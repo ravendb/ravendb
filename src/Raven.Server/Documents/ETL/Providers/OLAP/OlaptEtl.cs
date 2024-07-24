@@ -42,39 +42,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             Metrics = OlapMetrics;
             _operationCancelToken = new OperationCancelToken(Database.DatabaseShutdown, CancellationToken);
-            
-            _uploaderSettings = GenerateUploaderSetting(database.Configuration.Backup);
+
+            _uploaderSettings = UploaderSettings.GenerateUploaderSetting(database, Name, Configuration.Connection.S3Settings, Configuration.Connection.AzureSettings, Configuration.Connection.GlacierSettings, Configuration.Connection.GoogleCloudSettings, Configuration.Connection.FtpSettings);
 
             UpdateTimer(LastProcessState.LastBatchTime);
-        }
-
-        private UploaderSettings GenerateUploaderSetting(Config.Categories.BackupConfiguration configuration)
-        {
-            var s3Settings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
-                Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            var azureSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.AzureSettings, x => JsonDeserializationServer.AzureSettings(x),
-                Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            var glacierSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x),
-                Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            var googleCloudSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x),
-                Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            var ftpSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.FtpSettings, x => JsonDeserializationServer.FtpSettings(x),
-                Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            return new UploaderSettings(configuration)
-            {
-                S3Settings = s3Settings, 
-                AzureSettings = azureSettings, 
-                GlacierSettings = glacierSettings,
-                GoogleCloudSettings = googleCloudSettings,
-                FtpSettings = ftpSettings,
-                DatabaseName = Database.Name, 
-                TaskName = Name
-            };
         }
 
         public override EtlType EtlType => EtlType.Olap;
@@ -294,7 +265,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        private static BackupResult GenerateUploadResult()
+        public static BackupResult GenerateUploadResult()
         {
             return new BackupResult
             {

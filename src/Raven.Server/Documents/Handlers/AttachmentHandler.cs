@@ -8,9 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments;
+using Raven.Server.Documents.Handlers.Processors.Expiration;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -44,92 +46,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/attachments/bulk", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetAttachments()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var request = await context.ReadForDiskAsync(RequestBodyStream(), "GetAttachments");
-
-                if (request.TryGet(nameof(AttachmentType), out string typeString) == false || Enum.TryParse(typeString, out AttachmentType type) == false)
-                    throw new ArgumentException($"The '{nameof(AttachmentType)}' field in the body request is mandatory");
-
-                if (request.TryGet(nameof(GetAttachmentsOperation.GetAttachmentsCommand.Attachments), out BlittableJsonReaderArray attachments) == false)
-                    throw new ArgumentException($"The '{nameof(GetAttachmentsOperation.GetAttachmentsCommand.Attachments)}' field in the body request is mandatory");
-
-                var attachmentsStreams = new List<Stream>();
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(GetAttachmentsOperation.GetAttachmentsCommand.AttachmentsMetadata));
-                    writer.WriteStartArray();
-                    var first = true;
-                    foreach (BlittableJsonReaderObject bjro in attachments)
-                    {
-                        if (bjro.TryGet(nameof(AttachmentRequest.DocumentId), out string id) == false)
-                            throw new ArgumentException($"Could not parse {nameof(AttachmentRequest.DocumentId)}");
-                        if (bjro.TryGet(nameof(AttachmentRequest.Name), out string name) == false)
-                            throw new ArgumentException($"Could not parse {nameof(AttachmentRequest.Name)}");
-
-                        var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, id, name, type, changeVector: null);
-                        if (attachment == null)
-                            continue;
-
-                        if (first == false)
-                            writer.WriteComma();
-                        first = false;
-
-                        attachment.Size = attachment.Stream.Length;
-                        attachmentsStreams.Add(attachment.Stream);
-                        WriteAttachmentDetails(writer, attachment, id);
-
-                        await writer.MaybeFlushAsync(Database.DatabaseShutdown);
-                    }
-
-                    writer.WriteEndArray();
-                    writer.WriteEndObject();
-
-                    await writer.FlushAsync(Database.DatabaseShutdown);
-                }
-
-                using (context.GetMemoryBuffer(out var buffer))
-                {
-                    var responseStream = ResponseBodyStream();
-                    foreach (var stream in attachmentsStreams)
-                    {
-                        await using (var tmpStream = stream)
-                        {
-                            var count = await tmpStream.ReadAsync(buffer.Memory.Memory);
-                            while (count > 0)
-                            {
-                                await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, count), Database.DatabaseShutdown);
-                                count = await tmpStream.ReadAsync(buffer.Memory.Memory);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
-        {
-            writer.WriteStartObject();
-            writer.WritePropertyName(nameof(AttachmentDetails.Name));
-            writer.WriteString(attachment.Name);
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentDetails.Hash));
-            writer.WriteString(attachment.Base64Hash.ToString());
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentDetails.ContentType));
-            writer.WriteString(attachment.ContentType);
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentDetails.Size));
-            writer.WriteInteger(attachment.Size);
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentDetails.ChangeVector));
-            writer.WriteString(attachment.ChangeVector);
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentDetails.DocumentId));
-            writer.WriteString(documentId);
-            writer.WriteEndObject();
+            using (var processor = new AttachmentHandlerProcessorForBulkAttachment(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/debug/attachments/hash", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
@@ -175,7 +93,7 @@ namespace Raven.Server.Documents.Handlers
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, ExpectedChangeVector, Stream);
+                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, flags: AttachmentFlags.None, Stream.Length, retireAtDt: null, ExpectedChangeVector, Stream);
                 return 1;
             }
 

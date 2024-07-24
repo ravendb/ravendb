@@ -146,11 +146,16 @@ namespace Raven.Server.Documents.PeriodicBackup
                 throw new NotSupportedException("Trying to use direct upload when we configure a backup to a local folder.");
             }
 
-            var hasAws = BackupConfiguration.CanBackupUsing(configuration.S3Settings);
-            var hasGlacier = BackupConfiguration.CanBackupUsing(configuration.GlacierSettings);
-            var hasAzure = BackupConfiguration.CanBackupUsing(configuration.AzureSettings);
-            var hasGoogleCloud = BackupConfiguration.CanBackupUsing(configuration.GoogleCloudSettings);
-            var hasFtp = BackupConfiguration.CanBackupUsing(configuration.FtpSettings);
+            return DestinationForDirectUpload(localConfiguration, configuration.S3Settings, configuration.AzureSettings, configuration.GlacierSettings, configuration.GoogleCloudSettings, configuration.FtpSettings);
+        }
+
+        internal static BackupConfiguration.BackupDestination DestinationForDirectUpload(Config.Categories.BackupConfiguration localConfiguration, S3Settings s3Settings, AzureSettings azureSettings, GlacierSettings glacierSettings, GoogleCloudSettings googleCloudSettings, FtpSettings ftpSettings)
+        {
+            var hasAws = BackupConfiguration.CanBackupUsing(s3Settings);
+            var hasAzure = BackupConfiguration.CanBackupUsing(azureSettings);
+            var hasGlacier = BackupConfiguration.CanBackupUsing(glacierSettings);
+            var hasGoogleCloud = BackupConfiguration.CanBackupUsing(googleCloudSettings);
+            var hasFtp = BackupConfiguration.CanBackupUsing(ftpSettings);
 
             var destinations = new List<bool> { hasAws, hasGlacier, hasAzure, hasGoogleCloud, hasFtp };
             if (destinations.Count(x => x) != 1)

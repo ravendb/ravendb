@@ -7,10 +7,12 @@ using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
-    internal sealed class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHandlerProcessorForGetAttachment<DatabaseRequestHandler, DocumentsOperationContext>
+    internal class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHandlerProcessorForGetAttachment<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public AttachmentHandlerProcessorForGetAttachment([NotNull] DatabaseRequestHandler requestHandler, bool isDocument) : base(requestHandler, isDocument)
         {
@@ -18,7 +20,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
         protected override async ValueTask GetAttachmentAsync(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector, CancellationToken token)
         {
-            using (context.OpenReadTransaction())
+            using (var tx = context.OpenReadTransaction())
             {
                 var attachment = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, changeVector);
 
@@ -27,6 +29,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return;
                 }
+
+                var collection = CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(context, attachment, documentId, name);
 
                 var attachmentChangeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
                 if (attachmentChangeVector == attachment.ChangeVector)
@@ -62,18 +66,47 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 HttpContext.Response.Headers[Constants.Headers.AttachmentHash] = attachment.Base64Hash.ToString();
                 HttpContext.Response.Headers[Constants.Headers.AttachmentSize] = attachment.Size.ToString();
                 HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
+                HttpContext.Response.Headers[Constants.Headers.AttachmentRetireAt] = attachment.RetiredAt?.GetDefaultRavenFormat();
+                HttpContext.Response.Headers[Constants.Headers.AttachmentFlags] = ((int)attachment.Flags).ToString();
 
-                using (context.GetMemoryBuffer(out var buffer))
-                await using (var stream = attachment.Stream)
+                DisposeReadTransactionIfNeeded(tx);
+
+                await WriteResponseStream(context, attachment, collection, token);
+            }
+        }
+        public virtual void DisposeReadTransactionIfNeeded(DocumentsTransaction tx)
+        {
+            // noop
+        }
+        public virtual string CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
+        {
+            if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+            {
+                throw new InvalidOperationException($"Cannot get attachment '{name}' on document '{documentId}' because it is retired. Please use dedicated API.");
+            }
+
+            return null;
+        }
+
+        protected virtual async Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, string collection, CancellationToken token)
+        {
+            await using (var stream = attachment.Stream)
+            {
+                await WriteAttachmentToResponseStream(context, stream, token);
+            }
+        }
+
+        protected async Task WriteAttachmentToResponseStream(DocumentsOperationContext context, Stream stream, CancellationToken token)
+        {
+            using (context.GetMemoryBuffer(out var buffer))
+            {
+                var responseStream = RequestHandler.ResponseBodyStream();
+                var count = stream.Read(buffer.Memory.Memory.Span); // can never wait, so no need for async
+                while (count > 0)
                 {
-                    var responseStream = RequestHandler.ResponseBodyStream();
-                    var count = stream.Read(buffer.Memory.Memory.Span); // can never wait, so no need for async
-                    while (count > 0)
-                    {
-                        await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, count), token);
-                        // we know that this can never wait, so no need to do async i/o here
-                        count = stream.Read(buffer.Memory.Memory.Span);
-                    }
+                    await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, count), token);
+                    // we know that this can never wait, so no need to do async i/o here
+                    count = stream.Read(buffer.Memory.Memory.Span);
                 }
             }
         }

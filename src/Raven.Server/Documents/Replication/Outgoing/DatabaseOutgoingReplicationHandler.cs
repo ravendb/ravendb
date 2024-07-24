@@ -188,6 +188,14 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public long NextReplicateTicks;
 
         public abstract ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger);
+        internal ManualResetEventSlim DebugWaitAndRunReplicationOnce()
+        {
+            if (ForTestingPurposes is { DebugWaitAndRunReplicationOnce: not null })
+            {
+                return ForTestingPurposes.DebugWaitAndRunReplicationOnce;
+            }
+            return _parent.DebugWaitAndRunReplicationOnce;
+        }
 
         protected override void Replicate()
         {
@@ -197,7 +205,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             {
                 while (_database.Time.GetUtcNow().Ticks > NextReplicateTicks)
                 {
-                    var once = _parent.DebugWaitAndRunReplicationOnce;
+                    var once = DebugWaitAndRunReplicationOnce();
                     if (once != null)
                     {
                         once.Reset();
@@ -452,6 +460,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             public Action<Dictionary<Slice, AttachmentReplicationItem>, SortedList<long, ReplicationBatchItem>> OnMissingAttachmentStream;
 
             public bool DisableWaitForChangesForExternalReplication;
+
+            public ManualResetEventSlim DebugWaitAndRunReplicationOnce;
         }
     }
 

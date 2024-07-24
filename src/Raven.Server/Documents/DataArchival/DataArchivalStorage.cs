@@ -5,6 +5,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.DataArchival;
@@ -14,7 +15,7 @@ public sealed class DataArchivalStorage : AbstractBackgroundWorkStorage
     private const string DocumentsByArchiveAtDateTime = "DocumentsByArchiveAtDateTime";
 
     public DataArchivalStorage(DocumentDatabase database, Transaction tx)
-        : base(tx, database, DocumentsByArchiveAtDateTime, Constants.Documents.Metadata.ArchiveAt)
+        : base(tx, database, LoggingSource.Instance.GetLogger<DataArchivalStorage>(database.Name), DocumentsByArchiveAtDateTime, Constants.Documents.Metadata.ArchiveAt)
     {
     }
 

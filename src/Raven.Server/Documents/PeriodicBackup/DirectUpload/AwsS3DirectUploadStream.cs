@@ -19,6 +19,8 @@ public class AwsS3DirectUploadStream : DirectUploadStream<RavenAwsS3Client>
 
     protected override void OnCompleteUpload()
     {
+        if (_retentionPolicyParameters == null)
+            return;
         var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, Client);
         runner.Execute();
     }

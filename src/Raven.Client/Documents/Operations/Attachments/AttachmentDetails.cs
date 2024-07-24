@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents.Attachments;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Attachments
@@ -26,11 +27,15 @@ namespace Raven.Client.Documents.Operations.Attachments
     internal sealed class AttachmentNameWithCount : AttachmentName
     {
         public long Count { get; set; }
+        public long RetiredCount { get; set; }
+        public long TotalCount { get; set; }
 
         internal override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(Count)] = Count;
+            json[nameof(RetiredCount)] = RetiredCount;
+            json[nameof(TotalCount)] = TotalCount;
 
             return json;
         }
@@ -64,16 +69,22 @@ namespace Raven.Client.Documents.Operations.Attachments
         /// The size of the attachment in bytes.
         /// </summary>
         public long Size;
-
+        public AttachmentFlags Flags;
+        public DateTime? RetireAt;
         internal virtual DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
+            var json = new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
                 [nameof(Hash)] = Hash,
                 [nameof(ContentType)] = ContentType,
                 [nameof(Size)] = Size
             };
+            if (Flags != AttachmentFlags.None)
+                json[nameof(Flags)] = Flags.ToString();
+            if (RetireAt != null)
+                json[nameof(RetireAt)] = RetireAt;
+            return json;
         }
     }
 

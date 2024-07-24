@@ -184,6 +184,7 @@ namespace Raven.Server.ServerWide
             
             [nameof(EditDataArchivalCommand)] = 60_000,
             [nameof(UpdateResponsibleNodeForTasksCommand)] = UpdateResponsibleNodeForTasksCommand.CommandVersion,
+            [nameof(EditRetireAttachmentsCommand)] = EditRetireAttachmentsCommand.CommandVersion,
         };
 
         public bool CanPutCommand(string command)

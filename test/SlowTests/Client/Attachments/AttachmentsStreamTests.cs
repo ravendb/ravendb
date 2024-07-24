@@ -724,12 +724,16 @@ namespace SlowTests.Client.Attachments
                 {
                     var r1 = a.Read(buffer1, read1, r - read1);
                     read1 += r1;
+                    if (r1 == 0)
+                        break;
                 }
 
                 while (r - read2 > 0)
                 {
                     var r2 = b.Read(buffer2, read2, r - read2);
                     read2 += r2;
+                    if (r2 == 0)
+                        break;
                 }
 
                 Assert.Equal(read1, read2);
@@ -756,7 +760,7 @@ namespace SlowTests.Client.Attachments
             return true;
         }
 
-        private static async Task<bool> CompareStreamsAsync(Stream a, Stream b)
+        internal static async Task<bool> CompareStreamsAsync(Stream a, Stream b)
         {
             if (a == null && b == null)
                 return true;
@@ -786,12 +790,16 @@ namespace SlowTests.Client.Attachments
                 {
                     var r1 = await a.ReadAsync(buffer1, read1, r - read1);
                     read1 += r1;
+                    if(r1 == 0)
+                        break;
                 }
 
                 while (r - read2 > 0)
                 {
                     var r2 = await b.ReadAsync(buffer2, read2, r - read2);
                     read2 += r2;
+                    if (r2 == 0)
+                        break;
                 }
 
                 Assert.Equal(read1, read2);

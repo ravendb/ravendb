@@ -38,7 +38,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         [AmazonS3RetryFact]
         public async Task CanUploadToS3()
         {
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings(_s3TestsPrefix);
 
             try
             {
@@ -113,7 +113,7 @@ loadToOrders(partitionBy(key),
         [AmazonS3RetryFact]
         public async Task SimpleTransformation()
         {
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings(_s3TestsPrefix);
 
             try
             {
@@ -221,7 +221,7 @@ loadToOrders(partitionBy(key),
         public async Task CanLoadToMultipleTables()
         {
             const string salesTableName = "Sales";
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings(_s3TestsPrefix);
 
             try
             {
@@ -418,7 +418,7 @@ loadToOrders(partitionBy(key), orderData);
         [AmazonS3RetryFact]
         public async Task CanModifyPartitionColumnName()
         {
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings(_s3TestsPrefix);
 
             try
             {
@@ -514,7 +514,7 @@ loadToOrders(partitionBy(['order_date', key]),
         [AmazonS3RetryFact]
         public async Task SimpleTransformation_NoPartition()
         {
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings(_s3TestsPrefix);
             try
             {
                 using (var store = GetDocumentStore())
@@ -623,7 +623,7 @@ loadToOrders(noPartition(),
         [AmazonS3RetryFact]
         public async Task SimpleTransformation_MultiplePartitions()
         {
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings(_s3TestsPrefix);
             try
             {
                 using (var store = GetDocumentStore())
@@ -759,7 +759,7 @@ loadToOrders(partitionBy(
         [AmazonS3RetryFact]
         public async Task CanPartitionByCustomDataFieldViaScript()
         {
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings(_s3TestsPrefix);
             try
             {
                 using (var store = GetDocumentStore())
@@ -835,7 +835,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
         [AmazonS3RetryFact]
         public async Task CanHandleSpecialCharsInEtlName()
         {
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings(_s3TestsPrefix);
             try
             {
                 using (var store = GetDocumentStore())
@@ -878,7 +878,7 @@ loadToOrders(noPartition(), {
         [AmazonS3RetryFact]
         public async Task CanHandleSpecialCharsInFolderPath()
         {
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings(_s3TestsPrefix);
             try
             {
                 using (var store = GetDocumentStore())
@@ -989,7 +989,7 @@ for (var i = 0; i < this.Lines.length; i++){
         [AmazonS3RetryFact]
         public async Task CanHandleSlashInPartitionValue()
         {
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings(_s3TestsPrefix);
             try
             {
                 using (var store = GetDocumentStore())
@@ -1045,7 +1045,7 @@ for (var i = 0; i < this.Lines.length; i++){
         [AmazonS3RetryFact]
         public async Task CanUpdateS3Settings()
         {
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings(_s3TestsPrefix);
             S3Settings settings1 = default, settings2 = default;
             try
             {
@@ -1222,7 +1222,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
         [AmazonS3RetryFact]
         public async Task ShouldTrimRedundantSlashInRemoteFolderName()
         {
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings(_s3TestsPrefix);
             try
             {
                 using (var store = GetDocumentStore())
@@ -1323,30 +1323,6 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             });
         }
 
-        private S3Settings GetS3Settings([CallerMemberName] string caller = null)
-        {
-            var s3Settings = AmazonS3RetryFactAttribute.S3Settings;
-            if (s3Settings == null)
-                return null;
-
-            var remoteFolderName = _s3TestsPrefix;
-            if (string.IsNullOrEmpty(caller) == false)
-                remoteFolderName = $"{remoteFolderName}/{caller}";
-
-            if (string.IsNullOrEmpty(s3Settings.RemoteFolderName) == false)
-                remoteFolderName = $"{s3Settings.RemoteFolderName}/{remoteFolderName}";
-
-
-            return new S3Settings
-            {
-                BucketName = s3Settings.BucketName,
-                RemoteFolderName = remoteFolderName,
-                AwsAccessKey = s3Settings.AwsAccessKey,
-                AwsSecretKey = s3Settings.AwsSecretKey,
-                AwsRegionName = s3Settings.AwsRegionName
-            };
-        }
-
         internal static async Task DeleteObjects(S3Settings s3Settings, string additionalTable = null)
         {
             if (s3Settings == null)
@@ -1360,7 +1336,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             await DeleteObjects(s3Settings, prefix: $"{s3Settings.RemoteFolderName}/{additionalTable}", delimiter: string.Empty);
         }
 
-        private static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter, bool listFolder = false)
+        internal static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter, bool listFolder = false)
         {
             if (s3Settings == null)
                 return;

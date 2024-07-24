@@ -1,5 +1,7 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
+using Raven.Client.Documents.Attachments;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -12,6 +14,10 @@ namespace Raven.Client.Documents.Indexes
         public string ContentType { get; }
 
         public long Size { get; }
+
+        public DateTime? RetiredAt { get; }
+
+        public AttachmentFlags Flags { get; }
 
         public string GetContentAsString();
 

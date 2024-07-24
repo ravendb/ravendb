@@ -65,6 +65,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         CompressedDocsSchema = ShardingCompressedDocsSchemaBase;
 
         AttachmentsSchema = ShardingAttachmentsSchemaBase;
+        //RetiredAttachmentsSchema = ShardingRetiredAttachmentsSchemaBase;
         ConflictsSchema = ShardingConflictsSchemaBase;
         CountersSchema = ShardingCountersSchemaBase;
         CounterTombstonesSchema = Schemas.CounterTombstones.ShardingCounterTombstonesSchemaBase;

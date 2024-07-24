@@ -176,7 +176,7 @@ namespace Sparrow.Json.Parsing
             {
                 var read = await peepingTomStream.ReadAsync(buffer.Memory.Memory, token).ConfigureAwait(false);
                 if (read == 0)
-                    throw new EndOfStreamException("Stream ended without reaching end of json content");
+                    throw new EndOfStreamException("Stream ended without reaching end of json content" + GetPeepingTomBufferAsString(peepingTomStream));
 
                 parser.SetBuffer(buffer, 0, read);
             }
