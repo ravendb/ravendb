@@ -587,22 +587,19 @@ namespace Raven.Server.Rachis
             return false;
         }
 
-        public async Task WaitForLeaderChange(CancellationToken token) => await WaitForLeaderChange(LeaderTag, token);
-
-        public async Task<string> WaitForLeaderChange(string leader, CancellationToken token)
+        public async Task WaitForLeaderChange(CancellationToken cts)
         {
-            while (token.IsCancellationRequested == false)
+            var currentLeader = LeaderTag;
+            while (cts.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
-                var task = _stateChanged.Task.WithCancellation(token);
-                var current = GetLeaderTag(safe: true);
-                if (leader != current)
-                    return current;
+                var task = _stateChanged.Task.WithCancellation(cts);
+
+                if (currentLeader != GetLeaderTag(safe: true))
+                    return;
 
                 await task;
             }
-
-            return null;
         }
 
         public async Task<bool> WaitForLeaveState(RachisState rachisState, CancellationToken cts)

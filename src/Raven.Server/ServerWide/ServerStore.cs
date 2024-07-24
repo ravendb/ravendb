@@ -24,7 +24,6 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
@@ -124,8 +123,7 @@ namespace Raven.Server.ServerWide
         private readonly OperationsStorage _operationsStorage;
         public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
 
-        private RequestExecutor _leaderRequestExecutor;
-
+        private RequestExecutor _clusterRequestExecutor;
         private long _lastClusterTopologyIndex = -1;
 
         public readonly RavenConfiguration Configuration;
@@ -2481,7 +2479,7 @@ namespace Raven.Server.ServerWide
                         LicenseManager,
                         DatabasesLandlord,
                         _env,
-                        _leaderRequestExecutor,
+                        _clusterRequestExecutor,
                         ContextPool,
                         ByteStringMemoryCache.Cleaner,
                         InitializationCompleted,
@@ -3152,7 +3150,12 @@ namespace Raven.Server.ServerWide
             var djv = cmd.ToJson(context);
             var cmdJson = context.ReadObject(djv, "raft/command");
 
-            
+            ClusterTopology clusterTopology;
+            using (context.OpenReadTransaction())
+                clusterTopology = _engine.GetTopology(context);
+
+            if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
+                throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
 
             cmdJson.TryGet("Type", out string commandType);
             var command = new PutRaftCommand(cmdJson, _engine.Url, commandType)
@@ -3160,10 +3163,19 @@ namespace Raven.Server.ServerWide
                 Timeout = cmd.Timeout
             };
 
+            var serverCertificateChanged = Interlocked.Exchange(ref _serverCertificateChanged, 0) == 1;
+
+            if (_clusterRequestExecutor == null
+                || serverCertificateChanged
+                || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
+            {
+                var newExecutor = CreateNewClusterRequestExecutor(leaderUrl);
+                Interlocked.Exchange(ref _clusterRequestExecutor, newExecutor);
+            }
+
             try
             {
-                var requestExecutor = GetLeaderRequestExecutor(context, engineLeaderTag);
-                await requestExecutor.ExecuteAsync(command, context, token: token);
+                await _clusterRequestExecutor.ExecuteAsync(command, context, token: token);
             }
             catch
             {
@@ -3172,31 +3184,6 @@ namespace Raven.Server.ServerWide
             }
 
             return (command.Result.RaftCommandIndex, command.Result.Data);
-        }
-
-        public RequestExecutor GetLeaderRequestExecutor(TransactionOperationContext context, string leaderTag)
-        {
-            if (string.IsNullOrEmpty(leaderTag))
-                throw new NoLeaderException();
-
-            ClusterTopology clusterTopology;
-            using (context.OpenReadTransaction())
-                clusterTopology = _engine.GetTopology(context);
-
-            if (clusterTopology.Members.TryGetValue(leaderTag, out string leaderUrl) == false)
-                throw new InvalidOperationException("Leader " + leaderTag + " was not found in the topology members");
-
-            var serverCertificateChanged = Interlocked.Exchange(ref _serverCertificateChanged, 0) == 1;
-
-            if (_leaderRequestExecutor == null
-                || serverCertificateChanged
-                || _leaderRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
-            {
-                var newExecutor = CreateNewClusterRequestExecutor(leaderUrl);
-                Interlocked.Exchange(ref _leaderRequestExecutor, newExecutor);
-            }
-
-            return _leaderRequestExecutor;
         }
 
         protected internal async Task WaitForExecutionOnSpecificNode(TransactionOperationContext context, string node, long index)
