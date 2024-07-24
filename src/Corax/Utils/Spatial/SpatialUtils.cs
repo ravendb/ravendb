@@ -46,10 +46,6 @@ public sealed class SpatialUtils
     /// </summary>
     private const int Threshold = 2 << 10;
 
-    public static double GetGeoDistance(double lat, double lng, double center_lng, double center_lat) =>
-        GetGeoDistance((lat, lng), (center_lng, center_lat), 0, SpatialUnits.Kilometers);
-
-    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static double GetGeoDistance(in (double lat, double lng) fieldCoordinates, (double X, double Y) center, double round, SpatialUnits units)
     {

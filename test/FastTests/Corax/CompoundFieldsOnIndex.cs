@@ -66,29 +66,30 @@ public class CompoundFieldsOnIndex : RavenTestBase
             s.Store(new User("Corax", "Hadera", new DateTime(2014, 4, 1)));
             s.Store(new User("aCorax", "Hader", new DateTime(2014, 4, 1)));
             s.Store(new User("Lucene", "Hadera", new DateTime(2009, 4, 1)));
-        
+
             s.Store(new User("Corax", "Torun", new DateTime(2021, 4, 1)));
             
             s.Store(new User("A", "IL", new DateTime(2014, 4, 1)));
             s.Store(new User("B", "IL", new DateTime(2014, 4, 1)));
             s.Store(new User("A", "IL", new DateTime(2009, 4, 1)));
-        
+
             
             s.SaveChanges();
         }
-         Indexes.WaitForIndexing(store);
-        // using (var s = store.OpenSession())
-        // {
-        //     var users = s.Query<User, TIndex>()
-        //         .Where(x => x.Name == "Corax")
-        //         .OrderBy(x => x.Birthday)
-        //         .ToList();
-        //     WaitForUserToContinueTheTest(store);
-        //
-        //     Assert.Equal(2, users.Count);
-        //     Assert.Equal(2014, users[0].Birthday.Year);
-        //     Assert.Equal(2021, users[1].Birthday.Year);
-        // }
+        
+        Indexes.WaitForIndexing(store);
+        using (var s = store.OpenSession())
+        {
+            var users = s.Query<User, TIndex>()
+                .Where(x => x.Name == "Corax")
+                .OrderBy(x => x.Birthday)
+                .ToList();
+            WaitForUserToContinueTheTest(store);
+
+            Assert.Equal(2, users.Count);
+            Assert.Equal(2014, users[0].Birthday.Year);
+            Assert.Equal(2021, users[1].Birthday.Year);
+        }
         
         using (var s = store.OpenSession())
         {

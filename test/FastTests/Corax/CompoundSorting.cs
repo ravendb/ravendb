@@ -96,7 +96,6 @@ public class CompoundSorting : RavenTestBase
     {
         using var store = GetDatabaseWithDocuments(out var indexName);
         using var session = store.OpenSession();
- //       WaitForUserToContinueTheTest(store);
 
         var queryStrAscFloatAsc = GetBaseQuery(session, indexName, boxedComparer)
             .OrderBy(nameof(Dto.Floating), OrderingType.Double)
@@ -193,7 +192,7 @@ public class CompoundSorting : RavenTestBase
         foreach (var metadata in queryResults.Select(doc => session.Advanced.GetMetadataFor(doc)))
         {
             Assert.NotNull(metadata[Raven.Client.Constants.Documents.Metadata.IndexScore]);
-                Assert.NotEqual(0, (double)metadata[Raven.Client.Constants.Documents.Metadata.IndexScore], 10);
+            Assert.NotEqual(0, (double)metadata[Raven.Client.Constants.Documents.Metadata.IndexScore], 10);
         }
     }
 
