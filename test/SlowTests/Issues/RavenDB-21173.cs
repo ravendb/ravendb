@@ -1,7 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
 
@@ -23,16 +26,35 @@ public class RavenDB_21173 : ClusterTestBase
         using var store = GetDocumentStore(options);
         var databaseName = store.Database;
 
-        var disposeNodeTask = Task.Run(async () =>
+        if (options.DatabaseMode == RavenDatabaseMode.Sharded)
         {
-            await Task.Delay(400);
-            var tag = store.GetRequestExecutor(databaseName).TopologyNodes.First().ClusterTag;
-            var server = nodes.Single(n => n.ServerStore.NodeTag == tag);
-            await DisposeServerAndWaitForFinishOfDisposalAsync(server);
-        });
-        await ProcessDocument(store, "Docs/1-A");
+            var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(databaseName, nodes);
+            await foreach (var shard in shards)
+            {
+                shard.RachisLogIndexNotifications.RecentNotificationsMaxEntries = 4000;
+            }
+        }
 
-        await disposeNodeTask;
+        try
+        {
+
+            var disposeNodeTask = Task.Run(async () =>
+            {
+                await Task.Delay(400);
+                var tag = store.GetRequestExecutor(databaseName).TopologyNodes.First().ClusterTag;
+                var server = nodes.Single(n => n.ServerStore.NodeTag == tag);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(server);
+            });
+            await ProcessDocument(store, "Docs/1-A");
+            
+            await disposeNodeTask;
+        }
+        catch
+        {
+            if(options.DatabaseMode == RavenDatabaseMode.Sharded)
+                Console.WriteLine(await Sharding.GetNotificationInfoAsync(databaseName, nodes));
+            throw;
+        }
     }
 
     private async Task ProcessDocument(IDocumentStore store, string id)
@@ -63,3 +85,4 @@ public class RavenDB_21173 : ClusterTestBase
 
 }
 
+;

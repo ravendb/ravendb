@@ -38,7 +38,7 @@ import TaskUtils from "../../../../utils/TaskUtils";
 import { KafkaEtlPanel } from "./panels/KafkaEtlPanel";
 import { RabbitMqEtlPanel } from "./panels/RabbitMqEtlPanel";
 import useInterval from "hooks/useInterval";
-import { Alert, Button } from "reactstrap";
+import { Alert, Button, Row } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
@@ -435,9 +435,12 @@ export function OngoingTasksPage() {
                     />
                 )}
             </StickyHeader>
+            <Row className="gy-sm">
             <div className="flex-vertical">
                 <div className="scroll flex-grow">
-                    {allTasksCount === 0 && <EmptySet>No tasks have been created for this Database Group.</EmptySet>}
+                        {allTasksCount === 0 && (
+                            <EmptySet>No tasks have been created for this Database Group.</EmptySet>
+                        )}
 
                     {externalReplications.length > 0 && (
                         <div key="external-replications">
@@ -718,6 +721,7 @@ export function OngoingTasksPage() {
                     )}
                 </div>
             </div>
+            </Row>
             <div id="modalContainer" className="bs5" />
         </div>
     );

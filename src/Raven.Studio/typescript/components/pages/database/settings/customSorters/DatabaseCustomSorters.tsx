@@ -70,74 +70,81 @@ export default function DatabaseCustomSorters() {
     }
 
     return (
-        <Row className="gy-sm content-margin">
-            <DatabaseLimitAlert
-                databaseLimitReachStatus={databaseLimitReachStatus}
-                databaseResultsCount={databaseResultsCount}
-                licenseDatabaseLimit={licenseDatabaseLimit}
-                upgradeLicenseLink={upgradeLicenseLink}
-            />
-            <ClusterLimitAlert
-                clusterLimitReachStatus={clusterLimitReachStatus}
-                numberOfCustomSortersInCluster={numberOfCustomSortersInCluster}
-                licenseClusterLimit={licenseClusterLimit}
-                upgradeLicenseLink={upgradeLicenseLink}
-            />
-            <Col>
-                <AboutViewHeading title="Custom sorters" icon="custom-sorters" />
-                {hasDatabaseAdminAccess && (
-                    <>
-                        <div id="newCustomSorter" className="w-fit-content">
-                            <Button color="primary" className="mb-3" onClick={addNewSorter} disabled={isLimitReached}>
-                                <Icon icon="plus" />
-                                Add a custom sorter
-                            </Button>
-                        </div>
-                        {isLimitReached && (
-                            <AddButtonLicensePopover
-                                databaseLimitReachStatus={databaseLimitReachStatus}
-                                upgradeLicenseLink={upgradeLicenseLink}
-                            />
-                        )}
-                    </>
-                )}
-
-                <HrHeader count={databaseLimitReachStatus === "notReached" ? databaseResultsCount : null}>
-                    Database custom sorters
-                    {databaseLimitReachStatus !== "notReached" && (
-                        <CounterBadge className="ms-2" count={databaseResultsCount} limit={licenseDatabaseLimit} />
-                    )}
-                </HrHeader>
-                <DatabaseCustomSortersList
-                    sorters={sorters}
-                    fetchStatus={asyncGetDatabaseSorters.status}
-                    reload={asyncGetDatabaseSorters.execute}
-                    serverWideSorterNames={asyncGetServerWideSorters.result?.map((x) => x.Name) ?? []}
-                    remove={removeSorter}
+        <div className="content-margin">
+            <Row className="gy-sm">
+                <DatabaseLimitAlert
+                    databaseLimitReachStatus={databaseLimitReachStatus}
+                    databaseResultsCount={databaseResultsCount}
+                    licenseDatabaseLimit={licenseDatabaseLimit}
+                    upgradeLicenseLink={upgradeLicenseLink}
                 />
+                <ClusterLimitAlert
+                    clusterLimitReachStatus={clusterLimitReachStatus}
+                    numberOfCustomSortersInCluster={numberOfCustomSortersInCluster}
+                    licenseClusterLimit={licenseClusterLimit}
+                    upgradeLicenseLink={upgradeLicenseLink}
+                />
+                <Col>
+                    <AboutViewHeading title="Custom sorters" icon="custom-sorters" />
+                    {hasDatabaseAdminAccess && (
+                        <>
+                            <div id="newCustomSorter" className="w-fit-content">
+                                <Button
+                                    color="primary"
+                                    className="mb-3"
+                                    onClick={addNewSorter}
+                                    disabled={isLimitReached}
+                                >
+                                    <Icon icon="plus" />
+                                    Add a custom sorter
+                                </Button>
+                            </div>
+                            {isLimitReached && (
+                                <AddButtonLicensePopover
+                                    databaseLimitReachStatus={databaseLimitReachStatus}
+                                    upgradeLicenseLink={upgradeLicenseLink}
+                                />
+                            )}
+                        </>
+                    )}
 
-                <HrHeader
-                    right={
-                        hasServerWideCustomSorters ? (
-                            <a href={appUrl.forServerWideCustomSorters()} target="_blank">
-                                <Icon icon="link" />
-                                Server-wide custom sorters
-                            </a>
-                        ) : null
-                    }
-                    count={serverWideResultsCount}
-                >
-                    Server-wide custom sorters
-                    {!hasServerWideCustomSorters && <LicenseRestrictedBadge licenseRequired="Professional +" />}
-                </HrHeader>
-                {hasServerWideCustomSorters && (
-                    <DatabaseCustomSortersServerWideList asyncGetSorters={asyncGetServerWideSorters} />
-                )}
-            </Col>
-            <Col sm={12} lg={4}>
-                <DatabaseCustomSortersInfoHub databaseSortersCount={databaseResultsCount} />
-            </Col>
-        </Row>
+                    <HrHeader count={databaseLimitReachStatus === "notReached" ? databaseResultsCount : null}>
+                        Database custom sorters
+                        {databaseLimitReachStatus !== "notReached" && (
+                            <CounterBadge className="ms-2" count={databaseResultsCount} limit={licenseDatabaseLimit} />
+                        )}
+                    </HrHeader>
+                    <DatabaseCustomSortersList
+                        sorters={sorters}
+                        fetchStatus={asyncGetDatabaseSorters.status}
+                        reload={asyncGetDatabaseSorters.execute}
+                        serverWideSorterNames={asyncGetServerWideSorters.result?.map((x) => x.Name) ?? []}
+                        remove={removeSorter}
+                    />
+
+                    <HrHeader
+                        right={
+                            hasServerWideCustomSorters ? (
+                                <a href={appUrl.forServerWideCustomSorters()} target="_blank">
+                                    <Icon icon="link" />
+                                    Server-wide custom sorters
+                                </a>
+                            ) : null
+                        }
+                        count={serverWideResultsCount}
+                    >
+                        Server-wide custom sorters
+                        {!hasServerWideCustomSorters && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                    </HrHeader>
+                    {hasServerWideCustomSorters && (
+                        <DatabaseCustomSortersServerWideList asyncGetSorters={asyncGetServerWideSorters} />
+                    )}
+                </Col>
+                <Col sm={12} lg={4}>
+                    <DatabaseCustomSortersInfoHub databaseSortersCount={databaseResultsCount} />
+                </Col>
+            </Row>
+        </div>
     );
 }
 

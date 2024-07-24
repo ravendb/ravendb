@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var properties = await blob.GetPropertiesAsync(cancellationToken: _cancellationToken);
             var response = await blob.DownloadAsync(cancellationToken: _cancellationToken);
 
-            return new RavenStorageClient.Blob(response.Value.Content, properties.Value.Metadata, response.Value);
+            return new RavenStorageClient.Blob(response.Value.Content, properties.Value.Metadata, response.Value.ContentLength, response.Value);
         }
 
         public void DeleteBlobs(List<string> blobsToDelete)

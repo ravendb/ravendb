@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -10,7 +11,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     {
         Task<Stream> GetStream(string path);
 
-        Task<ZipArchive> GetZipArchiveForSnapshot(string path);
+        Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress);
 
         Task<List<string>> GetFilesForRestore();
 

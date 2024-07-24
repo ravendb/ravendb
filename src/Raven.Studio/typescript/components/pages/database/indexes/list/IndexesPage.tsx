@@ -138,7 +138,7 @@ export function IndexesPage(props: IndexesPageProps) {
     };
 
     return (
-        <>
+        <div className="content-margin">
             <IndexesPageLicenseLimits
                 staticClusterLimitStatus={staticClusterLimitStatus}
                 staticClusterCount={staticClusterCount}
@@ -233,7 +233,7 @@ export function IndexesPage(props: IndexesPageProps) {
                     )}
                 </StickyHeader>
             )}
-            <div className="indexes p-4 pt-0 no-transition">
+            <div className="indexes mt-3 pt-0 no-transition">
                 <div className="indexes-list">
                     {filter.groupBy === "None" && (
                         <IndexesPageList {...indexesPageListCommonProps} indexes={regularIndexes} />
@@ -271,6 +271,6 @@ export function IndexesPage(props: IndexesPageProps) {
                     allActionContexts={allActionContexts}
                 />
             )}
-        </>
+        </div>
     );
 }

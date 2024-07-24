@@ -293,14 +293,14 @@ namespace Raven.Server.Rachis.Remote
             }
         }
 
-        public SnapshotReader CreateReader()
+        public SnapshotReader CreateReader(RachisLogRecorder debugRecorder)
         {
-            return new RemoteSnapshotReader(this);
+            return new RemoteSnapshotReader(debugRecorder, this);
         }
 
-        public SnapshotReader CreateReaderToStream(Stream stream)
+        public SnapshotReader CreateReaderToStream(RachisLogRecorder debugRecorder, Stream stream)
         {
-            return new RemoteToStreamSnapshotReader(this, stream);
+            return new RemoteToStreamSnapshotReader(debugRecorder, this, stream);
         }
 
         public T Read<T>(JsonOperationContext context)
