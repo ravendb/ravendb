@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 case IndexType.Map:
                 case IndexType.MapReduce:
                 case IndexType.Faulty:
-                    index = IndexCompiler.Compile(definition);
+                    index = IndexCompiler.Compile(definition, indexVersion);
                     break;
                 case IndexType.JavaScriptMap:
                 case IndexType.JavaScriptMapReduce:
