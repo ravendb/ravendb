@@ -27,10 +27,9 @@ class AzureQueueStorageConnectionStringModel {
                     
                     return value.includes("DefaultEndpointsProtocol") &&
                         value.includes("AccountName") &&
-                        value.includes("AccountKey") &&
-                        value.includes("QueueEndpoint")
+                        value.includes("AccountKey");
                 },
-                message: "Please define all required fields: DefaultEndpointsProtocol, AccountName, AccountKey and QueueEndpoint"
+                message: "Please define all required fields: DefaultEndpointsProtocol, AccountName and AccountKey"
             }
         });
     }
