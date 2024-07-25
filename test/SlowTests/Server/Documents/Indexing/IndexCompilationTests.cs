@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.Indexing
                             Total = order.Lines.Sum(l => l.PricePerUnit)
                     }"
                 }
-            });
+            }, 0);
         }
     }
 }

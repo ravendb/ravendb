@@ -19,12 +19,11 @@ namespace SlowTests.Issues
         [Fact]
         public void Indexing_func_must_return_anonymous_object()
         {
-            var ex = Assert.Throws<IndexCompilationException>(() => IndexCompiler.Compile(new Bad_index_1().CreateIndexDefinition()));
+            var ex = Assert.Throws<IndexCompilationException>(() => IndexCompiler.Compile(new Bad_index_1().CreateIndexDefinition(), 0));
             Assert.Contains("Indexing function must return an anonymous object", ex.Message);
 
-            ex = Assert.Throws<IndexCompilationException>(() => IndexCompiler.Compile(new Bad_index_2().CreateIndexDefinition()));
+            ex = Assert.Throws<IndexCompilationException>(() => IndexCompiler.Compile(new Bad_index_2().CreateIndexDefinition(), 0));
             Assert.Contains("Indexing function must return an anonymous object", ex.Message);
-
         }
 
         private class Bad_index_1 : AbstractIndexCreationTask<DroneStateSnapshoot>
