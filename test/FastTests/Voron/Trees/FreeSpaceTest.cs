@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -90,7 +90,7 @@ namespace FastTests.Voron.Trees
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.LowLevelTransaction.TestOnly_SetLocalTxNextPageNumber(maxPageNumber + 1 - Env.CurrentStateRecord.NextPageNumber);
+                tx.LowLevelTransaction.ForTestingPurposesOnly().SetLocalTxNextPageNumber(maxPageNumber + 1 - Env.CurrentStateRecord.NextPageNumber);
 
                 tx.Commit();
             }
@@ -146,7 +146,7 @@ namespace FastTests.Voron.Trees
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.LowLevelTransaction.TestOnly_SetLocalTxNextPageNumber(maxPageNumber + 1 - Env.CurrentStateRecord.NextPageNumber);
+                tx.LowLevelTransaction.ForTestingPurposesOnly().SetLocalTxNextPageNumber(maxPageNumber + 1 - Env.CurrentStateRecord.NextPageNumber);
 
                 tx.Commit();
             }

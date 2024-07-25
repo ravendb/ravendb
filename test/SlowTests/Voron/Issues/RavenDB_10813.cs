@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests.Voron;
 using Sparrow.Platform;
 using Voron;
@@ -29,7 +29,7 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                tx.LowLevelTransaction.TestOnly_SetLocalTxNextPageNumber(10 - Env.NextPageNumber);
+                tx.LowLevelTransaction.ForTestingPurposesOnly().SetLocalTxNextPageNumber(10 - Env.NextPageNumber);
 
                 tx.LowLevelTransaction.AllocatePage(1, 3);
                 tx.LowLevelTransaction.AllocatePage(1, 4);
