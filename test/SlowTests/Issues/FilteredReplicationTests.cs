@@ -1627,7 +1627,7 @@ namespace SlowTests.Issues
             var dbNameA = GetDatabaseName();
             var dbNameB = GetDatabaseName();
 
-            var (_, hubLeader, hubCertificates) = await CreateRaftClusterWithSsl(2, watcherCluster: true);
+            var (hubNodes, hubLeader, hubCertificates) = await CreateRaftClusterWithSsl(2, watcherCluster: true);
             using var hub = GetDocumentStore(new Options
             {
                 Server = hubLeader,
@@ -1647,7 +1647,7 @@ namespace SlowTests.Issues
 
             var sinkRecord = await sink.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(sink.Database));
             var sinkClusterId = sinkRecord.Topology.ClusterTransactionIdBase64;
-            var hubDatabaseId = (await GetDatabase(hubLeader, hub.Database)).DbBase64Id;
+            var hubDatabaseIds = await Task.WhenAll(hubNodes.Select(async node => (await GetDatabase(node, hub.Database)).DbBase64Id));
 
             const string usersDocId1 = "users/1";
 
@@ -1716,7 +1716,7 @@ namespace SlowTests.Issues
                 changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.True(changeVector.Contains(sinkClusterId));
-                Assert.True(changeVector.Contains(hubDatabaseId));
+                Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
 
                 await VerifyDatabaseChangeVector(hub);
             }
@@ -1740,7 +1740,7 @@ namespace SlowTests.Issues
                 Assert.True(changeVector.Contains(ChangeVectorParser.RaftTag));
                 Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.True(changeVector.Contains(sinkClusterId));
-                Assert.True(changeVector.Contains(hubDatabaseId));
+                Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
 
                 await VerifyDatabaseChangeVector(sink);
             }
