@@ -1,23 +1,10 @@
 ﻿#nullable enable
 
 using System;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Sparrow;
-using Sparrow.Logging;
-using Sparrow.Platform;
-using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
-using Sparrow.Server.Platform.Win32;
-using Sparrow.Utils;
 using Voron.Exceptions;
-using Voron.Platform.Win32;
 using Voron.Global;
-using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Impl.Paging;
 

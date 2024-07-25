@@ -1,17 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Sparrow;
 using Sparrow.Collections;
-using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Voron.Exceptions;
 using Voron.Global;
-using Voron.Platform.Win32;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Impl.Paging;

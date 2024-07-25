@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Voron.Global;
-using Voron.Impl.Scratch;
 
 namespace Voron.Impl.Paging;
 

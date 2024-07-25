@@ -49,7 +49,7 @@ namespace Voron.Impl
         private Tree _root;
         public Tree RootObjects => _root;
 
-        public long FlushedToJournal = -1;
+        public long WrittenToJournalNumber = -1;
 
         private long _numberOfModifiedPages;
 
@@ -550,11 +550,6 @@ namespace Voron.Impl
         public long GetNextPageNumber() => _envRecord.NextPageNumber + _localTxNextPageNumber;
 
         public void SetNextPageNumber(long nextPageNumber) => _localTxNextPageNumber = nextPageNumber - _envRecord.NextPageNumber;
-
-        internal void TestOnly_SetLocalTxNextPageNumber(long n)
-        {
-            _localTxNextPageNumber = n;
-        }
 
         [Conditional("DEBUG")]
         private void EnsureNotCurrentlyHoldingRootObjectsOpen()
@@ -1345,7 +1340,11 @@ namespace Voron.Impl
             {
                 _tx = tx;
             }
-
+            
+            internal void SetLocalTxNextPageNumber(long n)
+            {
+                _tx._localTxNextPageNumber = n;
+            }
             [DoesNotReturn]
             internal void ThrowSimulateErrorOnCommitStage2()
             {

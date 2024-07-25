@@ -12,7 +12,7 @@ public record EnvironmentStateRecord(
     Pager.State DataPagerState, 
     long TransactionId,
     ImmutableDictionary<long, PageFromScratchBuffer> ScratchPagesTable,
-    long FlushedToJournal,
+    long WrittenToJournalNumber,
     TreeMutableState Root,
     long NextPageNumber,
     (JournalFile Current, long Last4KWritePosition) Journal,

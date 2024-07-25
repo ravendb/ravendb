@@ -1,4 +1,5 @@
-﻿using Voron;
+﻿using Tests.Infrastructure;
+using Voron;
 using Voron.Data.BTrees;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,8 +12,8 @@ namespace FastTests.Voron
         {
         }
 
-        
-        [Fact]
+
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void CanCloneAndReadOldDataFromReadTx_ManualFlush()
         {
             Options.ForceUsing32BitsPager = true;
@@ -23,6 +24,7 @@ namespace FastTests.Voron
                 tx.CreateTree("test").Add("hello", "one");
                 tx.Commit();
             }
+
             Env.BackgroundFlushWritesToDataFile();
 
             using (var outer = Env.ReadTransaction())
@@ -32,6 +34,7 @@ namespace FastTests.Voron
                     tx.CreateTree("test").Add("hello", "two");
                     tx.Commit();
                 }
+
                 Env.BackgroundFlushWritesToDataFile();
                 {
                     ValueReader readResultReader = outer.CreateTree("test").Read("hello").Reader;
@@ -39,7 +42,7 @@ namespace FastTests.Voron
 
                     Assert.Equal("one", result);
                 }
-               
+
 
                 using (var inner = Env.CloneReadTransaction(outer))
                 {
@@ -50,6 +53,7 @@ namespace FastTests.Voron
                         tx.CreateTree("test").Add("hello", "three");
                         tx.Commit();
                     }
+
                     Env.BackgroundFlushWritesToDataFile();
                     {
                         Tree tree = inner.CreateTree("test");
@@ -71,12 +75,12 @@ namespace FastTests.Voron
 
 
         }
-        
-        [Fact]
+
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void CanCloneAndReadOldDataFromReadTx()
         {
             Options.ForceUsing32BitsPager = true;
-            
+
 
             using (var tx = Env.WriteTransaction())
             {
@@ -98,7 +102,7 @@ namespace FastTests.Voron
 
                     Assert.Equal("one", result);
                 }
-               
+
 
                 using (var inner = Env.CloneReadTransaction(outer))
                 {
@@ -127,8 +131,6 @@ namespace FastTests.Voron
                     }
                 }
             }
-
-
         }
     }
 }
