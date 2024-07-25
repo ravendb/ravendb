@@ -531,6 +531,7 @@ public unsafe partial class Pager : IDisposable
         }
 
         if (PlatformDetails.RunningOnPosix &&
+            Options.OwnsPagers &&
             _flags.HasFlag(Pal.OpenFileFlags.Temporary))
         {
             // Posix doesn't support DeleteOnClose
