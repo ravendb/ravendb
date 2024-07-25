@@ -1535,6 +1535,18 @@ namespace Raven.Server.Documents.Replication
                         newIncoming.Add(entry);
                         knownEntries.Add(entry);
                     }
+                    else if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
+                    {
+                        // TRXN
+                        newIncoming.Add(new ChangeVectorEntry
+                        {
+                            DbId = entry.DbId,
+                            Etag = entry.Etag,
+                            NodeTag = ChangeVectorParser.TrxnInt
+                        });
+
+                        continue;
+                    }
                     else
                     {
                         newIncoming.Add(new ChangeVectorEntry
@@ -1558,7 +1570,7 @@ namespace Raven.Server.Documents.Replication
 
             private static void ReplaceKnownSinkEntries(DocumentsOperationContext context, ref string changeVector)
             {
-                if (changeVector.Contains("SINK", StringComparison.OrdinalIgnoreCase) == false)
+                if (changeVector.Contains(ChangeVectorParser.SinkTag, StringComparison.OrdinalIgnoreCase) == false)
                     return;
 
                 var global = context.LastDatabaseChangeVector?.ToChangeVectorList();
@@ -1578,6 +1590,19 @@ namespace Raven.Server.Documents.Replication
                                 Etag = entry.Etag,
                                 NodeTag = found.NodeTag
                             });
+                            continue;
+                        }
+
+                        if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
+                        {
+                            // TRXN
+                            newIncoming.Add(new ChangeVectorEntry
+                            {
+                                DbId = entry.DbId,
+                                Etag = entry.Etag,
+                                NodeTag = ChangeVectorParser.TrxnInt
+                            });
+
                             continue;
                         }
                     }
