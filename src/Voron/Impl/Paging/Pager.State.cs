@@ -3,21 +3,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.IO.MemoryMappedFiles;
-using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron.Global;
-using Voron.Impl.Scratch;
-using Voron.Platform.Win32;
 
 namespace Voron.Impl.Paging;
 
@@ -191,20 +182,6 @@ public unsafe partial class Pager
     public class State: IDisposable
     {
         public readonly Pager Pager;
-        
-        /// <summary>
-        /// For the duration of the transaction that created this state, we *must*
-        /// hold a hard reference to the previous state(s) to ensure that any pointer
-        /// that we _already_ got is valid.
-        ///
-        /// This is cleared upon committing the transaction state to the global state  
-        /// </summary>
-        private State? _previous;
-
-        public void BeforePublishing()
-        {
-            _previous = null;
-        }
 
         public readonly WeakReference<State> WeakSelf;
 
@@ -216,7 +193,6 @@ public unsafe partial class Pager
             Handle = handle;
        
             Pager = pager;
-            _previous = null;
             WeakSelf = new WeakReference<State>(this);
         }
 
@@ -259,8 +235,6 @@ public unsafe partial class Pager
 
         ~State()
         {
-            // this is here only to avoid the "field is unused" error
-            GC.KeepAlive(_previous);
             try
             {
                 Dispose();

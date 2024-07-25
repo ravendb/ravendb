@@ -489,7 +489,6 @@ namespace Voron.Impl.Journal
 
         public sealed class JournalApplicator : IDisposable
         {
-            private static readonly ObjectPool<List<PageFromScratchBuffer>, ListResetBehavior<PageFromScratchBuffer>> _scratchPagesListPool = new(() => []);
             private readonly ConcurrentDictionary<long, JournalFile> _journalsToDelete = new();
             private readonly object _flushingLock = new();
             private readonly SemaphoreSlim _fsyncLock = new(1);
@@ -587,9 +586,9 @@ namespace Voron.Impl.Journal
                 if (Monitor.IsEntered(_flushingLock) && _ignoreLockAlreadyTaken == false)
                     throw new InvalidJournalFlushRequestException("Applying journals to the data file has been already requested on the same thread");
 
-                List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree = null;
                 ByteStringContext byteStringContext = null;
                 bool lockTaken = false;
+                List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree = null;
                 try
                 {
                     ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken();
@@ -616,10 +615,9 @@ namespace Voron.Impl.Journal
 
                     // RavenDB-13302: we need to force a re-check this before we make decisions here
                     _waj._env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
-                    bufferOfPageFromScratchBuffersToFree = _scratchPagesListPool.Allocate();
-                    if (_waj._env.GetLatestTransactionToFlush(
-                            uptoTxId: _waj._env.ActiveTransactions.OldestTransaction,
-                            bufferOfPageFromScratchBuffersToFree,
+                    if (_waj._env.TryGetLatestEnvironmentStateToFlush(
+                            uptoTxIdExclusive: _waj._env.ActiveTransactions.OldestTransaction,
+                            out bufferOfPageFromScratchBuffersToFree,
                             out var record) == false)
                     {
                         Debug.Assert(bufferOfPageFromScratchBuffersToFree.Count == 0);
@@ -663,13 +661,13 @@ namespace Voron.Impl.Journal
                 }
                 finally
                 {
-                    Interlocked.Exchange(ref FlushInProgress, 0);
-                    
-                    if(bufferOfPageFromScratchBuffersToFree != null) 
-                        _scratchPagesListPool.Free(bufferOfPageFromScratchBuffersToFree);
+                    bufferOfPageFromScratchBuffersToFree?.Clear();
                     byteStringContext?.Dispose();
                     if (lockTaken)
+                    {
+                        Interlocked.Exchange(ref FlushInProgress, 0);
                         Monitor.Exit(_flushingLock);
+                    }
                 }
 
                 _waj._env.LogsApplied();
@@ -811,14 +809,14 @@ namespace Voron.Impl.Journal
             {
                 _forTestingPurposes?.OnUpdateJournalStateUnderWriteTransactionLock?.Invoke();
 
-                JournalFile journalFile = _waj._files.First(x => x.Number == flushedRecord.FlushedToJournal);
+                JournalFile journalFile = _waj._files.First(x => x.Number == flushedRecord.WrittenToJournalNumber);
                 
                 var unusedJournals = new List<JournalFile>();
                 _waj._files = _waj._files.RemoveWhile(x =>
                 {
-                    if (x.Number < flushedRecord.FlushedToJournal)
+                    if (x.Number < flushedRecord.WrittenToJournalNumber)
                         return true;
-                    return x.Number == flushedRecord.FlushedToJournal && x.GetAvailable4Kbs(txw.CurrentStateRecord) == 0;
+                    return x.Number == flushedRecord.WrittenToJournalNumber && x.GetAvailable4Kbs(txw.CurrentStateRecord) == 0;
                 }, unusedJournals);
 
                 if (_waj._logger.IsInfoEnabled)
@@ -834,7 +832,7 @@ namespace Voron.Impl.Journal
                 
                 SetLastFlushed(new LastFlushState(
                     flushedRecord.TransactionId,
-                    flushedRecord.FlushedToJournal,
+                    flushedRecord.WrittenToJournalNumber,
                     journalFile,
                     _journalsToDelete.Values.ToList()));
 
@@ -1504,7 +1502,7 @@ namespace Voron.Impl.Journal
                     sp.Restart();
                     CurrentFile.Write(tx, journalEntry);
                     sp.Stop();
-                    tx.FlushedToJournal = CurrentFile.Number;
+                    tx.WrittenToJournalNumber = CurrentFile.Number;
                     _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
                     _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
 

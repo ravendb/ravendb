@@ -112,7 +112,13 @@ namespace Voron
         private int _idleFlushTimerFailures = 0;
         private Task _idleFlushTimer = Task.CompletedTask;
 
-        internal DateTime LastFlushTime;
+        public DateTime LastFlushTime;
+
+        internal TestingStuff _forTestingPurposes;
+        private EnvironmentStateRecord _currentStateRecord;
+        private readonly ConcurrentQueue<EnvironmentStateRecord> _transactionsToFlush = new();
+
+        public EnvironmentStateRecord CurrentStateRecord => _currentStateRecord;
 
         public DateTime LastWorkTime;
 
@@ -815,13 +821,13 @@ namespace Voron
 
             if (ActiveTransactions.Contains(tx) == false)
             {
-                if (tx.Committed && tx.FlushedToJournal >= 0)
+                if (tx.Committed && tx.WrittenToJournalNumber >= 0)
                     ThrowCommittedAndFlushedTransactionNotFoundInActiveOnes(tx);
 
                 return;
             }
 
-            if (!tx.Committed) 
+            if (tx.Committed is false) 
                 return;
             
             UpdateStateOnCommit(tx);
@@ -836,7 +842,7 @@ namespace Voron
                 if (tx.Flags != (TransactionFlags.ReadWrite))
                     return;
 
-                if (tx.FlushedToJournal >= 0)
+                if (tx.WrittenToJournalNumber >= 0)
                 {
                     var totalPages = 0;
                     foreach (var page in tx.GetTransactionPages())
@@ -1538,13 +1544,7 @@ namespace Voron
         {
             throw new InvalidOperationException("Simulation of db creation failure");
         }
-
-        internal TestingStuff _forTestingPurposes;
-        private EnvironmentStateRecord _currentStateRecord;
-        private ConcurrentQueue<EnvironmentStateRecord> _transactionsToFlush = new();
-
-        public EnvironmentStateRecord CurrentStateRecord => _currentStateRecord;
-
+        
         internal TestingStuff ForTestingPurposesOnly()
         {
             if (_forTestingPurposes != null)
@@ -1587,8 +1587,8 @@ namespace Voron
             {
                 // we may want to update the state of the transaction (scratch table, data pager state, etc)
                 // without incrementing the transaction id, since we didn't commit a transaction to the journal
-                TransactionId = tx.FlushedToJournal == -1 ? currentStateRecord.TransactionId-1 : currentStateRecord.TransactionId,
-                FlushedToJournal = tx.FlushedToJournal == -1 ? currentStateRecord.FlushedToJournal : tx.FlushedToJournal,
+                TransactionId = tx.WrittenToJournalNumber == -1 ? currentStateRecord.TransactionId-1 : currentStateRecord.TransactionId,
+                WrittenToJournalNumber = tx.WrittenToJournalNumber == -1 ? currentStateRecord.WrittenToJournalNumber : tx.WrittenToJournalNumber,
                 ScratchPagesTable = tx.ModifiedPagesInTransaction,
                 NextPageNumber = tx.GetNextPageNumber(),
                 Root = tx.RootObjects.State,
@@ -1600,23 +1600,27 @@ namespace Voron
             
             // We only want to flush to data pager transactions that have been flushed to the journal.
             // Transactions that _haven't_ been flushed are mostly book-keeping (updating scratch table, etc)
-            if (tx.FlushedToJournal >= 0)
+            if (tx.WrittenToJournalNumber >= 0)
             {
                 _transactionsToFlush.Enqueue(updatedState);
             }
         }
 
-        public bool GetLatestTransactionToFlush(long uptoTxId, List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree, out EnvironmentStateRecord record)
+        private readonly List<PageFromScratchBuffer> _cachedBuffer = [];
+        public bool TryGetLatestEnvironmentStateToFlush(long uptoTxIdExclusive, out List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree, out EnvironmentStateRecord record)
         {
-            if (uptoTxId == 0)
-                uptoTxId = long.MaxValue;
+            if (uptoTxIdExclusive == 0)
+                uptoTxIdExclusive = long.MaxValue;
+
+            _cachedBuffer.Clear();
+            bufferOfPageFromScratchBuffersToFree = _cachedBuffer;
             
             record = default;
             bool found = false;
             while (true)
             {
                 if (_transactionsToFlush.TryPeek(out var maybe) == false || 
-                    maybe.TransactionId >= uptoTxId)
+                    maybe.TransactionId >= uptoTxIdExclusive)
                     return found;
                 if (_transactionsToFlush.TryDequeue(out record) == false)
                     throw new InvalidOperationException("Failed to get transaction to flush after already peeked successfully");
