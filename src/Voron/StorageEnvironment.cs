@@ -118,7 +118,7 @@ namespace Voron
         private EnvironmentStateRecord _currentStateRecord;
         private readonly ConcurrentQueue<EnvironmentStateRecord> _transactionsToFlush = new();
 
-        public EnvironmentStateRecord CurrentStateRecord => _currentStateRecord;
+        internal EnvironmentStateRecord CurrentStateRecord => _currentStateRecord;
 
         public DateTime LastWorkTime;
 
