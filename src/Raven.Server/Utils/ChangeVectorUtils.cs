@@ -370,6 +370,11 @@ namespace Raven.Server.Utils
             return from.StripTags(ChangeVectorParser.SinkTag, exclude);
         }
 
+        public static string StripSinkTags(this string from)
+        {
+            return from.StripTags(ChangeVectorParser.SinkTag, exclude: null);
+        }
+
         public static string StripTrxnTags(this string from)
         {
             return from.StripTags(ChangeVectorParser.TrxnTag, exclude: null);
