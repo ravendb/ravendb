@@ -25,8 +25,6 @@ public unsafe partial class Pager
             AcquirePagePointer = &Bits32.AcquirePagePointer,
             AcquireRawPagePointer = &Bits32.AcquirePagePointer,
             AcquirePagePointerForNewPage = &Bits32.AcquirePagePointerForNewPage,
-            ProtectPageRange = ProtectPages ? &Bits64.ProtectPageRange : &Bits64.ProtectPageNoop,
-            UnprotectPageRange = ProtectPages ? &Bits64.UnprotectPageRange : &Bits64.ProtectPageNoop,
             EnsureMapped = &Bits32.EnsureMapped,
         };
         
