@@ -529,7 +529,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
             _count = matchBuffer.Count;
         }
         
-        return MergeHelper.And(buffer, buffer, matchBuffer.Results);
+        return MergeHelper.And(buffer, buffer.Slice(0, matches), matchBuffer.Results);
     }
 
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
