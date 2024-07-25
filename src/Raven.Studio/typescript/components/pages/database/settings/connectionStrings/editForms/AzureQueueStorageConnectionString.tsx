@@ -277,13 +277,12 @@ const schema = yupObjectSchema<FormData>({
                             .required()
                             .test(
                                 "connectionString",
-                                "Please define all required fields: DefaultEndpointsProtocol, AccountName, AccountKey and QueueEndpoint",
+                                "Please define all required fields: DefaultEndpointsProtocol, AccountName and AccountKey",
                                 (value) => {
                                     return (
                                         value.includes("DefaultEndpointsProtocol") &&
                                         value.includes("AccountName") &&
-                                        value.includes("AccountKey") &&
-                                        value.includes("QueueEndpoint")
+                                        value.includes("AccountKey")
                                     );
                                 }
                             ),
