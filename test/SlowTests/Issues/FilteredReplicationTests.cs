@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Esprima.Ast;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -16,6 +18,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
@@ -1498,25 +1501,30 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Replication)]
         public async Task Can_pull_and_push_with_first_transaction_on_sink()
         {
-            var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
             var dbNameB = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
-                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
+            var (hubNodes, hubLeader, hubCertificates) = await CreateRaftClusterWithSsl(2, watcherCluster: true);
             using var hub = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbNameA
+                Server = hubLeader,
+                ReplicationFactor = 2,
+                AdminCertificate = hubCertificates.ServerCertificate.Value,
+                ClientCertificate = hubCertificates.ServerCertificate.Value,
+                ModifyDatabaseName = s => dbNameA,
+                CreateDatabase = true
             });
+
             using var sink = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = hubCertificates.ServerCertificate.Value,
+                ClientCertificate = hubCertificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbNameB
             });
 
+            var sinkDatabaseId = (await GetDatabase(Server, sink.Database)).DbBase64Id;
+            var hubDatabaseIds = await Task.WhenAll(hubNodes.Select(async node => (await GetDatabase(node, hub.Database)).DbBase64Id));
+            
             const string usersDocId1 = "users/1";
 
             using (var session = sink.OpenAsyncSession())
@@ -1524,9 +1532,12 @@ namespace SlowTests.Issues
                 var user = new User { Name = "Grisha" };
                 await session.StoreAsync(user, usersDocId1);
                 await session.SaveChangesAsync();
+
+                var changeVector = session.Advanced.GetChangeVectorFor(user);
+                Assert.True(changeVector.Contains(sinkDatabaseId));
             }
 
-            var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = new X509Certificate2(File.ReadAllBytes(hubCertificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hub.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -1570,6 +1581,7 @@ namespace SlowTests.Issues
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(sinkDatabaseId));
 
                 var stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
@@ -1578,6 +1590,8 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
                 changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(sinkDatabaseId));
+                Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
 
                 stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
@@ -1599,6 +1613,8 @@ namespace SlowTests.Issues
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(sinkDatabaseId));
+                Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
 
                 var stats = await sink.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
@@ -1608,24 +1624,30 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.Replication)]
         public async Task Can_pull_and_push_with_first_cluster_transactions_on_sink()
         {
-            var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
             var dbNameB = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
-                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
+            var (_, hubLeader, hubCertificates) = await CreateRaftClusterWithSsl(2, watcherCluster: true);
             using var hub = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbNameA
+                Server = hubLeader,
+                ReplicationFactor = 2,
+                AdminCertificate = hubCertificates.ServerCertificate.Value,
+                ClientCertificate = hubCertificates.ServerCertificate.Value,
+                ModifyDatabaseName = s => dbNameA,
+                CreateDatabase = true
             });
+
             using var sink = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = hubCertificates.ServerCertificate.Value,
+                ClientCertificate = hubCertificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbNameB
             });
+
+            var sinkRecord = await sink.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(sink.Database));
+            var sinkClusterId = sinkRecord.Topology.ClusterTransactionIdBase64;
+            var hubDatabaseId = (await GetDatabase(hubLeader, hub.Database)).DbBase64Id;
 
             const string usersDocId1 = "users/1";
 
@@ -1638,9 +1660,10 @@ namespace SlowTests.Issues
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.True(changeVector.Contains(ChangeVectorParser.TrxnTag));
+                Assert.True(changeVector.Contains(sinkClusterId));
             }
 
-            var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = new X509Certificate2(File.ReadAllBytes(hubCertificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hub.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -1684,19 +1707,18 @@ namespace SlowTests.Issues
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(sinkClusterId));
 
-                var stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
-                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.TrxnTag));
+                await VerifyDatabaseChangeVector(hub);
 
                 user.Age = age;
                 await session.SaveChangesAsync();
                 changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(sinkClusterId));
+                Assert.True(changeVector.Contains(hubDatabaseId));
 
-                stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
-                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.TrxnTag));
+                await VerifyDatabaseChangeVector(hub);
             }
 
             var ageVal = await WaitForValueAsync(async () =>
@@ -1717,34 +1739,58 @@ namespace SlowTests.Issues
                 Assert.True(changeVector.Contains(ChangeVectorParser.TrxnTag));
                 Assert.True(changeVector.Contains(ChangeVectorParser.RaftTag));
                 Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(sinkClusterId));
+                Assert.True(changeVector.Contains(hubDatabaseId));
 
-                var stats = await sink.Maintenance.SendAsync(new GetStatisticsOperation());
+                await VerifyDatabaseChangeVector(sink);
+            }
+
+            using (var session = sink.OpenAsyncSession())
+            {
+                const string anotherUserId = "users/2";
+                var user = new User();
+                await session.StoreAsync(user, anotherUserId);
+                await session.SaveChangesAsync();
+
+                user.Name = "Grisha";
+                await session.SaveChangesAsync();
+            }
+
+            async Task VerifyDatabaseChangeVector(DocumentStore store)
+            {
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.TrxnTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.False(stats.DatabaseChangeVector.Contains(sinkClusterId));
             }
         }
 
         [RavenFact(RavenTestCategory.Replication)]
         public async Task Can_pull_and_push_with_first_transactions_on_hub()
         {
-            var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
             var dbNameB = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
-                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
+            var (hubNodes, hubLeader, hubCertificates) = await CreateRaftClusterWithSsl(2, watcherCluster: true);
             using var hub = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbNameA
+                Server = hubLeader,
+                ReplicationFactor = 2,
+                AdminCertificate = hubCertificates.ServerCertificate.Value,
+                ClientCertificate = hubCertificates.ServerCertificate.Value,
+                ModifyDatabaseName = s => dbNameA,
+                CreateDatabase = true
             });
+
             using var sink = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = hubCertificates.ServerCertificate.Value,
+                ClientCertificate = hubCertificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbNameB
             });
+
+            var sinkDatabaseId = (await GetDatabase(Server, sink.Database)).DbBase64Id;
+            var hubDatabaseIds = await Task.WhenAll(hubNodes.Select(async node => (await GetDatabase(node, hub.Database)).DbBase64Id));
 
             const string usersDocId1 = "users/1";
 
@@ -1753,9 +1799,12 @@ namespace SlowTests.Issues
                 var user = new User { Name = "Grisha" };
                 await session.StoreAsync(user, usersDocId1);
                 await session.SaveChangesAsync();
+
+                var changeVector = session.Advanced.GetChangeVectorFor(user);
+                Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
             }
 
-            var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = new X509Certificate2(File.ReadAllBytes(hubCertificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hub.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -1799,6 +1848,7 @@ namespace SlowTests.Issues
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
 
                 var stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
@@ -1807,6 +1857,8 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
                 changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
+                Assert.True(changeVector.Contains(sinkDatabaseId));
 
                 stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
@@ -1828,6 +1880,8 @@ namespace SlowTests.Issues
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
+                Assert.True(changeVector.Contains(sinkDatabaseId));
 
                 var stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
@@ -1837,24 +1891,30 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.Replication)]
         public async Task Can_pull_and_push_with_first_cluster_transactions_on_hub()
         {
-            var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
             var dbNameB = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
-                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
+            var (_, hubLeader, hubCertificates) = await CreateRaftClusterWithSsl(2, watcherCluster: true);
             using var hub = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = s => dbNameA
+                Server = hubLeader,
+                ReplicationFactor = 2,
+                AdminCertificate = hubCertificates.ServerCertificate.Value,
+                ClientCertificate = hubCertificates.ServerCertificate.Value,
+                ModifyDatabaseName = s => dbNameA,
+                CreateDatabase = true
             });
+
             using var sink = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = hubCertificates.ServerCertificate.Value,
+                ClientCertificate = hubCertificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbNameB
             });
+
+            var hubRecord = await hub.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(hub.Database));
+            var hubClusterId = hubRecord.Topology.ClusterTransactionIdBase64;
+            var sinkDatabaseId = (await GetDatabase(Server, sink.Database)).DbBase64Id;
 
             const string usersDocId1 = "users/1";
 
@@ -1867,9 +1927,10 @@ namespace SlowTests.Issues
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.True(changeVector.Contains(ChangeVectorParser.TrxnTag));
+                Assert.True(changeVector.Contains(hubClusterId));
             }
 
-            var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = new X509Certificate2(File.ReadAllBytes(hubCertificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hub.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -1913,19 +1974,18 @@ namespace SlowTests.Issues
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.True(changeVector.Contains(ChangeVectorParser.TrxnTag));
+                Assert.True(changeVector.Contains(hubClusterId));
 
-                var stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
-                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.TrxnTag));
+                await VerifyDatabaseChangeVector(sink);
 
                 user.Age = age;
                 await session.SaveChangesAsync();
                 changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.True(changeVector.Contains(ChangeVectorParser.TrxnTag));
+                Assert.True(changeVector.Contains(hubClusterId));
+                Assert.True(changeVector.Contains(sinkDatabaseId));
 
-                stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
-                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.TrxnTag));
+                await VerifyDatabaseChangeVector(sink);
             }
 
             var ageVal = await WaitForValueAsync(async () =>
@@ -1946,10 +2006,29 @@ namespace SlowTests.Issues
                 Assert.True(changeVector.Contains(ChangeVectorParser.TrxnTag));
                 Assert.True(changeVector.Contains(ChangeVectorParser.RaftTag));
                 Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(hubClusterId));
+                Assert.True(changeVector.Contains(sinkDatabaseId));
 
-                var stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
+                await VerifyDatabaseChangeVector(hub);
+            }
+
+            using (var session = hub.OpenAsyncSession())
+            {
+                const string anotherUserId = "users/2";
+                var user = new User();
+                await session.StoreAsync(user, anotherUserId);
+                await session.SaveChangesAsync();
+
+                user.Name = "Grisha";
+                await session.SaveChangesAsync();
+            }
+
+            async Task VerifyDatabaseChangeVector(DocumentStore store)
+            {
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.TrxnTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.False(stats.DatabaseChangeVector.Contains(hubClusterId));
             }
         }
     }
