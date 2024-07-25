@@ -109,7 +109,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                     if (needToApplyAggregation)
                     {
                         //not supported yet.
-                        //todo:   ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, ref reader);
+                        throw new InvalidOperationException("Facet queries that need to apply aggregation should be handled via scanning reader. This code path is not supposed to be reached for such queries.");
                     }
 
                     continue;
@@ -140,6 +140,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                 if (needToApplyAggregation)
                 {
                     //not supported yet.
+                    throw new InvalidOperationException("Facet queries that need to apply aggregation should be handled via scanning reader. This code path is not supposed to be reached for such queries.");
                 }
 
                 token.ThrowIfCancellationRequested();
