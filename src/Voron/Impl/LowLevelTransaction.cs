@@ -289,7 +289,7 @@ namespace Voron.Impl
             InitTransactionHeader();
         }
 
-        public EnvironmentStateRecord CurrentStateRecord => _envRecord;
+        internal EnvironmentStateRecord CurrentStateRecord => _envRecord;
 
         internal void UpdateRootsIfNeeded(Tree root)
         {
