@@ -42,11 +42,9 @@ public abstract class AbstractSubscriptionStorage
 
     public bool ShouldWaitForClusterStabilization()
     {
-        var lastState = _serverStore.Engine.LastState;
-        if (lastState == null)
-            return false;
+        var lastState = _serverStore.Engine.CurrentPublishedStateAndTimestamp();
 
-        switch (lastState.To)
+        switch (lastState.State)
         {
             // get last cluster state
             case RachisState.Passive:
