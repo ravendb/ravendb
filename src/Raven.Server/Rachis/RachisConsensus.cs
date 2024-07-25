@@ -152,6 +152,13 @@ namespace Raven.Server.Rachis
         {
             return CurrentStateIn(_persistentState.CurrentStateRecord);
         }
+        
+        public (RachisState State, DateTime When) CurrentPublishedStateAndTimestamp()
+        {
+            if (_persistentState.CurrentStateRecord.ClientState is ClusterStateRecord r)
+                return (r.State, r.When);
+            return (RachisState.Passive, DateTime.MinValue);
+        }
 
         private static RachisState CurrentStateIn(EnvironmentStateRecord environmentStateRecord)
         {
@@ -164,7 +171,11 @@ namespace Raven.Server.Rachis
         {
             var cur = (ClusterStateRecord)ctx.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState ??
                       ClusterStateRecord.Empty;
-            ctx.Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState(cur with {State = state});
+            ctx.Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState(cur with
+            {
+                State = state,
+                When = DateTime.UtcNow
+            });
         }
         
         public void UpdateTermIn(ClusterOperationContext ctx, long term)
@@ -914,7 +925,6 @@ namespace Raven.Server.Rachis
             });
         }
 
-        public StateTransition LastState;
         public ConcurrentQueue<StateTransition> PrevStates { get; set; } = new ConcurrentQueue<StateTransition>();
 
         public void TakeOffice(ClusterOperationContext context)
