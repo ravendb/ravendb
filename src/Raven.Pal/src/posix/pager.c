@@ -115,6 +115,8 @@ int32_t _open_pager_file(int fd,
     {
         handle_ptr->file_fd = fd;
         handle_ptr->open_flags = open_flags;
+        handle_ptr->file_path = owned_file_path;
+        handle_ptr->allocation_size = st.st_size;
         *memory_size = st.st_size;
         *handle = handle_ptr;
         return SUCCESS;
