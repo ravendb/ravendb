@@ -27,7 +27,6 @@ struct handle
     uint64_t allocation_size;
     int file_fd;
     int32_t open_flags;
-    int children_count;
 };
 
 int32_t rvn_lock_memory(int32_t open_flags, void *mem, int64_t size, int32_t *detailed_error_code)
@@ -235,8 +234,6 @@ rvn_increase_pager_size(void *handle,
         return FAIL_DUPLICATE_HANDLE;
     }
     int32_t rc = _open_pager_file(new_fd, owned_file_path, handle_ptr->open_flags, new_length, new_handle, memory, memory_size, detailed_error_code);
-    if(rc == SUCCESS)
-        handle_ptr->children_count++;
     return rc;
 }
 
@@ -260,20 +257,7 @@ rvn_close_pager(
             rc = FAIL_MAP_VIEW_OF_FILE;
         }
     }
-    /*
-        A temporary file will be deleted when the _last_ handle to it is closed.
-        We don't *care* about correctness, so we aren't trying to handle all scenarios,
-        as long as serial creation of handles & extending them is working, this will work.
-        In odd cases, we may delete the file while it is being used, which on Posix is fine
-        and will work. 
-    */
-    if(handle_ptr->open_flags & OPEN_FILE_TEMPORARY &&  
-       handle_ptr->children_count == 0)                 
-    {
-        /* explicitly not checking the return value, it is fine to fail here */
-        unlink(handle_ptr->file_path);
-
-    }
+  
     if (close(handle_ptr->file_fd))
     {
         if (*detailed_error_code == 0)

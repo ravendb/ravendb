@@ -529,6 +529,21 @@ public unsafe partial class Pager : IDisposable
                 v.Dispose();
             }
         }
+
+        if (PlatformDetails.RunningOnPosix &&
+            _flags.HasFlag(Pal.OpenFileFlags.Temporary))
+        {
+            // Posix doesn't support DeleteOnClose
+            try
+            {
+                File.Delete(FileName);
+            }
+            catch
+            {
+                // if we can't delete it, there isn't much that 
+                // we can do about it
+            }
+        }
     }
 
     public void TryReleasePage(ref PagerTransactionState txState, long pageNumber)

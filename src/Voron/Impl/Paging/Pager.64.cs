@@ -23,11 +23,6 @@ namespace Voron.Impl.Paging;
 
 public unsafe partial class Pager
 {
-#if VALIDATE
-    public const bool ProtectPages = true;
-#else
-    public const bool ProtectPages = false;
-#endif
 
     public static class Bits64
     {
@@ -44,8 +39,6 @@ public unsafe partial class Pager
             AcquirePagePointer = &AcquirePagePointer,
             AcquireRawPagePointer = &AcquirePagePointer,
             AcquirePagePointerForNewPage = &AcquirePagePointerForNewPage,
-            ProtectPageRange = ProtectPages ? &ProtectPageRange : &ProtectPageNoop,
-            UnprotectPageRange = ProtectPages ? &UnprotectPageRange : &ProtectPageNoop,
             EnsureMapped = &EnsureMapped,
         };
 
@@ -57,26 +50,6 @@ public unsafe partial class Pager
             _ = pageNumber;
             _ = numberOfPages;
             return false;
-        }
-
-        public static void ProtectPageNoop(byte* start, ulong size) { }
-
-        public static void ProtectPageRange(byte* start, ulong size)
-        {
-            var rc = Win32MemoryProtectMethods.VirtualProtect(start, new UIntPtr(size), Win32MemoryProtectMethods.MemoryProtection.READONLY, out _);
-            if (!rc)
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
-            }
-        }
-
-        public static void UnprotectPageRange(byte* start, ulong size)
-        {
-            bool rc = Win32MemoryProtectMethods.VirtualProtect(start, new UIntPtr(size), Win32MemoryProtectMethods.MemoryProtection.READWRITE, out _);
-            if (!rc)
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
-            }
         }
 
         public static byte* AcquirePagePointerForNewPage(Pager pager, long pageNumber, int numberOfPages, State state, ref PagerTransactionState txState)
