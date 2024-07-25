@@ -920,14 +920,14 @@ namespace SlowTests.Issues
             using (ctx.OpenReadTransaction())
             {
                 var sink1GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                Assert.Equal(3, sink1GlobalCv.ToChangeVector().Length);
+                Assert.Equal(2, sink1GlobalCv.ToChangeVector().Length);
             }
 
             using (sink2Db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 var sink2GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                Assert.Equal(3, sink2GlobalCv.ToChangeVector().Length);
+                Assert.Equal(2, sink2GlobalCv.ToChangeVector().Length);
             }
 
             async Task SetupSink(DocumentStore sinkStore)
