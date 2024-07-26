@@ -96,7 +96,7 @@ public static class Constants
             public const string ServerGcPinnedObjectsCount = "pinnedobjectscount";
             public const string ServerGcPromoted = "promoted";
             public const string ServerGcTotalAvailableMemory = "totalavailablememory";
-            public const string ServerGcTotalCommitted = "totalcommited";
+            public const string ServerGcTotalCommitted = "totalcommitted";
             public const string ServerGcLohSize = "gclohsize";
         }
     }
