@@ -24,6 +24,6 @@ internal static class ClusterWideTransactionHelper
     public static string ExtractDocumentIdFromAtomicGuard(string key)
     {
         Debug.Assert(key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix));
-        return key[Constants.CompareExchange.RvnAtomicPrefix.Length..];
+        return key.Substring(Constants.CompareExchange.RvnAtomicPrefix.Length);
     }
 }
