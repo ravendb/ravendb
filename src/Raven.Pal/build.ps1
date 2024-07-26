@@ -65,9 +65,9 @@ Copy-Item ../../libs/libzstd/libzstd.linux.arm.32.so runtimes/linux-arm/native/l
 mkdir runtimes/linux-arm64/native -ErrorAction Ignore > $null
 Copy-Item ../../libs/libzstd/libzstd.linux.arm.64.so runtimes/linux-arm64/native/libzstd.so
 mkdir runtimes/osx-x64/native -ErrorAction Ignore > $null
-Copy-Item ../../libs/libzstd/libzstd.mac.x64.dylib runtimes/osx-x64/native/libzstd.so
+Copy-Item ../../libs/libzstd/libzstd.mac.x64.dylib runtimes/osx-x64/native/libzstd.dylib
 mkdir runtimes/osx-arm64/native -ErrorAction Ignore > $null
-Copy-Item ../../libs/libzstd/libzstd.mac.arm64.dylib runtimes/osx-arm64/native/libzstd.so
+Copy-Item ../../libs/libzstd/libzstd.mac.arm64.dylib runtimes/osx-arm64/native/libzstd.dylib
 
 
 Write-Output "Building Windows x86"
