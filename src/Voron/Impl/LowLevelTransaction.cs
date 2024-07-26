@@ -69,24 +69,17 @@ namespace Voron.Impl
             public readonly HashSet<long> DirtyPagesPool = new ();
             
 
-            // These two are not just about pooling memory, but about actually holding
-            // on to the values _across_ transactions
+            // The ScratchPagesInUse is not just about pooling memory, but about actually holding on to the values _across_ transactions
+            // and keeping a mutable instance that we can cheaply modify
             public ImmutableDictionary<long, PageFromScratchBuffer>.Builder ScratchPagesInUse = ImmutableDictionary.CreateBuilder<long, PageFromScratchBuffer>(); 
 
             public void Reset()
             {
                 // We are _explicitly_ not clearing this, we rely on the 
                 // state here to carry all the modified pages between write
-                // transactions.
+                // transactions. 
                 
                 // -- ScratchPagesInUse.Clear(); --
-                
-                // We are _explicitly_ not clearing this, we rely on the 
-                // state here to ensure correct references to all the 
-                // states for the pages held by ScratchPagesInUse
-
-                // -- UsedPagerStates.Clear(); --
-                
                 
                 DirtyPagesPool.Clear();
                 TableValueBuilder.Reset();
@@ -132,8 +125,6 @@ namespace Voron.Impl
 
         private readonly HashSet<PageFromScratchBuffer> _transactionPages;
         private bool _hasFreePages;
-
-        private const int RevertedScratchPageMarker = -0xDEAD;
 
         private CommitStats _requestedCommitStats;
 
@@ -1419,8 +1410,6 @@ namespace Voron.Impl
 
         public void ForgetAboutScratchPage(PageFromScratchBuffer value)
         {
-            Debug.Assert(value.File.Number != RevertedScratchPageMarker);
-
             if (_env.WriteTransactionPool.ScratchPagesInUse.TryGetValue(value.PageNumberInDataFile, out var existing) == false)
             {
                 // page may have been freed, that is expected

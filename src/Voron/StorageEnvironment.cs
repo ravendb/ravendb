@@ -1607,7 +1607,8 @@ namespace Voron
         }
 
         private readonly List<PageFromScratchBuffer> _cachedBuffer = [];
-        public bool TryGetLatestEnvironmentStateToFlush(long uptoTxIdExclusive, out List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree, out EnvironmentStateRecord record)
+
+        internal bool TryGetLatestEnvironmentStateToFlush(long uptoTxIdExclusive, out List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree, out EnvironmentStateRecord record)
         {
             if (uptoTxIdExclusive == 0)
                 uptoTxIdExclusive = long.MaxValue;
@@ -1638,12 +1639,12 @@ namespace Voron
             }
         }
 
-        public void UpdateJournal(JournalFile file, long last4KWrite)
+        internal void UpdateJournal(JournalFile file, long last4KWrite)
         {
             _currentStateRecord = _currentStateRecord with { Journal = (file, last4KWrite) };
         }
 
-        public void UpdateDataPagerState(Pager.State dataPagerState)
+        internal void UpdateDataPagerState(Pager.State dataPagerState)
         {
             // this should only happen during recovery, never during active operations
             Debug.Assert(ActiveTransactions.AllTransactions.Count == 0 , "ActiveTransactions.AllTransactions.Count == 0");

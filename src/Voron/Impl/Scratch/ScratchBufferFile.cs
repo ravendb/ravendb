@@ -20,7 +20,7 @@ using Sparrow.Server.LowMemory;
 
 namespace Voron.Impl.Scratch
 {
-    public sealed unsafe class ScratchBufferFile : IDisposable
+    public sealed class ScratchBufferFile : IDisposable
     {
         private sealed class PendingPage
         {

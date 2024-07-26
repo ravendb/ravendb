@@ -71,17 +71,12 @@ namespace Voron.Global
             public const int PageHeaderSize = TreePageHeader.SizeOf;
             public const int NodeHeaderSize = TreeNodeHeader.SizeOf;
             public const int RequiredSpaceForNewNode = NodeHeaderSize + NodeOffsetSize;
-            public const int MaxKeySize = 2038 - RequiredSpaceForNewNode;
+            public const int MaxKeySize = NodeMaxSize - RequiredSpaceForNewNode;
             public const int NodeOffsetSize = sizeof(ushort);
             public const int PageNumberSize = sizeof(long);
             public const int PageMaxSpace = Storage.PageSize - PageHeaderSize;
-            public static int NodeMaxSize = PageMaxSpace / 2 - 1;
-
-            /// <summary>
-            /// If there are less than 2 keys in a page, we no longer have a tree
-            /// This impacts the MaxKeySize available
-            /// </summary>
-            public const int MinKeysInPage = 2;
+            public const int NodeMaxSize = PageMaxSpace / 2 - 1;
+            public const int PageMinSpace = (int)(PageMaxSpace * 0.33);
 
             static Tree()
             {
