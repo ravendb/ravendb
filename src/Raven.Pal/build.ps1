@@ -101,8 +101,8 @@ Set-Content artifacts\pal.nuspec  -Value $PalNuspec
 Set-Location artifacts
 Remove-Item *.nupkg
 ../../../scripts/assets/bin/nuget.exe pack .\pal.nuspec
-Remove-Item ../../../libs/RavenDB.Pal.*
+Remove-Item ../../../libs/Raven.Pal.*
 Copy-Item *.nupkg ../../../libs
 Set-Location ..
-dotnet remove ../Sparrow.Server/Sparrow.Server.csproj package RavenDB.Pal
-dotnet add ../Sparrow.Server/Sparrow.Server.csproj package RavenDB.Pal --source ..\..\libs\
+dotnet remove ../Sparrow.Server/Sparrow.Server.csproj package Raven.Pal
+dotnet add ../Sparrow.Server/Sparrow.Server.csproj package Raven.Pal --source ..\..\libs\
