@@ -49,11 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public virtual IndexStateRecord UpdateIndexCache(Transaction tx)
         {
-            if (tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord record))
-            {
-                return record;
-            }
-            throw new InvalidOperationException("Unable to find index ClientState, should not be possible");
+            return tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord record) ? record : null;
         }
 
     }
