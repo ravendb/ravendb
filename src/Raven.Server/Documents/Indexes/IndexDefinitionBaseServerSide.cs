@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Indexes
             public const long PhraseQuerySupportInCoraxIndexes = 60_002;
             public const long StoreOnlySupportInCoraxIndexes = 60_003; // RavenDB-22369
             public const long JavaScriptProperlyHandleDynamicFieldsIndexFields = 60_004; // RavenDB-22363
-            public const long LoadDocumentWithDynamicCollectionNameShouldThrow = 60_005; // RavenDB-22359
+            public const long LoadDocumentWithDynamicCollectionNameShouldThrow = 61_000; // RavenDB-22359
 
             /// <summary>
             /// Remember to bump this
