@@ -376,7 +376,6 @@ namespace Voron.Impl.Backup
 
                             var (journalPager, journalPagerState) = env.Options.OpenJournalPager(jounalFileName.FullPath);
                             toDispose.Add(journalPager);
-                            toDispose.Add(journalPagerState);
 
                             if (long.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out journalNumber) == false)
                             {
@@ -389,7 +388,6 @@ namespace Voron.Impl.Backup
                                     env.Options.InitialFileSize ?? env.Options.InitialLogFileSize,
                                     env.Options.Encryption.IsEnabled);
                             toDispose.Add(recoveryPager);
-                            toDispose.Add(recoverPagerState);
                             
                             using (var reader = new JournalReader(env, journalPager, journalPagerState, txw.DataPager, recoveryPager, new HashSet<long>(),
                                        new JournalInfo { LastSyncedTransactionId = lastTxId }, new FileHeader { HeaderRevision = -1 }, lastTxHeader))
