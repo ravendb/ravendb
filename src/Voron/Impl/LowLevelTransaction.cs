@@ -545,7 +545,7 @@ namespace Voron.Impl
                 return pageNumber.Value;
 
             // allocate from end of file
-            var eof = _envRecord.NextPageNumber + _localTxNextPageNumber;
+            var eof = GetNextPageNumber();
             _localTxNextPageNumber += numberOfPages;
             return eof;
         }

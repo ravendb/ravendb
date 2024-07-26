@@ -43,9 +43,9 @@ namespace Voron.Impl.Backup
             Action<(string Message, int FilesCount)> infoNotify = null)
         {
             infoNotify ??= _ => { };
-            
+
             infoNotify(("Voron backup db started", 0));
-            
+
             using (var file = SafeFileStream.Create(backupPath.FullPath, FileMode.Create))
             {
                 using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
@@ -54,14 +54,15 @@ namespace Voron.Impl.Backup
                     var dataPager = env.DataPager;
                     var copier = new DataCopier(Constants.Storage.PageSize * 16);
                     Backup(env, compressionAlgorithm, compressionLevel, dataPager, package, string.Empty, copier, infoNotify);
-            
+
                     file.Flush(true); // make sure that we fully flushed to disk
-            
+
                 }
             }
-            
+
             infoNotify(("Voron backup db finished", 0));
         }
+
         /// <summary>
         /// Do a full backup of a set of environments. Note that the order of the environments matter!
         /// </summary>
@@ -115,7 +116,7 @@ namespace Voron.Impl.Backup
                 using (env.Journal.Applicator.TakeFlushingLock()) // prevent from running JournalApplicator.UpdateDatabaseStateAfterSync() concurrently
                 using (var txw = env.NewLowLevelTransaction(writePersistentContext, TransactionFlags.ReadWrite)) // so no new journal files will be created
                 {
-                    txr = env.NewLowLevelTransaction(readPersistentContext, TransactionFlags.Read);// now have snapshot view
+                    txr = env.NewLowLevelTransaction(readPersistentContext, TransactionFlags.Read); // now have snapshot view
                     allocatedPages = txw.DataPagerState.NumberOfAllocatedPages;
 
                     Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);
@@ -137,8 +138,8 @@ namespace Voron.Impl.Backup
                     }
 
                     for (var journalNum = startingJournal;
-                        journalNum <= journalInfo.CurrentJournal;
-                        journalNum++)
+                         journalNum <= journalInfo.CurrentJournal;
+                         journalNum++)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
@@ -175,6 +176,7 @@ namespace Voron.Impl.Backup
                         // now can copy everything else
                         copier.ToStream(dataPager, txr, 0, allocatedPages, dataStream, message => infoNotify((message, 0)), cancellationToken);
                     }
+
                     infoNotify(("Voron copy data file", 1));
                 }
 
@@ -226,6 +228,7 @@ namespace Voron.Impl.Backup
                         {
                             copier.ToStream(env, journalFile, 0, pagesToCopy, stream, message => infoNotify((message, 0)), cancellationToken);
                         }
+
                         infoNotify(($"Voron copy journal file {entryName}", 1));
 
                         lastBackedupJournal = journalFile.Number;
@@ -241,6 +244,7 @@ namespace Voron.Impl.Backup
                             header->IncrementalBackup.LastBackedUpJournalPage = -1;
                         });
                     }
+
                     backupSuccess = true;
                 }
                 catch (Exception)
@@ -255,7 +259,7 @@ namespace Voron.Impl.Backup
                     {
                         if (backupSuccess) // if backup succeeded we can remove journals
                         {
-                            if (journalFile.Number < lastWrittenLogFile &&  // prevent deletion of the current journal and journals with a greater number
+                            if (journalFile.Number < lastWrittenLogFile && // prevent deletion of the current journal and journals with a greater number
                                 journalFile.Number < lastSyncedJournal) // prevent deletion of journals that aren't synced with the data file
                             {
                                 journalFile.DeleteOnClose = true;
@@ -323,7 +327,8 @@ namespace Voron.Impl.Backup
                         if (swForProgress.ElapsedMilliseconds > 5000)
                         {
                             swForProgress.Restart();
-                            onProgress?.Invoke($"Restoring file: '{entry.Name}', {new Size(totalRead, SizeUnit.Bytes)}{(isZstd ? string.Empty : "/" + new Size(entry.Length, SizeUnit.Bytes))}");
+                            onProgress?.Invoke(
+                                $"Restoring file: '{entry.Name}', {new Size(totalRead, SizeUnit.Bytes)}{(isZstd ? string.Empty : "/" + new Size(entry.Length, SizeUnit.Bytes))}");
                         }
                     }, cancellationToken);
                 }
