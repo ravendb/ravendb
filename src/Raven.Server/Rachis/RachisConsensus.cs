@@ -223,7 +223,7 @@ namespace Raven.Server.Rachis
 
         public long CurrentTermIn(ClusterOperationContext ctx)
         {
-            if (_persistentState.TryGetClientState(out ClusterStateRecord cur) is false)
+            if (ctx.Transaction.InnerTransaction.LowLevelTransaction.TryGetClientState(out ClusterStateRecord cur))
                 return cur.Term;
             return -1;
         }
