@@ -80,13 +80,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         private static void AssertLoadDocumentHasConstantCollectionName(InvocationExpressionSyntax node)
         {
-            if (node.ArgumentList.Arguments.Count == 2)
-            {
-                var collectionExpression = node.ArgumentList.Arguments[1].Expression;
+            var collectionExpression = node.ArgumentList.Arguments[1].Expression;
                 
-                if (collectionExpression is not LiteralExpressionSyntax && IndexVersion >= IndexDefinitionBaseServerSide.IndexVersion.LoadDocumentWithDynamicCollectionNameShouldThrow)
-                    throw new ArgumentException("LoadDocument method has to be called with constant value as collection name");
-            }
+            if (collectionExpression is not LiteralExpressionSyntax && IndexVersion >= IndexDefinitionBaseServerSide.IndexVersion.LoadDocumentWithDynamicCollectionNameShouldThrow)
+                throw new ArgumentException("LoadDocument method has to be called with constant value as collection name");
         }
     }
 }
