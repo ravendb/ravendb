@@ -27,7 +27,7 @@ using Raven.Client.Util;
 namespace Raven.Client.Documents
 {
     ///<summary>
-    /// Extensions to the linq syntax
+    ///     Extensions to the LINQ syntax
     ///</summary>
     public static class LinqExtensions
     {
@@ -89,7 +89,6 @@ namespace Raven.Client.Documents
             this IQueryable<T> source,
             Expression<Func<T, bool>> predicate,
             int limit = int.MaxValue)
-        
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
@@ -114,6 +113,9 @@ namespace Raven.Client.Documents
             return Include(source, includeBuilder);
         }
 
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}"/>
+        /// <param name="includes">Includes builder. Specifies the documents/counters/revisions/time series to load from the server. See more at: <see cref="IncludeBuilder"/></param>.
+        /// <param name="source">The source for querying</param>
         private static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, IncludeBuilder includes)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -189,10 +191,7 @@ namespace Raven.Client.Documents
             return results;
         }
 
-        /// <summary>
-        /// Partition the query so we can intersect different parts of the query
-        /// across different index entries.
-        /// </summary>
+        /// <inheritdoc cref="IDocumentQueryBase{T,TSelf}.Intersect"/>
         public static IRavenQueryable<T> Intersect<T>(this IQueryable<T> self)
         {
             var currentMethod = typeof(LinqExtensions).GetMethod("Intersect");
@@ -206,7 +205,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// Project query results according to the specified type
+        ///     Projects query results into the specified type.
         /// </summary>
         public static IRavenQueryable<TResult> ProjectInto<TResult>(this IQueryable queryable)
         {
@@ -242,21 +241,13 @@ namespace Raven.Client.Documents
             return source.SuggestUsing(f.Suggestion);
         }
 
-        /// <summary>
-        /// Register the query as a lazy async query in the session and return a lazy async
-        /// instance that will evaluate the query only when needed
-        /// </summary>
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.LazilyAsync(Action{IEnumerable{T}})"/>
         public static Lazy<Task<IEnumerable<T>>> LazilyAsync<T>(this IQueryable<T> source)
         {
             return LazilyAsync(source, null);
         }
 
-        /// <summary>
-        /// Register the query as a lazy async query in the session and return a lazy async
-        /// instance that will evaluate the query only when needed
-        /// As well as a function to execute when the value is evaluated
-        /// </summary>
-
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.LazilyAsync(Action{IEnumerable{T}})"/>
         public static Lazy<Task<IEnumerable<T>>> LazilyAsync<T>(this IQueryable<T> source, Action<IEnumerable<T>> onEval)
         {
             var provider = source.Provider as IRavenQueryProvider;
@@ -266,20 +257,13 @@ namespace Raven.Client.Documents
             return provider.LazilyAsync(source.Expression, onEval);
         }
 
-        /// <summary>
-        /// Register the query as a lazy query in the session and return a lazy
-        /// instance that will evaluate the query only when needed
-        /// </summary>
+        /// <inheritdoc cref="IDocumentQueryBase{T}.Lazily(Action{IEnumerable{T}})"/>
         public static Lazy<IEnumerable<T>> Lazily<T>(this IQueryable<T> source)
         {
             return Lazily(source, null);
         }
 
-        /// <summary>
-        /// Register the query as a lazy query in the session and return a lazy
-        /// instance that will evaluate the query only when needed
-        /// As well as a function to execute when the value is evaluated
-        /// </summary>
+        /// <inheritdoc cref="IDocumentQueryBase{T}.Lazily(Action{IEnumerable{T}})"/>
         public static Lazy<IEnumerable<T>> Lazily<T>(this IQueryable<T> source, Action<IEnumerable<T>> onEval)
         {
             var provider = source.Provider as IRavenQueryProvider;
@@ -289,10 +273,7 @@ namespace Raven.Client.Documents
             return provider.Lazily(source.Expression, onEval);
         }
 
-        /// <summary>
-        /// Register the query as a lazy-count query in the session and return a lazy
-        /// instance that will evaluate the query only when needed
-        /// </summary>
+        /// <inheritdoc cref="IDocumentQueryBase{T}.CountLazily"/>
         public static Lazy<int> CountLazily<T>(this IQueryable<T> source)
         {
             if (source == null)
@@ -306,10 +287,7 @@ namespace Raven.Client.Documents
             return provider.CountLazily<T>(source.Expression);
         }
 
-        /// <summary>
-        /// Register the query as a lazy-count query in the session and return a lazy
-        /// instance that will evaluate the query only when needed
-        /// </summary>
+        /// <inheritdoc cref="IDocumentQueryBase{T}.LongCountLazily"/>
         public static Lazy<long> LongCountLazily<T>(this IQueryable<T> source)
         {
             if (source == null)
@@ -323,10 +301,7 @@ namespace Raven.Client.Documents
             return provider.LongCountLazily<T>(source.Expression);
         }
 
-        /// <summary>
-        /// Register the query as a lazy-count query in the session and return a lazy
-        /// instance that will evaluate the query only when needed
-        /// </summary>
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.CountLazilyAsync(CancellationToken)"/>
         public static Lazy<Task<int>> CountLazilyAsync<T>(this IQueryable<T> source, CancellationToken token = default)
         {
             if (source == null)
@@ -340,10 +315,7 @@ namespace Raven.Client.Documents
             return provider.CountLazilyAsync<T>(source.Expression, token);
         }
 
-        /// <summary>
-        /// Register the query as a lazy-count query in the session and return a lazy
-        /// instance that will evaluate the query only when needed
-        /// </summary>
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.LongCountLazilyAsync(CancellationToken)"/>
         public static Lazy<Task<long>> LongCountLazilyAsync<T>(this IQueryable<T> source, CancellationToken token = default)
         {
             if (source == null)
@@ -357,9 +329,7 @@ namespace Raven.Client.Documents
             return provider.LongCountLazilyAsync<T>(source.Expression, token);
         }
 
-        /// <summary>
-        /// Returns a list of results for a query asynchronously. 
-        /// </summary>
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.ToListAsync(CancellationToken)"/>
         public static Task<List<T>> ToListAsync<T>(this IQueryable<T> source, CancellationToken token = default)
         {
             var provider = source.Provider as IRavenQueryProvider;
@@ -370,9 +340,7 @@ namespace Raven.Client.Documents
             return documentQuery.ToListAsync(token);
         }
 
-        /// <summary>
-        /// Returns an array of results for a query asynchronously. 
-        /// </summary>
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.ToArrayAsync(CancellationToken)"/>
         public static Task<T[]> ToArrayAsync<T>(this IQueryable<T> source, CancellationToken token = default)
         {
             var provider = source.Provider as IRavenQueryProvider;
@@ -383,26 +351,7 @@ namespace Raven.Client.Documents
             return documentQuery.ToArrayAsync(token);
         }
 
-        /// <summary>
-        /// Determines whether a sequence contains any elements.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> that contains the elements to be counted.
-        /// </param>
-        /// <param name="token">The cancellation token.</param>
-        /// 
-        /// <returns>
-        /// true if the source sequence contains any elements; otherwise, false.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source is null.
-        /// </exception>
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.AnyAsync(CancellationToken)"/>
         public static Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
@@ -418,32 +367,8 @@ namespace Raven.Client.Documents
             return query.AnyAsync(token);
         }
 
-        /// <summary>
-        /// Determines whether any element of a sequence satisfies a condition.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> that contains the elements to be counted.
-        /// </param>
-        /// 
-        /// <param name="predicate">
-        /// A function to test each element for a condition.
-        /// </param>
-        /// 
-        /// <param name="token">The cancellation token.</param>
-        /// 
-        /// <returns>
-        /// true if any elements in the source sequence pass the test in the specified
-        /// predicate; otherwise, false.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source or predicate is null.
-        /// </exception>
+        /// <inheritdoc cref="AnyAsync{TSource}(IQueryable{TSource}, CancellationToken)"/>
+        /// <param name="predicate">A function to test each element for a condition.</param>
         public static Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default)
         {
             if (source == null)
@@ -460,30 +385,7 @@ namespace Raven.Client.Documents
             return query.AnyAsync(token);
         }
 
-        /// <summary>
-        /// Returns the number of elements in a sequence.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> that contains the elements to be counted.
-        /// </param>
-        /// <param name="token">The cancellation token.</param>
-        /// 
-        /// <returns>
-        /// The number of elements in the input sequence.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source is null.
-        /// </exception>
-        /// 
-        /// <exception cref="OverflowException">
-        /// The number of elements in source is larger than <see cref="Int32.MaxValue"/>.
-        /// </exception>
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.CountAsync(CancellationToken)"/>
         public static Task<int> CountAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
@@ -500,7 +402,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// Returns the number of elements in a sequence as int64 type.
+        ///     Returns the number of query results as int64 type.
         /// </summary>
         public static long LongCount<TSource>(this IQueryable<TSource> source)
         {
@@ -516,9 +418,7 @@ namespace Raven.Client.Documents
             return query.LongCount();
         }
 
-        /// <summary>
-        /// Returns the number of elements in a sequence as int64 type.
-        /// </summary>
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.LongCountAsync(CancellationToken)"/>
         public static Task<long> LongCountAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
@@ -533,36 +433,7 @@ namespace Raven.Client.Documents
             return query.LongCountAsync(token);
         }
 
-        /// <summary>
-        /// Returns the number of elements in the specified sequence that satisfies a condition.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> that contains the elements to be counted.
-        /// </param>
-        /// 
-        /// <param name="predicate">
-        /// A function to test each element for a condition.
-        /// </param>
-        /// 
-        /// <param name="token">The cancellation token.</param>
-        /// 
-        /// <returns>
-        /// The number of elements in the sequence that satisfies the condition in
-        /// the predicate function.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source or predicate is null.
-        /// </exception>
-        /// 
-        /// <exception cref="OverflowException">
-        /// The number of elements in source is larger than <see cref="Int32.MaxValue"/>.
-        /// </exception>
+        /// <inheritdoc cref="CountAsync{TSource}(IQueryable{TSource}, CancellationToken)"/>
         public static Task<int> CountAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default)
         {
             if (source == null)
@@ -579,31 +450,7 @@ namespace Raven.Client.Documents
             return query.CountAsync(token);
         }
 
-        /// <summary>
-        /// Asynchronously returns the first element of a sequence.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> to return the first element of.
-        /// </param>
-        /// <param name="token">The cancellation token.</param>
-        /// 
-        /// <returns>
-        /// The first element in source.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source is null.
-        /// </exception>
-        /// 
-        /// <exception cref="InvalidOperationException">
-        /// The source sequence is empty or source
-        /// is not of type <see cref="IRavenQueryable{T}"/>.
-        /// </exception>
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.FirstAsync(CancellationToken)"/>
         public static Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
@@ -619,36 +466,8 @@ namespace Raven.Client.Documents
             return query.FirstAsync(token);
         }
 
-        /// <summary>
-        /// Asynchronously returns the first element of a sequence that satisfies a specified condition.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> to return the first element of.
-        /// </param>
-        /// 
-        /// <param name="predicate">
-        /// A function to test each element for a condition.
-        /// </param>
-        /// <param name="token">The cancellation token.</param>
-        /// 
-        /// <returns>
-        /// The first element in source.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source or predicate is null.
-        /// </exception>
-        /// 
-        /// <exception cref="InvalidOperationException">
-        /// No element satisfies the condition in predicate,
-        /// the source sequence is empty or source
-        /// is not of type <see cref="IRavenQueryable{T}"/>.
-        /// </exception>
+        /// <inheritdoc cref="FirstAsync{TSource}(IQueryable{TSource}, CancellationToken)"/>
+        /// <param name="predicate">A function to test each element for a condition.</param>
         public static Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default)
         {
             if (source == null)
@@ -665,31 +484,7 @@ namespace Raven.Client.Documents
             return query.FirstAsync(token);
         }
 
-        /// <summary>
-        /// Asynchronously returns the first element of a sequence, or a default value if the sequence contains no elements.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> to return the first element of.
-        /// </param>
-        /// <param name="token">The cancellation token.</param>
-        /// 
-        /// <returns>
-        /// default(TSource) if source is empty; otherwise,
-        /// the first element in source.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source is null.
-        /// </exception>
-        /// 
-        /// <exception cref="InvalidOperationException">
-        /// source is not of type <see cref="IRavenQueryable{T}"/>.
-        /// </exception>
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.FirstOrDefaultAsync(CancellationToken)"/>
         public static Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
@@ -705,38 +500,8 @@ namespace Raven.Client.Documents
             return query.FirstOrDefaultAsync(token);
         }
 
-        /// <summary>
-        /// Asynchronously returns the first element of a sequence that satisfies a specified
-        /// condition or a default value if no such element is found.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> to return the first element of.
-        /// </param>
-        /// 
-        /// <param name="predicate">
-        /// A function to test each element for a condition.
-        /// </param>
-        /// <param name="token">The cancellation token.</param>
-        /// 
-        /// <returns>
-        /// default(TSource) if source is empty or
-        /// if no element passes the test specified by predicate;
-        /// otherwise, the first element in source that passes
-        /// the test specified by predicate.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source or predicate is null.
-        /// </exception>
-        /// 
-        /// <exception cref="InvalidOperationException">
-        /// source is not of type <see cref="IRavenQueryable{T}"/>.
-        /// </exception>
+        /// <inheritdoc cref="FirstOrDefaultAsync{TSource}(IQueryable{TSource}, CancellationToken)"/>
+        /// <param name="predicate">A function to test each element for a condition.</param>
         public static Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default)
         {
             if (source == null)
@@ -753,32 +518,7 @@ namespace Raven.Client.Documents
             return query.FirstOrDefaultAsync(token);
         }
 
-        /// <summary>
-        /// Asynchronously returns the only element of a sequence, and throws an exception if there
-        /// is not exactly one element in the sequence.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> to return the single element of.
-        /// </param>
-        /// <param name="token">The cancellation token.</param>
-        /// 
-        /// <returns>
-        /// The single element of the input sequence.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source is null.
-        /// </exception>
-        /// 
-        /// <exception cref="InvalidOperationException">
-        /// The source sequence is empty, has more than one element or
-        /// is not of type <see cref="IRavenQueryable{T}"/>.
-        /// </exception>
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.SingleAsync(CancellationToken)"/>
         public static Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
@@ -794,37 +534,8 @@ namespace Raven.Client.Documents
             return query.SingleAsync(token);
         }
 
-        /// <summary>
-        /// Asynchronously returns the only element of a sequence, and throws an exception if there
-        /// is not exactly one element in the sequence.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> to return the single element of.
-        /// </param>
-        /// 
-        /// <param name="predicate">
-        /// A function to test each element for a condition.
-        /// </param>
-        /// <param name="token">The cancellation token.</param>
-        /// 
-        /// <returns>
-        /// The single element of the input sequence that satisfies the condition in predicate.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source or predicate is null.
-        /// </exception>
-        /// 
-        /// <exception cref="InvalidOperationException">
-        /// No element satisfies the condition in predicate, more than
-        /// one element satisfies the condition, the source sequence is empty or
-        /// source is not of type <see cref="IRavenQueryable{T}"/>.
-        /// </exception>
+        /// <inheritdoc cref="SingleAsync{TSource}(IQueryable{TSource}, CancellationToken)"/>
+        /// <param name="predicate">A function to test each element for a condition.</param>
         public static Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default)
         {
             if (source == null)
@@ -841,34 +552,7 @@ namespace Raven.Client.Documents
             return query.SingleAsync(token);
         }
 
-        /// <summary>
-        /// Asynchronously returns the only element of a sequence, or a default value if the
-        /// sequence is empty; this method throws an exception if there is more than one
-        /// element in the sequence.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> to return the first element of.
-        /// </param>
-        /// <param name="token">The cancellation token.</param>
-        /// 
-        /// <returns>
-        /// The single element of the input sequence, or default(TSource)
-        /// if the sequence contains no elements.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source is null.
-        /// </exception>
-        /// 
-        /// <exception cref="InvalidOperationException">
-        /// source has more than one element or
-        /// is not of type <see cref="IRavenQueryable{T}"/>.
-        /// </exception>
+        /// <inheritdoc cref="IAsyncDocumentQueryBase{T}.SingleOrDefaultAsync(CancellationToken)"/>
         public static Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, CancellationToken token = default)
         {
             if (source == null)
@@ -884,39 +568,8 @@ namespace Raven.Client.Documents
             return query.SingleOrDefaultAsync(token);
         }
 
-        /// <summary>
-        /// Asynchronously returns the only element of a sequence that satisfies a specified
-        /// condition or a default value if no such element exists; this method throws an
-        /// exception if more than one element satisfies the condition.
-        /// </summary>
-        /// 
-        /// <typeparam name="TSource">
-        /// The type of the elements of source.
-        /// </typeparam>
-        /// 
-        /// <param name="source">
-        /// The <see cref="IRavenQueryable{T}"/> to return the first element of.
-        /// </param>
-        /// 
-        /// <param name="predicate">
-        /// A function to test each element for a condition.
-        /// </param>
-        /// 
-        /// <param name="token">The cancellation token.</param>
-        /// 
-        /// <returns>
-        /// The single element of the input sequence that satisfies the condition in predicate,
-        /// or default(TSource) if no such element is found.
-        /// </returns>
-        /// 
-        /// <exception cref="ArgumentNullException">
-        /// source or predicate is null.
-        /// </exception>
-        /// 
-        /// <exception cref="InvalidOperationException">
-        /// More than one element satisfies the condition in predicate
-        /// or source is not of type <see cref="IRavenQueryable{T}"/>.
-        /// </exception>
+        /// <inheritdoc cref="SingleOrDefaultAsync{TSource}(IQueryable{TSource}, CancellationToken)"/>
+        /// <param name="predicate">A function to test each element for a condition.</param>
         public static Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate, CancellationToken token = default)
         {
             if (source == null)
@@ -933,17 +586,11 @@ namespace Raven.Client.Documents
             return query.SingleOrDefaultAsync(token);
         }
 
-        /// <summary>        
-        /// Perform a search for documents which fields that match the searchTerms.
-        /// If there is more than a single term, each of them will be checked independently.        
-        /// </summary>
-        /// <typeparam name="T">The type of element of self</typeparam>
-        /// <param name="self">The <see cref="IQueryable{T}"/> to search on</param>
-        /// <param name="fieldSelector">Function returning the field to search on</param>
-        /// <param name="searchTerms">Field terms to search for, separated with whitespaces</param>
-        /// <param name="boost">Boost factor for sorting purposes</param>
-        /// <param name="options">Logical operator to use in relation to the previous filtering statement.</param>
-        /// <param name="operator">Determines the logical operator between all of the terms received in searchTerms parameter</param>
+        /// <inheritdoc cref="IFilterDocumentQueryBase{T, TSelf}.Search(string, string, SearchOperator)"/>
+        /// <param name="fieldSelector">Path to the field used for searching.</param>
+        /// <param name="boost">Defines boost value for documents matched by this search statement, increasing their score. By default, documents with higher score are
+        /// returned first.</param>
+        /// <param name="options">Defines a logical conjunction between this and previous search statement. Default: SearchOptions.Guess.</param>
         public static IRavenQueryable<T> Search<T>(this IQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms,
                                                    decimal boost = 1,
                                                    SearchOptions options = SearchOptions.Guess,
@@ -963,17 +610,8 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
-        /// <summary>        
-        /// Perform a search for documents which fields match the searchTerms array.
-        /// Each array element will be checked independently.        
-        /// </summary>
-        /// <typeparam name="T">The type of element of self</typeparam>
-        /// <param name="self">The <see cref="IQueryable{T}"/> to search on</param>
-        /// <param name="fieldSelector">Function returning the field to search on</param>
+        /// <inheritdoc cref="Search{T}(IQueryable{T}, Expression{Func{T, object}}, string, decimal, SearchOptions, SearchOperator)"/>
         /// <param name="searchTerms">Array of terms to search for.</param>
-        /// <param name="boost">Boost factor for sorting purposes</param>
-        /// <param name="options">Logical operator to use in relation to the previous filtering statement.</param>
-        /// <param name="operator">Determines the logical operator between all of the terms received in searchTerms parameter</param>
         public static IRavenQueryable<T> Search<T>(this IQueryable<T> self, Expression<Func<T, object>> fieldSelector, IEnumerable<string> searchTerms,
             decimal boost = 1,
             SearchOptions options = SearchOptions.Guess,
@@ -987,9 +625,7 @@ namespace Raven.Client.Documents
             return Search(self, fieldSelector, termToSearch, boost, options, @operator);
         }
 
-        /// <summary>
-        /// Perform an initial sort by lucene score.
-        /// </summary>
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByScore"/>
         public static IOrderedQueryable<T> OrderByScore<T>(this IQueryable<T> self)
         {
             var currentMethod = typeof(LinqExtensions).GetMethod(nameof(OrderByScore));
@@ -1002,7 +638,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// Perform an initial sort by lucene score.
+        ///     Performs secondary sorting of query results by score in ascending order.
         /// </summary>
         public static IOrderedQueryable<T> ThenByScore<T>(this IOrderedQueryable<T> self)
         {
@@ -1015,9 +651,7 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
-        /// <summary>
-        /// Perform an initial sort by lucene score descending.
-        /// </summary>
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByScoreDescending"/>
         public static IOrderedQueryable<T> OrderByScoreDescending<T>(this IQueryable<T> self)
         {
             var currentMethod = typeof(LinqExtensions).GetMethod(nameof(OrderByScoreDescending));
@@ -1030,7 +664,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// Perform an initial sort by lucene score descending.
+        ///     Performs secondary sorting of query results by score in descending order.
         /// </summary>
         public static IOrderedQueryable<T> ThenByScoreDescending<T>(this IOrderedQueryable<T> self)
         {
@@ -1044,7 +678,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// Returns the query results as a stream
+        ///     Returns the query results as a stream.
         /// </summary>
         public static void ToStream<T>(this IQueryable<T> self, Stream stream)
         {
@@ -1052,9 +686,8 @@ namespace Raven.Client.Documents
             var docQuery = queryProvider.ToDocumentQuery<T>(self.Expression);
             ToStream(docQuery, stream);
         }
-        /// <summary> 
-        /// Returns the query results as a stream
-        /// </summary>
+
+        /// <inheritdoc cref="ToStream{T}(IQueryable{T}, Stream)"/>
         public static void ToStream<T>(this IDocumentQuery<T> self, Stream stream)
         {
             var documentQuery = (DocumentQuery<T>)self;
@@ -1063,7 +696,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// Returns the query results as a stream
+        ///     Returns the query results as an asynchronous stream.
         /// </summary>
         public static async Task ToStreamAsync<T>(this IQueryable<T> self, Stream stream, CancellationToken token = default)
         {
@@ -1072,9 +705,7 @@ namespace Raven.Client.Documents
             await ToStreamAsync(docQuery, stream, token).ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Returns the query results as a stream
-        /// </summary>
+        /// <inheritdoc cref="ToStreamAsync{T}(IQueryable{T}, Stream, CancellationToken)"/>
         public static async Task ToStreamAsync<T>(this IAsyncDocumentQuery<T> self, Stream stream, CancellationToken token = default)
         {
             var documentQuery = (AbstractDocumentQuery<T, AsyncDocumentQuery<T>>)self;
@@ -1141,11 +772,18 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        /// <summary>
+        ///     Performs spatial query.
+        /// </summary>
+        /// <param name="path">Path to the spatial field used for querying.</param>
+        /// <param name="clause">Spatial criteria that will be executed on a given spatial field.</param>
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             return source.Spatial(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), clause);
         }
 
+        /// <inheritdoc cref="Spatial{T}(IQueryable{T}, Expression{Func{T, object}}, Func{SpatialCriteriaFactory, SpatialCriteria})"/>
+        /// <param name="fieldName">Name of the spatial field used for querying.</param>
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1157,11 +795,15 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="Spatial{T}(IQueryable{T}, Expression{Func{T, object}}, Func{SpatialCriteriaFactory, SpatialCriteria})"/>
+        /// <param name="field">Spatial field factory that returns spatial field used for querying.</param>
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             return source.Spatial(field(new DynamicSpatialFieldFactory<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions)), clause);
         }
 
+        /// <inheritdoc cref="Spatial{T}(IQueryable{T}, Expression{Func{T, object}}, Func{SpatialCriteriaFactory, SpatialCriteria})"/>
+        /// <param name="field">Dynamic spatial field used for querying.</param>
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, DynamicSpatialField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1173,11 +815,13 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistance(Func{DynamicSpatialFieldFactory{T}, DynamicSpatialField}, double, double)"/>
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude)
         {
             return source.OrderByDistance(field(new DynamicSpatialFieldFactory<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions)), latitude, longitude);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistance(DynamicSpatialField, double, double)"/>
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, DynamicSpatialField field, double latitude, double longitude)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1189,20 +833,25 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistance(Expression{Func{T, object}}, double, double)"/>
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude)
         {
             return OrderByDistance<T>(source, path, latitude, longitude, 0);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistance(Expression{Func{T, object}}, double, double, double)"/>
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude, double roundFactor)
         {
             return source.OrderByDistance(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), latitude, longitude, roundFactor);
         }
+
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistance(string, double, double)"/>
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
         {
             return OrderByDistance<T>(source, fieldName, latitude, longitude, 0);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistance(string, double, double, double)"/>
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude, double roundFactor)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1219,11 +868,13 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistance(Func{DynamicSpatialFieldFactory{T}, DynamicSpatialField}, string)"/>
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt)
         {
             return source.OrderByDistance(field(new DynamicSpatialFieldFactory<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions)), shapeWkt);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistance(DynamicSpatialField, string)"/>
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, DynamicSpatialField field, string shapeWkt)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1235,11 +886,13 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistance(Expression{Func{T, object}}, string)"/>
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt)
         {
             return source.OrderByDistance(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), shapeWkt);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistance(string, string)"/>
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1251,11 +904,13 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistanceDescending(Func{DynamicSpatialFieldFactory{T}, DynamicSpatialField}, double, double)"/>
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude)
         {
             return source.OrderByDistanceDescending(field(new DynamicSpatialFieldFactory<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions)), latitude, longitude);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistanceDescending(DynamicSpatialField, double, double)"/>
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, DynamicSpatialField field, double latitude, double longitude)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1269,20 +924,26 @@ namespace Raven.Client.Documents
                     Expression.Constant(longitude)));
             return (IOrderedQueryable<T>)queryable;
         }
+
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistanceDescending(Expression{Func{T, object}}, double, double)"/>
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude)
         {
             return OrderByDistanceDescending(source, path, latitude, longitude, 0);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistanceDescending(Expression{Func{T, object}}, double, double, double)"/>
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude, double roundFactor)
         {
             return source.OrderByDistanceDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), latitude, longitude, roundFactor);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistanceDescending(string, double, double)"/>
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
         {
             return OrderByDistanceDescending(source, fieldName, latitude, longitude, 0);
         }
+
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistanceDescending(string, double, double, double)"/>
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude, double roundFactor)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1299,11 +960,13 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistanceDescending(Func{DynamicSpatialFieldFactory{T}, DynamicSpatialField}, string)"/>
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt)
         {
             return source.OrderByDistanceDescending(field(new DynamicSpatialFieldFactory<T>(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions)), shapeWkt);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistanceDescending(DynamicSpatialField, string)"/>
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, DynamicSpatialField field, string shapeWkt)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1315,20 +978,25 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistanceDescending(Expression{Func{T, object}}, string)"/>
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt)
         {
             return OrderByDistanceDescending(source, path, shapeWkt, 0);
         }
+
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistanceDescending(Expression{Func{T, object}}, string, double)"/>
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt, double roundFactor)
         {
             return source.OrderByDistanceDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), shapeWkt, roundFactor);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistanceDescending(string, string)"/>
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
         {
             return OrderByDistanceDescending<T>(source, fieldName, shapeWkt, 0);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDistanceDescending(string, string, double)"/>
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, string shapeWkt, double roundFactor)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1344,11 +1012,13 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderBy{TValue}(Expression{Func{T, TValue}}, string)"/>
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string sorterName)
         {
             return source.OrderBy(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), sorterName);
         }
-
+        
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderBy(string, string)"/>
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, string path, string sorterName)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1360,11 +1030,13 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderBy{TValue}(Expression{Func{T, TValue}}, OrderingType)"/>
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
         {
             return source.OrderBy(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderBy(string, OrderingType)"/>
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1377,11 +1049,13 @@ namespace Raven.Client.Documents
 
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDescending{TValue}(Expression{Func{T, TValue}}, string)"/>
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string sorterName)
         {
             return source.OrderByDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), sorterName);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDescending(string, string)"/>
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, string path, string sorterName)
         {
             if (string.IsNullOrWhiteSpace(sorterName))
@@ -1396,11 +1070,13 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDescending{TValue}(Expression{Func{T, TValue}}, OrderingType)"/>
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
         {
             return source.OrderByDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering);
         }
 
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDescending(string, OrderingType)"/>
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1412,11 +1088,17 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        /// <summary>
+        ///     Performs secondary sorting of query results in ascending order.
+        /// </summary>
+        /// <param name="path">Path to the field to order the query results by.</param>
+        /// <param name="sorterName">Name of the custom sorter to be used.</param>
         public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, string sorterName)
         {
             return source.ThenBy(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), sorterName);
         }
 
+        /// <inheritdoc cref="ThenBy{T}(IOrderedQueryable{T}, Expression{Func{T, object}}, string)"/>
         public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, string path, string sorterName)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1428,11 +1110,14 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="ThenBy{T}(IOrderedQueryable{T}, Expression{Func{T, object}}, string)"/>
+        /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
         public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
         {
             return source.ThenBy(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering);
         }
 
+        /// <inheritdoc cref="ThenBy{T}(IOrderedQueryable{T}, Expression{Func{T, object}}, OrderingType)"/>
         public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1444,11 +1129,17 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        /// <summary>
+        ///     Performs secondary sorting of query results in descending order.
+        /// </summary>
+        /// <param name="path">Path to the field to order the query results by.</param>
+        /// <param name="sorterName">Name of the custom sorter to be used.</param>
         public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, string sorterName)
         {
             return source.ThenByDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), sorterName);
         }
 
+        /// <inheritdoc cref="ThenByDescending{T}(IOrderedQueryable{T}, Expression{Func{T, object}}, string)"/>
         public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, string path, string sorterName)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1460,11 +1151,14 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        /// <inheritdoc cref="ThenByDescending{T}(IOrderedQueryable{T}, Expression{Func{T, object}}, string)"/>
+        /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
         public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
         {
             return source.ThenByDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering);
         }
 
+        /// <inheritdoc cref="ThenByDescending{T}(IOrderedQueryable{T}, Expression{Func{T, object}}, OrderingType)"/>
         public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1499,6 +1193,7 @@ namespace Raven.Client.Documents
             return source.MoreLikeThis(f.MoreLikeThis);
         }
 
+        /// <inheritdoc cref="RavenQueryProvider{T}.ToDocumentQuery{TResult}(Expression)"/>
         public static IDocumentQuery<T> ToDocumentQuery<T>(this IQueryable<T> source)
         {
             var expression = ConvertExpressionIfNecessary(source);
@@ -1510,6 +1205,7 @@ namespace Raven.Client.Documents
             return ravenQueryInspector.GetDocumentQuery();
         }
 
+        /// <inheritdoc cref="RavenQueryProvider{T}.ToAsyncDocumentQuery{TResult}(Expression)"/>
         public static IAsyncDocumentQuery<T> ToAsyncDocumentQuery<T>(this IQueryable<T> source)
         {
             var expression = ConvertExpressionIfNecessary(source);
@@ -1521,6 +1217,7 @@ namespace Raven.Client.Documents
             return ravenQueryInspector.GetAsyncDocumentQuery();
         }
 
+        /// <inheritdoc cref="IPagingDocumentQueryBase{T, TSelf}.Skip(long)"/>
         public static IRavenQueryable<T> Skip<T>(this IQueryable<T> source, long count)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
