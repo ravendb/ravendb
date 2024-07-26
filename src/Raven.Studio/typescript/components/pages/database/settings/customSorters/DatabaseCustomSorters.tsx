@@ -10,7 +10,7 @@ import { useAppSelector } from "components/store";
 import { useAsync } from "react-async-hook";
 import { CounterBadge } from "components/common/CounterBadge";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { LicenseLimitReachStatus, getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
@@ -22,7 +22,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 
 export default function DatabaseCustomSorters() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const { databasesService, manageServerService } = useServices();
 

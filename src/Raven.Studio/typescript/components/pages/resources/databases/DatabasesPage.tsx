@@ -19,7 +19,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { databasesViewSelectors } from "components/pages/resources/databases/store/databasesViewSelectors";
 import { StickyHeader } from "components/common/StickyHeader";
 import { Icon } from "components/common/Icon";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import CreateDatabase, { CreateDatabaseMode } from "./partials/create/CreateDatabase";
 
 interface DatabasesPageProps {

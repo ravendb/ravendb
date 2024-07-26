@@ -1,5 +1,5 @@
 import { ConditionalPopover } from "components/common/ConditionalPopover";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import React from "react";
@@ -14,7 +14,7 @@ interface IntegrationsAddNewButtonProps {
 export default function IntegrationsAddNewButton(props: IntegrationsAddNewButtonProps) {
     const { isLicenseUpgradeRequired, addNewUser } = props;
 
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     return (
         <ConditionalPopover

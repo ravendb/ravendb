@@ -25,7 +25,7 @@ import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import * as yup from "yup";
 import { FormAceEditor, FormSelectCreatable } from "components/common/Form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 interface ConflictResolutionConfigPanelProps {
     initialConfig: ConflictResolutionCollectionConfig;
@@ -33,7 +33,7 @@ interface ConflictResolutionConfigPanelProps {
 
 export default function ConflictResolutionConfigPanel({ initialConfig }: ConflictResolutionConfigPanelProps) {
     const dispatch = useAppDispatch();
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
         (x) => x !== "@empty" && x !== "@hilo"
     );
@@ -175,7 +175,7 @@ function PanelActions({
     reset: () => void;
 }) {
     const dispatch = useAppDispatch();
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const discard = () => {
         dispatch(conflictResolutionActions.discardEdit(configId));

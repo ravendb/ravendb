@@ -40,7 +40,7 @@ import useBoolean from "hooks/useBoolean";
 import { Icon } from "components/common/Icon";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import ResetIndexesButton from "components/pages/database/indexes/list/partials/ResetIndexesButton";
 
 export interface IndexPanelProps {
@@ -91,7 +91,7 @@ function getLockColor(index: IndexSharedInfo) {
 export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTMLDivElement>) {
     const { index, selected, toggleSelection, hasReplacement, globalIndexingStatus, resetIndex } = props;
 
-    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);

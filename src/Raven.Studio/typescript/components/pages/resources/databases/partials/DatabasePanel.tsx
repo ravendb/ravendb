@@ -29,7 +29,7 @@ import { DatabaseDistribution } from "components/pages/resources/databases/parti
 import { ValidDatabasePropertiesPanel } from "components/pages/resources/databases/partials/ValidDatabasePropertiesPanel";
 import { locationAwareLoadableData } from "components/models/common";
 import DatabaseUtils from "components/utils/DatabaseUtils";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import genUtils from "common/generalUtils";
 import databasesManager from "common/shell/databasesManager";
 import { AccessIcon } from "components/pages/resources/databases/partials/AccessIcon";
@@ -105,7 +105,9 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     //TODO: show commands errors!
 
-    const dbAccess: databaseAccessLevel = useAppSelector(accessManagerSelectors.effectiveDatabaseAccessLevel(db.name));
+    const getEffectiveDatabaseAccessLevel = useAppSelector(accessManagerSelectors.getEffectiveDatabaseAccessLevel);
+    const dbAccess = getEffectiveDatabaseAccessLevel(db.name);
+
     const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
 
     const { reportEvent } = useEventsCollector();
@@ -134,7 +136,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     const isOperatorOrAbove = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
     const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess(db.name));
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)(db.name);
 
     const canNavigateToDatabase = !db.isDisabled;
 

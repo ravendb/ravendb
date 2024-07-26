@@ -5,7 +5,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import CreateDatabase, {
     CreateDatabaseMode,
 } from "components/pages/resources/databases/partials/create/CreateDatabase";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
 
 export function NoDatabases() {
