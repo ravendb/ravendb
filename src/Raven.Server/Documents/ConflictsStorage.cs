@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -600,7 +600,8 @@ namespace Raven.Server.Documents
                             tvb.Add(documentFlags);
                             if (conflictsTable.Set(tvb))
                             {
-                                var state = (DocumentTransactionCache)tx.LowLevelTransaction.CurrentStateRecord.ClientState ?? new DocumentTransactionCache();
+                                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache state) is false)
+                                    state = new DocumentTransactionCache();
                                 state.ConflictsCount++;
                                 tx.LowLevelTransaction.UpdateClientState(state);
                             }
@@ -737,8 +738,12 @@ namespace Raven.Server.Documents
 
         public long NumberOfConflicts(DocumentsOperationContext context)
         {
-            var record = context.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord;
-            return record.ClientState is DocumentTransactionCache dtc ? dtc.ConflictsCount : 0;
+            if (context.Transaction.InnerTransaction.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
+            {
+                return cache.ConflictsCount;
+            }
+
+            return 0;
         }
     }
 }

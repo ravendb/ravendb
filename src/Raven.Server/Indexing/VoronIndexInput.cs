@@ -41,7 +41,7 @@ namespace Raven.Server.Indexing
         {
             if (transaction.IsWriteTransaction == false)
             {
-                if (transaction.LowLevelTransaction.CurrentStateRecord.ClientState is IndexStateRecord cache)
+                if (transaction.LowLevelTransaction.TryGetClientState(out IndexStateRecord cache))
                 {
                     if (cache.DirectoriesByName.TryGetValue(directory.Name, out var files))
                     {

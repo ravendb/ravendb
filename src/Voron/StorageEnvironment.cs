@@ -1649,6 +1649,17 @@ namespace Voron
             Debug.Assert(ActiveTransactions.AllTransactions.Count == 0 , "ActiveTransactions.AllTransactions.Count == 0");
             _currentStateRecord = _currentStateRecord with { DataPagerState = dataPagerState };
         }
+
+        public bool TryGetClientState<T>(out T value)
+        {
+            if(_currentStateRecord.ClientState is T t)
+            {
+                value = t;
+                return true;
+            }
+            value = default;
+            return false;
+        }
     }
 
     public sealed class StorageEnvironmentWithType

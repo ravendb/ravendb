@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             using var _ = _index._contextPool.AllocateOperationContext(out TransactionOperationContext context);
             context.OpenReadTransaction();
-            if (context.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState is IndexStateRecord rec)
+            if (context.Transaction.InnerTransaction.LowLevelTransaction.TryGetClientState(out IndexStateRecord rec))
                 return rec.PrefixesOfReduceOutputDocumentsToDelete;
             return ImmutableDictionary<string, string>.Empty;
         }

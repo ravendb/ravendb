@@ -873,7 +873,8 @@ namespace Raven.Server.ServerWide
             using (var wtx = context.OpenWriteTransaction())
             {
                 PublishedServerUrls = PublishedServerUrls.Read(context);
-                var clusterState = (ClusterStateRecord)wtx.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState;
+                if (wtx.InnerTransaction.LowLevelTransaction.TryGetClientState(out ClusterStateRecord clusterState) is false)
+                    throw new InvalidOperationException("Unable to find cluster client state, should not be possible");
                 wtx.InnerTransaction.LowLevelTransaction.UpdateClientState(clusterState with
                 {
                     DefaultIdentityPartsSeparator = LoadDefaultIdentityPartsSeparator(context)

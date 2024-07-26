@@ -474,7 +474,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.CurrentStateRecord.ClientState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
                     return cache.LastDocumentEtag;
                 }
@@ -487,7 +487,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.CurrentStateRecord.ClientState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
                     return cache.LastTombstoneEtag;
                 }
@@ -499,7 +499,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.CurrentStateRecord.ClientState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
                     return cache.LastConflictEtag;
                 }
@@ -511,7 +511,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.CurrentStateRecord.ClientState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
                     return cache.LastRevisionsEtag;
                 }
@@ -523,7 +523,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.CurrentStateRecord.ClientState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
                     return cache.LastAttachmentsEtag;
                 }
@@ -536,7 +536,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.CurrentStateRecord.ClientState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
                     return cache.LastCounterEtag;
                 }
@@ -548,7 +548,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.CurrentStateRecord.ClientState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
                     return cache.LastTimeSeriesEtag;
                 }
@@ -569,7 +569,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.CurrentStateRecord.ClientState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
                     return cache.LastEtag;
                 }
@@ -1336,7 +1336,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.CurrentStateRecord.ClientState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
                     if (cache.LastEtagsByCollection.TryGetValue(collection, out var col))
                         return col.LastDocumentEtag;
@@ -1353,7 +1353,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.CurrentStateRecord.ClientState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
                     if (cache.LastEtagsByCollection.TryGetValue(collection, out var col))
                         return col.LastChangeVector;
@@ -1395,7 +1395,7 @@ namespace Raven.Server.Documents
         {
             if (tx.IsWriteTransaction == false)
             {
-                if (tx.LowLevelTransaction.CurrentStateRecord.ClientState is DocumentTransactionCache cache)
+                if (tx.LowLevelTransaction.TryGetClientState(out DocumentTransactionCache cache))
                 {
                     if (cache.LastEtagsByCollection.TryGetValue(collection, out var col))
                         return col.LastTombstoneEtag;

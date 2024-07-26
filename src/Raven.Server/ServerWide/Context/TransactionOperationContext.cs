@@ -51,13 +51,9 @@ namespace Raven.Server.ServerWide.Context
 
         private static IndexStateRecord GetIndexStateFrom(LowLevelTransaction llt)
         {
-            var rec = llt.CurrentStateRecord.ClientState switch
-            {
-                IndexStateRecord r => r,
-                null => IndexStateRecord.Empty,
-                _ => throw new ArgumentOutOfRangeException("Expected IndexTransactionalStateRecord, got " + llt.CurrentStateRecord.ClientState.GetType())
-            };
-            return rec;
+            if (llt.TryGetClientState(out IndexStateRecord r) is false)
+                r = IndexStateRecord.Empty;
+            return r;
         }
 
         public HandleReferencesBase.ReferenceState GetReferenceStateFor(HandleReferencesBase.ActionType actionType, string collection)

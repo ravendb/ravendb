@@ -47,7 +47,14 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract void DisposeWriters();
         public abstract void Dispose();
 
-        public virtual IndexStateRecord UpdateIndexCache(Transaction tx) => tx.LowLevelTransaction.CurrentStateRecord.ClientState as IndexStateRecord;
-        
+        public virtual IndexStateRecord UpdateIndexCache(Transaction tx)
+        {
+            if (tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord record))
+            {
+                return record;
+            }
+            throw new InvalidOperationException("Unable to find index ClientState, should not be possible");
+        }
+
     }
 }

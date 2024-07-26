@@ -205,8 +205,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 foreach (LowLevelTransaction llt in _index._indexStorage.Environment().ActiveTransactions.Enumerate())
                 {
-                    var stateRecord = (IndexStateRecord)llt.CurrentStateRecord.ClientState;
-                    stateRecord.LuceneIndexState.Recreate(CreateIndexSearcher);
+                    if (llt.TryGetClientState(out IndexStateRecord stateRecord))
+                    {
+                        stateRecord.LuceneIndexState.Recreate(CreateIndexSearcher);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("Unable to find index ClientState, should not be possible");
+                    }
                 }
             }
 
@@ -271,7 +277,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 dirs[name] = GetLuceneFilesChunks(tx, name);
             }
 
-            var rec = (IndexStateRecord)tx.LowLevelTransaction.CurrentStateRecord.ClientState ?? IndexStateRecord.Empty;
+            if(tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord rec) is false)
+                rec = IndexStateRecord.Empty;
 
             return rec with { Collections = GetCollectionEtags(tx), DirectoriesByName = dirs.ToImmutable() };
         }
@@ -391,7 +398,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 dic.Add(field.Key, CreateSuggestions(dir));
             }
 
-            var stateRecord = (IndexStateRecord)tx.LowLevelTransaction.CurrentStateRecord.ClientState;
+            if (tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord stateRecord) is false)
+                throw new InvalidOperationException("Unable to find index ClientState, should not be possible");
             tx.LowLevelTransaction.UpdateClientState(stateRecord with
             {
                 LuceneSuggestionStates = dic.ToImmutable()
@@ -459,7 +467,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             CheckDisposed();
             CheckInitialized();
 
-            var stateRecord = (IndexStateRecord)readTransaction.LowLevelTransaction.CurrentStateRecord.ClientState;
+            if (readTransaction.LowLevelTransaction.TryGetClientState(out IndexStateRecord stateRecord) is false)
+                throw new InvalidOperationException("Unable to find index ClientState, should not be possible");
             if (!_suggestionsDirectories.TryGetValue(field, out LuceneVoronDirectory directory) || 
                 !stateRecord.LuceneSuggestionStates.TryGetValue(field, out var state))
                 throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
@@ -479,8 +488,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         internal override void RecreateSearcher(Transaction asOfTx)
         {
-            var record = asOfTx.LowLevelTransaction.CurrentStateRecord;
-            var stateRecord = (IndexStateRecord)record.ClientState ?? IndexStateRecord.Empty;
+            if (asOfTx.LowLevelTransaction.TryGetClientState(out IndexStateRecord stateRecord) is false)
+                stateRecord = IndexStateRecord.Empty;
             asOfTx.LowLevelTransaction.UpdateClientState(stateRecord with { LuceneIndexState = new LuceneIndexState(CreateIndexSearcher) });
         }
 
@@ -489,7 +498,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_suggestionsDirectories.Count == 0)
                 return;
 
-            var record = (IndexStateRecord)asOfTx.LowLevelTransaction.CurrentStateRecord.ClientState;
+            if (asOfTx.LowLevelTransaction.TryGetClientState(out IndexStateRecord record) is false)
+                throw new InvalidOperationException("Unable to find index ClientState, should not be possible");
             var builder = record.LuceneSuggestionStates.ToBuilder();
             foreach (var suggestion in _suggestionsDirectories)
             {
@@ -617,7 +627,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _currentIndexState = state;
             try
             {
-                var record = (IndexStateRecord)tx.LowLevelTransaction.CurrentStateRecord.ClientState;
+                if (tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord record) is false)
+                    throw new InvalidOperationException("Unable to find index ClientState, should not be possible");
                 return record.LuceneIndexState.IndexSearcher.Value;
             }
             finally

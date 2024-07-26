@@ -336,7 +336,17 @@ namespace Raven.Server.Documents
 
         public char IdentityPartsSeparator
         {
-            get => _localIdentityPartsSeparator ?? ((ClusterStateRecord)_serverStore._env.CurrentStateRecord.ClientState).DefaultIdentityPartsSeparator;
+            get
+            {
+                if (_localIdentityPartsSeparator != null)
+                    return _localIdentityPartsSeparator.Value;
+                if (_serverStore._env.TryGetClientState(out ClusterStateRecord rec))
+                {
+                    return rec.DefaultIdentityPartsSeparator;
+                }
+
+                throw new InvalidOperationException("Unable to get cluster state from environment ClientState, should not be possible");
+            }
         }
 
         public ClientConfiguration ClientConfiguration { get; private set; }
