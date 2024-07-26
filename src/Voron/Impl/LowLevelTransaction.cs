@@ -291,6 +291,18 @@ namespace Voron.Impl
 
         internal EnvironmentStateRecord CurrentStateRecord => _envRecord;
 
+        public bool TryGetClientState<T>(out T value)
+        {
+            if (_envRecord.ClientState is T t)
+            {
+                value = t;
+                return true;
+            }
+
+            value = default;
+            return false;
+        }
+
         internal void UpdateRootsIfNeeded(Tree root)
         {
             //can only happen during initial transaction that creates Root and FreeSpaceRoot trees

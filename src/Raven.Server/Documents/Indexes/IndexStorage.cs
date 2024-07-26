@@ -550,7 +550,7 @@ namespace Raven.Server.Documents.Indexes
 
             public long ReadLastProcessedReferenceEtag(Transaction tx, string collection, CollectionName referencedCollection)
             {
-                if (tx.IsWriteTransaction == false && tx.LowLevelTransaction.CurrentStateRecord.ClientState is IndexStateRecord cache)
+                if (tx.IsWriteTransaction == false && tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord cache))
                 {
                     switch (_type)
                     {
@@ -593,7 +593,7 @@ namespace Raven.Server.Documents.Indexes
 
             public long ReadLastProcessedReferenceTombstoneEtag(Transaction tx, string collection, CollectionName referencedCollection)
             {
-                if (tx.IsWriteTransaction == false && tx.LowLevelTransaction.CurrentStateRecord.ClientState is IndexStateRecord cache)
+                if (tx.IsWriteTransaction == false && tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord cache))
                 {
                     switch (_type)
                     {
@@ -774,13 +774,10 @@ namespace Raven.Server.Documents.Indexes
         public long ReadLastProcessedTombstoneEtag(RavenTransaction tx, string collection)
         {
             var txi = tx.InnerTransaction;
-            if (txi.IsWriteTransaction == false)
+            if (txi.IsWriteTransaction == false && txi.LowLevelTransaction.TryGetClientState(out IndexStateRecord cache))
             {
-                if (txi.LowLevelTransaction.CurrentStateRecord.ClientState is IndexStateRecord cache)
-                {
-                    if (cache.Collections.TryGetValue(collection, out var val))
+                if (cache.Collections.TryGetValue(collection, out var val))
                         return val.LastProcessedTombstoneEtag;
-                }
             }
 
             using (Slice.From(txi.Allocator, collection, out Slice collectionSlice))
@@ -792,13 +789,10 @@ namespace Raven.Server.Documents.Indexes
         public long ReadLastIndexedEtag(RavenTransaction tx, string collection)
         {
             var txi = tx.InnerTransaction;
-            if (txi.IsWriteTransaction == false)
+            if (txi.IsWriteTransaction == false && txi.LowLevelTransaction.TryGetClientState(out IndexStateRecord cache))
             {
-                if (txi.LowLevelTransaction.CurrentStateRecord.ClientState is IndexStateRecord cache)
-                {
-                    if (cache.Collections.TryGetValue(collection, out var val))
+                if (cache.Collections.TryGetValue(collection, out var val))
                         return val.LastIndexedEtag;
-                }
             }
 
             using (Slice.From(txi.Allocator, collection, out Slice collectionSlice))

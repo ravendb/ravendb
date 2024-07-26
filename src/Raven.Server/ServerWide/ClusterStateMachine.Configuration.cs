@@ -24,7 +24,8 @@ public sealed partial class ClusterStateMachine
             using (var rec = context.ReadObject(command.ValueToJson(), "inner-val"))
                 PutValueDirectly(context, command.Name, rec, index);
 
-            var stateRecord = (ClusterStateRecord)context.Transaction.InnerTransaction.LowLevelTransaction.CurrentStateRecord.ClientState;
+            if (context.Transaction.InnerTransaction.LowLevelTransaction.TryGetClientState(out ClusterStateRecord stateRecord) is false)
+                throw new InvalidOperationException("Unable to find cluster client state, should not be possible");
             context.Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState(stateRecord with
             {
                 DefaultIdentityPartsSeparator = ServerStore.LoadDefaultIdentityPartsSeparator(command.Value)
