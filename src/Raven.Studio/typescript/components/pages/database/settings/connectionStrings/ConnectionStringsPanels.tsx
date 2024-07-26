@@ -1,5 +1,5 @@
 import { HrHeader } from "components/common/HrHeader";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
 import React from "react";
 import { useDispatch } from "react-redux";
@@ -17,7 +17,7 @@ interface ConnectionStringsPanelsProps {
 
 export default function ConnectionStringsPanels({ connections, connectionsType }: ConnectionStringsPanelsProps) {
     const dispatch = useDispatch();
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     if (connections.length === 0) {
         return null;

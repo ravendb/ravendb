@@ -1,6 +1,6 @@
 import { FormInput, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { CreateDatabaseRegularFormData as FormData } from "../createDatabaseRegularValidation";
 import { useAppSelector } from "components/store";

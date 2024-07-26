@@ -10,7 +10,7 @@ import {
     RichPanelDetails,
 } from "components/common/RichPanel";
 import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 import useBoolean from "components/hooks/useBoolean";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
@@ -51,7 +51,7 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
 
     const isNew = !formState.defaultValues.name;
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const { value: isEditMode, toggle: toggleIsEditMode } = useBoolean(isNew);
     const { value: isTestMode, toggle: toggleIsTestMode } = useBoolean(false);
@@ -202,7 +202,7 @@ function CustomSortersActions({
     isSubmitting,
     asyncDeleteSorter,
 }: CustomSortersActionsProps) {
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     if (!hasDatabaseAdminAccess) {
         return isEditMode ? (

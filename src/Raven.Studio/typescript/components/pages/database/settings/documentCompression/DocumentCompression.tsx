@@ -28,11 +28,11 @@ import { SelectOption } from "components/common/select/Select";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 export default function DocumentCompression() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const { databasesService } = useServices();
 
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(

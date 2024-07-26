@@ -22,7 +22,7 @@ import {
 import { Collapse, Input } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 type ReplicationSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskReplicationSinkInfo>;
 
@@ -60,7 +60,7 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
 export function ReplicationSinkPanel(props: ReplicationSinkPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
 
     const { forCurrentDatabase } = useAppUrls();

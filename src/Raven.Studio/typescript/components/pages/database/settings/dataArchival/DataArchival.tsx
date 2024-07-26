@@ -29,11 +29,11 @@ import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUti
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 export default function DataArchival() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const hasDataArchival = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
 
     const { databasesService } = useServices();

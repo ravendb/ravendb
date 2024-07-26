@@ -25,7 +25,7 @@ import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 import { Collapse, Input } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 type OlapEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskOlapEtlInfo>;
 
@@ -57,7 +57,7 @@ function Details(props: OlapEtlPanelProps & { canEdit: boolean }) {
 export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;

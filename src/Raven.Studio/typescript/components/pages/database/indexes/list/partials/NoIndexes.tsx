@@ -2,11 +2,11 @@
 import { EmptySet } from "components/common/EmptySet";
 import { Button } from "reactstrap";
 import React from "react";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
 
 export function NoIndexes() {
-    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
     const { forCurrentDatabase } = useAppUrls();
 
     return (
