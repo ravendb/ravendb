@@ -58,9 +58,6 @@ mkdir runtimes/win-x86/native -ErrorAction Ignore > $null
 Copy-Item ../../libs/libzstd/libzstd.win.x86.dll runtimes/win-x86/native/libzstd.dll
 mkdir runtimes/win-x64/native -ErrorAction Ignore > $null
 Copy-Item ../../libs/libzstd/libzstd.win.x64.dll runtimes/win-x64/native/libzstd.dll
-mkdir runtimes/linux-x86/native -ErrorAction Ignore > $null
-# we don't have such a file - that said, I don't know we _have_ a x86 release for Linux
-# cp ../../libs/libzstd/libzstd.linux.x86.so runtimes/linux-x86/native/libzstd.so
 mkdir runtimes/linux-x64/native -ErrorAction Ignore > $null
 Copy-Item ../../libs/libzstd/libzstd.linux.x64.so runtimes/linux-x64/native/libzstd.so
 mkdir runtimes/linux-arm/native -ErrorAction Ignore > $null
@@ -78,9 +75,6 @@ zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86-windows -o runtimes/win-x86/
 
 Write-Output "Building Windows x64"
 zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86_64-windows -o runtimes/win-x64/native/librvnpal.dll  $shared $win_files 
-
-Write-Output "Building Linux x86"
-zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target x86-linux-gnu -o runtimes/linux-x86/native/librvnpal.so  $shared $posix_files "src/posix/linuxonly.c" 
 
 Write-Output "Building Linux x64"
 zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target x86_64-linux-gnu -o runtimes/linux-x64/native/librvnpal.so $shared $posix_files "src/posix/linuxonly.c" 
