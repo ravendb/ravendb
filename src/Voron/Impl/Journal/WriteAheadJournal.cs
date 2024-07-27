@@ -1273,8 +1273,12 @@ namespace Voron.Impl.Journal
             {
                 int index = 0;
                 var pageNumsBuffer = ArrayPool<long>.Shared.Rent(record.ScratchPagesTable.Count);
+                var lastFlushedTx = _lastFlushed.TransactionId;
                 foreach (var (pageNum, pageValue) in record.ScratchPagesTable)
                 {
+                    if(lastFlushedTx >= pageValue.AllocatedInTransaction)
+                        continue; // We already wrote those pages to disk in a previous flush... 
+                    
                     Debug.Assert(pageValue.AllocatedInTransaction <= record.TransactionId, "pageValue.AllocatedInTransaction <= record.TransactionId");
                     if (pageValue.IsDeleted)
                     {
