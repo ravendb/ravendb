@@ -3,7 +3,6 @@ using System.Linq;
 using Raven.Server.Commercial;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.ServerWide.Commands
@@ -46,10 +45,6 @@ namespace Raven.Server.ServerWide.Commands
             ReBalanceCores(licenseLimits);
 
             return context.ReadObject(licenseLimits.ToJson(), "update-license-limits");
-        }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, ClusterOperationContext context)
-        {
         }
 
         private void RemoveNotInClusterNodes(LicenseLimits licenseLimits)

@@ -5,7 +5,6 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.ConnectionStrings
@@ -46,10 +45,6 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         {
             record.RavenConnectionStrings.Remove(ConnectionStringName);
         }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
-        }
     }
 
     public class RemoveSqlConnectionStringCommand : RemoveConnectionStringCommand<SqlConnectionString>
@@ -68,10 +63,6 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         {
             record.SqlConnectionStrings.Remove(ConnectionStringName);
         }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
-        }
     }
 
     public class RemoveElasticSearchConnectionStringCommand : RemoveConnectionStringCommand<ElasticSearchConnectionString>
@@ -88,10 +79,6 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.ElasticSearchConnectionStrings.Remove(ConnectionStringName);
-        }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
         }
     }
 
@@ -111,10 +98,6 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         {
             record.OlapConnectionStrings.Remove(ConnectionStringName);
         }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
-        }
     }
 
     public class RemoveQueueConnectionStringCommand : RemoveConnectionStringCommand<QueueConnectionString>
@@ -131,10 +114,6 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.QueueConnectionStrings.Remove(ConnectionStringName);
-        }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
         }
     }
 }

@@ -1,7 +1,6 @@
-﻿using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Exceptions.Commercial;
+﻿using System.Collections.Generic;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -40,23 +39,6 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Definition)] = Definition.ToJson();
-        }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
-            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54201, serverStore) == false)
-                return;
-
-            var licenseStatus = serverStore.Cluster.GetLicenseStatus(context);
-
-            if (licenseStatus.HasPullReplicationAsHub)
-                return;
-
-            if (databaseRecord.HubPullReplications.Count == 0)
-                return;
-
-            throw new LicenseLimitException(LimitType.PullReplicationAsHub, "Your license doesn't support adding Hub Replication feature.");
-
         }
     }
 }

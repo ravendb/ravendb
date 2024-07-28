@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Raven.Client.ServerWide;
 using Raven.Server.Extensions;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes;
@@ -48,9 +47,5 @@ public class PutIndexHistoryCommand : UpdateDatabaseCommand
         json[nameof(IndexName)] = IndexName;
         json[nameof(IndexHistory)] = histJson;
         json[nameof(RevisionsToKeep)] = RevisionsToKeep;
-    }
-
-    public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-    {
     }
 }

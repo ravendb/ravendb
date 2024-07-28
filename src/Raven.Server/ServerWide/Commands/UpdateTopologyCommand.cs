@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Client.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -42,10 +41,6 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(Topology)] = Topology.ToJson();
             json[nameof(RaftCommandIndex)] = RaftCommandIndex;
             json[nameof(At)] = At;
-        }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
+﻿using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -28,7 +27,5 @@ namespace Raven.Server.ServerWide.Commands
         protected UpdateValueCommand(string uniqueRequestId) : base(uniqueRequestId)
         {
         }
-
-        public abstract void AssertLicenseLimits(ServerStore serverStore, ClusterOperationContext context);
     }
 }

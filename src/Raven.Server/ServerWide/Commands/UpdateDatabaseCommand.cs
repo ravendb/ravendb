@@ -56,7 +56,5 @@ namespace Raven.Server.ServerWide.Commands
                 throw new RachisApplyException($"Task name `{name}` is already in use", e);
             }
         }
-
-        public abstract void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context);
     }
 }
