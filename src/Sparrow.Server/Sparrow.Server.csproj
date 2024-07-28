@@ -49,6 +49,7 @@
     </PackageReference>
     <PackageReference Include="RavenDB.Pal" Version="6.2.1" />
     <PackageReference Include="RavenDB.Pal" Version="6.2.6" />
+    <PackageReference Include="Raven.Pal" Version="6.2.9" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
