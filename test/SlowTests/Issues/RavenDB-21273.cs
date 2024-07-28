@@ -26,12 +26,12 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class _21273 : RavenTestBase
+    public class RavenDB_21273 : RavenTestBase
     {
         private const string RL_COMM = "RAVEN_LICENSE_COMMUNITY";
         private const string RL_PRO = "RAVEN_LICENSE_PROFESSIONAL";
 
-        public _21273(ITestOutputHelper output) : base(output)
+        public RavenDB_21273(ITestOutputHelper output) : base(output)
         {
         }
 
@@ -58,7 +58,6 @@ namespace SlowTests.Issues
                             AdditionalAssemblies = { AdditionalAssembly.FromNuGet("System.Drawing.Common", "4.7.0") }
                         }
                     }));
-                    WaitForUserToContinueTheTest(store);
                     var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 

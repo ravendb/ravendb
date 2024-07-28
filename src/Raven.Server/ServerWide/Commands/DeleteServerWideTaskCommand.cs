@@ -59,10 +59,6 @@ namespace Raven.Server.ServerWide.Commands
             return context.ReadObject(previousValue, Name);
         }
 
-        public override void AssertLicenseLimits(ServerStore serverStore, ClusterOperationContext context)
-        {
-        }
-
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
             AssertClusterAdmin(isClusterAdmin);

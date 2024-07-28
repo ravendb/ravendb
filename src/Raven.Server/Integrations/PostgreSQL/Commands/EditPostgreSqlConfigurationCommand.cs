@@ -1,9 +1,7 @@
 ﻿using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Integrations.PostgreSQL.Commands
@@ -36,10 +34,6 @@ namespace Raven.Server.Integrations.PostgreSQL.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Configuration)] = Configuration.ToJson();
-        }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
         }
     }
 }

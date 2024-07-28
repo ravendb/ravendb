@@ -1,5 +1,4 @@
 ﻿using Raven.Client.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -22,10 +21,6 @@ namespace Raven.Server.ServerWide.Commands
         {
             json[nameof(DatabaseName)] = DatabaseName;
             json[nameof(Solver)] = Solver.ToJson();
-        }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
         }
     }
 }

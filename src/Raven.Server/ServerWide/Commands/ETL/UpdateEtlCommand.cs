@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -58,10 +57,6 @@ namespace Raven.Server.ServerWide.Commands.ETL
             new AddRavenEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
 
         }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
-        }
     }
 
     public class UpdateSqlEtlCommand : UpdateEtlCommand<SqlEtlConfiguration, SqlConnectionString>
@@ -82,10 +77,6 @@ namespace Raven.Server.ServerWide.Commands.ETL
             new AddSqlEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
 
         }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
-        }
     }
 
     public class UpdateOlapEtlCommand : UpdateEtlCommand<OlapEtlConfiguration, OlapConnectionString>
@@ -104,10 +95,6 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.OlapEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddOlapEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
-        }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
         }
     }
     
@@ -128,10 +115,6 @@ namespace Raven.Server.ServerWide.Commands.ETL
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.ElasticSearchEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddElasticSearchEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
-        }
     }
 
     public class UpdateQueueEtlCommand : UpdateEtlCommand<QueueEtlConfiguration, QueueConnectionString>
@@ -150,10 +133,6 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.QueueEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddQueueEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
-        }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
         }
     }
 }

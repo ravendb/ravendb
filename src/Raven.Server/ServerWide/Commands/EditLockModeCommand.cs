@@ -1,5 +1,4 @@
 ﻿using Raven.Client.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -27,10 +26,6 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(LockMode)] = LockMode;
-        }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
         }
     }
 }

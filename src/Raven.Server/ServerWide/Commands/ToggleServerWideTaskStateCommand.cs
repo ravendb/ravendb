@@ -3,7 +3,6 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Rachis;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -44,10 +43,6 @@ namespace Raven.Server.ServerWide.Commands
             };
 
             return context.ReadObject(previousValue, Name);
-        }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, ClusterOperationContext context)
-        {
         }
 
         private string GetDisabledPropertyName()

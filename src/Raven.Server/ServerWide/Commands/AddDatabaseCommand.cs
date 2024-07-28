@@ -1,10 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.ServerWide;
-using Raven.Server.ServerWide.Commands.ETL;
-using Raven.Server.ServerWide.Commands.Indexes;
-using Raven.Server.ServerWide.Commands.PeriodicBackup;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -63,31 +59,6 @@ namespace Raven.Server.ServerWide.Commands
             djv[nameof(IsRestore)] = IsRestore;
 
             return djv;
-        }
-
-        public void AssertLicenseLimitsAddDatabase(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
-            List<UpdateDatabaseCommand> _licenseLimitsCommandsForCreateDatabase = new()
-            {
-                new PutIndexesCommand(),
-                new PutIndexCommand(),
-                new UpdatePeriodicBackupCommand(),
-                new UpdateExternalReplicationCommand(),
-                new EditTimeSeriesConfigurationCommand(),
-                new EditDocumentsCompressionCommand(),
-                new UpdatePullReplicationAsSinkCommand(),
-                new UpdatePullReplicationAsHubCommand(),
-                new AddRavenEtlCommand(),
-                new AddSqlEtlCommand(),
-                new AddOlapEtlCommand(),
-                new AddElasticSearchEtlCommand(),
-                new AddQueueEtlCommand()
-            };
-
-            foreach (var command in _licenseLimitsCommandsForCreateDatabase)
-            {
-                command.AssertLicenseLimits(serverStore, databaseRecord, context);
-            }
         }
     }
 }

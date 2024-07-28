@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -63,10 +62,6 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(RaftCommandIndex)] = RaftCommandIndex;
             json[nameof(DatabaseId)] = DatabaseId;
-        }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
         }
     }
 }

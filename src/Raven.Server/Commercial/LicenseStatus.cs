@@ -9,8 +9,6 @@ namespace Raven.Server.Commercial
 {
     public class LicenseStatus
     {
-        public static LicenseStatus Default = new LicenseStatus();
-
         public Guid? Id { get; set; }
 
         public string LicensedTo { get; set; }

@@ -157,9 +157,5 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(TaskId)] = TypeConverter.ToBlittableSupportedType(TaskId);
             json[nameof(TaskType)] = TypeConverter.ToBlittableSupportedType(TaskType);
         }
-
-        public override void AssertLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
-        {
-        }
     }
 }
