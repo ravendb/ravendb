@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Elastic.Clients.Elasticsearch;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
@@ -46,33 +47,8 @@ namespace Raven.Server.Documents.Revisions
                     return;
                 }
 
-                ForceDeleteAllRevisionsForInternal(context, lowerId, prefixSlice, collectionName, shouldSkip: null, maxDeletesUponUpdate: null);
+                ForceDeleteAllRevisionsForInternal(context, lowerId, prefixSlice, collectionName, shouldSkip: null, maxDeletesUponUpdate: null, tombstoneFlags: DocumentFlags.FromResharding | DocumentFlags.Artificial);
             }
-        }
-
-
-        private long ForceDeleteAllRevisionsForInternal(DocumentsOperationContext context, Slice lowerId, Slice prefixSlice, CollectionName collectionName, long? maxDeletesUponUpdate,
-            Func<Document, bool> shouldSkip)
-        {
-            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-            var newEtag = _documentsStorage.GenerateNextEtag();
-            var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-
-            var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
-            var result = new DeleteOldRevisionsResult();
-            var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate, shouldSkip, result);
-            var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
-            var deleted = DeleteRevisionsInternal(context, table, lowerId, collectionName, changeVector, lastModifiedTicks, revisionsPreviousCount, revisionsToDelete,
-                result, tombstoneFlags: DocumentFlags.FromResharding | DocumentFlags.Artificial);
-            IncrementCountOfRevisions(context, prefixSlice, -deleted);
-
-            return deleted;
-        }
-
-        private static bool IsRevisionInRange(Document revision, DateTime? after, DateTime? before)
-        {
-            return (after.HasValue == false || revision.LastModified > after.Value) && 
-                   (before.HasValue == false || revision.LastModified < before.Value);
         }
 
     }

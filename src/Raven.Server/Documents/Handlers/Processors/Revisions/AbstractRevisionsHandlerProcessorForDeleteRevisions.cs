@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected abstract Task<long> DeleteRevisions(DeleteRevisionsRequest request, OperationCancelToken token);
+        protected abstract Task<long> DeleteRevisionsAsync(DeleteRevisionsRequest request, OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 
             using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
-                deletedCount = await DeleteRevisions(request, token);
+                deletedCount = await DeleteRevisionsAsync(request, token);
             }
 
             if (LoggingSource.AuditLog.IsInfoEnabled)

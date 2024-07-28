@@ -1881,6 +1881,33 @@ namespace Raven.Server.Documents.Revisions
             MinimumRevisionsToKeep = 0
         };
 
+        public bool IsAllowedToDeleteRevisionsManually(string collection, DocumentFlags flags)
+        {
+            var configuration = GetRevisionsConfiguration(collection: collection, flags: flags);
+            if (configuration == ConflictConfiguration.Default)
+                return false;
+
+            return configuration.AllowDeleteRevisionsManually;
+        }
+
+        private long ForceDeleteAllRevisionsForInternal(DocumentsOperationContext context, Slice lowerId, Slice prefixSlice, CollectionName collectionName, long? maxDeletesUponUpdate,
+            Func<Document, bool> shouldSkip, DocumentFlags tombstoneFlags = DocumentFlags.None)
+        {
+            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+            var newEtag = _documentsStorage.GenerateNextEtag();
+            var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+
+            var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
+            var result = new DeleteOldRevisionsResult();
+            var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate, shouldSkip, result);
+            var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
+            var deleted = DeleteRevisionsInternal(context, table, lowerId, collectionName, changeVector, lastModifiedTicks, revisionsPreviousCount, revisionsToDelete,
+                result, tombstoneFlags);
+            IncrementCountOfRevisions(context, prefixSlice, -deleted);
+
+            return deleted;
+        }
+
         internal long EnforceConfigurationFor(DocumentsOperationContext context, string id, bool skipForceCreated, ref bool moreWork)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
@@ -2022,8 +2049,6 @@ namespace Raven.Server.Documents.Revisions
         {
             return await RevertRevisions(before, window, onProgress, collections: null, token);
         }
-
-
 
         public Task RevertDocumentsToRevisionsAsync(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
         {
