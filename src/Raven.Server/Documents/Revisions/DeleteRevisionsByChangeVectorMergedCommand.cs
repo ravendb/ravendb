@@ -4,18 +4,22 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Voron.Data.Tables;
 using Voron;
+using Elastic.Clients.Elasticsearch;
 
 namespace Raven.Server.Documents.Revisions;
 public partial class RevisionsStorage
 {
     internal sealed class DeleteRevisionsByChangeVectorMergedCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
+        private readonly string _id;
+
         private readonly List<string> _cvs;
 
         public long? Result { get; private set; } // number of deleted revisions
 
-        public DeleteRevisionsByChangeVectorMergedCommand(List<string> cvs)
+        public DeleteRevisionsByChangeVectorMergedCommand(string id, List<string> cvs)
         {
+            _id = id;
             _cvs = cvs;
         }
 
@@ -40,7 +44,7 @@ public partial class RevisionsStorage
             foreach (var cv in _cvs)
             {
                 if (string.IsNullOrEmpty(cv))
-                    throw new ArgumentException("Change Vector is null or empty");
+                    throw new ArgumentException($"Change Vector is null or empty (document id: '{_id}')");
 
                 Document revision;
                 using (Slice.From(context.Allocator, cv, out var cvSlice))
@@ -50,8 +54,11 @@ public partial class RevisionsStorage
                         continue;
                     }
 
-                    revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
+                    revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId | DocumentFields.Id);
                 }
+
+                if (revision.Id != _id)
+                    throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't belong to the doc \"{_id}\" but to the doc \"{revision.Id}\"");
 
                 using (DocumentIdWorker.GetSliceFromId(context, revision.LowerId, out var lowerId))
                 using (revisionsStorage.GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
@@ -81,21 +88,24 @@ public partial class RevisionsStorage
 
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new DeleteRevisionsByChangeVectorMergedCommandDto(_cvs);
+            return new DeleteRevisionsByChangeVectorMergedCommandDto(_id, _cvs);
         }
 
         private sealed class DeleteRevisionsByChangeVectorMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsByChangeVectorMergedCommand>
         {
+            private readonly string _id;
+
             private readonly List<string> _cvs;
 
-            public DeleteRevisionsByChangeVectorMergedCommandDto(List<string> cvs)
+            public DeleteRevisionsByChangeVectorMergedCommandDto(string id, List<string> cvs)
             {
+                _id = id;
                 _cvs = cvs;
             }
 
             public DeleteRevisionsByChangeVectorMergedCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new DeleteRevisionsByChangeVectorMergedCommand(_cvs);
+                return new DeleteRevisionsByChangeVectorMergedCommand(_id, _cvs);
             }
         }
     }
