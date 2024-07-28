@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Raven.Client.Documents.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using static Raven.Server.Documents.Revisions.RevisionsStorage;
 
 namespace Raven.Server.Documents.Handlers.Processors.Revisions
 {
@@ -17,12 +18,33 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected override Task<long> DeleteRevisions(DeleteRevisionsRequest request, OperationCancelToken token)
+        protected override Task<long> DeleteRevisionsAsync(DeleteRevisionsRequest request, OperationCancelToken token)
         {
-            if(request.RevisionsChangeVecotors.IsNullOrEmpty()==false)
-                return RequestHandler.Database.DocumentsStorage.RevisionsStorage.DeleteRevisionsByChangeVectorManuallyAsync(request.RevisionsChangeVecotors);
+            if (request.RevisionsChangeVectors.IsNullOrEmpty() == false)
+                return DeleteRevisionsByChangeVectorAsync(request.RevisionsChangeVectors);
 
-            return RequestHandler.Database.DocumentsStorage.RevisionsStorage.DeleteRevisionsByDocumentIdManuallyAsync(request.DocumentId, request.MaxDeletes, request.After, request.Before);
+            return DeleteRevisionsByDocumentIdAsync(request.DocumentId, request.MaxDeletes,
+                request.After, request.Before);
+        }
+
+        private async Task<long> DeleteRevisionsByChangeVectorAsync(List<string> cvs)
+        {
+            if (cvs == null || cvs.Count == 0)
+                return 0;
+
+            var cmd = new DeleteRevisionsByChangeVectorMergedCommand(cvs);
+            await RequestHandler.Database.TxMerger.Enqueue(cmd);
+            return cmd.Result.HasValue ? cmd.Result.Value : 0;
+        }
+
+        private async Task<long> DeleteRevisionsByDocumentIdAsync(string id, long maxDeletes, DateTime? after, DateTime? before)
+        {
+            if (string.IsNullOrEmpty(id))
+                return 0;
+
+            var cmd = new DeleteRevisionsByDocumentIdMergedCommand(id, maxDeletes, after, before);
+            await RequestHandler.Database.TxMerger.Enqueue(cmd);
+            return cmd.Result.HasValue ? cmd.Result.Value : 0;
         }
     }
 }

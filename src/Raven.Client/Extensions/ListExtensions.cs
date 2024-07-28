@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Extensions
 {
-    public static class ListExtensions
+    internal static class ListExtensions
     {
         public static bool IsNullOrEmpty<T>(this List<T> list)
         {

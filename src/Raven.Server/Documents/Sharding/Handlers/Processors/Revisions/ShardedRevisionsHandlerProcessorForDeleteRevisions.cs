@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
         {
         }
 
-        protected override async Task<long> DeleteRevisions(DeleteRevisionsRequest request, OperationCancelToken token)
+        protected override async Task<long> DeleteRevisionsAsync(DeleteRevisionsRequest request, OperationCancelToken token)
         {
             if (string.IsNullOrEmpty(request.DocumentId) == false)
             {

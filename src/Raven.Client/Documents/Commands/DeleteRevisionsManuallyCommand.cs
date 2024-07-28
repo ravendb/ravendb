@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Commands
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/revisions/delete";
+            url = $"{node.Url}/databases/{node.Database}/revisions/";
 
             return new HttpRequestMessage
             {
@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Commands
     internal class DeleteRevisionsRequest
     {
         // Either!
-        public List<string> RevisionsChangeVecotors { get; set; }
+        public List<string> RevisionsChangeVectors { get; set; }
 
         // Or!
         public string DocumentId { get; set; }
@@ -58,14 +58,14 @@ namespace Raven.Client.Documents.Commands
 
         internal void Validate()
         {
-            if (string.IsNullOrEmpty(DocumentId) && RevisionsChangeVecotors.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(DocumentId) && RevisionsChangeVectors.IsNullOrEmpty())
             {
-                throw new ArgumentNullException($"{nameof(RevisionsChangeVecotors)}, {nameof(DocumentId)}", "request 'DocumentIds' and 'RevisionsChangeVecotors' cannot be both null or empty.");
+                throw new ArgumentNullException($"{nameof(RevisionsChangeVectors)}, {nameof(DocumentId)}", "request 'DocumentIds' and 'RevisionsChangeVecotors' cannot be both null or empty.");
             }
 
-            if (string.IsNullOrEmpty(DocumentId) == false && RevisionsChangeVecotors.IsNullOrEmpty() == false)
+            if (string.IsNullOrEmpty(DocumentId) == false && RevisionsChangeVectors.IsNullOrEmpty() == false)
             {
-                throw new ArgumentException($"{nameof(RevisionsChangeVecotors)}, {nameof(DocumentId)}", "The request contains values for both 'DocumentId' and 'RevisionsChangeVectors'. You can only provide one of them, the other must be null or empty.");
+                throw new ArgumentException($"{nameof(RevisionsChangeVectors)}, {nameof(DocumentId)}", "The request contains values for both 'DocumentId' and 'RevisionsChangeVectors'. You can only provide one of them, the other must be null or empty.");
             }
 
             if (string.IsNullOrEmpty(DocumentId) == false)
@@ -77,10 +77,10 @@ namespace Raven.Client.Documents.Commands
         internal void ValidateDocumentId()
         {
             if (MaxDeletes <= 0)
-                throw new ArgumentException(nameof(DocumentId), "request 'MaxDeletes' have to be greater then 0.");
+                throw new ArgumentException(nameof(MaxDeletes), "request 'MaxDeletes' have to be greater then 0.");
 
             if (After.HasValue && Before.HasValue && After >= Before)
-                throw new ArgumentException(nameof(DocumentId), "'After' must be greater then 'Before'.");
+                throw new ArgumentException($"{nameof(After)}, {nameof(Before)}", "'After' must be greater then 'Before'.");
         }
     }
 }
