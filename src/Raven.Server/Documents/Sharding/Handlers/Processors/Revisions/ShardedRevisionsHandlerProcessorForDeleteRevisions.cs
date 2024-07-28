@@ -16,24 +16,17 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 
         protected override async Task<long> DeleteRevisionsAsync(DeleteRevisionsRequest request, OperationCancelToken token)
         {
-            if (string.IsNullOrEmpty(request.DocumentId) == false)
+            var cmd = new DeleteRevisionsManuallyCommand(request);
+            int shardNumber;
+
+            var config = RequestHandler.DatabaseContext.DatabaseRecord.Sharding;
+            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var cmd = new DeleteRevisionsManuallyCommand(request);
-                int shardNumber;
-
-                var config = RequestHandler.DatabaseContext.DatabaseRecord.Sharding;
-                using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                {
-                    shardNumber = ShardHelper.GetShardNumberFor(config, context, request.DocumentId);
-                }
-
-                var result = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber, token.Token);
-                return result.TotalDeletes;
+                shardNumber = ShardHelper.GetShardNumberFor(config, context, request.DocumentId);
             }
 
-            var op = new ShardedDeleteRevisionsManuallyOperation(request);
-            var result2 = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, token.Token);
-            return result2.TotalDeletes;
+            var result = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber, token.Token);
+            return result.TotalDeletes;
         }
     }
 }

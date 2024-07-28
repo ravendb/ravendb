@@ -45,7 +45,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             }
 
             if (LoggingSource.AuditLog.IsInfoEnabled)
-                RequestHandler.LogAuditFor("Database", "DELETE", $"{RequestHandler.DatabaseName} - {deletedCount} revisions had been deleted manually.");
+            {
+                RequestHandler.LogAuditFor("Database", "DELETE",
+                    $"{RequestHandler.DatabaseName} - {deletedCount} revisions of '{request.DocumentId}' had been deleted manually" +
+                    (request.After.HasValue || request.Before.HasValue ? 
+                        $", in the range {request.After?.ToString() ?? "start"} to {request.Before?.ToString() ?? "end"}" : string.Empty));
+            }
 
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))

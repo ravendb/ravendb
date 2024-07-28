@@ -31,14 +31,20 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// of revisions by setting <c>AllowDeleteRevisionsManually</c> to <c>true</c>.
         /// </remarks>
 
-        public DeleteRevisionsManuallyOperation(List<string> revisionsChangeVecotors)
+        public DeleteRevisionsManuallyOperation(string documentId, List<string> revisionsChangeVecotors)
         {
             if (revisionsChangeVecotors == null)
             {
                 throw new ArgumentNullException(nameof(revisionsChangeVecotors), "'revisionsChangeVecotors' cannot be both null or empty.");
             }
 
-            _request = new DeleteRevisionsRequest { RevisionsChangeVectors = revisionsChangeVecotors };
+            _request = new DeleteRevisionsRequest
+            {
+                DocumentId = documentId,
+                RevisionsChangeVectors = revisionsChangeVecotors
+            };
+
+            _request.Validate();
         }
 
         /// <summary>
@@ -81,7 +87,7 @@ namespace Raven.Client.Documents.Operations.Revisions
                 Before = before
             };
 
-            _request.ValidateDocumentId();
+            _request.Validate();
         }
 
         public RavenCommand<Result> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)

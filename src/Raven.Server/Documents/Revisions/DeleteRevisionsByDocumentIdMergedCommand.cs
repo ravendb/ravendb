@@ -21,9 +21,9 @@ public partial class RevisionsStorage
 
         public long? Result { get; private set; } // number of deleted revisions
 
-        public DeleteRevisionsByDocumentIdMergedCommand(string ids, long maxDeletes, DateTime? after, DateTime? before)
+        public DeleteRevisionsByDocumentIdMergedCommand(string id, long maxDeletes, DateTime? after, DateTime? before)
         {
-            _id = ids;
+            _id = id;
             _maxDeletes = maxDeletes;
             _after = after;
             _before = before;

@@ -21,27 +21,21 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         protected override Task<long> DeleteRevisionsAsync(DeleteRevisionsRequest request, OperationCancelToken token)
         {
             if (request.RevisionsChangeVectors.IsNullOrEmpty() == false)
-                return DeleteRevisionsByChangeVectorAsync(request.RevisionsChangeVectors);
+                return DeleteRevisionsByChangeVectorAsync(request.DocumentId, request.RevisionsChangeVectors);
 
             return DeleteRevisionsByDocumentIdAsync(request.DocumentId, request.MaxDeletes,
                 request.After, request.Before);
         }
 
-        private async Task<long> DeleteRevisionsByChangeVectorAsync(List<string> cvs)
+        private async Task<long> DeleteRevisionsByChangeVectorAsync(string id, List<string> cvs)
         {
-            if (cvs == null || cvs.Count == 0)
-                return 0;
-
-            var cmd = new DeleteRevisionsByChangeVectorMergedCommand(cvs);
+            var cmd = new DeleteRevisionsByChangeVectorMergedCommand(id, cvs);
             await RequestHandler.Database.TxMerger.Enqueue(cmd);
             return cmd.Result.HasValue ? cmd.Result.Value : 0;
         }
 
         private async Task<long> DeleteRevisionsByDocumentIdAsync(string id, long maxDeletes, DateTime? after, DateTime? before)
         {
-            if (string.IsNullOrEmpty(id))
-                return 0;
-
             var cmd = new DeleteRevisionsByDocumentIdMergedCommand(id, maxDeletes, after, before);
             await RequestHandler.Database.TxMerger.Enqueue(cmd);
             return cmd.Result.HasValue ? cmd.Result.Value : 0;
