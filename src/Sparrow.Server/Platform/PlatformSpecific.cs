@@ -35,30 +35,12 @@ namespace Sparrow.Server.Platform
 
                 Interlocked.Add(ref Sparrow.Utils.NativeMemory._totalAllocatedMemory, size);
 
-                if (PlatformDetails.RunningOnPosix)
-                {
-                    // we pass NULL (IntPtr.Zero) as the first parameter (address / start) so the kernel chooses the(page-aligned) address at which to create the mapping
+                var rc = Pal.rvn_mmap_anonymous(out void* ptr, (ulong)size, out var errorCode);
 
-                    var pageAlignedMemory = Syscall.mmap64(IntPtr.Zero, (UIntPtr)size, MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                        MmapFlags.MAP_PRIVATE | MmapFlags.MAP_ANONYMOUS, -1, 0L);
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, "Could not allocate memory");
 
-                    if (pageAlignedMemory.ToInt64() == -1)
-                    {
-                        var err = Marshal.GetLastWin32Error();
-                        Syscall.ThrowLastError(err,
-                            $"Could not allocate memory (allocation size: {size / Constants.Size.Kilobyte:#,#0} kb)");
-                    }
-
-                    return (byte*)pageAlignedMemory;
-                }
-
-                var allocate4KbAlignedMemory = Win32MemoryProtectMethods.VirtualAlloc(null, (UIntPtr)size, Win32MemoryProtectMethods.AllocationType.COMMIT,
-                    Win32MemoryProtectMethods.MemoryProtection.READWRITE);
-
-                if (allocate4KbAlignedMemory == null)
-                    ThrowFailedToAllocate();
-
-                return allocate4KbAlignedMemory;
+                return (byte*)ptr;
             }
 
             public static void Free4KbAlignedMemory(byte* ptr, long size, Sparrow.Utils.NativeMemory.ThreadStats stats)
@@ -70,20 +52,11 @@ namespace Sparrow.Server.Platform
 
                 Interlocked.Add(ref Sparrow.Utils.NativeMemory._totalAllocatedMemory, -size);
                 
-                if (PlatformDetails.RunningOnPosix)
-                {
-                    var result = Syscall.munmap((IntPtr)ptr, (UIntPtr)(uint)size);
-                    if (result == -1)
-                    {
-                        var err = Marshal.GetLastWin32Error();
-                        Syscall.ThrowLastError(err, "Failed to munmap ");
-                    }
+                
+                var rc = Pal.rvn_mumap_anonymous(ptr, (ulong)size, out var errorCode);
 
-                    return;
-                }
-
-                if (Win32MemoryProtectMethods.VirtualFree(ptr, UIntPtr.Zero, Win32MemoryProtectMethods.FreeType.MEM_RELEASE) == false)
-                    ThrowFailedToFree();
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, "Could not free memory");
             }
 
             [DoesNotReturn]

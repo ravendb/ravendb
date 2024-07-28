@@ -150,4 +150,11 @@ rvn_get_path_disk_space(const char * path, uint64_t* total_free_bytes, uint64_t*
 PRIVATE int64_t
 _nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size);
 
+
+EXPORT int32_t
+rvn_mmap_anonymous(void** address, uint64_t size, int32_t *detailed_error_code);
+
+EXPORT int32_t
+rvn_mumap_anonymous(void* address,  uint64_t size, int32_t *detailed_error_code);
+
 #endif
