@@ -17,6 +17,7 @@ import { collectionsTrackerSelectors } from "components/common/shell/collections
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import menu from "common/shell/menu";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 interface UseStudioSearchSyncRegisterParams {
     omniSearch: OmniSearch<StudioSearchItem, StudioSearchItemType>;
@@ -31,6 +32,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const allDatabaseNames = useAppSelector(databaseSelectors.allDatabaseNames);
     const collectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
+    const getCanHandleOperation = useAppSelector(accessManagerSelectors.getCanHandleOperation);
 
     const { appUrl } = useAppUrls();
 
@@ -128,10 +130,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
         menuLeafs
             .filter((item) => item.search?.isExcluded !== true)
             .forEach((item) => {
-                const canHandle = item.requiredAccess
-                    ? accessManager.canHandleOperation(item.requiredAccess, activeDatabaseName)
-                    : true;
-
+                const canHandle = item.requiredAccess ? getCanHandleOperation(item.requiredAccess) : true;
                 if (!canHandle) {
                     return;
                 }
@@ -165,7 +164,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
                 searchItems.filter((x) => x.type === type)
             );
         });
-    }, [activeDatabaseName, mainMenu, omniSearch, goToMenuItem, getMenuItemType]);
+    }, [activeDatabaseName, mainMenu, omniSearch, goToMenuItem, getMenuItemType, getCanHandleOperation]);
 }
 
 const databaseRoutePrefix = "databases/";
