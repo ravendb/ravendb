@@ -1641,6 +1641,8 @@ namespace Voron
 
         internal void UpdateJournal(JournalFile file, long last4KWrite)
         {
+            // this should only happen during recovery, never during active operations
+            Debug.Assert(ActiveTransactions.AllTransactions.Count == 0 , "ActiveTransactions.AllTransactions.Count == 0");
             _currentStateRecord = _currentStateRecord with { Journal = (file, last4KWrite) };
         }
 
