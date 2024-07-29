@@ -77,14 +77,6 @@ export default function StepShardingPrefixes() {
                 <Icon icon="plus" />
                 Add prefix
             </Button>
-
-            <div className="d-flex justify-content-center mt-3">
-                <Alert color="warning">
-                    Sharding prefixes can be defined only when creating a database, and cannot be modified.
-                    <br />
-                    Make sure everything is set up correctly.
-                </Alert>
-            </div>
         </div>
     );
 }
