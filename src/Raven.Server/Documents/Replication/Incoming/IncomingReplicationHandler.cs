@@ -749,7 +749,8 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             private void RecordDatabaseChangeVector(DocumentsOperationContext context)
             {
-                if (context.DocumentDatabase.ReplicationLoader.IncomingHandlers.Any() == false)
+                var handlers = context.DocumentDatabase.ReplicationLoader.IncomingHandlers;
+                if (handlers == null || handlers.Any() == false)
                 {
                     if (_replicationInfo.Logger.IsInfoEnabled)
                         _replicationInfo.Logger.Info("Failed to retrieve incoming replication handler instance.");
@@ -764,13 +765,13 @@ namespace Raven.Server.Documents.Replication.Incoming
                     incomingHandler = context.DocumentDatabase.ReplicationLoader.IncomingHandlers.Single(i =>
                         i.ConnectionInfo.SourceDatabaseId == _replicationInfo.SourceDatabaseId);
                 }
-                catch (InvalidOperationException e)
+                catch (Exception e)
                 {
                     if (_replicationInfo.Logger.IsInfoEnabled)
                         _replicationInfo.Logger.Info(
                             $"Failed to retrieve a unique incoming replication handler instance for SourceDatabaseId: {_replicationInfo.SourceDatabaseId}.", e);
 
-                    throw;
+                    return;
                 }
 
                 var stats = incomingHandler.GetLatestReplicationPerformance();
