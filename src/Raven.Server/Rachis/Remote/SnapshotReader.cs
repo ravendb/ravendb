@@ -72,12 +72,14 @@ namespace Raven.Server.Rachis.Remote
             return BitConverter.ToInt64(Buffer, 0);
         }
 
+        public Size ReadSize => new Size(_totalBytes, SizeUnit.Bytes);
+
         public virtual void ReadExactly(int size)
         {
             _totalBytes += size;
             if (++_readAttempts % 256 == 0)
             {
-                _logger.Record($"Read snapshot total size {new Size(_totalBytes, SizeUnit.Bytes)}");
+                _logger.Record($"Consumed {ReadSize} of the snapshot");
             }
 
             if (Buffer.Length < size)
