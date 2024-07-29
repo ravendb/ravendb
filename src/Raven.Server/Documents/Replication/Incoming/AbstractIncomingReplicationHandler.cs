@@ -525,7 +525,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                         }
                         else
                         {
-                            Logger.Info("Failed to receive documents replication batch. This is not supposed to happen, and is likely a bug.", e);
+                            Logger.Info("Failed to receive documents replication batch.", e);
                         }
                     }
                     throw;
