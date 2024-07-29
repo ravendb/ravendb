@@ -136,22 +136,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                     operationsCount++;
                 }
 
-                var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
-                if (conflictStatus != ConflictStatus.Update)
-                {
-                    if (string.IsNullOrEmpty(_connectionInfo.SourceDatabaseBase64Id) == false)
-                    {
-                        var result = ChangeVectorUtils.TryUpdateChangeVector(_connectionInfo.SourceTag, _connectionInfo.SourceDatabaseBase64Id, _lastDocumentEtag, current);
-                        if (result.IsValid)
-                        {
-                            context.LastDatabaseChangeVector = context.GetChangeVector(result.ChangeVector);
-                        }
-                    }
-
-                    return operationsCount;
-                }
-
                 if (TryUpdateChangeVector(context))
                     operationsCount++;
 
@@ -173,7 +157,18 @@ namespace Raven.Server.Documents.Replication.Incoming
                 var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
                 if (conflictStatus != ConflictStatus.Update)
+                {
+                    if (string.IsNullOrEmpty(_connectionInfo.SourceDatabaseBase64Id) == false)
+                    {
+                        var result = ChangeVectorUtils.TryUpdateChangeVector(_connectionInfo.SourceTag, _connectionInfo.SourceDatabaseBase64Id, _lastDocumentEtag, current);
+                        if (result.IsValid)
+                        {
+                            context.LastDatabaseChangeVector = context.GetChangeVector(result.ChangeVector);
+                        }
+                    }
+
                     return false;
+                }
 
                 context.LastDatabaseChangeVector = current.MergeWith(_changeVector, context);
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
