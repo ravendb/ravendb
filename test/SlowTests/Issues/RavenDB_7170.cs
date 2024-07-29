@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,10 +20,12 @@ namespace SlowTests.Issues
         [Fact]
         public void Indexing_func_must_return_anonymous_object()
         {
-            var ex = Assert.Throws<IndexCompilationException>(() => IndexCompiler.Compile(new Bad_index_1().CreateIndexDefinition(), 0));
+            const long currentIndexVersion = IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion;
+            
+            var ex = Assert.Throws<IndexCompilationException>(() => IndexCompiler.Compile(new Bad_index_1().CreateIndexDefinition(), currentIndexVersion));
             Assert.Contains("Indexing function must return an anonymous object", ex.Message);
 
-            ex = Assert.Throws<IndexCompilationException>(() => IndexCompiler.Compile(new Bad_index_2().CreateIndexDefinition(), 0));
+            ex = Assert.Throws<IndexCompilationException>(() => IndexCompiler.Compile(new Bad_index_2().CreateIndexDefinition(), currentIndexVersion));
             Assert.Contains("Indexing function must return an anonymous object", ex.Message);
         }
 
