@@ -63,7 +63,7 @@ public class RavenDB_20206 : RavenTestBase
             using (context.OpenReadTransaction())
             {
                 // clean tombstones
-                var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server, store1.Database, context);
+                var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store1.Database, server, true);
                 Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
             }
 
@@ -85,7 +85,7 @@ public class RavenDB_20206 : RavenTestBase
             using (context.OpenReadTransaction())
             {
                 // clean tombstones
-                var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server, store2.Database, context);
+                var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store2.Database, server, true);
                 Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
             }
 

@@ -1269,7 +1269,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (context.OpenReadTransaction())
                     {
                         // clean tombstones
-                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server, store.Database, context);
+                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
                         Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
                     }
 
@@ -1370,7 +1370,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (context.OpenReadTransaction())
                     {
                         // clean tombstones
-                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server, store.Database, context);
+                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
                         Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
                     }
 
@@ -1441,7 +1441,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
                     Assert.Equal(1, numOfCompareExchangeTombstones);
 
-                    await CompareExchangeTombstoneCleanerTestHelper.Clean(server, store.Database, context);
+                    await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
                 }
                 using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
@@ -1472,7 +1472,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(1, numOfCompareExchangeTombstones);
 
                     // clean tombstones
-                    var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server, store.Database, context);
+                    var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
                     Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
                 }
                 using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -1614,7 +1614,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
                         Assert.Equal(1, numOfCompareExchangeTombstones);
 
-                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server, store.Database, context);
+                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
                         Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus, cleanupState);
                     }
                     using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -1675,7 +1675,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal(1, numOfCompareExchangeTombstones);
 
                         // clean tombstones
-                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server, store.Database, context);
+                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
                         Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
                     }
                     using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -1792,7 +1792,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(1, numOfCompareExchangeTombstones);
 
                     // clean tombstones
-                    var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server, store.Database, context);
+                    var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
                     Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
                 }
                 using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
