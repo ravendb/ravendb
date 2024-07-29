@@ -7,8 +7,8 @@ import { InputGroup } from "reactstrap";
 export default function StudioSearchWithDatabaseSwitcher(props: { mainMenu: menu }) {
     return (
         <InputGroup>
-            <StudioSearch mainMenu={props.mainMenu} />
             <DatabaseSwitcher />
+            <StudioSearch mainMenu={props.mainMenu} />
         </InputGroup>
     );
 }

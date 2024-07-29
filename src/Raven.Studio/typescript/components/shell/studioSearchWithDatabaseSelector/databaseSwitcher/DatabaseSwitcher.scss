@@ -7,14 +7,12 @@
     min-width: 300px;
     max-width: 300px;
     width: 300px;
-    border-top-right-radius: var(--bs-border-radius-pill) !important;
-    border-bottom-right-radius: var(--bs-border-radius-pill) !important;
+    border-radius: sizes.$border-radius-pill 0 0 sizes.$border-radius-pill !important;
 
     .react-select__control {
         min-height: 35px;
         height: 35px;
-        border-top-right-radius: var(--bs-border-radius-pill) !important;
-        border-bottom-right-radius: var(--bs-border-radius-pill) !important;
+        border-radius: sizes.$border-radius-pill 0 0 sizes.$border-radius-pill !important;
         background-color: colors.$panel-header-bg-var;
     }
 
