@@ -86,7 +86,7 @@
         }
     }
     &__input {
-        border-radius: sizes.$border-radius-pill 0 0 sizes.$border-radius-pill !important;
+        border-radius: 0 sizes.$border-radius-pill sizes.$border-radius-pill 0 !important;
         padding: 0 0 0 sizes.$gutter !important;
         min-height: 35px !important;
     }
