@@ -835,7 +835,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Task InitializeAsync(DatabaseRecord record, long raftIndex, Action<string> addToInitLog)
+        public Task InitializeAsync(DatabaseRecord record, long raftIndex, Action<LogMode, string> addToInitLog)
         {
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
@@ -1566,7 +1566,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void OpenIndexesFromRecord(DatabaseRecord record, long raftIndex, Action<string> addToInitLog)
+        private void OpenIndexesFromRecord(DatabaseRecord record, long raftIndex, Action<LogMode, string> addToInitLog)
         {
             var path = _documentDatabase.Configuration.Indexing.StoragePath;
 
@@ -1602,7 +1602,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var sp = Stopwatch.StartNew();
 
-                    addToInitLog($"Initializing static index: `{name}`");
+                    addToInitLog(LogMode.Information, $"Initializing static index: `{name}`");
                     OpenIndex(path, indexPath, exceptions, name, startIndex, definition);
 
                     if (Logger.IsInfoEnabled)
@@ -1624,11 +1624,10 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var sp = Stopwatch.StartNew();
 
-                    addToInitLog($"Initializing auto index: `{name}`");
+                    addToInitLog(LogMode.Information, $"Initializing auto index: `{name}`");
                     OpenIndex(path, indexPath, exceptions, name, startIndex, definition);
 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Initialized auto index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
+                    addToInitLog(LogMode.Information, $"Initialized auto index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
                 }
             }
 
@@ -1651,7 +1650,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                         catch (Exception e)
                         {
-                            addToInitLog($"Could not start index '{index.Name}': {e}");
+                            addToInitLog(LogMode.Operations, $"Could not start index '{index.Name}': {e}");
                         }
                     });
 
@@ -1661,13 +1660,12 @@ namespace Raven.Server.Documents.Indexes
             // loading the new indexes
             var startIndexSp = Stopwatch.StartNew();
 
-            addToInitLog("Starting new indexes");
+            addToInitLog(LogMode.Information, "Starting new indexes");
             startIndex = _documentDatabase.Configuration.Indexing.IndexStartupBehavior != IndexingConfiguration.IndexStartupBehaviorType.Pause;
             var startedIndexes = HandleDatabaseRecordChange(record, raftIndex, startIndex);
 
-            addToInitLog($"Started {startedIndexes} new index{(startedIndexes > 1 ? "es" : string.Empty)}, took: {startIndexSp.ElapsedMilliseconds}ms");
-
-            addToInitLog($"IndexStore initialization is completed, took: {totalSp.ElapsedMilliseconds:#,#;;0}ms");
+            addToInitLog(LogMode.Information, $"Started {startedIndexes} new index{(startedIndexes > 1 ? "es" : string.Empty)}, took: {startIndexSp.ElapsedMilliseconds}ms");
+            addToInitLog(LogMode.Information, $"IndexStore initialization is completed, took: {totalSp.ElapsedMilliseconds:#,#;;0}ms");
 
             if (exceptions != null && exceptions.Count > 0)
                 throw new AggregateException("Could not load some of the indexes", exceptions);

@@ -9,7 +9,7 @@ import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { useAsync } from "react-async-hook";
 import { CounterBadge } from "components/common/CounterBadge";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { getLicenseLimitReachStatus, LicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
@@ -21,7 +21,7 @@ import DatabaseCustomAnalyzersServerWideList from "components/pages/database/set
 
 export default function DatabaseCustomAnalyzers() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const { databasesService, manageServerService } = useServices();
 

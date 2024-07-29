@@ -27,7 +27,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
 import { SubscriptionConnectionsDetailsWithId } from "../OngoingTasksReducer";
 import { useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo> & {
     refreshSubscriptionInfo: () => void;
@@ -228,7 +228,7 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
         isTogglingState,
     } = props;
 
-    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = hasDatabaseWriteAccess && !data.shared.serverWide;

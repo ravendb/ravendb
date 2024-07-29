@@ -24,7 +24,7 @@ import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 import { Collapse, Input } from "reactstrap";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 type AzureQueueStorageEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskAzureQueueStorageEtlInfo>;
 
@@ -53,7 +53,7 @@ function Details(props: AzureQueueStorageEtlPanelProps & { canEdit: boolean }) {
 export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
     const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editAzureQueueStorageEtl(data.shared.taskId)();

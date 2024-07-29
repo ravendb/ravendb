@@ -1,4 +1,4 @@
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
 import React from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -25,7 +25,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 export default function RevertRevisions() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const { control, formState, handleSubmit, setValue } = useForm<RevertRevisionsFormData>({
         resolver: revertRevisionsYupResolver,

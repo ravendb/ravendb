@@ -3,7 +3,7 @@ import { Button, Card, CardBody, Col, Row, UncontrolledTooltip } from "reactstra
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { HrHeader } from "components/common/HrHeader";
 import ConflictResolutionConfigPanel from "components/pages/database/settings/conflictResolution/ConflictResolutionConfigPanel";
 import { Switch } from "components/common/Checkbox";
@@ -31,7 +31,7 @@ export default function ConflictResolution() {
     const isDirty = useAppSelector(conflictResolutionSelectors.isDirty);
     const isSomeInEditMode = useAppSelector(conflictResolutionSelectors.isSomeInEditMode);
 
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();

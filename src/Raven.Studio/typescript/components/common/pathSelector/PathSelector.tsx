@@ -5,9 +5,13 @@ import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
 import useBoolean from "components/hooks/useBoolean";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useImperativeHandle, useState } from "react";
 import { AsyncStateStatus } from "react-async-hook";
 import { Button, Modal, ModalBody, FormGroup, Label, Input, ModalFooter, CloseButton } from "reactstrap";
+
+export interface PathSelectorStateRef {
+    toggle: () => void;
+}
 
 export interface PathSelectorProps<ParamsType extends unknown[] = unknown[]> {
     getPaths: (...args: ParamsType) => Promise<string[]>;
@@ -18,11 +22,20 @@ export interface PathSelectorProps<ParamsType extends unknown[] = unknown[]> {
     placeholder?: string;
     disabled?: boolean;
     buttonClassName?: string;
+    stateRef?: React.MutableRefObject<PathSelectorStateRef>;
 }
 
 export default function PathSelector<ParamsType extends unknown[] = unknown[]>(props: PathSelectorProps<ParamsType>) {
-    const { handleSelect, getPaths, getPathDependencies, defaultPath, buttonClassName, selectorTitle, disabled } =
-        props;
+    const {
+        handleSelect,
+        getPaths,
+        getPathDependencies,
+        defaultPath,
+        buttonClassName,
+        selectorTitle,
+        disabled,
+        stateRef,
+    } = props;
 
     const { value: isModalOpen, toggle: toggleIsModalOpen } = useBoolean(false);
     const [pathInput, setPathInput] = useState(defaultPath || "");
@@ -32,6 +45,10 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
     }, [defaultPath]);
 
     const asyncGetPaths = useAsyncDebounce(getPaths, getPathDependencies(pathInput));
+
+    useImperativeHandle(stateRef, () => ({
+        toggle: toggleIsModalOpen,
+    }));
 
     const { canGoBack, parentDir } = getParentPath(pathInput);
 

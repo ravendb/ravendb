@@ -1,4 +1,4 @@
-import React, { ComponentProps, ReactNode, useState } from "react";
+import React, { ComponentProps, ReactNode, useRef, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import { Control, ControllerProps, FieldPath, FieldValues, useController } from "react-hook-form";
@@ -13,7 +13,7 @@ import { GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGro
 import Select, { InputNotHidden, SelectValue } from "./select/Select";
 import DatePicker from "./DatePicker";
 import { Icon } from "components/common/Icon";
-import PathSelector, { PathSelectorProps } from "components/common/pathSelector/PathSelector";
+import PathSelector, { PathSelectorProps, PathSelectorStateRef } from "components/common/pathSelector/PathSelector";
 import { OmitIndexSignature } from "components/utils/common";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
@@ -566,6 +566,14 @@ export function FormPathSelector<
         shouldUnregister,
     });
 
+    const pathSelectorStateRef = useRef<PathSelectorStateRef>(null);
+
+    const handleInputFocus = () => {
+        if (!formValuePath) {
+            pathSelectorStateRef.current.toggle();
+        }
+    };
+
     return (
         <div className="position-relative flex-grow-1">
             <div className="d-flex flex-grow-1">
@@ -579,6 +587,7 @@ export function FormPathSelector<
                         className="position-relative d-flex flex-grow-1"
                         placeholder={placeholder || "Enter path"}
                         disabled={disabled || formState.isSubmitting}
+                        onFocus={handleInputFocus}
                     />
                     <PathSelector
                         getPaths={getPaths}
@@ -588,6 +597,7 @@ export function FormPathSelector<
                         selectorTitle={selectorTitle}
                         disabled={disabled || formState.isSubmitting}
                         buttonClassName={classNames("input-btn", invalid && "me-3")}
+                        stateRef={pathSelectorStateRef}
                     />
                 </InputGroup>
             </div>

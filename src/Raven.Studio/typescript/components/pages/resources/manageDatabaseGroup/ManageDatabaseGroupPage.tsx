@@ -16,7 +16,7 @@ import { Icon } from "components/common/Icon";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { SortableModeCounterProvider } from "./partials/useSortableModeCounter";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 function getDynamicDatabaseDistributionWarning(
     hasDynamicNodesDistribution: boolean,

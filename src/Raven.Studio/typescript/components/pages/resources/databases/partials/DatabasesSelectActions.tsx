@@ -23,7 +23,7 @@ import {
 import { databaseActions } from "components/common/shell/databaseSliceActions";
 import genUtils = require("common/generalUtils");
 import useConfirm from "components/common/ConfirmDialog";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 interface DatabasesSelectActionsProps {

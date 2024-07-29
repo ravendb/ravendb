@@ -24,7 +24,7 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { Checkbox } from "components/common/Checkbox";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import generalUtils from "common/generalUtils";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 interface DocumentRevisionsConfigPanelProps {
     config: DocumentRevisionsConfig;
@@ -36,7 +36,7 @@ interface DocumentRevisionsConfigPanelProps {
 export default function DocumentRevisionsConfigPanel(props: DocumentRevisionsConfigPanelProps) {
     const { config, onDelete, onToggle, onEdit } = props;
 
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const dispatch = useAppDispatch();
     const { reportEvent } = useEventsCollector();
 

@@ -14,6 +14,8 @@ import { services } from "hooks/useServices";
 import viewModelBase from "viewmodels/viewModelBase";
 import buildInfo = require("models/resources/buildInfo");
 import genUtils = require("common/generalUtils");
+import accessManager = require("common/shell/accessManager");
+import { accessManagerActions } from "components/common/shell/accessManagerSlice";
 
 let initialized = false;
 
@@ -90,6 +92,13 @@ function initRedux() {
     );
 
     changesContext.default.connectServerWideNotificationCenter();
+
+    accessManager.default.securityClearance.subscribe((securityClearance) =>
+        globalDispatch(accessManagerActions.onSecurityClearanceSet(securityClearance))
+    );
+    accessManager.default.secureServer.subscribe((isSecureServer) =>
+        globalDispatch(accessManagerActions.onIsSecureServerSet(isSecureServer))
+    );
 }
 
 declare module "yup" {

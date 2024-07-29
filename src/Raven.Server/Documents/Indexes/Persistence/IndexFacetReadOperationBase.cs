@@ -147,7 +147,7 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
             }
             else
             {
-                allTerms = GetAllTermsSorted(result.Value.Options.TermSortMode, groups);
+                allTerms = GetAllTermsSorted(result.Value.Options.TermSortMode, result.Value.SortedIds, groups);
 
                 start = result.Value.Options.Start;
                 pageSize = Math.Min(allTerms.Count, result.Value.Options.PageSize);
@@ -216,17 +216,17 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
         return (values, remainingTermsCount, remainingHits, valuesCount);
     }
 
-    internal static List<string> GetAllTermsSorted(FacetTermSortMode sortMode, Dictionary<string, FacetValues> values)
+    internal static List<string> GetAllTermsSorted(FacetTermSortMode sortMode, List<string> valueSortedIds, Dictionary<string, FacetValues> values)
     {
         List<string> allTerms;
 
         switch (sortMode)
         {
             case FacetTermSortMode.ValueAsc:
-                allTerms = new List<string>(values.OrderBy(x => x.Key).ThenBy(x => x.Value.Count).Select(x => x.Key));
+                allTerms = valueSortedIds ?? new List<string>(values.OrderBy(x => x.Key).ThenBy(x => x.Value.Count).Select(x => x.Key));
                 break;
             case FacetTermSortMode.ValueDesc:
-                allTerms = new List<string>(values.OrderByDescending(x => x.Key).ThenBy(x => x.Value.Count).Select(x => x.Key));
+                allTerms = valueSortedIds ?? new List<string>(values.OrderByDescending(x => x.Key).ThenBy(x => x.Value.Count).Select(x => x.Key));
                 break;
             case FacetTermSortMode.CountAsc:
                 allTerms = new List<string>(values.OrderBy(x => x.Value.Count).ThenBy(x => x.Key).Select(x => x.Key));

@@ -23,7 +23,7 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
 import useConfirm from "components/common/ConfirmDialog";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
 
 interface OrchestratorInfoComponentProps {

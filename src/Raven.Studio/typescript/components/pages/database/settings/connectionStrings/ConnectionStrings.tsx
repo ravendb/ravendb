@@ -3,7 +3,7 @@ import { Button, Col, Row, UncontrolledTooltip } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { ConnectionStringsInfoHub } from "./ConnectionStringsInfoHub";
 import EditConnectionStrings from "./EditConnectionStrings";
 import { LazyLoad } from "components/common/LazyLoad";
@@ -25,7 +25,7 @@ export default function ConnectionStrings(props: ConnectionStringsUrlParameters)
 
     const { hasNone: hasNoneInLicense } = useConnectionStringsLicense();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const dispatch = useAppDispatch();
 

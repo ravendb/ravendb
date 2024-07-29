@@ -1,24 +1,32 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
+using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
+using Corax.Utils;
+using Sparrow;
+using Sparrow.Compression;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Data.Containers;
 using Voron.Data.Lookups;
+using Voron.Data.PostingLists;
+using Voron.Util;
 using Range = Corax.Querying.Matches.Meta.Range;
 
 namespace Corax.Querying.Matches.TermProviders;
 
 [DebuggerDisplay("{DebugView,nq}")]
-public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
+public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, IAggregationProvider
     where TLookupIterator : struct, ILookupIterator
     where TLow : struct, Range.Marker
     where THigh : struct, Range.Marker
 {
-    private readonly CompactTree _tree;
-    private readonly Querying.IndexSearcher _indexSearcher;
+    private readonly IndexSearcher _indexSearcher;
     private readonly FieldMetadata _field;
     private Slice _low, _high;
 
@@ -40,7 +48,6 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
 
         _low = low;
         _high = high;
-        _tree = tree;
 
         // Optimization for unbounded ranges. We seek the proper term (depending on the iterator) and iterate through all left items.
         _skipRangeCheck = _isForward
@@ -55,7 +62,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
     {
         CompactKey key;
         ReadOnlySpan<byte> termSlice;
-        
+
         var startKey = _isForward ? _low : _high;
         var finalKey = _isForward ? _high : _low;
 
@@ -66,7 +73,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
             {
                 _isEmpty = true;
                 return; //empty set, we will go out of range immediately 
-}
+            }
 
             termSlice = key.Decoded();
             var shouldInclude = _isForward switch
@@ -97,7 +104,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
                     Slice.From(_indexSearcher.Allocator, termSlice, out _high);
             }
         }
-        
+
         if (_skipRangeCheck)
         {
             // In this case we will accept all items left.
@@ -126,7 +133,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
             true when typeof(THigh) == typeof(Range.Inclusive) && _high.Options != SliceOptions.AfterAllKeys && finalCmp > 0 => false,
             _ => true
         };
-        if(_shouldIncludeLastTerm == false && hasPreviousValue == false)
+        if (_shouldIncludeLastTerm == false && hasPreviousValue == false)
         {
             _isEmpty = true;
         }
@@ -150,7 +157,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
         else
             _iterator.Reset();
     }
-    
+
     private bool ShouldSeek()
     {
         return _isForward switch
@@ -171,7 +178,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
         if (termId == _endContainerId)
         {
             _isEmpty = true;
-            
+
             if (_shouldIncludeLastTerm == false)
                 goto ReturnEmpty;
         }
@@ -186,25 +193,101 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider
 
     public QueryInspectionNode Inspect()
     {
-        var lowValue = _low.Options is SliceOptions.BeforeAllKeys 
+        var lowValue = _low.Options is SliceOptions.BeforeAllKeys
             ? null
             : _low.ToString();
 
-        var highValue = _high.Options is SliceOptions.AfterAllKeys 
+        var highValue = _high.Options is SliceOptions.AfterAllKeys
             ? null
             : _high.ToString();
-        
+
         return new QueryInspectionNode(nameof(TermRangeProvider<TLookupIterator, TLow, THigh>),
             parameters: new Dictionary<string, string>()
             {
                 { Constants.QueryInspectionNode.FieldName, _field.ToString() },
-                { Constants.QueryInspectionNode.LowValue, lowValue},
-                { Constants.QueryInspectionNode.HighValue, highValue},
-                { Constants.QueryInspectionNode.LowOption, typeof(TLow).Name},
-                { Constants.QueryInspectionNode.HighOption, typeof(THigh).Name},
-                { Constants.QueryInspectionNode.IteratorDirection, Constants.QueryInspectionNode.IterationDirectionName<TLookupIterator>()}
+                { Constants.QueryInspectionNode.LowValue, lowValue },
+                { Constants.QueryInspectionNode.HighValue, highValue },
+                { Constants.QueryInspectionNode.LowOption, typeof(TLow).Name },
+                { Constants.QueryInspectionNode.HighOption, typeof(THigh).Name },
+                { Constants.QueryInspectionNode.IteratorDirection, Constants.QueryInspectionNode.IterationDirectionName<TLookupIterator>() }
             });
     }
 
     public string DebugView => Inspect().ToString();
+
+    public IDisposable AggregateByTerms(out List<string> terms, out Span<long> counts)
+    {
+        throw new NotImplementedException();
+    }
+
+    public unsafe long AggregateByRange()
+    {
+        //we do not support Long ranges since we want to perform aggregation on doubles 
+        const long singleMarker = -1L;
+        if (_isEmpty)
+        {
+            return 0;
+        }
+        
+        var allocator = _indexSearcher.Allocator;
+        CompactKey compactKey = new();
+        compactKey.Initialize(_indexSearcher._transaction.LowLevelTransaction);
+        
+        NativeList<long> postingLists = new();
+        postingLists.Initialize(allocator);
+        
+        NativeList<TermIdMask> postingListsType = new();
+        postingListsType.Initialize(allocator);
+        
+        while (_isEmpty == false && _iterator.MoveNext(compactKey, out var termId, out var _))
+        {
+            if (termId == _endContainerId)
+            {
+                _isEmpty = true;
+
+                if (_shouldIncludeLastTerm == false)
+                    break;
+            }
+            
+            if ((termId & (long)TermIdMask.PostingList) != 0)
+            {
+                postingLists.Add(allocator, EntryIdEncodings.GetContainerId(termId));
+                postingListsType.Add(allocator, TermIdMask.PostingList);
+            }
+            else if ((termId & (long)TermIdMask.SmallPostingList) != 0)
+            {
+                postingLists.Add(allocator, EntryIdEncodings.GetContainerId(termId));
+                postingListsType.Add(allocator, TermIdMask.SmallPostingList);
+            }
+            else
+            {
+                postingLists.Add(allocator, singleMarker);
+                postingListsType.Add(allocator, TermIdMask.Single);
+            }
+        }
+
+        using var _ = allocator.Allocate((sizeof(UnmanagedSpan)) * postingLists.Count, out ByteString containers);
+        var containersPtr = (UnmanagedSpan*)containers.Ptr;
+
+        Container.GetAll(_indexSearcher._transaction.LowLevelTransaction, postingLists.ToSpan(), containersPtr, singleMarker,
+            _indexSearcher._transaction.LowLevelTransaction.PageLocator);
+
+        long totalCount = 0;
+        for (int i = 0; i < postingLists.Count; ++i)
+        {
+            var localCount = (postingListsType[i]) switch
+            {
+                TermIdMask.PostingList => ((PostingListState*)(containersPtr[i].Address))->NumberOfEntries,
+                TermIdMask.SmallPostingList => VariableSizeEncoding.Read<long>(containersPtr[i].Address, out var _),
+                TermIdMask.Single => 1,
+                _ => throw new InvalidDataException($"Supported posting lists types are: 'PostingList', 'SmallPostingList', 'Single' but got {postingListsType[i]}")
+            };
+            
+            totalCount += localCount;
+        }
+
+        postingLists.Dispose(allocator);
+        postingListsType.Dispose(allocator);
+        return totalCount;
+    }
 }
