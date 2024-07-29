@@ -36,6 +36,7 @@ namespace Raven.Server.Rachis
     {
         private TaskCompletionSource<object> _topologyModification;
         private readonly RachisConsensus _engine;
+        public RachisConsensus Engine => _engine;
         private readonly string _threadName;
 
         public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
@@ -92,6 +93,7 @@ namespace Raven.Server.Rachis
         private MultipleUseFlag _running = new MultipleUseFlag();
         public bool Running => _running.IsRaised();
 
+        public RaftDebugView ToDebugView => new LeaderDebugView(this);
         public void Start(Dictionary<string, RemoteConnection> connections = null)
         {
             _running.Raise();
@@ -866,6 +868,8 @@ namespace Raven.Server.Rachis
                         }
                         context.Transaction.Commit();
                     }
+                    
+                    _engine.LastAppended = DateTime.UtcNow;
 
                     if (tasks.Count > 0)
                         _newEntry.Set();
