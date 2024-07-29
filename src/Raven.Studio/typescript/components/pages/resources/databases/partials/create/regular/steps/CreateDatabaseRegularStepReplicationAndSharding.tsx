@@ -204,7 +204,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                     <br />
                                     <small className="text-muted">
                                         Manage document distribution by defining
-                                        <br />a prefix for document names
+                                        <br />a prefix for document IDs
                                     </small>
                                 </FormSwitch>
                             </Collapse>
