@@ -200,7 +200,6 @@ loadToOrders(orderData, {  // load to the 'Orders' Topic with optional params
 
 loadToOrders(orderData, "routingKey", {  // load to the 'Orders' Exchange with optional params
     Id: id(this),
-    PartitionKey: id(this),
     Type: 'com.github.users',
     Source: '/registrations/direct-signup'
 });`;

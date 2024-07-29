@@ -22,7 +22,7 @@ import { useRavenLink } from "components/hooks/useRavenLink";
 import IndexesPageList, { IndexesPageListProps } from "./IndexesPageList";
 import IndexesPageLicenseLimits from "./IndexesPageLicenseLimits";
 import IndexesPageAboutView from "./IndexesPageAboutView";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 
@@ -35,7 +35,7 @@ export function IndexesPage(props: IndexesPageProps) {
     const { stale, indexName: indexToHighlight } = props;
 
     const db = useAppSelector(databaseSelectors.activeDatabase);
-    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.hasDatabaseWriteAccess());
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
     const { reportEvent } = useEventsCollector();
 
     const { forCurrentDatabase: urls } = useAppUrls();

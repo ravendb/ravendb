@@ -13,7 +13,7 @@ import {
     mapRavenConnectionsFromDto,
     mapSqlConnectionsFromDto,
 } from "./connectionStringsMapsFromDto";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
@@ -158,7 +158,7 @@ const fetchData = createAsyncThunk<
     );
     const connectionStringsDto = await services.tasksService.getConnectionStrings(db.name);
 
-    const hasDatabaseAdminAccess = accessManagerSelectors.hasDatabaseAdminAccess(db.name)(state);
+    const hasDatabaseAdminAccess = accessManagerSelectors.getHasDatabaseAdminAccess(state)(db.name);
 
     return {
         ongoingTasksDto,

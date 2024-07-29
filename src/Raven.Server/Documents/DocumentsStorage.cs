@@ -83,7 +83,7 @@ namespace Raven.Server.Documents
         private static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
-        private readonly Action<string> _addToInitLog;
+        private readonly Action<LogMode, string> _addToInitLog;
 
         private readonly Logger _logger;
         private readonly string _name;
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public DocumentsStorage(DocumentDatabase documentDatabase, Action<string> addToInitLog)
+        public DocumentsStorage(DocumentDatabase documentDatabase, Action<LogMode, string> addToInitLog)
         {
             DocumentDatabase = documentDatabase;
             SetDocumentsStorageSchemas();

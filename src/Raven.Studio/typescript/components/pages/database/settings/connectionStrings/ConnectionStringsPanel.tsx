@@ -9,7 +9,7 @@ import {
 import { Button, UncontrolledTooltip } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { Connection } from "./connectionStringsTypes";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -35,7 +35,7 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
     const isDeleteDisabled = connection.usedByTasks?.length > 0;
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const asyncDelete = useAsyncCallback(async () => {
         await tasksService.deleteConnectionString(databaseName, getDtoEtlType(connection.type), connection.name);

@@ -25,7 +25,7 @@ import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 import { Collapse, Input } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 type KafkaEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskKafkaEtlInfo>;
 
@@ -53,7 +53,7 @@ function Details(props: KafkaEtlPanelProps & { canEdit: boolean }) {
 export function KafkaEtlPanel(props: KafkaEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
 
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;

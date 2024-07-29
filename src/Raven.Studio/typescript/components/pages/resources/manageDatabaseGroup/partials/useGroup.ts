@@ -3,7 +3,7 @@ import { NodeInfo } from "components/models/databases";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useSortableModeCounter } from "./useSortableModeCounter";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 export function useGroup(nodes: NodeInfo[], initialFixOrder: boolean) {
     const [fixOrder, setFixOrder] = useState(initialFixOrder);

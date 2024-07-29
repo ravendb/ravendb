@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Corax.Mappings;
 using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.TermProviders;
 using Voron;
 using Voron.Data.Lookups;
@@ -86,6 +87,7 @@ public partial class IndexSearcher
             : MultiTermMatchBuilder<ExistsTermProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, default(Slice), streamingEnabled: streamingEnabled, token: token);
     }
 
+    
     public MultiTermMatch RegexQuery(in FieldMetadata field, Regex regex, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);

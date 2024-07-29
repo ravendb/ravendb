@@ -78,7 +78,7 @@ namespace Raven.Server.Documents
     public class DocumentDatabase : IDisposable
     {
         private readonly ServerStore _serverStore;
-        private readonly Action<string> _addToInitLog;
+        private readonly Action<LogMode, string> _addToInitLog;
         private readonly Logger _logger;
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
         internal TestingStuff ForTestingPurposes;
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents
 
         private readonly SemaphoreSlim _updateValuesLocker = new(1, 1);
 
-        public Action<string> AddToInitLog => _addToInitLog;
+        public Action<LogMode, string> AddToInitLog => _addToInitLog;
 
         /// <summary>
         /// The current lock, used to make sure indexes have a unique names
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents
             _lastIdleTicks = DateTime.MinValue.Ticks;
         }
 
-        public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
+        public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<LogMode, string> addToInitLog)
         {
             Name = name;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents
 
                 if (Configuration.Core.RunInMemory == false)
                 {
-                    _addToInitLog("Creating db.lock file");
+                    _addToInitLog(LogMode.Information, "Creating db.lock file");
                     _fileLocker = new FileLocker(Configuration.Core.DataDirectory.Combine("db.lock").FullPath);
                     _fileLocker.TryAcquireWriteLock(_logger);
 
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents
                     if (DisableOngoingTasks)
                     {
                         var msg = $"MAINTENANCE WARNING: Found disable.tasks.marker file. All tasks will not start. Please remove the file and restart the '{Name}' database.";
-                        _addToInitLog(msg);
+                        _addToInitLog(LogMode.Information, msg);
                         if (_logger.IsOperationsEnabled)
                             _logger.Operations(msg);
                     }
@@ -206,7 +206,7 @@ namespace Raven.Server.Documents
 
         public readonly bool DisableOngoingTasks;
 
-        protected virtual DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
+        protected virtual DocumentsStorage CreateDocumentsStorage(Action<LogMode, string> addToInitLog)
         {
             return new DocumentsStorage(this, addToInitLog);
         }
@@ -388,21 +388,21 @@ namespace Raven.Server.Documents
 
                 InitializeCompareExchangeStorage();
 
-                _addToInitLog("Initializing NotificationCenter");
+                _addToInitLog(LogMode.Information, "Initializing NotificationCenter");
                 NotificationCenter.Initialize();
 
-                _addToInitLog("Initializing DocumentStorage");
+                _addToInitLog(LogMode.Information, "Initializing DocumentStorage");
                 DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
-                _addToInitLog("Starting Transaction Merger");
+                _addToInitLog(LogMode.Information, "Starting Transaction Merger");
                 TxMerger.Initialize(DocumentsStorage.ContextPool, IsEncrypted, Is32Bits);
                 TxMerger.Start();
-                _addToInitLog("Initializing ConfigurationStorage");
+                _addToInitLog(LogMode.Information, "Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();
 
                 if ((options & InitializeOptions.SkipLoadingDatabaseRecord) == InitializeOptions.SkipLoadingDatabaseRecord)
                     return;
 
-                _addToInitLog("Loading Database");
+                _addToInitLog(LogMode.Information, "Loading Database");
 
                 MetricCacher.Initialize();
 
@@ -422,11 +422,11 @@ namespace Raven.Server.Documents
                 ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
-                _addToInitLog("Initializing IndexStore (async)");
+                _addToInitLog(LogMode.Information, "Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
-                _addToInitLog("Initializing Replication");
+                _addToInitLog(LogMode.Information, "Initializing Replication");
                 ReplicationLoader?.Initialize(record, index);
-                _addToInitLog("Initializing ETL");
+                _addToInitLog(LogMode.Information, "Initializing ETL");
                 EtlLoader.Initialize(record);
                 QueueSinkLoader.Initialize(record);
 
@@ -450,7 +450,7 @@ namespace Raven.Server.Documents
 
                 DatabaseShutdown.ThrowIfCancellationRequested();
 
-                _addToInitLog("Initializing SubscriptionStorage completed");
+                _addToInitLog(LogMode.Information, "Initializing SubscriptionStorage completed");
 
                 TombstoneCleaner.Start();
 

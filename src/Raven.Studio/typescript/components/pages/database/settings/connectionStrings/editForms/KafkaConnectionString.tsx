@@ -15,7 +15,7 @@ import { yupObjectSchema } from "components/utils/yupUtils";
 import ConnectionTestError from "components/common/connectionTests/ConnectionTestError";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 type FormData = ConnectionFormData<KafkaConnection>;
 

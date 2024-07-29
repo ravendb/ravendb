@@ -7,6 +7,7 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
+using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -42,7 +43,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         }
     }
 
-    public ShardedDocumentsStorage(ShardedDocumentDatabase documentDatabase, Action<string> addToInitLog) 
+    public ShardedDocumentsStorage(ShardedDocumentDatabase documentDatabase, Action<LogMode, string> addToInitLog)
         : base(documentDatabase, addToInitLog)
     {
         _documentDatabase = documentDatabase;

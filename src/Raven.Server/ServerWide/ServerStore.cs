@@ -3366,6 +3366,39 @@ namespace Raven.Server.ServerWide
             if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
                 throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
 
+            var requestExecutor = GetLeaderRequestExecutor(context, engineLeaderTag);
+
+            cmdJson.TryGet("Type", out string commandType);
+            var command = new PutRaftCommand(requestExecutor.Conventions, cmdJson, _engine.Url, commandType)
+            {
+                Timeout = cmd.Timeout
+            };
+
+            try
+            {
+                await requestExecutor.ExecuteAsync(command, context, token: token);
+            }
+            catch
+            {
+                reachedLeader.Value = command.HasReachLeader();
+                throw;
+            }
+
+            return (command.Result.RaftCommandIndex, command.Result.Data);
+        }
+        
+        public RequestExecutor GetLeaderRequestExecutor(TransactionOperationContext context, string leaderTag)
+        {
+            if (string.IsNullOrEmpty(leaderTag))
+                throw new NoLeaderException();
+
+            ClusterTopology clusterTopology;
+            using (context.OpenReadTransaction())
+                clusterTopology = _engine.GetTopology(context);
+
+            if (clusterTopology.Members.TryGetValue(leaderTag, out string leaderUrl) == false)
+                throw new InvalidOperationException("Leader " + leaderTag + " was not found in the topology members");
+
             var serverCertificateChanged = Interlocked.Exchange(ref _serverCertificateChanged, 0) == 1;
 
             if (_leaderRequestExecutor == null
@@ -3376,23 +3409,7 @@ namespace Raven.Server.ServerWide
                 Interlocked.Exchange(ref _leaderRequestExecutor, newExecutor);
             }
 
-            cmdJson.TryGet("Type", out string commandType);
-            var command = new PutRaftCommand(_leaderRequestExecutor.Conventions, cmdJson, _engine.Url, commandType)
-            {
-                Timeout = cmd.Timeout
-            };
-
-            try
-            {
-                await _leaderRequestExecutor.ExecuteAsync(command, context, token: token);
-            }
-            catch
-            {
-                reachedLeader.Value = command.HasReachLeader();
-                throw;
-            }
-
-            return (command.Result.RaftCommandIndex, command.Result.Data);
+            return _leaderRequestExecutor;
         }
 
         protected internal async Task WaitForExecutionOnSpecificNodeAsync(JsonOperationContext context, string node, long index)

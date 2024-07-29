@@ -5,7 +5,7 @@ import {
 } from "components/common/customAnalyzers/editCustomAnalyzerValidation";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useDirtyFlag } from "hooks/useDirtyFlag";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useBoolean from "hooks/useBoolean";
@@ -47,7 +47,7 @@ export default function DatabaseCustomAnalyzersListItem(props: DatabaseCustomAna
 
     const isNew = !formState.defaultValues.name;
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const { value: isEditMode, toggle: toggleIsEditMode } = useBoolean(isNew);
 
@@ -186,7 +186,7 @@ function CustomAnalyzersActions({
     isSubmitting,
     asyncDeleteAnalyzer,
 }: CustomAnalyzersActionsProps) {
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     if (!hasDatabaseAdminAccess) {
         return isEditMode ? (

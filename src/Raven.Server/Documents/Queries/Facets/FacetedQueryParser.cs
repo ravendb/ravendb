@@ -4,6 +4,9 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using Corax.Mappings;
+using Corax.Querying;
+using Corax.Querying.Matches.Meta;
 using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
@@ -388,8 +391,10 @@ namespace Raven.Server.Documents.Queries.Facets
         public sealed class CoraxParsedRange : ParsedRange
         {
             private Operation _leftSide; 
-            private Operation _rightSide; 
-
+            private Operation _rightSide;
+            private bool IsNumerical;
+            
+            
             public double LowValueAsDouble = double.MinValue;
             public double HighValueAsDouble = double.MaxValue;
             public long LowValueAsLong = long.MinValue;
@@ -401,6 +406,8 @@ namespace Raven.Server.Documents.Queries.Facets
             private readonly byte[] _lowValueAsBytes;
             public CoraxParsedRange(ParsedRange range)
             {
+                IsNumerical = true;
+                
                 _leftSide = Operation.None;
                 _rightSide = Operation.None;
                 //Deep copy
@@ -422,7 +429,7 @@ namespace Raven.Server.Documents.Queries.Facets
                     _leftSide |= Operation.GreaterThan;
                     _lowValueAsBytes = Encodings.Utf8.GetBytes(LowValue);
                     long.TryParse(LowValue, out LowValueAsLong);
-                    double.TryParse(LowValue, out LowValueAsDouble);
+                    IsNumerical &= double.TryParse(LowValue, out LowValueAsDouble);
                 }
                 
                 if (HighValue != null)
@@ -430,10 +437,53 @@ namespace Raven.Server.Documents.Queries.Facets
                     _rightSide |= Operation.LowerThan;
                     _highValueAsBytes = Encodings.Utf8.GetBytes(HighValue);
                     long.TryParse(HighValue, out HighValueAsLong);
-                    double.TryParse(HighValue, out HighValueAsDouble);
+                    IsNumerical &= double.TryParse(HighValue, out HighValueAsDouble);
                 }
             }
 
+            public IAggregationProvider GetAggregation(IndexSearcher searcher, in FieldMetadata metadata, bool forward = true)
+            {
+                var type = IsNumerical ? RangeType.Double : RangeType.None;
+                var lowValueRange = RangeTypeToCoraxRange(_leftSide);
+                var highValueRange = RangeTypeToCoraxRange(_rightSide);
+                
+                //Between
+                if (LowValue != null && HighValue != null)
+                {
+                    return type switch
+                    {
+                        RangeType.Double or RangeType.Long => searcher.BetweenAggregation(metadata, LowValueAsDouble, HighValueAsDouble, lowValueRange, highValueRange, forward),
+                        _ => searcher.BetweenAggregation(metadata, LowValue, HighValue, lowValueRange, highValueRange, forward)
+                    };
+                }
+                
+                if (LowValue != null)
+                {
+                    return type switch
+                    {
+                        RangeType.Double or RangeType.Long => searcher.GreaterAggregationBuilder(metadata, LowValueAsDouble, lowValueRange, forward),
+                        _ => searcher.GreaterAggregationBuilder(metadata, LowValue, lowValueRange, forward)
+                    };
+                }
+
+                return type switch
+                {
+                    RangeType.Double or RangeType.Long => searcher.LowAggregationBuilder(metadata, HighValueAsDouble, highValueRange, forward),
+                    _ => searcher.LowAggregationBuilder(metadata, HighValue, highValueRange, forward)
+                };
+            }
+
+            private UnaryMatchOperation RangeTypeToCoraxRange(Operation o) => o switch
+            {
+                Operation.LowerThan => UnaryMatchOperation.LessThan,
+                Operation.GreaterThan => UnaryMatchOperation.GreaterThan,
+                Operation.Equal => UnaryMatchOperation.Equals,
+                Operation.LowerOrEqualThan => UnaryMatchOperation.LessThanOrEqual,
+                Operation.GreaterOrEqualThan => UnaryMatchOperation.GreaterThanOrEqual,
+                Operation.None => UnaryMatchOperation.None,
+                _ => throw new ArgumentOutOfRangeException(nameof(o), o, null)
+            };
+            
             public bool IsMatch(double value)
             {              
                 var leftSide = _leftSide switch
@@ -576,6 +626,8 @@ namespace Raven.Server.Documents.Queries.Facets
             public List<ParsedRange> Ranges;
 
             public Raven.Client.Documents.Queries.Facets.FacetResult Result;
+
+            public List<string> SortedIds;
 
             public FacetOptions Options;
 

@@ -77,7 +77,22 @@ namespace Voron.Data.CompactTrees
                     key = default;
                     return false;
                 }
+                
                 key = keyData.GetKey(_tree._inner);
+                return true;
+            }
+            
+            public unsafe bool MoveNext(CompactKey key, out long v, out bool hasPreviousValue)
+            {
+                
+                
+                if (_it.MoveNext(out CompactKeyLookup keyData, out v, out hasPreviousValue) == false)
+                {
+                    key = default;
+                    return false;
+                }
+                
+                keyData.FillKey(key, _tree._inner);
                 return true;
             }
         }

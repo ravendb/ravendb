@@ -152,7 +152,7 @@ public sealed class ShardedFacetedQueryOperation : AbstractShardedQueryOperation
         {
             if (_options != null)
             {
-                List<string> allTerms = IndexFacetReadOperationBase.GetAllTermsSorted(_options.TermSortMode, _values);
+                List<string> allTerms = IndexFacetReadOperationBase.GetAllTermsSorted(_options.TermSortMode, null, _values);
 
                 var start = _options.Start;
                 var pageSize = Math.Min(allTerms.Count, _options.PageSize);
