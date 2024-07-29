@@ -54,8 +54,6 @@ namespace Raven.Server.Documents.Indexes.Static
         [ThreadStatic]
         private static bool DisableMatchingAdditionalAssembliesByNameValue;
 
-        private static long IndexVersion { get; set; }
-
         static IndexCompiler()
         {
             AssemblyLoadContext.Default.Resolving += (ctx, name) =>
@@ -167,11 +165,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static AbstractStaticIndexBase Compile(IndexDefinition definition, long indexVersion)
         {
-            IndexVersion = indexVersion;
             
             var cSharpSafeName = GetCSharpSafeName(definition.Name);
 
-            var @class = CreateClass(cSharpSafeName, definition);
+            var @class = CreateClass(cSharpSafeName, definition, indexVersion);
 
             var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, definition);
             var type = compilationResult.Type;
@@ -533,12 +530,12 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
         
-        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
+        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition, long indexVersion)
         {
             var statements = new List<StatementSyntax>();
             var maps = definition.Maps.ToList();
             var fieldNamesValidator = new FieldNamesValidator();
-            var methodDetector = new MethodDetectorRewriter(IndexVersion);
+            var methodDetector = new MethodDetectorRewriter(indexVersion);
             var stackDepthRetriever = new StackDepthRetriever();
             var members = new SyntaxList<MemberDeclarationSyntax>();
             var maxDepthInRecursiveLinqQuery = 0;
