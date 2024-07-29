@@ -18,6 +18,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -4026,7 +4027,24 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Null(ts);
                 }
 
-                await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
+                // add debug info in order to investigate RavenDB-22611
+                // can revert this change when RavenDB-22611 is fixed
+
+                WaitHandle[] waitHandles;
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    waitHandles = await Sharding.Backup.WaitForBackupsToComplete(new[] { store });
+                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup : false);
+                }
+                else
+                {
+                    waitHandles = await Backup.WaitForBackupToComplete(store);
+                    await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup : false);
+                }
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)), AddDebugInfo(store, backupTaskId, options.DatabaseMode));
+
+                //await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
             }
 
             using (var store = GetDocumentStore(options))
@@ -4368,6 +4386,33 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 .AppendLine("incremental backup status:")
                 .AppendLine(JsonConvert.SerializeObject(incrementalBackupStatus));
             return sb.ToString();
+        }
+
+        private static string AddDebugInfo(IDocumentStore store, long backupTaskId, RavenDatabaseMode databaseMode)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("backup failed to complete in 60 seconds");
+
+            if (databaseMode == RavenDatabaseMode.Sharded)
+            {
+                var shardedBackupStatus = store.Maintenance.Send(new GetShardedPeriodicBackupStatusOperation(backupTaskId));
+                sb.AppendLine("sharded backup statuses: ");
+                foreach (var kvp in shardedBackupStatus.Statuses)
+                {
+                    sb.AppendLine()
+                        .AppendLine($"shard {kvp.Key}:")
+                        .AppendLine(JsonConvert.SerializeObject(kvp.Value));
+                }
+            }
+            else
+            {
+                var backupStatus = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
+                sb.AppendLine("backup status: ")
+                    .AppendLine(JsonConvert.SerializeObject(backupStatus));
+            }
+
+            return sb.ToString();
+
         }
     }
 }
