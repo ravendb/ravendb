@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
@@ -118,9 +119,9 @@ namespace Raven.Server.Documents.Replication.Incoming
             return cmd;
         }
 
-        protected override DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger)
+        protected override DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
         {
-            return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo.SourceDatabaseId, trigger, _incomingPullReplicationParams);
+            return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo, trigger, _incomingPullReplicationParams);
         }
 
         internal sealed class MergedDocumentForPullReplicationCommand : MergedDocumentReplicationCommand
@@ -261,8 +262,8 @@ namespace Raven.Server.Documents.Replication.Incoming
         {
             private readonly ReplicationLoader.PullReplicationParams _pullReplicationParams;
 
-            public MergedUpdateDatabaseChangeVectorForHubCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger,
-                ReplicationLoader.PullReplicationParams pullReplicationParams) : base(changeVector, lastDocumentEtag, sourceDatabaseId, trigger)
+            public MergedUpdateDatabaseChangeVectorForHubCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger,
+                ReplicationLoader.PullReplicationParams pullReplicationParams) : base(changeVector, lastDocumentEtag, connectionInfo, trigger)
             {
                 _pullReplicationParams = pullReplicationParams;
             }
@@ -290,7 +291,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             public ReplicationLoader.PullReplicationParams PullReplicationParams;
             public MergedUpdateDatabaseChangeVectorForHubCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                var command = new MergedUpdateDatabaseChangeVectorForHubCommand(BaseDto.ChangeVector, BaseDto.LastDocumentEtag, BaseDto.SourceDatabaseId,
+                var command = new MergedUpdateDatabaseChangeVectorForHubCommand(BaseDto.ChangeVector, BaseDto.LastDocumentEtag, BaseDto.IncomingConnectionInfo,
                     new AsyncManualResetEvent(), PullReplicationParams);
                 return command;
             }

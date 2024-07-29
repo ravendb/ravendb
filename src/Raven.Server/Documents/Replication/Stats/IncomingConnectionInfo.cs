@@ -7,6 +7,7 @@ namespace Raven.Server.Documents.Replication.Stats
     public sealed class IncomingConnectionInfo : IEquatable<IncomingConnectionInfo>
     {
         public string SourceDatabaseId { get; set; }
+        public string SourceDatabaseBase64Id { get; set; }
 
         public string SourceDatabaseName { get; set; }
 
@@ -28,6 +29,7 @@ namespace Raven.Server.Documents.Replication.Stats
                 SourceUrl = message.SourceUrl,
                 SourceMachineName = message.SourceMachineName,
                 SourceDatabaseId = message.SourceDatabaseId,
+                SourceDatabaseBase64Id = message.SourceDatabaseBase64Id,
                 SourceTag = message.SourceTag,
                 ReplicationsType = message.ReplicationsType
             };

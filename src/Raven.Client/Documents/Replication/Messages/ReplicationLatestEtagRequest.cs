@@ -8,6 +8,8 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public string SourceDatabaseId { get; set; }
 
+        public string SourceDatabaseBase64Id { get; set; }
+
         public string SourceUrl { get; set; }
 
         public string SourceTag { get; set; }
