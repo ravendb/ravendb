@@ -2609,7 +2609,9 @@ namespace Raven.Server.Documents.TimeSeries
                 LowerId = docId,
                 Name = name,
                 Etag = Bits.SwapBytes(etag),
-                Type = IndexItemType.TimeSeries
+                Type = IndexItemType.TimeSeries,
+                From = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.From, ref reader),
+                To = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.To, ref reader)
             };
         }
 

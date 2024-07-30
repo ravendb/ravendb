@@ -100,8 +100,8 @@ namespace SlowTests.Issues
                 {
                     var user = new User();
                     session.Store(user, id);
-                    session.TimeSeriesFor(user, "HeartRate").Append(now1,1);
-                    session.TimeSeriesFor(user, "HeartRate").Append(now2,2);
+                    session.TimeSeriesFor(user, "HeartRate").Append(now1, 1);
+                    session.TimeSeriesFor(user, "HeartRate").Append(now2, 2);
 
                     session.SaveChanges();
                 }
@@ -110,7 +110,7 @@ namespace SlowTests.Issues
                 await mapIndex.ExecuteAsync(store);
 
                 Indexes.WaitForIndexing(store);
-                
+
                 Assert.Equal(2, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 2));
 
                 using (var session = store.OpenSession())
@@ -124,6 +124,287 @@ namespace SlowTests.Issues
                 Indexes.WaitForIndexing(store);
 
                 Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 0));
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleDocuments(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                const string id = "users/1";
+                const string id2 = "users/2";
+                var now1 = RavenTestHelper.UtcToday;
+                var now2 = now1.AddMinutes(1);
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = new User();
+                    session.Store(user1, id);
+                    session.TimeSeriesFor(user1, "HeartRate").Append(now1, 1);
+                    session.TimeSeriesFor(user1, "HeartRate").Append(now2, 2);
+
+                    var user2 = new User();
+                    session.Store(user2, id2);
+                    session.TimeSeriesFor(user2, "HeartRate").Append(now1, 1);
+                    session.TimeSeriesFor(user2, "HeartRate").Append(now2, 2);
+
+                    session.SaveChanges();
+                }
+
+                var mapIndex = new UsersTimeSeriesMapIndex();
+                await mapIndex.ExecuteAsync(store);
+
+                Indexes.WaitForIndexing(store);
+
+                Assert.Equal(4, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 4));
+
+                // delete only one document time series
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(id);
+                    session.TimeSeriesFor(user, "HeartRate").Delete();
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                Assert.Equal(2, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 2));
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleDocuments2(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                const string id = "users/1";
+                const string id2 = "users/2";
+                var now1 = RavenTestHelper.UtcToday;
+                var now2 = now1.AddMinutes(1);
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = new User();
+                    session.Store(user1, id);
+                    session.TimeSeriesFor(user1, "HeartRate").Append(now1, 1);
+                    session.TimeSeriesFor(user1, "HeartRate").Append(now2, 2);
+
+                    var user2 = new User();
+                    session.Store(user2, id2);
+                    session.TimeSeriesFor(user2, "HeartRate").Append(now1, 1);
+                    session.TimeSeriesFor(user2, "HeartRate").Append(now2, 2);
+
+                    session.SaveChanges();
+                }
+
+                var mapIndex = new UsersTimeSeriesMapIndex();
+                await mapIndex.ExecuteAsync(store);
+
+                Indexes.WaitForIndexing(store);
+
+                Assert.Equal(4, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 4));
+
+                // delete all time series
+                using (var session = store.OpenSession())
+                {
+                    var user1 = session.Load<User>(id);
+                    session.TimeSeriesFor(user1, "HeartRate").Delete();
+
+                    var user2 = session.Load<User>(id2);
+                    session.TimeSeriesFor(user2, "HeartRate").Delete();
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 0));
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleDocuments3(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                const string id = "users/1";
+                const string id2 = "users/2";
+                var now1 = RavenTestHelper.UtcToday;
+                var now2 = now1.AddMinutes(1);
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = new User();
+                    session.Store(user1, id);
+                    session.TimeSeriesFor(user1, "HeartRate").Append(now1, 1);
+                    session.TimeSeriesFor(user1, "HeartRate").Append(now2, 2);
+
+                    var user2 = new User();
+                    session.Store(user2, id2);
+                    session.TimeSeriesFor(user2, "HeartRate").Append(now1, 1);
+                    session.TimeSeriesFor(user2, "HeartRate").Append(now2, 2);
+
+                    session.SaveChanges();
+                }
+
+                var mapIndex = new UsersTimeSeriesMapIndex();
+                await mapIndex.ExecuteAsync(store);
+
+                Indexes.WaitForIndexing(store);
+
+                Assert.Equal(4, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 4));
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = session.Load<User>(id);
+                    session.TimeSeriesFor(user1, "HeartRate").Delete(at: now1);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user2 = session.Load<User>(id2);
+                    session.TimeSeriesFor(user2, "HeartRate").Delete();
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                Assert.Equal(1, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 1));
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleSegments(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                const string id = "users/1";
+                var now1 = RavenTestHelper.UtcToday;
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = new User();
+                    session.Store(user1, id);
+                    session.SaveChanges();
+                }
+
+                // append multiple segments
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor(id, "Heartrate");
+
+                    for (int j = 0; j < 1000; j++)
+                        tsf.Append(now1.AddMinutes(j), new double[] { j, j + 1, j + 2, j + 3, j + 4 }, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                var mapIndex = new UsersTimeSeriesMapIndex();
+                await mapIndex.ExecuteAsync(store);
+
+                Indexes.WaitForIndexing(store);
+
+                Assert.Equal(1000, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 1000));
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(id);
+                    session.TimeSeriesFor(user, "HeartRate").Delete();
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 0));
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleSegments2(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                const string id = "users/1";
+                var now1 = RavenTestHelper.UtcToday;
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = new User();
+                    session.Store(user1, id);
+                    session.SaveChanges();
+                }
+
+                // append multiple segments
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor(id, "Heartrate");
+
+                    for (int j = 0; j < 1000; j++)
+                        tsf.Append(now1.AddMinutes(j), new double[] { j, j + 1, j + 2, j + 3, j + 4 }, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                var mapIndex = new UsersTimeSeriesMapIndex();
+                await mapIndex.ExecuteAsync(store);
+
+                Indexes.WaitForIndexing(store);
+
+                Assert.Equal(1000, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 1000));
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(id);
+                    var tsf = session.TimeSeriesFor(user, "HeartRate");
+
+                    // insert many deleted ranges 
+                    for (int j = 0; j < 1000; j++)
+                        tsf.Delete(at: now1.AddMinutes(j));
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 0));
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(id);
+                    var tsf = session.TimeSeriesFor(user, "HeartRate");
+
+                    // insert many deleted ranges 
+                    for (int j = 0; j < 1000; j++)
+                        tsf.Append(now1.AddMinutes(j), new double[] { j, j + 1, j + 2, j + 3, j + 4 }, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                Assert.Equal(1000, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 1000));
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(id);
+                    session.Delete(user);
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 0));
+
             }
         }
 
@@ -167,7 +448,7 @@ namespace SlowTests.Issues
                     }
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                
+
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => now1.AddHours(2);
 
@@ -227,7 +508,7 @@ namespace SlowTests.Issues
                 await database.TombstoneCleaner.ExecuteCleanup();
 
                 Indexes.WaitForIndexing(store);
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var entries = await session.TimeSeriesFor(id, timeSeriesName).GetAsync();
@@ -314,14 +595,14 @@ namespace SlowTests.Issues
                 AddMap(
                     "HeartRate",
                     timeSeries => from ts in timeSeries
-                        from entry in ts.Entries
-                        select new
-                        {
-                            HeartBeat = entry.Values[0],
-                            ts.Name,
-                            entry.Timestamp.Date,
-                            User = ts.DocumentId
-                        });
+                                  from entry in ts.Entries
+                                  select new
+                                  {
+                                      HeartBeat = entry.Values[0],
+                                      ts.Name,
+                                      entry.Timestamp.Date,
+                                      User = ts.DocumentId
+                                  });
             }
         }
 
@@ -339,12 +620,12 @@ namespace SlowTests.Issues
                     });
 
                 Reduce = results => from result in results
-                    group result by new { result.Name } into g
-                    select new
-                    {
-                        Name = g.Key.Name,
-                        Count = g.Sum(x => x.Count)
-                    };
+                                    group result by new { result.Name } into g
+                                    select new
+                                    {
+                                        Name = g.Key.Name,
+                                        Count = g.Sum(x => x.Count)
+                                    };
             }
         }
     }

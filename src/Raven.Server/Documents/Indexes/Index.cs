@@ -20,7 +20,6 @@ using Raven.Client.Exceptions.Corax;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -1337,7 +1336,7 @@ namespace Raven.Server.Documents.Indexes
                 var lastItemEtag = GetLastItemEtagInCollection(queryContext, collection);
 
                 var lastProcessedItemEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
-                var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(_itemType, indexContext.Transaction, collection);
+                var lastProcessedTombstoneEtag = ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                 _inMemoryIndexProgress.TryGetValue(collection, out var stats);
 
@@ -4957,6 +4956,9 @@ namespace Raven.Server.Documents.Indexes
             }
             return Math.Max(lastDocEtag, lastTombstoneEtag);
         }
+
+        public virtual long ReadLastProcessedTombstoneEtag(RavenTransaction transaction, string collection) =>
+            _indexStorage.ReadLastProcessedTombstoneEtag(transaction, collection);
 
         public virtual long GetLastItemEtagInCollection(QueryOperationContext queryContext, string collection)
         {

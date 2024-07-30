@@ -17,6 +17,7 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.TimeSeries;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -183,6 +184,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return result;
         }
 
+        public override long ReadLastProcessedTombstoneEtag(RavenTransaction transaction, string collection) =>
+            _indexStorage.ReadLastProcessedTimeSeriesDeletedRangeEtag(transaction, collection);
+
         public override long GetLastItemEtagInCollection(QueryOperationContext queryContext, string collection)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
@@ -219,7 +223,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             if (tombstone == null)
                 return default;
 
-            return new TimeSeriesDeletedRangeIndexItem(tombstone.Key, tombstone.DocId, tombstone.Etag, tombstone.Name, sizeof(long) * 2 /*todo: change?*/, tombstone);
+            return new TimeSeriesDeletedRangeIndexItem(tombstone.Key, tombstone.DocId, tombstone.Etag, tombstone.Name, sizeof(long) * 2, tombstone);
         }
 
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
@@ -301,10 +305,10 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             progressStats.TotalNumberOfItems += totalCount;
 
 
-            progressStats.NumberOfTombstonesToProcess +=
+            progressStats.NumberOfTimeSeriesDeletedRangesToProcess +=
                 DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(queryContext.Documents, collectionName,
                     progressStats.LastProcessedTimeSeriesDeletedRangeEtag, out totalCount, overallDuration);
-            progressStats.TotalNumberOfTombstones += totalCount;
+            progressStats.TotalNumberOfTimeSeriesDeletedRanges += totalCount;
         }
     }
 }

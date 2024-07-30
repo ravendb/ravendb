@@ -7,39 +7,46 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes.Workers.Cleanup
 {
-    public abstract class CleanupBase : IIndexingWork
+    public abstract class CleanupItemsBase : IIndexingWork
     {
         private readonly Logger _logger;
 
         private readonly Index _index;
         private readonly IndexItemType _itemType;
         private readonly IndexingConfiguration _configuration;
-        private readonly IndexStorage _indexStorage;
-        private readonly MapReduceIndexingContext _mapReduceContext;
 
-        protected CleanupBase(Index index, IndexStorage indexStorage, IndexingConfiguration configuration, MapReduceIndexingContext mapReduceContext)
+        protected readonly IndexStorage IndexStorage;
+
+        protected CleanupItemsBase(Index index, IndexStorage indexStorage, IndexingConfiguration configuration, MapReduceIndexingContext mapReduceContext)
         {
             _index = index;
             _itemType = _index.ItemType;
             _configuration = configuration;
-            _mapReduceContext = mapReduceContext;
-            _indexStorage = indexStorage;
             _logger = LoggingSource.Instance
-                .GetLogger<CleanupBase>(indexStorage.DocumentDatabase.Name);
+                .GetLogger<CleanupItemsBase>(indexStorage.DocumentDatabase.Name);
+
+            IndexStorage = indexStorage;
         }
 
-        public string Name => "Cleanup";
+        public abstract string Name { get; }
+
+        protected abstract long ReadLastProcessedTombstoneEtag(RavenTransaction transaction, string collection);
+
+        protected abstract void WriteLastProcessedTombstoneEtag(RavenTransaction transaction, string collection, long lastEtag);
+
+        internal abstract void UpdateStats(IndexProgress.CollectionStats inMemoryStats, long lastEtag);
 
         protected abstract IEnumerable<TombstoneIndexItem> GetTombstonesFrom(DocumentsOperationContext context, long etag, long start, long take);
 
         protected abstract IEnumerable<TombstoneIndexItem> GetTombstonesFrom(DocumentsOperationContext context, string collection, long etag, long start, long take);
 
-        protected abstract bool ValidateType(TombstoneIndexItem tombstone);
+        protected abstract bool IsValidTombstoneType(TombstoneIndexItem tombstone);
 
         protected abstract bool HandleDelete(TombstoneIndexItem tombstone, string collection, Lazy<IndexWriteOperationBase> writer, QueryOperationContext queryContext,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
@@ -61,8 +68,8 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
-                    var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
-                    var lastTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(_itemType, indexContext.Transaction, collection);
+                    var lastMappedEtag = IndexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+                    var lastTombstoneEtag = ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Collection: {collection}. LastMappedEtag: {lastMappedEtag:#,#;;0}. LastTombstoneEtag: {lastTombstoneEtag:#,#;;0}.");
@@ -77,6 +84,9 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
                     while (keepRunning)
                     {
                         var hasChanges = false;
+                        
+                        ClearStatsIfNeeded();
+
                         using (queryContext.OpenReadTransaction())
                         {
                             sw.Restart();
@@ -96,19 +106,19 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
                                 totalProcessedCount++;
                                 hasChanges = true;
                                 lastEtag = tombstone.Etag;
-                                inMemoryStats.UpdateLastEtag(lastEtag, isTombstone: true, isTimeSeriesDeletedRange: _index.ItemType == IndexItemType.TimeSeries);
+                                UpdateStats(inMemoryStats, lastEtag);
 
                                 if (_logger.IsInfoEnabled && totalProcessedCount % 2048 == 0)
                                     _logger.Info($"Executing cleanup for '{_index.Name}'. Processed count: {totalProcessedCount:#,#;;0} etag: {lastEtag}.");
 
-                                if (ValidateType(tombstone) == false)
+                                if (IsValidTombstoneType(tombstone) == false)
                                     continue; // this can happen when we have '@all_docs'
 
                                 var deleted = HandleDelete(tombstone, collection, writeOperation, queryContext, indexContext, collectionStats);
                                 stats.RecordTombstoneDeleteSuccess();
 
                                 if (deleted && _itemType == IndexItemType.TimeSeries)
-                                    break;
+                                    continue;
 
                                 var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.Cleanup, queryContext, indexContext, writeOperation, lastEtag,
                                     lastCollectionEtag,
@@ -134,23 +144,17 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Processed {count} tombstones in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
-                    if (_index.Type.IsMap())
-                    {
-                        _indexStorage.WriteLastTombstoneEtag(_itemType, indexContext.Transaction, collection, lastEtag);
-                    }
-                    else
-                    {
-                        if (_itemType == IndexItemType.TimeSeries)
-                            _mapReduceContext.ProcessedTimeSeriesDeletedRangeEtags[collection] = lastEtag;
-                        else
-                            _mapReduceContext.ProcessedTombstoneEtags[collection] = lastEtag;
-                    }
+                    WriteLastProcessedTombstoneEtag(indexContext.Transaction, collection, lastEtag);
 
                     moreWorkFound = true;
                 }
             }
 
             return (moreWorkFound, batchContinuationResult);
+        }
+
+        protected virtual void ClearStatsIfNeeded()
+        {
         }
     }
 }
