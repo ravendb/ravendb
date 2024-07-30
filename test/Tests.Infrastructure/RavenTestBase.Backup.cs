@@ -17,6 +17,7 @@ using Raven.Server;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -127,6 +128,16 @@ namespace FastTests
                 }, true);
 
                 Assert.True(value);
+
+                // wait for the command to be applied all the way so timer will be updated if needed
+                AsyncHelpers.RunSync(async () =>
+                {
+                    long index = 0;
+                    var res = WaitForValue(() => _parent.Cluster.TryGetLastRaftIndexForCommand(serverStore.Server, nameof(UpdateResponsibleNodeForTasksCommand), out index), true);
+                    Assert.True(res);
+                    Assert.True(index > 0);
+                    await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(index, new() { serverStore.Server });
+                });
             }
 
             /// <summary>
