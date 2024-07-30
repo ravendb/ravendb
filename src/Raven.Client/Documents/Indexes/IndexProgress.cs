@@ -34,24 +34,27 @@ namespace Raven.Client.Documents.Indexes
 
             public long NumberOfTombstonesToProcess { get; set; }
 
+            public long NumberOfTimeSeriesDeletedRangesToProcess { get; set; }
+
             public long TotalNumberOfTombstones { get; set; }
 
-            internal void UpdateLastEtag(long lastEtag, bool isTombstone, bool isTimeSeriesDeletedRange = false)
+            public long TotalNumberOfTimeSeriesDeletedRanges { get; set; }
+
+            internal void UpdateLastEtag(long lastEtag, bool isTombstone)
             {
                 if (isTombstone)
                 {
-                    if (isTimeSeriesDeletedRange)
-                    {
-                        LastProcessedTimeSeriesDeletedRangeEtag = lastEtag;
-                        return;
-                    }
-
                     LastProcessedTombstoneEtag = lastEtag;
                 }
                 else
                 {
                     LastProcessedItemEtag = lastEtag;
                 }
+            }
+
+            internal void UpdateTimeSeriesDeletedRangeLastEtag(long lastEtag)
+            {
+                LastProcessedTimeSeriesDeletedRangeEtag = lastEtag;
             }
         }
     }

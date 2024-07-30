@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.Cleanup;
 using Raven.Server.Documents.Indexes.Workers.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -148,6 +149,8 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 _mre.Set();
             }
         }
+        public override long ReadLastProcessedTombstoneEtag(RavenTransaction transaction, string collection) =>
+            _indexStorage.ReadLastProcessedTimeSeriesDeletedRangeEtag(transaction, collection);
 
         private void HandleTimeSeriesChange(TimeSeriesChange change)
         {
@@ -164,6 +167,11 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(
                     queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount, overallDuration);
             progressStats.TotalNumberOfItems += totalCount;
+
+            progressStats.NumberOfTimeSeriesDeletedRangesToProcess +=
+                DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(queryContext.Documents, collectionName,
+                    progressStats.LastProcessedTimeSeriesDeletedRangeEtag, out totalCount, overallDuration);
+            progressStats.TotalNumberOfTimeSeriesDeletedRanges += totalCount;
         }
 
         internal void HandleTimeSeriesDelete(TombstoneIndexItem tombstone, TransactionOperationContext indexContext)

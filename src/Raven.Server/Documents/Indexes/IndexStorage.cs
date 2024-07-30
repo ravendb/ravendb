@@ -796,17 +796,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void WriteLastTombstoneEtag(IndexItemType itemType, RavenTransaction tx, string collection, long etag)
-        {
-            if (itemType == IndexItemType.TimeSeries)
-            {
-                WriteLastTimeSeriesDeletedRangeEtag(tx, collection, etag);
-                return;
-            }
-          
-            WriteLastTombstoneEtag(tx, collection, etag);
-        }
-
         public void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
         {
             using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))

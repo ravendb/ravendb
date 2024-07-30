@@ -69,13 +69,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             using var reader = _indexWriter.GetReader(state);
             using var termsEnumerator = reader.Terms(term, state);
             
-            if (termsEnumerator.Term == null)
-                return;
+            while (termsEnumerator.Term != null)
+            {
+                if (termsEnumerator.Term.Text.Contains(term.Text, StringComparison.OrdinalIgnoreCase) == false)
+                    return;
 
-            // found by prefix
-            term = termsEnumerator.Term;
+                // found by prefix
+                _indexWriter.DeleteDocuments(termsEnumerator.Term, state);
 
-            _indexWriter.DeleteDocuments(term, state);
+                if (termsEnumerator.Next(state) == false)
+                    return;
+            }
         }
 
         public int EntriesCount(IState state)
