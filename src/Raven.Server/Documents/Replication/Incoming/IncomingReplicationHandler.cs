@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Replication.Messages;
@@ -99,9 +100,9 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override int GetNextReplicationStatsId() => _parent.GetNextReplicationStatsId();
 
-        protected virtual DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger)
+        protected virtual DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
         {
-            return new MergedUpdateDatabaseChangeVectorCommand(changeVector, lastDocumentEtag, sourceDatabaseId, trigger);
+            return new MergedUpdateDatabaseChangeVectorCommand(changeVector, lastDocumentEtag, connectionInfo, trigger);
         }
 
         protected virtual DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
@@ -114,31 +115,26 @@ namespace Raven.Server.Documents.Replication.Incoming
         {
             private readonly string _changeVector;
             private readonly long _lastDocumentEtag;
-            private readonly string _sourceDatabaseId;
+            private readonly IncomingConnectionInfo _connectionInfo;
             private readonly AsyncManualResetEvent _trigger;
 
-            public MergedUpdateDatabaseChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger)
+            public MergedUpdateDatabaseChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
             {
                 _changeVector = changeVector;
                 _lastDocumentEtag = lastDocumentEtag;
-                _sourceDatabaseId = sourceDatabaseId;
+                _connectionInfo = connectionInfo;
                 _trigger = trigger;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var operationsCount = 0;
-                var lastReplicatedEtag = DocumentsStorage.GetLastReplicatedEtagFrom(context, _sourceDatabaseId);
+                var lastReplicatedEtag = DocumentsStorage.GetLastReplicatedEtagFrom(context, _connectionInfo.SourceDatabaseId);
                 if (_lastDocumentEtag > lastReplicatedEtag)
                 {
-                    DocumentsStorage.SetLastReplicatedEtagFrom(context, _sourceDatabaseId, _lastDocumentEtag);
+                    DocumentsStorage.SetLastReplicatedEtagFrom(context, _connectionInfo.SourceDatabaseId, _lastDocumentEtag);
                     operationsCount++;
                 }
-
-                var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
-                if (conflictStatus != ConflictStatus.Update)
-                    return operationsCount;
 
                 if (TryUpdateChangeVector(context))
                     operationsCount++;
@@ -152,7 +148,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     ChangeVector = _changeVector,
                     LastDocumentEtag = _lastDocumentEtag,
-                    SourceDatabaseId = _sourceDatabaseId,
+                    IncomingConnectionInfo = _connectionInfo,
                 };
             }
 
@@ -161,7 +157,18 @@ namespace Raven.Server.Documents.Replication.Incoming
                 var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
                 if (conflictStatus != ConflictStatus.Update)
+                {
+                    if (string.IsNullOrEmpty(_connectionInfo.SourceDatabaseBase64Id) == false)
+                    {
+                        var result = ChangeVectorUtils.TryUpdateChangeVector(_connectionInfo.SourceTag, _connectionInfo.SourceDatabaseBase64Id, _lastDocumentEtag, current);
+                        if (result.IsValid)
+                        {
+                            context.LastDatabaseChangeVector = context.GetChangeVector(result.ChangeVector);
+                        }
+                    }
+
                     return false;
+                }
 
                 context.LastDatabaseChangeVector = current.MergeWith(_changeVector, context);
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
@@ -184,11 +191,11 @@ namespace Raven.Server.Documents.Replication.Incoming
         {
             public string ChangeVector;
             public long LastDocumentEtag;
-            public string SourceDatabaseId;
+            public IncomingConnectionInfo IncomingConnectionInfo;
 
             public MergedUpdateDatabaseChangeVectorCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                var command = new MergedUpdateDatabaseChangeVectorCommand(ChangeVector, LastDocumentEtag, SourceDatabaseId,
+                var command = new MergedUpdateDatabaseChangeVectorCommand(ChangeVector, LastDocumentEtag, IncomingConnectionInfo,
                     new AsyncManualResetEvent());
                 return command;
             }
@@ -217,7 +224,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                             $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
                     }
 
-                    var cmd = GetUpdateChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo.SourceDatabaseId, _replicationFromAnotherSource);
+                    var cmd = GetUpdateChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo, _replicationFromAnotherSource);
 
                     if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
                     {

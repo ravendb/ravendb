@@ -60,7 +60,7 @@ public partial class IndexSearcher
     public IAggregationProvider BetweenAggregation<TValue>(in FieldMetadata field, TValue low, TValue high,
         UnaryMatchOperation leftSide = UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation rightSide = UnaryMatchOperation.LessThanOrEqual, bool forward = true)
     {
-        Debug.Assert(low is double or string, "value is double or string");
+        Debug.Assert(low is double or string or Slice, "value is double or string or Slice");
         
         if (typeof(TValue) == typeof(double))
         {

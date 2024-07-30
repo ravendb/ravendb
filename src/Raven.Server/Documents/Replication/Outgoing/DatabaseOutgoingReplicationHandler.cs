@@ -321,6 +321,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             var initialRequest = base.GetInitialHandshakeRequest();
 
+            initialRequest[nameof(ReplicationLatestEtagRequest.SourceDatabaseBase64Id)] = _database.DbBase64Id;
             initialRequest[nameof(ReplicationLatestEtagRequest.SourceDatabaseId)] = _database.DbId.ToString();
             return initialRequest;
         }

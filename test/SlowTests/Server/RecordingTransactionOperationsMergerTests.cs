@@ -37,6 +37,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
@@ -660,7 +661,7 @@ namespace SlowTests.Server
                 await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 var command = new IncomingPullReplicationHandler.MergedUpdateDatabaseChangeVectorForHubCommand(
-                    expectedChangeVector, 5, Guid.NewGuid().ToString(), new AsyncManualResetEvent(), new ReplicationLoader.PullReplicationParams
+                    expectedChangeVector, 5, new IncomingConnectionInfo() { SourceDatabaseId = Guid.NewGuid().ToString() }, new AsyncManualResetEvent(), new ReplicationLoader.PullReplicationParams
                     {
                         Mode = PullReplicationMode.HubToSink
                     });

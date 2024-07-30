@@ -170,7 +170,7 @@ namespace SlowTests.Issues
             }))
             {
                 var database = await GetDatabase(store.Database);
-                database.NotificationCenter.Paging.ForTestingPurposesOnly().DisableTimer = true;
+                database.NotificationCenter.Paging.ForTestingPurposesOnly().DisableDequeue = true;
 
                 using (var session = store.OpenSession())
                 {
