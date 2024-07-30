@@ -1,11 +1,14 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Text.Json;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.IdentityModel.Tokens;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 {
@@ -36,15 +39,10 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
                 deletedCount = await DeleteRevisionsAsync(parameters, token);
             }
 
-            /*
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                RequestHandler.LogAuditFor("Database", "DELETE",
-                    $"{RequestHandler.DatabaseName} - {deletedCount} revisions of '{request.DocumentId}' had been deleted manually" +
-                    (request.After.HasValue || request.Before.HasValue ? 
-                        $", in the range {request.After?.ToString() ?? "start"} to {request.Before?.ToString() ?? "end"}" : string.Empty));
+                RequestHandler.LogAuditFor("database/revisions/delete", "DELETE", $"database: {RequestHandler.DatabaseName}, totalDeletes: {deletedCount}, parameters: {JsonSerializer.Serialize(parameters)} ");
             }
-             */
 
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
@@ -56,6 +54,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 
                 writer.WriteEndObject();
             }
+
         }
     }
 }
