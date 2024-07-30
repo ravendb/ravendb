@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                 ReplicationFactor = 1,
                 RunInMemory = false
             });
-            
+
             string id = "User/33-A";
             using (var session = store.OpenAsyncSession())
             {
@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                 {
                     Name = "BackgroundSubscriptionWorker"
                 });
-            
+
             using var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("BackgroundSubscriptionWorker"));
 
             // disable database
@@ -69,7 +69,7 @@ namespace SlowTests.Issues
                 }
             };
             var successMre = new AsyncManualResetEvent();
-            var _ = worker.Run( batch =>
+            var _ = worker.Run(batch =>
             {
                 successMre.Set();
             }, cts.Token);
@@ -191,7 +191,7 @@ namespace SlowTests.Issues
                 }
 
                 subscriptionLog.Add((DateTime.UtcNow, sb.ToString()));
-                Assert.True(false, string.Join(Environment.NewLine, subscriptionLog.Select(x => $"#### {x.Item1.GetDefaultRavenFormat()}: {x.Item2}")));
+                Assert.Fail(string.Join(Environment.NewLine, subscriptionLog.Select(x => $"#### {x.Item1.GetDefaultRavenFormat()}: {x.Item2}")));
             }
         }
 
@@ -297,8 +297,8 @@ namespace SlowTests.Issues
             var result1 = await DisposeServerAndWaitForFinishOfDisposalAsync(nodes[1]);
 
             var cts = new CancellationTokenSource();
-            
-            var aggregateException = await Assert.ThrowsAsync<AggregateException>( () => worker.Run(batch => { }, cts.Token));
+
+            var aggregateException = await Assert.ThrowsAsync<AggregateException>(() => worker.Run(batch => { }, cts.Token));
             var actualExceptionWasThrown = false;
             var subscriptionInvalidStateExceptionWasThrown = false;
             foreach (var e in aggregateException.InnerExceptions)
