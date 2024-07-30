@@ -13,7 +13,7 @@ public partial class RevisionsStorage
 {
     internal sealed class DeleteRevisionsByDocumentIdMergedCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
-        private readonly IEnumerable<string> _ids;
+        private readonly List<string> _ids;
 
         private readonly DateTime? _after, _before;
 
@@ -21,7 +21,7 @@ public partial class RevisionsStorage
 
         public (bool MoreWork, long Deleted)? Result { get; private set; } // has more to delete, number of deleted revisions
 
-        public DeleteRevisionsByDocumentIdMergedCommand(IEnumerable<string> ids, DateTime? after, DateTime? before, bool includeForceCreated)
+        public DeleteRevisionsByDocumentIdMergedCommand(List<string> ids, DateTime? after, DateTime? before, bool includeForceCreated)
         {
             _ids = ids;
             _after = after;
@@ -84,25 +84,25 @@ public partial class RevisionsStorage
             return new DeleteRevisionsByDocumentIdMergedCommandDto(_ids, _after, _before, _includeForceCreated);
         }
 
-        private sealed class DeleteRevisionsByDocumentIdMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsByDocumentIdMergedCommand>
+        public sealed class DeleteRevisionsByDocumentIdMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsByDocumentIdMergedCommand>
         {
-            private IEnumerable<string> _ids;
+            public List<string> Ids;
 
-            private readonly DateTime? _after, _before;
+            public readonly DateTime? After, Before;
 
-            private readonly bool _includeForceCreated;
+            public readonly bool IncludeForceCreated;
 
-            public DeleteRevisionsByDocumentIdMergedCommandDto(IEnumerable<string> ids,  DateTime? after, DateTime? before, bool includeForceCreated)
+            public DeleteRevisionsByDocumentIdMergedCommandDto(List<string> ids,  DateTime? after, DateTime? before, bool includeForceCreated)
             {
-                _ids = ids;
-                _after = after;
-                _before = before;
-                _includeForceCreated = includeForceCreated;
+                Ids = ids;
+                After = after;
+                Before = before;
+                IncludeForceCreated = includeForceCreated;
             }
 
             public DeleteRevisionsByDocumentIdMergedCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new DeleteRevisionsByDocumentIdMergedCommand(_ids, _after, _before, _includeForceCreated);
+                return new DeleteRevisionsByDocumentIdMergedCommand(Ids, After, Before, IncludeForceCreated);
             }
         }
     }

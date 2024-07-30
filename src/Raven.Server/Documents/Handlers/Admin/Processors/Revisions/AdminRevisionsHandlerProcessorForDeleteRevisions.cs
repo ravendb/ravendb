@@ -35,13 +35,15 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
             return cmd.Result.HasValue ? cmd.Result.Value : 0;
         }
 
-        private async Task<long> DeleteRevisionsByDocumentIdAsync(IEnumerable<string> ids, DateTime? after, DateTime? before, bool includeForceCreated, OperationCancelToken token)
+        private async Task<long> DeleteRevisionsByDocumentIdAsync(List<string> ids, DateTime? after, DateTime? before, bool includeForceCreated, OperationCancelToken token)
         {
             var deleted = 0L;
             var moreWork = false;
 
             do
             {
+                token.ThrowIfCancellationRequested();
+
                 var cmd = new DeleteRevisionsByDocumentIdMergedCommand(ids, after, before, includeForceCreated);
                 await RequestHandler.Database.TxMerger.Enqueue(cmd);
 
