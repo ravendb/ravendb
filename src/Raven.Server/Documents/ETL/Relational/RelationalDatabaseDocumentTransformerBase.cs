@@ -16,7 +16,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Relational;
 
-internal abstract class RelationalDocumentTransformer<TRelationalConnectionString, TRelationalEtlConfiguration>  : EtlTransformer<ToRelationalItem, RelationalTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
+internal abstract class RelationalDatabaseDocumentTransformerBase<TRelationalConnectionString, TRelationalEtlConfiguration>  : EtlTransformer<ToRelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
 where TRelationalConnectionString: ConnectionString
 where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
 {
@@ -24,14 +24,14 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
     
     private readonly Transformation _transformation;
     protected readonly TRelationalEtlConfiguration _config;
-    private readonly Dictionary<string, RelationalTableWithRecords> _tables;
+    private readonly Dictionary<string, RelationalDatabaseTableWithRecords> _tables;
     private Dictionary<string, Queue<Attachment>> _loadedAttachments;
-    private readonly List<RelationalTableWithRecords> _tablesForScript;
-    private readonly List<RelationalTableWithRecords> _etlTablesWithRecords;
+    private readonly List<RelationalDatabaseTableWithRecords> _tablesForScript;
+    private readonly List<RelationalDatabaseTableWithRecords> _etlTablesWithRecords;
 
     private EtlStatsScope _stats;
 
-    public RelationalDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, TRelationalEtlConfiguration config, PatchRequestType patchRequestType)
+    public RelationalDatabaseDocumentTransformerBase(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, TRelationalEtlConfiguration config, PatchRequestType patchRequestType)
         : base(database, context, new PatchRequest(transformation.Script, patchRequestType), null)
     {
         _transformation = transformation;
@@ -41,8 +41,8 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
 
         LoadToDestinations = destinationTables;
 
-        _tables = new Dictionary<string, RelationalTableWithRecords>(destinationTables.Length, StringComparer.OrdinalIgnoreCase);
-        _tablesForScript = new List<RelationalTableWithRecords>(destinationTables.Length);
+        _tables = new Dictionary<string, RelationalDatabaseTableWithRecords>(destinationTables.Length, StringComparer.OrdinalIgnoreCase);
+        _tablesForScript = new List<RelationalDatabaseTableWithRecords>(destinationTables.Length);
 
 
         _etlTablesWithRecords = GetEtlTables();
@@ -59,7 +59,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
            _loadedAttachments = new Dictionary<string, Queue<Attachment>>(StringComparer.OrdinalIgnoreCase);
     }
 
-    protected abstract List<RelationalTableWithRecords> GetEtlTables();
+    protected abstract List<RelationalDatabaseTableWithRecords> GetEtlTables();
 
     public override void Initialize(bool debugMode)
     {
@@ -80,14 +80,14 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
             ThrowLoadParameterIsMandatory(nameof(tableName));
 
         var result = cols.TranslateToObject(Context);
-        var columns = new List<RelationalColumn>(result.Count);
+        var columns = new List<RelationalDatabaseColumn>(result.Count);
         var prop = new BlittableJsonReaderObject.PropertyDetails();
 
         for (var i = 0; i < result.Count; i++)
         {
             result.GetPropertyByIndex(i, ref prop);
 
-            var relationalColumn = new RelationalColumn { Id = prop.Name, Type = prop.Token, Value = prop.Value };
+            var relationalColumn = new RelationalDatabaseColumn { Id = prop.Name, Type = prop.Token, Value = prop.Value };
 
             if (_transformation.IsLoadingAttachments && 
                 prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
@@ -103,7 +103,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
             columns.Add(relationalColumn);
         }
 
-        var newItem = new ToRelationalItem(Current);
+        var newItem = new ToRelationalDatabaseItem(Current);
         newItem.Columns = columns;
         
         GetOrAdd(tableName).Inserts.Add(newItem);
@@ -154,16 +154,16 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
         throw new NotSupportedException($"Time series aren't supported by {_config.EtlType.ToString()} ETL");
     }
 
-    private RelationalTableWithRecords GetOrAdd(string tableName)
+    private RelationalDatabaseTableWithRecords GetOrAdd(string tableName)
     {
-        if (_tables.TryGetValue(tableName, out RelationalTableWithRecords table) == false)
+        if (_tables.TryGetValue(tableName, out RelationalDatabaseTableWithRecords table) == false)
         {
             var relationalEtlTable = _etlTablesWithRecords.Find(x => x.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase));
 
             if (relationalEtlTable == null)
                 ThrowTableNotDefinedInConfig(tableName);
             
-            table = new RelationalTableWithRecords(relationalEtlTable);
+            table = new RelationalDatabaseTableWithRecords(relationalEtlTable);
             _tables[tableName] = table;
             return table;
         }
@@ -177,12 +177,12 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
         throw new InvalidOperationException($"Table '{tableName}' was not defined in the configuration of {_config.EtlType.ToString()} ETL task");
     }
 
-    public override IEnumerable<RelationalTableWithRecords> GetTransformedResults()
+    public override IEnumerable<RelationalDatabaseTableWithRecords> GetTransformedResults()
     {
         return _tables.Values;
     }
 
-    public override void Transform(ToRelationalItem item, EtlStatsScope stats, EtlProcessState state)
+    public override void Transform(ToRelationalDatabaseItem item, EtlStatsScope stats, EtlProcessState state)
     {
         _stats = stats;
 

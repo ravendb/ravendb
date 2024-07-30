@@ -91,7 +91,7 @@ loadToItems(data);"
                         }
                     }, database, database.ServerStore, context);
                 
-                var result = (RelationalEtlTestScriptResult)testResult;
+                var result = (RelationalDatabaseEtlTestScriptResult)testResult;
                 Assert.Equal(0, result.TransformationErrors.Count);
                 Assert.Equal(0, result.LoadErrors.Count);
                 Assert.Equal(0, result.SlowSqlWarnings.Count);

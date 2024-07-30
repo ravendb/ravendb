@@ -6,46 +6,46 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Relational;
 
-public sealed class RelationalTableWithRecords
+public sealed class RelationalDatabaseTableWithRecords
 {
     
     public string TableName { get; set; }
     public string DocumentIdColumn { get; set; }
     public bool InsertOnlyMode { get; set; }
 
-    private RelationalTableWithRecords()
+    private RelationalDatabaseTableWithRecords()
     {
     }
 
-    internal RelationalTableWithRecords(RelationalTableWithRecords tableWithRecords)
+    internal RelationalDatabaseTableWithRecords(RelationalDatabaseTableWithRecords tableWithRecords)
     {
         TableName = tableWithRecords.TableName;
         DocumentIdColumn = tableWithRecords.DocumentIdColumn;
         InsertOnlyMode = tableWithRecords.InsertOnlyMode;
     }
 
-    public readonly List<ToRelationalItem> Inserts = [];
+    public readonly List<ToRelationalDatabaseItem> Inserts = [];
 
-    public readonly List<ToRelationalItem> Deletes = [];
+    public readonly List<ToRelationalDatabaseItem> Deletes = [];
 
-    public static RelationalTableWithRecords FromSnowflakeEtlTable(SnowflakeEtlTable snowflakeEtlTable)
+    public static RelationalDatabaseTableWithRecords FromSnowflakeEtlTable(SnowflakeEtlTable snowflakeEtlTable)
     {
-        return new RelationalTableWithRecords()
+        return new RelationalDatabaseTableWithRecords()
         {
             TableName = snowflakeEtlTable.TableName, DocumentIdColumn = snowflakeEtlTable.DocumentIdColumn, InsertOnlyMode = snowflakeEtlTable.InsertOnlyMode
         };
     }
 
-    public static RelationalTableWithRecords FromSqlEtlTable(SqlEtlTable sqlEtlTable)
+    public static RelationalDatabaseTableWithRecords FromSqlEtlTable(SqlEtlTable sqlEtlTable)
     {
-        return new RelationalTableWithRecords()
+        return new RelationalDatabaseTableWithRecords()
         {
             TableName = sqlEtlTable.TableName, DocumentIdColumn = sqlEtlTable.DocumentIdColumn, InsertOnlyMode = sqlEtlTable.InsertOnlyMode
         };
     }
     
     
-    public bool Equals(RelationalTableWithRecords other)
+    public bool Equals(RelationalDatabaseTableWithRecords other)
     {
         return string.Equals(TableName, other.TableName) && string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase) &&
                InsertOnlyMode == other.InsertOnlyMode;

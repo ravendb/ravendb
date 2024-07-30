@@ -18,14 +18,14 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.ETL.Relational;
 
-public abstract class RelationalEtl<TRelationalEtlConfiguration, TRelationalConnectionString>
-    : EtlProcess<ToRelationalItem, RelationalTableWithRecords, TRelationalEtlConfiguration, TRelationalConnectionString, EtlStatsScope, EtlPerformanceOperation>
+public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRelationalConnectionString>
+    : EtlProcess<ToRelationalDatabaseItem, RelationalDatabaseTableWithRecords, TRelationalEtlConfiguration, TRelationalConnectionString, EtlStatsScope, EtlPerformanceOperation>
     where TRelationalConnectionString : ConnectionString
     where TRelationalEtlConfiguration : EtlConfiguration<TRelationalConnectionString>
 {
     public readonly RelationalEtlMetricsCountersManager RelationalMetrics = new();
 
-    public RelationalEtl(Transformation transformation, TRelationalEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore,
+    public RelationalDatabaseEtlBase(Transformation transformation, TRelationalEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore,
         string relationalEtlTag)
         : base(transformation, configuration, database, serverStore, relationalEtlTag)
     {
@@ -34,35 +34,35 @@ public abstract class RelationalEtl<TRelationalEtlConfiguration, TRelationalConn
 
     public abstract override EtlType EtlType { get; }
     
-    protected override IEnumerator<ToRelationalItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
+    protected override IEnumerator<ToRelationalDatabaseItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
     {
-        return new DocumentsToRelationalItems(docs, collection);
+        return new DocumentsToRelationalDatabaseItems(docs, collection);
     }
     
-    protected override IEnumerator<ToRelationalItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
+    protected override IEnumerator<ToRelationalDatabaseItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
     {
-        return new TombstonesToRelationalItems(tombstones, collection);
+        return new TombstonesToRelationalDatabaseItems(tombstones, collection);
     }
     
-    protected override IEnumerator<ToRelationalItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
+    protected override IEnumerator<ToRelationalDatabaseItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
         List<string> collections)
     {
         throw new NotSupportedException($"Attachment tombstones aren't supported by {Configuration.EtlType.ToString()} ETL");
     }
 
-    protected override IEnumerator<ToRelationalItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters,
+    protected override IEnumerator<ToRelationalDatabaseItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters,
         string collection)
     {
         throw new NotSupportedException($"Counters aren't supported by {Configuration.EtlType.ToString()} ETL");
     }
 
-    protected override IEnumerator<ToRelationalItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries,
+    protected override IEnumerator<ToRelationalDatabaseItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries,
         string collection)
     {
         throw new NotSupportedException($"Time series aren't supported by {Configuration.EtlType.ToString()} ETL");
     }
 
-    protected override IEnumerator<ToRelationalItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context,
+    protected override IEnumerator<ToRelationalDatabaseItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context,
         IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
     {
         throw new NotSupportedException($"Time series aren't supported by {Configuration.EtlType.ToString()} ETL");
@@ -77,15 +77,15 @@ public abstract class RelationalEtl<TRelationalEtlConfiguration, TRelationalConn
 
     public override bool ShouldTrackTimeSeries() => false;
 
-    protected abstract override EtlTransformer<ToRelationalItem, RelationalTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(
+    protected abstract override EtlTransformer<ToRelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(
         DocumentsOperationContext context);
 
-    protected override int LoadInternal(IEnumerable<RelationalTableWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)
+    protected override int LoadInternal(IEnumerable<RelationalDatabaseTableWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)
     {
         var count = 0;
 
         using (var lazyWriter =
-               new DisposableLazy<RelationalWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration>>(
+               new DisposableLazy<RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration>>(
                    GetRelationalDatabaseWriterInstance))
         {
             foreach (var table in records)
@@ -108,9 +108,9 @@ public abstract class RelationalEtl<TRelationalEtlConfiguration, TRelationalConn
         return count;
     }
 
-    protected abstract RelationalWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration> GetRelationalDatabaseWriterInstance();
+    protected abstract RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration> GetRelationalDatabaseWriterInstance();
     
-    private void LogStats(RelationalWriteStats stats, RelationalTableWithRecords table)
+    private void LogStats(RelationalWriteStats stats, RelationalDatabaseTableWithRecords table)
     {
         if (table.Inserts.Count > 0)
         {
@@ -143,7 +143,7 @@ public abstract class RelationalEtl<TRelationalEtlConfiguration, TRelationalConn
 
     protected abstract RelationalWriterSimulatorBase<TRelationalEtlConfiguration, TRelationalConnectionString> GetWriterSimulator();
 
-    public RelationalEtlTestScriptResult RunTest(DocumentsOperationContext context, IEnumerable<RelationalTableWithRecords> toWrite, bool performRolledBackTransaction)
+    public RelationalDatabaseEtlTestScriptResult RunTest(DocumentsOperationContext context, IEnumerable<RelationalDatabaseTableWithRecords> toWrite, bool performRolledBackTransaction)
     {
         var summaries = new List<TableQuerySummary>();
 
@@ -183,7 +183,7 @@ public abstract class RelationalEtl<TRelationalEtlConfiguration, TRelationalConn
             }
         }
 
-        return new RelationalEtlTestScriptResult
+        return new RelationalDatabaseEtlTestScriptResult
         {
             TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
             LoadErrors = Statistics.LastLoadErrorsInCurrentBatch.Errors.ToList(),

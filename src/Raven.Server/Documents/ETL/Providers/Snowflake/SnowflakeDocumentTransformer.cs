@@ -9,16 +9,16 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Snowflake;
 
-internal sealed class SnowflakeDocumentTransformer : RelationalDocumentTransformer<SnowflakeConnectionString, SnowflakeEtlConfiguration>
+internal sealed class SnowflakeDocumentTransformer : RelationalDatabaseDocumentTransformerBase<SnowflakeConnectionString, SnowflakeEtlConfiguration>
 {
     public SnowflakeDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SnowflakeEtlConfiguration config) :
         base(transformation, database, context, config, PatchRequestType.SnowflakeEtl)
     {
     }
     
-    protected override List<RelationalTableWithRecords> GetEtlTables()
+    protected override List<RelationalDatabaseTableWithRecords> GetEtlTables()
     {
-        return _config.SnowflakeTables.Select(RelationalTableWithRecords.FromSnowflakeEtlTable).ToList();
+        return _config.SnowflakeTables.Select(RelationalDatabaseTableWithRecords.FromSnowflakeEtlTable).ToList();
     }
 }
     

@@ -3,12 +3,12 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Documents.ETL.Relational.Enumerators;
 
-public sealed class TombstonesToRelationalItems: IEnumerator<ToRelationalItem>
+public sealed class TombstonesToRelationalDatabaseItems: IEnumerator<ToRelationalDatabaseItem>
 {
     private readonly IEnumerator<Tombstone> _tombstones;
     private readonly string _collection;
 
-    public TombstonesToRelationalItems(IEnumerator<Tombstone> tombstones, string collection)
+    public TombstonesToRelationalDatabaseItems(IEnumerator<Tombstone> tombstones, string collection)
     {
         _tombstones = tombstones;
         _collection = collection;
@@ -25,7 +25,7 @@ public sealed class TombstonesToRelationalItems: IEnumerator<ToRelationalItem>
         if (_tombstones.MoveNext() == false)
             return false;
 
-        Current = new ToRelationalItem(_tombstones.Current, _collection);
+        Current = new ToRelationalDatabaseItem(_tombstones.Current, _collection);
         Current.Filtered = Filter();
         return true;
     }
@@ -41,6 +41,6 @@ public sealed class TombstonesToRelationalItems: IEnumerator<ToRelationalItem>
     {
     }
 
-    public ToRelationalItem Current { get; private set; }
+    public ToRelationalDatabaseItem Current { get; private set; }
 }
 

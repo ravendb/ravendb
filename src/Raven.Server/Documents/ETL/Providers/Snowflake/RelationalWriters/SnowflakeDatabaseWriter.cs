@@ -13,7 +13,7 @@ using DbCommandBuilder = Raven.Server.Documents.ETL.Relational.RelationalWriters
 
 namespace Raven.Server.Documents.ETL.Providers.Snowflake.RelationalWriters;
 
-public class SnowflakeDatabaseWriter: RelationalWriterBase<SnowflakeConnectionString, SnowflakeEtlConfiguration>
+public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConnectionString, SnowflakeEtlConfiguration>
 {
     private readonly string SnowflakeEtlTag = "Snowflake ETL";
     
@@ -80,23 +80,23 @@ public class SnowflakeDatabaseWriter: RelationalWriterBase<SnowflakeConnectionSt
             parameter.DbType = DbType.String;
     }
 
-    protected override void SetPrimaryKeyParamValue(ToRelationalItem itemToReplicate, DbParameter pkParam)
+    protected override void SetPrimaryKeyParamValue(ToRelationalDatabaseItem itemToReplicate, DbParameter pkParam)
     {
         pkParam.Value = itemToReplicate.DocumentId.ToString();
         EnsureParamTypeSupportedByDbProvider(pkParam);
     }
 
-    protected override string GetPostInsertIntoStartSyntax(ToRelationalItem itemToReplicate)
+    protected override string GetPostInsertIntoStartSyntax(ToRelationalDatabaseItem itemToReplicate)
     {
         return "SELECT ";
     }
 
-    protected override string GetPostInsertIntoEndSyntax(ToRelationalItem itemToReplicate)
+    protected override string GetPostInsertIntoEndSyntax(ToRelationalDatabaseItem itemToReplicate)
     {
         return string.Empty;
     }
 
-    protected override string GetPostDeleteSyntax(ToRelationalItem itemToDelete)
+    protected override string GetPostDeleteSyntax(ToRelationalDatabaseItem itemToDelete)
     {
         return string.Empty;
     }

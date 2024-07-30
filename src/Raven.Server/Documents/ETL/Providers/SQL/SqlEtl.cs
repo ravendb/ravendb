@@ -3,7 +3,6 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Relational;
-using Raven.Server.Documents.ETL.Relational.Metrics;
 using Raven.Server.Documents.ETL.Relational.RelationalWriters;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.ServerWide;
@@ -11,7 +10,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public sealed class SqlEtl : RelationalEtl<SqlEtlConfiguration, SqlConnectionString>
+    public sealed class SqlEtl : RelationalDatabaseEtlBase<SqlEtlConfiguration, SqlConnectionString>
     {
         public const string SqlEtlTag = "SQL ETL";
     
@@ -22,12 +21,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public override EtlType EtlType { get; }
         
-        protected override EtlTransformer<ToRelationalItem, RelationalTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ToRelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
         {
             return new SqlDocumentTransformer(Transformation, Database, context, Configuration);
         }
 
-        protected override RelationalWriterBase<SqlConnectionString, SqlEtlConfiguration> GetRelationalDatabaseWriterInstance()
+        protected override RelationalDatabaseWriterBase<SqlConnectionString, SqlEtlConfiguration> GetRelationalDatabaseWriterInstance()
         {
             return new SqlDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics);
         }   

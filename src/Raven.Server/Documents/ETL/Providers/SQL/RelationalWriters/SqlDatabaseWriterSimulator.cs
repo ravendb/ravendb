@@ -86,7 +86,7 @@ public class SqlDatabaseWriterSimulator: RelationalWriterSimulatorBase<SqlEtlCon
         return string.Empty;
     }
 
-    protected override void SetParamValue(DbParameter colParam, RelationalColumn column, List<Func<DbParameter, string, bool>> stringParsers)
+    protected override void SetParamValue(DbParameter colParam, RelationalDatabaseColumn column, List<Func<DbParameter, string, bool>> stringParsers)
     {
         SqlDatabaseWriter.SetParamValue(colParam, column, stringParsers, false);
     }

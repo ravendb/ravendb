@@ -3,12 +3,12 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Documents.ETL.Relational.Enumerators;
 
-public sealed class DocumentsToRelationalItems : IEnumerator<ToRelationalItem>
+public sealed class DocumentsToRelationalDatabaseItems : IEnumerator<ToRelationalDatabaseItem>
 {
     private readonly IEnumerator<Document> _docs;
     private readonly string _collection;
 
-    internal DocumentsToRelationalItems(IEnumerator<Document> docs, string collection)
+    internal DocumentsToRelationalDatabaseItems(IEnumerator<Document> docs, string collection)
     {
         _docs = docs;
         _collection = collection;
@@ -19,7 +19,7 @@ public sealed class DocumentsToRelationalItems : IEnumerator<ToRelationalItem>
         if (_docs.MoveNext() == false)
             return false;
 
-        Current = new ToRelationalItem(_docs.Current, _collection);
+        Current = new ToRelationalDatabaseItem(_docs.Current, _collection);
 
         return true;
     }
@@ -35,6 +35,6 @@ public sealed class DocumentsToRelationalItems : IEnumerator<ToRelationalItem>
     {
     }
 
-    public ToRelationalItem Current { get; private set; }
+    public ToRelationalDatabaseItem Current { get; private set; }
 }
 

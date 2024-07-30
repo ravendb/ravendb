@@ -529,7 +529,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SqlEtlConfiguration));
             scripter.AddType(typeof(TestRelationalEtlScript<SqlConnectionString, SqlEtlConfiguration>));
             scripter.AddType(typeof(SqlEtlTable));
-            scripter.AddType(typeof(RelationalEtlTestScriptResult));
+            scripter.AddType(typeof(RelationalDatabaseEtlTestScriptResult));
 
             // ongoing tasks - Olap ETL
             scripter.AddType(typeof(OngoingTaskOlapEtl));

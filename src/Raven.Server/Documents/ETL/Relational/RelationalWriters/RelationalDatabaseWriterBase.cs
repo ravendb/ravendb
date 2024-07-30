@@ -27,7 +27,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL.Relational.RelationalWriters;
 
-public abstract class RelationalWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration> : IDisposable 
+public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration> : IDisposable 
 where TRelationalConnectionString: ConnectionString
 where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
 
@@ -46,7 +46,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
     private readonly List<Func<DbParameter, string, bool>> _stringParserList;
     private const int LongStatementWarnThresholdInMs = 3000;
 
-    public RelationalWriterBase(DocumentDatabase database, EtlConfiguration<TRelationalConnectionString> configuration, RelationalEtlMetricsCountersManager sqlMetrics, EtlProcessStatistics statistics)
+    public RelationalDatabaseWriterBase(DocumentDatabase database, EtlConfiguration<TRelationalConnectionString> configuration, RelationalEtlMetricsCountersManager sqlMetrics, EtlProcessStatistics statistics)
     {
         _sqlMetrics = sqlMetrics;
         _statistics = statistics;
@@ -57,7 +57,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
         Configuration = configuration;
         _connection = ProviderFactory.CreateConnection();
         _commandBuilder = GetInitializedCommandBuilder();
-        Logger = LoggingSource.Instance.GetLogger<RelationalWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration>>(Database.Name); // todo: logger passed type shouldn't be abstract
+        Logger = LoggingSource.Instance.GetLogger<RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration>>(Database.Name); // todo: logger passed type shouldn't be abstract
 
         var connectionString = GetConnectionString(configuration);
         _connection.ConnectionString = connectionString;
@@ -148,7 +148,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
         _tx.Rollback();
     }
 
-    private int InsertItems(string tableName, string pkName, List<ToRelationalItem> toInsert, Action<DbCommand> commandCallback, CancellationToken token)
+    private int InsertItems(string tableName, string pkName, List<ToRelationalDatabaseItem> toInsert, Action<DbCommand> commandCallback, CancellationToken token)
     {
         var inserted = 0;
 
@@ -280,7 +280,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
         }
     }
 
-    public int DeleteItems(string tableName, string pkName, bool parameterize, List<ToRelationalItem> toDelete, Action<DbCommand> commandCallback, CancellationToken token)
+    public int DeleteItems(string tableName, string pkName, bool parameterize, List<ToRelationalDatabaseItem> toDelete, Action<DbCommand> commandCallback, CancellationToken token)
     {
         const int maxParams = 1000;
 
@@ -412,14 +412,14 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
     
     protected abstract void EnsureParamTypeSupportedByDbProvider(DbParameter parameter);
 
-    protected abstract void SetPrimaryKeyParamValue(ToRelationalItem itemToReplicate, DbParameter pkParam);
+    protected abstract void SetPrimaryKeyParamValue(ToRelationalDatabaseItem itemToReplicate, DbParameter pkParam);
 
-    protected abstract string GetPostInsertIntoStartSyntax(ToRelationalItem itemToReplicate);
-    protected abstract string GetPostInsertIntoEndSyntax(ToRelationalItem itemToReplicate);
+    protected abstract string GetPostInsertIntoStartSyntax(ToRelationalDatabaseItem itemToReplicate);
+    protected abstract string GetPostInsertIntoEndSyntax(ToRelationalDatabaseItem itemToReplicate);
     
-    protected abstract string GetPostDeleteSyntax(ToRelationalItem itemToDelete);
+    protected abstract string GetPostDeleteSyntax(ToRelationalDatabaseItem itemToDelete);
 
-    public RelationalWriteStats Write(RelationalTableWithRecords table, List<DbCommand> commands, CancellationToken token)
+    public RelationalWriteStats Write(RelationalDatabaseTableWithRecords table, List<DbCommand> commands, CancellationToken token)
     {
         var stats = new RelationalWriteStats();
         
@@ -503,7 +503,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
         throw new NotSupportedException($"Factory provider '{providerType}' is not supported");
     }
 
-    public static void SetParamValue(DbParameter colParam, RelationalColumn column, List<Func<DbParameter, string, bool>> stringParsers, bool isSnowflake, SqlProvider? sqlProvider = null)
+    public static void SetParamValue(DbParameter colParam, RelationalDatabaseColumn column, List<Func<DbParameter, string, bool>> stringParsers, bool isSnowflake, SqlProvider? sqlProvider = null)
     {
         if (column.Value == null)
             colParam.Value = DBNull.Value;

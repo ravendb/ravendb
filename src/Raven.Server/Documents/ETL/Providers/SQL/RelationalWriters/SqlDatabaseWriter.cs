@@ -3,7 +3,6 @@ using System.Data.Common;
 using System.Linq;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
-using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Relational;
 using Raven.Server.Documents.ETL.Relational.Metrics;
 using Raven.Server.Documents.ETL.Relational.RelationalWriters;
@@ -12,7 +11,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using DbCommandBuilder = Raven.Server.Documents.ETL.Relational.RelationalWriters.DbCommandBuilder;
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 
-internal sealed class SqlDatabaseWriter: RelationalWriterBase<SqlConnectionString, SqlEtlConfiguration>
+internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnectionString, SqlEtlConfiguration>
 {
     private readonly string SqlEtlTag = "SQL ETL";
     private readonly bool _isSqlServerFactoryType;
@@ -127,25 +126,25 @@ internal sealed class SqlDatabaseWriter: RelationalWriterBase<SqlConnectionStrin
 
     protected override void EnsureParamTypeSupportedByDbProvider(DbParameter parameter)
     {
-        // empty
+        // empty by design - sql etl should support all db types todo: try to make it sure in SetValue method
     }
 
-    protected override void  SetPrimaryKeyParamValue(ToRelationalItem itemToReplicate, DbParameter pkParam)
+    protected override void  SetPrimaryKeyParamValue(ToRelationalDatabaseItem itemToReplicate, DbParameter pkParam)
     { 
         pkParam.Value = itemToReplicate.DocumentId.ToString();
     }
 
-    protected override string GetPostInsertIntoStartSyntax(ToRelationalItem itemToReplicate)
+    protected override string GetPostInsertIntoStartSyntax(ToRelationalDatabaseItem itemToReplicate)
     {
         return "\r\nVALUES(";
     }
 
-    protected override string GetPostInsertIntoEndSyntax(ToRelationalItem itemToReplicate)
+    protected override string GetPostInsertIntoEndSyntax(ToRelationalDatabaseItem itemToReplicate)
     {
         return _isSqlServerFactoryType && Configuration.ForceQueryRecompile ? ") OPTION(RECOMPILE)" : ")";
     }
 
-    protected override string GetPostDeleteSyntax(ToRelationalItem itemToDelete)
+    protected override string GetPostDeleteSyntax(ToRelationalDatabaseItem itemToDelete)
     {
         return _isSqlServerFactoryType && Configuration.ForceQueryRecompile ? " OPTION(RECOMPILE)" : string.Empty;
     }

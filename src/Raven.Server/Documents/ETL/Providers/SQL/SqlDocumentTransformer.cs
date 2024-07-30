@@ -10,14 +10,14 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.ETL.Providers.SQL;
 
 internal sealed class
-    SqlDocumentTransformer : RelationalDocumentTransformer<SqlConnectionString, SqlEtlConfiguration>
+    SqlDocumentTransformer : RelationalDatabaseDocumentTransformerBase<SqlConnectionString, SqlEtlConfiguration>
 {
     public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config) : base(transformation, database, context, config, PatchRequestType.SqlEtl)
     {
     }
 
-    protected override List<RelationalTableWithRecords> GetEtlTables()
+    protected override List<RelationalDatabaseTableWithRecords> GetEtlTables()
     {
-        return _config.SqlTables.Select(RelationalTableWithRecords.FromSqlEtlTable).ToList();
+        return _config.SqlTables.Select(RelationalDatabaseTableWithRecords.FromSqlEtlTable).ToList();
     }
 }

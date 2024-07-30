@@ -32,7 +32,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalCollectionString>
     protected abstract DbProviderFactory GetDbProviderFactory(EtlConfiguration<TRelationalCollectionString> configuration);
     protected abstract DbCommandBuilder GetInitializedCommandBuilder();
     
-    public IEnumerable<string> SimulateExecuteCommandText(RelationalTableWithRecords records, CancellationToken token)
+    public IEnumerable<string> SimulateExecuteCommandText(RelationalDatabaseTableWithRecords records, CancellationToken token)
     {
         if (records.InsertOnlyMode == false)
         {
@@ -56,8 +56,8 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalCollectionString>
     protected abstract string GetPostDeleteSyntax();
     
 
-    protected abstract void SetParamValue(DbParameter colParam, RelationalColumn column, List<Func<DbParameter, string, bool>> stringParsers);
-    private IEnumerable<string> GenerateInsertItemCommandText(string tableName, string pkName, List<ToRelationalItem> dataForTable, CancellationToken token)
+    protected abstract void SetParamValue(DbParameter colParam, RelationalDatabaseColumn column, List<Func<DbParameter, string, bool>> stringParsers);
+    private IEnumerable<string> GenerateInsertItemCommandText(string tableName, string pkName, List<ToRelationalDatabaseItem> dataForTable, CancellationToken token)
     {
         foreach (var itemToReplicate in dataForTable)
         {
@@ -105,7 +105,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalCollectionString>
         }
     }
 
-    private IEnumerable<string> GenerateDeleteItemsCommandText(string tableName, string pkName, bool parameterize, List<ToRelationalItem> toSqlItems, CancellationToken token)
+    private IEnumerable<string> GenerateDeleteItemsCommandText(string tableName, string pkName, bool parameterize, List<ToRelationalDatabaseItem> toSqlItems, CancellationToken token)
     {
         const int maxParams = 1000;
 
