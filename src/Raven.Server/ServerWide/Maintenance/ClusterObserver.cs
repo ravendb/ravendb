@@ -704,7 +704,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
 
                     var hasReport = nodeReport.Report.TryGetValue(state.Name, out var report);
-                    Debug.Assert(hasReport, $"Could not find report for node '{nodeTag}' for database '{state.Name}'.");
+                    Debug.Assert(hasReport || nodeReport.Error != null, $"Could not find report for node '{nodeTag}' for database '{state.Name}'.");
                     // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                     if (hasReport == false)
                         return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
