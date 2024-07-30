@@ -16,7 +16,7 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
     private readonly string SqlEtlTag = "SQL ETL";
     private readonly bool _isSqlServerFactoryType;
 
-    private static readonly string[] SqlServerFactoryNames =
+    public static readonly string[] SqlServerFactoryNames =
     {
         "System.Data.SqlClient", "Microsoft.Data.SqlClient", "System.Data.SqlServerCe.4.0", "MySql.Data.MySqlClient", "System.Data.SqlServerCe.3.5"
     }; 

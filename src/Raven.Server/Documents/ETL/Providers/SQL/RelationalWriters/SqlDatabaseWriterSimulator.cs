@@ -20,10 +20,7 @@ public class SqlDatabaseWriterSimulator: RelationalWriterSimulatorBase<SqlEtlCon
     private SqlProvider _providerType;
     private readonly bool _isSqlServerFactoryType;
 
-    private static readonly string[] SqlServerFactoryNames =
-    {
-        "System.Data.SqlClient", "Microsoft.Data.SqlClient" ,"System.Data.SqlServerCe.4.0", "MySql.Data.MySqlClient", "System.Data.SqlServerCe.3.5"
-    }; 
+    private static readonly string[] SqlServerFactoryNames = SqlDatabaseWriter.SqlServerFactoryNames;
     
     private readonly string _sqlEtlTag = "SQL ETL";
 
