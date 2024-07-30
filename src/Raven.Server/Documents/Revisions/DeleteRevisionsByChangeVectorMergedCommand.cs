@@ -15,12 +15,15 @@ public partial class RevisionsStorage
 
         private readonly List<string> _cvs;
 
+        private readonly bool _includeForceCreated;
+
         public long? Result { get; private set; } // number of deleted revisions
 
-        public DeleteRevisionsByChangeVectorMergedCommand(string id, List<string> cvs)
+        public DeleteRevisionsByChangeVectorMergedCommand(string id, List<string> cvs, bool includeForceCreated)
         {
             _id = id;
             _cvs = cvs;
+            _includeForceCreated = includeForceCreated;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -60,6 +63,9 @@ public partial class RevisionsStorage
                 if (revision.Id != _id)
                     throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't belong to the doc \"{_id}\" but to the doc \"{revision.Id}\"");
 
+                if (SkipForceCreated(revision))
+                    continue;
+
                 using (DocumentIdWorker.GetSliceFromId(context, revision.LowerId, out var lowerId))
                 using (revisionsStorage.GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
                 {
@@ -70,10 +76,6 @@ public partial class RevisionsStorage
                             revisionsStorage._logger.Info($"Tried to delete revision {revision.ChangeVector} ({revision.LowerId}) but no collection found.");
                         continue;
                     }
-
-                    if (context.DocumentDatabase.DocumentsStorage.RevisionsStorage.IsAllowedToDeleteRevisionsManually(collectionName.Name, revision.Flags) == false)
-                        throw new InvalidOperationException(
-                            $"You are trying to delete revisions of '{revision.LowerId}' but it isn't allowed by its revisions configuration.");
 
                     var collectionTable = revisionsStorage.EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
@@ -86,9 +88,14 @@ public partial class RevisionsStorage
             return deleted;
         }
 
+        private bool SkipForceCreated(Document revision)
+        {
+            return _includeForceCreated == false && revision.Flags.Contain(DocumentFlags.ForceCreated);
+        }
+
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new DeleteRevisionsByChangeVectorMergedCommandDto(_id, _cvs);
+            return new DeleteRevisionsByChangeVectorMergedCommandDto(_id, _cvs, _includeForceCreated);
         }
 
         private sealed class DeleteRevisionsByChangeVectorMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsByChangeVectorMergedCommand>
@@ -97,15 +104,18 @@ public partial class RevisionsStorage
 
             private readonly List<string> _cvs;
 
-            public DeleteRevisionsByChangeVectorMergedCommandDto(string id, List<string> cvs)
+            private readonly bool _includeForceCreated;
+
+            public DeleteRevisionsByChangeVectorMergedCommandDto(string id, List<string> cvs, bool includeForceCreated)
             {
                 _id = id;
                 _cvs = cvs;
+                _includeForceCreated = includeForceCreated;
             }
 
             public DeleteRevisionsByChangeVectorMergedCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new DeleteRevisionsByChangeVectorMergedCommand(_id, _cvs);
+                return new DeleteRevisionsByChangeVectorMergedCommand(_id, _cvs, _includeForceCreated);
             }
         }
     }

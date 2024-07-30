@@ -15,16 +15,13 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         public long? MaximumRevisionsToDeleteUponDocumentUpdate { get; set; }
 
-        public bool AllowDeleteRevisionsManually { get; set; }
-
         private bool Equals(RevisionsCollectionConfiguration other)
         {
             return MinimumRevisionsToKeep == other.MinimumRevisionsToKeep &&
                    MinimumRevisionAgeToKeep == other.MinimumRevisionAgeToKeep &&
                    Disabled == other.Disabled &&
                    PurgeOnDelete == other.PurgeOnDelete &&
-                   MaximumRevisionsToDeleteUponDocumentUpdate == other.MaximumRevisionsToDeleteUponDocumentUpdate &&
-                   AllowDeleteRevisionsManually == other.AllowDeleteRevisionsManually;
+                   MaximumRevisionsToDeleteUponDocumentUpdate == other.MaximumRevisionsToDeleteUponDocumentUpdate;
         }
 
         public override bool Equals(object obj)
@@ -44,7 +41,6 @@ namespace Raven.Client.Documents.Operations.Revisions
                 hashCode = (hashCode * 397) ^ (MaximumRevisionsToDeleteUponDocumentUpdate?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ Disabled.GetHashCode();
                 hashCode = (hashCode * 397) ^ PurgeOnDelete.GetHashCode();
-                hashCode = (hashCode * 397) ^ AllowDeleteRevisionsManually.GetHashCode();
                 return hashCode;
             }
         }
@@ -57,8 +53,7 @@ namespace Raven.Client.Documents.Operations.Revisions
                 [nameof(MinimumRevisionsToKeep)] = MinimumRevisionsToKeep,
                 [nameof(MinimumRevisionAgeToKeep)] = MinimumRevisionAgeToKeep,
                 [nameof(PurgeOnDelete)] = PurgeOnDelete,
-                [nameof(MaximumRevisionsToDeleteUponDocumentUpdate)] = MaximumRevisionsToDeleteUponDocumentUpdate,
-                [nameof(AllowDeleteRevisionsManually)] = AllowDeleteRevisionsManually,
+                [nameof(MaximumRevisionsToDeleteUponDocumentUpdate)] = MaximumRevisionsToDeleteUponDocumentUpdate
             };
         }
 

@@ -19,23 +19,25 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 {
-    internal class ShardedDeleteRevisionsManuallyOperation : IShardedOperation<DeleteRevisionsManuallyOperation.Result>
+    internal readonly struct ShardedDeleteRevisionsOperation : IShardedOperation<DeleteRevisionsOperation.Result>
     {
-        private readonly DeleteRevisionsRequest _request;
+        private readonly Dictionary<int, DeleteRevisionsCommand> _cmds;
+        private readonly HttpContext _httpContext;
 
-        public ShardedDeleteRevisionsManuallyOperation(DeleteRevisionsRequest request)
+        public ShardedDeleteRevisionsOperation(HttpContext httpContext, Dictionary<int, DeleteRevisionsCommand> cmds)
         {
-            _request = request;
+            _cmds = cmds;
+            _httpContext = httpContext;
         }
 
-        public HttpRequest HttpRequest => null;
+        public HttpRequest HttpRequest => _httpContext.Request;
+        public DeleteRevisionsOperation.Result Combine(Dictionary<int, ShardExecutionResult<DeleteRevisionsOperation.Result>> results) =>
+            new DeleteRevisionsOperation.Result { TotalDeletes = results.Values.Sum(deleted => deleted.Result.TotalDeletes) };
 
-        public DeleteRevisionsManuallyOperation.Result Combine(Dictionary<int, ShardExecutionResult<DeleteRevisionsManuallyOperation.Result>> shardsResults) =>
-            new DeleteRevisionsManuallyOperation.Result { TotalDeletes = shardsResults.Values.Sum(deleted => deleted.Result.TotalDeletes) };
-        
-        public RavenCommand<DeleteRevisionsManuallyOperation.Result> CreateCommandForShard(int shardNumber)
+        public RavenCommand<DeleteRevisionsOperation.Result> CreateCommandForShard(int shardNumber)
         {
-            return new DeleteRevisionsManuallyCommand(_request);
+            return _cmds[shardNumber];
         }
+
     }
 }

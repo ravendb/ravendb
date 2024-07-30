@@ -1,6 +1,8 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
@@ -15,24 +17,45 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
         {
         }
         
-        protected abstract ValueTask DeleteRevisionsAsync(TOperationContext context, string[] documentIds, bool includeForceCreated,
+        protected abstract Task<long> DeleteRevisionsAsync(DeleteRevisionsOperation.Parameters parameters,
             OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
-            bool includeForceCreated = RequestHandler.GetBoolValueQueryString("includeForceCreated", required: false) ?? false;
-
+            DeleteRevisionsOperation.Parameters parameters;
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "admin/revisions/delete");
-                var parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
-
-                using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken())
-                {
-                    await DeleteRevisionsAsync(context, parameters.DocumentIds, includeForceCreated, token);
-                }
+                parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
             }
-            RequestHandler.NoContentStatus();
+            parameters.Validate();
+
+            long deletedCount;
+            using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken())
+            {
+                deletedCount = await DeleteRevisionsAsync(parameters, token);
+            }
+
+            /*
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                RequestHandler.LogAuditFor("Database", "DELETE",
+                    $"{RequestHandler.DatabaseName} - {deletedCount} revisions of '{request.DocumentId}' had been deleted manually" +
+                    (request.After.HasValue || request.Before.HasValue ? 
+                        $", in the range {request.After?.ToString() ?? "start"} to {request.Before?.ToString() ?? "end"}" : string.Empty));
+            }
+             */
+
+            using (ContextPool.AllocateOperationContext(out TOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(DeleteRevisionsOperation.Result.TotalDeletes));
+                writer.WriteInteger(deletedCount);
+
+                writer.WriteEndObject();
+            }
         }
     }
 }

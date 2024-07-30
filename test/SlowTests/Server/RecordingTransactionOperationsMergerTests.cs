@@ -566,10 +566,7 @@ namespace SlowTests.Server
 
                 await store.Commands().PutAsync(id, null, user);
 
-                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
-                {
-                    DocumentIds = new[] { id }
-                }));
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { id }));
 
                 await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }

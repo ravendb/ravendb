@@ -72,7 +72,7 @@ namespace FastTests.Client
                 "AddQueueSinkCommand", "UpdateQueueSinkCommand", "ConfigureDataArchivalCommand",
                 "AdoptOrphanedRevisionsCommand",
                 "AddPrefixedShardingSettingCommand", "DeletePrefixedShardingSettingCommand", "UpdatePrefixedShardingSettingCommand", "RevertRevisionsByIdCommand",
-                "DeleteRevisionsManuallyCommand"
+                "DeleteRevisionsCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);

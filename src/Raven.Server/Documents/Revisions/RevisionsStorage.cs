@@ -584,7 +584,7 @@ namespace Raven.Server.Documents.Revisions
                     result);
             }
 
-            var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, result.PreviousCount, revisionsToDelete, result, tombstoneFlags: flags);
+            var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, revisionsToDelete, result, tombstoneFlags: flags);
 
             IncrementCountOfRevisions(context, lowerIdPrefix, -deleted);
             result.Remaining = result.PreviousCount - deleted;
@@ -607,39 +607,6 @@ namespace Raven.Server.Documents.Revisions
                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false &&
                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler) == false &&
                    deleted > 0;
-        }
-
-        public void DeleteAllRevisionsFor(DocumentsOperationContext context, string id, bool skipForceCreated, ref bool moreWork)
-        {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerIdPrefix))
-            using (GetKeyPrefix(context, lowerIdPrefix, out Slice prefixSlice))
-            {
-                var collectionName = GetCollectionFor(context, prefixSlice);
-                if (collectionName == null)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Tried to delete all revisions for '{id}' but no revisions found.");
-                    return;
-                }
-
-                var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-                var newEtag = _documentsStorage.GenerateNextEtag();
-                var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-
-                var configuration = GetRevisionsConfiguration(collectionName.Name, deleteRevisionsWhenNoCofiguration: true);
-
-                var maxDeletesUponUpdate = configuration.MaximumRevisionsToDeleteUponDocumentUpdate;
-
-                var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
-                var result = new DeleteOldRevisionsResult();
-                var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate,
-                    shouldSkip: skipForceCreated ? revision => revision.Flags.Contain(DocumentFlags.ForceCreated) : null,
-                    result);
-                var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
-                var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, revisionsPreviousCount, revisionsToDelete, result, tombstoneFlags: DocumentFlags.None);
-                moreWork |= result.HasMore;
-                IncrementCountOfRevisions(context, prefixSlice, -deleted);
-            }
         }
 
         public long DeleteRevisionsFor(DocumentsOperationContext context, string id, bool fromDelete = false)
@@ -815,7 +782,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private long DeleteRevisionsInternal(DocumentsOperationContext context, Table table, Slice lowerIdPrefix, CollectionName collectionName,
-            ChangeVector changeVector, long lastModifiedTicks, long revisionsPreviousCount,
+            ChangeVector changeVector, long lastModifiedTicks,
             IEnumerable<Document> revisionsToRemove,
             DeleteOldRevisionsResult result,
             DocumentFlags tombstoneFlags)
@@ -849,7 +816,7 @@ namespace Raven.Server.Documents.Revisions
             // then don't delete it, so the previous revisions that remained wont become orphan.
             if (lastRevisionToDelete != null)
             {
-                var remained = revisionsPreviousCount - deleted;
+                var remained = result.PreviousCount - deleted;
                 var skipLast = lastRevisionToDelete.Flags.Contain(DocumentFlags.DeleteRevision) && remained > 1 &&
                                RevisionIsLast(context, table, lowerIdPrefix, lastRevisionToDelete.Etag);
 
@@ -1881,31 +1848,30 @@ namespace Raven.Server.Documents.Revisions
             MinimumRevisionsToKeep = 0
         };
 
-        public bool IsAllowedToDeleteRevisionsManually(string collection, DocumentFlags flags)
-        {
-            var configuration = GetRevisionsConfiguration(collection: collection, flags: flags);
-            if (configuration == ConflictConfiguration.Default)
-                return false;
-
-            return configuration.AllowDeleteRevisionsManually;
-        }
-
-        private long ForceDeleteAllRevisionsForInternal(DocumentsOperationContext context, Slice lowerId, Slice prefixSlice, CollectionName collectionName, long? maxDeletesUponUpdate,
+        private (bool MoreWork, long Deleted) ForceDeleteAllRevisionsForInternal(DocumentsOperationContext context, Slice lowerId, Slice prefixSlice, CollectionName collectionName, long? maxDeletesUponUpdate,
             Func<Document, bool> shouldSkip, DocumentFlags tombstoneFlags = DocumentFlags.None)
         {
+            var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
+            if (revisionsPreviousCount == 0)
+            {
+                return (false, 0);
+            }
+
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
             var newEtag = _documentsStorage.GenerateNextEtag();
             var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
 
             var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
-            var result = new DeleteOldRevisionsResult();
+            var result = new DeleteOldRevisionsResult() { PreviousCount = revisionsPreviousCount };
             var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate, shouldSkip, result);
-            var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
-            var deleted = DeleteRevisionsInternal(context, table, lowerId, collectionName, changeVector, lastModifiedTicks, revisionsPreviousCount, revisionsToDelete,
+            var deleted = DeleteRevisionsInternal(context, table, lowerId, collectionName, changeVector, lastModifiedTicks, revisionsToDelete,
                 result, tombstoneFlags);
             IncrementCountOfRevisions(context, prefixSlice, -deleted);
 
-            return deleted;
+            result.Remaining = revisionsPreviousCount - deleted;
+            var moreWork = result.HasMore && result.Remaining > 0;
+
+            return (moreWork, deleted);
         }
 
         internal long EnforceConfigurationFor(DocumentsOperationContext context, string id, bool skipForceCreated, ref bool moreWork)
