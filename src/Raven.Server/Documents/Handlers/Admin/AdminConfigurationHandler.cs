@@ -15,8 +15,10 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using ConfigurationEntryScope = Raven.Server.Config.Attributes.ConfigurationEntryScope;
 
 namespace Raven.Server.Documents.Handlers.Admin
@@ -67,6 +69,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var entry = new ConfigurationEntryDatabaseValue(Database.Configuration, databaseRecord, configurationEntryMetadata, status);
                 settingsResult.Settings.Add(entry);
             }
+            
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+                LogAuditFor(Database.Name, "PUT", "Database configuration changed");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
