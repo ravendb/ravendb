@@ -855,14 +855,16 @@ namespace Voron
                     GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                 }
 
+                
+                // this must occur when we are holding the transaction lock
+                Journal.Applicator.OnTransactionCompleted(tx);
+
                 if (tx.AsyncCommit != null)
                     return;
-
                 _currentWriteTransactionIdHolder = -1;
                 _writeTransactionRunning.Reset();
                 _transactionWriter.Release();
-
-                Journal.Applicator.OnTransactionCompleted();
+                Journal.Applicator.AfterTransactionWriteLockReleased();
             }
             finally
             {

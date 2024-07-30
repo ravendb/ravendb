@@ -493,7 +493,6 @@ namespace Voron.Impl.Journal
             private readonly object _flushingLock = new();
             private readonly SemaphoreSlim _fsyncLock = new(1);
             private readonly WriteAheadJournal _waj;
-            private readonly ManualResetEventSlim _waitForJournalStateUpdateUnderTx = new();
             private readonly ManualResetEventSlim _onWriteTransactionCompleted = new();
             private readonly LockTaskResponsible _flushLockTaskResponsible;
 
@@ -521,6 +520,7 @@ namespace Voron.Impl.Journal
             private LastFlushState _lastFlushed = new LastFlushState(0, 0, null, null);
             private long _totalWrittenButUnsyncedBytes;
             private bool _ignoreLockAlreadyTaken;
+            private long _transactionThatUpdatedFlush;
             private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
             private DateTime _lastFlushTime;
             private DateTime _lastSyncTime;
@@ -545,9 +545,18 @@ namespace Voron.Impl.Journal
                 action?.Invoke(tx);
             }
 
-            public void OnTransactionCompleted()
+            public void OnTransactionCompleted(LowLevelTransaction tx)
             {
-                // no-op if there are no waiters
+                // we are getting the transaction here just to verify that the write lock is held
+                Debug.Assert(tx.Flags is TransactionFlags.ReadWrite);
+                if (tx.Committed && _transactionThatUpdatedFlush == tx.Id)
+                {
+                    _updateJournalStateAfterFlush = null;
+                }
+            }
+
+            public void AfterTransactionWriteLockReleased()
+            {
                 _onWriteTransactionCompleted.Set();
             }
 
@@ -687,19 +696,15 @@ namespace Voron.Impl.Journal
                 try
                 {
                     var transactionPersistentContext = new TransactionPersistentContext(true);
-                    _waitForJournalStateUpdateUnderTx.Reset();
                     _onWriteTransactionCompleted.Reset();
                     ExceptionDispatchInfo edi = null;
                     var sp = Stopwatch.StartNew();
 
-                    var singleUseFlag = new SingleUseFlag();
                     Action<LowLevelTransaction> currentAction = txw =>
                     {
-                        if (singleUseFlag.Raise() == false)
-                            throw new InvalidOperationException("Tried to update journal state after flush twice");
-
                         try
                         {
+                            _transactionThatUpdatedFlush = txw.Id;
                             txw.UpdateDataPagerState(dataPagerState);
                             UpdateJournalStateUnderWriteTransactionLock(txw,bufferOfPageFromScratchBuffersToFree, record);
 
@@ -713,11 +718,6 @@ namespace Voron.Impl.Journal
 
                             edi = ExceptionDispatchInfo.Capture(e);
                             throw;
-                        }
-                        finally
-                        {
-                            _updateJournalStateAfterFlush = null;
-                            _waitForJournalStateUpdateUnderTx.Set();
                         }
                     };
                     Interlocked.Exchange(ref _updateJournalStateAfterFlush, currentAction);
@@ -763,20 +763,19 @@ namespace Voron.Impl.Journal
                             // - we got a notification that the transaction is over (for any reason)
                             //   and we'll try to acquire the write tx lock again
 
-                            var satisfiedIndex = WaitHandle.WaitAny(new[] { _waitForJournalStateUpdateUnderTx.WaitHandle, _onWriteTransactionCompleted.WaitHandle, token.WaitHandle }, TimeSpan.FromMilliseconds(250));
+                            var satisfiedIndex = WaitHandle.WaitAny(new[] { _onWriteTransactionCompleted.WaitHandle, token.WaitHandle }, TimeSpan.FromMilliseconds(250));
 
                             switch (satisfiedIndex)
                             {
                                 case 0:
-                                case 2:
-                                    // _waitForJournalStateUpdateUnderTx or cancellation token
-                                    return;
-
-                                case 1:
                                     // once we get a signal (_onWriteTransactionCompleted), we should be able to acquire the write tx lock since we prevent new write transactions.
                                     // this is just a precaution in order to prevent a loop here if the implementation will change in the future.
                                     _onWriteTransactionCompleted.Reset();
                                     continue;
+                                
+                                case 1:
+                                    // cancellation token
+                                    return;
 
                                 case WaitHandle.WaitTimeout:
                                     // timeout
@@ -787,12 +786,8 @@ namespace Voron.Impl.Journal
                             }
                         }
 
-                        var action = _updateJournalStateAfterFlush;
-                        if (action != null)
-                        {
-                            action(txw);
-                            txw.Commit();
-                        }
+                        // here we rely on the Commit() invoking the _updateJournalStateAfterFlush call as part of its work
+                        txw.Commit();
                         break;
                     }
                     finally
