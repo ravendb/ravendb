@@ -44,13 +44,13 @@ namespace Raven.Server.NotificationCenter
             _pagingUpdates[(int)operation] = now;
             _pagingQueue.Enqueue(new PagingInformation(operation, action, details, numberOfResults, pageSize, duration, now, totalDocumentsSizeInBytes));
 
+            if (ForTestingPurposes?.DisableDequeue == true)
+                return;
+
             while (_pagingQueue.Count > 50)
                 _pagingQueue.TryDequeue(out _);
 
             if (_pagingTimer != null)
-                return;
-
-            if (ForTestingPurposes?.DisableTimer == true)
                 return;
 
             lock (_locker)
@@ -189,7 +189,7 @@ namespace Raven.Server.NotificationCenter
 
         internal sealed class TestingStuff
         {
-            internal bool DisableTimer;
+            internal bool DisableDequeue;
         }
 
         public void Dispose()

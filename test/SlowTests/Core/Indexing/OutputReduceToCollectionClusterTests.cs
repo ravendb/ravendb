@@ -1,11 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Orders;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -48,21 +49,96 @@ namespace SlowTests.Core.Indexing
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(0, stats.CountOfRevisionDocuments);
+
             }
         }
 
-        private static void PutOrders(IDocumentSession session)
+        [RavenFact(RavenTestCategory.Cluster)]
+        public async Task CanUpdateDatabaseChangeVectorAfterCreatingArtificialDocs()
+        {
+            var clusterSize = 5;
+            var cluster = await CreateRaftCluster(numberOfNodes: clusterSize, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options 
+                   {
+                       Server = cluster.Leader, 
+                       ReplicationFactor = clusterSize,
+                   }))
+            {
+                for (int i = 1; i < 100; i+=3)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        PutOrders(session, i);
+                        session.Advanced.WaitForReplicationAfterSaveChanges(replicas: clusterSize - 1);
+                        session.SaveChanges();
+                    }    
+                }
+
+                var indexToCreate = new Orders_ProfitByProductAndOrderedAt(referencesCollectionName: "Foo");
+                await indexToCreate.ExecuteAsync(store);
+
+                WaitForIndexingInTheCluster(store);
+
+                indexToCreate = new Orders_ProfitByProductAndOrderedAt(referencesCollectionName: "Bar");
+                await indexToCreate.ExecuteAsync(store);
+
+                WaitForIndexingInTheCluster(store);
+
+                indexToCreate = new Orders_ProfitByProductAndOrderedAt(referencesCollectionName: "Baz");
+                await indexToCreate.ExecuteAsync(store);
+
+                WaitForIndexingInTheCluster(store);
+
+                var r = await WaitForNullAsync(() => AssertChangeVector(store));
+                Assert.True(r == null, r);
+            }
+        }
+
+        private static async Task<string> AssertChangeVector(DocumentStore store)
+        {
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+            string databaseChangeVector = null;
+            foreach (var nodeTag in record.Topology.AllNodes)
+            {
+                var databaseStatistics = await store.Maintenance.SendAsync(new GetStatisticsOperation("get-change-vector", nodeTag));
+                if (databaseChangeVector != null)
+                {
+                    if (databaseChangeVector != databaseStatistics.DatabaseChangeVector)
+                        return $"{databaseChangeVector} != {databaseStatistics.DatabaseChangeVector}";
+                }
+                databaseChangeVector = databaseStatistics.DatabaseChangeVector;
+            }
+
+            return null;
+        }
+
+        private static void PutOrders(IDocumentSession session, int i = 1)
         {
             session.Store(
                 new Order()
                 {
                     OrderedAt = new DateTime(2019, 10, 26),
-                    Lines = new List<OrderLine>() {new OrderLine() {Product = "products/1",}, new OrderLine() {Product = "products/2",}}
-                }, "orders/1");
+                    Lines =
+                    [
+                        new OrderLine { Product = $"products/{i}", },
+                        new OrderLine { Product = $"products/{i + 1}", }
+                    ]
+                }, $"orders/{i}");
 
-            session.Store(new Order() {OrderedAt = new DateTime(2019, 10, 25), Lines = new List<OrderLine>() {new OrderLine() {Product = "products/2",}}}, "orders/2");
+            session.Store(new Order 
+            {
+                OrderedAt = new DateTime(2019, 10, 25), 
+                Lines = [
+                    new OrderLine { Product = $"products/{i+1}", }]
+            }, $"orders/{i + 1}");
 
-            session.Store(new Order() {OrderedAt = new DateTime(2019, 10, 24), Lines = new List<OrderLine>() {new OrderLine() {Product = "products/1",}}}, "orders/3");
+            session.Store(new Order
+            {
+                OrderedAt = new DateTime(2019, 10, 24), 
+                Lines = [
+                    new OrderLine{ Product = $"products/{i}", }
+                ]
+            }, $"orders/{i+2}");
         }
 
         private class Orders_ProfitByProductAndOrderedAt : AbstractIndexCreationTask<Order, Orders_ProfitByProductAndOrderedAt.Result>
