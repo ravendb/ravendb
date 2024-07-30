@@ -1484,6 +1484,20 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
         {
+            if (TableValueReader.TryCast<N1>(ref tvr, out var tvr1))
+                return ParseDocument(context, ref tvr1, fields);
+            if (TableValueReader.TryCast<N2>(ref tvr, out var tvr2))
+                return ParseDocument(context, ref tvr2, fields);
+
+            // It will fail on TableValueReader if this is not the case, this is a safe case.
+            TableValueReader.TryCast<N4>(ref tvr, out var tvr4);
+            return ParseDocument(context, ref tvr4, fields);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Document ParseDocument<TTableValueReader>(JsonOperationContext context, ref TTableValueReader tvr, DocumentFields fields)
+            where TTableValueReader : struct, ITableValueReader
+        {
             if (fields == DocumentFields.All)
             {
                 return new Document
@@ -1503,7 +1517,8 @@ namespace Raven.Server.Documents
             return ParseDocumentPartial(context, ref tvr, fields);
         }
 
-        private static Document ParseDocumentPartial(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+        private static Document ParseDocumentPartial<TTableValueReader>(JsonOperationContext context, ref TTableValueReader tvr, DocumentFields fields)
+            where TTableValueReader : struct, ITableValueReader
         {
             var result = new Document();
 
@@ -2742,7 +2757,8 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long TableValueToEtag(int index, ref TableValueReader tvr)
+        public static long TableValueToEtag<TTableValueReader>(int index, ref TTableValueReader tvr)
+            where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out _);
             var etag = Bits.SwapBytes(*(long*)ptr);
@@ -2750,20 +2766,23 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long TableValueToLong(int index, ref TableValueReader tvr)
+        public static long TableValueToLong<TTableValueReader>(int index, ref TTableValueReader tvr)
+            where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out _);
             return *(long*)ptr;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static DocumentFlags TableValueToFlags(int index, ref TableValueReader tvr)
+        public static DocumentFlags TableValueToFlags<TTableValueReader>(int index, ref TTableValueReader tvr)
+            where TTableValueReader : struct, ITableValueReader
         {
             return *(DocumentFlags*)tvr.Read(index, out _);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static short TableValueToShort(int index, string name, ref TableValueReader tvr)
+        public static short TableValueToShort<TTableValueReader>(int index, string name, ref TTableValueReader tvr)
+            where TTableValueReader : struct, ITableValueReader
         {
             var value = *(short*)tvr.Read(index, out int size);
             if (size != sizeof(short))
@@ -2784,34 +2803,39 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static DateTime TableValueToDateTime(int index, ref TableValueReader tvr)
+        public static DateTime TableValueToDateTime<TTableValueReader>(int index, ref TTableValueReader tvr)
+            where TTableValueReader : struct, ITableValueReader
         {
             return new DateTime(*(long*)tvr.Read(index, out _), DateTimeKind.Utc);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static LazyStringValue TableValueToString(JsonOperationContext context, int index, ref TableValueReader tvr)
+        public static LazyStringValue TableValueToString<TTableValueReader>(JsonOperationContext context, int index, ref TTableValueReader tvr)
+            where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);
             return context.AllocateStringValue(null, ptr, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string TableValueToChangeVector(JsonOperationContext context, int index, ref TableValueReader tvr)
+        public static string TableValueToChangeVector<TTableValueReader>(JsonOperationContext context, int index, ref TTableValueReader tvr)
+            where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);
             return Encodings.Utf8.GetString(ptr, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ChangeVector TableValueToChangeVector(DocumentsOperationContext context, int index, ref TableValueReader tvr)
+        public static ChangeVector TableValueToChangeVector<TTableValueReader>(DocumentsOperationContext context, int index, ref TTableValueReader tvr)
+            where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);
             return context.GetChangeVector(Encodings.Utf8.GetString(ptr, size));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static LazyStringValue TableValueToId(JsonOperationContext context, int index, ref TableValueReader tvr)
+        public static LazyStringValue TableValueToId<TTableValueReader>(JsonOperationContext context, int index, ref TTableValueReader tvr)
+            where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out _);
             var lzs = context.GetLazyStringValue(ptr, out bool success);
@@ -2821,8 +2845,9 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.InternalScope TableValueToSlice(
-            DocumentsOperationContext context, int index, ref TableValueReader tvr, out Slice slice)
+        public static ByteStringContext.InternalScope TableValueToSlice<TTableValueReader>(DocumentsOperationContext context, 
+            int index, ref TTableValueReader tvr, out Slice slice)
+            where TTableValueReader : struct, ITableValueReader
         {
             var ptr = tvr.Read(index, out int size);
             return Slice.From(context.Allocator, ptr, size, ByteStringType.Immutable, out slice);

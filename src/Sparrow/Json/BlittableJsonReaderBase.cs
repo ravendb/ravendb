@@ -32,6 +32,34 @@ namespace Sparrow.Json
 
         public bool NoCache { get; set; }
 
+        
+        private static ReadOnlySpan<int> PropertyIdSizeTable => new[]
+        {
+            0, sizeof(byte), // BlittableJsonToken.PropertyIdSizeByte
+            sizeof(short),   // BlittableJsonToken.PropertyIdSizeShort
+            sizeof(int)      // BlittableJsonToken.PropertyIdSizeInt
+        };
+
+        private static ReadOnlySpan<int> PropNamesDataOffsetSizeTable => new[]
+        {
+            0, sizeof(byte), // BlittableJsonToken.OffsetSizeByte
+            sizeof(short),   // BlittableJsonToken.OffsetSizeShort
+            sizeof(int)      // BlittableJsonToken.OffsetSizeInt
+        };
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected static int GetPropertyNamesDataOffsetSize(BlittableJsonToken token)
+        {
+            // process part of byte flags that responsible for offset sizes
+            const BlittableJsonToken mask =
+                BlittableJsonToken.OffsetSizeByte |
+                BlittableJsonToken.OffsetSizeShort |
+                BlittableJsonToken.OffsetSizeInt;
+
+            int tokenIndex = (int)(token & mask) / (int)BlittableJsonToken.OffsetSizeByte;
+            return tokenIndex < PropNamesDataOffsetSizeTable.Length ? PropNamesDataOffsetSizeTable[tokenIndex] : 0;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
         {
@@ -41,49 +69,24 @@ namespace Sparrow.Json
                 BlittableJsonToken.PropertyIdSizeShort |
                 BlittableJsonToken.PropertyIdSizeInt;
 
-            // PERF: Switch for this case will create if-then-else anyways. 
-            //       So we order them explicitly based on knowledge.
-            BlittableJsonToken current = currentType & mask;
-            int size; // PERF: We assign to a variable instead to have smaller code for inlining.
-            if (current == BlittableJsonToken.PropertyIdSizeByte)
-                size = sizeof(byte); 
-            else if (current == BlittableJsonToken.PropertyIdSizeShort)
-                size = sizeof(short);
-            else if (current == BlittableJsonToken.PropertyIdSizeInt)
-                size = sizeof(int);
-            else
-                size = ThrowInvalidOffsetSize(currentType);
-                
-            return size;                        
+            int tokenIndex = (int)(currentType & mask) / (int)BlittableJsonToken.PropertyIdSizeByte;
+            if (tokenIndex < PropertyIdSizeTable.Length)
+            {
+                int offsetSize = PropertyIdSizeTable[tokenIndex];
+                if (offsetSize > 0)
+                    return offsetSize;
+            }
+
+            throw new ArgumentException($"Illegal offset size {currentType}");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static int ProcessTokenOffsetFlags(BlittableJsonToken currentType)
         {
-            // process part of byte flags that responsible for offset sizes
-            const BlittableJsonToken mask =
-                BlittableJsonToken.OffsetSizeByte |
-                BlittableJsonToken.OffsetSizeShort |
-                BlittableJsonToken.OffsetSizeInt;
+            var result = GetPropertyNamesDataOffsetSize(currentType);
+            if (result > 0)
+                return result;
 
-            // PERF: Switch for this case will create if-then-else anyways. 
-            //       So we order them explicitly based on knowledge.
-            BlittableJsonToken current = currentType & mask;
-            int size; // PERF: We assign to a variable instead to have smaller code for inlining.
-            if (current == BlittableJsonToken.OffsetSizeByte)
-                size = sizeof(byte);
-            else if (current == BlittableJsonToken.OffsetSizeShort)
-                size = sizeof(short);
-            else if (current == BlittableJsonToken.OffsetSizeInt)
-                size = sizeof(int);
-            else
-                size = ThrowInvalidOffsetSize(currentType);
-
-            return size;
-        }
-
-        private static int ThrowInvalidOffsetSize(BlittableJsonToken currentType)
-        {
             throw new ArgumentException($"Illegal offset size {currentType}");
         }
 
@@ -103,12 +106,6 @@ namespace Sparrow.Json
             if (token is >= BlittableJsonToken.StartObject and <= BlittableJsonToken.RawBlob)
                 return currentType & TypesMask;
 
-            ThrowInvalidType(currentType);
-            return default;// will never happen
-        }
-
-        private static void ThrowInvalidType(BlittableJsonToken currentType)
-        {
             throw new ArgumentException($"Illegal type {currentType}");
         }
 
