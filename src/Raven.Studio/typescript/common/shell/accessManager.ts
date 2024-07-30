@@ -12,6 +12,7 @@ class accessManager {
     
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
     secureServer = ko.observable<boolean>(true);
+    allowEncryptedDatabasesOverHttp = ko.observable<boolean>(false);
 
     
     // cluster node has the same privileges as cluster admin
