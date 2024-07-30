@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Data;
 using System.Data.Common;
 using System.Linq;
+using Microsoft.Data.SqlClient;
+using NpgsqlTypes;
+using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Relational;
@@ -147,5 +151,68 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
     protected override string GetPostDeleteSyntax(ToRelationalDatabaseItem itemToDelete)
     {
         return _isSqlServerFactoryType && Configuration.ForceQueryRecompile ? " OPTION(RECOMPILE)" : string.Empty;
+    }
+    
+    internal static void SetProviderSpecificDbType(string dbTypeString, ref DbParameter colParam, SqlProvider? providerType)
+    {
+        if (providerType is null)
+        {
+            return;
+        }
+        switch (providerType)
+        {
+            case SqlProvider.SqlClient:
+                SqlDbType sqlDbType = ParseProviderSpecificParameterType<SqlDbType>(dbTypeString);
+                ((SqlParameter)colParam).SqlDbType = sqlDbType;
+                break;
+            case SqlProvider.Npgsql:
+                NpgsqlDbType npgsqlType = ParseProviderSpecificParameterType<NpgsqlDbType>(dbTypeString);
+                ((Npgsql.NpgsqlParameter)colParam).NpgsqlDbType = npgsqlType;
+                break;
+            case SqlProvider.MySqlClient:
+            case SqlProvider.MySqlConnectorFactory:
+                MySqlConnector.MySqlDbType mySqlConnectorDbType = ParseProviderSpecificParameterType<MySqlConnector.MySqlDbType>(dbTypeString);
+                ((MySqlConnector.MySqlParameter)colParam).MySqlDbType = mySqlConnectorDbType;
+                break;
+            case SqlProvider.OracleClient:
+                OracleDbType oracleDbType = ParseProviderSpecificParameterType<OracleDbType>(dbTypeString);
+                ((OracleParameter)colParam).OracleDbType = oracleDbType;
+                break;
+            default:
+                ThrowProviderNotSupported(providerType);
+                break;
+        }
+
+    }
+    
+    private static T ParseProviderSpecificParameterType<T>(string dbTypeString) where T : struct, Enum, IConvertible
+    {
+        if (dbTypeString.Contains("|"))
+        {
+            var multipleTypes = dbTypeString.Split('|').Select(e =>
+            {
+                if (Enum.TryParse(e.Trim(), ignoreCase: true, out T singleProviderSpecificType) == false)
+                    ThrowCouldNotParseDbType();
+
+                return singleProviderSpecificType;
+            }).ToList();
+
+            return multipleTypes.Aggregate((a, b) => (T)Enum.ToObject(typeof(T), Convert.ToInt32(a) | Convert.ToInt32(b)));
+        }
+
+        if (Enum.TryParse(dbTypeString, ignoreCase: true, out T providerSpecificType) == false)
+            ThrowCouldNotParseDbType();
+
+        return providerSpecificType;
+
+        void ThrowCouldNotParseDbType()
+        {
+            throw new InvalidOperationException(string.Format($"Couldn't parse '{dbTypeString}' as db type."));
+        }
+    }
+
+    static void ThrowProviderNotSupported(SqlProvider? providerType)
+    {
+        throw new NotSupportedException($"Factory provider '{providerType}' is not supported");
     }
 }

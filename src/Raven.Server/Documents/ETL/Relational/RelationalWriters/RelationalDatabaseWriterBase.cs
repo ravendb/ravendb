@@ -18,12 +18,14 @@ using Raven.Client.Extensions.Streams;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.Snowflake.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Relational.Metrics;
 using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using DbProviderFactories = System.Data.Common.DbProviderFactories;
 
 namespace Raven.Server.Documents.ETL.Relational.RelationalWriters;
 
@@ -329,10 +331,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
 
                 var endSyntax = GetPostDeleteSyntax(toDelete[i]);
                 sb.Append(endSyntax);
-                // if (IsSqlServerFactoryType && _etl.Configuration.ForceQueryRecompile)
-                // {
-                //     sb.Append(" OPTION(RECOMPILE)");
-                // }
+
 
                 var stmt = sb.ToString();
                 cmd.CommandText = stmt;
@@ -440,69 +439,6 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
         return stats;
     }
 
-    private static void SetProviderSpecificDbType(string dbTypeString, ref DbParameter colParam, SqlProvider? providerType)
-    {
-        if (providerType is null)
-        {
-            return;
-        }
-        switch (providerType)
-        {
-            case SqlProvider.SqlClient:
-                SqlDbType sqlDbType = ParseProviderSpecificParameterType<SqlDbType>(dbTypeString);
-                ((SqlParameter)colParam).SqlDbType = sqlDbType;
-                break;
-            case SqlProvider.Npgsql:
-                NpgsqlDbType npgsqlType = ParseProviderSpecificParameterType<NpgsqlDbType>(dbTypeString);
-                ((Npgsql.NpgsqlParameter)colParam).NpgsqlDbType = npgsqlType;
-                break;
-            case SqlProvider.MySqlClient:
-            case SqlProvider.MySqlConnectorFactory:
-                MySqlConnector.MySqlDbType mySqlConnectorDbType = ParseProviderSpecificParameterType<MySqlConnector.MySqlDbType>(dbTypeString);
-                ((MySqlConnector.MySqlParameter)colParam).MySqlDbType = mySqlConnectorDbType;
-                break;
-            case SqlProvider.OracleClient:
-                OracleDbType oracleDbType = ParseProviderSpecificParameterType<OracleDbType>(dbTypeString);
-                ((OracleParameter)colParam).OracleDbType = oracleDbType;
-                break;
-            default:
-                ThrowProviderNotSupported(providerType);
-                break;
-        }
-
-    }
-    
-    private static T ParseProviderSpecificParameterType<T>(string dbTypeString) where T : struct, Enum, IConvertible
-    {
-        if (dbTypeString.Contains("|"))
-        {
-            var multipleTypes = dbTypeString.Split('|').Select(e =>
-            {
-                if (Enum.TryParse(e.Trim(), ignoreCase: true, out T singleProviderSpecificType) == false)
-                    ThrowCouldNotParseDbType();
-
-                return singleProviderSpecificType;
-            }).ToList();
-
-            return multipleTypes.Aggregate((a, b) => (T)Enum.ToObject(typeof(T), Convert.ToInt32(a) | Convert.ToInt32(b)));
-        }
-
-        if (Enum.TryParse(dbTypeString, ignoreCase: true, out T providerSpecificType) == false)
-            ThrowCouldNotParseDbType();
-
-        return providerSpecificType;
-
-        void ThrowCouldNotParseDbType()
-        {
-            throw new InvalidOperationException(string.Format($"Couldn't parse '{dbTypeString}' as db type."));
-        }
-    }
-
-    static void ThrowProviderNotSupported(SqlProvider? providerType)
-    {
-        throw new NotSupportedException($"Factory provider '{providerType}' is not supported");
-    }
-
     public static void SetParamValue(DbParameter colParam, RelationalDatabaseColumn column, List<Func<DbParameter, string, bool>> stringParsers, bool isSnowflake, SqlProvider? sqlProvider = null)
     {
         if (column.Value == null)
@@ -538,6 +474,10 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
                         {
                             if (isSnowflake)
                             {
+                                // Complete Snowflake logic of this feature is here, the rest is for SQL
+                                // It needs to be here because this method is static
+                                // todo: make this method non static - make simulators inherit this class
+                                // todo: https://github.com/ravendb/ravendb/pull/18901#discussion_r1695045213
                                 column.IsArrayOrObject = true;
                                 var dbTypeString = dbType.ToString() ?? string.Empty;
                                 colParam.Value = dbTypeString switch
@@ -596,7 +536,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
                                 }
                                 else
                                 {
-                                    SetProviderSpecificDbType(dbTypeString, ref colParam, sqlProvider);
+                                    SqlDatabaseWriter.SetProviderSpecificDbType(dbTypeString, ref colParam, sqlProvider);
 
                                     if (fieldValue is IEnumerable<object> enumerableValue)
                                     {
