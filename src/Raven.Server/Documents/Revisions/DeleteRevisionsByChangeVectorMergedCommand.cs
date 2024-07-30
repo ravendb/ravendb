@@ -98,24 +98,24 @@ public partial class RevisionsStorage
             return new DeleteRevisionsByChangeVectorMergedCommandDto(_id, _cvs, _includeForceCreated);
         }
 
-        private sealed class DeleteRevisionsByChangeVectorMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsByChangeVectorMergedCommand>
+        public sealed class DeleteRevisionsByChangeVectorMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsByChangeVectorMergedCommand>
         {
-            private readonly string _id;
+            public readonly string Id;
 
-            private readonly List<string> _cvs;
+            public readonly List<string> Cvs;
 
-            private readonly bool _includeForceCreated;
+            public readonly bool IncludeForceCreated;
 
             public DeleteRevisionsByChangeVectorMergedCommandDto(string id, List<string> cvs, bool includeForceCreated)
             {
-                _id = id;
-                _cvs = cvs;
-                _includeForceCreated = includeForceCreated;
+                Id = id;
+                Cvs = cvs;
+                IncludeForceCreated = includeForceCreated;
             }
 
             public DeleteRevisionsByChangeVectorMergedCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new DeleteRevisionsByChangeVectorMergedCommand(_id, _cvs, _includeForceCreated);
+                return new DeleteRevisionsByChangeVectorMergedCommand(Id, Cvs, IncludeForceCreated);
             }
         }
     }
