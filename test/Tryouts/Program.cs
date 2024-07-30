@@ -17,6 +17,7 @@ using SlowTests.Authentication;
 using SlowTests.Issues;
 using SlowTests.Server.Documents.PeriodicBackup;
 using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftAntimalwareEngine;
+using RachisTests;
 
 namespace Tryouts;
 
@@ -38,16 +39,11 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new RavenDB_18554(testOutputHelper))
+                using (var test = new AddNodeToClusterTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    //test.CanRoundTripSmallContainer("GreaterThan42B");
-                    //await test.CanRestartEncryptedDbWithIndexes(new RavenTestParameters
-                    //{
-                    //    SearchEngine = RavenSearchEngineMode.Lucene,
-                    //    DatabaseMode = RavenDatabaseMode.Single,
-                    //});
-                    await test.QueriesShouldFailoverIfIndexIsCompactingCluster ();
+                   
+                    await test.AddDatabaseOnDisconnectedNode ();
                 }
             }
             catch (Exception e)
