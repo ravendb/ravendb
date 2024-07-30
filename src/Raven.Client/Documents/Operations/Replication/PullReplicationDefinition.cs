@@ -85,9 +85,9 @@ namespace Raven.Client.Documents.Operations.Replication
             }
         }
 
-        public ExternalReplication ToExternalReplication(ReplicationInitialRequest request, long taskId)
+        public PullReplicationAsHub ToPullReplicationAsHub(ReplicationInitialRequest request, long taskId)
         {
-            return new ExternalReplication
+            return new PullReplicationAsHub
             {
                 Url = request.SourceUrl,
                 Database = request.Database,

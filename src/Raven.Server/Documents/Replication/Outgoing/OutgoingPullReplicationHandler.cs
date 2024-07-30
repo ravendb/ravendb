@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         // we need to associate this instance to the replication definition.
         public string PullReplicationDefinitionName;
 
-        public OutgoingPullReplicationHandlerAsHub(ReplicationLoader parent, DocumentDatabase database, ExternalReplication node, TcpConnectionInfo connectionInfo) : 
+        public OutgoingPullReplicationHandlerAsHub(ReplicationLoader parent, DocumentDatabase database, PullReplicationAsHub node, TcpConnectionInfo connectionInfo) : 
             base(parent, database, node, connectionInfo)
         {
         }
