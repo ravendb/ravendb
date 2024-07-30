@@ -223,7 +223,7 @@ namespace Voron.Recovery
                         {
                             var page = mem;
                             if (IsEncrypted)
-                                 page = DecryptPageIfNeeded(se, mem, startOffset, ref tempTx, maybePulseTransaction: true);
+                                 page = DecryptPageIfNeeded(se, mem, ref tempTx, maybePulseTransaction: true);
 
                             if (ct.IsCancellationRequested)
                             {
@@ -334,10 +334,7 @@ namespace Voron.Recovery
                                             }
 
                                             var nextStreamHeader = (byte*)(streamPageHeader->StreamNextPageNumber * _pageSize) + startOffset;
-                                            nextPage = (PageHeader*)nextStreamHeader;
-                                            if (IsEncrypted)
-                                                throw new NotImplementedException();
-                                            //nextPage = (PageHeader*)DecryptPageIfNeeded(nextStreamHeader, startOffset, ref tx, false);
+                                            nextPage = (PageHeader*)DecryptPageIfNeeded(se, nextStreamHeader, ref tempTx);
 
                                             //This is the case that the next page isn't a stream page
                                             if (nextPage->Flags.HasFlag(PageFlags.Stream) == false || nextPage->Flags.HasFlag(PageFlags.Overflow) == false)
@@ -748,7 +745,7 @@ namespace Voron.Recovery
 
         private Size _maxTransactionSize = new Size(64, SizeUnit.Megabytes);
 
-        private byte* DecryptPageIfNeeded(StorageEnvironment env,byte* mem, long start, ref Pager.PagerTransactionState txState, bool maybePulseTransaction = false)
+        private byte* DecryptPageIfNeeded(StorageEnvironment env,byte* mem, ref Pager.PagerTransactionState txState, bool maybePulseTransaction = false)
         {
             if (IsEncrypted == false)
                 return mem;
@@ -760,7 +757,7 @@ namespace Voron.Recovery
                 txState = default;
             }
             
-            long pageNumber = (long)((PageHeader*)mem)->PageNumber;
+            long pageNumber = ((PageHeader*)mem)->PageNumber;
             var res = _dataPager.AcquirePagePointer(_dataPagerState, ref txState, pageNumber);
             
             return res;
