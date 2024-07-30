@@ -3,13 +3,19 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Admin.Processors.Revisions;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Sharding.Executors;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Revisions;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using static Raven.Server.Documents.Sharding.ShardLocator;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 {
@@ -19,35 +25,37 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
         {
         }
 
-        protected override async ValueTask DeleteRevisionsAsync(TransactionOperationContext context, string[] documentIds, bool includeForceCreated,
-            OperationCancelToken token)
+        protected override async Task<long> DeleteRevisionsAsync(DeleteRevisionsOperation.Parameters parameters, OperationCancelToken token)
         {
-            var shardsToDocs = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, documentIds);
-            var cmds = new Dictionary<int, RavenCommand>(shardsToDocs.Count);
+            if (parameters.DocumentIds.Count == 1)
+            {
+                var cmd = new DeleteRevisionsCommand(DocumentConventions.Default, parameters);
+                int shardNumber;
+
+                var config = RequestHandler.DatabaseContext.DatabaseRecord.Sharding;
+                using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    shardNumber = ShardHelper.GetShardNumberFor(config, context, parameters.DocumentIds.First());
+                }
+
+                return (await RequestHandler.ShardExecutor.ExecuteSingleShardAsync<DeleteRevisionsOperation.Result>(cmd, shardNumber, token.Token)).TotalDeletes;
+            }
+
+            Dictionary<int, IdsByShard<string>> shardsToDocs;
+            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                shardsToDocs = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, parameters.DocumentIds);
+
+            var cmds = new Dictionary<int, DeleteRevisionsCommand>(shardsToDocs.Count);
             foreach (var (shard, ids) in shardsToDocs)
             {
-                cmds[shard] = new DeleteRevisionsOperation.DeleteRevisionsCommand(includeForceCreated, DocumentConventions.Default, context,
-                    new DeleteRevisionsOperation.Parameters() {DocumentIds = ids.Ids.ToArray()});
+                var shardParameters = (DeleteRevisionsOperation.Parameters)parameters.Clone();
+                shardParameters.DocumentIds = ids.Ids.ToList();
+                cmds[shard] = new DeleteRevisionsCommand(DocumentConventions.Default, shardParameters);
             }
             
-            await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToDocs.Keys.ToArray(), new ShardedDeleteRevisionsOperation(RequestHandler.HttpContext, cmds), token.Token);
+            return (await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToDocs.Keys.ToArray(), new ShardedDeleteRevisionsOperation(RequestHandler.HttpContext, cmds), token.Token)).TotalDeletes;
         }
-        
-        internal readonly struct ShardedDeleteRevisionsOperation : IShardedOperation
-        {
-            private readonly Dictionary<int, RavenCommand> _cmds;
-            private readonly HttpContext _httpContext;
 
-            public ShardedDeleteRevisionsOperation(HttpContext httpContext, Dictionary<int, RavenCommand> cmds)
-            {
-                _cmds = cmds;
-                _httpContext = httpContext;
-            }
-            
-            public HttpRequest HttpRequest => _httpContext.Request;
 
-            public RavenCommand<object> CreateCommandForShard(int shardNumber) => _cmds[shardNumber];
-
-        }
     }
 }

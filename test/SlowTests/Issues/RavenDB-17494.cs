@@ -49,8 +49,7 @@ public class RavenDB_17494 : ClusterTestBase
         {
             Default = new RevisionsCollectionConfiguration
             {
-                Disabled = false, 
-                AllowDeleteRevisionsManually = true
+                Disabled = false
             }
         };
         await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
@@ -119,14 +118,14 @@ public class RavenDB_17494 : ClusterTestBase
             user1deleteCv3 = u1revisionsCvs[7];
         }
 
-        var result = await store.Operations.SendAsync(
-            new DeleteRevisionsManuallyOperation(user1.Id, new List<string>() { user1deleteCv1, user1deleteCv2, user1deleteCv3 }));
+        var result = await store.Maintenance.SendAsync(
+            new DeleteRevisionsOperation(user1.Id, new List<string>() { user1deleteCv1, user1deleteCv2, user1deleteCv3 }));
         Assert.Equal(3, result.TotalDeletes);
 
-        var result2 = await store.Operations.SendAsync(new DeleteRevisionsManuallyOperation(documentId: company1.Id));
+        var result2 = await store.Maintenance.SendAsync(new DeleteRevisionsOperation(documentId: company1.Id));
         Assert.Equal(11, result2.TotalDeletes);
 
-        var result3 = await store.Operations.SendAsync(new DeleteRevisionsManuallyOperation(documentId: company2.Id, before: before, after: after));
+        var result3 = await store.Maintenance.SendAsync(new DeleteRevisionsOperation(documentId: company2.Id, from: after, to: before));
         Assert.Equal(3, result3.TotalDeletes);
 
         using (var session = store.OpenAsyncSession())
@@ -154,11 +153,16 @@ public class RavenDB_17494 : ClusterTestBase
         var user2 = new User { Id = "Users/2-B", Name = "Shahar2" };
         var company1 = new Company { Id = "Companies/1-A", Name = "Shahar1" };
         var company2 = new Company { Id = "Companies/2-B", Name = "Shahar2" };
-        var company3 = new Company { Id = "Companies/3-C", Name = "Shahar3" };
 
         using var store = GetDocumentStore(options);
 
-        var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false } };
+        var configuration = new RevisionsConfiguration { 
+            Default = new RevisionsCollectionConfiguration
+            {
+                Disabled = false,
+                MaximumRevisionsToDeleteUponDocumentUpdate = 9
+            }
+        };
         await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
 
         using (var session = store.OpenAsyncSession())
@@ -167,7 +171,6 @@ public class RavenDB_17494 : ClusterTestBase
             await session.StoreAsync(user2);
             await session.StoreAsync(company1);
             await session.StoreAsync(company2);
-            await session.StoreAsync(company3);
             await session.SaveChangesAsync();
         }
 
@@ -187,14 +190,10 @@ public class RavenDB_17494 : ClusterTestBase
                 var c2 = await session.LoadAsync<Company>(company2.Id);
                 c2.Name = $"RavenDB2_{i}";
 
-                var c3 = await session.LoadAsync<Company>(company3.Id);
-                c3.Name = $"RavenDB3_{i}";
-
                 await session.SaveChangesAsync();
             }
         }
 
-        string user1deleteCv = string.Empty;
         string user2deleteCv = string.Empty;
 
         using (var session = store.OpenAsyncSession())
@@ -203,45 +202,30 @@ public class RavenDB_17494 : ClusterTestBase
             Assert.Equal(11, await session.Advanced.Revisions.GetCountForAsync(user2.Id));
             Assert.Equal(11, await session.Advanced.Revisions.GetCountForAsync(company1.Id));
             Assert.Equal(11, await session.Advanced.Revisions.GetCountForAsync(company2.Id));
-            Assert.Equal(11, await session.Advanced.Revisions.GetCountForAsync(company3.Id));
-
-            var u1revisionsCvs = await GetRevisionsCvs(session, user1.Id);
-            user1deleteCv = u1revisionsCvs[5];
 
             var u2revisionsCvs = await GetRevisionsCvs(session, user2.Id);
             user2deleteCv = u2revisionsCvs[5];
         }
-
-        var e1 = await Assert.ThrowsAsync<RavenException>(() => store.Operations.SendAsync(new DeleteRevisionsManuallyOperation(user1.Id, new List<string>() { user1deleteCv })));
-        Assert.Contains(" but it isn't allowed by its revisions configuration.", e1.Message);
-
-        var e2 = await Assert.ThrowsAsync<RavenException>(() => store.Operations.SendAsync(new DeleteRevisionsManuallyOperation(documentId: company3.Id)));
-        Assert.Contains("You are trying to delete revisions of 'Companies/3-C' but it isn't allowed by its revisions configuration.", e2.Message);
-
-        configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false, AllowDeleteRevisionsManually = true } };
-        await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
-
 
         if (options.DatabaseMode == RavenDatabaseMode.Single)
         {
             // In sharded, if user1 and user2 in different shards, it wont find the user2 revision (cv) and it'll continue,
             // Thats why it won't necessarily throw on sharded db
             var e3 = await Assert.ThrowsAsync<RavenException>(() =>
-                store.Operations.SendAsync(new DeleteRevisionsManuallyOperation(user1.Id, new List<string>() { user2deleteCv })));
+                store.Maintenance.SendAsync(new DeleteRevisionsOperation(user1.Id, new List<string>() { user2deleteCv })));
             Assert.Contains($"Revision with the cv \"{user2deleteCv}\" doesn't belong to the doc \"{user1.Id}\" but to the doc \"{user2.Id}\"", e3.Message);
         }
 
-        var result = await store.Operations.SendAsync(new DeleteRevisionsManuallyOperation(documentId: company3.Id, maxDeletes: 9));
+        var result = await store.Maintenance.SendAsync(new DeleteRevisionsOperation(company2.Id));
 
-        Assert.Equal(9, result.TotalDeletes);
+        Assert.Equal(11, result.TotalDeletes);
 
         using (var session = store.OpenAsyncSession())
         {
             Assert.Equal(11, await session.Advanced.Revisions.GetCountForAsync(user1.Id));
             Assert.Equal(11, await session.Advanced.Revisions.GetCountForAsync(user2.Id));
             Assert.Equal(11, await session.Advanced.Revisions.GetCountForAsync(company1.Id));
-            Assert.Equal(11, await session.Advanced.Revisions.GetCountForAsync(company2.Id));
-            Assert.Equal(2, await session.Advanced.Revisions.GetCountForAsync(company3.Id));
+            Assert.Equal(0, await session.Advanced.Revisions.GetCountForAsync(company2.Id));
         }
     }
 

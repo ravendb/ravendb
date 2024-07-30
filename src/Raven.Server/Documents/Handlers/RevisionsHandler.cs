@@ -57,13 +57,6 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/revisions/", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public async Task DeleteRevisions()
-        {
-            using (var processor = new RevisionsHandlerProcessorForDeleteRevisions(this))
-                await processor.ExecuteAsync();
-        }
-
         [RavenAction("/databases/*/revisions/resolved", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetResolvedConflictsSince()
         {

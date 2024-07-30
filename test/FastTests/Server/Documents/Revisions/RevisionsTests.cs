@@ -1637,7 +1637,7 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisionsMetadata[3].GetString(Constants.Documents.Metadata.Flags));
                 }
 
-                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters { DocumentIds = new[] { id, "users/not/exists" } }));
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { id, "users/not/exists" }));
 
                 statistics = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
@@ -1776,7 +1776,7 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Equal(4, usersRevCount);
                     Assert.Equal(4, orderssRevCount);
 
-                    await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters() { DocumentIds = new[] { "users/1", "orders/1" } }));
+                    await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { "users/1", "orders/1" }));
 
                     usersRevCount = await session.Advanced.Revisions.GetCountForAsync("users/1");
                     orderssRevCount = await session.Advanced.Revisions.GetCountForAsync("orders/1");

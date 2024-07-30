@@ -312,7 +312,7 @@ namespace Raven.Client.Json.Serialization
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskQueueSink> GetOngoingTaskQueueSinkResult = GenerateJsonDeserializationRoutine<OngoingTaskQueueSink>();
 
-        public static readonly Func<BlittableJsonReaderObject, DeleteRevisionsManuallyOperation.Result> DeleteRevisionsManuallyResult = GenerateJsonDeserializationRoutine<DeleteRevisionsManuallyOperation.Result>();
+        public static readonly Func<BlittableJsonReaderObject, DeleteRevisionsOperation.Result> DeleteRevisionsResult = GenerateJsonDeserializationRoutine<DeleteRevisionsOperation.Result>();
 
     }
 }
