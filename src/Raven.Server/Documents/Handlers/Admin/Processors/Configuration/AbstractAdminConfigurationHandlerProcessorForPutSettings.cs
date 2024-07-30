@@ -6,6 +6,7 @@ using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 
@@ -23,7 +24,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
     public override async ValueTask ExecuteAsync()
     {
         await RequestHandler.ServerStore.EnsureNotPassiveAsync();
-
+        
         using (ClusterContextPool.AllocateOperationContext(out ClusterOperationContext context))
         {
             var databaseSettingsJson = await context.ReadForDiskAsync(RequestHandler.RequestBodyStream(), Constants.DatabaseSettings.StudioId);
@@ -42,6 +43,9 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
             long index = (await RequestHandler.Server.ServerStore.SendToLeaderAsync(command)).Index;
 
             await WaitForIndexNotificationAsync(index);
+            
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "PUT", "Database configuration changed");
         }
 
         RequestHandler.NoContentStatus(HttpStatusCode.Created);
