@@ -620,7 +620,7 @@ namespace Voron.Impl.Journal
                         }
 
                         throw new InvalidJournalException(
-                            $"The last synced transaction id was {_journalInfo.LastSyncedTransactionId} (in journal: {_journalInfo.LastSyncedJournal}) but the first transaction being read in the recovery process is {current->TransactionId} in journal {_journalPager} (transaction has valid hash). Tx diff is: {txIdDiff}{AddSkipTxInfoDetails()}. " +
+                            $"The last synced transaction id was {_journalInfo.LastSyncedTransactionId} (in journal: {_journalInfo.LastSyncedJournal}) but the first transaction being read in the recovery process is {current->TransactionId} in journal {_journalPager.FileName} (transaction has valid hash). Tx diff is: {txIdDiff}{AddSkipTxInfoDetails()}. " +
                             $"Some journals might be missing. Debug details - file header {_currentFileHeader}", _journalInfo);
                     }
                 }
