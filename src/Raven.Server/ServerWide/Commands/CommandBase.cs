@@ -9,7 +9,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public abstract class CommandBase
     {
-        public string Type;
+        public const string Type = nameof(Type);
         public virtual DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var json = new DynamicJsonValue
