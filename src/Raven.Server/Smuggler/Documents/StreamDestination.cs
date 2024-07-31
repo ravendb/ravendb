@@ -443,12 +443,28 @@ namespace Raven.Server.Smuggler.Documents
                             _writer.WriteEndObject();
                         }
 
+                        if (databaseRecord.Studio != null)
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.Studio));
 
+                            WriteStudioConfiguration(databaseRecord.Studio);
+                        }
 
                         break;
                 }
 
                 await _writer.MaybeFlushAsync();
+            }
+
+            private void WriteStudioConfiguration(StudioConfiguration studioConfiguration)
+            {
+                if (studioConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _context.Write(_writer, studioConfiguration.ToJson());
             }
 
             private void WriteHubPullReplications(List<PullReplicationDefinition> hubPullReplications)

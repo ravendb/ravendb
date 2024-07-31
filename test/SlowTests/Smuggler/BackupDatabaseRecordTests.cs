@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,10 +30,15 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
+using Raven.Client.Util;
+using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -42,6 +48,20 @@ namespace SlowTests.Smuggler
     {
         public BackupDatabaseRecordTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [RavenFact (RavenTestCategory.Smuggler)]
+        public void EnsureAllDatabaseRecordFieldsAreTested()
+        {
+            // If this test failed, that means a new field has been added to the database record.
+            // Make sure it is included in SmugglerRestore, StreamSource->GetDatabaseRecordAsync, StreamDestination->WriteDatabaseRecordAsync
+            // And add it to CanBackupAndRestoreDatabaseRecord and CanExportAndImportDatabaseRecord tests
+
+            var fieldNames = ReflectionUtil.GetPropertiesAndFieldsFor(typeof(DatabaseRecord), BindingFlags.Instance | BindingFlags.Public)
+                .Select(field => field.Name)
+                .ToList();
+
+            Assert.Equal(41, fieldNames.Count);
         }
 
         [Fact, Trait("Category", "Smuggler")]
@@ -1154,6 +1174,15 @@ namespace SlowTests.Smuggler
                     }
                 }));
 
+                // add studio configuration
+                var command = new PutDatabaseStudioConfigurationCommand(new ServerWideStudioConfiguration()
+                {
+                    Disabled = false,
+                    Environment = StudioConfiguration.StudioEnvironment.None
+                }, store.Database, RaftIdGenerator.NewId());
+                long index = (await Server.ServerStore.SendToLeaderAsync(command)).Index;
+                await Server.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, TimeSpan.FromSeconds(30));
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -1240,6 +1269,10 @@ namespace SlowTests.Smuggler
                     Assert.NotNull(record.Integrations);
                     Assert.Equal("jane", record.Integrations.PostgreSql.Authentication.Users.First().Username);
                     Assert.Equal("foo!@22", record.Integrations.PostgreSql.Authentication.Users.First().Password);
+
+                    Assert.NotNull(record.Studio);
+                    Assert.False(record.Studio.Disabled);
+                    Assert.Equal(StudioConfiguration.StudioEnvironment.None, record.Studio.Environment);
                 }
             }
         }
