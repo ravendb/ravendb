@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Analysis;
@@ -19,6 +20,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Integrations.PostgreSQL;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
@@ -27,8 +29,8 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Server.Smuggler.Migration;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Xunit;
@@ -1134,6 +1136,24 @@ namespace SlowTests.Smuggler
                     Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                 }));
 
+                await RefreshHelper.SetupExpiration(store, Server.ServerStore,
+                    new RefreshConfiguration() { Disabled = false, MaxItemsToProcess = 100, RefreshFrequencyInSec = 100 });
+
+                store.Maintenance.Send(new ConfigurePostgreSqlOperation(new PostgreSqlConfiguration
+                {
+                    Authentication = new PostgreSqlAuthenticationConfiguration()
+                    {
+                        Users = new List<PostgreSqlUser>()
+                        {
+                            new PostgreSqlUser()
+                            {
+                                Username = "jane",
+                                Password = "foo!@22"
+                            }
+                        }
+                    }
+                }));
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -1212,6 +1232,14 @@ namespace SlowTests.Smuggler
                     Assert.Equal("connection", record.SqlEtls.First().ConnectionStringName);
                     Assert.Equal(true, record.SqlEtls.First().AllowEtlOnNonEncryptedChannel);
                     Assert.Equal(false, record.SqlEtls.First().Disabled);
+
+                    Assert.NotNull(record.Refresh);
+                    Assert.False(record.Refresh.Disabled);
+                    Assert.Equal(100, record.Refresh.RefreshFrequencyInSec);
+
+                    Assert.NotNull(record.Integrations);
+                    Assert.Equal("jane", record.Integrations.PostgreSql.Authentication.Users.First().Username);
+                    Assert.Equal("foo!@22", record.Integrations.PostgreSql.Authentication.Users.First().Password);
                 }
             }
         }
