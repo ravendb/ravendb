@@ -2,12 +2,9 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Extensions;
-using Raven.Server.Documents.Revisions;
-using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using static Raven.Server.Documents.Revisions.RevisionsStorage;
@@ -23,9 +20,9 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
         protected override Task<long> DeleteRevisionsAsync(DeleteRevisionsOperation.Parameters request, OperationCancelToken token)
         {
             if (request.RevisionsChangeVectors.IsNullOrEmpty() == false)
-                return DeleteRevisionsByChangeVectorAsync(request.DocumentIds.First(), request.RevisionsChangeVectors, request.IncludeForceCreated);
+                return DeleteRevisionsByChangeVectorAsync(request.DocumentIds.Single(), request.RevisionsChangeVectors, request.RemoveForceCreatedRevisions);
 
-            return DeleteRevisionsByDocumentIdAsync(request.DocumentIds, request.After, request.Before, request.IncludeForceCreated, token);
+            return DeleteRevisionsByDocumentIdAsync(request.DocumentIds, request.From, request.To, request.RemoveForceCreatedRevisions, token);
         }
 
         private async Task<long> DeleteRevisionsByChangeVectorAsync(string id, List<string> cvs, bool includeForceCreated)
@@ -35,7 +32,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
             return cmd.Result.HasValue ? cmd.Result.Value : 0;
         }
 
-        private async Task<long> DeleteRevisionsByDocumentIdAsync(List<string> ids, DateTime? after, DateTime? before, bool includeForceCreated, OperationCancelToken token)
+        private async Task<long> DeleteRevisionsByDocumentIdAsync(List<string> ids, DateTime? from, DateTime? to, bool includeForceCreated, OperationCancelToken token)
         {
             var deleted = 0L;
             var moreWork = false;
@@ -44,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
             {
                 token.ThrowIfCancellationRequested();
 
-                var cmd = new DeleteRevisionsByDocumentIdMergedCommand(ids, after, before, includeForceCreated);
+                var cmd = new DeleteRevisionsByDocumentIdMergedCommand(ids, from, to, includeForceCreated);
                 await RequestHandler.Database.TxMerger.Enqueue(cmd);
 
                 if (cmd.Result.HasValue)

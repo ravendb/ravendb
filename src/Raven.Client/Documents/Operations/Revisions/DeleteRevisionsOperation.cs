@@ -17,68 +17,186 @@ namespace Raven.Client.Documents.Operations.Revisions
     {
         private readonly Parameters _parameters;
 
-        public DeleteRevisionsOperation(List<string> documentIds, bool includeForceCreated = false)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.
+        /// This operation allows deletion of revisions.
+        /// </summary>
+        /// <remarks>
+        /// This is an <c>Admin</c> to operation.
+        /// </remarks>
+
+        /// <param name="documentIds">
+        /// A list of document IDs whose revisions you want to delete. 
+        /// Default is an empty list if not provided.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when the <paramref name="documentIds"/> parameter is null or empty.
+        /// </exception>
+
+        /// <param name="removeForceCreatedRevisions">
+        /// Indicates whether to include force-created revisions in the deletion. Default is <c>false</c>
+        /// </param>
+
+        public DeleteRevisionsOperation(List<string> documentIds, bool removeForceCreatedRevisions = false)
         {
             var parameters = new Parameters()
             {
                 DocumentIds = documentIds,
-                IncludeForceCreated = includeForceCreated
+                RemoveForceCreatedRevisions = removeForceCreatedRevisions
             };
             parameters.Validate();
             _parameters = parameters;
         }
 
-        public DeleteRevisionsOperation(string documentId, bool includeForceCreated = false)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.
+        /// This operation allows deletion of revisions.
+        /// </summary>
+        /// <remarks>
+        /// This is an <c>Admin</c> to operation.
+        /// </remarks>
+
+        /// <param name="documentId">
+        /// The ID of the document whose revisions you want to delete.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when the <paramref name="documentId"/> parameter is null or empty.
+        /// </exception>
+
+        /// <param name="removeForceCreatedRevisions">
+        /// Indicates whether to include force-created revisions in the deletion. Default is <c>false</c>
+        /// </param>
+
+        public DeleteRevisionsOperation(string documentId, bool removeForceCreatedRevisions = false)
         {
             var parameters = new Parameters()
             {
                 DocumentIds = new List<string> { documentId },
-                IncludeForceCreated = includeForceCreated
+                RemoveForceCreatedRevisions = removeForceCreatedRevisions
             };
             parameters.Validate();
             _parameters = parameters;
         }
 
-        public DeleteRevisionsOperation(List<string> documentIds, DateTime? from, DateTime? to, bool includeForceCreated = false)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.
+        /// This operation allows deletion of revisions.
+        /// </summary>
+        /// <remarks>
+        /// This is an <c>Admin</c> to operation.
+        /// </remarks>
+
+        /// <param name="documentIds">
+        /// A list of document IDs whose revisions you want to delete. 
+        /// Default is an empty list if not provided.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when the <paramref name="documentIds"/> parameter is null or empty.
+        /// </exception>
+
+        /// <param name="from">
+        /// The start of the date range for the revisions to delete.
+        /// </param>
+        /// <param name="to">
+        /// The end of the date range for the revisions to delete. 
+        /// </param>
+        /// <exception cref="ArgumentException">
+        /// Throws an <see cref="ArgumentException"/> if <paramref name="to"/> is before <paramref name="from"/>.
+        /// </exception>
+
+        /// <param name="removeForceCreatedRevisions">
+        /// Indicates whether to include force-created revisions in the deletion. Default is <c>false</c>
+        /// </param>
+
+        public DeleteRevisionsOperation(List<string> documentIds, DateTime? from, DateTime? to, bool removeForceCreatedRevisions = false)
         {
             var parameters = new Parameters()
             {
                 DocumentIds = documentIds,
-                After = from,
-                Before = to,
-                IncludeForceCreated = includeForceCreated
+                From = from,
+                To = to,
+                RemoveForceCreatedRevisions = removeForceCreatedRevisions
             };
             parameters.Validate();
             _parameters = parameters;
         }
 
-        public DeleteRevisionsOperation(string documentId, DateTime? from, DateTime? to, bool includeForceCreated = false)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.
+        /// This operation allows deletion of revisions.
+        /// </summary>
+        /// <remarks>
+        /// This is an <c>Admin</c> to operation.
+        /// </remarks>
+
+        /// <param name="documentId">
+        /// The ID of the document whose revisions you want to delete.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when the <paramref name="documentId"/> parameter is null or empty.
+        /// </exception>
+
+        /// <param name="from">
+        /// The start of the date range for the revisions to delete.
+        /// </param>
+        /// <param name="to">
+        /// The end of the date range for the revisions to delete. 
+        /// </param>
+        /// <exception cref="ArgumentException">
+        /// Throws an <see cref="ArgumentException"/> if <paramref name="to"/> is before <paramref name="from"/>.
+        /// </exception>
+
+        /// <param name="removeForceCreatedRevisions">
+        /// Indicates whether to include force-created revisions in the deletion. Default is <c>false</c>
+        /// </param>
+
+        public DeleteRevisionsOperation(string documentId, DateTime? from, DateTime? to, bool removeForceCreatedRevisions = false)
         {
             var parameters = new Parameters()
             {
                 DocumentIds = new List<string> { documentId },
-                After = from,
-                Before = to,
-                IncludeForceCreated = includeForceCreated
+                From = from,
+                To = to,
+                RemoveForceCreatedRevisions = removeForceCreatedRevisions
             };
             parameters.Validate();
             _parameters = parameters;
         }
 
-        public DeleteRevisionsOperation(string documentId, List<string> revisionsChangeVectors, bool includeForceCreated = false)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.
+        /// This operation allows deletion of revisions.
+        /// </summary>
+        /// <remarks>
+        /// This is an <c>Admin</c> to operation.
+        /// </remarks>
+
+        /// <param name="documentId">
+        /// The ID of the document whose revisions you want to delete.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when the <paramref name="documentId"/> parameter is null or empty.
+        /// </exception>
+
+        /// <param name="revisionsChangeVectors">
+        /// A list of change vectors corresponding to the revisions that the user wishes to delete.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when the <paramref name="revisionsChangeVectors"/> parameter is null or empty.
+        /// </exception>
+
+        /// <param name="removeForceCreatedRevisions">
+        /// Include also "Force Created" revisions on the deletion. Default is <c>false</c>
+        /// </param>
+
+        public DeleteRevisionsOperation(string documentId, List<string> revisionsChangeVectors, bool removeForceCreatedRevisions = false)
         {
             var parameters = new Parameters()
             {
                 DocumentIds = new List<string> { documentId },
                 RevisionsChangeVectors = revisionsChangeVectors,
-                IncludeForceCreated = includeForceCreated
+                RemoveForceCreatedRevisions = removeForceCreatedRevisions
             };
-            parameters.Validate();
-            _parameters = parameters;
-        }
-
-        internal DeleteRevisionsOperation(Parameters parameters)
-        {
             parameters.Validate();
             _parameters = parameters;
         }
@@ -88,18 +206,18 @@ namespace Raven.Client.Documents.Operations.Revisions
             return new DeleteRevisionsCommand(conventions, _parameters);
         }
 
-        public sealed class Parameters : ICloneable
+        internal sealed class Parameters : ICloneable
         {
             public List<string> DocumentIds { get; set; }
 
-            public bool IncludeForceCreated { get; set; }
+            public bool RemoveForceCreatedRevisions { get; set; }
 
             // Either!
             public List<string> RevisionsChangeVectors { get; set; }
 
             // Or!
-            public DateTime? After { get; set; } // start
-            public DateTime? Before { get; set; } // end
+            public DateTime? From { get; set; } // start
+            public DateTime? To { get; set; } // end
 
             internal void Validate()
             {
@@ -114,19 +232,19 @@ namespace Raven.Client.Documents.Operations.Revisions
 
                 if (RevisionsChangeVectors.IsNullOrEmpty())
                 {
-                    if (After.HasValue && Before.HasValue && After >= Before)
-                        throw new ArgumentException($"{nameof(After)}, {nameof(Before)}", "'After' must be greater then 'Before'.");
+                    if (From.HasValue && To.HasValue && From >= To)
+                        throw new ArgumentException($"{nameof(From)}, {nameof(To)}", "'After' must be greater then 'Before'.");
                 }
                 else
                 {
                     if (DocumentIds.Count > 1)
                         throw new ArgumentException(nameof(DocumentIds), "The request must include exactly one document ID when deleting specific revisions by their change-vectors.");
 
-                    if (After.HasValue)
-                        throw new ArgumentException(nameof(After), $"request '{nameof(After)}' cannot have a value when deleting specific revisions by their change-vectors.");
+                    if (From.HasValue)
+                        throw new ArgumentException(nameof(From), $"request '{nameof(From)}' cannot have a value when deleting specific revisions by their change-vectors.");
 
-                    if (Before.HasValue)
-                        throw new ArgumentException(nameof(Before), $"request '{nameof(Before)}' cannot have a value when deleting specific revisions by their change-vectors.");
+                    if (To.HasValue)
+                        throw new ArgumentException(nameof(To), $"request '{nameof(To)}' cannot have a value when deleting specific revisions by their change-vectors.");
 
                     foreach (var cv in RevisionsChangeVectors)
                     {
@@ -142,10 +260,10 @@ namespace Raven.Client.Documents.Operations.Revisions
                 return new Parameters
                 {
                     DocumentIds = this.DocumentIds,
-                    IncludeForceCreated = this.IncludeForceCreated,
+                    RemoveForceCreatedRevisions = this.RemoveForceCreatedRevisions,
                     RevisionsChangeVectors = this.RevisionsChangeVectors,
-                    After = this.After,
-                    Before = this.Before,
+                    From = this.From,
+                    To = this.To,
                 };
             }
         }

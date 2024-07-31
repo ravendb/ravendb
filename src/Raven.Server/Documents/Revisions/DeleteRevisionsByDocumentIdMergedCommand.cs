@@ -15,17 +15,17 @@ public partial class RevisionsStorage
     {
         private readonly List<string> _ids;
 
-        private readonly DateTime? _after, _before;
+        private readonly DateTime? _from, _to;
 
         private readonly bool _includeForceCreated;
 
         public (bool MoreWork, long Deleted)? Result { get; private set; } // has more to delete, number of deleted revisions
 
-        public DeleteRevisionsByDocumentIdMergedCommand(List<string> ids, DateTime? after, DateTime? before, bool includeForceCreated)
+        public DeleteRevisionsByDocumentIdMergedCommand(List<string> ids, DateTime? from, DateTime? to, bool includeForceCreated)
         {
             _ids = ids;
-            _after = after;
-            _before = before;
+            _from = from;
+            _to = to;
             _includeForceCreated = includeForceCreated;
         }
 
@@ -52,9 +52,9 @@ public partial class RevisionsStorage
                         .MaximumRevisionsToDeleteUponDocumentUpdate;
 
                     Func<Document, bool> shouldSkip = null;
-                    if (_includeForceCreated == false || _after.HasValue || _before.HasValue)
+                    if (_includeForceCreated == false || _from.HasValue || _to.HasValue)
                     {
-                        shouldSkip = revision => SkipForceCreated(revision) || IsRevisionInRange(revision, _after, _before) == false;
+                        shouldSkip = ShouldSkipRevision;
                     }
 
                     var result = revisionsStorage.ForceDeleteAllRevisionsForInternal(context, lowerId, prefixSlice, collectionName, maxDeletes, shouldSkip);
@@ -68,41 +68,51 @@ public partial class RevisionsStorage
 
         }
 
+        private bool ShouldSkipRevision(Document revision)
+        {
+            // here you can use local vars from the outer method
+            if (_includeForceCreated == false || _from.HasValue || _to.HasValue)
+            {
+                return SkipForceCreated(revision) || IsRevisionInRange(revision, _from, _to) == false;
+            }
+            return false;
+        }
+
         private bool SkipForceCreated(Document revision)
         {
             return _includeForceCreated == false && revision.Flags.Contain(DocumentFlags.ForceCreated);
         }
 
-        private static bool IsRevisionInRange(Document revision, DateTime? after, DateTime? before)
+        private static bool IsRevisionInRange(Document revision, DateTime? from, DateTime? to)
         {
-            return (after.HasValue == false || revision.LastModified > after.Value) &&
-                   (before.HasValue == false || revision.LastModified < before.Value);
+            return (from.HasValue == false || revision.LastModified >= from.Value) &&
+                   (to.HasValue == false || revision.LastModified <= to.Value);
         }
 
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new DeleteRevisionsByDocumentIdMergedCommandDto(_ids, _after, _before, _includeForceCreated);
+            return new DeleteRevisionsByDocumentIdMergedCommandDto(_ids, _from, _to, _includeForceCreated);
         }
 
         public sealed class DeleteRevisionsByDocumentIdMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsByDocumentIdMergedCommand>
         {
             public List<string> Ids;
 
-            public readonly DateTime? After, Before;
+            public readonly DateTime? From, To;
 
             public readonly bool IncludeForceCreated;
 
-            public DeleteRevisionsByDocumentIdMergedCommandDto(List<string> ids,  DateTime? after, DateTime? before, bool includeForceCreated)
+            public DeleteRevisionsByDocumentIdMergedCommandDto(List<string> ids,  DateTime? from, DateTime? to, bool includeForceCreated)
             {
                 Ids = ids;
-                After = after;
-                Before = before;
+                From = from;
+                To = to;
                 IncludeForceCreated = includeForceCreated;
             }
 
             public DeleteRevisionsByDocumentIdMergedCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new DeleteRevisionsByDocumentIdMergedCommand(Ids, After, Before, IncludeForceCreated);
+                return new DeleteRevisionsByDocumentIdMergedCommand(Ids, From, To, IncludeForceCreated);
             }
         }
     }
