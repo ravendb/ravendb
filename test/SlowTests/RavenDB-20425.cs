@@ -930,7 +930,7 @@ return oldestDoc;"
                 await RevisionsHelper.SetupRevisionsAsync(store, Server.ServerStore, configuration: maxUponUpdateConfig);
             }
 
-            await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { "Docs/2", "Docs/1" } , includeForceCreated: includeForceCreated));
+            await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { "Docs/2", "Docs/1" } , removeForceCreatedRevisions: includeForceCreated));
 
             using (var session = store.OpenAsyncSession())
             {

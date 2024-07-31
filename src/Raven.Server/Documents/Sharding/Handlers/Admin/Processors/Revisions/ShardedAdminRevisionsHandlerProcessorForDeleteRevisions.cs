@@ -38,7 +38,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
                     shardNumber = ShardHelper.GetShardNumberFor(config, context, parameters.DocumentIds.First());
                 }
 
-                return (await RequestHandler.ShardExecutor.ExecuteSingleShardAsync<DeleteRevisionsOperation.Result>(cmd, shardNumber, token.Token)).TotalDeletes;
+                var singleShardResult = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(cmd, shardNumber, token.Token);
+                return singleShardResult.TotalDeletes;
             }
 
             Dictionary<int, IdsByShard<string>> shardsToDocs;
@@ -53,7 +54,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
                 cmds[shard] = new DeleteRevisionsCommand(DocumentConventions.Default, shardParameters);
             }
             
-            return (await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToDocs.Keys.ToArray(), new ShardedDeleteRevisionsOperation(RequestHandler.HttpContext, cmds), token.Token)).TotalDeletes;
+            var result = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToDocs.Keys.ToArray(), new ShardedDeleteRevisionsOperation(RequestHandler.HttpContext, cmds), token.Token);
+            return result.TotalDeletes;
         }
 
 

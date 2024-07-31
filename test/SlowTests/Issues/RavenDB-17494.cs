@@ -64,8 +64,8 @@ public class RavenDB_17494 : ClusterTestBase
             await session.SaveChangesAsync();
         }
 
-        DateTime after = default; // after 5th revision
-        DateTime before = default; // before 9th revision
+        DateTime from = default; // after 5th revision
+        DateTime to = default; // before 9th revision
 
         for (int i = 0; i < 10; i++)
         {
@@ -88,21 +88,19 @@ public class RavenDB_17494 : ClusterTestBase
 
                 if (i == 9)
                 {
-                    before = DateTime.UtcNow;
+                    to = DateTime.UtcNow;
                 }
 
                 await session.SaveChangesAsync();
 
                 if (i == 5)
                 {
-                    after = DateTime.UtcNow;
+                    from = DateTime.UtcNow;
                 }
             }
         }
 
-        string user1deleteCv1 = string.Empty;
-        string user1deleteCv2 = string.Empty;
-        string user1deleteCv3 = string.Empty;
+        List<string> user1revisionsToDelete = null;
 
         using (var session = store.OpenAsyncSession())
         {
@@ -113,19 +111,17 @@ public class RavenDB_17494 : ClusterTestBase
             Assert.Equal(11, await session.Advanced.Revisions.GetCountForAsync(company3.Id));
 
             var u1revisionsCvs = await GetRevisionsCvs(session, user1.Id);
-            user1deleteCv1 = u1revisionsCvs[5];
-            user1deleteCv2 = u1revisionsCvs[6];
-            user1deleteCv3 = u1revisionsCvs[7];
+            user1revisionsToDelete = new List<string>() { u1revisionsCvs[5], u1revisionsCvs[6], u1revisionsCvs[7] };
         }
 
         var result = await store.Maintenance.SendAsync(
-            new DeleteRevisionsOperation(user1.Id, new List<string>() { user1deleteCv1, user1deleteCv2, user1deleteCv3 }));
+            new DeleteRevisionsOperation(user1.Id, user1revisionsToDelete ));
         Assert.Equal(3, result.TotalDeletes);
 
         var result2 = await store.Maintenance.SendAsync(new DeleteRevisionsOperation(documentId: company1.Id));
         Assert.Equal(11, result2.TotalDeletes);
 
-        var result3 = await store.Maintenance.SendAsync(new DeleteRevisionsOperation(documentId: company2.Id, from: after, to: before));
+        var result3 = await store.Maintenance.SendAsync(new DeleteRevisionsOperation(documentId: company2.Id, from, to));
         Assert.Equal(3, result3.TotalDeletes);
 
         using (var session = store.OpenAsyncSession())
@@ -138,9 +134,9 @@ public class RavenDB_17494 : ClusterTestBase
             Assert.Equal(11, await session.Advanced.Revisions.GetCountForAsync(company3.Id));
 
             var u1revisionsCvs = await GetRevisionsCvs(session, user1.Id);
-            Assert.False(u1revisionsCvs.Any(cv => cv == user1deleteCv1));
-            Assert.False(u1revisionsCvs.Any(cv => cv == user1deleteCv2));
-            Assert.False(u1revisionsCvs.Any(cv => cv == user1deleteCv3));
+
+            var notDeletedRevisions = u1revisionsCvs.Intersect(user1revisionsToDelete).ToList();
+            Assert.True(notDeletedRevisions.Count == 0, string.Join(',', notDeletedRevisions));
         }
     }
 

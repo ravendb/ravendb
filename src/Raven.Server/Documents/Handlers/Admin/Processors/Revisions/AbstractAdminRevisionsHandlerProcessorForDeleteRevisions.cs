@@ -25,34 +25,50 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 
         public override async ValueTask ExecuteAsync()
         {
-            DeleteRevisionsOperation.Parameters parameters;
-            using (ContextPool.AllocateOperationContext(out TOperationContext context))
+            DeleteRevisionsOperation.Parameters parameters = null;
+            var deletedCount = 0L;
+            Exception ex = null;
+            try
             {
-                var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "admin/revisions/delete");
-                parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
+                using (ContextPool.AllocateOperationContext(out TOperationContext context))
+                {
+                    var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "admin/revisions/delete");
+                    parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
+                }
+
+                parameters.Validate();
+
+                using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken())
+                {
+                    deletedCount = await DeleteRevisionsAsync(parameters, token);
+                }
+
+                using (ContextPool.AllocateOperationContext(out TOperationContext context))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(DeleteRevisionsOperation.Result.TotalDeletes));
+                    writer.WriteInteger(deletedCount);
+
+                    writer.WriteEndObject();
+                }
+
+                throw new InvalidOperationException();
             }
-            parameters.Validate();
-
-            long deletedCount;
-            using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken())
+            catch (Exception e)
             {
-                deletedCount = await DeleteRevisionsAsync(parameters, token);
+                ex = e;
+                throw;
             }
-
-            if (LoggingSource.AuditLog.IsInfoEnabled)
+            finally
             {
-                RequestHandler.LogAuditFor("database/revisions/delete", "DELETE", $"database: {RequestHandler.DatabaseName}, totalDeletes: {deletedCount}, parameters: {JsonSerializer.Serialize(parameters)} ");
-            }
-
-            using (ContextPool.AllocateOperationContext(out TOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(DeleteRevisionsOperation.Result.TotalDeletes));
-                writer.WriteInteger(deletedCount);
-
-                writer.WriteEndObject();
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"Delete revisions, totalDeletes: {deletedCount}" +
+                                                                                      (parameters == null ? string.Empty : $" ,parameters: {JsonSerializer.Serialize(parameters)} ") +
+                                                                                      (ex == null ? string.Empty : ", "+ex));
+                }
             }
 
         }

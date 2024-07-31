@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Elastic.Clients.Elasticsearch;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
