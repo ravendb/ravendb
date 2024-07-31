@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
+using System.Text;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
@@ -275,6 +277,108 @@ namespace FastTests.Voron.Tables
                     Assert.Equal(serialized, actualIndex.Serialize());
                     SchemaIndexDefEqual(expectedIndex, actualIndex);
                     expectedIndex.EnsureIdentical(actualIndex);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void CanSerializeDynamicIndexWithSupportDuplicateKeys()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var expectedIndex = new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = IndexKeyGenerator,
+                    SupportDuplicateKeys = true
+                };
+                Slice.From(tx.Allocator, "Test Name", ByteStringType.Immutable, out expectedIndex.Name);
+
+                byte[] serialized = expectedIndex.Serialize();
+
+                fixed (byte* serializedPtr = serialized)
+                {
+                    var reader = new TableValueReader(serializedPtr, serialized.Length);
+                    var actualIndex = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, ref reader);
+                    Assert.Equal(serialized, actualIndex.Serialize());
+                    SchemaIndexDefEqual(expectedIndex, actualIndex);
+                    expectedIndex.EnsureIdentical(actualIndex);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void CanSerializeDynamicIndexWithSupportDuplicateKeys2()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var expectedIndex = new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = IndexKeyGenerator,
+                    OnEntryChanged = UpdateStats,
+                    SupportDuplicateKeys = true
+                };
+                Slice.From(tx.Allocator, "Test Name", ByteStringType.Immutable, out expectedIndex.Name);
+
+                byte[] serialized = expectedIndex.Serialize();
+
+                fixed (byte* serializedPtr = serialized)
+                {
+                    var reader = new TableValueReader(serializedPtr, serialized.Length);
+                    var actualIndex = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, ref reader);
+                    Assert.Equal(serialized, actualIndex.Serialize());
+                    SchemaIndexDefEqual(expectedIndex, actualIndex);
+                    expectedIndex.EnsureIdentical(actualIndex);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void CanSerializeDynamicIndexWithSupportDuplicateKeysFromOld()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var expectedIndex1 = new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = IndexKeyGenerator,
+                    SupportDuplicateKeys = false
+                };
+                Slice.From(tx.Allocator, "Test Name", ByteStringType.Immutable, out expectedIndex1.Name);
+
+                byte[] serialized1 = expectedIndex1.Serialize();
+
+                var expectedIndex2 = new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = IndexKeyGenerator,
+                    OnEntryChanged = UpdateStats,
+                    SupportDuplicateKeys = false
+                };
+                Slice.From(tx.Allocator, "Test Name", ByteStringType.Immutable, out expectedIndex2.Name);
+
+                byte[] serialized2 = expectedIndex2.Serialize();
+
+
+                var bytes1 = Encoding.UTF8.GetBytes("\u0006\u0006\u000e\u000f\u0018)X\u0002\0\0\0\0\0\0\0\0Test NameIndexKeyGeneratorFastTests.Voron.Tables.RavenDB_17760, FastTests\0");
+                var bytes2 = Encoding.UTF8.GetBytes("\b\b\u0010\u0011\u001a+Z[f\u0002\0\0\0\0\0\0\0\0Test NameIndexKeyGeneratorFastTests.Voron.Tables.RavenDB_17760, FastTests\u0001UpdateStatsFastTests.Voron.Tables.RavenDB_17760, FastTests");
+
+                Assert.NotEqual(serialized1, bytes1);
+                Assert.NotEqual(serialized2, bytes2);
+
+                fixed (byte* bytes1Ptr = bytes1)
+                {
+                    var reader = new TableValueReader(bytes1Ptr, bytes1.Length);
+                    var bytes1Index = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, ref reader);
+                    Assert.Equal(serialized1, bytes1Index.Serialize());
+                    SchemaIndexDefEqual(expectedIndex1, bytes1Index);
+                    expectedIndex1.EnsureIdentical(bytes1Index);
+                }
+
+                fixed (byte* bytes2Ptr = bytes2)
+                {
+                    var reader = new TableValueReader(bytes2Ptr, bytes2.Length);
+                    var bytes2Index = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, ref reader);
+                    Assert.Equal(serialized2, bytes2Index.Serialize());
+                    SchemaIndexDefEqual(expectedIndex2, bytes2Index);
+                    expectedIndex2.EnsureIdentical(bytes2Index);
                 }
             }
         }
