@@ -43,8 +43,9 @@ function getStepValidation<T extends FormData>({
     if (stepId === "basicInfoStep") {
         return async () => {
             const basicInfoResult = await trigger(stepId);
-            asyncDatabaseNameValidation.execute(databaseName);
-            return asyncDatabaseNameValidation.result && basicInfoResult;
+            const isNameValid = await asyncDatabaseNameValidation.execute(databaseName);
+
+            return isNameValid && basicInfoResult;
         };
     }
 
