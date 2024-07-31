@@ -9,30 +9,19 @@ using Elastic.Clients.Elasticsearch;
 namespace Raven.Server.Documents.Revisions;
 public partial class RevisionsStorage
 {
-    internal sealed class DeleteRevisionsByChangeVectorMergedCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+    internal sealed class DeleteRevisionsByChangeVectorMergedCommand : AbstractDeleteRevisionsMergedCommand<long?>
     {
         private readonly string _id;
 
         private readonly List<string> _cvs;
 
-        private readonly bool _includeForceCreated;
-
-        public long? Result { get; private set; } // number of deleted revisions
-
-        public DeleteRevisionsByChangeVectorMergedCommand(string id, List<string> cvs, bool includeForceCreated)
+        public DeleteRevisionsByChangeVectorMergedCommand(string id, List<string> cvs, bool includeForceCreated) : base(includeForceCreated)
         {
             _id = id;
             _cvs = cvs;
-            _includeForceCreated = includeForceCreated;
         }
 
-        protected override long ExecuteCmd(DocumentsOperationContext context)
-        {
-            Result = DeleteRevisions(context);
-            return 1;
-        }
-
-        private long DeleteRevisions(DocumentsOperationContext context)
+        protected override long? DeleteRevisions(DocumentsOperationContext context)
         {
             var revisionsStorage = context.DocumentDatabase.DocumentsStorage.RevisionsStorage;
 
@@ -88,14 +77,9 @@ public partial class RevisionsStorage
             return deleted;
         }
 
-        private bool SkipForceCreated(Document revision)
-        {
-            return _includeForceCreated == false && revision.Flags.Contain(DocumentFlags.ForceCreated);
-        }
-
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new DeleteRevisionsByChangeVectorMergedCommandDto(_id, _cvs, _includeForceCreated);
+            return new DeleteRevisionsByChangeVectorMergedCommandDto(_id, _cvs, IncludeForceCreated);
         }
 
         public sealed class DeleteRevisionsByChangeVectorMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsByChangeVectorMergedCommand>

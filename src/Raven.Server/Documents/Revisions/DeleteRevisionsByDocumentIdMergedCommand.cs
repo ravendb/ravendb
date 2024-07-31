@@ -11,25 +11,20 @@ namespace Raven.Server.Documents.Revisions;
 
 public partial class RevisionsStorage
 {
-    internal sealed class DeleteRevisionsByDocumentIdMergedCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+    internal sealed class DeleteRevisionsByDocumentIdMergedCommand : AbstractDeleteRevisionsMergedCommand<(bool MoreWork, long Deleted)?>
     {
         private readonly List<string> _ids;
 
         private readonly DateTime? _from, _to;
 
-        private readonly bool _includeForceCreated;
-
-        public (bool MoreWork, long Deleted)? Result { get; private set; } // has more to delete, number of deleted revisions
-
-        public DeleteRevisionsByDocumentIdMergedCommand(List<string> ids, DateTime? from, DateTime? to, bool includeForceCreated)
+        public DeleteRevisionsByDocumentIdMergedCommand(List<string> ids, DateTime? from, DateTime? to, bool includeForceCreated) : base(includeForceCreated)
         {
             _ids = ids;
             _from = from;
             _to = to;
-            _includeForceCreated = includeForceCreated;
         }
 
-        protected override long ExecuteCmd(DocumentsOperationContext context)
+        protected override (bool MoreWork, long Deleted)? DeleteRevisions(DocumentsOperationContext context)
         {
             var revisionsStorage = context.DocumentDatabase.DocumentsStorage.RevisionsStorage;
             var moreWork = false;
@@ -52,7 +47,7 @@ public partial class RevisionsStorage
                         .MaximumRevisionsToDeleteUponDocumentUpdate;
 
                     Func<Document, bool> shouldSkip = null;
-                    if (_includeForceCreated == false || _from.HasValue || _to.HasValue)
+                    if (IncludeForceCreated == false || _from.HasValue || _to.HasValue)
                     {
                         shouldSkip = ShouldSkipRevision;
                     }
@@ -63,24 +58,17 @@ public partial class RevisionsStorage
                 }
             }
 
-            Result = (moreWork, deleted);
-            return 1;
-
+            return (moreWork, deleted);
         }
 
         private bool ShouldSkipRevision(Document revision)
         {
             // here you can use local vars from the outer method
-            if (_includeForceCreated == false || _from.HasValue || _to.HasValue)
+            if (IncludeForceCreated == false || _from.HasValue || _to.HasValue)
             {
                 return SkipForceCreated(revision) || IsRevisionInRange(revision, _from, _to) == false;
             }
             return false;
-        }
-
-        private bool SkipForceCreated(Document revision)
-        {
-            return _includeForceCreated == false && revision.Flags.Contain(DocumentFlags.ForceCreated);
         }
 
         private static bool IsRevisionInRange(Document revision, DateTime? from, DateTime? to)
@@ -91,7 +79,7 @@ public partial class RevisionsStorage
 
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new DeleteRevisionsByDocumentIdMergedCommandDto(_ids, _from, _to, _includeForceCreated);
+            return new DeleteRevisionsByDocumentIdMergedCommandDto(_ids, _from, _to, IncludeForceCreated);
         }
 
         public sealed class DeleteRevisionsByDocumentIdMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsByDocumentIdMergedCommand>
