@@ -78,6 +78,7 @@ rvn_init_pager(const char* filename,
     int32_t open_flags,
     void** handle,
     void** memory,
+    void** writable_memory,
     int64_t *memory_size,
     int32_t* detailed_error_code);
 
@@ -86,6 +87,7 @@ rvn_increase_pager_size(void* handle,
     int64_t new_length,
     void** new_handle,
     void** memory,
+    void **writable_memory,
     int64_t* memory_size,
     int32_t* detailed_error_code);
 
