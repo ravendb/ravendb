@@ -13,6 +13,15 @@ public unsafe partial class Pager
 {
     public static class Crypto
     {
+        public static byte* ConvertToWritePointer(Pager pager, State state, byte* ptr)
+        {
+            // Crypto pager may use a raw buffer from the file mapping, or internally allocated buffer
+            if(state.WriteAddress != null && 
+                ptr >= state.ReadAddress && ptr < state.ReadAddress + (state.NumberOfAllocatedPages*Constants.Storage.PageSize))
+                return state.WriteAddress + (ptr - state.ReadAddress);
+            return ptr;
+        }
+
         public static byte* AcquirePagePointerForNewPage(Pager pager, long pageNumber, int numberOfPages, State state, ref PagerTransactionState txState)
         {
             Debug.Assert(pager.Options.Encryption.IsEnabled);
@@ -246,7 +255,7 @@ public unsafe partial class Pager
                     pager.EnsureContinuous(ref state, buffer.Key, numPages);
                     pager.EnsureMapped(state, ref txState, buffer.Key, numPages);
 
-                    var pagePointer = pager.AcquireRawPagePointer(state, ref txState, buffer.Key);
+                    var pagePointer = pager.MakeWritable(state, pager.AcquireRawPagePointer(state, ref txState, buffer.Key));
                     Debug.Assert(pager._flags.HasFlag(Pal.OpenFileFlags.WritableMap),
                         "pager._flags.HasFlag( Pal.OpenFileFlags.WritableMap) - expected a scratch file pager, not a data pager!");
                     Memory.Copy(pagePointer, buffer.Value.Pointer, dataSize);

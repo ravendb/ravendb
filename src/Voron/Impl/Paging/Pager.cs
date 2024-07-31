@@ -57,10 +57,10 @@ public unsafe partial class Pager : IDisposable
     {
         var pager = new Pager(options, filename, flags, GetFunctions(options, flags));
         var result = Pal.rvn_init_pager(filename, initialFileSize, flags, 
-            out var handle, out var memory, out var memorySize, out var error);
+            out var handle, out var readOnlyMemory, out var writeMemory, out var memorySize, out var error);
         if (result != PalFlags.FailCodes.Success)
             RaiseError(filename, error, result, initialFileSize);
-        var state = new State(pager, memory, memorySize, handle);
+        var state = new State(pager, readOnlyMemory, writeMemory, memorySize, handle);
         pager.InstallState(state);
         pager.Initialize(memorySize);
         return (pager, state);
@@ -73,6 +73,7 @@ public unsafe partial class Pager : IDisposable
         {
             funcs.AcquirePagePointer = &Crypto.AcquirePagePointer;
             funcs.AcquirePagePointerForNewPage = &Crypto.AcquirePagePointerForNewPage;
+            funcs.ConvertToWritePointer = &Crypto.ConvertToWritePointer;
         }
         return funcs;
     }
@@ -131,7 +132,7 @@ public unsafe partial class Pager : IDisposable
         if (Options.DiscardVirtualMemory == false)
             return;
 
-        byte* baseAddress = state.BaseAddress;
+        byte* baseAddress = state.ReadAddress;
         long offset = pageNumber * Constants.Storage.PageSize;
 
         _ = Pal.rvn_discard_virtual_memory(baseAddress + offset, numberOfPages * Constants.Storage.PageSize, out _);
@@ -206,7 +207,7 @@ public unsafe partial class Pager : IDisposable
             if (!_prefetchState.ShouldPrefetchSegment(pageNumber, out var offset, out long bytes))
                 continue;
 
-            prefetcher.CommandQueue.TryAdd(new PalDefinitions.PrefetchRanges { VirtualAddress = state.BaseAddress + offset, NumberOfBytes = (nint)bytes }, 0);
+            prefetcher.CommandQueue.TryAdd(new PalDefinitions.PrefetchRanges { VirtualAddress = state.ReadAddress + offset, NumberOfBytes = (nint)bytes }, 0);
         } while (pagesToPrefetch.MoveNext());
 
         _prefetchState.CheckResetPrefetchTable();
@@ -308,14 +309,14 @@ public unsafe partial class Pager : IDisposable
             throw new IncreasingDataFileInCopyOnWriteModeException(state.Pager.FileName, allocationSize);
 
         var rc = Pal.rvn_increase_pager_size(state.Handle, 
-            allocationSize, out var handle, out var baseAddress, 
+            allocationSize, out var handle, out var readAddress, out var writeAddress, 
             out var totalAllocatedSize, out var errorCode);
         if (rc != PalFlags.FailCodes.Success)
         {
             PalHelper.ThrowLastError(rc, errorCode, $"Failed to increase file '{state.Pager.FileName}' to {new Size(allocationSize, SizeUnit.Bytes)}");
         }
         Debug.Assert(totalAllocatedSize >= state.TotalAllocatedSize, "totalAllocatedSize >= state.TotalAllocatedSize");
-        state = new State(this, baseAddress, totalAllocatedSize, handle);
+        state = new State(this, readAddress, writeAddress, totalAllocatedSize, handle);
         InstallState(state);
     }
 
@@ -560,5 +561,10 @@ public unsafe partial class Pager : IDisposable
             return;
         
         cyprtoState.RemoveBuffer(this,pageNumber);
+    }
+
+    public byte* MakeWritable(State state, byte* ptr)
+    {
+        return _functions.ConvertToWritePointer(this, state, ptr);
     }
 }

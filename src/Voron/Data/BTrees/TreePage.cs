@@ -23,9 +23,6 @@ namespace Voron.Data.BTrees
         public int LastSearchPosition;
         public bool Dirty;
 
-#if VALIDATE
-        public bool Freed;
-#endif
         public TreePage(byte* basePtr, int pageSize)
         {
             Base = basePtr;
@@ -648,10 +645,7 @@ namespace Voron.Data.BTrees
         {
             if (NumberOfEntries == 0)
                 return;
-#if VALIDATE
-            if (Freed)
-                return;
-#endif
+
             if (IsBranch && NumberOfEntries < 2)
             {
                 throw new InvalidOperationException("The branch page " + PageNumber + " has " + NumberOfEntries + " entry");

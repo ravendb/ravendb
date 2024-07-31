@@ -13,12 +13,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
-#if VALIDATE
-
-using Sparrow.Debugging;
-
-#endif
-
 namespace Sparrow.Json
 {
     /// <summary>

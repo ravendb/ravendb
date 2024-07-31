@@ -25,10 +25,6 @@ namespace Voron.Data.BTrees
     {
         private int _directAddUsage;
 
-#if VALIDATE_DIRECT_ADD_STACKTRACE
-        private string _allocationStacktrace;
-#endif
-
         private readonly TreeMutableState _state;
 
         private static readonly ObjectPool<RecentlyFoundTreePages> FoundPagesPool = new(() => new RecentlyFoundTreePages(), 128);
@@ -500,9 +496,6 @@ namespace Voron.Data.BTrees
                     ThrowScopeAlreadyOpen();
                 }
 
-#if VALIDATE_DIRECT_ADD_STACKTRACE
-                _parent._allocationStacktrace = Environment.StackTrace;
-#endif
             }
 
             public void Dispose()
@@ -517,9 +510,6 @@ namespace Voron.Data.BTrees
                 var message = $"Write operation already requested on a tree name: {_parent}. " +
                               $"{nameof(Tree.DirectAdd)} method cannot be called recursively while the scope is already opened.";
 
-#if VALIDATE_DIRECT_ADD_STACKTRACE
-                message += Environment.NewLine + _parent._allocationStacktrace;
-#endif
 
                 throw new InvalidOperationException(message);
             }
@@ -1038,9 +1028,6 @@ namespace Voron.Data.BTrees
 
         internal void FreePage(TreePage p)
         {
-#if VALIDATE
-            p.Freed = true;
-#endif
             PageFreed?.Invoke(p.PageNumber, p.Flags);
 
             if (p.IsOverflow)

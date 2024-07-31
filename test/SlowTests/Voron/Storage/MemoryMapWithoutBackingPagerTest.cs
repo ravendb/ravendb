@@ -92,7 +92,7 @@ namespace SlowTests.Voron.Storage
         {
             if (StorageEnvironmentOptions.RunningOnPosix)
             {
-                var p = Syscall.mmap64(new IntPtr(dataPagerState.BaseAddress + dataPagerState.TotalAllocatedSize), (UIntPtr)16,
+                var p = Syscall.mmap64(new IntPtr(dataPagerState.ReadAddress + dataPagerState.TotalAllocatedSize), (UIntPtr)16,
                     MmapProts.PROT_READ | MmapProts.PROT_WRITE, MmapFlags.MAP_ANONYMOUS, -1, 0L);
                 if (p.ToInt64() == -1)
                 {
@@ -100,7 +100,7 @@ namespace SlowTests.Voron.Storage
                 }
                 return (byte*)p.ToPointer();
             }
-            return Win32MemoryProtectMethods.VirtualAlloc(dataPagerState.BaseAddress + dataPagerState.TotalAllocatedSize, new UIntPtr(16),
+            return Win32MemoryProtectMethods.VirtualAlloc(dataPagerState.ReadAddress + dataPagerState.TotalAllocatedSize, new UIntPtr(16),
                 Win32MemoryProtectMethods.AllocationType.RESERVE, Win32MemoryProtectMethods.MemoryProtection.EXECUTE_READWRITE);
         }
 

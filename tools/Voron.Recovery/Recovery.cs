@@ -142,7 +142,7 @@ namespace Voron.Recovery
                         }
 
                         //for encrypted database the pointer points to the buffer and this is not what we want.
-                        mem = se.CurrentStateRecord.DataPagerState.BaseAddress;
+                        mem = se.CurrentStateRecord.DataPagerState.ReadAddress;
                         writer.WriteLine(
                             $"Journal recovery has completed successfully within {sw.Elapsed.TotalSeconds:N1} seconds");
                     }
@@ -176,11 +176,11 @@ namespace Voron.Recovery
                     if (se == null /*journal recovery failed or copy on write is set to false*/)
                     {
                         (_dataPager, _dataPagerState) = _option.InitializeDataPager();
-                        mem = _dataPagerState.BaseAddress;
+                        mem = _dataPagerState.ReadAddress;
                     }
                     else
                     {
-                        mem = se.CurrentStateRecord.DataPagerState.BaseAddress;
+                        mem = se.CurrentStateRecord.DataPagerState.ReadAddress;
                     }
                 }
                 long startOffset = (long)mem;

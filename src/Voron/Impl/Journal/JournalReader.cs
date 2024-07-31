@@ -96,7 +96,9 @@ namespace Voron.Impl.Journal
             var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
             _recoveryPager.EnsureContinuous(ref recoveryPagerState, 0, numberOfPages);
             _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, numberOfPages);
-            var outputPage = _recoveryPager.AcquireRawPagePointer(recoveryPagerState, ref txState, 0);
+            var outputPage = _recoveryPager.MakeWritable(recoveryPagerState,
+                _recoveryPager.AcquireRawPagePointer(recoveryPagerState, ref txState, 0)
+            );
             Memory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
 
             TransactionHeaderPageInfo* pageInfoPtr;
@@ -319,7 +321,9 @@ namespace Voron.Impl.Journal
                 return;
             var recoveryBufferSize = recoveryPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize;
             _recoveryPager.EnsureMapped(recoveryPagerState, ref txState, 0, checked((int)recoveryPagerState.NumberOfAllocatedPages));
-            var pagePointer = _recoveryPager.AcquireRawPagePointer(recoveryPagerState, ref txState, 0);
+            var pagePointer = _recoveryPager.MakeWritable(recoveryPagerState, 
+                _recoveryPager.AcquireRawPagePointer(recoveryPagerState, ref txState, 0)
+            );
             Sodium.sodium_memzero(pagePointer, (UIntPtr)recoveryBufferSize);
         }
 

@@ -97,7 +97,23 @@ public class BasicNextGen : StorageTest
         RestartDatabase();
     }
 
-    
+
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void WithRestart()
+    {
+        RequireFileBasedPager();
+        Options.ManualFlushing = true;
+        using (var tx2 = Env.WriteTransaction())
+        {
+            tx2.LowLevelTransaction.AllocatePage(1);
+            tx2.Commit();
+        }
+      
+        RestartDatabase();
+    }
+
+
     [RavenFact(RavenTestCategory.Voron)]
     public void EncryptedStorageAnd_Flush()
     {
@@ -114,7 +130,6 @@ public class BasicNextGen : StorageTest
         }
     }
 
-    
     [RavenFact(RavenTestCategory.Voron)]
     public void EncryptedStorage()
     {
