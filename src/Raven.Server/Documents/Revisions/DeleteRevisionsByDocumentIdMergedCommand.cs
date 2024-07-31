@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Voron;
@@ -63,7 +60,6 @@ public partial class RevisionsStorage
 
         private bool ShouldSkipRevision(Document revision)
         {
-            // here you can use local vars from the outer method
             if (IncludeForceCreated == false || _from.HasValue || _to.HasValue)
             {
                 return SkipForceCreated(revision) || IsRevisionInRange(revision, _from, _to) == false;

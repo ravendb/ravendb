@@ -4,7 +4,6 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Voron.Data.Tables;
 using Voron;
-using Elastic.Clients.Elasticsearch;
 
 namespace Raven.Server.Documents.Revisions;
 public partial class RevisionsStorage
@@ -24,57 +23,32 @@ public partial class RevisionsStorage
         protected override long? DeleteRevisions(DocumentsOperationContext context)
         {
             var revisionsStorage = context.DocumentDatabase.DocumentsStorage.RevisionsStorage;
-
             var deleted = 0L;
 
-            var lastModifiedTicks = context.DocumentDatabase.Time.GetUtcNow().Ticks;
-
-            var table = new Table(revisionsStorage.RevisionsSchema, context.Transaction.InnerTransaction);
-
-            var writeTables = new Dictionary<string, Table>();
-
-            foreach (var cv in _cvs)
+            using (DocumentIdWorker.GetSliceFromId(context, _id, out Slice lowerId))
+            using (revisionsStorage.GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
-                if (string.IsNullOrEmpty(cv))
-                    throw new ArgumentException($"Change Vector is null or empty (document id: '{_id}')");
-
-                Document revision;
-                using (Slice.From(context.Allocator, cv, out var cvSlice))
+                var collectionName = revisionsStorage.GetCollectionFor(context, prefixSlice);
+                if (collectionName == null)
                 {
-                    if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
-                    {
-                        continue;
-                    }
-
-                    revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId | DocumentFields.Id);
+                    if (revisionsStorage._logger.IsInfoEnabled)
+                        revisionsStorage._logger.Info($"Tried to delete revisions for '{_id}' but no revisions found.");
+                    return 0;
                 }
 
-                if (revision.Id != _id)
-                    throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't belong to the doc \"{_id}\" but to the doc \"{revision.Id}\"");
+                var maxDeletes = revisionsStorage.GetRevisionsConfiguration(collectionName.Name, deleteRevisionsWhenNoCofiguration: true)
+                    .MaximumRevisionsToDeleteUponDocumentUpdate;
 
-                if (SkipForceCreated(revision))
-                    continue;
-
-                using (DocumentIdWorker.GetSliceFromId(context, revision.LowerId, out var lowerId))
-                using (revisionsStorage.GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
-                {
-                    var collectionName = revisionsStorage.GetCollectionFor(context, lowerIdPrefix);
-                    if (collectionName == null)
-                    {
-                        if (revisionsStorage._logger.IsInfoEnabled)
-                            revisionsStorage._logger.Info($"Tried to delete revision {revision.ChangeVector} ({revision.LowerId}) but no collection found.");
-                        continue;
-                    }
-
-                    var collectionTable = revisionsStorage.EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-
-                    revisionsStorage.DeleteRevisionFromTable(context, collectionTable, writeTables, revision, collectionName, context.GetChangeVector(cv), lastModifiedTicks, revision.Flags);
-                    RevisionsStorage.IncrementCountOfRevisions(context, lowerIdPrefix, -1);
-                    deleted++;
-                }
+                var result = revisionsStorage.ForceDeleteAllRevisionsForInternal(context, lowerId, prefixSlice, collectionName, maxDeletes, ShouldSkipRevision);
+                deleted += result.Deleted;
             }
 
             return deleted;
+        }
+
+        private bool ShouldSkipRevision(Document revision)
+        {
+            return SkipForceCreated(revision) || _cvs.Contains(revision.ChangeVector) == false;
         }
 
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
