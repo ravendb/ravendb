@@ -23,7 +23,8 @@
 struct handle
 {
     char *file_path;
-    void *base_address;
+    void *read_address;
+    void *write_address;
     uint64_t allocation_size;
     int file_fd;
     int32_t open_flags;
@@ -63,12 +64,14 @@ int32_t _open_pager_file(int fd,
                          int64_t req_file_size,
                          void **handle,
                          void **memory,
+                         void** writable_memory,
                          int64_t *memory_size,
                          int32_t *detailed_error_code)
 {
     int32_t rc = SUCCESS;
     struct handle *handle_ptr = NULL;
     void *mem = NULL;
+    void *wmem = NULL;
 
     handle_ptr = calloc(1, sizeof(struct handle));
     if (handle_ptr == NULL)
@@ -123,28 +126,41 @@ int32_t _open_pager_file(int fd,
     }
 
     int32_t mmap_flags = (open_flags & OPEN_FILE_COPY_ON_WRITE) ? MAP_PRIVATE : MAP_SHARED;
-    int32_t prot = (open_flags & OPEN_FILE_WRITABLE_MAP) ? PROT_READ | PROT_WRITE : PROT_READ;
-    mem = rvn_mmap(NULL, st.st_size, prot, mmap_flags, fd, 0L);
+    mem = rvn_mmap(NULL, st.st_size, PROT_READ, mmap_flags, fd, 0L);
     if (mem == NULL)
     {
         rc = FAIL_MAP_VIEW_OF_FILE;
         goto Error;
     }
 
+    if (open_flags & OPEN_FILE_WRITABLE_MAP) 
+    {
+        wmem = rvn_mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, mmap_flags, fd, 0L);
+        if(wmem == NULL)
+        {
+            rc = FAIL_MAP_VIEW_OF_FILE;
+            goto Error;
+        }
+    }
+
     if (open_flags & OPEN_FILE_LOCK_MEMORY &&
-        !rvn_lock_memory(open_flags, mem, st.st_size, detailed_error_code))
+        !rvn_lock_memory(open_flags, mem, st.st_size, detailed_error_code) &&
+        wmem != NULL &&
+        !rvn_lock_memory(open_flags, wmem, st.st_size, detailed_error_code))
     {
         rc = FAIL_LOCK_MEMORY;
         goto Error;
     }
 
     handle_ptr->file_fd = fd;
-    handle_ptr->base_address = mem;
+    handle_ptr->read_address = mem;
+    handle_ptr->write_address = wmem;
     handle_ptr->allocation_size = st.st_size;
     handle_ptr->open_flags = open_flags;
     handle_ptr->file_path = owned_file_path;
     *handle = handle_ptr;
     *memory = mem;
+    *writable_memory = wmem;
     *memory_size = st.st_size;
     return SUCCESS;
 
@@ -153,6 +169,10 @@ Error:
     if (mem != NULL)
     {
         munmap(mem, st.st_size);
+    }
+    if(wmem != NULL)
+    {
+        munmap(wmem, st.st_size);
     }
     close(fd);
     free(owned_file_path);
@@ -166,6 +186,7 @@ rvn_init_pager(const char *filename,
                int32_t open_flags,
                void **handle,
                void **memory,
+               void** writable_memory,
                int64_t *memory_size,
                int32_t *detailed_error_code)
 {
@@ -200,7 +221,7 @@ rvn_init_pager(const char *filename,
         rc = FAIL_OPEN_FILE;
     }
 
-    return _open_pager_file(fd, owned_file_path, open_flags, initial_file_size, handle, memory, memory_size, detailed_error_code);
+    return _open_pager_file(fd, owned_file_path, open_flags, initial_file_size, handle, memory, writable_memory, memory_size, detailed_error_code);
 
 Error:
     *detailed_error_code = errno;
@@ -213,6 +234,7 @@ rvn_increase_pager_size(void *handle,
                         int64_t new_length,
                         void **new_handle,
                         void **memory,
+                        void **writable_memory,
                         int64_t *memory_size,
                         int32_t *detailed_error_code)
 {
@@ -235,7 +257,7 @@ rvn_increase_pager_size(void *handle,
         free(owned_file_path);
         return FAIL_DUPLICATE_HANDLE;
     }
-    int32_t rc = _open_pager_file(new_fd, owned_file_path, handle_ptr->open_flags, new_length, new_handle, memory, memory_size, detailed_error_code);
+    int32_t rc = _open_pager_file(new_fd, owned_file_path, handle_ptr->open_flags, new_length, new_handle, memory, writable_memory, memory_size, detailed_error_code);
     return rc;
 }
 
@@ -253,10 +275,18 @@ rvn_close_pager(
     int rc = SUCCESS;
     if (!(handle_ptr->open_flags & OPEN_FILE_DO_NOT_MAP))
     {
-        if (munmap(handle_ptr->base_address, handle_ptr->allocation_size))
+        if (munmap(handle_ptr->read_address, handle_ptr->allocation_size))
         {
             *detailed_error_code = errno;
             rc = FAIL_MAP_VIEW_OF_FILE;
+        }
+        if(handle_ptr->open_flags & OPEN_FILE_WRITABLE_MAP)
+        {
+            if (munmap(handle_ptr->write_address, handle_ptr->allocation_size))
+            {
+                *detailed_error_code = errno;
+                rc = FAIL_MAP_VIEW_OF_FILE;
+            }
         }
     }
   

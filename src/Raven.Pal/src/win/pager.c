@@ -5,11 +5,26 @@
 #include "status_codes.h"
 #include "internal_win.h"
 
+#ifdef _MSC_VER
+static __forceinline int clzl(uint64_t x)
+{
+    unsigned long r = 0;
+    BitScanReverse64(&r, x);
+    return (int)(r ^ 63);
+}
+#else
+__forceinline int clzl(uint64_t x)
+{
+    return __builtin_clzl(x);
+}
+#endif
+
 struct handle
 {
     HANDLE file_handle;
     HANDLE file_mapping_handle;
-    void *base_address;
+    void *read_address;
+    void *write_address;
     uint64_t allocation_size;
     int32_t open_flags;
 };
@@ -29,7 +44,7 @@ uint64_t _GetNearestFileSize(uint64_t needed_size)
     }
     if (needed_size < POWER_OF_TWO_THRESHOLD)
     {
-        int32_t idx = __builtin_clzl(needed_size);
+        int32_t idx = clzl(needed_size);
         if (idx)
         {
             return (uint64_t)1 << (32 - idx);
@@ -61,7 +76,7 @@ BOOL _RecoverFromMemoryLockFailure(void *mem, SIZE_T size)
     // From: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686234(v=vs.85).aspx
     // "The maximum number of pages that a process can lock is equal to the number of pages in its minimum working set minus a small overhead"
     // let's increase the max size of memory we can lock by increasing the MinWorkingSet. On Windows, that is available for all users
-    SIZE_T next_working_set_size = _GetNearestFileSize(min_working_set + size);
+    SIZE_T next_working_set_size = (SIZE_T)_GetNearestFileSize(min_working_set + size);
     if (next_working_set_size > INT32_MAX)
     {
         if (sizeof(void *) == 4)
@@ -193,13 +208,15 @@ int32_t _open_pager_file(HANDLE h,
                          int64_t req_file_size,
                          void **handle,
                          void **memory,
+                         void** writable_memory,
                          int64_t *memory_size,
                          int32_t *detailed_error_code)
 {
     int32_t rc = SUCCESS;
     HANDLE m = INVALID_HANDLE_VALUE;
     struct handle *handle_ptr = NULL;
-    void *mem = NULL;
+    void* mem = NULL;
+    void* wmem = NULL;
 
     handle_ptr = calloc(1, sizeof(struct handle));
     if (handle_ptr == NULL)
@@ -256,7 +273,7 @@ int32_t _open_pager_file(HANDLE h,
         return SUCCESS;
     }
 
-    DWORD dwDesiredAccess = (open_flags & OPEN_FILE_WRITABLE_MAP) ? (FILE_MAP_READ | FILE_MAP_WRITE) : ((open_flags & OPEN_FILE_COPY_ON_WRITE) ? FILE_MAP_COPY : FILE_MAP_READ);
+    DWORD dwDesiredAccess = ((open_flags & OPEN_FILE_COPY_ON_WRITE) ? FILE_MAP_COPY : FILE_MAP_READ);
 
     mem = MapViewOfFile(m, dwDesiredAccess, 0, 0, 0);
     if (mem == NULL)
@@ -264,23 +281,39 @@ int32_t _open_pager_file(HANDLE h,
         rc = FAIL_MAP_VIEW_OF_FILE;
         goto Error;
     }
+
+    if (open_flags & OPEN_FILE_WRITABLE_MAP)
+    {
+        wmem = MapViewOfFile(m, FILE_MAP_WRITE, 0, 0, 0);
+        if (wmem == NULL)
+        {
+            rc = FAIL_MAP_VIEW_OF_FILE;
+            goto Error;
+        }
+    }
+
     CloseHandle(m);
+
     m = INVALID_HANDLE_VALUE;
 
     if (open_flags & OPEN_FILE_LOCK_MEMORY &&
-        rvn_lock_memory(open_flags, mem, file_size.QuadPart, detailed_error_code))
+        rvn_lock_memory(open_flags, mem, file_size.QuadPart, detailed_error_code) && 
+        wmem != NULL && 
+        rvn_lock_memory(open_flags, wmem, file_size.QuadPart, detailed_error_code))
     {
         rc = FAIL_LOCK_MEMORY;
         goto Error;
     }
 
     handle_ptr->file_handle = h;
-    handle_ptr->base_address = mem;
+    handle_ptr->read_address = mem;
+    handle_ptr->write_address = wmem;
     handle_ptr->allocation_size = file_size.QuadPart;
     handle_ptr->open_flags = open_flags;
     handle_ptr->file_mapping_handle = INVALID_HANDLE_VALUE;
     *handle = handle_ptr;
     *memory = mem;
+    *writable_memory = wmem;
     *memory_size = file_size.QuadPart;
     return SUCCESS;
 
@@ -289,6 +322,10 @@ Error:
     if (mem != NULL)
     {
         UnmapViewOfFile(mem);
+    }
+    if(wmem != NULL)
+    {
+        UnmapViewOfFile(wmem);
     }
     CloseHandle(m);
     CloseHandle(h);
@@ -302,6 +339,7 @@ rvn_init_pager(const char *filename,
                int32_t open_flags,
                void **handle,
                void **memory,
+               void** writable_memory,
                int64_t *memory_size,
                int32_t *detailed_error_code)
 {
@@ -324,7 +362,7 @@ rvn_init_pager(const char *filename,
         return FAIL_OPEN_FILE;
     }
 
-    return _open_pager_file(h, open_flags, initial_file_size, handle, memory, memory_size, detailed_error_code);
+    return _open_pager_file(h, open_flags, initial_file_size, handle, memory, writable_memory, memory_size, detailed_error_code);
 }
 
 int32_t
@@ -332,6 +370,7 @@ rvn_increase_pager_size(void *handle,
                         int64_t new_length,
                         void **new_handle,
                         void **memory,
+                        void **writable_memory,
                         int64_t *memory_size,
                         int32_t *detailed_error_code)
 {
@@ -351,7 +390,7 @@ rvn_increase_pager_size(void *handle,
         return FAIL_DUPLICATE_HANDLE;
     }
 
-    return _open_pager_file(h, handle_ptr->open_flags, new_length, new_handle, memory, memory_size, detailed_error_code);
+    return _open_pager_file(h, handle_ptr->open_flags, new_length, new_handle, memory, writable_memory, memory_size, detailed_error_code);
 }
 
 EXPORT int32_t
@@ -368,10 +407,19 @@ rvn_close_pager(
     int rc = SUCCESS;
     if (!(handle_ptr->open_flags & OPEN_FILE_DO_NOT_MAP))
     {
-        if (!UnmapViewOfFile(handle_ptr->base_address))
+        if (!UnmapViewOfFile(handle_ptr->read_address))
         {
             *detailed_error_code = GetLastError();
             rc = FAIL_MAP_VIEW_OF_FILE;
+        }
+        if(handle_ptr->open_flags & OPEN_FILE_WRITABLE_MAP)
+        {
+            if (!UnmapViewOfFile(handle_ptr->write_address))
+            {
+                rc = FAIL_MAP_VIEW_OF_FILE;
+                if (*detailed_error_code == 0)
+                    *detailed_error_code = GetLastError();
+            }
         }
     }
     if (!CloseHandle(handle_ptr->file_handle))
