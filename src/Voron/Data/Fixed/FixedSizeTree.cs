@@ -32,10 +32,6 @@ namespace Voron.Data.Fixed
     public unsafe partial class FixedSizeTree<TVal> 
         where TVal: unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
     {
-#if VALIDATE_DIRECT_ADD_STACKTRACE
-        private string _allocationStacktrace;
-#endif
-
         internal const int BranchEntrySize = sizeof(long) + sizeof(long);
         private readonly LowLevelTransaction _tx;
         private readonly Tree _parent;
@@ -94,10 +90,6 @@ namespace Voron.Data.Fixed
                 {
                     ThrowScopeAlreadyOpen();
                 }
-
-#if VALIDATE_DIRECT_ADD_STACKTRACE
-                _parent._allocationStacktrace = Environment.StackTrace;
-#endif
             }
 
             public void Dispose()
@@ -110,10 +102,6 @@ namespace Voron.Data.Fixed
             {
                 var message = $"Write operation already requested on a tree name: {_parent}. " +
                               $"{nameof(Tree.DirectAdd)} method cannot be called recursively while the scope is already opened.";
-
-#if VALIDATE_DIRECT_ADD_STACKTRACE
-                message += Environment.NewLine + _parent._allocationStacktrace;
-#endif
 
                 throw new InvalidOperationException(message);
             }

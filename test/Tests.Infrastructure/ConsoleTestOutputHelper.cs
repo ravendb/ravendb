@@ -11,7 +11,13 @@ namespace Tests.Infrastructure
 
         public void Dispose()
         {
-            XunitLogging.Flush();
+            try
+            {
+                XunitLogging.Flush();
+            }
+            catch (Exception)
+            {
+            }
         }
     }
 }

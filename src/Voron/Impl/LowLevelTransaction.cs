@@ -462,30 +462,24 @@ namespace Voron.Impl
 
         private Page GetPageInternal(long pageNumber)
         {
-            PageFromScratchBuffer value = null;
-            var modifiedPage = Flags switch
-            {
-                TransactionFlags.ReadWrite => _env.WriteTransactionPool.ScratchPagesInUse.TryGetValue(pageNumber, out value),
-                TransactionFlags.Read => _envRecord.ScratchPagesTable.Count > 0 && _envRecord.ScratchPagesTable.TryGetValue(pageNumber, out value),
-                _ => throw new ArgumentOutOfRangeException(nameof(Flags))
-            };
-            Page p;
-            if (modifiedPage is false)
-            {
-                p = new Page(DataPager.AcquirePagePointerWithOverflowHandling(DataPagerState, ref PagerTransactionState, pageNumber));
-                if (_env.Options.Encryption.IsEnabled == false)// When encryption is off, we do validation by checksum
-                    _env.ValidatePageChecksum(pageNumber, (PageHeader*)p.Pointer);
-            }
-            else // if we are reading from the scratch, we don't need to validate, we wrote it in this process run anyway
-            {
-                p = value.ReadPage(this);
-            }
-            
+            var p =  GetThePage();
             Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from data file");
-
             TrackReadOnlyPage(p);
-
             return p;
+
+            Page GetThePage()
+            {
+                if (Flags == TransactionFlags.ReadWrite && _env.WriteTransactionPool.ScratchPagesInUse.TryGetValue(pageNumber, out var value))
+                    return value.ReadWritable(this);
+                
+                if (Flags == TransactionFlags.Read && _envRecord.ScratchPagesTable.Count > 0 && _envRecord.ScratchPagesTable.TryGetValue(pageNumber, out value))
+                    return value.ReadPage(this);
+
+                var page =  new Page(DataPager.AcquirePagePointerWithOverflowHandling(DataPagerState, ref PagerTransactionState, pageNumber));
+                if (_env.Options.Encryption.IsEnabled == false)// When encryption is off, we do validation by checksum
+                    _env.ValidatePageChecksum(pageNumber, (PageHeader*)page.Pointer);
+                return page;
+            }
         }
 
         public T GetPageHeaderForDebug<T>(long pageNumber) where T : unmanaged
@@ -654,7 +648,7 @@ namespace Voron.Impl
             if (_env.WriteTransactionPool.ScratchPagesInUse.TryGetValue(pageNumber, out PageFromScratchBuffer value) == false)
                 throw new InvalidOperationException($"The page {pageNumber} was not previous allocated in this transaction");
 
-            var page = value.ReadPage(this);
+            var page = value.ReadWritable(this);
             if (page.IsOverflow == false || page.OverflowSize < newSize)
                 throw new InvalidOperationException($"The page {pageNumber} was is not an overflow page greater than {newSize}");
 

@@ -20,9 +20,10 @@ public unsafe partial class Pager
 
         public readonly WeakReference<State> WeakSelf;
 
-        public State(Pager pager, byte* baseAddress, long totalAllocatedSize, void* handle)
+        public State(Pager pager, byte* readAddress, byte* writeMemory, long totalAllocatedSize, void* handle)
         {
-            BaseAddress = baseAddress;
+            ReadAddress = readAddress;
+            WriteAddress = writeMemory;
             TotalAllocatedSize = totalAllocatedSize;
             NumberOfAllocatedPages = totalAllocatedSize / Constants.Storage.PageSize;
             Handle = handle;
@@ -32,7 +33,8 @@ public unsafe partial class Pager
         }
 
 
-        public byte* BaseAddress;
+        public readonly byte* ReadAddress;
+        public readonly byte* WriteAddress;
         public long NumberOfAllocatedPages;
         public long TotalAllocatedSize;
 
@@ -56,7 +58,7 @@ public unsafe partial class Pager
                 Pager._states.TryRemove(WeakSelf);
 
                 var rc = Pal.rvn_close_pager(Handle, out var errorCode);
-                NativeMemory.UnregisterFileMapping(Pager.FileName, (nint)BaseAddress, TotalAllocatedSize);
+                NativeMemory.UnregisterFileMapping(Pager.FileName, (nint)ReadAddress, TotalAllocatedSize);
                 
                 if (rc != PalFlags.FailCodes.Success)
                 {

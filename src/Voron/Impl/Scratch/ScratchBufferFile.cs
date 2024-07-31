@@ -80,35 +80,8 @@ namespace Voron.Impl.Scratch
 
         public void Reset()
         {
-#if VALIDATE
-            foreach (var free in _freePagesBySizeAvailableImmediately)
-            {
-                foreach (var freeAndAvailablePageNumber in free.Value)
-                {
-                    byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(null, freeAndAvailablePageNumber, PagerState);
-                    ulong freeAndAvailablePageSize = (ulong)free.Key * Constants.Storage.PageSize;
-                    // This has to be forced, as the list of available pages should be protected by default, but this
-                    // is a policy we implement inside the ScratchBufferFile only.
-                    _scratchPager.UnprotectPageRange(freeAndAvailablePagePointer, freeAndAvailablePageSize, true);
-                }
-            }
-#endif
             _scratchPager.DiscardWholeFile(_scratchPagerState);
 
-
-#if VALIDATE
-            foreach (var free in _freePagesBySize)
-            {
-                foreach (var val in free.Value)
-                {
-                    byte* freePageBySizePointer = _scratchPager.AcquirePagePointer(null, val.Page, PagerState);
-                    ulong freePageBySizeSize = (ulong)free.Key * Constants.Storage.PageSize;
-                    // This has to be forced, as the list of available pages should be protected by default, but this
-                    // is a policy we implement inside the ScratchBufferFile only.
-                    _scratchPager.UnprotectPageRange(freePageBySizePointer, freePageBySizeSize, true);
-                }
-            }
-#endif
             ClearDictionaries();
             _txIdAfterWhichLatestFreePagesBecomeAvailable = -1;
             _lastUsedPage = 0;

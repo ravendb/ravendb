@@ -17,10 +17,11 @@ public unsafe partial class Pager
     {
         public static Functions CreateFunctions() => new()
         {
-            AcquirePagePointer = &Bits32.AcquirePagePointer,
-            AcquireRawPagePointer = &Bits32.AcquirePagePointer,
-            AcquirePagePointerForNewPage = &Bits32.AcquirePagePointerForNewPage,
-            EnsureMapped = &Bits32.EnsureMapped,
+            AcquirePagePointer = &AcquirePagePointer,
+            AcquireRawPagePointer = &AcquirePagePointer,
+            AcquirePagePointerForNewPage = &AcquirePagePointerForNewPage,
+            EnsureMapped = &EnsureMapped,
+            ConvertToWritePointer = &NoConversion
         };
         
         private const int NumberOfPagesInAllocationGranularity = Bits64.AllocationGranularity / Constants.Storage.PageSize;
@@ -240,5 +241,13 @@ public unsafe partial class Pager
                 $"Was asked to map page {startPage} + {size / 1024:#,#0} kb, but the file size is only {allocationSize}, can't do that.");
         }
 
-    }     
+    }
+    
+    private static byte* NoConversion(Pager pager, State state, byte* ptr)
+    {
+        // pointers in 32 bits are read/write - they are short lived anyway
+        // and there is no point trying to maintain dual mapping like that
+        return ptr;
+    }
+
 }

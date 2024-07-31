@@ -27,7 +27,13 @@ public unsafe partial class Pager
             AcquireRawPagePointer = &AcquirePagePointer,
             AcquirePagePointerForNewPage = &AcquirePagePointerForNewPage,
             EnsureMapped = &EnsureMapped,
+            ConvertToWritePointer = &ConvertToWritePointer
         };
+
+        private static byte* ConvertToWritePointer(Pager pager, State state, byte* ptr)
+        {
+            return state.WriteAddress + (ptr - state.ReadAddress);
+        }
 
         private static bool EnsureMapped(Pager pager, State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
         {
@@ -55,11 +61,11 @@ public unsafe partial class Pager
 
             if (pager._canPrefetch && pager._prefetchState.ShouldPrefetchSegment(pageNumber, out long offsetFromFileBase, out long bytes))
             {
-                var command = new PalDefinitions.PrefetchRanges(state.BaseAddress + offsetFromFileBase, bytes);
+                var command = new PalDefinitions.PrefetchRanges(state.ReadAddress + offsetFromFileBase, bytes);
                 GlobalPrefetchingBehavior.GlobalPrefetcher.Value.CommandQueue.TryAdd(command, 0);
             }
 
-            return state.BaseAddress + pageNumber * Constants.Storage.PageSize;
+            return state.ReadAddress + pageNumber * Constants.Storage.PageSize;
 
             InvalidPage:
             VoronUnrecoverableErrorException.Raise(pager.Options, $"The page {pageNumber} was not allocated in {pager.FileName}");

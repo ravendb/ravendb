@@ -8,5 +8,6 @@ public unsafe partial class Pager
         public delegate* <Pager, State, ref PagerTransactionState, long, byte*> AcquireRawPagePointer;
         public delegate* <Pager, long, int, State, ref PagerTransactionState, byte*> AcquirePagePointerForNewPage;
         public delegate* <Pager, State, ref PagerTransactionState, long, int, bool> EnsureMapped;
+        public delegate* <Pager, State, byte*, byte*> ConvertToWritePointer;
     }
 }

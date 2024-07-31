@@ -3,10 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-#if VALIDATE
 using System.Diagnostics;
 using System.Linq;
-#endif
 using System.Runtime.CompilerServices;
 using Voron.Global;
 using Voron.Impl;
@@ -69,15 +67,11 @@ namespace Voron.Data.BTrees
 
                     EnsureValidLastSearchPosition(_parentPage, _currentPage.PageNumber, originalLastSearchPositionOfParent);
                 }
-#if VALIDATE
+
                 Debug.Assert(_cursor.CurrentPage.GetNode(_cursor.CurrentPage.LastSearchPosition)->PageNumber == _currentPage.PageNumber, 
                             "The parent page is not referencing a page which is being split");
-
-                var parentToValidate = ParentOfAddedPageRef;
-                Debug.Assert(Enumerable.Range(0, parentToValidate.NumberOfEntries).Any(i => parentToValidate.GetNode(i)->PageNumber == pageRefNumber),
+                Debug.Assert(Enumerable.Range(0, ParentOfAddedPageRef.NumberOfEntries).Any(i => ParentOfAddedPageRef.GetNode(i)->PageNumber == pageRefNumber),
                             "The parent page of a page reference isn't referencing it");
-#endif
-
 
                 return posToInsert;
             }

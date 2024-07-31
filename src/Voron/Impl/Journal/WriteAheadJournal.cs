@@ -1570,7 +1570,9 @@ namespace Voron.Impl.Journal
 
             _compressionPager.EnsureMapped(_compressionPagerState, ref txState, 0, pagesRequired);
             var stateOfThePagerForPagesToBeCompressed = _compressionPagerState;
-            var txHeaderPtr = _compressionPager.AcquirePagePointer(_compressionPagerState, ref txState, 0);
+            var txHeaderPtr = _compressionPager.MakeWritable(_compressionPagerState,
+                _compressionPager.AcquireRawPagePointer(_compressionPagerState, ref txState, 0)
+            );
             var txPageInfoPtr = txHeaderPtr + sizeof(TransactionHeader);
             var pagesInfo = (TransactionHeaderPageInfo*)txPageInfoPtr;
 
@@ -1579,7 +1581,7 @@ namespace Voron.Impl.Journal
             var pagesEncountered = 0;
             foreach (var txPage in txPages)
             {
-                var scratchPage =txPage.Read(ref tx.PagerTransactionState);
+                var scratchPage = txPage.ReadWritable(ref tx.PagerTransactionState);
                 var pageHeader = (PageHeader*)scratchPage;
 
                 // When encryption is off, we do validation by checksum
@@ -1675,7 +1677,9 @@ namespace Voron.Impl.Journal
 
                 _compressionPager.EnsureMapped(_compressionPagerState, ref tx.PagerTransactionState, pagesWritten, outputBufferInPages);
 
-                txHeaderPtr = _compressionPager.AcquirePagePointer(_compressionPagerState, ref tx.PagerTransactionState, pagesWritten);
+                txHeaderPtr = _compressionPager.MakeWritable(_compressionPagerState,
+                    _compressionPager.AcquireRawPagePointer(_compressionPagerState, ref tx.PagerTransactionState, pagesWritten)
+                );
                 var compressionBuffer = txHeaderPtr + sizeof(TransactionHeader);
 
                 var compressionDuration = Stopwatch.StartNew();
@@ -1937,8 +1941,9 @@ namespace Voron.Impl.Journal
             {
                 var compressionBufferSize = _compressionPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize;
                 _compressionPager.EnsureMapped(_compressionPagerState, ref txState, 0, checked((int)_compressionPagerState.NumberOfAllocatedPages));
-                var pagePointer = _compressionPager.AcquirePagePointer(_compressionPagerState, ref txState, 0);
-
+               	var pagePointer = _compressionPager.MakeWritable(_compressionPagerState,
+                    _compressionPager.AcquirePagePointer(_compressionPagerState, ref txState, 0)
+                );
                 Sodium.sodium_memzero(pagePointer, (UIntPtr)compressionBufferSize);
             }
             finally

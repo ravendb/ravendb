@@ -104,9 +104,7 @@ namespace Voron.Impl
                 thread.Allocations += size;
 
                 Debug.Assert(size == allocation.Size, $"size ({size}) == allocation.Size ({allocation.Size})");
-#if VALIDATE
-                pager?.UnprotectPageRange(allocation.Ptr, (ulong)size);
-#endif
+
                 return allocation.Ptr;
             }
 
@@ -121,9 +119,6 @@ namespace Voron.Impl
 
                 thread = NativeMemory.ThreadAllocations.Value;
                 thread.Allocations += size;
-#if VALIDATE
-                pager?.UnprotectPageRange(allocation.Ptr, (ulong)size);
-#endif
                 return allocation.Ptr;
             }
 
@@ -138,10 +133,6 @@ namespace Voron.Impl
             Interlocked.Add(ref _currentlyInUseBytes, -size);
 
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
-            
-#if VALIDATE
-            pager?.ProtectPageRange(ptr, (ulong)size);
-#endif
 
             var numberOfPages = size / Constants.Storage.PageSize;
 
