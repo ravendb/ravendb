@@ -821,6 +821,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.IndexesHistory = smugglerDatabaseRecord.IndexesHistory;
                     databaseRecord.Refresh = smugglerDatabaseRecord.Refresh;
                     databaseRecord.Integrations = smugglerDatabaseRecord.Integrations;
+                    databaseRecord.Studio = smugglerDatabaseRecord.Studio;
 
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
