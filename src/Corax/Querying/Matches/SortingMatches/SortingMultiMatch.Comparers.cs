@@ -198,31 +198,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         }
     }
 
-    private struct CompactKeyComparer : IComparer<UnmanagedSpan>
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int Compare(UnmanagedSpan xItem, UnmanagedSpan yItem)
-        {
-            if (yItem.Address == null)
-            {
-                return xItem.Address == null ? 0 : 1;
-            }
-
-            if (xItem.Address == null)
-                return -1;
-            var match = Memory.Compare(xItem.Address + 1, yItem.Address + 1, Math.Min(xItem.Length - 1, yItem.Length - 1));
-            if (match != 0)
-                return match;
-
-            var xItemLengthInBits = (xItem.Length - 1) * 8 - (xItem.Address[0] >> 4);
-            var yItemLengthInBits = (yItem.Length - 1) * 8 - (yItem.Address[0] >> 4);
-            return xItemLengthInBits - yItemLengthInBits;
-        }
-    }
-
     private struct EntryComparerByTerm : IEntryComparer, IComparer<UnmanagedSpan>, IComparer<int>
     {
-        private CompactKeyComparer _cmpTerm;
         private Lookup<Int64LookupKey> _lookup;
         private UnmanagedSpan<long> _batchResults;
         private int _comparerId;
@@ -253,19 +230,18 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
             match._token.ThrowIfCancellationRequested();
             bool isDescending = orderMetadata[0].Ascending == false;
-            object indirectComparer = isDescending ?
-                new IndirectComparer<DescendingWrapper<CompactKeyComparer>, TComparer2, TComparer3>(ref match, batchTerms, new DescendingWrapper<CompactKeyComparer>(), comparer2, comparer3)
-                : new IndirectComparer<CompactKeyComparer, TComparer2, TComparer3>(ref match, batchTerms, new CompactKeyComparer(), comparer2, comparer3);
 
-            var indexes = isDescending
-                ? SortByTerms(ref match, batchTermIds, batchTerms, (IndirectComparer<DescendingWrapper<CompactKeyComparer>, TComparer2, TComparer3>)indirectComparer)
-                : SortByTerms(ref match, batchTermIds, batchTerms, (IndirectComparer<CompactKeyComparer, TComparer2, TComparer3>)indirectComparer);
-
+            var heapSize = Math.Min(match._take, batchResults.Length);
+            heapSize = heapSize < 0 ? batchResults.Length : heapSize;
+            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+            var secondaryComparer = new SortingMultiMatch<TInner>.IndirectComparer2<TComparer2, TComparer3>(ref match, comparer2, comparer3);
+            using var _ = llt.Allocator.Allocate(heapSize, out Span<UnmanagedSpan> terms);
+            var sorter = HeapSorterBuilder.BuildCompoundCompactKeySorter(indexes.Slice(0, heapSize), terms, orderMetadata[0].Ascending == false, secondaryComparer);
+           
             for (int i = 0; i < indexes.Length; i++)
-            {
-                int bIdx = indexes[i];
-                match._results.Add(batchResults[bIdx]);
-            }
+                sorter.Insert(i, batchTerms[i]);
+            
+            sorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer);
         }
 
         private static void MaybeBreakTies<TComparer>(Span<long> buffer, TComparer tieBreaker) 
@@ -363,7 +339,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
         {
-            return _cmpTerm.Compare(x, y);
+            return CompactKeyComparer.Compare(x, y);
         }
 
         public int Compare(int x, int y)
@@ -402,14 +378,21 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 match._results.AddRange(batchResults);
                 return;
             }
+            // load terms for documents
+            _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
 
-            _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
-            match._token.ThrowIfCancellationRequested();
-            var indexes = EntryComparerHelper.NumericSortBatch(ref match, batchTermIds, batchTerms, new EntryComparerByLong(), comparer2, comparer3);
+            var heapSize = Math.Min(match._take, batchResults.Length);
+            heapSize = heapSize < 0 ? batchResults.Length : heapSize;
+            
+            using var _ = llt.Allocator.Allocate(heapSize, out Span<long> terms);
+            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+            var secondaryComparer = new IndirectComparer2<TComparer2, TComparer3>(ref match, comparer2, comparer3);
+            var heapSorter = HeapSorterBuilder.BuildCompoundNumericalSorter(indexes.Slice(0, heapSize), terms, orderMetadata[0].Ascending == false, secondaryComparer);
+                
             for (int i = 0; i < indexes.Length; i++)
-            {
-                match._results.Add(batchResults[indexes[i]]);
-            }
+                heapSorter.Insert(i, batchTermIds[i]);
+
+            heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer);
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
@@ -485,14 +468,21 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 match._results.AddRange(batchResults);
                 return;
             }
-
+            // load terms for documents
             _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
-            match._token.ThrowIfCancellationRequested();
-            var indexes = EntryComparerHelper.NumericSortBatch(ref match, batchTermIds, batchTerms, new EntryComparerByDouble(), comparer2, comparer3);
+
+            var heapSize = Math.Min(match._take, batchResults.Length);
+            heapSize = heapSize < 0 ? batchResults.Length : heapSize;
+            
+            using var _ = llt.Allocator.Allocate(heapSize, out Span<double> terms);
+            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+            var secondaryComparer = new IndirectComparer2<TComparer2, TComparer3>(ref match, comparer2, comparer3);
+            var heapSorter = HeapSorterBuilder.BuildCompoundNumericalSorter(indexes.Slice(0, heapSize), terms, orderMetadata[0].Ascending == false, secondaryComparer);
+                
             for (int i = 0; i < indexes.Length; i++)
-            {
-                match._results.Add(batchResults[indexes[i]]);
-            }
+                heapSorter.Insert(i, BitConverter.Int64BitsToDouble(batchTermIds[i]));
+
+            heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer);
         }
 
         public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match)
@@ -531,7 +521,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 buffer.Slice(2,2).Reverse();
             
             var bufferPtrAsDouble = (double*)bufferPtr;
-            return bufferPtrAsDouble[2].CompareTo(bufferPtrAsDouble[3]);
+            return BitConverter.Int64BitsToDouble(buffer[2]).CompareTo(BitConverter.Int64BitsToDouble(buffer[3]));
         }
     }
 
@@ -542,7 +532,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         private Lookup<Int64LookupKey> _lookup;
         private UnmanagedSpan<long> _batchResults;
         private int _comparerId;
-
+        private ByteStringContext _allocator;
         public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match) => match._orderMetadata[_comparerId].Field.FieldName;
 
         public void Init(ref SortingMultiMatch<TInner> match, UnmanagedSpan<long> batchResults, int comparerId)
@@ -552,6 +542,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             _dictionaryId = match._searcher.GetDictionaryIdFor(match._orderMetadata[_comparerId].Field.FieldName);
             _lookup = match._searcher.EntriesToTermsReader(match._orderMetadata[_comparerId].Field.FieldName);
             _batchResults = batchResults;
+            _allocator = match._searcher.Allocator;
         }
 
         public void SortBatch<TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator,
@@ -568,30 +559,30 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
             Container.GetAll(llt, batchTermIds, batchTerms, long.MinValue, pageLocator);
-            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+            var documents = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
             for (int i = 0; i < batchTermIds.Length; i++)
-            {
-                indexes[i] = i;
-            }
-            
-            match._token.ThrowIfCancellationRequested();
-            EntryComparerHelper.IndirectSort(ref match, indexes, batchTerms, this, comparer2, comparer3);
-            for (int i = 0; i < indexes.Length; i++)
-            {
-                match._results.Add(batchResults[indexes[i]]);
-            }
+                documents[i] = i;
+
+            var heapCapacity = match._take == -1 ? batchResults.Length : Math.Min(match._take, batchResults.Length);
+            using var _ = _allocator.Allocate(heapCapacity, out Span<ByteString> terms);
+            var secondaryComparers = new IndirectComparer2<TComparer2, TComparer3>(ref match, comparer2, comparer3);
+            var heapSorter = HeapSorterBuilder.BuildCompoundAlphanumericalSorter(documents.Slice(0, heapCapacity), terms, _allocator, orderMetadata[0].Ascending == false, secondaryComparers);
+           
+            for (int i = 0; i < batchTermIds.Length; i++)
+                heapSorter.Insert(i, _reader.GetDecodedTerm(_dictionaryId, batchTerms[i]));
+
+            heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer);
         }
-
-
+        
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
         {
-            _reader.GetDecodedTerms(_dictionaryId, x, out var xTerm, y, out var yTerm);
-            return BasicComparers.CompareAlphanumericAscending(xTerm, yTerm);
+            throw new NotSupportedException($"Method `{nameof(Compare)} for `{nameof(UnmanagedSpan)}` should never be used.");
         }
 
         public int Compare(int x, int y)
         {
-            return string.Compare(_reader.GetTermFor(_batchResults[x]), _reader.GetTermFor(_batchResults[y]), StringComparison.Ordinal);
+            _reader.GetDecodedTermsByIds(_dictionaryId, _batchResults[x], out var xTerm, _batchResults[y], out var yTerm);
+            return AlphanumericalComparer.Instance.Compare(xTerm, yTerm);
         }
     }
 
@@ -622,55 +613,45 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             where TComparer2 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
         {
-            match._token.ThrowIfCancellationRequested();
-
             if (_reader.IsValid == false) // field does not exist, so arbitrary sort order, whatever query said goes
             {
                 match._results.AddRange(batchResults);
                 return;
             }
-            
-            var spatialResults = match._sortingDataTransfer.IncludeDistances 
-                ? new Span<SpatialResult>((byte*)batchTerms + batchResults.Length * sizeof(UnmanagedSpan), batchResults.Length)
-                : Span<SpatialResult>.Empty;
+
+            var descending = orderMetadata[0].Ascending == false;
+            var heapSize = Math.Min(match._take, batchResults.Length);
+            heapSize = heapSize < 0 ? batchResults.Length : heapSize;
             
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+            using var _ = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
+
+
+            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes.Slice(0, heapSize), terms, descending);
+            
+
+
             for (int i = 0; i < batchResults.Length; i++)
             {
-                double distance;
+                SpatialResult distance; 
                 if (_reader.TryGetSpatialPoint(batchResults[i], out var coords) == false)
                 {
-                    if (spatialResults.Length > 0)
-                        spatialResults[i] = SpatialResult.Invalid;
-                    
-                    // always at the bottom, then, desc & asc
-                    distance = match._orderMetadata[0].Ascending == false ? double.MinValue : double.MaxValue;
+                    distance = new SpatialResult() { Distance = descending ? double.MinValue : double.MaxValue, Latitude = Double.NaN, Longitude = Double.NaN };
                 }
                 else
                 {
-                    distance = SpatialUtils.GetGeoDistance(coords, _center, _round, _units);
-
-                    if (spatialResults.Length > 0)
-                        spatialResults[i] = new SpatialResult() {Distance = distance, Latitude = coords.Lat, Longitude = coords.Lng};
+                    distance = new SpatialResult()
+                    {
+                        Distance = SpatialUtils.GetGeoDistance(coords, _center, _round, _units), Longitude = coords.Lng, Latitude = coords.Lat
+                    };
                 }
-
-                batchTerms[i] = new UnmanagedSpan(distance);
-                indexes[i] = i;
+                heapSorter.Insert(i, distance);
             }
-            
-            
-            match._token.ThrowIfCancellationRequested();
-            EntryComparerHelper.IndirectSort<EntryComparerByDouble, TComparer2, TComparer3>(ref match, indexes, batchTerms, new(), comparer2, comparer3);
 
-            
-            
-            for (int i = 0; i < indexes.Length; i++)
-            {
-                match._results.Add(batchResults[indexes[i]]);
-
-                if (match._sortingDataTransfer.IncludeDistances)
-                    match._distancesResults.Add(spatialResults[indexes[i]]);
-            }
+            if (match._sortingDataTransfer.IncludeDistances)
+                heapSorter.FillWithTerms(batchResults, ref match._results, ref match._distancesResults, ref match._scoresResults, match._secondaryScoreBuffer);
+            else
+                heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer);
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
@@ -692,79 +673,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 : SpatialUtils.GetGeoDistance(coords, _center, _round, _units);
 
             return xDistance.CompareTo(yDistance);
-        }
-    }
-    
-    private readonly struct IndirectComparer<TComparer1, TComparer2, TComparer3> : IComparer<long>, IComparer<int>
-        where TComparer1 : struct, IComparer<UnmanagedSpan>
-        where TComparer2 : struct, IComparer<int>, IComparer<UnmanagedSpan>
-        where TComparer3 : struct, IComparer<int>, IComparer<UnmanagedSpan>
-    {
-        private readonly UnmanagedSpan* _terms;
-        private readonly TComparer1 _cmp1;
-        private readonly TComparer2 _cmp2;
-        private readonly TComparer3 _cmp3;
-        private readonly IEntryComparer[] _nextComparers;
-        private readonly int _maxDegreeOfInnerComparer;
-
-        public IndirectComparer(ref SortingMultiMatch<TInner> match, UnmanagedSpan* terms, TComparer1 entryComparer, TComparer2 cmp2, TComparer3 cmp3)
-        {
-            _terms = terms;
-            _cmp1 = entryComparer;
-            _cmp2 = cmp2;
-            _cmp3 = cmp3;
-            _nextComparers = match._nextComparers;
-
-            if (typeof(TComparer1) == typeof(NullComparer))
-                _maxDegreeOfInnerComparer = 0;
-            else if (typeof(TComparer2) == typeof(NullComparer))
-                _maxDegreeOfInnerComparer = 1;
-            else if (typeof(TComparer3) == typeof(NullComparer))
-                _maxDegreeOfInnerComparer = 2;
-            else
-                _maxDegreeOfInnerComparer = 3;
-            
-            _maxDegreeOfInnerComparer += _nextComparers.Length;
-        }
-
-        public int Compare(long x, long y)
-        {
-            var xIdx = (ushort)x & 0X7FFF;
-            var yIdx = (ushort)y & 0X7FFF;
-
-            Debug.Assert(yIdx < SortingMatch.SortBatchSize && xIdx < SortingMatch.SortBatchSize);
-
-            var cmp = 0;
-            for (int comparerId = 0; cmp == 0 && comparerId < _maxDegreeOfInnerComparer; ++comparerId)
-            {
-                cmp = comparerId switch
-                {
-                    0 => _cmp1.Compare(_terms[xIdx], _terms[yIdx]),
-                    1 => _cmp2.Compare(xIdx, yIdx),
-                    2 => _cmp3.Compare(xIdx, yIdx),
-                    _ => _nextComparers[comparerId - 3].Compare(xIdx, yIdx)
-                };
-            }
-            
-            return cmp;
-        }
-
-
-        public int Compare(int x, int y)
-        {
-            var cmp = 0;
-            for (int comparerId = 0; cmp == 0 && comparerId < _maxDegreeOfInnerComparer; ++comparerId)
-            {
-                cmp = comparerId switch
-                {
-                    0 => _cmp1.Compare(_terms[x], _terms[y]),
-                    1 => _cmp2.Compare(x, y),
-                    2 => _cmp3.Compare(x, y),
-                    _ => _nextComparers[comparerId - 3].Compare(x, y)
-                };
-            }
-
-            return cmp;
         }
     }
 }

@@ -194,7 +194,7 @@ namespace SlowTests.Issues
                 }
 
                 subscriptionLog.Add((DateTime.UtcNow, sb.ToString()));
-                Assert.True(false, string.Join(Environment.NewLine, subscriptionLog.Select(x => $"#### {x.Item1.GetDefaultRavenFormat()}: {x.Item2}")));
+                Assert.Fail(string.Join(Environment.NewLine, subscriptionLog.Select(x => $"#### {x.Item1.GetDefaultRavenFormat()}: {x.Item2}")));
             }
         }
 

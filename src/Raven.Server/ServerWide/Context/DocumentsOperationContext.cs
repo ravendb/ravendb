@@ -25,7 +25,7 @@ namespace Raven.Server.ServerWide.Context
                 if (value.IsSingle == false)
                     throw new InvalidOperationException($"The global change vector '{value}' cannot contain pipe");
 
-
+                value = value.StripSinkTags(this);
                 value = value.StripTrxnTags(this);
 
                 if (DbIdsToIgnore == null || DbIdsToIgnore.Count == 0 || value.IsNullOrEmpty)

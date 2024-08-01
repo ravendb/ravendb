@@ -157,8 +157,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         }
     }
         
-    private static delegate*<ref SortingMatch<TInner>, Span<long>, int> 
-        SortBy<TEntryComparer,TFwdIt,TBackIt>(OrderMetadata metadata)
+    private static delegate*<ref SortingMatch<TInner>, Span<long>, int> SortBy<TEntryComparer,TFwdIt,TBackIt>(OrderMetadata metadata)
         where TEntryComparer : struct, IEntryComparer, IComparer<UnmanagedSpan>
         where TFwdIt : struct,  ILookupIterator
         where TBackIt : struct, ILookupIterator
@@ -552,8 +551,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         return l;
     }
-
-
+    
     private static void SortResults<TEntryComparer>(ref SortingMatch<TInner> match, Span<long> batchResults) 
         where TEntryComparer : struct,  IEntryComparer, IComparer<UnmanagedSpan>
     {

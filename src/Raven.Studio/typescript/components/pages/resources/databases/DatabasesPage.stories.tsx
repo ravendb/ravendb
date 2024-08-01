@@ -82,13 +82,25 @@ export const WithDifferentAccessLevel: StoryFn<typeof DatabasesPage> = () => {
     return <DatabasesPage />;
 };
 
-export const WithLoadError: StoryFn<typeof DatabasesPage> = () => {
+export const WithLoadErrorOnSingleNode: StoryFn<typeof DatabasesPage> = () => {
     commonInit();
 
     const value = mockStore.databases.with_Cluster();
 
     mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value), {
         loadError: ["B"],
+    });
+
+    return <DatabasesPage />;
+};
+
+export const WithLoadErrorOnAllNodes: StoryFn<typeof DatabasesPage> = () => {
+    commonInit();
+
+    const value = mockStore.databases.with_Cluster();
+
+    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value), {
+        loadError: ["A", "B", "C"],
     });
 
     return <DatabasesPage />;
