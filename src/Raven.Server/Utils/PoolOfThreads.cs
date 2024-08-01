@@ -115,7 +115,7 @@ namespace Raven.Server.Utils
             }
 
             pooled.StartedAt = DateTime.UtcNow;
-            pooled.InPoolSince = null;
+            pooled.InPoolSince = DateTime.MinValue;
             return pooled.SetWorkForThread(action, state, threadInfo, nameToUse);
         }
 
@@ -135,7 +135,7 @@ namespace Raven.Server.Utils
 
         private static void ReleaseThread(PooledThread pooled)
         {
-            pooled.InPoolSince = null;
+            pooled.InPoolSince = DateTime.MinValue;
             pooled.SetWorkForThread(null, null, null, null);
         }
 
@@ -207,7 +207,7 @@ namespace Raven.Server.Utils
             }
         }
 
-        internal class PooledThread
+        internal class PooledThread : PooledItem
         {
             private static readonly FieldInfo ThreadFieldName;
 
@@ -227,8 +227,6 @@ namespace Raven.Server.Utils
             public long? ThreadMask { get; private set; }
 
             public DateTime StartedAt { get; internal set; }
-
-            public DateTime? InPoolSince;
 
             static PooledThread()
             {
@@ -423,6 +421,10 @@ namespace Raven.Server.Utils
                 ThreadMask = threadMask;
 
                 AffinityHelper.SetCustomThreadAffinity(this);
+            }
+
+            public override void Dispose()
+            {
             }
         }
     }
