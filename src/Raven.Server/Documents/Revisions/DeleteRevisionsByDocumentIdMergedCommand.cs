@@ -27,8 +27,9 @@ public partial class RevisionsStorage
             var moreWork = false;
             var deleted = 0L;
 
-            foreach (var id in _ids)
+            for (int i = _ids.Count - 1; i >= 0; i--)
             {
+                var id = _ids[i];
                 using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
                 using (revisionsStorage.GetKeyPrefix(context, lowerId, out Slice prefixSlice))
                 {
@@ -50,6 +51,10 @@ public partial class RevisionsStorage
                     }
 
                     var result = revisionsStorage.ForceDeleteAllRevisionsForInternal(context, lowerId, prefixSlice, collectionName, maxDeletes, shouldSkip);
+                    if (result.MoreWork == false)
+                    {
+                        _ids.RemoveAt(i);
+                    }
                     moreWork |= result.MoreWork;
                     deleted += result.Deleted;
                 }

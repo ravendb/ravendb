@@ -25,18 +25,20 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 
         public override async ValueTask ExecuteAsync()
         {
-            DeleteRevisionsOperation.Parameters parameters = null;
+            var parametersJson = string.Empty;
             var deletedCount = 0L;
             Exception ex = null;
             try
             {
+                DeleteRevisionsOperation.Parameters parameters;
                 using (ContextPool.AllocateOperationContext(out TOperationContext context))
                 {
                     var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "admin/revisions/delete");
                     parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
                 }
-
                 parameters.Validate();
+                if(LoggingSource.AuditLog.IsInfoEnabled)
+                    parametersJson = JsonSerializer.Serialize(parameters);
 
                 using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken())
                 {
@@ -65,7 +67,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
                     RequestHandler.LogAuditFor(RequestHandler.DatabaseName, 
-                        "DELETE", $"Delete revisions, totalDeletes: {deletedCount} ,parameters: {JsonSerializer.Serialize(parameters)} ", ex);
+                        "DELETE", $"Delete Revisions, totalDeletes: {deletedCount} ,parameters: {parametersJson}", ex);
                 }
             }
 
