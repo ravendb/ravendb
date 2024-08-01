@@ -451,10 +451,28 @@ namespace Raven.Server.Smuggler.Documents
                             WriteStudioConfiguration(databaseRecord.Studio);
                         }
 
+                        if (databaseRecord.RevisionsForConflicts != null)
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.RevisionsForConflicts));
+
+                            WriteRevisionsForConflictsConfiguration(databaseRecord.RevisionsForConflicts);
+                        }
+
                         break;
                 }
 
                 await _writer.MaybeFlushAsync();
+            }
+
+            private void WriteRevisionsForConflictsConfiguration(RevisionsCollectionConfiguration revisionsForConflictsConfiguration)
+            {
+                if (revisionsForConflictsConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _context.Write(_writer, revisionsForConflictsConfiguration.ToJson());
             }
 
             private void WriteStudioConfiguration(StudioConfiguration studioConfiguration)
