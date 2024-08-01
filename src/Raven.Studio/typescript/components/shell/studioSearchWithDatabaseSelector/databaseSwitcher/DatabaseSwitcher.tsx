@@ -12,21 +12,21 @@ import { DatabaseSwitcherOption } from "./databaseSwitcherTypes";
 export default function DatabaseSwitcher() {
     const allDatabases = useAppSelector(databaseSelectors.allDatabases);
 
-    // Disabled databases are always at the bottom
-    const options: DatabaseSwitcherOption[] = useMemo(
-        () =>
-            [...allDatabases]
-                .sort((a, b) => (a.isDisabled > b.isDisabled ? 1 : -1))
-                .map((db) => {
-                    return {
-                        value: db.name,
-                        isSharded: db.isSharded,
-                        environment: db.environment,
-                        isDisabled: db.isDisabled,
-                    };
-                }),
-        [allDatabases]
-    );
+    // Sorted by name. Disabled databases are always at the bottom
+    const options: DatabaseSwitcherOption[] = useMemo(() => {
+        const sortedByNameDatabases = allDatabases.sort((a, b) => a.name.localeCompare(b.name));
+        const sortedByStatusDatabases = [
+            ...sortedByNameDatabases.filter((item) => !item.isDisabled),
+            ...sortedByNameDatabases.filter((item) => item.isDisabled),
+        ];
+
+        return sortedByStatusDatabases.map((db) => ({
+            value: db.name,
+            isSharded: db.isSharded,
+            environment: db.environment,
+            isDisabled: db.isDisabled,
+        }));
+    }, [allDatabases]);
 
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const selectedDatabase = options.find((x) => x.value === activeDatabaseName);
