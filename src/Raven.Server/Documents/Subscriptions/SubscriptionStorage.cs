@@ -12,7 +12,6 @@ using Raven.Client;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Subscriptions.Stats;
@@ -157,20 +156,10 @@ namespace Raven.Server.Documents.Subscriptions
             return _db.Configuration.Subscriptions.ArchivedDataProcessingBehavior;
         }
 
-        public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(ClusterOperationContext context, bool history, int start, int take)
+        public override IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(ClusterOperationContext context, bool history, int start, int take)
         {
-            foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(_databaseName)))
+            foreach (var task in base.GetAllSubscriptions(context, history, start, take))
             {
-                if (start > 0)
-                {
-                    start--;
-                    continue;
-                }
-
-                if (take-- <= 0)
-                    yield break;
-
-                var task = JsonDeserializationClient.SubscriptionState(keyValue.Value);
                 var subscriptionGeneralData = new SubscriptionGeneralDataAndStats(task);
 
                 GetSubscriptionInternal(subscriptionGeneralData, history);
@@ -182,24 +171,10 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllRunningSubscriptions(ClusterOperationContext context, bool history, int start, int take)
         {
-            foreach (var kvp in _subscriptions)
+            foreach (var (state, subscriptionConnectionsState) in GetAllRunningSubscriptionsInternal(context, history, start, take))
             {
-                var subscriptionConnectionsState = kvp.Value;
-
-                if (subscriptionConnectionsState.IsSubscriptionActive() == false)
-                    continue;
-
-                if (start > 0)
-                {
-                    start--;
-                    continue;
-                }
-
-                if (take-- <= 0)
-                    yield break;
-
-                var state = GetSubscriptionFromServerStore(context, subscriptionConnectionsState.SubscriptionName);
                 var subscriptionData = GetRunningSubscriptionInternal(history, state, subscriptionConnectionsState);
+
                 yield return subscriptionData;
             }
         }
@@ -218,105 +193,41 @@ namespace Raven.Server.Documents.Subscriptions
             return c;
         }
 
-        public SubscriptionGeneralDataAndStats GetSubscription(ClusterOperationContext context, long? id, string name, bool history)
+        public override SubscriptionGeneralDataAndStats GetSubscription(ClusterOperationContext context, long? id, string name, bool history)
         {
-            SubscriptionState state;
-
-            if (string.IsNullOrEmpty(name) == false)
-            {
-                state = GetSubscriptionFromServerStore(context, name);
-            }
-            else if (id.HasValue)
-            {
-                state = GetSubscriptionFromServerStore(context, id.ToString());
-            }
-            else
-            {
-                throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
-            }
-
+            SubscriptionState state = base.GetSubscription(context, id, name, history);
             var subscription = GetSubscriptionInternal(state, history);
 
             return subscription;
         }
 
-        public SubscriptionState GetSubscriptionFromServerStore(ClusterOperationContext context, string name)
+        public override SubscriptionState GetSubscriptionFromServerStore(ClusterOperationContext context, string name)
         {
-            var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_databaseName, name));
-
-            if (subscriptionBlittable == null)
-                throw new SubscriptionDoesNotExistException($"Subscription with name '{name}' was not found in server store");
-
-            var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
+            var subscriptionState = base.GetSubscriptionFromServerStore(context, name);
             subscriptionState.ArchivedDataProcessingBehavior ??= _db.Configuration.Subscriptions.ArchivedDataProcessingBehavior; // persisted state from v5.x  
             
             return subscriptionState;
         }
 
-        public SubscriptionGeneralDataAndStats GetRunningSubscription(ClusterOperationContext context, long? id, string name, bool history)
+        public override SubscriptionGeneralDataAndStats GetRunningSubscription(ClusterOperationContext context, long? id, string name, bool history)
         {
-            SubscriptionState state;
-            if (string.IsNullOrEmpty(name) == false)
-            {
-                state = GetSubscriptionFromServerStore(context, name);
-            }
-            else if (id.HasValue)
-            {
-                name = GetSubscriptionNameById(context, id.Value);
-                state = GetSubscriptionFromServerStore(context, name);
-            }
-            else
-            {
-                throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
-            }
-
-            if (_subscriptions.TryGetValue(state.SubscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
-                return null;
-
-            if (subscriptionConnectionsState.IsSubscriptionActive() == false)
-                return null;
-
+            SubscriptionState state = GetRunningSubscriptionInternal(context, id, name, history, out var subscriptionConnectionsState);
             var subscription = GetRunningSubscriptionInternal(history, state, subscriptionConnectionsState);
             return subscription;
         }
 
-        public sealed class SubscriptionGeneralDataAndStats : SubscriptionState
+        public sealed class SubscriptionGeneralDataAndStats : SubscriptionDataBase<SubscriptionConnection>
         {
-            public List<SubscriptionConnection> Connections;
-            public IEnumerable<SubscriptionConnectionInfo> RecentConnections;
-            public IEnumerable<SubscriptionConnectionInfo> RecentRejectedConnections;
-            public IEnumerable<SubscriptionConnectionInfo> CurrentPendingConnections;
-
             public SubscriptionGeneralDataAndStats() { }
 
-            public SubscriptionGeneralDataAndStats(SubscriptionState @base)
+            public SubscriptionGeneralDataAndStats(SubscriptionState @base) : base(@base)
             {
-                Query = @base.Query;
-                ChangeVectorForNextBatchStartingPoint = @base.ChangeVectorForNextBatchStartingPoint;
-                SubscriptionId = @base.SubscriptionId;
-                SubscriptionName = @base.SubscriptionName;
-                ArchivedDataProcessingBehavior = @base.ArchivedDataProcessingBehavior;
-                MentorNode = @base.MentorNode;
-                PinToMentorNode = @base.PinToMentorNode;
-                NodeTag = @base.NodeTag;
-                LastBatchAckTime = @base.LastBatchAckTime;
-                LastClientConnectionTime = @base.LastClientConnectionTime;
-                Disabled = @base.Disabled;
-                ShardingState = @base.ShardingState;
-                RaftCommandIndex = @base.RaftCommandIndex;
             }
         }
 
         public long GetRunningCount()
         {
             return _subscriptions.Count(x => x.Value.IsSubscriptionActive());
-        }
-
-        private static void SetSubscriptionHistory(SubscriptionConnectionsState subscriptionConnectionsState, SubscriptionGeneralDataAndStats subscriptionData)
-        {
-            subscriptionData.RecentConnections = subscriptionConnectionsState.RecentConnections;
-            subscriptionData.RecentRejectedConnections = subscriptionConnectionsState.RecentRejectedConnections;
-            subscriptionData.CurrentPendingConnections = subscriptionConnectionsState.PendingConnections;
         }
 
         private static SubscriptionGeneralDataAndStats GetRunningSubscriptionInternal(bool history, SubscriptionState state, SubscriptionConnectionsState subscriptionConnectionsState)

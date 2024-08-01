@@ -838,19 +838,28 @@ namespace Raven.Client.Documents.Subscriptions
                             {
                                 var reqEx = GetRequestExecutor();
                                 var curTopology = reqEx.TopologyNodes;
-                                var nextNodeIndex = (_forcedTopologyUpdateAttempts++) % curTopology.Count;
-                                try
+                                if (curTopology != null)
                                 {
-                                    (_, _redirectNode) = await reqEx.GetRequestedNode(curTopology[nextNodeIndex].ClusterTag, throwIfContainsFailures: true).ConfigureAwait(false);
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Subscription '{_options.SubscriptionName}'. Will modify redirect node from null to {_redirectNode.ClusterTag}",
-                                            ex);
-                                }
-                                catch (Exception e)
-                                {
-                                    // will let topology to decide
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Subscription '{_options.SubscriptionName}'. Could not select the redirect node will keep it null.", e);
+                                    try
+                                    {
+                                        await TrySetRedirectNode(reqEx, curTopology).ConfigureAwait(false);
+                                        if (_redirectNode == null)
+                                        {
+                                            if (_logger.IsInfoEnabled)
+                                                _logger.Info($"Subscription '{_options.SubscriptionName}'. Cannot set redirect node, will try to connect anyway.", ex);
+                                        }
+                                        else
+                                        {
+                                            if (_logger.IsInfoEnabled)
+                                                _logger.Info($"Subscription '{_options.SubscriptionName}'. Will modify redirect node from null to {_redirectNode.ClusterTag}", ex);
+                                        }
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        // will let topology to decide
+                                        if (_logger.IsInfoEnabled)
+                                            _logger.Info($"Subscription '{_options.SubscriptionName}'. Could not select the redirect node will keep it null.", e);
+                                    }
                                 }
                             }
 
@@ -876,6 +885,12 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                 }
             }
+        }
+
+        protected virtual async Task TrySetRedirectNode(RequestExecutor reqEx, IReadOnlyList<ServerNode> curTopology)
+        {
+            var nextNodeIndex = (_forcedTopologyUpdateAttempts++) % curTopology.Count;
+            (_, _redirectNode) = await reqEx.GetRequestedNode(curTopology[nextNodeIndex].ClusterTag, throwIfContainsFailures: true).ConfigureAwait(false);
         }
 
         internal DateTime? _lastConnectionFailure;
@@ -923,8 +938,9 @@ namespace Raven.Client.Documents.Subscriptions
                         return (true, null);
                     }
 
-                    var nodeToRedirectTo = requestExecutor.TopologyNodes
-                        .FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
+                    ServerNode nodeToRedirectTo = null;
+                    if (requestExecutor.TopologyNodes != null)
+                        nodeToRedirectTo = requestExecutor.TopologyNodes?.FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
                     if (nodeToRedirectTo == null && throwOnRedirectNodeNotFound)
                     {
                         throw new AggregateException(ex,

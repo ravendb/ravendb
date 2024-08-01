@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
@@ -47,14 +48,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             }
         }
 
-        internal static void WriteGetAllResult(AsyncBlittableJsonTextWriterForDebug writer, IEnumerable<SubscriptionState> subscriptions, ClusterOperationContext context)
+        internal void WriteGetAllResult(AsyncBlittableJsonTextWriterForDebug writer, IEnumerable<SubscriptionState> subscriptions, ClusterOperationContext context)
         {
             writer.WriteStartObject();
             writer.WriteArray(context, "Results", subscriptions.Select(SubscriptionStateAsJson), (w, c, subscription) => c.Write(w, subscription));
             writer.WriteEndObject();
         }
 
-        private static DynamicJsonValue SubscriptionStateAsJson(SubscriptionState state)
+        protected virtual DynamicJsonValue SubscriptionStateAsJson(SubscriptionState state)
         {
             var json = new DynamicJsonValue
             {
@@ -93,10 +94,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             if (subscriptionList == null)
                 return new DynamicJsonArray();
 
-            return new DynamicJsonArray(subscriptionList.Select(s => GetSubscriptionConnectionJson(s)));
+            return new DynamicJsonArray(subscriptionList.Select(GetSubscriptionConnectionJson));
         }
 
-        private static DynamicJsonValue GetSubscriptionConnectionJson(SubscriptionConnection x)
+        protected static DynamicJsonValue GetSubscriptionConnectionJson<T>(SubscriptionConnectionBase<T> x) where T : AbstractIncludesCommand
         {
             if (x == null)
                 return new DynamicJsonValue();

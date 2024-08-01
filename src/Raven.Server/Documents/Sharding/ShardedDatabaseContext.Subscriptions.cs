@@ -1,4 +1,7 @@
-﻿using Raven.Client.Documents.DataArchival;
+﻿using System;
+using System.Collections.Generic;
+using System.Net;
+using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
@@ -6,8 +9,10 @@ using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using static Raven.Server.Documents.Subscriptions.SubscriptionStorage;
 
 namespace Raven.Server.Documents.Sharding;
 
@@ -70,6 +75,145 @@ public partial class ShardedDatabaseContext
         public override ArchivedDataProcessingBehavior GetDefaultArchivedDataProcessingBehavior()
         {
             return _context.Configuration.Subscriptions.ArchivedDataProcessingBehavior;
+        }
+
+        public override IEnumerable<ShardedSubscriptionData> GetAllSubscriptions(ClusterOperationContext context, bool history, int start, int take)
+        {
+            foreach (var task in base.GetAllSubscriptions(context, history, start, take))
+            {
+                var shardedSubscriptionData = GetSubscriptionInternal(task, history);
+
+                yield return shardedSubscriptionData;
+            }
+        }
+
+        private ShardedSubscriptionData GetSubscriptionInternal(SubscriptionState task, bool history)
+        {
+            var shardedSubscriptionData = new ShardedSubscriptionData(new SubscriptionGeneralDataAndStats(task));
+            if (_subscriptions.TryGetValue(shardedSubscriptionData.SubscriptionId, out SubscriptionConnectionsStateOrchestrator orchestratorSubscription))
+            {
+                shardedSubscriptionData.ShardedWorkers = orchestratorSubscription.ShardWorkers;
+                shardedSubscriptionData.Connections = orchestratorSubscription.GetConnections();
+                if (history)//Only valid if this is my subscription
+                {
+                    SetSubscriptionHistory(orchestratorSubscription, shardedSubscriptionData);
+                    shardedSubscriptionData.RecentShardedWorkers = orchestratorSubscription.RecentShardedWorkers;
+                }
+            }
+            return shardedSubscriptionData;
+        }
+
+        public IEnumerable<ShardedSubscriptionData> GetAllRunningSubscriptions(ClusterOperationContext context, bool history, int start, int take)
+        {
+            foreach (var (state, subscriptionConnectionsState) in GetAllRunningSubscriptionsInternal(context, history, start, take))
+            {
+                var shardedSubscriptionData = GetRunningSubscriptionInternal(history, state, subscriptionConnectionsState);
+
+                yield return shardedSubscriptionData;
+            }
+        }
+
+        private static ShardedSubscriptionData GetRunningSubscriptionInternal(bool history, SubscriptionState state,
+            SubscriptionConnectionsStateOrchestrator subscriptionConnectionsState)
+        {
+            var shardedSubscriptionData = new ShardedSubscriptionData(new SubscriptionGeneralDataAndStats(state))
+            {
+                ShardedWorkers = subscriptionConnectionsState.ShardWorkers,
+                Connections = subscriptionConnectionsState.GetConnections()
+            };
+
+            if (history)//Only valid if this is my subscription
+            {
+                SetSubscriptionHistory(subscriptionConnectionsState, shardedSubscriptionData);
+                shardedSubscriptionData.RecentShardedWorkers = subscriptionConnectionsState.RecentShardedWorkers;
+            }
+
+            return shardedSubscriptionData;
+        }
+
+        public override ShardedSubscriptionData GetSubscription(ClusterOperationContext context, long? id, string name, bool history)
+        {
+            SubscriptionState state = base.GetSubscription(context, id, name, history);
+            var shardedSubscriptionData = new ShardedSubscriptionData(new SubscriptionGeneralDataAndStats(state));
+            var subscription = GetSubscriptionInternal(shardedSubscriptionData, history);
+
+            return subscription;
+        }
+
+        public override ShardedSubscriptionData GetRunningSubscription(ClusterOperationContext context, long? id, string name, bool history)
+        {
+            SubscriptionState state = GetRunningSubscriptionInternal(context, id, name, history, out var subscriptionConnectionsState);
+            var subscription = GetRunningSubscriptionInternal(history, state, subscriptionConnectionsState);
+            return subscription;
+        }
+
+        public sealed class ShardedSubscriptionData : SubscriptionDataBase<OrchestratedSubscriptionConnection>
+        {
+            public IDictionary<string, ShardedSubscriptionWorker> ShardedWorkers;
+            public IEnumerable<ShardedSubscriptionWorkerInfo> RecentShardedWorkers;
+
+            public ShardedSubscriptionData(SubscriptionGeneralDataAndStats stateWithData) : base(stateWithData)
+            {
+            }
+        }
+
+        public class ShardedSubscriptionWorkerInfo : IDynamicJson
+        {
+            public string Shard { get; set; }
+            public string WorkerId { get; set; }
+            public string RemoteIp { get; set; }
+            public string CurrentNodeTag { get; set; }
+            public DateTime? DisposeTimeUtc { get; set; }
+            public DateTime? LastConnectionFailure { get; set; }
+            public bool IsCanceled { get; set; }
+            public bool IsFaulted { get; set; }
+            public string Exception { get; set; }
+
+            public ShardedSubscriptionWorkerInfo()
+            {
+            }
+
+            public static ShardedSubscriptionWorkerInfo Create(string shard, ShardedSubscriptionWorker w)
+            {
+                string address = null;
+                try
+                {
+                    address = ((IPEndPoint)w._tcpClient?.Client?.RemoteEndPoint)?.Address.ToString();
+                }
+                catch (Exception e)
+                {
+                    // might be disposed
+                }
+
+                return new ShardedSubscriptionWorkerInfo()
+                {
+                    Shard = shard,
+                    DisposeTimeUtc = DateTime.UtcNow,
+                    Exception = w.SubscriptionTask.Exception?.ToString(),
+                    IsCanceled = w.SubscriptionTask.IsCanceled,
+                    IsFaulted = w.SubscriptionTask.IsFaulted,
+                    CurrentNodeTag = w.CurrentNodeTag,
+                    WorkerId = w.WorkerId,
+                    LastConnectionFailure = w._lastConnectionFailure,
+                    RemoteIp = address
+                };
+            }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Shard)] = Shard,
+                    [nameof(WorkerId)] = WorkerId,
+                    [nameof(RemoteIp)] = RemoteIp,
+                    [nameof(CurrentNodeTag)] = CurrentNodeTag,
+                    [nameof(DisposeTimeUtc)] = DisposeTimeUtc,
+                    [nameof(LastConnectionFailure)] = LastConnectionFailure,
+                    [nameof(IsCanceled)] = IsCanceled,
+                    [nameof(IsFaulted)] = IsFaulted,
+                    [nameof(Exception)] = Exception,
+                };
+            }
         }
     }
 }
