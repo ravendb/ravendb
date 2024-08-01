@@ -54,7 +54,6 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
                     writer.WriteEndObject();
                 }
 
-                throw new InvalidOperationException();
             }
             catch (Exception e)
             {
@@ -65,9 +64,8 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
             {
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"Delete revisions, totalDeletes: {deletedCount}" +
-                                                                                      (parameters == null ? string.Empty : $" ,parameters: {JsonSerializer.Serialize(parameters)} ") +
-                                                                                      (ex == null ? string.Empty : ", "+ex));
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, 
+                        "DELETE", $"Delete revisions, totalDeletes: {deletedCount} ,parameters: {JsonSerializer.Serialize(parameters)} ", ex);
                 }
             }
 
