@@ -13,6 +13,7 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Logging;
@@ -30,19 +31,19 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
     private readonly Dictionary<string, long> _fieldNameToRootPage = new();
     private readonly IndexSearcher _indexSearcher;
     private readonly ByteStringContext _allocator;
-    private readonly Dictionary<string, Slice> _fieldNameCache;
+    private readonly LowLevelTransaction _llt;
 
     public CoraxIndexFacetedReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
         IndexFieldsMapping fieldsMapping) : base(index, queryBuilderFactories, logger)
     {
         _fieldMappings = fieldsMapping;
         _allocator = readTransaction.Allocator;
+        _llt = readTransaction.LowLevelTransaction;
         _fieldMappings = fieldsMapping;
         _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings)
         {
             MaxMemoizationSizeInBytes = index.Configuration.MaxMemoizationSize.GetValue(SizeUnit.Bytes)
         };
-        _fieldNameCache = new();
     }
 
     public override List<FacetResult> FacetedQuery(FacetQuery facetQuery, QueryTimingsScope queryTimings, DocumentsOperationContext context,
@@ -182,11 +183,12 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         int read = 0;
         CreateMappingForRanges(results, facetsByRange, facetQuery);
 
+        using var scope = _llt.AcquireCompactKey(out var existingKey);
         while ((read = baseQuery.Fill(ids)) != 0)
         {
             for (int docId = 0; docId < read; docId++)
             {
-                var reader = _indexSearcher.GetEntryTermsReader(ids[docId], ref page);
+                _indexSearcher.GetEntryTermsReader(ids[docId], ref page, out var reader, existingKey);
                 foreach (var result in results)
                 {
                     token.ThrowIfCancellationRequested();
