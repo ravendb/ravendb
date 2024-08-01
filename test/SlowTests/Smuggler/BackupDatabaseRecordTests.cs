@@ -1183,6 +1183,10 @@ namespace SlowTests.Smuggler
                 long index = (await Server.ServerStore.SendToLeaderAsync(command)).Index;
                 await Server.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, TimeSpan.FromSeconds(30));
 
+                //add RevisionsForConflicts configuration
+                store.Maintenance.Server.Send(new ConfigureRevisionsForConflictsOperation(store.Database,
+                    new RevisionsCollectionConfiguration() { Disabled = false, MinimumRevisionAgeToKeep = TimeSpan.FromDays(5) }));
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -1273,6 +1277,10 @@ namespace SlowTests.Smuggler
                     Assert.NotNull(record.Studio);
                     Assert.False(record.Studio.Disabled);
                     Assert.Equal(StudioConfiguration.StudioEnvironment.None, record.Studio.Environment);
+
+                    Assert.NotNull(record.RevisionsForConflicts);
+                    Assert.False(record.Disabled);
+                    Assert.Equal(TimeSpan.FromDays(5), record.RevisionsForConflicts.MinimumRevisionAgeToKeep);
                 }
             }
         }

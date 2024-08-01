@@ -696,6 +696,19 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
+                if (reader.TryGet(nameof(databaseRecord.RevisionsForConflicts), out BlittableJsonReaderObject revisionForConflicts) &&
+                    revisionForConflicts != null)
+                {
+                    try
+                    {
+                        databaseRecord.RevisionsForConflicts = JsonDeserializationCluster.RevisionsCollectionConfiguration(revisionForConflicts);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the RevisionsForConflicts configuration from smuggler file. Skipping.", e);
+                    }
+                }
             });
 
             return databaseRecord;
