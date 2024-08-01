@@ -43,7 +43,6 @@ namespace Raven.Server.Rachis
         public string Tag => _tag;
 
         private RemoteConnection _connection;
-        public RemoteConnection Connection => _publishedConnection;
         private RemoteConnection _publishedConnection;
         public Exception LastException;
         public CandidateAmbassador(RachisConsensus engine, Candidate candidate, string tag, string url)
@@ -125,7 +124,7 @@ namespace Raven.Server.Rachis
                     {
                         Stream stream;
                         Action disconnect;
-                        TcpConnectionHeaderMessage.SupportedFeatures features;
+                        TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures features;
                         try
                         {
                             var connectTask = _engine.ConnectToPeer(_url, _tag, _engine.ClusterCertificate);
@@ -137,7 +136,7 @@ namespace Raven.Server.Rachis
 
                             stream = connection.Stream;
                             disconnect = connection.Disconnect;
-                            features = connection.SupportedFeatures;
+                            features = connection.SupportedFeatures.Cluster;
                         }
                         catch (Exception e)
                         {

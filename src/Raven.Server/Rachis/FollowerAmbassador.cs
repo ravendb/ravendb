@@ -68,7 +68,6 @@ namespace Raven.Server.Rachis
         private string _lastSentMsg;
         private PoolOfThreads.LongRunningWork _followerAmbassadorLongRunningOperation;
         private RemoteConnection _connection;
-        public RemoteConnection Connection => _connection;
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         private readonly long _term;
 
@@ -191,7 +190,7 @@ namespace Raven.Server.Rachis
                                     var connection = connectTask.Result;
                                     var stream = connection.Stream;
                                     var disconnect = connection.Disconnect;
-                                    var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, connection.SupportedFeatures, disconnect);
+                                    var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, connection.SupportedFeatures.Cluster, disconnect);
                                     Interlocked.Exchange(ref _connection, con);
                                     
                                     ClusterTopology topology;
@@ -636,7 +635,7 @@ namespace Raven.Server.Rachis
                             if (_engine.ShouldSnapshot(rootIterator.CurrentKey, rootObjectType) == false)
                                 continue;
                             
-                            _debugRecorder.Record($"Start sending: '{rootIterator.CurrentKey}'");
+                            _debugRecorder.Record($"Start sending type: '{rootObjectType}'");
 
                             var currentTreeKey = rootIterator.CurrentKey;
                             binaryWriter.Write((int)rootObjectType);
@@ -653,7 +652,7 @@ namespace Raven.Server.Rachis
                                     CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(long));
 
                                     var type = tree.State.Flags;
-                                    if (_connection.Features.Cluster.MultiTree)
+                                    if (_connection.Features.MultiTree)
                                     {
                                         binaryWriter.Write((int)type);
                                         CalculateTotalSize(ref items, ref totalSizeInBytes, sizeof(int));
@@ -682,7 +681,7 @@ namespace Raven.Server.Rachis
 
                                                     case TreeFlags.MultiValueTrees:
 
-                                                        if (_connection.Features.Cluster.MultiTree == false)
+                                                        if (_connection.Features.MultiTree == false)
                                                             throw new NotSupportedException(
                                                                 $"The connection '{_connection}' doesn't support '{type}', please upgrade node '{_connection.Dest}'");
 

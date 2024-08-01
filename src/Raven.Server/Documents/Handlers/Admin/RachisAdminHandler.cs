@@ -31,6 +31,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
+
 namespace Raven.Server.Documents.Handlers.Admin
 {
     public class RachisAdminHandler : ServerRequestHandler
@@ -153,17 +154,12 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var start = GetStart();
             var take = GetPageSize(defaultPageSize: 1024);
-            var detailed = GetBoolValueQueryString("detailed", required: false) ?? false;
-            var debugView = ServerStore.Engine.DebugView();
 
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
-                using (context.OpenReadTransaction())
-                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
-                {
-                    debugView.PopulateLogs(context, start, take, detailed);
-                    context.Write(writer, debugView.ToJson());
-                }
+                context.Write(writer, ServerStore.GetLogDetails(context, start, take));
             }
         }
 
