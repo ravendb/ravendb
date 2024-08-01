@@ -149,14 +149,11 @@ namespace Raven.Server.Utils
         {
             const int minNumberOfItemsInPoolToPerformCleanupCheck = 64;
 
-            if (_pool.Count < minNumberOfItemsInPoolToPerformCleanupCheck)
+            if (_disposed)
                 return;
 
-            lock (this)
-            {
-                if (_disposed)
-                    return;
-            }
+            if (_pool.Count < minNumberOfItemsInPoolToPerformCleanupCheck)
+                return;
 
             try
             {
