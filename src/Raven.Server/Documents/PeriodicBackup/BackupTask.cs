@@ -30,6 +30,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Utils;
+using static Raven.Server.Documents.PeriodicBackup.DirectUpload.DirectUploadBackupTask;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
 using StorageEnvironmentType = Voron.StorageEnvironmentWithType.StorageEnvironmentType;
 
@@ -52,7 +53,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         protected readonly bool _backupToLocalFolder;
         private readonly long _operationId;
         private readonly PathSetting _tempBackupPath;
-        private readonly Logger _logger;
+        protected readonly Logger _logger;
         public readonly OperationCancelToken TaskCancelToken;
         protected readonly bool _isServerWide;
         private readonly bool _isBackupEncrypted;
@@ -622,11 +623,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                         var compressionLevel = Configuration.SnapshotSettings?.CompressionLevel ?? Database.Configuration.Backup.SnapshotCompressionLevel;
                         var excludeIndexes = Configuration.SnapshotSettings?.ExcludeIndexes ?? false;
 
-                        using (var stream = GetStreamForBackupDestination(tempBackupFilePath, folderName, fileName))
+                        using (var uploader = GetUploaderForBackupDestination(tempBackupFilePath, folderName, fileName))
                         {
                             try
                             {
-                                var smugglerResult = Database.FullBackupTo(stream, compressionAlgorithm, compressionLevel, excludeIndexes,
+                                var smugglerResult = Database.FullBackupTo(uploader.Stream, compressionAlgorithm, compressionLevel, excludeIndexes,
                                     info =>
                                     {
                                         AddInfo(info.Message);
@@ -640,7 +641,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                                         }
                                     }, TaskCancelToken.Token);
 
-                                FlushToDisk(stream);
+                                FlushToDisk(uploader.Stream);
 
                                 EnsureSnapshotProcessed(databaseSummary, smugglerResult, indexesCount);
                             }
@@ -687,9 +688,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             IOExtensions.RenameFile(tempBackupFilePath, backupFilePath);
         }
 
-        protected virtual Stream GetStreamForBackupDestination(string filePath, string folderName, string fileName)
+        protected virtual BackupDestinationStream GetUploaderForBackupDestination(string filePath, string folderName, string fileName)
         {
-            return SafeFileStream.Create(filePath, FileMode.Create);
+            return new BackupDestinationStream()
+            {
+                Stream = SafeFileStream.Create(filePath, FileMode.Create)
+            };
         }
 
         public static string GetBackupDescription(BackupType backupType, bool isFull)
@@ -786,8 +790,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             startDocumentEtag = startDocumentEtag == null ? 0 : ++startDocumentEtag;
             startRaftIndex = startRaftIndex == null ? 0 : ++startRaftIndex;
 
-            using (var stream = GetStreamForBackupDestination(backupFilePath, folderName, fileName))
-            using (var outputStream = GetOutputStream(stream))
+            using (var uploader = GetUploaderForBackupDestination(backupFilePath, folderName, fileName))
+            using (var outputStream = GetOutputStream(uploader.Stream))
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext smugglerContext))
             {

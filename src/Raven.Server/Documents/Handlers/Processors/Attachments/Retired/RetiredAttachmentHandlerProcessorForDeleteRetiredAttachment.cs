@@ -1,6 +1,7 @@
 ﻿using System;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
 {
@@ -10,11 +11,19 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
         {
         }
 
-        protected override void CheckAttachmentFlagAndThrowIfNeeded(string docId, string name, Attachment attachment)
+        protected override void CheckAttachmentFlagAndThrowIfNeeded(string docId, string name)
         {
-            if (attachment.Flags.HasFlag(AttachmentFlags.Retired) == false)
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                throw new InvalidOperationException($"Cannot delete retired attachment '{name}' on document '{docId}' because it is not retired. Please use dedicated Client API.");
+                var attachment = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, docId, name, AttachmentType.Document, changeVector: null);
+                if (attachment == null)
+                    return;
+
+                if (attachment.Flags.HasFlag(AttachmentFlags.Retired) == false)
+                {
+                    throw new InvalidOperationException($"Cannot delete retired attachment '{name}' on document '{docId}' because it is not retired. Please use dedicated Client API.");
+                }
             }
 
             var dbRecord = RequestHandler.Database.ReadDatabaseRecord();

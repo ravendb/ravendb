@@ -15,14 +15,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
         protected override async ValueTask DeleteAttachmentAsync(DocumentsOperationContext _, string docId, string name, LazyStringValue changeVector)
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var attachment = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, docId, name, AttachmentType.Document, changeVector: null);
-                if(attachment == null)
-                    return;
-                CheckAttachmentFlagAndThrowIfNeeded(docId, name, attachment);
-            }
+            CheckAttachmentFlagAndThrowIfNeeded(docId, name);
 
             var cmd = new AttachmentHandler.MergedDeleteAttachmentCommand
             {
@@ -32,22 +25,21 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 Name = name
             };
             await RequestHandler.Database.TxMerger.Enqueue(cmd);
-            /* IF I am retired attachment
-            I would like to use exising mechanizm of retiring attachment, to also delete it from cloud
-            what I need to do, here: populate the tree or RetiredAttachments with some flag? 
-
-            Then send MergedDeleteAttachmentCommand just to delete the attachment from attachments table
-
-
-            */
-            // here send a task to remove the attachment from cloud?
         }
 
-        protected virtual void CheckAttachmentFlagAndThrowIfNeeded(string docId, string name, Attachment attachment)
+        protected virtual void CheckAttachmentFlagAndThrowIfNeeded(string docId, string name)
         {
-            if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{docId}' because it is retired. Please use dedicated API.");
+                var attachment = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, docId, name, AttachmentType.Document, changeVector: null);
+                if (attachment == null)
+                    return;
+
+                if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+                {
+                    throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{docId}' because it is retired. Please use dedicated API.");
+                }
             }
         }
     }

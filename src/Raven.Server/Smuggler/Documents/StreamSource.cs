@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -1567,6 +1566,8 @@ namespace Raven.Server.Smuggler.Documents
                 ["Hash"] = details.Hash,
                 ["ContentType"] = string.Empty,
                 ["Size"] = details.Size,
+                [nameof(AttachmentName.Flags)] = AttachmentFlags.None,
+                [nameof(AttachmentName.RetireAt)] = null
             };
             var attachments = new DynamicJsonArray();
             attachments.Add(attachment);
@@ -1685,7 +1686,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     //TODO: egor do this only if the dump is old (pre v6.2)
                     // hashBySize == null means there was no attachment streams in the dump
-                    if (hashBySize != null && metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray att) && att.Length > 0)
+                    if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray att) && att.Length > 0)
                     {
                         var didWork = false;
                         var results = new DynamicJsonArray();
@@ -1694,24 +1695,35 @@ namespace Raven.Server.Smuggler.Documents
                             var attachmentInMetadata = (BlittableJsonReaderObject)att[i];
                             if (attachmentInMetadata.TryGet(nameof(AttachmentName.Hash), out string hash) == false)
                             {
+                                // TODO: egor this should skip this item from the results array
+                                didWork = true;
                                 if (_log.IsOperationsEnabled)
                                     _log.Operations($"Ignoring an attachment because couldn't parse its hash: {attachmentInMetadata}");
                                 continue;
                             }
 
-                            if (hashBySize.ContainsKey(hash) == false)
-                            {
-                                if (_log.IsOperationsEnabled)
-                                    _log.Operations($"Ignoring an attachment with hash '{hash}' because couldn't find its size.");
-                                continue;
-                            }
-
                             if (attachmentInMetadata.TryGet(nameof(AttachmentName.Size), out long _) == false)
                             {
-                                attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
+                                if (hashBySize.ContainsKey(hash) == false)
                                 {
-                                    [nameof(AttachmentName.Size)] = hashBySize[hash]
-                                };
+                                    //TODO: egor can this happen? we dont have size in attachment metadata and dont have stream 
+                                    //  didWork = true;
+                                    if (_log.IsOperationsEnabled)
+                                        _log.Operations($"Ignoring an attachment with hash '{hash}' for document '{modifier.Id}' because couldn't find its size. Attachment metadata: {attachmentInMetadata}");
+                                    // continue;
+                                    Debug.Assert(false, "imported attachment doesn't have size & stream");
+                                    attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
+                                    {
+                                        [nameof(AttachmentName.Size)] = 0L
+                                    };
+                                }
+                                else
+                                {
+                                    attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
+                                    {
+                                        [nameof(AttachmentName.Size)] = hashBySize[hash]
+                                    };
+                                }
                             }
 
                             if (attachmentInMetadata.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false)
@@ -1730,7 +1742,22 @@ namespace Raven.Server.Smuggler.Documents
                                 }
                             }
 
-                            if (data.Modifications != null)
+                            if (attachmentInMetadata.TryGet(nameof(AttachmentName.RetireAt), out DateTime? _) == false)
+                            {
+                                if (attachmentInMetadata.Modifications == null)
+                                {
+                                    attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
+                                    {
+                                        [nameof(AttachmentName.RetireAt)] = null
+                                    };
+                                }
+                                else
+                                {
+                                    attachmentInMetadata.Modifications[nameof(AttachmentName.RetireAt)] = null;
+                                }
+                            }
+
+                            if (attachmentInMetadata.Modifications != null)
                             {
                                 didWork = true;
                             }
