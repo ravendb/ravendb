@@ -47,7 +47,7 @@ class collectionsTracker {
     }
 
     private collectionsLoaded(collectionsStats: collectionsStats) {
-        const collections = collectionsStats.collections.filter(x => !x.documentCount());
+        const collections = collectionsStats.collections.filter(x => x.documentCount());
         
         collections.sort((a, b) => this.sortAlphaNumericCollection(a.name, b.name));
 
