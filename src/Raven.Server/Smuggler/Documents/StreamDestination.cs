@@ -477,10 +477,47 @@ namespace Raven.Server.Smuggler.Documents
 
                             _writer.WriteEndObject();
                         }
+
+                        if (databaseRecord.Studio != null)
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.Studio));
+
+                            WriteStudioConfiguration(databaseRecord.Studio);
+                        }
+
+                        if (databaseRecord.RevisionsForConflicts != null)
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.RevisionsForConflicts));
+
+                            WriteRevisionsForConflictsConfiguration(databaseRecord.RevisionsForConflicts);
+                        }
+
                         break;
                 }
 
                 await _writer.MaybeFlushAsync();
+            }
+
+            private void WriteRevisionsForConflictsConfiguration(RevisionsCollectionConfiguration revisionsForConflictsConfiguration)
+            {
+                if (revisionsForConflictsConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _context.Write(_writer, revisionsForConflictsConfiguration.ToJson());
+            }
+
+            private void WriteStudioConfiguration(StudioConfiguration studioConfiguration)
+            {
+                if (studioConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _context.Write(_writer, studioConfiguration.ToJson());
             }
 
             private void WriteHubPullReplications(List<PullReplicationDefinition> hubPullReplications)

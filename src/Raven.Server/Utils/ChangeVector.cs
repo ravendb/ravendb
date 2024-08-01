@@ -315,6 +315,8 @@ public sealed class ChangeVector
 
     public ChangeVector StripTrxnTags(IChangeVectorOperationContext context) => StripTags(ChangeVectorParser.TrxnTag, exclude: null, context);
 
+    public ChangeVector StripSinkTags(IChangeVectorOperationContext context) => StripTags(ChangeVectorParser.SinkTag, exclude: null, context);
+
     public ChangeVector StripSinkTags(string exclude, IChangeVectorOperationContext context) => StripTags(ChangeVectorParser.SinkTag, exclude, context);
 
     private static string StripTags(string from, string tag, string exclude)

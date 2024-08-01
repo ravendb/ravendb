@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -693,6 +694,34 @@ namespace Raven.Server.Smuggler.Documents
                         databaseRecord.IndexesHistory = null; // skip when we hit a error.
                         if (_log.IsInfoEnabled)
                             _log.Info("Wasn't able to import the IndexesHistory from smuggler file. Skipping.", e);
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.Studio), out BlittableJsonReaderObject studioConfig) &&
+                    studioConfig != null)
+                {
+                    try
+                    {
+                        databaseRecord.Studio = JsonDeserializationCluster.StudioConfiguration(studioConfig);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the studio configuration from smuggler file. Skipping.", e);
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.RevisionsForConflicts), out BlittableJsonReaderObject revisionForConflicts) &&
+                    revisionForConflicts != null)
+                {
+                    try
+                    {
+                        databaseRecord.RevisionsForConflicts = JsonDeserializationCluster.RevisionsCollectionConfiguration(revisionForConflicts);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the RevisionsForConflicts configuration from smuggler file. Skipping.", e);
                     }
                 }
 
