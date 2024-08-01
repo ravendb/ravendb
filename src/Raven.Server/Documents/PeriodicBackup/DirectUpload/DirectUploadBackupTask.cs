@@ -5,21 +5,21 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
-public class DirectUploadBackupTask : BackupTask
+public partial class DirectUploadBackupTask : BackupTask
 {
-    private readonly DirectBackupUploader _directBackupUploader;
-
     internal DirectUploadBackupTask(DocumentDatabase database, BackupParameters backupParameters,
         BackupConfiguration configuration, OperationCancelToken token, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null) : base(database, backupParameters, configuration, token, logger, forTestingPurposes)
     {
-        var uploaderSettings = UploaderSettings.GenerateUploaderSettingForBackup(database, Configuration, _taskName, _isServerWide, _backupToLocalFolder, OnBackupException);
-        var destination = BackupConfigurationHelper.GetBackupDestinationForDirectUpload(_backupToLocalFolder, configuration, database.Configuration.Backup);
-        _directBackupUploader = new DirectBackupUploader(uploaderSettings, RetentionPolicyParameters, logger, BackupResult, _onProgress, token);
     }
 
-    protected override Stream GetStreamForBackupDestination(string filePath, string folderName, string fileName)
+    protected override BackupDestinationStream GetUploaderForBackupDestination(string filePath, string folderName, string fileName)
     {
-        return _directBackupUploader.StreamForBackupDestination(Database, folderName, fileName);
+        var uploaderSettings = UploaderSettings.GenerateUploaderSettingForBackup(Database, Configuration, _taskName, _isServerWide, _backupToLocalFolder, OnBackupException);
+        var backupUploader = new DirectBackupUploader(uploaderSettings, RetentionPolicyParameters, _logger, BackupResult, _onProgress, TaskCancelToken);
+        return new BackupDestinationStream()
+        {
+            Stream = backupUploader.StreamForBackupDestination(Database, folderName, fileName), BackupUploader = backupUploader
+        };
     }
 
     protected override void UploadToServer(string backupFilePath, string folderName, string fileName)
