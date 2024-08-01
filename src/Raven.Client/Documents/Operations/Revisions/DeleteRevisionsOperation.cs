@@ -27,14 +27,15 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         /// <param name="documentIds">
         /// A list of document IDs whose revisions you want to delete. 
-        /// Default is an empty list if not provided.
         /// </param>
         /// <exception cref="ArgumentNullException">
         /// Thrown when the <paramref name="documentIds"/> parameter is null or empty.
         /// </exception>
 
         /// <param name="removeForceCreatedRevisions">
-        /// Indicates whether to include force-created revisions in the deletion. Default is <c>false</c>
+        /// Indicates whether to include force-created revisions in the deletion 
+        /// (Can find more info <see href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
+        /// Default is <c>false</c>.
         /// </param>
 
         public DeleteRevisionsOperation(List<string> documentIds, bool removeForceCreatedRevisions = false)
@@ -64,7 +65,9 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </exception>
 
         /// <param name="removeForceCreatedRevisions">
-        /// Indicates whether to include force-created revisions in the deletion. Default is <c>false</c>
+        /// Indicates whether to include force-created revisions in the deletion 
+        /// (Can find more info <see href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
+        /// Default is <c>false</c>.
         /// </param>
 
         public DeleteRevisionsOperation(string documentId, bool removeForceCreatedRevisions = false)
@@ -88,7 +91,6 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         /// <param name="documentIds">
         /// A list of document IDs whose revisions you want to delete. 
-        /// Default is an empty list if not provided.
         /// </param>
         /// <exception cref="ArgumentNullException">
         /// Thrown when the <paramref name="documentIds"/> parameter is null or empty.
@@ -105,7 +107,9 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </exception>
 
         /// <param name="removeForceCreatedRevisions">
-        /// Indicates whether to include force-created revisions in the deletion. Default is <c>false</c>
+        /// Indicates whether to include force-created revisions in the deletion.
+        /// (Can find more info <see href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
+        /// Default is <c>false</c>.
         /// </param>
 
         public DeleteRevisionsOperation(List<string> documentIds, DateTime? from, DateTime? to, bool removeForceCreatedRevisions = false)
@@ -147,7 +151,9 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </exception>
 
         /// <param name="removeForceCreatedRevisions">
-        /// Indicates whether to include force-created revisions in the deletion. Default is <c>false</c>
+        /// Indicates whether to include force-created revisions in the deletion 
+        /// (Can find more info <see href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
+        /// Default is <c>false</c>.
         /// </param>
 
         public DeleteRevisionsOperation(string documentId, DateTime? from, DateTime? to, bool removeForceCreatedRevisions = false)
@@ -186,7 +192,9 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </exception>
 
         /// <param name="removeForceCreatedRevisions">
-        /// Include also "Force Created" revisions on the deletion. Default is <c>false</c>
+        /// Indicates whether to include force-created revisions in the deletion 
+        /// (Can find more info <see href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
+        /// Default is <c>false</c>.
         /// </param>
 
         public DeleteRevisionsOperation(string documentId, List<string> revisionsChangeVectors, bool removeForceCreatedRevisions = false)
