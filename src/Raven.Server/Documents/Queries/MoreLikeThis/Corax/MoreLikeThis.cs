@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -198,25 +198,29 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         var indexSearcher = _builderParameters.IndexSearcher;
         Dictionary<string, int> termFreqMap = new();
         Page p = default;
-        var indexEntry = indexSearcher.GetEntryTermsReader(documentId, ref p);
+        
+        indexSearcher.GetEntryTermsReader(documentId, ref p, out var indexEntry);
 
         var fields = _fieldNames.Select(x => indexSearcher.FieldCache.GetLookupRootPage(x)).ToHashSet();
-        
-        while (indexEntry.MoveNext())
-        {
-            if (fields.Contains(indexEntry.FieldRootPage) == false)
-                continue;
-            
-            if (indexEntry.IsNonExisting)
-                continue;
 
-            var key = indexEntry.IsNull 
-                ? null
-                : indexEntry.Current.Decoded();
+        using (indexEntry)
+        {
+            while (indexEntry.MoveNext())
+            {
+                if (fields.Contains(indexEntry.FieldRootPage) == false)
+                    continue;
             
-            InsertTerm(key, indexEntry.Frequency);
+                if (indexEntry.IsNonExisting)
+                    continue;            
+
+
+                var key = indexEntry.IsNull
+                    ? null
+                    : indexEntry.Current.Decoded();
+                InsertTerm(key, indexEntry.Frequency); 
+            }
         }
-        
+
         return CreateQueue(termFreqMap);
         
         

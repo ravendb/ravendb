@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -36,6 +36,7 @@ using Constants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using CoraxSpatialResult = global::Corax.Utils.Spatial.SpatialResult;
+using Raven.Server.Documents.Replication.ReplicationItems;
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
@@ -369,6 +370,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         // documents that we have already included during this request. 
         protected struct IdentityTracker<TDistinct> where TDistinct : struct, IHasDistinct
         {
+            private LowLevelTransaction _llt;
             private Index _index;
             private IndexQueryServerSide _query;
             private IndexSearcher _searcher;
@@ -382,8 +384,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             public long QueryStart;
             private TermsReader _documentIdReader;
 
-            public void Initialize(Index index, IndexQueryServerSide query, IndexSearcher searcher, TermsReader documentIdReader, IndexFieldsMapping fieldsMapping, IQueryResultRetriever retriever)
+            public void Initialize(LowLevelTransaction llt, Index index, IndexQueryServerSide query, IndexSearcher searcher, TermsReader documentIdReader, IndexFieldsMapping fieldsMapping, IQueryResultRetriever retriever)
             {
+                _llt = llt;
                 _index = index;
                 _query = query;
                 _searcher = searcher;
@@ -429,20 +432,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return limit;
                 }
 
+                using var _ = _llt.AcquireCompactKey(out var existingKey);
+
                 if (typeof(TDistinct) == typeof(HasDistinct))
                 {
                     _alreadySeenProjections ??= new();
 
                     var retriever = _retriever;
+                    
                     Page page = default;
                     foreach (var id in distinctIds)
                     {
-                        var reader = _searcher.GetEntryTermsReader(id, ref page);
+                        _searcher.GetEntryTermsReader(id, ref page, out var reader, existingKey);
 
                         var key = _documentIdReader.GetTermFor(id);
                         var retrieverInput = new RetrieverInput(_searcher, _fieldsMapping, reader, key, _index.IndexFieldsPersistence.HasTimeValues);
                         var result = retriever.Get(ref retrieverInput, token);
-
+                        
                         if (result.Document != null)
                         {
                             if (result.Document.Data.Count > 0)
@@ -563,7 +569,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
 
             var identityTracker = new IdentityTracker<TDistinct>();
-            identityTracker.Initialize(_index, query, IndexSearcher, _documentIdReader, _fieldMappings, retriever);
+            var llt = documentsContext.Transaction.InnerTransaction.LowLevelTransaction;
+            identityTracker.Initialize(llt, _index, query, IndexSearcher, _documentIdReader, _fieldMappings, retriever);
 
             long pageSize = query.PageSize;
 
@@ -663,6 +670,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     }
                 }
 
+                using var scope = documentsContext.Transaction.InnerTransaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
+
                 // We don't need to do any processing for the query beyond counting if we are getting a count.
                 while (query.IsCountQuery == false || typeof(TDistinct) == typeof(HasDistinct))
                 {
@@ -710,7 +719,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         CoraxSpatialResult? documentDistance = hasOrderByDistance ? sortingData.DistancesBuffer[i] : null;
 
                         var key = _documentIdReader.GetTermFor(indexEntryId);
-                        EntryTermsReader entryTermsReader = IndexSearcher.GetEntryTermsReader(indexEntryId, ref page);
+                        
+                        IndexSearcher.GetEntryTermsReader(indexEntryId, ref page, out var entryTermsReader, existingKey);
                         var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, in entryTermsReader, key, _index.IndexFieldsPersistence.HasTimeValues, documentScore, documentDistance);
 
                         var filterResult = queryFilter.Apply(ref retrieverInput, key);
@@ -1260,8 +1270,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
             else
             {
-                using (var blittableJson = ParseJsonStringIntoBlittable(moreLikeThisQuery.BaseDocument, context))
-                    mltQuery = mlt.Like(blittableJson);
+                using var blittableJson = ParseJsonStringIntoBlittable(moreLikeThisQuery.BaseDocument, context);
+                mltQuery = mlt.Like(blittableJson);
             }
 
             if (moreLikeThisQuery.FilterQuery != null && moreLikeThisQuery.FilterQuery is AllEntriesMatch == false)
@@ -1271,10 +1281,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             long[] ids = QueryPool.Rent(pageSize);
+            
             var read = 0;
             long returnedDocs = 0;
             long skippedDocs = 0;
             Page page = default;
+            using var _ = context.Transaction.InnerTransaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
             while ((read = mltQuery.Fill(ids.AsSpan())) != 0)
             {
                 for (int i = 0; i < read; i++)
@@ -1297,8 +1309,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         skippedDocs++;
                         continue;
                     }
-                    
-                    var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page);
+
+                    IndexSearcher.GetEntryTermsReader(hit, ref page, out var termsReader);
                     var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues);
                     var result = retriever.Get(ref retrieverInput, token);
                     
@@ -1339,24 +1351,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             IQueryMatch queryMatch;
             var builderParameters = new CoraxQueryBuilder.Parameters(IndexSearcher, _allocator, null, null, query, _index, query.QueryParameters, QueryBuilderFactories, _fieldMappings, null, null, -1, indexReadOperation: this, token: token);
-            if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out _)) is null)
+            if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out var _)) is null)
                 yield break;
 
             var ids = QueryPool.Rent(CoraxBufferSize(IndexSearcher, take, query));
             int docsToLoad = CoraxBufferSize(IndexSearcher, pageSize, query);
             using var coraxEntryReader = new CoraxIndexedEntriesReader(documentsContext, IndexSearcher);
+            
             int read;
             long i = Skip();
             Page page = default;
+
+            using var _ = documentsContext.Transaction.InnerTransaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
+            
             while (true)
             {
                 token.ThrowIfCancellationRequested();
                 for (; docsToLoad != 0 && i < read; ++i, --docsToLoad)
                 {
                     token.ThrowIfCancellationRequested();
-                    var reader = IndexSearcher.GetEntryTermsReader(ids[i], ref page);
+                    IndexSearcher.GetEntryTermsReader(ids[i], ref page, out var reader, existingKey);
                     var id = _documentIdReader.GetTermFor(ids[i]);
-                    yield return documentsContext.ReadObject(coraxEntryReader.GetDocument(ref reader), id);
+
+                    var dynamicJsonValue = coraxEntryReader.GetDocument(ref reader);
+                    yield return documentsContext.ReadObject(dynamicJsonValue, id);
                 }
 
                 if ((read = queryMatch.Fill(ids)) == 0)

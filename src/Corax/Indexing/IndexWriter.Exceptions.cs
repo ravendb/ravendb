@@ -56,11 +56,6 @@ public partial class IndexWriter
         throw new NotSupportedException("You *must* dispose the previous builder before calling it again");
     }
     
-    private static void ThrowUnableToFindMatchingField(EntryTermsReader reader)
-    {
-        throw new InvalidOperationException($"Unable to find matching field for {reader.FieldRootPage} with root page:  {reader.FieldRootPage}. Term: '{reader.Current}'");
-    }
-
     private static void ThrowUnableToLocateEntry(long entryToDelete)
     {
         throw new InvalidOperationException("Unable to locate entry id: " + entryToDelete);

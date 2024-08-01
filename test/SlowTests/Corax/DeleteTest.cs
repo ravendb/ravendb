@@ -122,7 +122,7 @@ public class DeleteTest : StorageTest
             Page p = default;
             for (int i = 0; i < read; i++)
             {
-                var entry = indexSearcher.GetEntryTermsReader(ids[i], ref p);
+                indexSearcher.GetEntryTermsReader(ids[i], ref p, out var entry);
                 Assert.True(entry.FindNext(fieldRootPage));
                 Assert.NotEqual(Encoding.UTF8.GetString(idAsBytes), Encoding.UTF8.GetString(entry.Current.Decoded()));
             }

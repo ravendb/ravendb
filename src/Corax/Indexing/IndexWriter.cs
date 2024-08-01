@@ -458,7 +458,8 @@ namespace Corax.Indexing
         
         private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, HashSet<long> nullTermMarkers, HashSet<long> nonExistingTermMarkers, long dicId, long entryToDelete, int termsPerEntryIndex)
         {
-            var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId);
+            using var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId);
+            
             reader.Reset();
             while (reader.MoveNextStoredField())
             {
@@ -473,7 +474,8 @@ namespace Corax.Indexing
             {
                 if (fieldsByRootPage.TryGetValue(reader.FieldRootPage, out var field) == false)
                 {
-                    ThrowUnableToFindMatchingField(reader);
+                    PortableExceptions.Throw<InvalidOperationException>(
+                        $"Unable to find matching field for {reader.FieldRootPage} with root page:  {reader.FieldRootPage}. Term: '{reader.Current}'");
                 }
 
                 if (reader.IsNull)

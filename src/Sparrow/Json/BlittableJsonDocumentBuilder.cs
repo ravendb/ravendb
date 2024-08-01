@@ -9,14 +9,15 @@ namespace Sparrow.Json
 {
     public sealed class BlittableJsonDocumentBuilder : AbstractBlittableJsonDocumentBuilder, IDisposableQueryable
     {
-        private static readonly StringSegment UnderscoreSegment = new("_");
-
         private readonly JsonOperationContext _context;
         private UsageMode _mode;
         private readonly IJsonParser _reader;
-        public IBlittableDocumentModifier _modifier;
         private readonly BlittableWriter<UnmanagedWriteBuffer> _writer;
         private readonly JsonParserState _state;
+        internal IBlittableDocumentModifier _modifier;
+
+        private static readonly StringSegment UnderscoreSegment = new("_");
+        private LazyStringValue _underscoreSegment;
         private LazyStringValue _fakeFieldName;
 
         private readonly SingleUseFlag _disposed = new();
@@ -85,7 +86,8 @@ namespace Sparrow.Json
             _writer.ResetAndRenew();
             _modifier?.Reset(_context);
 
-            _fakeFieldName = _context.GetLazyStringForFieldWithCaching(UnderscoreSegment);
+            _underscoreSegment ??= _context.GetLazyStringForFieldWithCaching(UnderscoreSegment);
+            _fakeFieldName = _underscoreSegment;
         }
 
         public void ReadArrayDocument()
