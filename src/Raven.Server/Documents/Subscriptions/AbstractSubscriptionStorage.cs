@@ -16,6 +16,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using static Raven.Server.Documents.Subscriptions.SubscriptionStorage;
 
 namespace Raven.Server.Documents.Subscriptions;
 
@@ -29,6 +30,7 @@ public abstract class AbstractSubscriptionStorage
     protected abstract string GetNodeFromState(SubscriptionState taskStatus);
     protected abstract DatabaseTopology GetTopology(ClusterOperationContext context);
     public abstract bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex);
+    public abstract SubscriptionState GetRunningSubscription(ClusterOperationContext context, long? id, string name, bool history);
 
     public abstract bool DisableSubscriptionTasks { get; }
     private readonly TimeSpan _waitForClusterStabilizationTimeout;
@@ -163,6 +165,18 @@ public abstract class AbstractSubscriptionStorage
         }
 
         return null;
+    }
+
+    public virtual SubscriptionState GetSubscriptionFromServerStore(ClusterOperationContext context, string name)
+    {
+        var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_databaseName, name));
+
+        if (subscriptionBlittable == null)
+            throw new SubscriptionDoesNotExistException($"Subscription with name '{name}' was not found in server store");
+
+        var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
+
+        return subscriptionState;
     }
 
     public bool TryEnterSubscriptionsSemaphore()
@@ -393,6 +407,102 @@ public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscription
         }
     }
 
+    protected static void SetSubscriptionHistory(AbstractSubscriptionConnectionsState subscriptionConnectionsState, SubscriptionDataAbstractBase subscriptionData)
+    {
+        subscriptionData.RecentConnections = subscriptionConnectionsState.RecentConnections;
+        subscriptionData.RecentRejectedConnections = subscriptionConnectionsState.RecentRejectedConnections;
+        subscriptionData.CurrentPendingConnections = subscriptionConnectionsState.PendingConnections;
+    }
+
+    protected SubscriptionState GetRunningSubscriptionInternal(ClusterOperationContext context, long? id, string name, bool history, out TState connectionsState)
+    {
+        SubscriptionState state;
+        if (string.IsNullOrEmpty(name) == false)
+        {
+            state = GetSubscriptionFromServerStore(context, name);
+        }
+        else if (id.HasValue)
+        {
+            name = GetSubscriptionNameById(context, id.Value);
+            state = GetSubscriptionFromServerStore(context, name);
+        }
+        else
+        {
+            throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
+        }
+
+        if (_subscriptions.TryGetValue(state.SubscriptionId, out connectionsState) == false)
+            return null;
+
+        if (connectionsState.IsSubscriptionActive() == false)
+            return null;
+
+        return state;
+    }
+
+    public virtual SubscriptionState GetSubscription(ClusterOperationContext context, long? id, string name, bool history)
+    {
+        SubscriptionState state;
+
+        if (string.IsNullOrEmpty(name) == false)
+        {
+            state = GetSubscriptionFromServerStore(context, name);
+        }
+        else if (id.HasValue)
+        {
+            state = GetSubscriptionFromServerStore(context, id.ToString());
+        }
+        else
+        {
+            throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
+        }
+
+        return state;
+    }
+
+    public IEnumerable<(SubscriptionState, TState)> GetAllRunningSubscriptionsInternal(ClusterOperationContext context, bool history, int start, int take)
+    {
+        foreach (var kvp in _subscriptions)
+        {
+            var subscriptionConnectionsState = kvp.Value;
+
+            if (subscriptionConnectionsState.IsSubscriptionActive() == false)
+                continue;
+
+            if (start > 0)
+            {
+                start--;
+                continue;
+            }
+
+            if (take-- <= 0)
+                yield break;
+
+            var state = GetSubscriptionFromServerStore(context, subscriptionConnectionsState.SubscriptionName);
+
+            yield return (state, subscriptionConnectionsState);
+        }
+    }
+
+    public virtual IEnumerable<SubscriptionState> GetAllSubscriptions(ClusterOperationContext context, bool history, int start, int take)
+    {
+        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(_databaseName)))
+        {
+            if (start > 0)
+            {
+                start--;
+                continue;
+            }
+
+            if (take-- <= 0)
+                yield break;
+
+            var task = JsonDeserializationClient.SubscriptionState(keyValue.Value);
+
+            yield return task;
+        }
+    }
+
     public void LowMemoryOver()
     {
         // nothing to do here
@@ -408,5 +518,36 @@ public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscription
         }
 
         aggregator.ThrowIfNeeded();
+    }
+
+    public abstract class SubscriptionDataAbstractBase : SubscriptionState
+    {
+        public IEnumerable<SubscriptionConnectionInfo> RecentConnections;
+        public IEnumerable<SubscriptionConnectionInfo> RecentRejectedConnections;
+        public IEnumerable<SubscriptionConnectionInfo> CurrentPendingConnections;
+    }
+
+    public class SubscriptionDataBase<T> : SubscriptionDataAbstractBase
+    {
+        public List<T> Connections;
+
+        public SubscriptionDataBase() { }
+
+        public SubscriptionDataBase(SubscriptionState @base)
+        {
+            Query = @base.Query;
+            ChangeVectorForNextBatchStartingPoint = @base.ChangeVectorForNextBatchStartingPoint;
+            SubscriptionId = @base.SubscriptionId;
+            SubscriptionName = @base.SubscriptionName;
+            ArchivedDataProcessingBehavior = @base.ArchivedDataProcessingBehavior;
+            MentorNode = @base.MentorNode;
+            PinToMentorNode = @base.PinToMentorNode;
+            NodeTag = @base.NodeTag;
+            LastBatchAckTime = @base.LastBatchAckTime;
+            LastClientConnectionTime = @base.LastClientConnectionTime;
+            Disabled = @base.Disabled;
+            ShardingState = @base.ShardingState;
+            RaftCommandIndex = @base.RaftCommandIndex;
+        }
     }
 }
