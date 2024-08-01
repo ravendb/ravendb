@@ -73,8 +73,9 @@ public class SpatialTests : StorageTest
                 Span<long> ids = new long[16];
                 var entries = searcher.TermQuery("Coordinates", partialGeohash);
                 Assert.Equal(1, entries.Fill(ids));
+
                 Page p = default;
-                var reader = searcher.GetEntryTermsReader(ids[0], ref p);
+                searcher.GetEntryTermsReader(ids[0], ref p, out var reader);
                 long fieldRootPage = searcher.FieldCache.GetLookupRootPage(fieldsMapping.GetByFieldId(CoordinatesIndex).FieldName);
                 Assert.True(reader.FindNextSpatial(fieldRootPage));
                 

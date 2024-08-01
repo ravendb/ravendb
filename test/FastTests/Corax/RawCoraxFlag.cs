@@ -72,7 +72,8 @@ public class RawCoraxFlag : StorageTest
             var match = searcher.SearchQuery(_analyzers.GetByFieldId(0).Metadata, new List<string>(){"1"}, Constants.Search.Operator.Or);
             Assert.Equal(1, match.Fill(mem));
             Page p = default;
-            var result = searcher.GetEntryTermsReader(mem[0], ref p);
+            searcher.GetEntryTermsReader(mem[0], ref p, out var result);
+            
             long fieldRootPage = searcher.FieldCache.GetLookupRootPage(fieldName);
             Assert.True(result.FindNextStored(fieldRootPage));
             {
@@ -218,7 +219,8 @@ public class RawCoraxFlag : StorageTest
             var match = searcher.SearchQuery(_analyzers.GetByFieldId(0).Metadata, new List<string>(){"1"}, Constants.Search.Operator.Or);
             Assert.Equal(1, match.Fill(mem));
             Page p = default;
-            var result = searcher.GetEntryTermsReader(mem[0], ref p);
+            
+            searcher.GetEntryTermsReader(mem[0], ref p, out var result);
             var fieldRootPage = searcher.FieldCache.GetLookupRootPage(_analyzers.GetByFieldId(1).FieldName);
             Assert.True(result.FindNextStored(fieldRootPage));
 

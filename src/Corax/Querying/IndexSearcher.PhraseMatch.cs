@@ -1,16 +1,9 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
 using Corax.Mappings;
-using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
-using Sparrow.Compression;
-using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
-using static Voron.Global.Constants;
 
 namespace Corax.Querying;
 
@@ -29,11 +22,11 @@ public partial class IndexSearcher
         var vectorRootPage = GetRootPageByFieldName(termsVectorFieldName);
         var rootPage = GetRootPageByFieldName(field.FieldName);
 
+        using var _ = _fieldsTree.Llt.AcquireCompactKey(out var termKey);
+        
         for (var i = 0; i < terms.Length; ++i)
         {
-            var term = terms[i];
-            CompactKey termKey = _fieldsTree.Llt.AcquireCompactKey();
-            termKey.Set(term);
+            termKey.Set(terms[i]);
 
             // When the term doesn't exist, that means no document matches our query (phrase query is performing "AND" between them).
             if (compactTree.TryGetTermContainerId(termKey, out var termContainerId) == false)
@@ -42,6 +35,6 @@ public partial class IndexSearcher
             sequence[i] = termContainerId;
         }
         
-        return new PhraseMatch<TInner>(field, this, inner, sequenceBuffer, vectorRootPage, rootPage: rootPage);
+        return new PhraseMatch<TInner>(this, inner, sequenceBuffer, vectorRootPage, rootPage: rootPage);
     }
 }

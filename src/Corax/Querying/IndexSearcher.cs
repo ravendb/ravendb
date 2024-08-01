@@ -116,8 +116,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             _fieldMapping = fieldsMapping;
         }
     }
-    
-    public EntryTermsReader GetEntryTermsReader(long id, ref Page p)
+
+    public void GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader, CompactKey existingKey = null)
     {
         if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
@@ -127,11 +127,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             _nullTermsMarkersLoaded = true;
             InitializeNullTermsMarkers();
         }
-        
+
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, item.Address, item.Length, _dictionaryId);
+        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, item.Address, item.Length, _dictionaryId, existingKey);
     }
-    
+
     internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref ContextBoundNativeList<Slice> terms)
     {
         if (term.Length == 0 || term.SequenceEqual(Constants.EmptyStringCharSpan.Span))

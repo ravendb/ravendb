@@ -72,22 +72,17 @@ public sealed unsafe class CompactKey : IDisposable
         StoragePool ??= ArrayPool<byte>.Create();
         KeyMappingPool ??= ArrayPool<long>.Create();
 
-        _storage = StoragePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
-        _keyMappingCache = KeyMappingPool.Rent(2 * MappingTableMask);
+        _storage ??= StoragePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
+        _keyMappingCache ??= KeyMappingPool.Rent(2 * MappingTableMask);
     }
 
     public void Reset()
     {
-        if (_storage is null || _keyMappingCache is null)
-            throw new InvalidOperationException("The key has not been initialized before calling reset.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(
+            _storage is null || _keyMappingCache is null, 
+            "The key has not been initialized before calling reset.");
 
         _owner = null;
-
-        StoragePool.Return(_storage);
-        _storage = null;
-
-        KeyMappingPool.Return(_keyMappingCache);
-        _keyMappingCache = null;
     }
 
     public bool IsValid => Dictionary > 0;
@@ -403,10 +398,22 @@ public sealed unsafe class CompactKey : IDisposable
         var result = Memory.CompareInline(ref MemoryMarshal.GetReference(encodedKey), ref nextEntryRef, Math.Min(encodedLength, nextEntryLength));
         return result == 0 ? encodedLength - nextEntryLength : result;
     }
-
+    
     public void Dispose()
     {
-        Reset();
+        if (_storage is null)
+        {
+            StoragePool.Return(_storage);
+            _storage = null;
+        }
+
+        if (_keyMappingCache is null)
+        {
+            KeyMappingPool.Return(_keyMappingCache);
+            _keyMappingCache = null;
+        }
+
+        _owner = null;
     }
 
     public int Compare(CompactKey value)

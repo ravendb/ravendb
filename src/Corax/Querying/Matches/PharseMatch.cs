@@ -21,16 +21,14 @@ public struct PhraseMatch<TInner> : IQueryMatch
     
     
     private TInner _inner;
-    private readonly FieldMetadata _fieldMetadata;
     private readonly IndexSearcher _indexSearcher;
     private readonly ByteString _subsequence;
     private readonly long _vectorRootPage;
     private readonly long _rootPage;
 
 
-    public PhraseMatch(in FieldMetadata fieldMetadata, IndexSearcher indexSearcher, TInner inner, ByteString subsequence, long vectorRootPage, long rootPage)
+    public PhraseMatch(IndexSearcher indexSearcher, TInner inner, ByteString subsequence, long vectorRootPage, long rootPage)
     {
-        _fieldMetadata = fieldMetadata;
         _indexSearcher = indexSearcher;
         _inner = inner;
         _subsequence = subsequence;
@@ -77,10 +75,12 @@ public struct PhraseMatch<TInner> : IQueryMatch
         Span<int> indexes = _memoryHandler is null 
           ? stackalloc int[128]
           : MemoryMarshal.Cast<byte, int>(_memory.ToSpan().Slice(MemorySize * sizeof(long)));
-        
+
+        using var _ = _indexSearcher.Transaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
+
         for (var processingId = 0; processingId < matches.Length; ++processingId)
         {
-            var entryTermsReader = _indexSearcher.GetEntryTermsReader(matches[processingId], ref p);
+            _indexSearcher.GetEntryTermsReader(matches[processingId], ref p, out var entryTermsReader, existingKey);
             if (entryTermsReader.FindNextStored(_vectorRootPage) == false)
                 continue;
             
@@ -149,7 +149,8 @@ public struct PhraseMatch<TInner> : IQueryMatch
     internal string RenderOriginalSentence(long documentId)
     {
         var p = default(Page);
-        var entryTermsReader = _indexSearcher.GetEntryTermsReader(documentId, ref p);
+        
+        _indexSearcher.GetEntryTermsReader(documentId, ref p, out var entryTermsReader);
         
         if (entryTermsReader.FindNextStored(_vectorRootPage) == false)
             return "NO PHRASE QUERY";

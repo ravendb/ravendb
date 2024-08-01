@@ -128,27 +128,31 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
 
     private bool CheckEntryManually(long id)
     {
-        if (_alreadyReturned?.TryGetValue(id, out _) ?? false)
+        if (_alreadyReturned?.TryGetValue(id, out var _) ?? false)
         {
             return false;
         }
         _alreadyReturned ??= new HashSet<long>();
-        var termsReader = _indexSearcher.GetEntryTermsReader(id, ref _lastPage);
+
+        using var _ = _indexSearcher.Transaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
+
+        _indexSearcher.GetEntryTermsReader(id, ref _lastPage, out var termsReader, existingKey);
         while (termsReader.MoveNextSpatial())
         {
             if(termsReader.FieldRootPage != _fieldRootPage)
                 continue;
+            
             _point.Reset(termsReader.Longitude, termsReader.Latitude);
-            if (IsTrue(_point.Relate(_shape)))
+            if (!IsTrue(_point.Relate(_shape))) 
+                continue;
+            
+            if (_alreadyReturned.Add(id) && typeof(TBoosting) == typeof(HasBoosting))
             {
-                if (_alreadyReturned.Add(id) && typeof(TBoosting) == typeof(HasBoosting))
-                {
-                    ref var spatialScore = ref _spatialScore;
-                    spatialScore.Push(id, (float)SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, termsReader.Longitude, termsReader.Latitude));
-                }
-                
-                return true;
+                ref var spatialScore = ref _spatialScore;
+                spatialScore.Push(id, (float)SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, termsReader.Longitude, termsReader.Latitude));
             }
+                
+            return true;
         }
         
         return false;

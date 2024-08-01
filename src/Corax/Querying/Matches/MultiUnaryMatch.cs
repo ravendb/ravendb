@@ -444,13 +444,16 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
             ref var comparerFieldsRootPage = ref Unsafe.Add(ref MemoryMarshal.GetReference(comparerFieldsRootPages), i);
             comparerFieldsRootPage = fieldRoot;
         }
-        
+
+        using var _ = _searcher.Transaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
+
         do
         {
             int currentMatchesIdx = 0;
             for (int docIdx = 0; docIdx < read; ++docIdx)
             {
-                var reader = _searcher.GetEntryTermsReader(workingBuffer[docIdx], ref lastPage);
+                _searcher.GetEntryTermsReader(workingBuffer[docIdx], ref lastPage, out var reader, existingKey);
+                
                 var documentMatched = true;
                 
                 for (int comparerId = 0; comparerId < _comparers.Length; ++comparerId)
@@ -504,7 +507,8 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                 return matchesIdx;
             
             read = inner.Fill(workingBuffer);
-        } while (read > 0);
+        } 
+        while (read > 0);
 
         if (read == 0)
             _confidence = QueryCountConfidence.High;

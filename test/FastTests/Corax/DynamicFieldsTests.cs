@@ -56,7 +56,8 @@ public unsafe class DynamicFieldsTests : StorageTest
         using (var indexSearcher = new IndexSearcher(Env, knownFields))
         {
             Page p = default;
-            var reader = indexSearcher.GetEntryTermsReader(entryId, ref p);
+            indexSearcher.GetEntryTermsReader(entryId, ref p, out var reader);
+            
             long fieldRootPage = indexSearcher.FieldCache.GetLookupRootPage(fieldName);
             Assert.True(reader.FindNext(fieldRootPage));
             Assert.Equal(Constants.EmptyStringSlice.AsSpan().ToArray(), reader.Current.Decoded().ToArray());
@@ -272,8 +273,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         using (var searcher = new IndexSearcher(Env, fields))
         {
             Page p = default;
-            var reader = searcher.GetEntryTermsReader(documentId, ref p);
-            var debugView = reader.Debug();
+            searcher.GetEntryTermsReader(documentId, ref p, out _);
             searcher.GetTermAmountInField(fields.GetByFieldId(1).Metadata);
         }
 
@@ -393,8 +393,9 @@ public unsafe class DynamicFieldsTests : StorageTest
                 Span<long> ids = new long[16];
                 var entries = searcher.TermQuery("Coordinates_Home", partialGeohash);
                 Assert.Equal(1, entries.Fill(ids));
+                
                 Page p = default;
-                var reader = searcher.GetEntryTermsReader(ids[0], ref p);
+                searcher.GetEntryTermsReader(ids[0], ref p, out var reader);
                 Assert.True(reader.MoveNextSpatial());
                 Assert.Equal(reader.Latitude, latitude);
                 Assert.Equal(reader.Longitude, longitude);
@@ -460,7 +461,8 @@ public unsafe class DynamicFieldsTests : StorageTest
         using (var indexSearcher = new IndexSearcher(Env, fields))
         {
             Page p = default;
-            var reader = indexSearcher.GetEntryTermsReader(entryId, ref p);
+            indexSearcher.GetEntryTermsReader(entryId, ref p, out var reader);
+            
             long fieldRootPage = indexSearcher.FieldCache.GetLookupRootPage("CoordinatesIndex");
             long i = 0;
             var l = new List<(double lat, double lng)>();

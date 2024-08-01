@@ -53,7 +53,7 @@ public class IndexEntryReaderBigDoc : StorageTest
         using (var indexSearcher = new IndexSearcher(Env, knownFields))
         {
             Page p = default;
-            var reader = indexSearcher.GetEntryTermsReader(entryId, ref p);
+            indexSearcher.GetEntryTermsReader(entryId, ref p, out var reader);
             long fieldRootPage = indexSearcher.FieldCache.GetLookupRootPage("Badges");
             long i = 0;
             while (reader.FindNextStored(fieldRootPage))

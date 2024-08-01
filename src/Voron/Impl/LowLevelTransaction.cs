@@ -859,6 +859,21 @@ namespace Voron.Impl
             return key;
         }
 
+        public struct CompactKeyScope(LowLevelTransaction _llt, CompactKey _key) : IDisposable
+        {
+            public void Dispose()
+            {
+                _llt.ReleaseCompactKey(ref _key);
+            }
+        }
+        
+        public CompactKeyScope AcquireCompactKey(out CompactKey key)
+        {
+            key = _sharedCompactKeyPool.Allocate();
+            key.Initialize(this);
+            return new CompactKeyScope(this, key);
+        }
+
         public void ReleaseCompactKey(ref CompactKey key)
         {
             if (key == null)
