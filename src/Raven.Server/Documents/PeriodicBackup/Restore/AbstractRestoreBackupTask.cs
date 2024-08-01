@@ -563,6 +563,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.QueueEtls = smugglerDatabaseRecord.QueueEtls;
                     databaseRecord.QueueConnectionStrings = smugglerDatabaseRecord.QueueConnectionStrings;
                     databaseRecord.IndexesHistory = smugglerDatabaseRecord.IndexesHistory;
+                    databaseRecord.Refresh = smugglerDatabaseRecord.Refresh;
+                    databaseRecord.Integrations = smugglerDatabaseRecord.Integrations;
+                    databaseRecord.Studio = smugglerDatabaseRecord.Studio;
+                    databaseRecord.RevisionsForConflicts = smugglerDatabaseRecord.RevisionsForConflicts;
                 };
             }
 

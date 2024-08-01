@@ -2048,11 +2048,13 @@ namespace Raven.Server.Documents
                         }
                         break;
                     case 2:
-                        if (expectedValues.Contains(cvArray[0].NodeTag) == false ||
+                        if ((expectedValues.Contains(cvArray[0].NodeTag) == false ||
                             expectedValues.Contains(cvArray[1].NodeTag) == false ||
-                            cvArray[0].NodeTag == cvArray[1].NodeTag)
+                            cvArray[0].NodeTag == cvArray[1].NodeTag) &&
+                            cvArray[0].NodeTag != ChangeVectorParser.SinkInt &&
+                            cvArray[1].NodeTag != ChangeVectorParser.SinkInt)
                         {
-                            Debug.Assert(false, $"FromClusterTransaction, expect RAFT or TRXN, {changeVector}");
+                            Debug.Assert(false, $"FromClusterTransaction, expect RAFT or TRXN or SINK, {changeVector}");
                         }
                         break;
                     default:

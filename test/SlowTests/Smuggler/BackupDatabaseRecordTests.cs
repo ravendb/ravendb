@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations;
@@ -18,6 +20,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Integrations.PostgreSQL;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
@@ -26,8 +29,12 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.Util;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
@@ -41,6 +48,20 @@ namespace SlowTests.Smuggler
     {
         public BackupDatabaseRecordTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [RavenFact (RavenTestCategory.Smuggler)]
+        public void EnsureAllDatabaseRecordFieldsAreTested()
+        {
+            // If this test failed, that means a new field has been added to the database record.
+            // Make sure it is included in SmugglerRestore, StreamSource->GetDatabaseRecordAsync, StreamDestination->WriteDatabaseRecordAsync
+            // And add it to CanBackupAndRestoreDatabaseRecord and CanExportAndImportDatabaseRecord tests
+
+            var fieldNames = ReflectionUtil.GetPropertiesAndFieldsFor(typeof(DatabaseRecord), BindingFlags.Instance | BindingFlags.Public)
+                .Select(field => field.Name)
+                .ToList();
+
+            Assert.Equal(45, fieldNames.Count);
         }
 
         [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
@@ -1132,6 +1153,37 @@ namespace SlowTests.Smuggler
                     Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                 }));
 
+                await RefreshHelper.SetupExpiration(store, Server.ServerStore,
+                    new RefreshConfiguration() { Disabled = false, MaxItemsToProcess = 100, RefreshFrequencyInSec = 100 });
+
+                store.Maintenance.Send(new ConfigurePostgreSqlOperation(new PostgreSqlConfiguration
+                {
+                    Authentication = new PostgreSqlAuthenticationConfiguration()
+                    {
+                        Users = new List<PostgreSqlUser>()
+                        {
+                            new PostgreSqlUser()
+                            {
+                                Username = "jane",
+                                Password = "foo!@22"
+                            }
+                        }
+                    }
+                }));
+
+                // add studio configuration
+                var command = new PutDatabaseStudioConfigurationCommand(new ServerWideStudioConfiguration()
+                {
+                    Disabled = false,
+                    Environment = StudioConfiguration.StudioEnvironment.None
+                }, store.Database, RaftIdGenerator.NewId());
+                long index = (await Server.ServerStore.SendToLeaderAsync(command)).Index;
+                await Server.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, TimeSpan.FromSeconds(30));
+
+                //add RevisionsForConflicts configuration
+                store.Maintenance.Server.Send(new ConfigureRevisionsForConflictsOperation(store.Database,
+                    new RevisionsCollectionConfiguration() { Disabled = false, MinimumRevisionAgeToKeep = TimeSpan.FromDays(5) }));
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -1210,6 +1262,22 @@ namespace SlowTests.Smuggler
                     Assert.Equal("connection", record.SqlEtls.First().ConnectionStringName);
                     Assert.Equal(true, record.SqlEtls.First().AllowEtlOnNonEncryptedChannel);
                     Assert.Equal(false, record.SqlEtls.First().Disabled);
+
+                    Assert.NotNull(record.Refresh);
+                    Assert.False(record.Refresh.Disabled);
+                    Assert.Equal(100, record.Refresh.RefreshFrequencyInSec);
+
+                    Assert.NotNull(record.Integrations);
+                    Assert.Equal("jane", record.Integrations.PostgreSql.Authentication.Users.First().Username);
+                    Assert.Equal("foo!@22", record.Integrations.PostgreSql.Authentication.Users.First().Password);
+
+                    Assert.NotNull(record.Studio);
+                    Assert.False(record.Studio.Disabled);
+                    Assert.Equal(StudioConfiguration.StudioEnvironment.None, record.Studio.Environment);
+
+                    Assert.NotNull(record.RevisionsForConflicts);
+                    Assert.False(record.Disabled);
+                    Assert.Equal(TimeSpan.FromDays(5), record.RevisionsForConflicts.MinimumRevisionAgeToKeep);
                 }
             }
         }
