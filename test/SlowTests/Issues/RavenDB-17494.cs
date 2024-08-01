@@ -140,6 +140,101 @@ public class RavenDB_17494 : ClusterTestBase
         }
     }
 
+    [RavenTheory(RavenTestCategory.Revisions)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task DeleteRevisionsManuallyEpMultipleIDsTest(Options options)
+    {
+        var company1 = new Company { Id = "Companies/1-A", Name = "RavenDB_0" };
+        var company2 = new Company { Id = "Companies/2-B", Name = "RavenDB_0" };
+        var company3 = new Company { Id = "Companies/3-C", Name = "RavenDB_0" };
+        var company4 = new Company { Id = "Companies/4-C", Name = "RavenDB_0" };
+
+        using var store = GetDocumentStore(options);
+
+        var configuration = new RevisionsConfiguration
+        {
+            Default = new RevisionsCollectionConfiguration
+            {
+                Disabled = false,
+                MaximumRevisionsToDeleteUponDocumentUpdate = 4
+            }
+        };
+        await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(company1);
+            await session.StoreAsync(company2);
+            await session.StoreAsync(company3);
+            await session.StoreAsync(company4);
+            await session.SaveChangesAsync();
+        }
+
+        for (int i = 1; i < 4; i++)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var c1 = await session.LoadAsync<Company>(company1.Id);
+                c1.Name = $"RavenDB_{i}";
+
+                await session.SaveChangesAsync();
+            }
+        }
+
+        for (int i = 1; i < 12; i++)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var c2 = await session.LoadAsync<Company>(company2.Id);
+                c2.Name = $"RavenDB_{i}";
+
+                await session.SaveChangesAsync();
+            }
+        }
+
+        for (int i = 1; i < 8; i++)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var c3 = await session.LoadAsync<Company>(company3.Id);
+                c3.Name = $"RavenDB_{i}";
+
+                await session.SaveChangesAsync();
+            }
+        }
+
+        for (int i = 1; i < 12; i++)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var c4 = await session.LoadAsync<Company>(company4.Id);
+                c4.Name = $"RavenDB_{i}";
+
+                await session.SaveChangesAsync();
+            }
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            Assert.Equal(4, await session.Advanced.Revisions.GetCountForAsync(company1.Id));
+            Assert.Equal(12, await session.Advanced.Revisions.GetCountForAsync(company2.Id)); // missing revisions 6, 7, 8
+            Assert.Equal(8, await session.Advanced.Revisions.GetCountForAsync(company3.Id));
+            Assert.Equal(12, await session.Advanced.Revisions.GetCountForAsync(company4.Id));
+        }
+
+        var result = await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { company1.Id, company2.Id, company3.Id, company4.Id }));
+        Assert.Equal(12 * 3, result.TotalDeletes);
+
+
+        using (var session = store.OpenAsyncSession())
+        {
+            Assert.Equal(0, await session.Advanced.Revisions.GetCountForAsync(company1.Id));
+            Assert.Equal(0, await session.Advanced.Revisions.GetCountForAsync(company2.Id)); // missing revisions 6, 7, 8
+            Assert.Equal(0, await session.Advanced.Revisions.GetCountForAsync(company3.Id));
+            Assert.Equal(0, await session.Advanced.Revisions.GetCountForAsync(company4.Id));
+        }
+    }
+
     private class User
     {
         public string Id { get; set; }
