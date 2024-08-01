@@ -177,13 +177,9 @@ namespace Sparrow.Json
             if (len < indexOfDays + 1 + 8)
                 return false;
 
-            for (int i = indexOfDays + 1 + 8; i < len; i++)
+            if (buffer[indexOfDays + 1 + 8] == '.')
             {
-                if (buffer[i] == '.')
-                {
-                    indexOfMilliseconds = i;
-                    break;
-                }
+                indexOfMilliseconds = indexOfDays + 1 + 8;
             }
 
             if (indexOfMilliseconds == -1) // if we have ms then it will be validated below
@@ -480,13 +476,9 @@ namespace Sparrow.Json
             if (len < indexOfDays + 1 + 8)
                 return false;
 
-            for (int i = indexOfDays + 1 + 8; i < len; i++)
+            if (buffer[indexOfDays + 1 + 8] == '.')
             {
-                if (buffer[i] == '.')
-                {
-                    indexOfMilliseconds = i;
-                    break;
-                }
+                indexOfMilliseconds = indexOfDays + 1 + 8;
             }
 
             if (indexOfMilliseconds == -1) // if we have ms then it will be validated below
