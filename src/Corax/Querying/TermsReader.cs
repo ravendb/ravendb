@@ -76,6 +76,20 @@ public unsafe struct TermsReader : IDisposable
 
         key.Set(encodedKeyLengthInBits, item.Address + 1, dictionaryId);
     }
+
+    public ReadOnlySpan<byte> GetDecodedTerm(long dictionaryId, UnmanagedSpan x)
+    {
+        DecodeKey(_xKeyScope, x.Address, x.Length, dictionaryId, out var xTerm);
+        return xTerm;
+    }
+    
+    public void GetDecodedTermsByIds(long dictionaryId, long xIds, out ReadOnlySpan<byte> xTerm, long yIds, out ReadOnlySpan<byte> yTerm)
+    {
+        var xKey = GetTerm(xIds);
+        var yKey = GetTerm(yIds);
+        DecodeKey(_xKeyScope, xKey.Address, xKey.Length, dictionaryId, out xTerm);
+        DecodeKey(_yKeyScope, yKey.Address, yKey.Length, dictionaryId, out yTerm);
+    }
     
     public void GetDecodedTerms(long dictionaryId, UnmanagedSpan x, out ReadOnlySpan<byte> xTerm, UnmanagedSpan y, out ReadOnlySpan<byte> yTerm)
     {

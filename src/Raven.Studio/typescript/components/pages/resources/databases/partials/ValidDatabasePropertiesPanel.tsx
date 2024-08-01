@@ -20,6 +20,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import AlertsPopover from "./ValidDatabasePropertiesPanelAlertsPopover";
 import PerfHintsPopover from "./ValidDatabasePropertiesPanelPerfHintsPopover";
 import "./ValidDatabasePropertiesPanel.scss";
+import { locationAwareLoadableData } from "components/models/common";
 
 export interface ValidDatabasePropertiesPanelPopoverProps {
     isCurrentNodeRelevant: boolean;
@@ -34,18 +35,6 @@ interface ValidDatabasePropertiesPanelProps {
     db: DatabaseSharedInfo;
     panelCollapsed: boolean;
     togglePanelCollapsed: () => void;
-}
-
-export function findLatestBackup(localInfos: DatabaseLocalInfo[]): BackupInfo {
-    const nonEmptyBackups = localInfos.filter((x) => x.backupInfo && x.backupInfo.LastBackup);
-    if (nonEmptyBackups.length === 0) {
-        return null;
-    }
-
-    const backupInfos = nonEmptyBackups.map((x) => x.backupInfo);
-    backupInfos.sort((a, b) => -1 * a.LastBackup.localeCompare(b.LastBackup));
-
-    return backupInfos[0];
 }
 
 export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) {
@@ -102,6 +91,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     );
 
     const hasAnyLoadError = dbState.some((x) => x.data?.loadError);
+    const isGeneralInfoVisible = getIsGeneralInfoVisible(dbState, db.isSharded);
 
     const localDocumentsUrl = appUrl.forDocuments(null, db.name);
     const documentsUrl = db.currentNode.isRelevant
@@ -184,27 +174,32 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     )}
                 </div>
             </RichPanelDetailItem>
-            <RichPanelDetailItem>
-                <a href={storageReportUrl} target={linksTarget}>
-                    <Icon icon="drive" /> {genUtils.formatBytesToSize(totalSize)}
-                </a>
-            </RichPanelDetailItem>
-            <RichPanelDetailItem>
-                <a href={documentsUrl} target={linksTarget}>
-                    <Icon icon="documents" /> {totalDocuments.toLocaleString()}
-                </a>
-            </RichPanelDetailItem>
-            <RichPanelDetailItem>
-                <a href={indexingListUrl} target={linksTarget}>
-                    <Icon icon="index" /> {db.indexesCount}
-                </a>
-            </RichPanelDetailItem>
-            <RichPanelDetailItem title="Click to navigate to Backups view" className="text-danger">
-                <a href={backupUrl} target={linksTarget} className={"text-" + backupStatus.color}>
-                    <Icon icon="backup" />
-                    {backupStatus.text}
-                </a>
-            </RichPanelDetailItem>
+
+            {isGeneralInfoVisible && (
+                <>
+                    <RichPanelDetailItem>
+                        <a href={storageReportUrl} target={linksTarget}>
+                            <Icon icon="drive" /> {genUtils.formatBytesToSize(totalSize)}
+                        </a>
+                    </RichPanelDetailItem>
+                    <RichPanelDetailItem>
+                        <a href={documentsUrl} target={linksTarget}>
+                            <Icon icon="documents" /> {totalDocuments.toLocaleString()}
+                        </a>
+                    </RichPanelDetailItem>
+                    <RichPanelDetailItem>
+                        <a href={indexingListUrl} target={linksTarget}>
+                            <Icon icon="index" /> {db.indexesCount}
+                        </a>
+                    </RichPanelDetailItem>
+                    <RichPanelDetailItem title="Click to navigate to Backups view" className="text-danger">
+                        <a href={backupUrl} target={linksTarget} className={"text-" + backupStatus.color}>
+                            <Icon icon="backup" />
+                            {backupStatus.text}
+                        </a>
+                    </RichPanelDetailItem>
+                </>
+            )}
 
             <div className="rich-panel-details-right">
                 {indexingErrors > 0 && (
@@ -331,3 +326,44 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
         </RichPanelDetails>
     );
 }
+
+function findLatestBackup(localInfos: DatabaseLocalInfo[]): BackupInfo {
+    const nonEmptyBackups = localInfos.filter((x) => x.backupInfo && x.backupInfo.LastBackup);
+    if (nonEmptyBackups.length === 0) {
+        return null;
+    }
+
+    const backupInfos = nonEmptyBackups.map((x) => x.backupInfo);
+    backupInfos.sort((a, b) => -1 * a.LastBackup.localeCompare(b.LastBackup));
+
+    return backupInfos[0];
+}
+
+function getIsGeneralInfoVisible(
+    dbStates: locationAwareLoadableData<DatabaseLocalInfo>[],
+    isSharded: boolean
+): boolean {
+    if (isSharded) {
+        const shardNumbers = [...new Set(dbStates.map((x) => x.location?.shardNumber))];
+
+        return shardNumbers.every((shardNumber) => {
+            const stateForShard = dbStates.filter((x) => x.location?.shardNumber === shardNumber);
+            return getIsSuccessWithNoLoadError(stateForShard);
+        });
+    }
+
+    return getIsSuccessWithNoLoadError(dbStates);
+}
+
+function getIsSuccessWithNoLoadError(dbStates: locationAwareLoadableData<DatabaseLocalInfo>[]) {
+    if (dbStates.some((x) => x.status === "success" && !x.data?.loadError)) {
+        return true;
+    }
+
+    return false;
+}
+
+export const exportedForTesting = {
+    findLatestBackup,
+    getIsGeneralInfoVisible,
+};

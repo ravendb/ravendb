@@ -23,7 +23,7 @@ class protractedCommandsDetector {
     private sync() {
         this.showSpinner(this.requestsInProgress.some(x => x.spinnerVisible));
 
-        this.requestsInProgress = this.requestsInProgress.filter(x => x.completed);
+        this.requestsInProgress = this.requestsInProgress.filter(x => !x.completed);
     }
 
     private showServerNotRespondingAlert() {

@@ -45,7 +45,7 @@ public sealed class SpatialUtils
     ///  Minimum amount of terms in specific area required to start compressing query into smaller ones.
     /// </summary>
     private const int Threshold = 2 << 10;
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static double GetGeoDistance(in (double lat, double lng) fieldCoordinates, (double X, double Y) center, double round, SpatialUnits units)
     {

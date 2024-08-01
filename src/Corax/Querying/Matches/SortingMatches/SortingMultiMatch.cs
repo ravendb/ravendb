@@ -150,30 +150,34 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         return 0;
     }
     
-    private static unsafe void SortResults<TComparer1, TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, Span<long> batchResults) 
+    private static void SortResults<TComparer1, TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, Span<long> matches) 
         where TComparer1 : struct,  IEntryComparer, IComparer<UnmanagedSpan>
         where TComparer2 : struct,  IEntryComparer, IComparer<int>, IComparer<UnmanagedSpan>
         where TComparer3 : struct,  IEntryComparer, IComparer<int>, IComparer<UnmanagedSpan>
     {
         var llt = match._searcher.Transaction.LowLevelTransaction;
         var allocator = match._searcher.Allocator;
+        var take = matches.Length;
+        //We supports take == -1 when it means "sort all", so then take will be size of result from TInner
+        // var take = Math.Min(match._take, matches.Length);
+        // take = take < 0 ? matches.Length : take;
         
-        var sizeToAllocate = batchResults.Length * (sizeof(long) + sizeof(UnmanagedSpan));
+        var sizeToAllocate = take * (sizeof(long) + sizeof(UnmanagedSpan));
         //OrderBySpatial relay on this order of data. If you change it please review Spatial ordering to ensure that everything works fine. [[ids], [terms], [spatial_distances]]
         if (match._sortingDataTransfer.IncludeDistances)
-            sizeToAllocate += batchResults.Length * sizeof(SpatialResult);
+            sizeToAllocate += take * sizeof(SpatialResult);
         
         var bufScope = allocator.Allocate(sizeToAllocate, out ByteString bs);
-        Span<long> batchTermIds = new(bs.Ptr, batchResults.Length);
-        UnmanagedSpan* termsPtr = (UnmanagedSpan*)(bs.Ptr + batchResults.Length * sizeof(long));
+        Span<long> matchesTermIds = new(bs.Ptr, take);
+        UnmanagedSpan* termsPtr = (UnmanagedSpan*)(bs.Ptr + take * sizeof(long));
 
         // Initialize the important infrastructure for the sorting.
         TComparer1 entryComparer = new();
         entryComparer.Init(ref match, default, 0);
         var pageCache = llt.PageLocator;
-        fixed (long* ptrBatchResults = batchResults)
+        fixed (long* ptrBatchResults = matches)
         {
-            var resultsPtr = new UnmanagedSpan<long>(ptrBatchResults, sizeof(long)* batchResults.Length);
+            var resultsPtr = new UnmanagedSpan<long>(ptrBatchResults, sizeof(long)* matches.Length);
             var comp2 = new TComparer2();
             comp2.Init(ref match, resultsPtr, 1);
             var comp3 = new TComparer3();
@@ -185,7 +189,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 add.Init(ref match, resultsPtr, NextComparerOffset + comparerId);
             }
 
-            entryComparer.SortBatch(ref match, llt, pageCache, resultsPtr, batchTermIds, termsPtr, match._orderMetadata, comp2, comp3);
+            entryComparer.SortBatch(ref match, llt, pageCache, resultsPtr, matchesTermIds, termsPtr, match._orderMetadata, comp2, comp3);
         }
 
         bufScope.Dispose();
