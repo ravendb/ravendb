@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Amqp.Framing;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers.Debugging;
 using Xunit;
@@ -35,6 +36,8 @@ namespace FastTests.Server.Basic
                 nameof(DatabaseRecord.QueueConnectionStrings),
                 nameof(DatabaseRecord.QueueEtls),
                 nameof(DatabaseRecord.QueueSinks),
+                nameof(DatabaseRecord.SnowflakeConnectionStrings),
+                nameof(DatabaseRecord.SnowflakeEtls),
             };
             
             foreach (var safe in ServerWideDebugInfoPackageHandler.FieldsThatShouldBeExposedForDebug)
