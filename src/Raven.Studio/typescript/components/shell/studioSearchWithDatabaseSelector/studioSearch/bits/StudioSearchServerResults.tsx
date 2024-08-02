@@ -22,7 +22,7 @@ export default function StudioSearchServerResults(props: {
             </DropdownItem>
             <div className="studio-search__server-col__group">
                 {serverResults.map((item) => (
-                    <StudioSearchDropdownItem key={item.id} item={item} activeItemId={activeItem?.id} />
+                    <StudioSearchDropdownItem key={item.id} item={item} activeItemId={activeItem?.id} isCapitalized />
                 ))}
             </div>
         </div>
