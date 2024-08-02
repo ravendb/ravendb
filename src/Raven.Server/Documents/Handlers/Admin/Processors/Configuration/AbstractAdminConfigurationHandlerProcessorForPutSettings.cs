@@ -37,17 +37,45 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
                 databaseSettingsJson.GetPropertyByIndex(i, ref prop);
                 settings.Add(prop.Name, prop.Value?.ToString());
             }
+            
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                var updatedSettingsKeys = GetUpdatedSettingsKeys(settings);
+                
+                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "CHANGE", $"Database configuration. Changed keys: {string.Join(" ", updatedSettingsKeys)}");
+            }
 
             var command = new PutDatabaseSettingsCommand(settings, RequestHandler.DatabaseName, RequestHandler.GetRaftRequestIdFromQuery());
 
             long index = (await RequestHandler.Server.ServerStore.SendToLeaderAsync(command)).Index;
 
             await WaitForIndexNotificationAsync(index);
-            
-            if (LoggingSource.AuditLog.IsInfoEnabled)
-                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "PUT", "Database configuration changed");
         }
 
         RequestHandler.NoContentStatus(HttpStatusCode.Created);
+    }
+    
+    private List<string> GetUpdatedSettingsKeys(Dictionary<string, string> updatedSettings)
+    {
+        var keys = new List<string>();
+
+        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            foreach (var kvp in updatedSettings)
+            {
+                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, RequestHandler.DatabaseName, out var _);
+
+                var databaseSettings = databaseRecord.Settings;
+
+                // We only have settings non-default values here
+                databaseSettings.TryGetValue(kvp.Key, out var currentValue);
+                
+                if (currentValue != kvp.Value)
+                    keys.Add(kvp.Key);
+            }
+        }
+
+        return keys;
     }
 }
