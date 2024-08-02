@@ -1,4 +1,3 @@
-import accessManager from "common/shell/accessManager";
 import databasesManager from "common/shell/databasesManager";
 import intermediateMenuItem from "common/shell/menu/intermediateMenuItem";
 import leafMenuItem from "common/shell/menu/leafMenuItem";
