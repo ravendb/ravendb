@@ -70,9 +70,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 settingsResult.Settings.Add(entry);
             }
             
-            if (LoggingSource.AuditLog.IsInfoEnabled)
-                LogAuditFor(Database.Name, "PUT", "Database configuration changed");
-
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
@@ -108,6 +105,13 @@ namespace Raven.Server.Documents.Handlers.Admin
                     settings.Add(prop.Name, prop.Value?.ToString());
                 }
                 
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var updatedSettingsKeys = GetUpdatedSettingsKeys(settings);
+                        
+                    LogAuditFor(Database.Name, "CHANGE", $"Database configuration. Changed keys: {string.Join(" ", updatedSettingsKeys)}");
+                }
+                
                 var command = new PutDatabaseSettingsCommand(settings, Database.Name, GetRaftRequestIdFromQuery());
 
                 long index = (await Server.ServerStore.SendToLeaderAsync(command)).Index;
@@ -115,6 +119,21 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
 
             NoContentStatus(HttpStatusCode.Created);
+        }
+
+        private List<string> GetUpdatedSettingsKeys(Dictionary<string, string> updatedSettings)
+        {
+            var keys = new List<string>();
+
+            foreach (var kvp in updatedSettings)
+            {
+                var currentValue= Database.Configuration.GetSetting(kvp.Key);
+                
+                if (currentValue != kvp.Value)
+                    keys.Add(kvp.Key);
+            }
+
+            return keys;
         }
 
         [RavenAction("/databases/*/admin/configuration/studio", "PUT", AuthorizationStatus.DatabaseAdmin)]
