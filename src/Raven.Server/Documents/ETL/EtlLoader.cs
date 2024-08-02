@@ -728,12 +728,12 @@ namespace Raven.Server.Documents.ETL
                             break;
                         }
                     
-                    case SnowflakeEtl elasticSearchEtl:
+                    case SnowflakeEtl snowflakeEtl:
                         {
                             SnowflakeEtlConfiguration existing = null;
                             foreach (var config in mySnowflakeEtl)
                             {
-                                var diff = elasticSearchEtl.Configuration.Compare(config);
+                                var diff = snowflakeEtl.Configuration.Compare(config);
 
                                 if (diff == EtlConfigurationCompareDifferences.None)
                                 {
