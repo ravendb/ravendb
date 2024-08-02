@@ -42,9 +42,12 @@ namespace Voron.Impl
         private readonly ByteStringContext _allocator;
         internal readonly PageLocator _pageLocator;
         private readonly bool _disposeAllocator;
+        private readonly bool _isValidationEnabled;
+
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
         public Pager.State DataPagerState;
+        
 
         private Tree _root;
         public Tree RootObjects => _root;
@@ -170,6 +173,7 @@ namespace Voron.Impl
             _allocator = allocator ?? new ByteStringContext(SharedMultipleUseFlag.None);
             _allocator.AllocationFailed += MarkTransactionAsFailed;
             _disposeAllocator = allocator == null;
+            _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
 
             Flags = TransactionFlags.Read;
 
@@ -217,6 +221,7 @@ namespace Voron.Impl
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             _disposeAllocator = true;
             _allocator.AllocationFailed += MarkTransactionAsFailed;
+            _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
 
             Flags = TransactionFlags.ReadWrite;
 
@@ -255,7 +260,7 @@ namespace Voron.Impl
             _allocator.AllocationFailed += MarkTransactionAsFailed;
             _disposeAllocator = context == null;
 
-            _disposeAllocator = context == null;
+            _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
 
             PersistentContext = transactionPersistentContext;
             Flags = flags;
@@ -457,29 +462,34 @@ namespace Voron.Impl
             if (_txStatus != TxStatus.None)
                 ThrowObjectDisposed();
 
-            return GetPageInternal(pageNumber);
+            var p = GetPageInternal(pageNumber);
+
+            Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from data file");
+            TrackReadOnlyPage(p);
+
+            return p;
         }
 
         private Page GetPageInternal(long pageNumber)
         {
-            var p =  GetThePage();
-            Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from data file");
-            TrackReadOnlyPage(p);
-            return p;
-
-            Page GetThePage()
+            switch (Flags)
             {
-                if (Flags == TransactionFlags.ReadWrite && _env.WriteTransactionPool.ScratchPagesInUse.TryGetValue(pageNumber, out var value))
-                    return value.ReadWritable(this);
+                case TransactionFlags.Read:
+                    var scratchPagesTable = _envRecord.ScratchPagesTable;
+                    if (scratchPagesTable.Count > 0 && scratchPagesTable.TryGetValue(pageNumber, out var value))
+                        return value.ReadPage(this);
+                    break;
                 
-                if (Flags == TransactionFlags.Read && _envRecord.ScratchPagesTable.Count > 0 && _envRecord.ScratchPagesTable.TryGetValue(pageNumber, out value))
-                    return value.ReadPage(this);
-
-                var page =  new Page(DataPager.AcquirePagePointerWithOverflowHandling(DataPagerState, ref PagerTransactionState, pageNumber));
-                if (_env.Options.Encryption.IsEnabled == false)// When encryption is off, we do validation by checksum
-                    _env.ValidatePageChecksum(pageNumber, (PageHeader*)page.Pointer);
-                return page;
+                case TransactionFlags.ReadWrite:
+                    if (_env.WriteTransactionPool.ScratchPagesInUse.TryGetValue(pageNumber, out value))
+                        return value.ReadWritable(this);
+                    break;
             }
+
+            var page = new Page(DataPager.AcquirePagePointerWithOverflowHandling(DataPagerState, ref PagerTransactionState, pageNumber));
+            if (_isValidationEnabled)// When encryption is off, we do validation by checksum
+                _env.ValidatePageChecksum(pageNumber, (PageHeader*)page.Pointer);
+            return page;
         }
 
         public T GetPageHeaderForDebug<T>(long pageNumber) where T : unmanaged
