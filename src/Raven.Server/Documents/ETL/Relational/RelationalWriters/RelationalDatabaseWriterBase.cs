@@ -20,7 +20,6 @@ using Raven.Server.Documents.ETL.Providers.Snowflake.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Relational.Metrics;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
 using Sparrow.Json;
