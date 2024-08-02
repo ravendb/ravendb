@@ -43,6 +43,8 @@ namespace Voron.Impl
         internal readonly PageLocator _pageLocator;
         private readonly bool _disposeAllocator;
         private readonly bool _isValidationEnabled;
+        private readonly ImmutableDictionary<long,PageFromScratchBuffer>.Builder _scratchPagesInUse;
+        private readonly ImmutableDictionary<long,PageFromScratchBuffer> _scratchPagesForReads;
 
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
@@ -174,6 +176,7 @@ namespace Voron.Impl
             _allocator.AllocationFailed += MarkTransactionAsFailed;
             _disposeAllocator = allocator == null;
             _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
+            _scratchPagesForReads = previous._scratchPagesForReads;
 
             Flags = TransactionFlags.Read;
 
@@ -222,6 +225,7 @@ namespace Voron.Impl
             _disposeAllocator = true;
             _allocator.AllocationFailed += MarkTransactionAsFailed;
             _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
+            _scratchPagesInUse = _env.WriteTransactionPool.ScratchPagesInUse;
 
             Flags = TransactionFlags.ReadWrite;
 
@@ -269,6 +273,7 @@ namespace Voron.Impl
 
             if (flags != TransactionFlags.ReadWrite)
             {
+                _scratchPagesForReads = _envRecord.ScratchPagesTable.Count > 0 ? _envRecord.ScratchPagesTable : null;
                 InitializeRoots();
 
                 return;
@@ -278,6 +283,7 @@ namespace Voron.Impl
 
             _env.WriteTransactionPool.Reset();
             _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
+            _scratchPagesInUse = _env.WriteTransactionPool.ScratchPagesInUse;
             _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
             _pagesToFreeOnCommit = new Stack<long>();
 
@@ -450,6 +456,8 @@ namespace Voron.Impl
                 return result;
 
             var p = GetPageInternal(pageNumber);
+            Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from data file");
+            TrackReadOnlyPage(p);
 
             _pageLocator.SetReadable(p);
 
@@ -475,13 +483,12 @@ namespace Voron.Impl
             switch (Flags)
             {
                 case TransactionFlags.Read:
-                    var scratchPagesTable = _envRecord.ScratchPagesTable;
-                    if (scratchPagesTable.Count > 0 && scratchPagesTable.TryGetValue(pageNumber, out var value))
+                    if (_scratchPagesForReads != null &&  _scratchPagesForReads.TryGetValue(pageNumber, out var value))
                         return value.ReadPage(this);
                     break;
                 
                 case TransactionFlags.ReadWrite:
-                    if (_env.WriteTransactionPool.ScratchPagesInUse.TryGetValue(pageNumber, out value))
+                    if (_scratchPagesInUse.TryGetValue(pageNumber, out value))
                         return value.ReadWritable(this);
                     break;
             }
@@ -1157,7 +1164,7 @@ namespace Voron.Impl
 
         //overflowPageId, Parent
         private readonly Dictionary<long, long> _overflowPagesToBeRemoved = new();
-
+        
         [Conditional("DEBUG")]
         private void ValidateOverflowPagesRemoval()
         {
