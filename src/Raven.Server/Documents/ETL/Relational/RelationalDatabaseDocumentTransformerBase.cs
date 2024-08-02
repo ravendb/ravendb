@@ -20,8 +20,6 @@ internal abstract class RelationalDatabaseDocumentTransformerBase<TRelationalCon
 where TRelationalConnectionString: ConnectionString
 where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
 {
-    private static readonly JsValue DefaultVarCharSize = 50;
-    
     private readonly Transformation _transformation;
     protected readonly TRelationalEtlConfiguration _config;
     private readonly Dictionary<string, RelationalDatabaseTableWithRecords> _tables;
@@ -60,18 +58,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
     }
 
     protected abstract List<RelationalDatabaseTableWithRecords> GetEtlTables();
-
-    public override void Initialize(bool debugMode)
-    {
-        base.Initialize(debugMode); // todo: explain varchar vs nvarchar?
-        
-        DocumentScript.ScriptEngine.SetValue("varchar",
-            new ClrFunction(DocumentScript.ScriptEngine, "varchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
-
-        DocumentScript.ScriptEngine.SetValue("nvarchar",
-            new ClrFunction(DocumentScript.ScriptEngine, "nvarchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values)));
-    }
-
+    
     protected override string[] LoadToDestinations { get; }
 
     protected override void LoadToFunction(string tableName, ScriptRunnerResult cols)
@@ -204,40 +191,6 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
                 continue;
 
             GetOrAdd(serverSideRelationalEtlTable.TableName).Deletes.Add(item);
-        }
-    }
-
-    private JsValue ToVarcharTranslator(JsValue type, JsValue[] args)
-    {
-        if (args[0].IsString() == false)
-            throw new InvalidOperationException("varchar() / nvarchar(): first argument must be a string");
-
-        var sizeSpecified = args.Length > 1;
-
-        if (sizeSpecified && args[1].IsNumber() == false)
-            throw new InvalidOperationException("varchar() / nvarchar(): second argument must be a number");
-
-        var item = new JsObject(DocumentScript.ScriptEngine);
-
-        item.FastSetDataProperty(nameof(VarcharFunctionCall.Type), type);
-        item.FastSetDataProperty(nameof(VarcharFunctionCall.Value), args[0]);
-        item.FastSetDataProperty(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : DefaultVarCharSize);
-
-        return item;
-    }
-
-    public sealed class VarcharFunctionCall
-    {
-        public static JsValue AnsiStringType = DbType.AnsiString.ToString(); // todo: elaborate on this - snowflake cannot process ansiString
-        public static JsValue StringType = DbType.String.ToString();
-
-        public DbType Type { get; set; }
-        public object Value { get; set; }
-        public int Size { get; set; }
-
-        private VarcharFunctionCall()
-        {
-
         }
     }
 }
