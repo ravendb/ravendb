@@ -57,6 +57,8 @@ public abstract class OngoingTasksBase : DatabaseBase<Integer32>
     protected internal static int GetNumberOfSinkPullReplications(RawDatabaseRecord database) => database.SinkPullReplications?.Count(x => x.Disabled == false) ?? 0;
 
     protected internal static int GetNumberOfSqlEtls(RawDatabaseRecord database) => database.SqlEtls?.Count(x => x.Disabled == false) ?? 0;
+    
+    protected internal static int GetNumberOfSnowflakeEtls(RawDatabaseRecord database) => database.SnowflakeEtls?.Count(x => x.Disabled == false) ?? 0;
 
     protected internal static int GetNumberOfSubscriptions(TransactionOperationContext context, RawDatabaseRecord database)
     {
