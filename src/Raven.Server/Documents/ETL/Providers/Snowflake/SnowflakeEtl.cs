@@ -32,7 +32,7 @@ public sealed class SnowflakeEtl : RelationalDatabaseEtlBase<SnowflakeEtlConfigu
         return new SnowflakeDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics);
     }
 
-    protected override RelationalWriterSimulatorBase<SnowflakeEtlConfiguration, SnowflakeConnectionString> GetWriterSimulator()
+    protected override RelationalDatabaseWriterSimulatorBase<SnowflakeEtlConfiguration, SnowflakeConnectionString> GetWriterSimulator()
     {
         return new SnowflakeDatabaseWriterSimulator(Configuration);
     }

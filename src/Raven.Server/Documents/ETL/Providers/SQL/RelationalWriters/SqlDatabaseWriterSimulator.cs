@@ -8,14 +8,11 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Relational;
 using Raven.Server.Documents.ETL.Relational.RelationalWriters;
-using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Utils;
 using DbCommandBuilder = Raven.Server.Documents.ETL.Relational.RelationalWriters.DbCommandBuilder;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 
-public class SqlDatabaseWriterSimulator: RelationalWriterSimulatorBase<SqlEtlConfiguration, SqlConnectionString>
+public class SqlDatabaseWriterSimulator: RelationalDatabaseWriterSimulatorBase<SqlEtlConfiguration, SqlConnectionString>
 {
     private SqlProvider _providerType;
     private readonly bool _isSqlServerFactoryType;

@@ -12,7 +12,7 @@ using Raven.Server.Documents.ETL.Relational.Test;
 
 namespace Raven.Server.Documents.ETL.Relational.RelationalWriters;
 
-public abstract class RelationalWriterSimulatorBase<TRelationalEtlConfiguration, TRelationalCollectionString>
+public abstract class RelationalDatabaseWriterSimulatorBase<TRelationalEtlConfiguration, TRelationalCollectionString>
 where TRelationalCollectionString: ConnectionString
 where TRelationalEtlConfiguration: EtlConfiguration<TRelationalCollectionString>
 {
@@ -21,7 +21,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalCollectionString>
     protected readonly DbCommandBuilder CommandBuilder;
     private readonly bool _parametrizeDeletes;
 
-    public RelationalWriterSimulatorBase(TRelationalEtlConfiguration configuration,  bool parametrizeDeletes)
+    public RelationalDatabaseWriterSimulatorBase(TRelationalEtlConfiguration configuration,  bool parametrizeDeletes)
     {
         Configuration = configuration;
         _parametrizeDeletes = parametrizeDeletes;

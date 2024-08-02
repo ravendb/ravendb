@@ -10,7 +10,7 @@ using DbCommandBuilder = Raven.Server.Documents.ETL.Relational.RelationalWriters
 
 namespace Raven.Server.Documents.ETL.Providers.Snowflake.RelationalWriters;
 
-public class SnowflakeDatabaseWriterSimulator: RelationalWriterSimulatorBase<SnowflakeEtlConfiguration, SnowflakeConnectionString>
+public class SnowflakeDatabaseWriterSimulator: RelationalDatabaseWriterSimulatorBase<SnowflakeEtlConfiguration, SnowflakeConnectionString>
 {
     public SnowflakeDatabaseWriterSimulator(SnowflakeEtlConfiguration configuration) : base(configuration, configuration.ParameterizeDeletes)
     {

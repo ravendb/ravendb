@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new SqlDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics);
         }   
 
-        protected override RelationalWriterSimulatorBase<SqlEtlConfiguration, SqlConnectionString> GetWriterSimulator()
+        protected override RelationalDatabaseWriterSimulatorBase<SqlEtlConfiguration, SqlConnectionString> GetWriterSimulator()
         {
             return new SqlDatabaseWriterSimulator(Configuration);
         }
