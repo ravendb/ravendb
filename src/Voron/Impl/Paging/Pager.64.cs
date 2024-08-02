@@ -26,23 +26,13 @@ public unsafe partial class Pager
             AcquirePagePointer = &AcquirePagePointer,
             AcquireRawPagePointer = &AcquirePagePointer,
             AcquirePagePointerForNewPage = &AcquirePagePointerForNewPage,
-            EnsureMapped = &EnsureMapped,
+            EnsureMapped = null,
             ConvertToWritePointer = &ConvertToWritePointer
         };
 
         private static byte* ConvertToWritePointer(Pager pager, State state, byte* ptr)
         {
             return state.WriteAddress + (ptr - state.ReadAddress);
-        }
-
-        private static bool EnsureMapped(Pager pager, State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
-        {
-            _ = pager;
-            _ = state;
-            _ = txState;
-            _ = pageNumber;
-            _ = numberOfPages;
-            return false;
         }
 
         public static byte* AcquirePagePointerForNewPage(Pager pager, long pageNumber, int numberOfPages, State state, ref PagerTransactionState txState)

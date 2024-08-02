@@ -145,6 +145,9 @@ public unsafe partial class Pager : IDisposable
 
     public bool EnsureMapped(State state, ref PagerTransactionState txState, long page, int numberOfPages)
     {
+        if (_functions.EnsureMapped == null)
+            return false;
+        
         return _functions.EnsureMapped(this, state, ref txState, page, numberOfPages);
     }
 
@@ -233,8 +236,16 @@ public unsafe partial class Pager : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public byte* AcquirePagePointerWithOverflowHandling(State state, ref PagerTransactionState txState, long pageNumber)
     {
-        // Case 1: Page is not overflow ==> no problem, returning a pointer to existing mapping
         var pageHeader = (PageHeader*)AcquirePagePointer(state, ref txState, pageNumber);
+        if (_functions.EnsureMapped == null) 
+            return (byte*)pageHeader;
+
+        return EnsureOverflowPageIsLoaded(state, ref txState, pageNumber, pageHeader);
+    }
+
+    private byte* EnsureOverflowPageIsLoaded(State state, ref PagerTransactionState txState, long pageNumber, PageHeader* pageHeader)
+    {
+        // Case 1: Page is not overflow ==> no problem, returning a pointer to existing mapping
         if ((pageHeader->Flags & PageFlags.Overflow) != PageFlags.Overflow)
             return (byte*)pageHeader;
 
@@ -243,30 +254,42 @@ public unsafe partial class Pager : IDisposable
             return (byte*)pageHeader;
 
         // Case 3: Page is overflow and was ensuredMapped above, view was re-mapped so we need to acquire a pointer to the new mapping.
-        return AcquirePagePointer(state, ref txState, pageNumber);
+        return _functions.AcquirePagePointer(this, state, ref txState, pageNumber);
     }
-
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public byte* AcquireRawPagePointerWithOverflowHandling(State state, ref PagerTransactionState txState, long pageNumber)
     {
-        // Case 1: Page is not overflow ==> no problem, returning a pointer to existing mapping
         var pageHeader = (PageHeader*)AcquireRawPagePointer(state, ref txState, pageNumber);
-        if ((pageHeader->Flags & PageFlags.Overflow) != PageFlags.Overflow)
+        if (_functions.EnsureMapped == null)
             return (byte*)pageHeader;
 
+        return EnsureOverflowRawPageIsLoaded(state, ref txState, pageNumber, pageHeader);
+    }
+
+    private byte* EnsureOverflowRawPageIsLoaded(State state, ref PagerTransactionState txState, long pageNumber, PageHeader* pageHeader)
+    {
+        // Case 1: Page is not overflow ==> no problem, returning a pointer to existing mapping
+        if ((pageHeader->Flags & PageFlags.Overflow) != PageFlags.Overflow)
+            return (byte*)pageHeader;
         // Case 2: Page is overflow and already mapped large enough ==> no problem, returning a pointer to existing mapping
         if (EnsureMapped(state, ref txState, pageNumber, Paging.GetNumberOfOverflowPages(pageHeader->OverflowSize)) == false)
             return (byte*)pageHeader;
 
         // Case 3: Page is overflow and was ensuredMapped above, view was re-mapped so we need to acquire a pointer to the new mapping.
-        return AcquireRawPagePointer(state, ref txState, pageNumber);
+        return _functions.AcquireRawPagePointer(this, state, ref txState, pageNumber);
     }
 
     public byte* AcquirePagePointer(State state, ref PagerTransactionState txState, long pageNumber)
     {
         if (pageNumber <= state.NumberOfAllocatedPages && pageNumber >= 0)
             return _functions.AcquirePagePointer(this, state, ref txState, pageNumber);
+        return ThrowInvalidMethod(state, pageNumber);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private byte* ThrowInvalidMethod(State state, long pageNumber)
+    {
         VoronUnrecoverableErrorException.Raise(Options,
             "The page " + pageNumber + " was not allocated, allocated pages: " + state.NumberOfAllocatedPages + " in " + FileName);
         return null; // never hit
@@ -277,9 +300,7 @@ public unsafe partial class Pager : IDisposable
         if (pageNumber <= state.NumberOfAllocatedPages && pageNumber >= 0)
             return _functions.AcquireRawPagePointer(this, state, ref txState, pageNumber);
 
-        VoronUnrecoverableErrorException.Raise(Options,
-            "The page " + pageNumber + " was not allocated, allocated pages: " + state.NumberOfAllocatedPages + " in " + FileName);
-        return null; // never hit
+        return ThrowInvalidMethod(state, pageNumber);
     }
 
     public byte* AcquirePagePointerForNewPage(State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
