@@ -122,7 +122,7 @@ namespace Raven.Server.NotificationCenter
 
                     // serialize to avoid race conditions
                     // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
-                    watcher.NotificationsQueue.Enqueue(notification.ToJson());
+                    watcher.Enqueue(notification.ToJson());
                 }
             }
             catch (ObjectDisposedException)
@@ -231,12 +231,29 @@ namespace Raven.Server.NotificationCenter
         }
     }
 
-    public class ConnectedWatcher
+    public sealed class ConnectedWatcher
     {
-        public AsyncQueue<DynamicJsonValue> NotificationsQueue;
+        private readonly AsyncQueue<DynamicJsonValue> _notificationsQueue;
+        private readonly int _maxNotificationsQueueSize;
 
-        public IWebsocketWriter Writer;
+        public readonly IWebsocketWriter Writer;
 
-        public CanAccessDatabase Filter;
+        public readonly CanAccessDatabase Filter;
+
+        public ConnectedWatcher(AsyncQueue<DynamicJsonValue> notificationsQueue, int maxNotificationsQueueSize, IWebsocketWriter writer, CanAccessDatabase filter)
+        {
+            _notificationsQueue = notificationsQueue;
+            _maxNotificationsQueueSize = maxNotificationsQueueSize;
+            Writer = writer;
+            Filter = filter;
+        }
+
+        public void Enqueue(DynamicJsonValue json)
+        {
+            if (_notificationsQueue.Count >= _maxNotificationsQueueSize) 
+                return;
+
+            _notificationsQueue.Enqueue(json);
+        }
     }
 }

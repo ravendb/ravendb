@@ -59,14 +59,14 @@ namespace Raven.Server.Dashboard
                             var asJson = info.ToJsonWithFilter(watcher.Filter);
                             if (asJson != null)
                             {
-                                watcher.NotificationsQueue.Enqueue(asJson);
+                                watcher.Enqueue(asJson);
                             }
                         }
                         else
                         {
                             // serialize to avoid race conditions
                             // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
-                            watcher.NotificationsQueue.Enqueue(info.ToJson());
+                            watcher.Enqueue(info.ToJson());
                         }
                     }
                 }

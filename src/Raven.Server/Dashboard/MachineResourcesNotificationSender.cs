@@ -59,7 +59,7 @@ namespace Raven.Server.Dashboard
                 {
                     // serialize to avoid race conditions
                     // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
-                    watcher.NotificationsQueue.Enqueue(machineResources.ToJson());
+                    watcher.Enqueue(machineResources.ToJson());
                 }
             }
             finally
