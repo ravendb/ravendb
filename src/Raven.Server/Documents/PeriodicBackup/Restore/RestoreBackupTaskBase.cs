@@ -44,6 +44,7 @@ using Index = Raven.Server.Documents.Indexes.Index;
 using Sparrow;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;
+using System.Threading;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -130,10 +131,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected async Task<Stream> CopyRemoteStreamLocally(Stream stream)
         {
-            return await CopyRemoteStreamLocally(stream, _serverStore.Configuration);
+            return await CopyRemoteStreamLocally(stream, _serverStore.Configuration, _operationCancelToken.Token);
         }
 
-        public static async Task<Stream> CopyRemoteStreamLocally(Stream stream, RavenConfiguration configuration)
+        public static async Task<Stream> CopyRemoteStreamLocally(Stream stream, RavenConfiguration configuration, CancellationToken cancellationToken)
         {
             if (stream.CanSeek)
                 return stream;
@@ -151,7 +152,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             try
             {
-                await stream.CopyToAsync(file);
+                await stream.CopyToAsync(file, cancellationToken);
                 file.Seek(0, SeekOrigin.Begin);
 
                 return file;

@@ -558,6 +558,7 @@ namespace Raven.Server.Web.System
         public async Task GetRestorePoints()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var cancelToken = CreateBackgroundOperationToken())
             {
                 PeriodicBackupConnectionType connectionType;
                 var type = GetStringValuesQueryString("type", false).FirstOrDefault();
@@ -600,7 +601,7 @@ namespace Raven.Server.Web.System
 
                     case PeriodicBackupConnectionType.S3:
                         var s3Settings = JsonDeserializationServer.S3Settings(restorePathBlittable);
-                        using (var s3RestoreUtils = new S3RestorePoints(ServerStore.Configuration, sortedList, context, s3Settings))
+                        using (var s3RestoreUtils = new S3RestorePoints(ServerStore.Configuration, sortedList, context, s3Settings, cancelToken.Token))
                         {
                             await s3RestoreUtils.FetchRestorePoints(s3Settings.RemoteFolderName);
                         }
@@ -609,7 +610,7 @@ namespace Raven.Server.Web.System
 
                     case PeriodicBackupConnectionType.Azure:
                         var azureSettings = JsonDeserializationServer.AzureSettings(restorePathBlittable);
-                        using (var azureRestoreUtils = new AzureRestorePoints(ServerStore.Configuration, sortedList, context, azureSettings))
+                        using (var azureRestoreUtils = new AzureRestorePoints(ServerStore.Configuration, sortedList, context, azureSettings, cancelToken.Token))
                         {
                             await azureRestoreUtils.FetchRestorePoints(azureSettings.RemoteFolderName);
                         }
@@ -617,7 +618,7 @@ namespace Raven.Server.Web.System
 
                     case PeriodicBackupConnectionType.GoogleCloud:
                         var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(restorePathBlittable);
-                        using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(ServerStore.Configuration, sortedList, context, googleCloudSettings))
+                        using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(ServerStore.Configuration, sortedList, context, googleCloudSettings, cancelToken.Token))
                         {
                             await googleCloudRestoreUtils.FetchRestorePoints(googleCloudSettings.RemoteFolderName);
                         }
