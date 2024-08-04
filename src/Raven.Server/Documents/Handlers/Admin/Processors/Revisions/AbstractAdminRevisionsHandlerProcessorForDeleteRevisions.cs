@@ -27,13 +27,14 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
             {
                 var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "admin/revisions/delete");
                 parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
-                parameters.Validate();
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
                     RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"Delete Revisions ,parameters: {json}");
                 }
             }
+
+            parameters.Validate();
 
             var deletedCount = 0L;
             using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken())

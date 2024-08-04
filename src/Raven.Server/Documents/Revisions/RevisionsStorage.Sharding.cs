@@ -33,22 +33,5 @@ namespace Raven.Server.Documents.Revisions
             ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)RevisionsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
         }
 
-        public void ForceDeleteAllRevisionsFor(DocumentsOperationContext context, string id)
-        {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
-            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
-            {
-                var collectionName = GetCollectionFor(context, prefixSlice);
-                if (collectionName == null)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Tried to delete all revisions for '{id}' but no revisions found.");
-                    return;
-                }
-
-                ForceDeleteAllRevisionsForInternal(context, lowerId, prefixSlice, collectionName, shouldSkip: null, maxDeletesUponUpdate: null, tombstoneFlags: DocumentFlags.FromResharding | DocumentFlags.Artificial);
-            }
-        }
-
     }
 }

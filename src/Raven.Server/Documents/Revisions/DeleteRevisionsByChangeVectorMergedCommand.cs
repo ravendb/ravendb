@@ -47,19 +47,35 @@ public partial class RevisionsStorage
                     return 0;
                 }
 
-                var maxDeletes = revisionsStorage.GetRevisionsConfiguration(collectionName.Name, deleteRevisionsWhenNoCofiguration: true)
-                    .MaximumRevisionsToDeleteUponDocumentUpdate;
-
-                var result = revisionsStorage.ForceDeleteAllRevisionsForInternal(context, lowerId, prefixSlice, collectionName, maxDeletes, ShouldSkipRevision);
-                deleted += result.Deleted;
+                foreach (var cv in _cvs)
+                {
+                    var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName,
+                        (table, _) => GetRevision(context, table, cv));
+                    deleted += result.Deleted;
+                }
             }
 
             return deleted;
         }
 
-        private bool ShouldSkipRevision(Document revision)
+        private IEnumerable<Document> GetRevision(DocumentsOperationContext context, Table table, string cv)
         {
-            return ShouldSkipForceCreated(_includeForceCreated == false, revision.Flags) || _cvs.Contains(revision.ChangeVector) == false;
+            Document revision;
+            using (Slice.From(context.Allocator, cv, out var cvSlice))
+            {
+                if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
+                    yield break;
+
+                revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId | DocumentFields.Id);
+            }
+
+            if (revision.Id != _id)
+                throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't belong to the doc \"{_id}\" but to the doc \"{revision.Id}\"");
+
+            if (ShouldSkipForceCreated(_includeForceCreated == false, revision.Flags))
+                yield break;
+
+            yield return revision;
         }
 
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)

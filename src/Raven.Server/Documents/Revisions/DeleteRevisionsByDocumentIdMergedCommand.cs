@@ -60,7 +60,7 @@ public partial class RevisionsStorage
                         maxDeletes = maxTotalDeletes - deleted;
                     }
 
-                    var result = revisionsStorage.ForceDeleteAllRevisionsForInternal(context, lowerId, prefixSlice, collectionName, maxDeletes, ShouldSkipRevision);
+					var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName, maxDeletes, ShouldSkipRevision);
                     if (result.MoreWork == false)
                     {
                         _ids.RemoveAt(i);
