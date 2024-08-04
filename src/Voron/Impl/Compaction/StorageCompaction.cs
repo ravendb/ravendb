@@ -423,7 +423,7 @@ namespace Voron.Impl.Compaction
                                 var reportRate = existingTree.State.NumberOfEntries / 33 + 1;
                                 if (copiedEntries % reportRate == 0)
                                     Report(copiedTrees, totalTreesCount, copiedEntries, existingTree.State.NumberOfEntries, progressReport,
-                                        $"Copying variable size tree '{treeName}'. Progress: {copiedEntries}/{existingTree.State.NumberOfEntries} entries.", treeName);
+                                        $"Copying variable size tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{existingTree.State.NumberOfEntries:#,#;;0} entries.", treeName);
                             }
 
                         } while (transactionSize < compactedEnv.Options.MaxScratchBufferSize / 2 && existingTreeIterator.MoveNext());
