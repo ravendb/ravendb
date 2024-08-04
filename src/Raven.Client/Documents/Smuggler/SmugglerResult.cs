@@ -612,7 +612,7 @@ namespace Raven.Client.Documents.Smuggler
 
             public override string ToString()
             {
-                return $"Skipped: {SkippedCount}. {base.ToString()}";
+                return $"Skipped: {SkippedCount:#,#;;0}. {base.ToString()}";
             }
         }
 
@@ -629,7 +629,7 @@ namespace Raven.Client.Documents.Smuggler
 
             public override string ToString()
             {
-                return $"Skipped: {SkippedCount}. {base.ToString()}";
+                return $"Skipped: {SkippedCount:#,#;;0}. {base.ToString()}";
             }
         }
     }
