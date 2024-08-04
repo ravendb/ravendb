@@ -111,7 +111,7 @@ public class RavenDB_17494 : ClusterTestBase
             Assert.Equal(11, await session.Advanced.Revisions.GetCountForAsync(company3.Id));
 
             var u1revisionsCvs = await GetRevisionsCvs(session, user1.Id);
-            user1revisionsToDelete = new List<string>() { u1revisionsCvs[5], u1revisionsCvs[6], u1revisionsCvs[7] };
+            user1revisionsToDelete = new List<string>() { u1revisionsCvs[6], u1revisionsCvs[5], u1revisionsCvs[7] };
         }
 
         var result = await store.Maintenance.SendAsync(

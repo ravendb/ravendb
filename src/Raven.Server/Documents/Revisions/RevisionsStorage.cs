@@ -1852,8 +1852,32 @@ namespace Raven.Server.Documents.Revisions
             MinimumRevisionsToKeep = 0
         };
 
-        private (bool MoreWork, long Deleted) ForceDeleteAllRevisionsForInternal(DocumentsOperationContext context, Slice lowerId, Slice prefixSlice, CollectionName collectionName, long? maxDeletesUponUpdate,
+        public void ForceDeleteAllRevisionsFor(DocumentsOperationContext context, string id, DocumentFlags tombstoneFlags = DocumentFlags.None)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+            {
+                var collectionName = GetCollectionFor(context, prefixSlice);
+                if (collectionName == null)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Tried to delete all revisions for '{id}' but no revisions found.");
+                    return;
+                }
+
+                ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName, maxDeletesUponUpdate: null, shouldSkip: null, tombstoneFlags);
+            }
+        }
+
+        private (bool MoreWork, long Deleted) ForceDeleteAllRevisionsFor(DocumentsOperationContext context, Slice lowerId, Slice prefixSlice, CollectionName collectionName, long? maxDeletesUponUpdate,
             Func<Document, bool> shouldSkip, DocumentFlags tombstoneFlags = DocumentFlags.None)
+        {
+            return ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName,
+                (table, result) => GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate, shouldSkip, result), tombstoneFlags);
+        }
+
+        private (bool MoreWork, long Deleted) ForceDeleteAllRevisionsFor(DocumentsOperationContext context, Slice lowerId, Slice prefixSlice, CollectionName collectionName, 
+            Func<Table, DeleteOldRevisionsResult, IEnumerable<Document>> getRevisions, DocumentFlags tombstoneFlags = DocumentFlags.None)
         {
             var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
             if (revisionsPreviousCount == 0)
@@ -1867,7 +1891,7 @@ namespace Raven.Server.Documents.Revisions
 
             var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
             var result = new DeleteOldRevisionsResult() { PreviousCount = revisionsPreviousCount };
-            var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate, shouldSkip, result);
+            var revisionsToDelete = getRevisions.Invoke(table, result);
             var deleted = DeleteRevisionsInternal(context, table, lowerId, collectionName, changeVector, lastModifiedTicks, revisionsToDelete,
                 result, tombstoneFlags);
             IncrementCountOfRevisions(context, prefixSlice, -deleted);

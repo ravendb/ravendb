@@ -361,7 +361,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
             Delete(context, document.Id, flags: DocumentFlags.Artificial | DocumentFlags.FromResharding);
 
             // delete revisions for document
-            RevisionsStorage.ForceDeleteAllRevisionsFor(context, document.Id);
+            RevisionsStorage.ForceDeleteAllRevisionsFor(context, document.Id, DocumentFlags.FromResharding | DocumentFlags.Artificial);
             deleted++;
 
             if (context.CanContinueTransaction == false)
