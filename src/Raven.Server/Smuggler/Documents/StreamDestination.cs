@@ -1445,7 +1445,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (stream == null)
                             {
                                 progress.Attachments.ErroredCount++;
-                                throw new ArgumentException($"Document {document.Id} seems to have a attachment hash: {hash}, but no correlating hash was found in the storage.");
+                                throw new ArgumentException($"Document {document.Id} seems to have an attachment hash: {hash}, but no correlating hash was found in the storage.");
                             }
                             await WriteAttachmentStreamAsync(hash, stream, tag);
                         }
