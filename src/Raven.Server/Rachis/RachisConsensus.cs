@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -85,7 +84,9 @@ namespace Raven.Server.Rachis
 
         public override long Apply(ClusterOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration)
         {
-            return StateMachine.Apply(context, uptoInclusive, leader, _serverStore, duration);
+            var committedIndex = StateMachine.Apply(context, uptoInclusive, leader, _serverStore, duration);
+            LastCommitted = DateTime.UtcNow;
+            return committedIndex;
         }
 
         public void EnsureNodeRemovalOnDeletion(ClusterOperationContext context, long term, string nodeTag)
@@ -130,168 +131,15 @@ namespace Raven.Server.Rachis
             {
             }
         }
-
-        public IEnumerable<BlittableJsonReaderObject> GetLogEntries(ClusterOperationContext context, long first, int start, int take)
-        {
-            var reveredNextIndex = Bits.SwapBytes(first);
-            Span<byte> span = stackalloc byte[sizeof(long)];
-            if (BitConverter.TryWriteBytes(span, reveredNextIndex) == false)
-                throw new InvalidOperationException($"Couldn't convert {first} to span<byte>");
-
-            var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
-            using (Slice.From(context.Allocator, span, out Slice key))
-            {
-                foreach (var value in table.SeekByPrimaryKey(key, start))
-                {
-                    if (take-- <= 0)
-                        yield break;
-
-                    yield return FollowerAmbassador.BuildRachisEntryToSend(context, value);
-                }
-            }
-        }
     }
 
-    public sealed class RachisLogEntry : IDynamicJsonValueConvertible
-    {
-        public DateTime At = DateTime.UtcNow;
-        public string Message;
-        public long MsFromCycleStart;
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(At)] = At,
-                [nameof(MsFromCycleStart)] = MsFromCycleStart,
-                [nameof(Message)] = Message
-            };
-        }
-    }
-
-    public sealed class RachisTimings
-    {
-        public readonly ConcurrentBag<RachisLogEntry> Timings = new ConcurrentBag<RachisLogEntry>();
-    }
-
-    public sealed class RachisLogRecorder
-    {
-        private readonly ConcurrentQueue<RachisTimings> _queue;
-        private readonly Stopwatch _sp = Stopwatch.StartNew();
-        private RachisTimings _current;
-        private ConcurrentBag<RachisLogEntry> Timings => _current.Timings;
-
-        public RachisLogRecorder(ConcurrentQueue<RachisTimings> queue)
-        {
-            _queue = queue;
-        }
-
-        public void Start()
-        {
-            _current = new RachisTimings();
-            _queue.LimitedSizeEnqueue(_current, 10);
-            Timings.Add(new RachisLogEntry
-            {
-                Message = "Start",
-                MsFromCycleStart = 0
-            });
-            _sp.Restart();
-        }
-
-        public void Record(string message)
-        {
-            if (_current == null)
-                return; // ignore - shutting down
-
-            Timings.Add(new RachisLogEntry
-            {
-                Message = message,
-                MsFromCycleStart = _sp.ElapsedMilliseconds
-            });
-        }
-    }
-
-    public sealed class RachisDebug
-    {
-        public readonly ConcurrentDictionary<string, RachisTimingsHolder> TimingTracking = new ConcurrentDictionary<string, RachisTimingsHolder>();
-        public readonly ConcurrentQueue<string> StateChangeTracking = new ConcurrentQueue<string>();
-
-        public sealed class RachisTimingsHolder
-        {
-            public ConcurrentQueue<RachisTimings> TimingTracking;
-            public DateTime Since = DateTime.UtcNow;
-        }
-
-        public bool IsInterVersionTest;
-
-        public RachisLogRecorder GetNewRecorder(string name)
-        {
-            var holder = new RachisTimingsHolder
-            {
-                TimingTracking = new ConcurrentQueue<RachisTimings>()
-            };
-
-            if (TimingTracking.TryAdd(name, holder) == false)
-            {
-                throw new ArgumentException($"Recorder with the name '{name}' already exists");
-            }
-            return new RachisLogRecorder(holder.TimingTracking);
-        }
-
-        public void RemoveRecorderOlderThan(DateTime after)
-        {
-            if (TimingTracking.IsEmpty)
-                return;
-
-            foreach (var item in TimingTracking)
-            {
-                if (item.Value.Since > after)
-                    continue;
-                TimingTracking.TryRemove(item.Key, out _);
-            }
-        }
-
-        public void RemoveRecorder(string name)
-        {
-            if (TimingTracking.Remove(name, out var q))
-            {
-                q.TimingTracking.Clear();
-            }
-        }
-
-        public DynamicJsonValue ToJson()
-        {
-            var timingTracking = new DynamicJsonValue();
-            foreach (var tuple in TimingTracking.ForceEnumerateInThreadSafeManner().OrderBy(x => x.Key))
-            {
-                var key = tuple.Key;
-                DynamicJsonArray inner;
-                timingTracking[key] = inner = new DynamicJsonArray();
-                foreach (var queue in tuple.Value.TimingTracking)
-                {
-                    inner.Add(new DynamicJsonArray(queue.Timings.OrderBy(x => x.At)));
-                }
-            }
-
-            var stateTracking = new DynamicJsonArray(StateChangeTracking);
-
-            return new DynamicJsonValue
-            {
-                [nameof(TimingTracking)] = timingTracking,
-                [nameof(StateChangeTracking)] = stateTracking
-            };
-        }
-    }
-
-    public abstract class RachisConsensus : IDisposable
+    public abstract partial class RachisConsensus : IDisposable
     {
         internal abstract RachisStateMachine GetStateMachine();
 
         internal abstract RachisVersionValidation Validator { get; }
 
         public const string InitialTag = "?";
-
-        public readonly RachisDebug InMemoryDebug = new RachisDebug();
 
         public RachisState CurrentState
         {
@@ -414,7 +262,8 @@ namespace Raven.Server.Rachis
         private readonly ManualResetEventSlim _disposeEvent = new ManualResetEventSlim();
         private readonly Random _rand;
         private string _lastStateChangeReason;
-        public Candidate Candidate { get; internal set; }
+        public Candidate Candidate { get; set; }
+        public Follower Follower { get; set; }
 
         protected RachisConsensus(CipherSuitesPolicy cipherSuitesPolicy, int? seed = null)
         {
@@ -571,6 +420,7 @@ namespace Raven.Server.Rachis
             SwitchToSingleLeaderAction?.Invoke(context);
 
             Candidate = null;
+            Follower = null;
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
@@ -914,6 +764,7 @@ namespace Raven.Server.Rachis
             var sp = Stopwatch.StartNew();
 
             _currentLeader = null;
+
             LastStateChangeReason = stateChangedReason;
             var toDispose = new List<IDisposable>(_disposables);
             _disposables.Clear();
@@ -1726,7 +1577,7 @@ namespace Raven.Server.Rachis
                     LogHistory.InsertHistoryLog(context, entry.Index, entry.Term, entry.Entry);
                 }
             }
-
+            LastAppended = DateTime.UtcNow;
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, lastTopology);
             return (lastTopology, lastTopologyIndex);
         }
