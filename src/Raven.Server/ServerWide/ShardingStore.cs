@@ -216,16 +216,24 @@ namespace Raven.Server.ServerWide
             if (shardingConfiguration.Prefixed is not { Count: > 0 })
                 return;
 
-            shardingConfiguration.Prefixed = shardingConfiguration.Prefixed
-                .OrderByDescending(x => x.Prefix)
-                .ToList();
+            var allPrefixesIgnoreCase = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            List<PrefixedShardingSetting> ordered = new();
 
-           var start = ShardHelper.NumberOfBuckets;
-            foreach (var setting in shardingConfiguration.Prefixed)
+            var start = ShardHelper.NumberOfBuckets;
+            foreach (var setting in shardingConfiguration.Prefixed.OrderByDescending(x => x.Prefix))
             {
+                if (allPrefixesIgnoreCase.Add(setting.Prefix) == false)
+                    throw new InvalidOperationException(
+                        $"Cannot add prefix '{setting.Prefix}' to {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
+                        $"Prefix '{setting.Prefix}' already exists in different casing.");
+
+                ordered.Add(setting);
+
                 AddPrefixedBucketRange(setting, start, shardingConfiguration);
                 start += ShardHelper.NumberOfBuckets;
             }
+
+            shardingConfiguration.Prefixed = ordered;
         }
 
         private static void AddPrefixedBucketRange(PrefixedShardingSetting setting, int rangeStart, ShardingConfiguration shardingConfiguration)

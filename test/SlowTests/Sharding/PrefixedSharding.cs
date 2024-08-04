@@ -2700,6 +2700,66 @@ public class PrefixedSharding : ClusterTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Sharding)]
+    public async Task PreventAddingSamePrefixWithDifferentCasing()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/us/",
+                        Shards = [0]
+                    }
+                ];
+            }
+        });
+        {
+
+            var ex = await Assert.ThrowsAsync<RavenException>((async () => await store.Maintenance.SendAsync(new AddPrefixedShardingSettingOperation(new PrefixedShardingSetting
+            {
+                Prefix = "users/US/",
+                Shards = [1]
+            }))));
+
+
+            Assert.Contains($"Prefix 'users/US/' already exists", ex.Message);
+        }
+
+
+    }
+
+    [RavenFact(RavenTestCategory.Sharding)]
+    public void PreventCreatingDatabaseWithSamePrefixInDifferentCasing()
+    {
+        var ex = Assert.Throws<RavenException>(() => Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/us/",
+                        Shards = [0]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/US/",
+                        Shards = [0]
+                    }
+                ];
+            }
+        }));
+
+        Assert.Contains("Prefix 'users/us/' already exists in different casing", ex.Message);
+    }
+
     private class Item
     {
 #pragma warning disable CS0649
