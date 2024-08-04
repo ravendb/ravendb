@@ -149,10 +149,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var file = SafeFileStream.Create(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
                 32 * 1024, FileOptions.DeleteOnClose);
 
-            AssertFreeSpace(size, basePath.FullPath);
-
             try
             {
+                AssertFreeSpace(size, basePath.FullPath);
+
                 var sw = Stopwatch.StartNew();
                 var swForProgress = Stopwatch.StartNew();
                 long totalRead = 0;
@@ -206,8 +206,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
 
             // + we need to download the snapshot
+            // + we need to unzip the snapshot
             // + leave 1GB of free space
-            var freeSpaceNeeded = size + new Size(1, SizeUnit.Gigabytes);
+            var freeSpaceNeeded = 2 * size + new Size(1, SizeUnit.Gigabytes);
 
             if (freeSpaceNeeded > spaceInfo.TotalFreeSpace)
                 throw new DiskFullException($"There is not enough space on '{basePath}', we need at least {freeSpaceNeeded} in order to successfully copy the snapshot backup file locally. " +
