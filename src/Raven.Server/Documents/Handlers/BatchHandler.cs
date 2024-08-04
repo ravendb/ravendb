@@ -415,7 +415,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (replicatedPast < numberOfReplicasToWaitFor && throwOnTimeoutInWaitForReplicas)
             {
-                var message = $"Could not verify that etag {lastChangeVector} was replicated " +
+                var message = $"Could not verify that the change vector '{lastChangeVector}' was replicated " +
                               $"to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. " +
                               $"So far, it only replicated to {replicatedPast}";
 
