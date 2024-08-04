@@ -8,21 +8,34 @@ namespace Raven.Server.Documents.Revisions;
 
 public partial class RevisionsStorage
 {
-    internal sealed class DeleteRevisionsByDocumentIdMergedCommand : AbstractDeleteRevisionsMergedCommand<(bool MoreWork, long Deleted)?>
+    internal sealed class DeleteRevisionsByDocumentIdMergedCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         private readonly List<string> _ids;
 
         private readonly DateTime? _from, _to;
 
-        public DeleteRevisionsByDocumentIdMergedCommand(List<string> ids, DateTime? from, DateTime? to, bool includeForceCreated) : base(includeForceCreated)
+        private readonly bool _includeForceCreated;
+
+        public (bool MoreWork, long Deleted)? Result;
+
+        public DeleteRevisionsByDocumentIdMergedCommand(List<string> ids, DateTime? from, DateTime? to, bool includeForceCreated)
         {
             _ids = ids;
             _from = from;
             _to = to;
+            _includeForceCreated = includeForceCreated;
         }
 
-        protected override (bool MoreWork, long Deleted)? DeleteRevisions(DocumentsOperationContext context)
+        protected override long ExecuteCmd(DocumentsOperationContext context)
         {
+            Result = DeleteRevisions(context);
+            return 1;
+        }
+
+        private (bool MoreWork, long Deleted)? DeleteRevisions(DocumentsOperationContext context)
+        {
+            const long maxTotalDeletes = 10_000;
+
             var revisionsStorage = context.DocumentDatabase.DocumentsStorage.RevisionsStorage;
             var moreWork = false;
             var deleted = 0L;
@@ -41,22 +54,27 @@ public partial class RevisionsStorage
                         continue;
                     }
 
-                    var maxDeletes = revisionsStorage.GetRevisionsConfiguration(collectionName.Name, deleteRevisionsWhenNoCofiguration: true)
-                        .MaximumRevisionsToDeleteUponDocumentUpdate;
-
-                    Func<Document, bool> shouldSkip = null;
-                    if (IncludeForceCreated == false || _from.HasValue || _to.HasValue)
+                    var maxDeletes = revisionsStorage.GetRevisionsConfiguration(collectionName.Name, deleteRevisionsWhenNoCofiguration: true).MaximumRevisionsToDeleteUponDocumentUpdate;
+                    if (maxDeletes == null || maxDeletes > maxTotalDeletes - deleted)
                     {
-                        shouldSkip = ShouldSkipRevision;
+                        maxDeletes = maxTotalDeletes - deleted;
                     }
 
-                    var result = revisionsStorage.ForceDeleteAllRevisionsForInternal(context, lowerId, prefixSlice, collectionName, maxDeletes, shouldSkip);
+                    var result = revisionsStorage.ForceDeleteAllRevisionsForInternal(context, lowerId, prefixSlice, collectionName, maxDeletes, ShouldSkipRevision);
                     if (result.MoreWork == false)
                     {
                         _ids.RemoveAt(i);
                     }
                     moreWork |= result.MoreWork;
                     deleted += result.Deleted;
+
+                    if (deleted >= maxTotalDeletes)
+                    {
+                        if (i != 0)
+                            moreWork = true;
+                        
+                        break;
+                    }
                 }
             }
 
@@ -65,22 +83,20 @@ public partial class RevisionsStorage
 
         private bool ShouldSkipRevision(Document revision)
         {
-            if (IncludeForceCreated == false || _from.HasValue || _to.HasValue)
+            if (_includeForceCreated == false || _from.HasValue || _to.HasValue)
             {
-                return SkipForceCreated(revision) || IsRevisionInRange(revision, _from, _to) == false;
+                return ShouldSkipForceCreated(_includeForceCreated == false, revision.Flags) || IsRevisionInRange(revision, _from, _to) == false;
             }
             return false;
         }
 
-        private static bool IsRevisionInRange(Document revision, DateTime? from, DateTime? to)
-        {
-            return (from.HasValue == false || revision.LastModified >= from.Value) &&
-                   (to.HasValue == false || revision.LastModified <= to.Value);
-        }
+        private static bool IsRevisionInRange(Document revision, DateTime? from, DateTime? to) =>
+            (from.HasValue == false || revision.LastModified >= from.Value) && (to.HasValue == false || revision.LastModified <= to.Value);
+        
 
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new DeleteRevisionsByDocumentIdMergedCommandDto(_ids, _from, _to, IncludeForceCreated);
+            return new DeleteRevisionsByDocumentIdMergedCommandDto(_ids, _from, _to, _includeForceCreated);
         }
 
         public sealed class DeleteRevisionsByDocumentIdMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteRevisionsByDocumentIdMergedCommand>
