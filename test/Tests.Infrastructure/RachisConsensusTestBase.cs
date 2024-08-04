@@ -309,9 +309,13 @@ namespace Tests.Infrastructure
                 {
                     var stream = tcpClient.GetStream();
                     var remoteConnection = new RemoteConnection(rachis.Tag, rachis.CurrentTerm, stream,
-                        features: new TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures
+                        features: new TcpConnectionHeaderMessage.SupportedFeatures(TcpConnectionHeaderMessage.ClusterTcpVersion)
                         {
-                            MultiTree = true
+                            Cluster = new TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures
+                            {
+                                BaseLine = true,
+                                MultiTree = true
+                            }
                         }, () => tcpClient.Client?.Disconnect(false));
 
                     await rachis.AcceptNewConnectionAsync(remoteConnection, tcpClient.Client.RemoteEndPoint, hello =>

@@ -16,23 +16,29 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Rachis
 {
-    public partial class Follower : IDisposable
+    public class Follower : IDisposable
     {
         private static int _uniqueId;
 
         private readonly RachisConsensus _engine;
+        public RachisConsensus Engine => _engine;
         private readonly long _term;
         private readonly RemoteConnection _connection;
+        public RemoteConnection Connection => _connection;
         private PoolOfThreads.LongRunningWork _followerLongRunningWork;
 
         private readonly string _debugName;
         private readonly RachisLogRecorder _debugRecorder;
+        public RachisLogRecorder DebugRecorder => _debugRecorder;
+        public FollowerDebugView.FollowerPhase Phase = FollowerDebugView.FollowerPhase.Initial;
+        public RaftDebugView ToDebugView => new FollowerDebugView(this);
 
         public Follower(RachisConsensus engine, long term, RemoteConnection remoteConnection)
         {
             _engine = engine;
             _connection = remoteConnection;
             _term = term;
+            engine.Follower = this;
 
             // this will give us a unique identifier for this follower
             var uniqueId = Interlocked.Increment(ref _uniqueId);
@@ -397,7 +403,8 @@ namespace Raven.Server.Rachis
             // at this point, the leader will send us a snapshot message
             // in most cases, it is an empty snapshot, then start regular append entries
             // the reason we send this is to simplify the # of states in the protocol
-
+            
+            Phase = FollowerDebugView.FollowerPhase.Snapshot;
             var snapshot = _connection.ReadInstallSnapshot(context);
             _debugRecorder.Record($"Got snapshot info: last included index:{snapshot.LastIncludedIndex} at term {snapshot.LastIncludedTerm}");
 
@@ -778,12 +785,13 @@ namespace Raven.Server.Rachis
                     try
                     {
                         _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
-
+                        Phase = FollowerDebugView.FollowerPhase.Negotiation;
                         using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                         {
                             NegotiateWithLeader(context, (LogLengthNegotiation)obj);
                         }
 
+                        Phase = FollowerDebugView.FollowerPhase.Steady;
                         FollowerSteadyState();
                     }
                     catch (Exception e) when (RachisConsensus.IsExpectedException(e))

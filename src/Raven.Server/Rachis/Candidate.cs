@@ -18,7 +18,9 @@ namespace Raven.Server.Rachis
     {
         private TaskCompletionSource<object> _stateChange = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly RachisConsensus _engine;
+        public RachisConsensus Engine => _engine;
         private List<CandidateAmbassador> _voters = new List<CandidateAmbassador>();
+        public List<CandidateAmbassador> Voters => _voters;
         private readonly ManualResetEvent _peersWaiting = new ManualResetEvent(false);
         private PoolOfThreads.LongRunningWork _longRunningWork;
         public long RunRealElectionAtTerm { get; internal set; }
@@ -26,6 +28,7 @@ namespace Raven.Server.Rachis
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         public bool Running => _running.IsRaised();
         public volatile ElectionResult ElectionResult;
+        public RaftDebugView ToDebugView => new CandidateDebugView(this);
 
         public Candidate(RachisConsensus engine)
         {

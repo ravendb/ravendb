@@ -3554,7 +3554,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 var features = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Cluster, tcp.ProtocolVersion);
-                var remoteConnection = new RemoteConnection(_engine.Tag, _engine.CurrentTerm, tcp.Stream, features.Cluster, disconnect);
+                var remoteConnection = new RemoteConnection(_engine.Tag, _engine.CurrentTerm, tcp.Stream, features, disconnect);
 
                 await _engine.AcceptNewConnectionAsync(remoteConnection, remoteEndpoint);
             }
@@ -3742,22 +3742,6 @@ namespace Raven.Server.ServerWide
             res[nameof(TcpConnectionInfo.Urls)] = array;
 
             return res;
-        }
-
-        public DynamicJsonValue GetLogDetails(ClusterOperationContext context, int start, int take)
-        {
-            RachisConsensus.GetLastTruncated(context, out var index, out var term);
-            var range = Engine.GetLogEntriesRange(context);
-            var json = new DynamicJsonValue
-            {
-                [nameof(LogSummary.CommitIndex)] = Engine.GetLastCommitIndex(context),
-                [nameof(LogSummary.LastTruncatedIndex)] = index,
-                [nameof(LogSummary.LastTruncatedTerm)] = term,
-                [nameof(LogSummary.FirstEntryIndex)] = range.Min,
-                [nameof(LogSummary.LastLogEntryIndex)] = range.Max,
-                [nameof(LogSummary.Entries)] = Engine.GetLogEntries(context, range.Min, start, take)
-            };
-            return json;
         }
 
         public IEnumerable<Client.ServerWide.Operations.MountPointUsage> GetMountPointUsageDetailsFor(StorageEnvironmentWithType environment, bool includeTempBuffers)
