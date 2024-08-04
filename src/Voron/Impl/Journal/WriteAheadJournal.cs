@@ -192,7 +192,7 @@ namespace Voron.Impl.Journal
             var deleteLastJournal = false;
             for (var journalNumber = journalToStartReadingFrom; journalNumber <= logInfo.CurrentJournal; journalNumber++)
             {
-                addToInitLog?.Invoke(LogMode.Information, $"Recovering journal {journalNumber} (up to last journal {logInfo.CurrentJournal})");
+                addToInitLog?.Invoke(LogMode.Information, $"Recovering journal {journalNumber:#,#;;0} (up to last journal {logInfo.CurrentJournal:#,#;;0})");
                 var initialSize = _env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize;
                 var journalRecoveryName = StorageEnvironmentOptions.JournalRecoveryName(journalNumber);
                 try
@@ -252,7 +252,7 @@ namespace Voron.Impl.Journal
                                 break;
                             }
                         }
-                        addToInitLog?.Invoke(LogMode.Information, $"Journal {journalNumber} Recovered");
+                        addToInitLog?.Invoke(LogMode.Information, $"Journal {journalNumber:#,#;;0} Recovered");
                     }
                 }
                 catch (InvalidJournalException)
@@ -287,7 +287,7 @@ namespace Voron.Impl.Journal
 
                     var overflowDetector = new RecoveryOverflowDetector();
 
-                    addToInitLog?.Invoke(LogMode.Information, $"Validate checksum on {modifiedPages.Count} pages");
+                    addToInitLog?.Invoke(LogMode.Information, $"Validate checksum on {modifiedPages.Count:#,#;;0} pages");
 
                     var sp = Stopwatch.StartNew();
 
@@ -298,7 +298,7 @@ namespace Voron.Impl.Journal
                         if (sp.Elapsed.TotalSeconds >= 60)
                         {
                             sp.Restart();
-                            addToInitLog?.Invoke(LogMode.Information, $"Still calculating checksum... ({sortedPages.Length - i} out of {sortedPages.Length}");
+                            addToInitLog?.Invoke(LogMode.Information, $"Still calculating checksum... {(sortedPages.Length - i) / sortedPages.Length * 100:0.00}% ({(sortedPages.Length - i):#,#;;0} out of {sortedPages.Length:#,#;;0}");
                         }
 
                         using (tempTx) // release any resources, we just wanted to validate things
@@ -320,11 +320,11 @@ namespace Voron.Impl.Journal
                     }
 
                     sp.Stop();
-                    addToInitLog?.Invoke(LogMode.Information, $"Validate of {sortedPages.Length} pages completed in {sp.Elapsed}");
+                    addToInitLog?.Invoke(LogMode.Information, $"Validate of {sortedPages.Length:#,#;;0} pages completed in {sp.Elapsed}");
                 }
                 else
                 {
-                    addToInitLog?.Invoke(LogMode.Information, $"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {modifiedPages.Count} pages.");
+                    addToInitLog?.Invoke(LogMode.Information, $"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {modifiedPages.Count:#,#;;0} pages.");
                 }
             }
 
