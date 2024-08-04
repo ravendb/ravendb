@@ -557,7 +557,7 @@ namespace Raven.Server.Web.System
         public async Task GetRestorePoints()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var cancelToken = CreateBackgroundOperationToken())
+            using (var cancelToken = CreateHttpRequestBoundOperationToken())
             {
                 PeriodicBackupConnectionType connectionType;
                 var type = GetStringValuesQueryString("type", false).FirstOrDefault();
