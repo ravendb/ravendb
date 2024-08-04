@@ -214,7 +214,7 @@ namespace Raven.Client.Documents.Operations.Revisions
             return new DeleteRevisionsCommand(conventions, _parameters);
         }
 
-        internal sealed class Parameters : ICloneable
+        internal sealed class Parameters
         {
             public List<string> DocumentIds { get; set; }
 
@@ -263,11 +263,11 @@ namespace Raven.Client.Documents.Operations.Revisions
 
             }
 
-            public object Clone()
+            public Parameters Clone(List<string> documentIds)
             {
                 return new Parameters
                 {
-                    DocumentIds = this.DocumentIds,
+                    DocumentIds = documentIds,
                     RemoveForceCreatedRevisions = this.RemoveForceCreatedRevisions,
                     RevisionsChangeVectors = this.RevisionsChangeVectors,
                     From = this.From,

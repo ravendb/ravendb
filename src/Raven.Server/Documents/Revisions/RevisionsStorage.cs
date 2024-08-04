@@ -917,6 +917,10 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
+        public static bool ShouldSkipForceCreated(bool skipForceCreated, DocumentFlags revisionFlags)
+        {
+            return skipForceCreated && revisionFlags.Contain(DocumentFlags.ForceCreated);
+        }
 
         private class ConflictedRevisionsDeletionState
         {
@@ -1025,12 +1029,12 @@ namespace Raven.Server.Documents.Revisions
 
             private bool ShouldDeleteNonConflicted(DocumentFlags revisionFlags)
             {
-
                 if (FinishedRegular)
                 {
                     return false;
                 }
-                if (_skipForceCreated && revisionFlags.Contain(DocumentFlags.ForceCreated))
+
+                if (ShouldSkipForceCreated(_skipForceCreated, revisionFlags))
                 {
                     _skippedForceCreated++;
                     FinishedRegular |= AllRegularAreDeleted();
