@@ -334,7 +334,7 @@ namespace Voron.Impl.Backup
 
                 onProgress?.Invoke($"Restored file: '{entry.Name}' to: '{dst}', " +
                                    $"size: {new Size(totalRead, SizeUnit.Bytes)}, " +
-                                   $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
+                                   $"took: {sw.Elapsed}");
             }
         }
 
