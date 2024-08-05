@@ -6,9 +6,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Esprima.Ast;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -1627,7 +1627,7 @@ namespace SlowTests.Issues
             var dbNameA = GetDatabaseName();
             var dbNameB = GetDatabaseName();
 
-            var (hubNodes, hubLeader, hubCertificates) = await CreateRaftClusterWithSsl(2, watcherCluster: true);
+            var (hubNodes, hubLeader, hubCertificates) = await CreateRaftClusterWithSsl(2);
             using var hub = GetDocumentStore(new Options
             {
                 Server = hubLeader,
@@ -1697,7 +1697,9 @@ namespace SlowTests.Issues
                 AllowedSinkToHubPaths = new[] { "*" }
             }));
 
-            WaitForDocument(hub, usersDocId1);
+            Assert.True(await WaitForDocumentInClusterAsync<User>
+                (hubNodes, dbNameA, usersDocId1, u => u.Name == "Grisha", 
+                    timeout: TimeSpan.FromSeconds(30), certificate: hubCertificates.ServerCertificate.Value));
 
             const int age = 38;
             using (var session = hub.OpenAsyncSession())
