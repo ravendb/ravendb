@@ -284,11 +284,11 @@ public unsafe partial class Pager : IDisposable
     {
         if (pageNumber <= state.NumberOfAllocatedPages && pageNumber >= 0)
             return _functions.AcquirePagePointer(this, state, ref txState, pageNumber);
-        return ThrowInvalidMethod(state, pageNumber);
+        return ThrowInvalidPage(state, pageNumber);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private byte* ThrowInvalidMethod(State state, long pageNumber)
+    private byte* ThrowInvalidPage(State state, long pageNumber)
     {
         VoronUnrecoverableErrorException.Raise(Options,
             "The page " + pageNumber + " was not allocated, allocated pages: " + state.NumberOfAllocatedPages + " in " + FileName);
@@ -300,7 +300,7 @@ public unsafe partial class Pager : IDisposable
         if (pageNumber <= state.NumberOfAllocatedPages && pageNumber >= 0)
             return _functions.AcquireRawPagePointer(this, state, ref txState, pageNumber);
 
-        return ThrowInvalidMethod(state, pageNumber);
+        return ThrowInvalidPage(state, pageNumber);
     }
 
     public byte* AcquirePagePointerForNewPage(State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
