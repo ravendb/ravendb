@@ -19,7 +19,6 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
-using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
@@ -174,7 +173,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     {"x-ms-date", now.ToString("R")},
                     {"x-ms-version", AzureStorageVersion},
                     {"x-ms-blob-type", "BlockBlob"},
-                    {Constants.Headers.ContentLength, stream.Length.ToString(CultureInfo.InvariantCulture)}
+                    {"Content-Length", stream.Length.ToString(CultureInfo.InvariantCulture)}
                 }
             };
 
@@ -247,7 +246,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     {
                         {"x-ms-date", now.ToString("R")},
                         {"x-ms-version", AzureStorageVersion},
-                        {Constants.Headers.ContentLength, subStream.Length.ToString(CultureInfo.InvariantCulture)}
+                        {"Content-Length", subStream.Length.ToString(CultureInfo.InvariantCulture)}
                     }
                 };
 
@@ -305,7 +304,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 {
                     {"x-ms-date", now.ToString("R")},
                     {"x-ms-version", AzureStorageVersion},
-                    {Constants.Headers.ContentLength, Encoding.UTF8.GetBytes(xmlString).Length.ToString(CultureInfo.InvariantCulture)}
+                    {"Content-Length", Encoding.UTF8.GetBytes(xmlString).Length.ToString(CultureInfo.InvariantCulture)}
                 }
             };
 
@@ -411,6 +410,37 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             throw StorageException.FromResponseMessage(response);
         }
 
+        public Blob GetBlob(string key)
+        {
+            var url = GetUrl($"{_serverUrlForContainer}/{key}");
+
+            var now = SystemTime.UtcNow;
+
+            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
+            {
+                Headers =
+                {
+                    {"x-ms-date", now.ToString("R")},
+                    {"x-ms-version", AzureStorageVersion}
+                }
+            };
+
+            var client = GetClient();
+            SetAuthorizationHeader(client, HttpMethods.Get, url, requestMessage.Headers);
+
+            var response = client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, CancellationToken).Result;
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return null;
+
+            if (response.IsSuccessStatusCode == false)
+                throw StorageException.FromResponseMessage(response);
+
+            var data = response.Content.ReadAsStreamAsync().Result;
+            var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
+
+            return new Blob(data, headers);
+        }
+
         public async Task<Blob> GetBlobAsync(string key)
         {
             var url = GetUrl($"{_serverUrlForContainer}/{key}");
@@ -439,14 +469,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var data = await response.Content.ReadAsStreamAsync();
             var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
 
-            if (response.Content.Headers.TryGetValues(Constants.Headers.ContentLength, out var values) == false)
-                throw new InvalidOperationException("Content-Length header is not present");
-
-            var contentLength = values.FirstOrDefault();
-            if (long.TryParse(contentLength, out var size) == false)
-                throw new InvalidOperationException($"Content-Length header is present but could not be parsed, got: {contentLength}");
-
-            return new Blob(data, headers, size);
+            return new Blob(data, headers);
         }
 
         public void DeleteContainer()
@@ -833,7 +856,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             if (httpContentHeaders != null)
             {
-                if (httpContentHeaders.TryGetValues(Constants.Headers.ContentLength, out IEnumerable<string> lengthValues))
+                if (httpContentHeaders.TryGetValues("Content-Length", out IEnumerable<string> lengthValues))
                     contentLength = lengthValues.First();
 
                 if (httpContentHeaders.TryGetValues("Content-Type", out IEnumerable<string> typeValues))
@@ -841,7 +864,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
             else
             {
-                if (httpHeaders.TryGetValues(Constants.Headers.ContentLength, out IEnumerable<string> lengthValues))
+                if (httpHeaders.TryGetValues("Content-Length", out IEnumerable<string> lengthValues))
                     contentLength = lengthValues.First();
 
                 if (httpHeaders.TryGetValues("Content-Type", out IEnumerable<string> typeValues))

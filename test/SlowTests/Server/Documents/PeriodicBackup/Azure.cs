@@ -10,7 +10,6 @@ using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Azure;
-using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -109,7 +108,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     });
                 var blob = await holder.Client.GetBlobAsync(blobKey);
                 Assert.NotNull(blob);
-                Assert.True(blob.Size.GetValue(SizeUnit.Bytes) > 0);
 
                 using (var reader = new StreamReader(blob.Data))
                     Assert.Equal("123", reader.ReadToEnd());

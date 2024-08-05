@@ -46,7 +46,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var @object = await client.GetObjectAsync(key);
                 Assert.NotNull(@object);
-                Assert.True(@object.Size.GetValue(SizeUnit.Bytes) > 0);
 
                 using (var reader = new StreamReader(@object.Data))
                     Assert.Equal("231", await reader.ReadToEndAsync());

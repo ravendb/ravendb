@@ -11,7 +11,6 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using Raven.Server.Utils;
-using Sparrow;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -71,19 +70,16 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             private IDisposable _toDispose;
 
-            public Blob(Stream data, IDictionary<string, string> metadata, long sizeInBytes, IDisposable toDispose = null)
+            public Blob(Stream data, IDictionary<string, string> metadata, IDisposable toDispose = null)
             {
                 Data = data ?? throw new ArgumentNullException(nameof(data));
                 Metadata = metadata;
-                Size = new Size(sizeInBytes, SizeUnit.Bytes);
                 _toDispose = toDispose;
             }
 
             public Stream Data { get; }
 
             public IDictionary<string, string> Metadata { get; }
-
-            public Size Size { get; }
 
             public void Dispose()
             {

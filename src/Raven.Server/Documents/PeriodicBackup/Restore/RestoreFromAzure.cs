@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -15,7 +14,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     {
         private readonly IRavenAzureClient _client;
         private readonly string _remoteFolderName;
-
         public RestoreFromAzure(ServerStore serverStore, RestoreFromAzureConfiguration restoreFromConfiguration, string nodeTag, OperationCancelToken operationCancelToken) : base(serverStore, restoreFromConfiguration, nodeTag, operationCancelToken)
         {
             _client = RavenAzureClient.Create(restoreFromConfiguration.Settings, serverStore.Configuration.Backup);
@@ -28,10 +26,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return blob.Data;
         }
 
-        protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress)
+        protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
             var blob = await _client.GetBlobAsync(path);
-            var file = await CopyRemoteStreamLocallyAsync(blob.Data, blob.Size, onProgress);
+            var file = await CopyRemoteStreamLocally(blob.Data);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 

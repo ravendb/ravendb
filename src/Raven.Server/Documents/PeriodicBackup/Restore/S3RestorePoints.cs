@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config;
@@ -15,13 +14,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     public class S3RestorePoints : RestorePointsBase
     {
         private readonly RavenConfiguration _configuration;
-        private readonly CancellationToken _cancellationToken;
         private readonly RavenAwsS3Client _client;
 
-        public S3RestorePoints(RavenConfiguration configuration, SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, S3Settings s3Settings, CancellationToken cancellationToken) : base(sortedList, context)
+        public S3RestorePoints(RavenConfiguration configuration, SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, S3Settings s3Settings) : base(sortedList, context)
         {
             _configuration = configuration;
-            _cancellationToken = cancellationToken;
             _client = new RavenAwsS3Client(s3Settings, configuration.Backup);
         }
 
@@ -76,7 +73,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override async Task<ZipArchive> GetZipArchive(string filePath)
         {
             var blob = await _client.GetObjectAsync(filePath);
-            var file = await RestoreBackupTaskBase.CopyRemoteStreamLocallyAsync(blob.Data, blob.Size, _configuration, onProgress: null, _cancellationToken);
+            var file = await RestoreBackupTaskBase.CopyRemoteStreamLocally(blob.Data, _configuration);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.ServerWide;
+using Voron.Util.Settings;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return Task.FromResult<Stream>(stream);
         }
 
-        protected override Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress)
+        protected override Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
             return Task.FromResult(ZipFile.Open(path, ZipArchiveMode.Read, System.Text.Encoding.UTF8));
         }

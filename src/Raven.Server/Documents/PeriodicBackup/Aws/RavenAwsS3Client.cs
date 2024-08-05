@@ -248,7 +248,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     Key = key
                 }, _cancellationToken);
 
-                return new RavenStorageClient.Blob(response.ResponseStream, ConvertMetadata(response.Metadata), response.ContentLength, response);
+                return new RavenStorageClient.Blob(response.ResponseStream, ConvertMetadata(response.Metadata), response);
             }
             catch (AmazonS3Exception e)
             {
