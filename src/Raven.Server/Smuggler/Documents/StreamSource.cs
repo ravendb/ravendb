@@ -16,6 +16,7 @@ using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
@@ -431,6 +432,24 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
+                if (reader.TryGet(nameof(databaseRecord.QueueSinks), out BlittableJsonReaderArray queueSinks) &&
+                    queueSinks != null)
+                {
+                    databaseRecord.QueueSinks = new List<QueueSinkConfiguration>();
+                    foreach (BlittableJsonReaderObject queue in queueSinks)
+                    {
+                        try
+                        {
+                            databaseRecord.QueueSinks.Add(JsonDeserializationCluster.QueueSinkConfiguration(queue));
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the Raven queue sinks configuration from smuggler file. Skipping.", e);
+                        }
+                    }
+                }
+                
                 if (reader.TryGet(nameof(databaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings) &&
                     ravenConnectionStrings != null)
                 {

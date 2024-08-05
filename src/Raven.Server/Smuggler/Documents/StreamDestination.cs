@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
@@ -462,6 +463,13 @@ namespace Raven.Server.Smuggler.Documents
                             WriteQueueEtls(databaseRecord.QueueEtls);
                         }
 
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.QueueSinks))
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.QueueSinks));
+                            WriteQueueSinks(databaseRecord.QueueSinks);
+                        }
+
                         if (databaseRecord.Integrations != null)
                         {
                             _writer.WriteComma();
@@ -786,6 +794,27 @@ namespace Raven.Server.Smuggler.Documents
                         _writer.WriteComma();
                     first = false;
                     _context.Write(_writer, etl.ToJson());
+                }
+
+                _writer.WriteEndArray();
+            }
+
+            private void WriteQueueSinks(List<QueueSinkConfiguration> queueSinkConfiguration)
+            {
+                if (queueSinkConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _writer.WriteStartArray();
+
+                var first = true;
+                foreach (var configuration in queueSinkConfiguration)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+                    _context.Write(_writer, configuration.ToJson());
                 }
 
                 _writer.WriteEndArray();
