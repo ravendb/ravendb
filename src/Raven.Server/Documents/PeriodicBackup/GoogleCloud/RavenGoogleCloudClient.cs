@@ -152,6 +152,9 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 
         public async Task<Size> GetObjectSizeAsync(string fileName)
         {
+            // Fetches the information about an object asynchronously.
+            // This does not retrieve the content of the object itself.
+
             var obj = await GetObjectAsync(fileName);
             if (obj.Size == null)
                 throw new InvalidOperationException("Size isn't available");
