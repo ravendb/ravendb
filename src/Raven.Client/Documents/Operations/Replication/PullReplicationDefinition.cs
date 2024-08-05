@@ -99,7 +99,7 @@ namespace Raven.Client.Documents.Operations.Replication
             }
         }
 
-        public PullReplicationAsHub ToPullReplicationAsHub(ReplicationInitialRequest request, long taskId)
+        internal PullReplicationAsHub ToPullReplicationAsHub(ReplicationInitialRequest request, long taskId)
         {
             return new PullReplicationAsHub
             {
