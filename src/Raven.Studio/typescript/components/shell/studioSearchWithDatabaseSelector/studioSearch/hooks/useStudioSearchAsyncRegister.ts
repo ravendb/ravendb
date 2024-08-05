@@ -12,7 +12,7 @@ import { useAppSelector } from "components/store";
 import assertUnreachable from "components/utils/assertUnreachable";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAsync } from "react-async-hook";
 
 interface UseStudioSearchAsyncRegisterProps {
@@ -194,8 +194,10 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
         }
     );
 
+    const [lastDocumentsCount, setLastDocumentsCount] = useState(0);
+
     // Register documents
-    const asyncGetDocuments = useAsyncDebounce(
+    useAsyncDebounce(
         async (searchQuery, activeDatabaseName) => {
             if (!activeDatabaseName || !searchQuery) {
                 return [];
@@ -208,9 +210,11 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
         {
             onSuccess: (results) => {
                 // When previous and current results are empty do nothing
-                if (results?.length === 0 && (!asyncGetDocuments.result || asyncGetDocuments.result?.length === 0)) {
+                if (results?.length === 0 && lastDocumentsCount === 0) {
                     return;
                 }
+
+                setLastDocumentsCount(results?.length ?? 0);
 
                 const mappedResults = results.map((x) => x["@metadata"]["@id"]);
 
