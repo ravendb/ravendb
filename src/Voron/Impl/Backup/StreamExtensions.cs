@@ -3,7 +3,6 @@ using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Sparrow.Utils;
 
 namespace Voron.Impl.Backup
 {
@@ -11,25 +10,23 @@ namespace Voron.Impl.Backup
     {
         private const int DefaultBufferSize = 81920;
 
-        [ThreadStatic]
-        private static byte[] _readBuffer;
-
-        static StreamExtensions()
-        {
-            ThreadLocalCleanup.ReleaseThreadLocalState += () => _readBuffer = null;
-        }
-
         public static void CopyTo(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)
         {
-            if (_readBuffer == null)
-                _readBuffer = new byte[DefaultBufferSize];
+            var readBuffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
 
-            int count;
-            while ((count = source.Read(_readBuffer, 0, _readBuffer.Length)) != 0)
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                onProgress?.Invoke(count);
-                destination.Write(_readBuffer, 0, count);
+                int count;
+                while ((count = source.Read(readBuffer, 0, readBuffer.Length)) != 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    onProgress?.Invoke(count);
+                    destination.Write(readBuffer, 0, count);
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(readBuffer);
             }
         }
 
