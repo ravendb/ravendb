@@ -14,6 +14,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
@@ -24,11 +25,12 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -37,6 +39,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
+using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
@@ -170,7 +173,7 @@ namespace Raven.Server.Documents.Handlers
 
                         if (disableAtomicDocumentWrites == false)
                         {
-                            if (ClusterWideTransactionHelper.IsAtomicGuardKey(commandData.Id))
+                            if (ClusterTransactionCommand.IsAtomicGuardKey(commandData.Id, out _))
                                 throw new CompareExchangeInvalidKeyException($"You cannot manipulate the atomic guard '{commandData.Id}' via the cluster-wide session");
                         }
 
@@ -327,7 +330,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task WaitForDatabaseCompletion(Task<HashSet<string>> onDatabaseCompletionTask, long index, ClusterTransactionOptions options, CancellationToken token)
         {
-            var lastCompleted = Database.ClusterWideTransactionIndexWaiter.LastIndex;
+            var lastCompleted = Interlocked.Read(ref Database.LastCompletedClusterTransactionIndex);
             HashSet<string> modifiedCollections = null;
             if (lastCompleted < index)
                 modifiedCollections = await onDatabaseCompletionTask; // already registered to the token

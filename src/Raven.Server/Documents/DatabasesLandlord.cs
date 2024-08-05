@@ -167,7 +167,7 @@ namespace Raven.Server.Documents
                             await database.StateChangedAsync(index);
                             if (type == ClusterStateMachine.SnapshotInstalled)
                             {
-                                database.NotifyOnPendingClusterTransaction();
+                                database.NotifyOnPendingClusterTransaction(index, changeType);
                             }
                             break;
 
@@ -176,12 +176,13 @@ namespace Raven.Server.Documents
                             break;
 
                         case ClusterDatabaseChangeType.PendingClusterTransactions:
+                        case ClusterDatabaseChangeType.ClusterTransactionCompleted:
                             if (ForTestingPurposes?.BeforeHandleClusterTransactionOnDatabaseChanged != null)
                                 await ForTestingPurposes.BeforeHandleClusterTransactionOnDatabaseChanged.Invoke(_serverStore);
 
                             database.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
                             database.ClusterTransactionId = topology.ClusterTransactionIdBase64;
-                            database.NotifyOnPendingClusterTransaction();
+                            database.NotifyOnPendingClusterTransaction(index, changeType);
                             break;
 
                         default:
@@ -1015,6 +1016,7 @@ namespace Raven.Server.Documents
             RecordRestored,
             ValueChanged,
             PendingClusterTransactions,
+            ClusterTransactionCompleted
         }
 
         public bool UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)

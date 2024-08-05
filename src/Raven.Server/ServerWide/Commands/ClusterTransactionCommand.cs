@@ -317,7 +317,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 var cmdType = dbCmd[nameof(ClusterTransactionDataCommand.Type)].ToString();
                 var docId = dbCmd[nameof(ClusterTransactionDataCommand.Id)].ToString();
-                var atomicGuardKey = ClusterWideTransactionHelper.GetAtomicGuardKey(docId);
+                var atomicGuardKey = GetAtomicGuardKey(docId);
                 var changeVector = dbCmd[nameof(ClusterTransactionDataCommand.ChangeVector)]?.ToString();
                 long changeVectorIndex = 0;
 
@@ -382,7 +382,24 @@ namespace Raven.Server.ServerWide.Commands
 
             return null;
         }
-        
+
+        public static bool IsAtomicGuardKey(string id, out string docId)
+        {
+            if (id.StartsWith(Constants.CompareExchange.RvnAtomicPrefix) == false)
+            {
+                docId = null;
+                return false;
+            }
+
+            docId = id.Substring(Constants.CompareExchange.RvnAtomicPrefix.Length);
+            return true;
+        }
+
+        public static string GetAtomicGuardKey(string docId)
+        {
+            return Constants.CompareExchange.RvnAtomicPrefix + docId;
+        }
+
         public DynamicJsonArray SaveCommandsBatch(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index)
         {
             var result = new DynamicJsonArray();
@@ -529,11 +546,11 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public static unsafe ByteStringContext.InternalScope GetPrefix<TTransaction>(TransactionOperationContext<TTransaction> context, string database, out Slice prefixSlice, long? prevCount = null)
+        public static unsafe ByteStringContext.InternalScope GetPrefix<TTransaction>(TransactionOperationContext<TTransaction> context, string database, out Slice prefixSlice, long? index = null)
             where TTransaction : RavenTransaction
         {
             var maxSize = database.GetUtf8MaxSize() + sizeof(byte);
-            if (prevCount.HasValue)
+            if (index.HasValue)
                 maxSize += sizeof(long);
 
             var lowerBufferSize = database.Length * sizeof(char);
@@ -554,9 +571,9 @@ namespace Raven.Server.ServerWide.Commands
                     var dbLen = Encoding.UTF8.GetBytes(lowerBufferStart, database.Length, prefixBuffer.Ptr, prefixBuffer.Length);
                     prefixBuffer.Ptr[dbLen] = Separator;
                     var actualSize = dbLen + 1;
-                    if (prevCount.HasValue)
+                    if (index.HasValue)
                     {
-                        *(long*)(prefixBuffer.Ptr + actualSize) = Bits.SwapBytes(prevCount.Value);
+                        *(long*)(prefixBuffer.Ptr + actualSize) = Bits.SwapBytes(index.Value);
                         actualSize += sizeof(long);
                     }
                     prefixBuffer.Truncate(actualSize);

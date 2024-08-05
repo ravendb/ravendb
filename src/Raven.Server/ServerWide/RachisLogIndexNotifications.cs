@@ -37,7 +37,7 @@ public class RachisLogIndexNotifications : AbstractRaftIndexNotifications<Recent
         {
             // the task has already completed
             // let's check if we had errors in it
-            foreach (var error in Errors)
+            foreach (var error in _errors)
             {
                 if (error.Index == index)
                     error.Exception.Throw(); // rethrow

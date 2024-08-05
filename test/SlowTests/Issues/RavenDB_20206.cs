@@ -5,7 +5,6 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Server;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
-using SlowTests.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -63,7 +62,7 @@ public class RavenDB_20206 : RavenTestBase
             using (context.OpenReadTransaction())
             {
                 // clean tombstones
-                var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server, store1.Database, context);
+                var cleanupState = await CleanupCompareExchangeTombstonesAsync(server, store1.Database, context);
                 Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
             }
 
@@ -85,7 +84,7 @@ public class RavenDB_20206 : RavenTestBase
             using (context.OpenReadTransaction())
             {
                 // clean tombstones
-                var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server, store2.Database, context);
+                var cleanupState = await CleanupCompareExchangeTombstonesAsync(server, store2.Database, context);
                 Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
             }
 
@@ -118,5 +117,22 @@ public class RavenDB_20206 : RavenTestBase
 
             return true;
         }, true));
+    }
+
+    private static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> CleanupCompareExchangeTombstonesAsync(RavenServer server, string database, TransactionOperationContext context)
+    {
+        var cmd = server.ServerStore.Observer.GetCompareExchangeTombstonesToCleanup(database, state: null, context, out var cleanupState);
+        if (cleanupState != ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones)
+            return cleanupState;
+
+        Assert.NotNull(cmd);
+
+        var result = await server.ServerStore.SendToLeaderAsync(cmd);
+        await server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+        var hasMore = (bool)result.Result;
+        return hasMore
+            ? ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones
+            : ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones;
     }
 }

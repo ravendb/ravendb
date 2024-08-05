@@ -656,7 +656,7 @@ namespace Raven.Server.Smuggler.Documents
                     _clusterTransactionCommandsSize.Set(0, SizeUnit.Bytes);
                 }
 
-                if (ClusterWideTransactionHelper.IsAtomicGuardKey(key, out var docId))
+                if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
                     value?.Dispose();
 
@@ -738,7 +738,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (_backupKind is null or BackupKind.None)
                         {
                             // waiting for the commands to be applied
-                            await _database.ClusterWideTransactionIndexWaiter.WaitAsync(_lastClusterTransactionIndex.Value, _token);
+                            await _database.RachisLogIndexNotifications.WaitForIndexNotification(_lastClusterTransactionIndex.Value, _token);
                         }
                         else
                         {

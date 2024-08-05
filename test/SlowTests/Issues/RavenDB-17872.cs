@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
-using Raven.Client.Util;
+using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -262,9 +262,9 @@ namespace SlowTests.Issues
                 }
 
                 var compareExchangeValue =
-                    await store.Operations.SendAsync(new GetCompareExchangeValueOperation<AtomicGuard>(ClusterWideTransactionHelper.GetAtomicGuardKey("users/1")));
+                    await store.Operations.SendAsync(new GetCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/1")));
                 compareExchangeValue.Metadata.Add(Constants.Documents.Metadata.Expires, DateTime.UtcNow.AddHours(1));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<AtomicGuard>(ClusterWideTransactionHelper.GetAtomicGuardKey("users/1"), compareExchangeValue.Value, compareExchangeValue.Index));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/1"), compareExchangeValue.Value, compareExchangeValue.Index));
 
                 using (var session = store.OpenAsyncSession(new SessionOptions() { TransactionMode = TransactionMode.ClusterWide }))
                 {

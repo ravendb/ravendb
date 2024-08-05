@@ -489,7 +489,7 @@ select incl(c)"
                         lastClusterTxIndex = value.Index;
                     }
 
-                    await database.ClusterWideTransactionIndexWaiter.WaitAsync(lastClusterTxIndex, TimeSpan.FromSeconds(5));
+                    await database.RachisLogIndexNotifications.WaitForIndexNotification(lastClusterTxIndex, TimeSpan.FromSeconds(5));
 
                     companies = companies = session.Advanced
                         .RawQuery<Company>(

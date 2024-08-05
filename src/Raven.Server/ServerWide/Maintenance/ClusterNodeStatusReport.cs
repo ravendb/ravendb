@@ -62,7 +62,6 @@ namespace Raven.Server.ServerWide.Maintenance
         public Dictionary<string, long> LastSentEtag = new Dictionary<string, long>();
 
         public long LastCompareExchangeIndex { get; set; }
-        public long LastClusterWideTransactionRaftIndex { get; set; }
 
         public class ObservedIndexStatus
         {
@@ -105,8 +104,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(LastSentEtag)] = DynamicJsonValue.Convert(LastSentEtag),
                 [nameof(Error)] = Error,
                 [nameof(UpTime)] = UpTime,
-                [nameof(LastCompareExchangeIndex)] = LastCompareExchangeIndex,
-                [nameof(LastClusterWideTransactionRaftIndex)] = LastClusterWideTransactionRaftIndex
+                [nameof(LastCompareExchangeIndex)] = LastCompareExchangeIndex
             };
             var indexStats = new DynamicJsonValue();
             foreach (var stat in LastIndexStats)

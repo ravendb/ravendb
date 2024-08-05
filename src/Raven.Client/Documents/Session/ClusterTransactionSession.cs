@@ -247,15 +247,11 @@ namespace Raven.Client.Documents.Session
 
                     var val = CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, materializeMetadata: false, _session.Conventions);
                     if(includingMissingAtomicGuards  &&
-                       ClusterWideTransactionHelper.IsAtomicGuardKey(val.Key) && 
+                        val.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.OrdinalIgnoreCase) && 
                         val.ChangeVector != null)
                     {
                         _missingDocumentsToAtomicGuardIndex ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                        _missingDocumentsToAtomicGuardIndex.Add(ClusterWideTransactionHelper.ExtractDocumentIdFromAtomicGuard(val.Key), val.ChangeVector);
-                    }
-                    else if (val.Index < 0)
-                    {
-                        RegisterMissingCompareExchangeValue(val.Key);
+                        _missingDocumentsToAtomicGuardIndex.Add(val.Key.Substring(Constants.CompareExchange.RvnAtomicPrefix.Length), val.ChangeVector);
                     }
                     else
                     {
@@ -269,7 +265,7 @@ namespace Raven.Client.Documents.Session
         {
             Debug.Assert(value != null, "value != null");
 
-            if (ClusterWideTransactionHelper.IsAtomicGuardKey(value.Key))
+            if (value.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.InvariantCultureIgnoreCase))
                 throw new InvalidOperationException($"'{value.Key}' is an atomic guard and you cannot load it via the session");
 
             if (_session.NoTracking)
