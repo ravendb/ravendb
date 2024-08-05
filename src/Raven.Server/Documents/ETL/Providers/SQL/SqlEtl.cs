@@ -1,5 +1,4 @@
-﻿using System;
-using Raven.Client.Documents.Operations.ETL;
+﻿using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Relational;
@@ -31,9 +30,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new SqlDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics);
         }   
 
-        protected override RelationalDatabaseWriterSimulatorBase<SqlEtlConfiguration, SqlConnectionString> GetWriterSimulator()
+        protected override RelationalDatabaseWriterSimulatorBase<SqlConnectionString, SqlEtlConfiguration> GetWriterSimulator()
         {
-            return new SqlDatabaseWriterSimulator(Configuration);
+            return new SqlDatabaseWriterSimulator(Configuration, Database, RelationalMetrics, Statistics);
         }
     }
 }

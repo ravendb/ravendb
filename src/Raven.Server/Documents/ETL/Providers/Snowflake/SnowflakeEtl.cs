@@ -1,9 +1,7 @@
-﻿using System;
-using Raven.Client.Documents.Operations.ETL;
+﻿using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Server.Documents.ETL.Providers.Snowflake.RelationalWriters;
 using Raven.Server.Documents.ETL.Relational;
-using Raven.Server.Documents.ETL.Relational.Metrics;
 using Raven.Server.Documents.ETL.Relational.RelationalWriters;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.ServerWide;
@@ -32,8 +30,8 @@ public sealed class SnowflakeEtl : RelationalDatabaseEtlBase<SnowflakeEtlConfigu
         return new SnowflakeDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics);
     }
 
-    protected override RelationalDatabaseWriterSimulatorBase<SnowflakeEtlConfiguration, SnowflakeConnectionString> GetWriterSimulator()
+    protected override RelationalDatabaseWriterSimulatorBase<SnowflakeConnectionString, SnowflakeEtlConfiguration> GetWriterSimulator()
     {
-        return new SnowflakeDatabaseWriterSimulator(Configuration);
+        return new SnowflakeDatabaseWriterSimulator(Configuration, Database, RelationalMetrics, Statistics);
     }
 }

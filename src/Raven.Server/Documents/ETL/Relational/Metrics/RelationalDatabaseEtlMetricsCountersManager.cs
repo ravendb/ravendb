@@ -5,11 +5,11 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Relational.Metrics;
 
-public sealed class RelationalEtlMetricsCountersManager: EtlMetricsCountersManager
+public sealed class RelationalDatabaseEtlMetricsCountersManager: EtlMetricsCountersManager
 {
     public ConcurrentDictionary<string, RelationalEtlTableMetrics> TablesMetrics { get; set; }
 
-    public RelationalEtlMetricsCountersManager()
+    public RelationalDatabaseEtlMetricsCountersManager()
     {
         TablesMetrics = new ConcurrentDictionary<string, RelationalEtlTableMetrics>();
     }

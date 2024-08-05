@@ -9,6 +9,7 @@ using Raven.Server.Documents.ETL.Relational.RelationalWriters;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Snowflake.Data.Client;
+using Sparrow.Json;
 using DbCommandBuilder = Raven.Server.Documents.ETL.Relational.RelationalWriters.DbCommandBuilder;
 
 namespace Raven.Server.Documents.ETL.Providers.Snowflake.RelationalWriters;
@@ -17,10 +18,10 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
 {
     private readonly string SnowflakeEtlTag = "Snowflake ETL";
     
-    private new readonly SnowflakeEtlConfiguration Configuration; // todo: get rid of bs with this 'new' hiding the same thing beneath 
-    public SnowflakeDatabaseWriter(DocumentDatabase database, SnowflakeEtlConfiguration configuration, RelationalEtlMetricsCountersManager sqlMetrics, EtlProcessStatistics statistics) : base(database, configuration, sqlMetrics, statistics)
+    private readonly SnowflakeEtlConfiguration _snowflakeEtlConfiguration;
+    public SnowflakeDatabaseWriter(DocumentDatabase database, SnowflakeEtlConfiguration configuration, RelationalDatabaseEtlMetricsCountersManager sqlMetrics, EtlProcessStatistics statistics) : base(database, configuration, sqlMetrics, statistics)
     {
-        Configuration = configuration;
+        _snowflakeEtlConfiguration = configuration;
         ParametrizeDeletes = configuration.ParameterizeDeletes; // todo: remove
     }
 
@@ -56,7 +57,7 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
 
     protected override int? GetCommandTimeout()
     {
-        return Configuration.CommandTimeout;
+        return _snowflakeEtlConfiguration.CommandTimeout;
     }
 
     protected override bool ShouldQuoteTables()
@@ -99,5 +100,17 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
     protected override string GetPostDeleteSyntax(ToRelationalDatabaseItem itemToDelete)
     {
         return string.Empty;
+    }
+
+    protected override void HandleCustomDbTypeObject(DbParameter colParam, RelationalDatabaseColumn column, object dbType, object fieldValue, BlittableJsonReaderObject objectValue)
+    {
+        column.IsArrayOrObject = true;
+        var dbTypeString = dbType.ToString() ?? string.Empty;
+        colParam.Value = dbTypeString switch
+        {
+            "Array" when fieldValue is BlittableJsonReaderArray bjrav => bjrav.ToString(),
+            "Object" when fieldValue is BlittableJsonReaderObject bjro => bjro.ToString(),
+            _ => throw new NotSupportedException($"Type {dbTypeString} isn't currently supported by Snowflake ETL.")
+        };
     }
 }

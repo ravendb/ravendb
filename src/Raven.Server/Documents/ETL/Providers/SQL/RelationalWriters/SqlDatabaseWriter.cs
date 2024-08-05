@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
@@ -12,6 +13,7 @@ using Raven.Server.Documents.ETL.Relational.Metrics;
 using Raven.Server.Documents.ETL.Relational.RelationalWriters;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow.Json;
 using DbCommandBuilder = Raven.Server.Documents.ETL.Relational.RelationalWriters.DbCommandBuilder;
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 
@@ -27,20 +29,20 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
     
     private readonly SqlProvider _providerType;
 
-    private new readonly SqlEtlConfiguration Configuration; // todo: get rid of bs with this 'new' hiding the same thing beneath 
+    private readonly SqlEtlConfiguration _sqlEtlConfiguration;
 
     public SqlDatabaseWriter(DocumentDatabase database, SqlEtlConfiguration configuration,
-        RelationalEtlMetricsCountersManager metrics, EtlProcessStatistics statistics) : base(database,
+        RelationalDatabaseEtlMetricsCountersManager metrics, EtlProcessStatistics statistics) : base(database,
         configuration, metrics, statistics)
     {
-        Configuration = configuration;
+        _sqlEtlConfiguration = configuration;
         ParametrizeDeletes = configuration.ParameterizeDeletes;
         if (SqlServerFactoryNames.Contains(configuration.Connection.FactoryName))
         {
             _isSqlServerFactoryType = true;
         }
 
-        _providerType = SqlProviderParser.GetSupportedProvider(Configuration.Connection.FactoryName);
+        _providerType = SqlProviderParser.GetSupportedProvider(_sqlEtlConfiguration.Connection.FactoryName);
     }
 
     public override bool ParametrizeDeletes { get; }
@@ -97,12 +99,12 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
 
     protected override int? GetCommandTimeout()
     {
-        return Configuration.CommandTimeout;
+        return _sqlEtlConfiguration.CommandTimeout;
     }
 
     protected override bool ShouldQuoteTables()
     {
-        return Configuration.QuoteTables;
+        return _sqlEtlConfiguration.QuoteTables;
     }
 
     protected override string GetParameterNameForDbParameter(string paramName)
@@ -145,14 +147,96 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
 
     protected override string GetPostInsertIntoEndSyntax(ToRelationalDatabaseItem itemToReplicate)
     {
-        return _isSqlServerFactoryType && Configuration.ForceQueryRecompile ? ") OPTION(RECOMPILE)" : ")";
+        return _isSqlServerFactoryType && _sqlEtlConfiguration.ForceQueryRecompile ? ") OPTION(RECOMPILE)" : ")";
     }
 
     protected override string GetPostDeleteSyntax(ToRelationalDatabaseItem itemToDelete)
     {
-        return _isSqlServerFactoryType && Configuration.ForceQueryRecompile ? " OPTION(RECOMPILE)" : string.Empty;
+        return _isSqlServerFactoryType && _sqlEtlConfiguration.ForceQueryRecompile ? " OPTION(RECOMPILE)" : string.Empty;
     }
-    
+
+    protected override void HandleCustomDbTypeObject(DbParameter colParam, RelationalDatabaseColumn column, object dbType, object fieldValue, BlittableJsonReaderObject objectValue)
+    {
+        var dbTypeString = dbType.ToString() ?? string.Empty;
+
+        bool useGenericDbType = Enum.TryParse(dbTypeString, ignoreCase: false, out DbType type);
+
+        if (useGenericDbType)
+        {
+            var value = fieldValue.ToString();
+
+            try
+            {
+                colParam.DbType = type;
+            }
+            catch
+            {
+                if (type == DbType.Guid && Guid.TryParse(value, out var guid1) && colParam is OracleParameter oracleParameter)
+                {
+                    var arr = guid1.ToByteArray();
+                    oracleParameter.Value = arr;
+                    oracleParameter.OracleDbType = OracleDbType.Raw;
+                    oracleParameter.Size = arr.Length;
+                    return;
+                }
+
+                throw;
+            }
+
+            if (colParam.DbType == DbType.Guid && Guid.TryParse(value, out var guid))
+            {
+                if (colParam is Npgsql.NpgsqlParameter || colParam is SqlParameter)
+                    colParam.Value = guid;
+
+                if (colParam is MySqlConnector.MySqlParameter mySqlConnectorParameter)
+                {
+                    var arr = guid.ToByteArray();
+                    mySqlConnectorParameter.Value = arr;
+                    mySqlConnectorParameter.MySqlDbType = MySqlConnector.MySqlDbType.Binary;
+                    mySqlConnectorParameter.Size = arr.Length;
+                    return;
+                }
+            }
+            else
+            {
+                colParam.Value = value;
+            }
+        }
+        else
+        {
+            SetProviderSpecificDbType(dbTypeString, ref colParam, _providerType);
+
+            if (fieldValue is IEnumerable<object> enumerableValue)
+            {
+                Type detectedType = null;
+
+                colParam.Value = enumerableValue.Select(x =>
+                {
+                    if (x is IConvertible)
+                    {
+                        detectedType ??= TryDetectCollectionType(dbTypeString, x);
+
+                        if (detectedType != null)
+                            return Convert.ChangeType(x, detectedType);
+
+                        return x.ToString();
+                    }
+
+                    return x.ToString();
+                }).ToArray();
+            }
+            else
+            {
+                colParam.Value = fieldValue.ToString();
+            }
+        }
+
+        if (objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Size), out object size))
+        {
+            colParam.Size = (int)(long)size;
+        }
+    }
+
     internal static void SetProviderSpecificDbType(string dbTypeString, ref DbParameter colParam, SqlProvider? providerType)
     {
         if (providerType is null)
@@ -209,6 +293,38 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
         {
             throw new InvalidOperationException(string.Format($"Couldn't parse '{dbTypeString}' as db type."));
         }
+    }
+
+    public static Type TryDetectCollectionType(string dbTypeString, object value)
+    {
+        Type detectedType = null;
+    
+        string lowerFieldType = dbTypeString.ToLower();
+    
+        if (value is LazyStringValue or LazyCompressedStringValue)
+        {
+            if (lowerFieldType.Contains("time") || lowerFieldType.Contains("date"))
+                detectedType = typeof(DateTime);
+            else
+                detectedType = typeof(string);
+        }
+        else if (value is LazyNumberValue or long or double)
+        {
+            if (lowerFieldType.Contains("double"))
+                detectedType = typeof(double);
+            else if (lowerFieldType.Contains("decimal"))
+                detectedType = typeof(decimal);
+            else if (lowerFieldType.Contains("float"))
+                detectedType = typeof(float);
+            else if (lowerFieldType.Contains("bigint"))
+                detectedType = typeof(long);
+            else if (lowerFieldType.Contains("int"))
+                detectedType = typeof(int);
+            else if (lowerFieldType.Contains("decimal") || lowerFieldType.Contains("money") || lowerFieldType.Contains("numeric"))
+                detectedType = typeof(decimal);
+        }
+    
+        return detectedType;
     }
 
     static void ThrowProviderNotSupported(SqlProvider? providerType)

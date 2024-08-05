@@ -1,43 +1,27 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.Data.Common;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
-using Raven.Server.Documents.ETL.Relational.Test;
+using Raven.Server.Documents.ETL.Relational.Metrics;
 
 namespace Raven.Server.Documents.ETL.Relational.RelationalWriters;
 
-public abstract class RelationalDatabaseWriterSimulatorBase<TRelationalEtlConfiguration, TRelationalCollectionString>
-where TRelationalCollectionString: ConnectionString
-where TRelationalEtlConfiguration: EtlConfiguration<TRelationalCollectionString>
+public abstract class RelationalDatabaseWriterSimulatorBase<TRelationalConnectionString, TRelationalEtlConfiguration>: RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration>
+where TRelationalConnectionString: ConnectionString
+where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
 {
-    protected readonly TRelationalEtlConfiguration Configuration;
-    protected readonly DbProviderFactory ProviderFactory;
-    protected readonly DbCommandBuilder CommandBuilder;
-    private readonly bool _parametrizeDeletes;
-
-    public RelationalDatabaseWriterSimulatorBase(TRelationalEtlConfiguration configuration,  bool parametrizeDeletes)
+    protected RelationalDatabaseWriterSimulatorBase(TRelationalEtlConfiguration configuration, DocumentDatabase database,
+        RelationalDatabaseEtlMetricsCountersManager etlMetricsCountersManager, EtlProcessStatistics etlProcessStatistics) : base(database, configuration,
+        etlMetricsCountersManager, etlProcessStatistics)
     {
-        Configuration = configuration;
-        _parametrizeDeletes = parametrizeDeletes;
-        ProviderFactory = GetDbProviderFactory(configuration);
-        CommandBuilder = GetInitializedCommandBuilder();
     }
 
-    protected abstract DbProviderFactory GetDbProviderFactory(EtlConfiguration<TRelationalCollectionString> configuration);
-    protected abstract DbCommandBuilder GetInitializedCommandBuilder();
-    
     public IEnumerable<string> SimulateExecuteCommandText(RelationalDatabaseTableWithRecords records, CancellationToken token)
     {
         if (records.InsertOnlyMode == false)
         {
             // first, delete all the rows that might already exist there
-            foreach (var deleteQuery in GenerateDeleteItemsCommandText(records.TableName, records.DocumentIdColumn, _parametrizeDeletes,
+            foreach (var deleteQuery in GenerateDeleteItemsCommandText(records.TableName, records.DocumentIdColumn, ParametrizeDeletes,
                 records.Deletes, token))
             {
                 yield return deleteQuery;
@@ -49,59 +33,14 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalCollectionString>
             yield return insertQuery;
         }
     }
-
-    protected abstract DbParameter GetNewDbParameter();
-    protected abstract string GetPostInsertIntoStartSyntax();
-    protected abstract string GetPostInsertIntoEndSyntax();
-    protected abstract string GetPostDeleteSyntax();
     
-
-    protected abstract void SetParamValue(DbParameter colParam, RelationalDatabaseColumn column, List<Func<DbParameter, string, bool>> stringParsers);
     private IEnumerable<string> GenerateInsertItemCommandText(string tableName, string pkName, List<ToRelationalDatabaseItem> dataForTable, CancellationToken token)
     {
         foreach (var itemToReplicate in dataForTable)
         {
-            token.ThrowIfCancellationRequested();
-            
-            var sb = new StringBuilder("INSERT INTO ")
-                    .Append(GetTableNameString(tableName))
-                    .Append(" (")
-                    .Append(CommandBuilder.QuoteIdentifier(pkName))
-                    .Append(", ");
-            foreach (var column in itemToReplicate.Columns)
-            {
-                if (column.Id == pkName)
-                    continue;
-                sb.Append(CommandBuilder.QuoteIdentifier(column.Id)).Append(", ");
-            }
-            sb.Length = sb.Length - 2;
-
-            sb.Append($") {GetPostInsertIntoStartSyntax()}")
-                .Append("'")
-                .Append(itemToReplicate.DocumentId)
-                .Append("'")
-                .Append(", ");
-
-            foreach (var column in itemToReplicate.Columns)
-            {
-                if (column.Id == pkName)
-                    continue;
-                DbParameter param = GetNewDbParameter();
-           
-                SetParamValue(param, column, null);
-                sb.Append(TableQuerySummary.GetParameterValue(param)).Append(", ");
-            }
-            
-            sb.Length = sb.Length - 2;
-            sb.Append(")");
-
-            var endSyntax = GetPostInsertIntoEndSyntax();
-
-            
-            sb.Append(endSyntax);
-            sb.Append(";");
-
-            yield return sb.ToString();
+            var command = CreateCommand();
+            FillInsertCommand(command, tableName, pkName, itemToReplicate);
+            yield return command.CommandText;
         }
     }
 
@@ -113,33 +52,10 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalCollectionString>
 
         for (int i = 0; i < toSqlItems.Count; i += maxParams)
         {
-            var sb = new StringBuilder("DELETE FROM ")
-                .Append(GetTableNameString(tableName))
-                .Append(" WHERE ")
-                .Append(CommandBuilder.QuoteIdentifier(pkName))
-                .Append(" IN (");
-
-            for (int j = i; j < Math.Min(i + maxParams, toSqlItems.Count); j++)
-            {
-                if (i != j)
-                    sb.Append(", ");
-                
-                sb.Append("'").Append(SqlDatabaseWriter.SanitizeSqlValue(toSqlItems[j].DocumentId)).Append("'");
-            }
-
-            sb.Append(GetPostDeleteSyntax());
-
-
-            sb.Append(";");
-            yield return sb.ToString();
+            var cmd = CreateCommand();
+            FillDeleteCommand(cmd, tableName, pkName, maxParams, toSqlItems, i, parameterize);
+            yield return cmd.CommandText;
         }
-    }
-
-    protected abstract bool ShouldQuoteTables();
-
-    private string GetTableNameString(string tableName)
-    {
-        return ShouldQuoteTables() ? string.Join(".", tableName.Split('.').Select(x => CommandBuilder.QuoteIdentifier(x)).ToArray()) : tableName;
     }
 }
 

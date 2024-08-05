@@ -23,7 +23,7 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
     where TRelationalConnectionString : ConnectionString
     where TRelationalEtlConfiguration : EtlConfiguration<TRelationalConnectionString>
 {
-    public readonly RelationalEtlMetricsCountersManager RelationalMetrics = new();
+    public readonly RelationalDatabaseEtlMetricsCountersManager RelationalMetrics = new();
 
     public RelationalDatabaseEtlBase(Transformation transformation, TRelationalEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore,
         string relationalEtlTag)
@@ -141,7 +141,7 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
         return true;
     }
 
-    protected abstract RelationalDatabaseWriterSimulatorBase<TRelationalEtlConfiguration, TRelationalConnectionString> GetWriterSimulator();
+    protected abstract RelationalDatabaseWriterSimulatorBase<TRelationalConnectionString, TRelationalEtlConfiguration> GetWriterSimulator();
 
     public RelationalDatabaseEtlTestScriptResult RunTest(DocumentsOperationContext context, IEnumerable<RelationalDatabaseTableWithRecords> toWrite, bool performRolledBackTransaction)
     {
