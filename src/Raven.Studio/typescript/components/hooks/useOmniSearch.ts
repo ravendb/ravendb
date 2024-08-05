@@ -30,7 +30,7 @@ interface UseOmniSearchArgs {
     threshold?: number;
 }
 
-export function useOmniSearch<TItem extends OmniSearchItem<TType>, TType>(args: UseOmniSearchArgs) {
+export function useOmniSearch<TItem extends OmniSearchItem<TType>, TType>(args: UseOmniSearchArgs = {}) {
     const { resultsLimit = 15, threshold = 0.3 } = args;
 
     const [registeredItems, setRegisteredItems] = useState<TItem[]>([]);

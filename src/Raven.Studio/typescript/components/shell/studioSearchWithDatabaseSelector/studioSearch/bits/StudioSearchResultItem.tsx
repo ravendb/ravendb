@@ -7,10 +7,11 @@ import { DropdownItem } from "reactstrap";
 interface StudioSearchDropdownItemProps {
     item: StudioSearchResultItem;
     activeItemId?: string;
-    isCapitalized?: boolean;
 }
 
-export default function StudioSearchDropdownItem({ item, activeItemId, isCapitalized }: StudioSearchDropdownItemProps) {
+export default function StudioSearchDropdownItem({ item, activeItemId }: StudioSearchDropdownItemProps) {
+    const isCapitalized = item.type.includes("MenuItem");
+
     return (
         <DropdownItem
             onClick={item.onSelected}
