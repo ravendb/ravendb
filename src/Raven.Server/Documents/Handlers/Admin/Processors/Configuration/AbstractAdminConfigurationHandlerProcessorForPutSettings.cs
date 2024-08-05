@@ -29,23 +29,29 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
         {
             var databaseSettingsJson = await context.ReadForDiskAsync(RequestHandler.RequestBodyStream(), Constants.DatabaseSettings.StudioId);
 
-            var settings = new Dictionary<string, string>();
+            var settingsToUpdate = new Dictionary<string, string>();
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
             for (int i = 0; i < databaseSettingsJson.Count; i++)
             {
                 databaseSettingsJson.GetPropertyByIndex(i, ref prop);
-                settings.Add(prop.Name, prop.Value?.ToString());
+                settingsToUpdate.Add(prop.Name, prop.Value?.ToString());
             }
             
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
-                var updatedSettingsKeys = GetUpdatedSettingsKeys(settings);
-                
-                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "CHANGE", $"Database configuration. Changed keys: {string.Join(" ", updatedSettingsKeys)}");
+                using (context.OpenReadTransaction())
+                {
+                    var databaseRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName);
+                    var currentSettings = databaseRecord.Settings;
+
+                    var updatedSettingsKeys = GetUpdatedSettingsKeys(currentSettings, settingsToUpdate);
+
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "CHANGE", $"Database configuration. Changed settings: {string.Join(" ", updatedSettingsKeys)}");
+                }
             }
 
-            var command = new PutDatabaseSettingsCommand(settings, RequestHandler.DatabaseName, RequestHandler.GetRaftRequestIdFromQuery());
+            var command = new PutDatabaseSettingsCommand(settingsToUpdate, RequestHandler.DatabaseName, RequestHandler.GetRaftRequestIdFromQuery());
 
             long index = (await RequestHandler.Server.ServerStore.SendToLeaderAsync(command)).Index;
 
@@ -55,27 +61,16 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
         RequestHandler.NoContentStatus(HttpStatusCode.Created);
     }
     
-    private List<string> GetUpdatedSettingsKeys(Dictionary<string, string> updatedSettings)
+    private static List<string> GetUpdatedSettingsKeys(Dictionary<string, string> currentSettings, Dictionary<string, string> settingsToUpdate)
     {
-        var keys = new List<string>();
+        var updatedSettings = new List<string>();
 
-        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-        using (context.OpenReadTransaction())
+        foreach (var settingToUpdate in settingsToUpdate)
         {
-            foreach (var kvp in updatedSettings)
-            {
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, RequestHandler.DatabaseName, out var _);
-
-                var databaseSettings = databaseRecord.Settings;
-
-                // We only have settings non-default values here
-                databaseSettings.TryGetValue(kvp.Key, out var currentValue);
-                
-                if (currentValue != kvp.Value)
-                    keys.Add(kvp.Key);
-            }
+            if (currentSettings.TryGetValue(settingToUpdate.Key, out var currentSettingValue) == false || currentSettingValue != settingToUpdate.Value)
+                updatedSettings.Add(settingToUpdate.Key);
         }
 
-        return keys;
+        return updatedSettings;
     }
 }
