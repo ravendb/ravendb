@@ -138,7 +138,7 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
 
         if (replicatedPast < numberOfReplicasToWaitFor && options.ThrowOnTimeoutInWaitForReplicas)
         {
-            var message = $"Could not verify that etag {lastChangeVector} was replicated " +
+            var message = $"Could not verify that the change vector '{lastChangeVector}' was replicated " +
                           $"to {numberOfReplicasToWaitFor} servers in {options.WaitForReplicasTimeout}. " +
                           $"So far, it only replicated to {replicatedPast}";
 
