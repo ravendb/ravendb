@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
         public override async Task WaitForDatabaseCompletion(Task<HashSet<string>> onDatabaseCompletionTask, long index, ClusterTransactionOptions options, CancellationToken token)
         {
             var database = RequestHandler.Database;
-            var lastCompleted = Interlocked.Read(ref database.LastCompletedClusterTransactionIndex);
+            var lastCompleted = database.ClusterWideTransactionIndexWaiter.LastIndex;
             HashSet<string> modifiedCollections = null;
             if (lastCompleted < index)
                 modifiedCollections = await onDatabaseCompletionTask; // already registered to the token

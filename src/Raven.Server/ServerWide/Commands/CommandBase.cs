@@ -9,11 +9,12 @@ namespace Raven.Server.ServerWide.Commands
 {
     public abstract class CommandBase
     {
+        public const string Type = nameof(Type);
         public virtual DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var json = new DynamicJsonValue
             {
-                ["Type"] = GetType().Name,
+                [nameof(Type)] = GetType().Name,
                 [nameof(UniqueRequestId)] = UniqueRequestId,
             };
 
@@ -43,7 +44,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public static CommandBase CreateFrom(BlittableJsonReaderObject json)
         {
-            if (json.TryGet("Type", out string type) == false)
+            if (json.TryGet(nameof(Type), out string type) == false)
             {
                 throw new RachisApplyException("Command must contain 'Type' field.");
             }

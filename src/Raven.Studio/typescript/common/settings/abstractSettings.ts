@@ -33,7 +33,7 @@ abstract class abstractSettings {
     protected findPropertyName(item: studioSetting<any>): string {
         let settingName: string = null;
 
-        Object.entries(this).map(([name, value]) => {
+        Object.entries(this).forEach(([name, value]) => {
             if (value instanceof studioSetting && value.saveLocation === item.saveLocation && value === item) {
                 settingName = name;
             }

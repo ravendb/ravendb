@@ -506,7 +506,7 @@ select incl(c)"
                     }
 
                     foreach (var database in databases)
-                        await database.RachisLogIndexNotifications.WaitForIndexNotification(lastClusterTxIndex, TimeSpan.FromSeconds(5));
+                        await database.ClusterWideTransactionIndexWaiter.WaitAsync(lastClusterTxIndex, TimeSpan.FromSeconds(5));
 
                     companies = session.Advanced
                         .RawQuery<Company>(

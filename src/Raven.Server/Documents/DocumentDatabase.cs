@@ -188,6 +188,7 @@ namespace Raven.Server.Documents
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
 
                 RachisLogIndexNotifications = new DatabaseRaftIndexNotifications(_serverStore.Engine.StateMachine._rachisLogIndexNotifications, DatabaseShutdown);
+                ClusterWideTransactionIndexWaiter = new RaftIndexWaiter(DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>
                 {
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath, stacktrace);
@@ -460,7 +461,7 @@ namespace Raven.Server.Documents
                 using (ctx.OpenReadTransaction())
                 {
                     var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
-                    Interlocked.Exchange(ref LastCompletedClusterTransactionIndex, lastCompletedClusterTransactionIndex);
+                    ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(lastCompletedClusterTransactionIndex);
                 }
 
                 _ = Task.Run(async () =>
@@ -537,14 +538,8 @@ namespace Raven.Server.Documents
         private readonly ManualResetEventSlim _hasClusterTransaction;
         public readonly DatabaseMetricCacher MetricCacher;
 
-        public void NotifyOnPendingClusterTransaction(long index, DatabasesLandlord.ClusterDatabaseChangeType changeType)
+        public void NotifyOnPendingClusterTransaction()
         {
-            if (changeType == DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted)
-            {
-                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
-                return;
-            }
-
             _hasClusterTransaction.Set();
         }
 
@@ -552,8 +547,7 @@ namespace Raven.Server.Documents
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
 
-        public long LastCompletedClusterTransactionIndex;
-
+        public readonly RaftIndexWaiter ClusterWideTransactionIndexWaiter;
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
@@ -585,7 +579,8 @@ namespace Raven.Server.Documents
                     continue;
                 }
 
-                _hasClusterTransaction.Wait(DatabaseShutdown);
+                //To make sure we mark compare exchange tombstone for cleaning  
+                _hasClusterTransaction.Wait(Configuration.Cluster.MaxClusterTransactionCompareExchangeTombstoneCheckInterval.AsTimeSpan, DatabaseShutdown);
                 if (DatabaseShutdown.IsCancellationRequested)
                     return;
 
@@ -598,9 +593,10 @@ namespace Raven.Server.Documents
                     {
                         var batchSize = Configuration.Cluster.MaxClusterTransactionsBatchSize;
                         var executed = ExecuteClusterTransaction(context, batchSize);
-                        if (executed.BatchSize == batchSize)
+                        if (executed.BatchSize != 0)
                         {
-                            // we might have more to execute
+                            // We might have more to execute if we read full batch
+                            // If we didn't read full batch we may want to update the last completed index for new cluster wide transaction with no database command so we need to open a new read transaction 
                             _hasClusterTransaction.Set();
                         }
                     }
@@ -658,7 +654,7 @@ namespace Raven.Server.Documents
 
         public (long BatchSize, long CommandsCount) ExecuteClusterTransaction(ClusterOperationContext context, int batchSize)
         {
-            using var batchCollector = CollectCommandsBatch(context, LastCompletedClusterTransactionIndex, batchSize);
+            using var batchCollector = CollectCommandsBatch(context, ClusterWideTransactionIndexWaiter.LastIndex, batchSize);
 
             ServerStore.ForTestingPurposes?.BeforeExecuteClusterTransactionBatch?.Invoke(Name, batchCollector.GetData().ToList());
 
@@ -674,10 +670,11 @@ namespace Raven.Server.Documents
 
                 if (batchCollector.Count == 0)
                 {
-                    var index = CompareExchangeStorage.GetLastCompareExchangeIndex(context);
-
-                    if (RachisLogIndexNotifications.LastModifiedIndex != index)
-                        RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
+                    var cmpXchgIndex = CompareExchangeStorage.GetLastCompareExchangeIndex(context);
+                    var tombstoneCmpxchgIndex = CompareExchangeStorage.GetLastCompareExchangeTombstoneIndex(context);
+                    var index = Math.Max(cmpXchgIndex, tombstoneCmpxchgIndex);
+                
+                    ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(index);
                     return (0, 0);
                 }
 
@@ -724,12 +721,14 @@ namespace Raven.Server.Documents
                 }
 
                 var commandsCount = 0;
+                long maxIndex = 0;
                 foreach (var command in batch)
                 {
                     commandsCount += command.Commands.Count;
-
                     OnClusterTransactionCompletion(command, mergedCommands);
+                    maxIndex = command.Index;
                 }
+                ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(maxIndex);
 
                 return (batch.Count, commandsCount);
             }
@@ -751,12 +750,14 @@ namespace Raven.Server.Documents
                 {
                     TxMerger.EnqueueSync(mergedCommand);
                     OnClusterTransactionCompletion(command, mergedCommand);
+                    ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(command.Index);
 
                     _clusterTransactionDelayOnFailure = 1000;
                     command.Processed = true;
                 }
                 catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
                 {
+                    ClusterWideTransactionIndexWaiter.NotifyListenersAboutError(e);
                     OnClusterTransactionCompletion(command, e);
                     NotificationCenter.Add(AlertRaised.Create(
                         Name,
@@ -784,10 +785,6 @@ namespace Raven.Server.Documents
             {
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
-
-
-                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
-                ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
 
                 ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId, mergedCommands.ModifiedCollections);
 

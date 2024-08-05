@@ -99,42 +99,58 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
 
     const { reportEvent } = useEventsCollector();
 
-    const onFinish: SubmitHandler<FormData> = async (formValues) => {
-        return tryHandleSubmit(async () => {
-            reportEvent("database", "newDatabase");
+    const onFinish: SubmitHandler<FormData> = useCallback(
+        async (formValues) => {
+            return tryHandleSubmit(async () => {
+                reportEvent("database", "newDatabase");
 
-            asyncDatabaseNameValidation.execute(formValues.basicInfoStep.databaseName);
-            if (!asyncDatabaseNameValidation.result) {
-                return;
-            }
+                if (formValues.basicInfoStep.isEncrypted) {
+                    const nodes = formValues.replicationAndShardingStep.isSharded
+                        ? Array.from(new Set(formValues.manualNodeSelectionStep.shards.flat()))
+                        : formValues.manualNodeSelectionStep.nodes;
 
-            if (formValues.basicInfoStep.isEncrypted) {
-                const nodes = formValues.replicationAndShardingStep.isSharded
-                    ? Array.from(new Set(formValues.manualNodeSelectionStep.shards.flat()))
-                    : formValues.manualNodeSelectionStep.nodes;
+                    await databasesService.distributeSecret(
+                        formValues.basicInfoStep.databaseName,
+                        formValues.encryptionStep.key,
+                        nodes
+                    );
+                }
 
-                await databasesService.distributeSecret(
-                    formValues.basicInfoStep.databaseName,
-                    formValues.encryptionStep.key,
-                    nodes
-                );
-            }
+                databasesManager.default.activateAfterCreation(formValues.basicInfoStep.databaseName);
 
-            databasesManager.default.activateAfterCreation(formValues.basicInfoStep.databaseName);
+                const dto = createDatabaseRegularDataUtils.mapToDto(formValues, allNodeTags);
+                await databasesService.createDatabase(dto, formValues.replicationAndShardingStep.replicationFactor);
 
-            const dto = createDatabaseRegularDataUtils.mapToDto(formValues, allNodeTags);
-            await databasesService.createDatabase(dto, formValues.replicationAndShardingStep.replicationFactor);
+                closeModal();
+            });
+        },
+        [allNodeTags, databasesService, reportEvent, closeModal]
+    );
 
-            closeModal();
-        });
-    };
-
-    const handleGoNext = useCallback(() => {
-        nextStepWithValidation(validateToTargetStep(currentStep));
+    const handleGoNext = useCallback(async () => {
+        await nextStepWithValidation(validateToTargetStep(currentStep));
     }, [currentStep, nextStepWithValidation, validateToTargetStep]);
 
+    const handleQuickCreate = useCallback(async () => {
+        if (activeSteps[currentStep].id === "basicInfoStep") {
+            const isNameValid = await asyncDatabaseNameValidation.execute(formValues.basicInfoStep.databaseName);
+            if (!isNameValid) {
+                return;
+            }
+        }
+
+        await handleSubmit(onFinish)();
+    }, [
+        activeSteps,
+        asyncDatabaseNameValidation,
+        currentStep,
+        formValues.basicInfoStep.databaseName,
+        handleSubmit,
+        onFinish,
+    ]);
+
     useCreateDatabaseShortcuts({
-        submit: handleSubmit(onFinish),
+        submit: handleQuickCreate,
         handleGoNext,
         isLastStep,
         canQuickCreate: true,
@@ -185,13 +201,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                             Finish
                         </ButtonWithSpinner>
                     ) : (
-                        <Button
-                            type="button"
-                            color="primary"
-                            className="rounded-pill"
-                            onClick={handleGoNext}
-                            disabled={asyncDatabaseNameValidation.loading}
-                        >
+                        <Button type="button" color="primary" className="rounded-pill" onClick={handleGoNext}>
                             Next <Icon icon="arrow-thin-right" margin="ms-1" />
                         </Button>
                     )}

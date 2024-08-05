@@ -164,8 +164,7 @@ namespace Raven.Server.ServerWide.Context
             {
                 if (ChangeVector.PerCoreChangeVectors.TryPush(_allocatedChangeVectors) == false)
                 {
-                    //foreach (var allocatedStringValue in _allocatedChangeVectors)
-                    //    allocatedStringValue?.Dispose();
+                    // GC will take care of this
                 }
 
                 _allocatedChangeVectors = null;
@@ -195,13 +194,9 @@ namespace Raven.Server.ServerWide.Context
 
             if (_allocatedChangeVectors != null)
             {
-                //for (var i = 0; i < _numberOfAllocatedChangeVectors; i++)
-                //    _allocatedChangeVectors[i].Reset();
-
                 if (ChangeVector.PerCoreChangeVectors.TryPush(_allocatedChangeVectors) == false)
                 {
-                    //foreach (var allocatedStringValue in _allocatedChangeVectors)
-                    //    allocatedStringValue?.Dispose();
+                    // GC will take care of this
                 }
 
                 _allocatedChangeVectors = null;

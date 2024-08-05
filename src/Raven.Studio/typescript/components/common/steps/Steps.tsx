@@ -68,7 +68,7 @@ function StepState({ step }: { step: StepItem }) {
     if (step.isLoading) {
         return (
             <div className="step-bullet">
-                <Spinner size="sm" className="m-0" color="primary" />
+                <Spinner size="sm" className="m-0" color="primary" data-testid="loader" />
             </div>
         );
     }

@@ -89,7 +89,8 @@ namespace SlowTests.Server.Documents.Expiration
                     {
                         Name = "Company Name"
                     };
-                    var expiry = DateTime.Now; // intentionally local time
+                    var now = DateTime.Now;// intentionally local time
+                    var expiry = now;
                     if (dateTimeFormat.Value == DateTimeKind.Utc)
                         expiry = expiry.ToUniversalTime();
 
@@ -121,7 +122,9 @@ namespace SlowTests.Server.Documents.Expiration
                     using (var session = store.OpenAsyncSession())
                     {
                         var company2 = await session.LoadAsync<Company>(company.Id);
-                        Assert.Null(company2);
+                        Assert.True(company2 == null,
+                            $"company2 == null, dateTimeFormat.Key: {dateTimeFormat.Key}, dateTimeFormat.Value: {dateTimeFormat.Value}, " +
+                            $"now: {now}, expiry: {expiry}, {database.Time.GetUtcNow()}");
                     }
                 }
             }
