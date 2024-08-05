@@ -587,6 +587,10 @@ namespace Voron.Impl.Journal
             }
 
 
+            record StateFromFailedApplyLogsToDataFile(List<PageFromScratchBuffer> Buffers, EnvironmentStateRecord Record);
+
+            private StateFromFailedApplyLogsToDataFile _stateFromPreviousFailedAttempt;
+
             public void ApplyLogsToDataFile(CancellationToken token, TimeSpan timeToWait)
             {
                 if (token.IsCancellationRequested)
@@ -622,18 +626,33 @@ namespace Voron.Impl.Journal
 
                     _forTestingPurposes?.OnApplyLogsToDataFileUnderFlushingLock?.Invoke();
 
-                    // RavenDB-13302: we need to force a re-check this before we make decisions here
-                    _waj._env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
-                    if (_waj._env.TryGetLatestEnvironmentStateToFlush(
-                            uptoTxIdExclusive: _waj._env.ActiveTransactions.OldestTransaction,
-                            out bufferOfPageFromScratchBuffersToFree,
-                            out var record) == false)
+                    EnvironmentStateRecord record;
+                    if (_stateFromPreviousFailedAttempt == null)
                     {
-                        Debug.Assert(bufferOfPageFromScratchBuffersToFree.Count == 0);
-                        return; // nothing to do
+                        // RavenDB-13302: we need to force a re-check this before we make decisions here
+                        _waj._env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
+                        if (_waj._env.TryGetLatestEnvironmentStateToFlush(
+                                uptoTxIdExclusive: _waj._env.ActiveTransactions.OldestTransaction,
+                                out bufferOfPageFromScratchBuffersToFree,
+                                out record) == false)
+                        {
+                            Debug.Assert(bufferOfPageFromScratchBuffersToFree.Count == 0);
+                            return; // nothing to do
+                        }
+
+                        _waj._env.Options.flushed.Enqueue(record);
+                        // we have to keep this around since TryGetLatestEnvironmentStateToFlush will _consume_ the state
+                        // so until we successfully flush the data, we need to remember to repeat this operation
+                        // flushing can fail because of disk full, etc...
+                        _stateFromPreviousFailedAttempt = new StateFromFailedApplyLogsToDataFile(bufferOfPageFromScratchBuffersToFree, record);
+                    }
+                    else
+                    {
+                        Console.WriteLine("What the hell!!!!!");
+                        (bufferOfPageFromScratchBuffersToFree, record) = _stateFromPreviousFailedAttempt;
                     }
 
-                    
+
                     var currentTotalCommittedSinceLastFlushPages = TotalCommittedSinceLastFlushPages;
 
                     Pager.State dataPagerState;
@@ -642,7 +661,7 @@ namespace Voron.Impl.Journal
                         byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
                         dataPagerState = ApplyPagesToDataFileFromScratch(record);
                     }
-                    catch (Exception e) when (e is OutOfMemoryException || e is EarlyOutOfMemoryException)
+                    catch (Exception e) when (e is OutOfMemoryException or EarlyOutOfMemoryException)
                     {
                         if (_waj._logger.IsOperationsEnabled)
                         {
@@ -662,6 +681,11 @@ namespace Voron.Impl.Journal
                         return;
                     }
 
+                    // we can clear this here, since we aren't handling any errors further down this function
+                    // any error from here on out is a catastrophic failure, and will be handled by recovering from 
+                    // scratch
+                    _stateFromPreviousFailedAttempt = null;
+                    
                     Interlocked.Add(ref TotalCommittedSinceLastFlushPages, -currentTotalCommittedSinceLastFlushPages);
 
                     ApplyJournalStateAfterFlush(token, bufferOfPageFromScratchBuffersToFree, record, dataPagerState, byteStringContext);
@@ -670,7 +694,10 @@ namespace Voron.Impl.Journal
                 }
                 finally
                 {
-                    bufferOfPageFromScratchBuffersToFree?.Clear();
+                    if (_stateFromPreviousFailedAttempt == null) // cannot clear this if we are going to re-use it next time
+                    {
+                        bufferOfPageFromScratchBuffersToFree?.Clear();
+                    }
                     byteStringContext?.Dispose();
                     if (lockTaken)
                     {
@@ -700,7 +727,7 @@ namespace Voron.Impl.Journal
                     ExceptionDispatchInfo edi = null;
                     var sp = Stopwatch.StartNew();
 
-                    Action<LowLevelTransaction> currentAction = txw =>
+                    WaitForJournalStateToBeUpdated(token, transactionPersistentContext, txw =>
                     {
                         try
                         {
@@ -719,10 +746,7 @@ namespace Voron.Impl.Journal
                             edi = ExceptionDispatchInfo.Capture(e);
                             throw;
                         }
-                    };
-                    Interlocked.Exchange(ref _updateJournalStateAfterFlush, currentAction);
-
-                    WaitForJournalStateToBeUpdated(token, transactionPersistentContext, currentAction, byteStringContext);
+                    }, byteStringContext);
 
                     edi?.Throw();
                 }
@@ -735,6 +759,7 @@ namespace Voron.Impl.Journal
             private void WaitForJournalStateToBeUpdated(CancellationToken token, TransactionPersistentContext transactionPersistentContext,
                 Action<LowLevelTransaction> currentAction, ByteStringContext byteStringContext)
             {
+                Interlocked.Exchange(ref _updateJournalStateAfterFlush, currentAction);
                 do
                 {
                     LowLevelTransaction txw = null;
@@ -747,7 +772,7 @@ namespace Voron.Impl.Journal
                         }
                         catch (OperationCanceledException)
                         {
-                            break;
+                            return; // we disposed the server
                         }
                         catch (TimeoutException)
                         {
@@ -788,7 +813,6 @@ namespace Voron.Impl.Journal
 
                         // here we rely on the Commit() invoking the _updateJournalStateAfterFlush call as part of its work
                         txw.Commit();
-                        break;
                     }
                     finally
                     {
@@ -811,7 +835,7 @@ namespace Voron.Impl.Journal
                 {
                     if (x.Number < flushedRecord.WrittenToJournalNumber)
                         return true;
-                    return x.Number == flushedRecord.WrittenToJournalNumber && x.GetAvailable4Kbs(txw.CurrentStateRecord) == 0;
+                    return x.Number == flushedRecord.WrittenToJournalNumber && x.GetAvailable4Kbs(flushedRecord) == 0;
                 }, unusedJournals);
 
                 if (_waj._logger.IsInfoEnabled)
