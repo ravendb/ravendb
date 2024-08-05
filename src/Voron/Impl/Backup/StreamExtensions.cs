@@ -17,7 +17,7 @@ namespace Voron.Impl.Backup
             try
             {
                 int count;
-                while ((count = source.Read(readBuffer, 0, readBuffer.Length)) != 0)
+                while ((count = source.Read(readBuffer, 0, DefaultBufferSize)) != 0)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     onProgress?.Invoke(count);
@@ -37,7 +37,7 @@ namespace Voron.Impl.Backup
             try
             {
                 int count;
-                while ((count = await source.ReadAsync(readBuffer, 0, readBuffer.Length, cancellationToken)) != 0)
+                while ((count = await source.ReadAsync(readBuffer, 0, DefaultBufferSize, cancellationToken)) != 0)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     onProgress?.Invoke(count);
