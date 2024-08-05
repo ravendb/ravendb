@@ -14,13 +14,11 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
-import menu from "common/shell/menu";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 interface UseStudioSearchSyncRegisterParams {
     register: (type: StudioSearchItemType, newItems: StudioSearchItem[]) => void;
-    mainMenu?: menu;
-    menuItems?: menuItem[];
+    menuItems: menuItem[];
     goToUrl: (url: string, newTab: boolean) => void;
     resetDropdown: () => void;
 }

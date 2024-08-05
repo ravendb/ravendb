@@ -44,7 +44,7 @@ export default function StudioSearchDatabaseResults(props: {
                 <StudioSearchDatabaseGroupHeader groupType={groupType} />
             </DropdownItem>
             {databaseResults[groupType].map((item) => (
-                <StudioSearchDropdownItem key={item.id} item={item} activeItemId={activeItem?.id} isCapitalized />
+                <StudioSearchDropdownItem key={item.id} item={item} activeItemId={activeItem?.id} />
             ))}
         </div>
     ));
