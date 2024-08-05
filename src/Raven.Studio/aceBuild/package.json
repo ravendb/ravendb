@@ -10,9 +10,12 @@
   "license": "ISC",
   "devDependencies": {
     "ace": "https://github.com/ajaxorg/ace/archive/v1.2.5.tar.gz",
-    "architect-build": "https://github.com/c9/architect-build/tarball/17268dce65",
-    "copy-dir": "^0.4.0",
-    "dryice": "^0.4.11"
+    "architect-build": "https://github.com/c9/architect-build/tarball/43a6fde",
+    "copy-dir": "^0.4.0"
   },
-  "dependencies": {}
+  "overrides": {
+    "architect-build": {
+      "uglify-js": "2.6.0"
+    }
+  }
 }
