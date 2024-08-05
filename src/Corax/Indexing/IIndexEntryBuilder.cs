@@ -9,6 +9,7 @@ public interface IIndexEntryBuilder
     void Boost(float boost);
     ReadOnlySpan<byte> AnalyzeSingleTerm(int fieldId, ReadOnlySpan<byte> value);
     void WriteNull(int fieldId, string path);
+    void WriteNonExistingField(int fieldId, string path);
     void Write(int fieldId, ReadOnlySpan<byte> value);
     void Write(int fieldId, string path, ReadOnlySpan<byte> value);
     void Write(int fieldId, string path, string value);

@@ -64,6 +64,11 @@ internal class CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
             // nothing to do here
         }
 
+        public void WriteNonExistingField(int fieldId, string path)
+        {
+            // nothing to do
+        }
+
         public void Write(int fieldId, ReadOnlySpan<byte> value)
         {
             if (value.Length == 0)

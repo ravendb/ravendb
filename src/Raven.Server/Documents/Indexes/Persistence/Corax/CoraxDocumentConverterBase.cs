@@ -402,6 +402,14 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         }
     }
 
+    protected void InsertNonExistingField<TBuilder>(IndexField field, TBuilder builder) where TBuilder : IIndexEntryBuilder
+    {
+        var path = field.Name;
+        var fieldId= field.Id;
+        
+        builder.WriteNonExistingField(fieldId, path);
+    }
+
     [DoesNotReturn]
     private static void ThrowFieldIsNoIndexedAndStored(IndexField field)
     {
