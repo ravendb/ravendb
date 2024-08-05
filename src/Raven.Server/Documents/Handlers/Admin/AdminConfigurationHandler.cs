@@ -133,9 +133,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             foreach (var settingToUpdate in settingsToUpdate)
             {
-                currentSettings.TryGetValue(settingToUpdate.Key, out var currentSettingValue);
-                
-                if (currentSettingValue != settingToUpdate.Value)
+                if (currentSettings.TryGetValue(settingToUpdate.Key, out var currentSettingValue) == false || currentSettingValue != settingToUpdate.Value)
                     updatedSettings.Add(settingToUpdate.Key);
             }
 
