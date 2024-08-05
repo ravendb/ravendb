@@ -136,7 +136,8 @@ namespace Corax.Indexing
             _lastEntryId =  _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
 
             _documentBoost = _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
-            _nullEntriesPostingLists = _transaction.CreateTree(Constants.IndexWriter.NullPostingLists);
+            _nullEntriesPostingListsTree = _transaction.CreateTree(Constants.IndexWriter.NullPostingLists);
+            _nonExistingEntriesPostingListsTree = _transaction.CreateTree(Constants.IndexWriter.NonExistingPostingLists);
             _entriesAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
 
             _tempListBuffer = new ContextBoundNativeList<long>(_entriesAllocator);
@@ -328,7 +329,8 @@ namespace Corax.Indexing
         private NativeList<NativeList<RecordedTerm>> _termsPerEntryId;
         private ByteStringContext _entriesAllocator;
         private Tree _fieldsTree;
-        private Tree _nullEntriesPostingLists;
+        private Tree _nullEntriesPostingListsTree;
+        private Tree _nonExistingEntriesPostingListsTree;
         
         public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
 
@@ -429,7 +431,7 @@ namespace Corax.Indexing
 
             var fieldsByRootPage = GetIndexedFieldByRootPage(_fieldsTree);
             var nullTermsMarkers = new HashSet<long>();
-            Querying.IndexSearcher.LoadNullTermMarkers(_nullEntriesPostingLists, nullTermsMarkers);
+            Querying.IndexSearcher.LoadNullTermMarkers(_nullEntriesPostingListsTree, nullTermsMarkers);
             
             long dicId = CompactTree.GetDictionaryId(llt);
 
@@ -1131,19 +1133,23 @@ namespace Corax.Indexing
                 _buffers.PrepareTerms(_indexedField, out var sortedTerms, out var termsOffsets);
                 Debug.Assert(sortedTerms.Length > 0, "sortedTerms.Length > 0 (checked by the caller)");
 
-                var firstTerm = sortedTerms[0]; // if we have null, it will always sort first
-                if (firstTerm.AsReadOnlySpan().SequenceEqual(Constants.NullValueSlice.AsReadOnlySpan()))
+                // Because of sorting first we have null, then not existing value (if any document has such), then the rest of values
+                var termsToIgnore = 0;
+                
+                if (sortedTerms[termsToIgnore].AsReadOnlySpan().SequenceEqual(Constants.NullValueSlice.AsReadOnlySpan()))
                 {
-                    (long postingListId, long termContainerId)  = GetOrCreateNullTermPostingList();
-                    ref var entries = ref _indexedField.Storage.GetAsRef(termsOffsets[0]);
-                    var nullLookup = new CompactTree.CompactKeyLookup(CompactKey.NullInstance);
-                    totalLengthOfTerm += ProcessSingleEntry(ref entries, ref nullLookup, isNullTerm: true,
-                        sortedTerms[0], postingListId, termContainerId, -1, termsOffsets[0]);
-                    
-                    // now skip it the null so we don't have the special case it
-                    sortedTerms = sortedTerms[1..]; 
-                    termsOffsets = termsOffsets[1..];
+                    HandleSpecialTerm(termsOffsets, sortedTerms, termsToIgnore, _writer._nullEntriesPostingListsTree, ref totalLengthOfTerm);
+                    termsToIgnore++;
                 }
+                
+                if (sortedTerms.Length > 1 && sortedTerms[termsToIgnore].AsReadOnlySpan().SequenceEqual(Constants.NonExistingValueSlice.AsReadOnlySpan()))
+                {
+                    HandleSpecialTerm(termsOffsets, sortedTerms, termsToIgnore, _writer._nonExistingEntriesPostingListsTree, ref totalLengthOfTerm);
+                    termsToIgnore++;
+                }
+                
+                sortedTerms = sortedTerms[termsToIgnore..]; 
+                termsOffsets = termsOffsets[termsToIgnore..];
                 
                 while (true)
                 {
@@ -1212,6 +1218,15 @@ namespace Corax.Indexing
                 ProcessTermsVector();
             }
 
+            private void HandleSpecialTerm(Span<int> termsOffsets, Span<Slice> sortedTerms, int termIndex, Tree tree, ref long totalLengthOfTerm)
+            {
+                (long postingListId, long termContainerId) = GetOrCreateSpecialPostingList(tree);
+                ref var entries = ref _indexedField.Storage.GetAsRef(termsOffsets[termIndex]);
+                var nullLookup = new CompactTree.CompactKeyLookup(CompactKey.NullInstance);
+                totalLengthOfTerm += ProcessSingleEntry(ref entries, ref nullLookup, isNullTerm: true,
+                    sortedTerms[termIndex], postingListId, termContainerId, -1, termsOffsets[termIndex]);
+            }
+            
             private long ProcessSingleEntry(ref EntriesModifications entries, ref CompactTree.CompactKeyLookup key,
                 bool isNullTerm, Slice term, long postListId, long termContainerId, int pageOffset, int storageLocation)
             {
@@ -1502,11 +1517,11 @@ namespace Corax.Indexing
                 pageOffsets = new Span<int>(buffers.PageOffsets, 0, max);
             }
 
-            private (long NullListId, long NullTermId) GetOrCreateNullTermPostingList()
+            private (long NonExistingTermListId, long NonExistingTermId) GetOrCreateSpecialPostingList(Tree tree)
             {
                 // In the case where the field does not have any null values, we will create a *large* posting list (an empty one)
                 // then we'll insert data to it as if it was any other term
-                var entry = _writer._nullEntriesPostingLists.Read(_indexedField.Name);
+                var entry = tree.Read(_indexedField.Name);
 
                 if (entry != null)
                 {
@@ -1532,15 +1547,13 @@ namespace Corax.Indexing
                 PostingList.Create(_writer._transaction.LowLevelTransaction, ref postingListState);
                 var encodedPostingListId = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
 
-                using (_writer._nullEntriesPostingLists.DirectAdd(_indexedField.Name, sizeof((long, long)), out var p))
+                using (tree.DirectAdd(_indexedField.Name, sizeof((long, long)), out var p))
                 {
                     *((long, long)*)p = (encodedPostingListId, nullMarkerId);
                 }
 
                 return (encodedPostingListId, nullMarkerId);
             }
-            
-            
 
             private void PrefetchContainerPages(ref ContextBoundNativeList<long> pagesToPrefetch, Span<long> postListIds)
             {

@@ -89,6 +89,14 @@ public partial class IndexWriter
                 ExactInsert(field, Constants.NullValueSlice);
         }
 
+        public void WriteNonExistingField(int fieldId, string path)
+        {
+            var field = GetField(fieldId, path);
+
+            if (field.ShouldIndex)
+                ExactInsert(field, Constants.NonExistingValueSlice);
+        }
+
         private IndexedField GetField(int fieldId, string path)
         {
             var field = fieldId != Constants.IndexWriter.DynamicField
