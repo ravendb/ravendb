@@ -324,6 +324,22 @@ namespace Raven.Server.Smuggler.Documents
                     WriteIndexesHistory(databaseRecord.IndexesHistory);
                 }
 
+                if (databaseRecord.Studio != null)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.Studio));
+
+                    WriteStudioConfiguration(databaseRecord.Studio);
+                }
+
+                if (databaseRecord.RevisionsForConflicts != null)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.RevisionsForConflicts));
+
+                    WriteRevisionsForConflictsConfiguration(databaseRecord.RevisionsForConflicts);
+                }
+
                 switch (authorizationStatus)
                 {
                     case AuthorizationStatus.DatabaseAdmin:
@@ -441,22 +457,6 @@ namespace Raven.Server.Smuggler.Documents
                             }
 
                             _writer.WriteEndObject();
-                        }
-
-                        if (databaseRecord.Studio != null)
-                        {
-                            _writer.WriteComma();
-                            _writer.WritePropertyName(nameof(databaseRecord.Studio));
-
-                            WriteStudioConfiguration(databaseRecord.Studio);
-                        }
-
-                        if (databaseRecord.RevisionsForConflicts != null)
-                        {
-                            _writer.WriteComma();
-                            _writer.WritePropertyName(nameof(databaseRecord.RevisionsForConflicts));
-
-                            WriteRevisionsForConflictsConfiguration(databaseRecord.RevisionsForConflicts);
                         }
 
                         break;
