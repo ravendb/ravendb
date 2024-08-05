@@ -7,7 +7,6 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import StudioSearchWithDatabaseSwitcher from "./StudioSearchWithDatabaseSwitcher";
 import { DatabaseSharedInfo } from "components/models/databases";
 import generateMenuItems from "common/shell/menu/generateMenuItems";
-import menu from "common/shell/menu";
 
 export default {
     title: "Shell/StudioSearchWithDatabaseSwitcher",
@@ -54,7 +53,7 @@ export const DefaultStory: StoryObj<StoryArgs> = {
 
         const menuItems = args.hasMenuItems ? generateMenuItems(null) : [];
 
-        return <StudioSearchWithDatabaseSwitcher mainMenu={new menu(menuItems)} />;
+        return <StudioSearchWithDatabaseSwitcher menuItems={menuItems} />;
     },
     args: {
         hasMenuItems: true,

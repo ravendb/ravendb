@@ -1,15 +1,37 @@
-import { OmniSearch } from "common/omniSearch/omniSearch";
 import { StudioSearchItem, StudioSearchItemType, StudioSearchResult } from "../studioSearchTypes";
 import assertUnreachable from "components/utils/assertUnreachable";
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { RangeTuple } from "fuse.js";
+import { useOmniSearch } from "components/hooks/useOmniSearch";
+
+interface Action {
+    text: string;
+    alternativeTexts?: string[];
+}
+
+export interface OmniSearchItem<TType = unknown> extends Action {
+    type: TType;
+    innerActions?: Action[];
+}
+
+export interface OmniSearchResults<TItem> {
+    items: OmniSearchResultItem<TItem>[];
+}
+
+export interface OmniSearchResultItem<TItem> {
+    item: TItem;
+    indices?: readonly RangeTuple[];
+    innerActionText?: string;
+    innerActionIndices?: readonly RangeTuple[];
+}
 
 export function useStudioSearchOmniSearch(searchQuery: string) {
-    const omniSearch = useMemo(() => new OmniSearch<StudioSearchItem, StudioSearchItemType>(), []);
+    const { register, search } = useOmniSearch<StudioSearchItem, StudioSearchItemType>();
 
     const [results, setResults] = useState<StudioSearchResult>(emptyResult);
 
     const handleOmniSearch = useCallback(() => {
-        const searchResults = omniSearch.search(searchQuery.trim());
+        const searchResults = search(searchQuery.trim());
         const resultTypes = new Set(searchResults.items.map((x) => x.item.type));
         const newResult = JSON.parse(JSON.stringify(emptyResult));
 
@@ -58,16 +80,15 @@ export function useStudioSearchOmniSearch(searchQuery: string) {
         }
 
         setResults(newResult);
-    }, [omniSearch, searchQuery]);
+    }, [search, searchQuery]);
 
     useEffect(() => {
         handleOmniSearch();
     }, [handleOmniSearch]);
 
     return {
-        omniSearch,
+        register,
         results,
-        handleOmniSearch,
     };
 }
 

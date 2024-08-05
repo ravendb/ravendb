@@ -130,6 +130,8 @@ class shell extends viewModelBase {
     isUpgradeModalVisible = ko.observable<boolean>(false);
 
     studioSearchWithDatabaseSwitcherView: ReactInKnockout<typeof StudioSearchWithDatabaseSwitcher>;
+
+    isEnabled = ko.observable<boolean>(false);
     
     constructor() {
         super();
@@ -217,12 +219,21 @@ class shell extends viewModelBase {
 
         this.upgradeModalView = ko.pureComputed(() => ({ component: UpgradeModal }))
         
-        this.studioSearchWithDatabaseSwitcherView = ko.pureComputed(() => ({
-            component: StudioSearchWithDatabaseSwitcher,
-            props: {
-                mainMenu: this.mainMenu
-            }
-        }));
+        this.studioSearchWithDatabaseSwitcherView = ko.computed(() => {
+            return {
+                component: StudioSearchWithDatabaseSwitcher,
+                props: {
+                    menuItems: this.mainMenu.items(),
+                    isEnabled: this.isEnabled(),
+                },
+            };
+        });
+
+        this.mainMenu.items.subscribe(items => {
+            this.studioSearchWithDatabaseSwitcherView().props= {
+                getMenuItems: () => items,
+            };
+        });
 
         this.serverEnvironmentClass = ko.pureComputed(() => {
             const env = this.serverEnvironment();
