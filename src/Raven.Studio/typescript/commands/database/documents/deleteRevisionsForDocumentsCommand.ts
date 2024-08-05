@@ -1,21 +1,22 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
 import endpoints = require("endpoints");
+type Parameters = Raven.Client.Documents.Operations.Revisions.DeleteRevisionsOperation.Parameters;
 
 class deleteRevisionsForDocumentsCommand extends commandBase {
 
-    constructor(private ids: Array<string>, private db: database | string) {
+    private readonly databaseName: string;
+    private readonly parameters: Parameters;
+
+    constructor(databaseName: string, parameters: Parameters) {
         super();
+        this.databaseName = databaseName;
+        this.parameters = parameters;
     }
 
     execute(): JQueryPromise<void> {
-        const payload: Raven.Server.Documents.Revisions.DeleteRevisionsOperation.Parameters = {
-            DocumentIds: this.ids
-        };
-
         const url = endpoints.databases.adminRevisions.adminRevisions;
 
-        return this.del<void>(url, JSON.stringify(payload), this.db, { dataType: undefined });
+        return this.del<void>(url, JSON.stringify(this.parameters), this.databaseName, { dataType: undefined });
     }
  }
 
