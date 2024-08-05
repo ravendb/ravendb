@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,14 +35,21 @@ namespace Voron.Impl.Backup
 
         public static async Task CopyToAsync(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)
         {
-            var readBuffer = new byte[DefaultBufferSize];
+            var readBuffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
 
-            int count;
-            while ((count = await source.ReadAsync(readBuffer, 0, readBuffer.Length, cancellationToken)) != 0)
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                onProgress?.Invoke(count);
-                await destination.WriteAsync(readBuffer, 0, count, cancellationToken);
+                int count;
+                while ((count = await source.ReadAsync(readBuffer, 0, readBuffer.Length, cancellationToken)) != 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    onProgress?.Invoke(count);
+                    await destination.WriteAsync(readBuffer, 0, count, cancellationToken);
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(readBuffer);
             }
         }
     }
