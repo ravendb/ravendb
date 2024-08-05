@@ -10,11 +10,11 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -72,7 +72,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             Disposables.Add(includeCompareExchangeValues);
         }
 
-        long lastModifiedIndex = RequestHandler.Database.RachisLogIndexNotifications.LastModifiedIndex;
+        long lastModifiedIndex = RequestHandler.Database.ClusterWideTransactionIndexWaiter.LastIndex;
         context.OpenReadTransaction();
 
         foreach (var id in ids)
@@ -89,7 +89,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
                 if (clusterWideTx)
                 {
                     Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
-                    includeCompareExchangeValues.AddDocument(ClusterTransactionCommand.GetAtomicGuardKey(id));
+                    includeCompareExchangeValues.AddDocument(ClusterWideTransactionHelper.GetAtomicGuardKey(id));
                     continue;
                 }
 
@@ -110,7 +110,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
                     if (changeVector.Version.Contains(RequestHandler.Database.ClusterTransactionId) == false)
                     {
                         Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
-                        if (includeCompareExchangeValues.TryGetAtomicGuard(ClusterTransactionCommand.GetAtomicGuardKey(id), lastModifiedIndex, out var index, out _))
+                        if (includeCompareExchangeValues.TryGetCompareExchange(ClusterWideTransactionHelper.GetAtomicGuardKey(id), lastModifiedIndex, out var index, out _))
                         {
                             var (isValid, cv) = ChangeVectorUtils.TryUpdateChangeVector(ChangeVectorParser.TrxnTag, RequestHandler.Database.ClusterTransactionId, index, changeVector);
                             Debug.Assert(isValid, "ChangeVector didn't have ClusterTransactionId tag but now does?!");
@@ -141,7 +141,8 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             {
                 foreach (var (k, v) in includeCompareExchangeValues.Results)
                 {
-                    v.ChangeVector = ChangeVectorUtils.NewChangeVector(ChangeVectorParser.TrxnTag, v.Index, RequestHandler.Database.ClusterTransactionId);
+                    if (v.Index >= 0)
+                        v.ChangeVector = ChangeVectorUtils.NewChangeVector(ChangeVectorParser.TrxnTag, v.Index, RequestHandler.Database.ClusterTransactionId);
                 }
             }
         }

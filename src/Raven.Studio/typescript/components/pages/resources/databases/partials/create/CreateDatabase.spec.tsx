@@ -98,7 +98,7 @@ describe("CreateDatabase", () => {
         fireClick: (element: HTMLElement) => Promise<void>
     ) => {
         await fillInput(screen.getByPlaceholderText(/Database name/i), "some-db-name");
-        await waitForElementToBeRemoved(screen.getByText(/Loading/i));
         await fireClick(screen.getByText(/Next/));
+        await waitForElementToBeRemoved(screen.getAllByTestId("loader"));
     };
 });

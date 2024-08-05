@@ -26,13 +26,10 @@ namespace Raven.Server.Utils
     /// </summary>
     public sealed class PoolOfThreads : IDisposable, ILowMemoryHandler
     {
-        private static readonly Lazy<PoolOfThreads> _globalRavenThreadPool = new Lazy<PoolOfThreads>(() =>
-        {
-            return new PoolOfThreads();
-        });
+        private static readonly Lazy<PoolOfThreads> _globalRavenThreadPool = new(() => new PoolOfThreads());
 
         public static PoolOfThreads GlobalRavenThreadPool => _globalRavenThreadPool.Value;
-        private static Logger _log = LoggingSource.Instance.GetLogger<PoolOfThreads>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PoolOfThreads>("Server");
 
         public int TotalNumberOfThreads;
 
@@ -41,16 +38,28 @@ namespace Raven.Server.Utils
         public PoolOfThreads()
         {
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
+
+            _cleanupTimer = new Timer(Cleanup, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
         }
 
-        private readonly ConcurrentQueue<PooledThread> _pool = new ConcurrentQueue<PooledThread>();
+        private readonly CountingConcurrentStack<PooledThread> _pool = new();
         private bool _disposed;
+        private readonly Timer _cleanupTimer;
 
         public void Dispose()
         {
             lock (this)
             {
                 _disposed = true;
+
+                try
+                {
+                    _cleanupTimer?.Dispose();
+                }
+                catch
+                {
+                    // ignored
+                }
             }
 
             Clear();
@@ -92,7 +101,7 @@ namespace Raven.Server.Utils
         {
             var nameToUse = ThreadNames.GetNameToUse(threadInfo);
 
-            if (_pool.TryDequeue(out var pooled) == false)
+            if (_pool.TryPop(out var pooled) == false)
             {
                 MemoryInformation.AssertNotAboutToRunOutOfMemory();
 
@@ -107,6 +116,7 @@ namespace Raven.Server.Utils
             }
 
             pooled.StartedAt = DateTime.UtcNow;
+            pooled.InPoolSince = DateTime.MinValue;
             return pooled.SetWorkForThread(action, state, threadInfo, nameToUse);
         }
 
@@ -124,13 +134,81 @@ namespace Raven.Server.Utils
             _lowMemoryFlag.Lower();
         }
 
-        private void Clear()
+        private static void ReleaseThread(PooledThread pooled)
         {
-            while (_pool.TryDequeue(out var pooled))
-                pooled.SetWorkForThread(null, null, null, null);
+            pooled.InPoolSince = DateTime.MinValue;
+            pooled.SetWorkForThread(null, null, null, null);
         }
 
-        internal sealed class PooledThread
+        private void Clear()
+        {
+            while (_pool.TryPop(out var pooled))
+                ReleaseThread(pooled);
+        }
+
+        private void Cleanup(object _)
+        {
+            const int minNumberOfItemsInPoolToPerformCleanupCheck = 64;
+
+            if (_disposed)
+                return;
+
+            if (_pool.Count < minNumberOfItemsInPoolToPerformCleanupCheck)
+                return;
+
+            try
+            {
+                var currentTime = DateTime.UtcNow;
+                var idleTime = TimeSpan.FromMinutes(5);
+
+                var numberOfThreadsToRelease = 0;
+                using (var enumerator = _pool.GetEnumerator())
+                {
+                    while (enumerator.MoveNext())
+                    {
+                        var pooled = enumerator.Current;
+
+                        var timeInPool = currentTime - pooled.InPoolSince;
+                        if (timeInPool <= idleTime)
+                            continue;
+
+                        numberOfThreadsToRelease++;
+                    }
+                }
+
+                if (numberOfThreadsToRelease < minNumberOfItemsInPoolToPerformCleanupCheck / 2)
+                    return;
+
+                lock (this)
+                {
+                    if (_disposed)
+                        return;
+
+                    var localPool = new CountingConcurrentStack<PooledThread>();
+                    while (_pool.TryPop(out var pooled))
+                    {
+                        var timeInPool = currentTime - pooled.InPoolSince;
+                        if (timeInPool <= idleTime)
+                        {
+                            localPool.Push(pooled);
+                            continue;
+                        }
+
+                        ReleaseThread(pooled);
+                    }
+
+                    while (localPool.TryPop(out var pooled))
+                        _pool.Push(pooled);
+                }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Error during cleanup.", e);
+            }
+        }
+
+        internal sealed class PooledThread : PooledItem
         {
             private static readonly FieldInfo ThreadFieldName;
 
@@ -189,7 +267,7 @@ namespace Raven.Server.Utils
                     while (true)
                     {
                         _waitForWork.WaitOne();
-                        
+
                         if (DoWork() == false)
                             return;
                     }
@@ -225,9 +303,9 @@ namespace Raven.Server.Utils
                 }
                 catch (Exception e)
                 {
-                    if (_log.IsOperationsEnabled)
+                    if (Logger.IsOperationsEnabled)
                     {
-                        _log.Operations($"An uncaught exception occurred in '{_threadInfo.FullName}' and killed the process", e);
+                        Logger.Operations($"An uncaught exception occurred in '{_threadInfo.FullName}' and killed the process", e);
                     }
 
                     throw;
@@ -249,7 +327,7 @@ namespace Raven.Server.Utils
 
                 ResetCurrentThreadName();
                 Thread.CurrentThread.Name = "Available Pool Thread";
-                
+
 
                 var resetThread = ResetThreadPriority();
                 resetThread &= ResetThreadAffinity();
@@ -265,7 +343,8 @@ namespace Raven.Server.Utils
                     if (_parent._lowMemoryFlag.IsRaised())
                         return false;
 
-                    _parent._pool.Enqueue(this);
+                    InPoolSince = DateTime.UtcNow;
+                    _parent._pool.Push(this);
                 }
 
                 return true;
@@ -284,12 +363,12 @@ namespace Raven.Server.Utils
                 var currentPriority = ThreadHelper.GetThreadPriority();
                 if (currentPriority != ThreadPriority.Normal)
                 {
-                    if (ThreadHelper.TrySetThreadPriority(ThreadPriority.Normal, null, _log) == false)
+                    if (ThreadHelper.TrySetThreadPriority(ThreadPriority.Normal, null, Logger) == false)
                     {
                         // if we can't reset it, better just kill it
-                        if (_log.IsInfoEnabled)
+                        if (Logger.IsInfoEnabled)
                         {
-                            _log.Info($"Unable to set this thread priority to normal, since we don't want its priority of {currentPriority}, we'll let it exit");
+                            Logger.Info($"Unable to set this thread priority to normal, since we don't want its priority of {currentPriority}, we'll let it exit");
                         }
 
                         return false;
@@ -343,6 +422,10 @@ namespace Raven.Server.Utils
                 ThreadMask = threadMask;
 
                 AffinityHelper.SetCustomThreadAffinity(this);
+            }
+
+            public override void Dispose()
+            {
             }
         }
     }

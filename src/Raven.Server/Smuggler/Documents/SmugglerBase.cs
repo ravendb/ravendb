@@ -510,7 +510,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (compareExchangeActions != null && item.Document.ChangeVector != null && item.Document.ChangeVector.Contains(ChangeVectorParser.TrxnTag))
                     {
-                        var key = ClusterTransactionCommand.GetAtomicGuardKey(item.Document.Id);
+                        var key = ClusterWideTransactionHelper.GetAtomicGuardKey(item.Document.Id);
                         await compareExchangeActions.WriteKeyValueAsync(key, null, item.Document);
                         continue;
                     }

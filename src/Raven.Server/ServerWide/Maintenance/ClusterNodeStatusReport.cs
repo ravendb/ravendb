@@ -67,6 +67,7 @@ namespace Raven.Server.ServerWide.Maintenance
         public Dictionary<int, BucketReport> ReportPerBucket = new Dictionary<int, BucketReport>();
 
         public long LastCompareExchangeIndex { get; set; }
+        public long LastClusterWideTransactionRaftIndex { get; set; }
 
         public sealed class ObservedIndexStatus
         {
@@ -110,7 +111,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(ReportPerBucket)] = DynamicJsonValue.Convert(ReportPerBucket),
                 [nameof(Error)] = Error,
                 [nameof(UpTime)] = UpTime,
-                [nameof(LastCompareExchangeIndex)] = LastCompareExchangeIndex
+                [nameof(LastCompareExchangeIndex)] = LastCompareExchangeIndex,
+                [nameof(LastClusterWideTransactionRaftIndex)] = LastClusterWideTransactionRaftIndex
             };
             var indexStats = new DynamicJsonValue();
             foreach (var stat in LastIndexStats)

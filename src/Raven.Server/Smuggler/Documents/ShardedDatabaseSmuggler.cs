@@ -6,10 +6,10 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Actions;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -212,7 +212,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        if (ClusterTransactionCommand.IsAtomicGuardKey(kvp.Key.Key, out _))
+                        if (ClusterWideTransactionHelper.IsAtomicGuardKey(kvp.Key.Key, out _))
                         {
                             await destinationActions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value, existingDocument: null);
                         }
@@ -253,7 +253,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        if (ClusterTransactionCommand.IsAtomicGuardKey(kvp.Key.Key, out _))
+                        if (ClusterWideTransactionHelper.IsAtomicGuardKey(kvp.Key.Key, out _))
                         {
                             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
                                 "RavenDB-19201 : handle atomic guard tombstones import");

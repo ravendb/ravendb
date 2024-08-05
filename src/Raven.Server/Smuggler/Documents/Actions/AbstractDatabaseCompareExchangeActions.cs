@@ -77,7 +77,7 @@ namespace Raven.Server.Smuggler.Documents.Actions
                 _clusterTransactionCommandsSize.Set(0, SizeUnit.Bytes);
             }
 
-            if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId) && TryHandleAtomicGuard(key, docId, value, existingDocument))
+            if (ClusterWideTransactionHelper.IsAtomicGuardKey(key, out var docId) && TryHandleAtomicGuard(key, docId, value, existingDocument))
                 return;
 
             _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_databaseName, key, value, 0, _context, RaftIdGenerator.DontCareId, fromBackup: true));

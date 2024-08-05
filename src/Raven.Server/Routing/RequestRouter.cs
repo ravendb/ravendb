@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RequestRouter.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -405,9 +405,9 @@ namespace Raven.Server.Routing
                     {
                         if (context.Request.Headers.TryGetValue(Constants.Headers.LastKnownClusterTransactionIndex, out var value)
                             && long.TryParse(value, out var index)
-                            && index > reqCtx.Database.RachisLogIndexNotifications.LastModifiedIndex)
+                            && index > reqCtx.Database.ClusterWideTransactionIndexWaiter.LastIndex)
                         {
-                            await reqCtx.Database.RachisLogIndexNotifications.WaitForIndexNotification(index, context.RequestAborted).ConfigureAwait(false);
+                            await reqCtx.Database.ClusterWideTransactionIndexWaiter.WaitAsync(index, context.RequestAborted).ConfigureAwait(false);
                         }
 
                         await handler(reqCtx).ConfigureAwait(false);
