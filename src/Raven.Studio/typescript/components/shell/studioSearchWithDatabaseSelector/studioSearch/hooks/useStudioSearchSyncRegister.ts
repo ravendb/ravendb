@@ -10,7 +10,6 @@ import {
 import { exhaustiveStringTuple } from "components/utils/common";
 import { useEffect, useCallback } from "react";
 import IconName from "typings/server/icons";
-import { OmniSearch } from "common/omniSearch/omniSearch";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -19,14 +18,15 @@ import menu from "common/shell/menu";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 interface UseStudioSearchSyncRegisterParams {
-    omniSearch: OmniSearch<StudioSearchItem, StudioSearchItemType>;
-    mainMenu: menu;
+    register: (type: StudioSearchItemType, newItems: StudioSearchItem[]) => void;
+    mainMenu?: menu;
+    menuItems?: menuItem[];
     goToUrl: (url: string, newTab: boolean) => void;
     resetDropdown: () => void;
 }
 
 export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterParams) {
-    const { omniSearch, mainMenu, goToUrl, resetDropdown } = props;
+    const { register, menuItems, goToUrl, resetDropdown } = props;
 
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const allDatabaseNames = useAppSelector(databaseSelectors.allDatabaseNames);
@@ -66,7 +66,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
 
     // Register collections
     useEffect(() => {
-        omniSearch.register(
+        register(
             "collection",
             collectionNames.map((name) => ({
                 type: "collection",
@@ -75,11 +75,11 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
                 text: name,
             }))
         );
-    }, [collectionNames, goToCollection, omniSearch]);
+    }, [collectionNames, goToCollection, register]);
 
     // Register databases
     useEffect(() => {
-        omniSearch.register(
+        register(
             "database",
             allDatabaseNames.map((databaseName) => ({
                 type: "database",
@@ -89,7 +89,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
                 alternativeTexts: ["db", "Database", "Active Database", "Select Database"],
             }))
         );
-    }, [allDatabaseNames, appUrl, omniSearch, handleDatabaseSwitch]);
+    }, [allDatabaseNames, appUrl, register, handleDatabaseSwitch]);
 
     const getMenuItemType = useCallback((route: string): StudioSearchMenuItemType => {
         if (route === "virtual") {
@@ -124,7 +124,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
             }
         };
 
-        mainMenu.getItems().forEach(crawlMenu);
+        menuItems.forEach(crawlMenu);
 
         menuLeafs
             .filter((item) => item.search?.isExcluded !== true)
@@ -158,12 +158,12 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
             });
 
         allMenuItemTypes.forEach((type) => {
-            omniSearch.register(
+            register(
                 type,
                 searchItems.filter((x) => x.type === type)
             );
         });
-    }, [activeDatabaseName, mainMenu, omniSearch, goToMenuItem, getMenuItemType, getCanHandleOperation]);
+    }, [menuItems, goToMenuItem, getMenuItemType, getCanHandleOperation, register]);
 }
 
 const databaseRoutePrefix = "databases/";

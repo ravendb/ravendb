@@ -25,7 +25,7 @@ class menu {
     width = ko.observable<number>(280);
 
     private type = 'menu';
-    private items: KnockoutObservable<Array<menuItem>> = ko.observable(null);
+    public items: KnockoutObservable<Array<menuItem>> = ko.observable(null);
 
     private resetMenuLevelToActiveItem: {
         isActive: boolean,
@@ -182,10 +182,6 @@ class menu {
                 this.width(widthFromSettings);
                 document.documentElement.style.setProperty('--menu-width', widthFromSettings.toString() + 'px');
             });
-    }
-
-    getItems(): menuItem[] {
-        return this.items();
     }
     
     private handleResize(e: JQuery.TriggeredEvent) {
