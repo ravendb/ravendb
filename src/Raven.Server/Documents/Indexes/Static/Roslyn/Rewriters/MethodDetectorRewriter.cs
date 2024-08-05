@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
     {
         public readonly IndexCompiler.IndexMethods Methods = new IndexCompiler.IndexMethods();
 
-        private static long IndexVersion { get; set; }
+        private long IndexVersion { get; set; }
         
         public MethodDetectorRewriter(long indexVersion)
         {
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return base.VisitGroupClause(node);
         }
 
-        private static void AssertLoadDocumentHasConstantCollectionName(InvocationExpressionSyntax node)
+        private void AssertLoadDocumentHasConstantCollectionName(InvocationExpressionSyntax node)
         {
             var collectionExpression = node.ArgumentList.Arguments[1].Expression;
                 
