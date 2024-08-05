@@ -1162,9 +1162,8 @@ namespace Voron.Impl
             _env.WriteTransactionPool.ScratchPagesInUse = _scratchPagesInUse = _scratchBuffersSnapshotToRollbackTo.ToBuilder(); 
             foreach (var (k, maybeRollBack) in rollbackPages)
             {
-                if(_envRecord.ScratchPagesTable.TryGetValue(k, out var committed) &&
-                   maybeRollBack == committed)
-                    continue; // from a committed version, can keep
+                if(maybeRollBack.AllocatedInTransaction != Id)
+                    continue; // from a committed transaction, can keep
                 
                 _env.ScratchBufferPool.Free(this, maybeRollBack.File.Number, maybeRollBack.PositionInScratchBuffer);
             }

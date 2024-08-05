@@ -640,7 +640,6 @@ namespace Voron.Impl.Journal
                             return; // nothing to do
                         }
 
-                        _waj._env.Options.flushed.Enqueue(record);
                         // we have to keep this around since TryGetLatestEnvironmentStateToFlush will _consume_ the state
                         // so until we successfully flush the data, we need to remember to repeat this operation
                         // flushing can fail because of disk full, etc...
