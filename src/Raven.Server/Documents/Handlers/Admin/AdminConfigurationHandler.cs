@@ -96,23 +96,29 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 var databaseSettingsJson = await context.ReadForDiskAsync(RequestBodyStream(), Constants.DatabaseSettings.StudioId);
 
-                var settings = new Dictionary<string, string>();
+                var settingsToUpdate = new Dictionary<string, string>();
                 var prop = new BlittableJsonReaderObject.PropertyDetails();
 
                 for (int i = 0; i < databaseSettingsJson.Count; i++)
                 {
                     databaseSettingsJson.GetPropertyByIndex(i, ref prop);
-                    settings.Add(prop.Name, prop.Value?.ToString());
+                    settingsToUpdate.Add(prop.Name, prop.Value?.ToString());
                 }
                 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var updatedSettingsKeys = GetUpdatedSettingsKeys(settings);
+                    using (context.OpenReadTransaction())
+                    {
+                        var databaseRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name);
+                        var currentSettings = databaseRecord.Settings;
                         
-                    LogAuditFor(Database.Name, "CHANGE", $"Database configuration. Changed keys: {string.Join(" ", updatedSettingsKeys)}");
+                        var updatedSettingsKeys = GetUpdatedSettingsKeys(currentSettings, settingsToUpdate);
+
+                        LogAuditFor(Database.Name, "CHANGE", $"Database configuration. Changed settings: {string.Join(" ", updatedSettingsKeys)}");
+                    }
                 }
                 
-                var command = new PutDatabaseSettingsCommand(settings, Database.Name, GetRaftRequestIdFromQuery());
+                var command = new PutDatabaseSettingsCommand(settingsToUpdate, Database.Name, GetRaftRequestIdFromQuery());
 
                 long index = (await Server.ServerStore.SendToLeaderAsync(command)).Index;
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
@@ -121,19 +127,19 @@ namespace Raven.Server.Documents.Handlers.Admin
             NoContentStatus(HttpStatusCode.Created);
         }
 
-        private List<string> GetUpdatedSettingsKeys(Dictionary<string, string> updatedSettings)
+        private static List<string> GetUpdatedSettingsKeys(Dictionary<string, string> currentSettings, Dictionary<string, string> settingsToUpdate)
         {
-            var keys = new List<string>();
+            var updatedSettings = new List<string>();
 
-            foreach (var kvp in updatedSettings)
+            foreach (var settingToUpdate in settingsToUpdate)
             {
-                var currentValue= Database.Configuration.GetSetting(kvp.Key);
+                currentSettings.TryGetValue(settingToUpdate.Key, out var currentSettingValue);
                 
-                if (currentValue != kvp.Value)
-                    keys.Add(kvp.Key);
+                if (currentSettingValue != settingToUpdate.Value)
+                    updatedSettings.Add(settingToUpdate.Key);
             }
 
-            return keys;
+            return updatedSettings;
         }
 
         [RavenAction("/databases/*/admin/configuration/studio", "PUT", AuthorizationStatus.DatabaseAdmin)]
