@@ -70,7 +70,7 @@ namespace Raven.Server.Documents
 
         public class ChangeValue
         {
-            public DynamicJsonValue ValueToSend;
+            public object ValueToSend;
             public bool AllowSkip;
         }
 
@@ -415,13 +415,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static readonly ChangeValue AggressiveCachingPulseValue = new()
+        internal static readonly ChangeValue AggressiveCachingPulseValue = new()
         {
             AllowSkip = true,
-            ValueToSend = new DynamicJsonValue
-            {
-                ["Type"] = nameof(AggressiveCacheChange),
-            }
+            ValueToSend = new AggressiveCacheChangeFactory()
         };
 
         private void PulseAggressiveCaching()
@@ -605,7 +602,17 @@ namespace Raven.Server.Documents
                                     writer.WriteComma();
 
                                 first = false;
-                                context.Write(writer, value);
+
+                                switch (value)
+                                {
+                                    case DynamicJsonValue djv:
+                                        context.Write(writer, djv);
+                                        break;
+                                    case DatabaseChangeFactory cf:
+                                        context.Write(writer, cf.CreateJson());
+                                        break;
+                                }
+
                                 messagesCount++;
 
                                 writer.Flush();
@@ -696,10 +703,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        private DynamicJsonValue _skippedMessage;
+        private object _skippedMessage;
         private DateTime _lastSendMessage;
 
-        private async Task<DynamicJsonValue> GetNextMessage(bool throttleConnection)
+        private async Task<object> GetNextMessage(bool throttleConnection)
         {
             while (true)
             {
@@ -1025,6 +1032,22 @@ namespace Raven.Server.Documents
         public void LowMemoryOver()
         {
             _lowMemoryFlag.Lower();
+        }
+
+        private abstract class DatabaseChangeFactory
+        {
+            public abstract DynamicJsonValue CreateJson();
+        }
+
+        private class AggressiveCacheChangeFactory : DatabaseChangeFactory
+        {
+            public override DynamicJsonValue CreateJson()
+            {
+                return new DynamicJsonValue
+                {
+                    ["Type"] = nameof(AggressiveCacheChange),
+                };
+            }
         }
     }
 }
