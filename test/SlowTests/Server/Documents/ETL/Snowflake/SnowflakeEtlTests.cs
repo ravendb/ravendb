@@ -5,8 +5,10 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Voron.Util;
 using Orders;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Util;
@@ -257,6 +259,21 @@ DROP DATABASE SqlReplication-{dbName}";
             }
         }
     }
+
+    protected static void CreateOrdersWithAttachmentTable(string connectionString)
+    {
+        using (var con = new SnowflakeDbConnection())
+        {
+            con.ConnectionString = connectionString;
+            con.Open();
+
+            using (var dbCommand = con.CreateCommand())
+            {
+                dbCommand.CommandText = "create or replace TABLE ORDERS (\n\tID STRING,\n\tNAME STRING,\n\tPIC BINARY\n);";
+                dbCommand.ExecuteNonQuery();
+            }
+        }
+    }
     
     [RequiresSnowflakeFact]
     public async Task CanUseSnowflakeSqlEtl()
@@ -328,7 +345,66 @@ DROP DATABASE SqlReplication-{dbName}";
             }
         }
     }
-    
+
+    [RequiresSnowflakeFact]
+    public async Task CanLoadSingleAttachment()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (WithSnowflakeDatabase(out var connectionString, out string databaseName, out string schemaName, dataSet: null, includeData: false))
+            {
+                CreateOrdersWithAttachmentTable(connectionString);
+                var attachmentBytes = new byte[] { 1, 2, 3 };
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order());
+                    await session.SaveChangesAsync();
+                }
+
+                store.Operations.Send(new PutAttachmentOperation("orders/1-A", "test-attachment", new MemoryStream(attachmentBytes), "image/png"));
+
+                var etlDone = Etl.WaitForEtlToComplete(store);
+
+                SetupSnowflakeEtl(store, connectionString, @"
+var orderData = {
+    Id: id(this),
+    Name: this['@metadata']['@attachments'][0].Name,
+    Pic: loadAttachment(this['@metadata']['@attachments'][0].Name)
+};
+
+loadToOrders(orderData);
+");
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+                using (var con = new SnowflakeDbConnection())
+                {
+                    con.ConnectionString = connectionString;
+                    con.Open();
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                        Assert.Equal(1L, dbCommand.ExecuteScalar());
+                    }
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
+
+                        var sqlDataReader = dbCommand.ExecuteReader();
+
+                        Assert.True(sqlDataReader.Read());
+                        var stream = sqlDataReader.GetStream(0);
+
+                        var bytes = stream.ReadData();
+
+                        Assert.Equal(attachmentBytes, bytes);
+                    }
+                }
+            }
+        }
+    }
+
+
     private class Order
     {
         public Address Address { get; set; }
