@@ -616,9 +616,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             _log.Info("Replication batch contained missing attachments will request the batch to be re-sent with those attachments.", mae);
                         }
-                        else if (_cts.IsCancellationRequested ||
-                                 e is ObjectDisposedException ||
-                                 (e is AggregateException && e.ExtractSingleInnerException() is ObjectDisposedException))
+                        else if (_cts.IsCancellationRequested || e.ExtractSingleInnerException() is ObjectDisposedException)
                         {
                             _log.Info($"Shutting down the replication connection {FromToString}, likely because the sender has closed the connection.");
                         }
