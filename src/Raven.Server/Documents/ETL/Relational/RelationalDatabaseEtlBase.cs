@@ -141,7 +141,7 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
         return true;
     }
 
-    protected abstract RelationalDatabaseWriterSimulatorBase<TRelationalConnectionString, TRelationalEtlConfiguration> GetWriterSimulator();
+    protected abstract RelationalDatabaseWriterSimulator GetWriterSimulator();
 
     public RelationalDatabaseEtlTestScriptResult RunTest(DocumentsOperationContext context, IEnumerable<RelationalDatabaseTableWithRecords> toWrite, bool performRolledBackTransaction)
     {

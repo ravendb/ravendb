@@ -22,7 +22,7 @@ using DbProviderFactories = System.Data.Common.DbProviderFactories;
 
 namespace Raven.Server.Documents.ETL.Relational.RelationalWriters;
 
-public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration> : IDisposable
+public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration> : IDisposable, IRelationalDatabaseWriter
     where TRelationalConnectionString : ConnectionString
     where TRelationalEtlConfiguration : EtlConfiguration<TRelationalConnectionString>
 {
@@ -141,56 +141,6 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         _tx.Rollback();
     }
 
-    protected void FillInsertCommand(DbCommand cmd, string tableName, string pkName, ToRelationalDatabaseItem itemToReplicate)
-    {
-        var sb = new StringBuilder("INSERT INTO ")
-            .Append(GetTableNameString(tableName))
-            .Append(" (")
-            .Append(_commandBuilder.QuoteIdentifier(pkName))
-            .Append(", ");
-        foreach (var column in itemToReplicate.Columns)
-        {
-            if (column.Id == pkName)
-                continue;
-            sb.Append(_commandBuilder.QuoteIdentifier(column.Id)).Append(", ");
-        }
-
-        sb.Length = sb.Length - 2;
-
-        var pkParam = cmd.CreateParameter();
-        pkParam.ParameterName = GetParameterNameForDbParameter(pkName);
-
-        SetPrimaryKeyParamValue(itemToReplicate, pkParam);
-        cmd.Parameters.Add(pkParam);
-
-        var afterIntoSyntax = GetPostInsertIntoStartSyntax(itemToReplicate);
-
-        sb.Append($") {afterIntoSyntax}");
-
-        sb.Append(GetParameterNameForCommandString(pkName, false)).Append(", ");
-
-        foreach (var column in itemToReplicate.Columns)
-        {
-            if (column.Id == pkName)
-                continue;
-
-            var colParam = cmd.CreateParameter();
-            colParam.ParameterName = GetParameterNameForDbParameter(column.Id);
-            SetParamValue(colParam, column, _stringParserList);
-            EnsureParamTypeSupportedByDbProvider(colParam);
-
-            cmd.Parameters.Add(colParam);
-            sb.Append(GetParameterNameForCommandString(column.Id, column.IsArrayOrObject)).Append(", ");
-        }
-
-        sb.Length = sb.Length - 2;
-        var endSyntax = GetPostInsertIntoEndSyntax(itemToReplicate);
-        sb.Append(endSyntax);
-
-        var stmt = sb.ToString();
-        cmd.CommandText = stmt;
-    }
-
     private int InsertItems(string tableName, string pkName, List<ToRelationalDatabaseItem> toInsert, Action<DbCommand> commandCallback, CancellationToken token)
     {
         var inserted = 0;
@@ -200,13 +150,10 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         {
             sp.Restart();
 
-            using (var cmd = CreateCommand())
+            using (var cmd = GetInsertCommand(tableName, pkName, itemToReplicate))
             using (token.Register(cmd.Cancel))
             {
                 token.ThrowIfCancellationRequested();
-
-                FillInsertCommand(cmd, tableName, pkName, itemToReplicate);
-
                 commandCallback?.Invoke(cmd);
 
                 try
@@ -278,67 +225,22 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         }
     }
 
-    protected int FillDeleteCommand(DbCommand cmd, string tableName, string pkName, int maxParams, List<ToRelationalDatabaseItem> toDelete, int currentToDeleteIndex,
-        bool parameterize)
-    {
-        cmd.Parameters.Clear();
-        var sb = new StringBuilder("DELETE FROM ")
-            .Append(GetTableNameString(tableName))
-            .Append(" WHERE ")
-            .Append(_commandBuilder.QuoteIdentifier(pkName))
-            .Append(" IN (");
-
-        var countOfDeletes = 0;
-        for (int j = currentToDeleteIndex; j < Math.Min(currentToDeleteIndex + maxParams, toDelete.Count); j++)
-        {
-            if (currentToDeleteIndex != j)
-                sb.Append(", ");
-
-            if (parameterize)
-            {
-                var dbParameter = cmd.CreateParameter();
-                dbParameter.ParameterName = GetParameterNameForCommandString("p" + j, false);
-                dbParameter.Value = toDelete[j].DocumentId.ToString();
-                cmd.Parameters.Add(dbParameter);
-                sb.Append(dbParameter.ParameterName);
-            }
-            else
-            {
-                sb.Append("'").Append(SanitizeSqlValue(toDelete[j].DocumentId)).Append("'");
-            }
-
-            if (toDelete[j].IsDelete) // count only "real" deletions, not the ones because of insert
-                countOfDeletes++;
-        }
-
-        sb.Append(")");
-
-        var endSyntax = GetPostDeleteSyntax(toDelete[currentToDeleteIndex]);
-        sb.Append(endSyntax);
-
-
-        var stmt = sb.ToString();
-        cmd.CommandText = stmt;
-        return countOfDeletes;
-    }
-
     public int DeleteItems(string tableName, string pkName, bool parameterize, List<ToRelationalDatabaseItem> toDelete, Action<DbCommand> commandCallback,
         CancellationToken token)
     {
         const int maxParams = 1000;
-
         var deleted = 0;
 
         var sp = new Stopwatch();
-        using (var cmd = CreateCommand())
-        using (token.Register(cmd.Cancel))
-        {
-            sp.Start();
-            token.ThrowIfCancellationRequested();
+        sp.Start();
 
-            for (int i = 0; i < toDelete.Count; i += maxParams)
+        token.ThrowIfCancellationRequested();
+
+        for (int i = 0; i < toDelete.Count; i += maxParams)
+        {
+            using (var cmd = GetDeleteCommand(tableName, pkName, toDelete, i, parameterize, maxParams, out int countOfDeletes))
+            using (token.Register(cmd.Cancel))
             {
-                int countOfDeletes = FillDeleteCommand(cmd, tableName, pkName, maxParams, toDelete, i, parameterize);
                 commandCallback?.Invoke(cmd);
 
                 try
@@ -557,6 +459,104 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
                 return false;
             }
         };
+    }
+
+    public DbCommand GetInsertCommand(string tableName, string pkName, ToRelationalDatabaseItem itemToReplicate)
+    {
+        var cmd = CreateCommand();
+        
+        var sb = new StringBuilder("INSERT INTO ")
+            .Append(GetTableNameString(tableName))
+            .Append(" (")
+            .Append(_commandBuilder.QuoteIdentifier(pkName))
+            .Append(", ");
+        foreach (var column in itemToReplicate.Columns)
+        {
+            if (column.Id == pkName)
+                continue;
+            sb.Append(_commandBuilder.QuoteIdentifier(column.Id)).Append(", ");
+        }
+
+        sb.Length = sb.Length - 2;
+
+        var pkParam = cmd.CreateParameter();
+        pkParam.ParameterName = GetParameterNameForDbParameter(pkName);
+
+        SetPrimaryKeyParamValue(itemToReplicate, pkParam);
+        cmd.Parameters.Add(pkParam);
+
+        var afterIntoSyntax = GetPostInsertIntoStartSyntax(itemToReplicate);
+
+        sb.Append($") {afterIntoSyntax}");
+
+        sb.Append(GetParameterNameForCommandString(pkName, false)).Append(", ");
+
+        foreach (var column in itemToReplicate.Columns)
+        {
+            if (column.Id == pkName)
+                continue;
+
+            var colParam = cmd.CreateParameter();
+            colParam.ParameterName = GetParameterNameForDbParameter(column.Id);
+            SetParamValue(colParam, column, _stringParserList);
+            EnsureParamTypeSupportedByDbProvider(colParam);
+
+            cmd.Parameters.Add(colParam);
+            sb.Append(GetParameterNameForCommandString(column.Id, column.IsArrayOrObject)).Append(", ");
+        }
+
+        sb.Length = sb.Length - 2;
+        var endSyntax = GetPostInsertIntoEndSyntax(itemToReplicate);
+        sb.Append(endSyntax);
+
+        var stmt = sb.ToString();
+        cmd.CommandText = stmt;
+
+        return cmd;
+    }
+
+    public DbCommand GetDeleteCommand(string tableName, string pkName, List<ToRelationalDatabaseItem> toDeleteSqlItems, int currentToDeleteIndex, bool parameterize, int maxParams, out int countOfDeletes)
+    {
+        var cmd = CreateCommand();
+        cmd.Parameters.Clear();
+        var sb = new StringBuilder("DELETE FROM ")
+            .Append(GetTableNameString(tableName))
+            .Append(" WHERE ")
+            .Append(_commandBuilder.QuoteIdentifier(pkName))
+            .Append(" IN (");
+
+        countOfDeletes = 0;
+        for (int j = currentToDeleteIndex; j < Math.Min(currentToDeleteIndex + maxParams, toDeleteSqlItems.Count); j++)
+        {
+            if (currentToDeleteIndex != j)
+                sb.Append(", ");
+
+            if (parameterize)
+            {
+                var dbParameter = cmd.CreateParameter();
+                dbParameter.ParameterName = GetParameterNameForCommandString("p" + j, false);
+                dbParameter.Value = toDeleteSqlItems[j].DocumentId.ToString();
+                cmd.Parameters.Add(dbParameter);
+                sb.Append(dbParameter.ParameterName);
+            }
+            else
+            {
+                sb.Append("'").Append(SanitizeSqlValue(toDeleteSqlItems[j].DocumentId)).Append("'");
+            }
+
+            if (toDeleteSqlItems[j].IsDelete) // count only "real" deletions, not the ones because of insert
+                countOfDeletes++;
+        }
+
+        sb.Append(")");
+
+        var endSyntax = GetPostDeleteSyntax(toDeleteSqlItems[currentToDeleteIndex]);
+        sb.Append(endSyntax);
+
+
+        var stmt = sb.ToString();
+        cmd.CommandText = stmt;
+        return cmd;
     }
 }
 

@@ -9,17 +9,13 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Snowflake;
 
-public sealed class SnowflakeEtl : RelationalDatabaseEtlBase<SnowflakeEtlConfiguration, SnowflakeConnectionString>
+public sealed class SnowflakeEtl(Transformation transformation, SnowflakeEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
+    : RelationalDatabaseEtlBase<SnowflakeEtlConfiguration, SnowflakeConnectionString>(transformation, configuration, database, serverStore, SnowflakeEtlTag)
 {
     public const string SnowflakeEtlTag = "Snowflake ETL";
-    
-    public SnowflakeEtl(Transformation transformation, SnowflakeEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore) : base(transformation, configuration, database, serverStore, SnowflakeEtlTag)
-    {
-        EtlType = EtlType.Snowflake;
-    }
 
-    public override EtlType EtlType { get; }
-    
+    public override EtlType EtlType => EtlType.Snowflake;
+
     protected override EtlTransformer<ToRelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
     {
         return new SnowflakeDocumentTransformer(Transformation, Database, context, Configuration);
@@ -30,8 +26,8 @@ public sealed class SnowflakeEtl : RelationalDatabaseEtlBase<SnowflakeEtlConfigu
         return new SnowflakeDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics);
     }
 
-    protected override RelationalDatabaseWriterSimulatorBase<SnowflakeConnectionString, SnowflakeEtlConfiguration> GetWriterSimulator()
+    protected override RelationalDatabaseWriterSimulator GetWriterSimulator()
     {
-        return new SnowflakeDatabaseWriterSimulator(Configuration, Database, RelationalMetrics, Statistics);
+        return new RelationalDatabaseWriterSimulator(GetRelationalDatabaseWriterInstance(), Configuration.ParameterizeDeletes);
     }
 }
