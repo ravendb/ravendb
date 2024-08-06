@@ -42,6 +42,22 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
         };
     }, [inputRef, setIsDropdownOpen]);
 
+    // Handle closing dropdown on tab key
+    useEffect(() => {
+        const handleTabKey = (e: KeyboardEvent) => {
+            if (e.key === "Tab") {
+                setIsDropdownOpen(false);
+            }
+        };
+
+        const current = inputRef.current;
+        current.addEventListener("keydown", handleTabKey);
+
+        return () => {
+            current.removeEventListener("keydown", handleTabKey);
+        };
+    }, [inputRef, setIsDropdownOpen]);
+
     // Handle enter key
     useEffect(() => {
         const handleEnterKey = (e: KeyboardEvent) => {

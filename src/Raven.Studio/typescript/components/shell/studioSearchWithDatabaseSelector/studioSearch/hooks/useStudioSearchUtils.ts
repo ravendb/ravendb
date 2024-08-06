@@ -4,18 +4,13 @@ import router from "plugins/router";
 
 interface UseStudioSearchUtilsProps {
     inputRef: React.RefObject<HTMLInputElement>;
-    studioSearchInputId: string;
     setIsDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
     setActiveItem: React.Dispatch<React.SetStateAction<StudioSearchResultItem>>;
 }
 
 export function useStudioSearchUtils(props: UseStudioSearchUtilsProps) {
-    const { inputRef, studioSearchInputId, setIsDropdownOpen, setSearchQuery, setActiveItem } = props;
-
-    const toggleDropdown = (e: any) => {
-        setIsDropdownOpen((e.target as Element)?.id === studioSearchInputId);
-    };
+    const { inputRef, setIsDropdownOpen, setSearchQuery, setActiveItem } = props;
 
     const resetDropdown = useCallback(() => {
         inputRef.current?.blur();
@@ -38,7 +33,6 @@ export function useStudioSearchUtils(props: UseStudioSearchUtilsProps) {
     );
 
     return {
-        toggleDropdown,
         goToUrl,
         resetDropdown,
     };

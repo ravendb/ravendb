@@ -1,5 +1,5 @@
 import "./StudioSearch.scss";
-import { studioSearchInputId, useStudioSearch } from "./hooks/useStudioSearch";
+import { studioSearchInputId, useStudioSearch, studioSearchBackdropId } from "./hooks/useStudioSearch";
 import React from "react";
 import { Dropdown, DropdownItem, DropdownMenu, Input, Row, DropdownToggle } from "reactstrap";
 import classNames from "classnames";
@@ -9,22 +9,14 @@ import StudioSearchSwitchToDatabaseResults from "./bits/StudioSearchSwitchToData
 import StudioSearchServerResults from "./bits/StudioSearchServerResults";
 
 export default function StudioSearch(props: { menuItems?: menuItem[] }) {
-    const {
-        refs,
-        isSearchDropdownOpen,
-        toggleDropdown,
-        searchQuery,
-        setSearchQuery,
-        matchStatus,
-        results,
-        activeItem,
-    } = useStudioSearch(props.menuItems);
+    const { refs, isSearchDropdownOpen, searchQuery, setSearchQuery, matchStatus, results, activeItem } =
+        useStudioSearch(props.menuItems);
 
     return (
         <>
             <Dropdown
                 isOpen={isSearchDropdownOpen}
-                toggle={toggleDropdown}
+                toggle={() => {}} // handled manually in useStudioSearchMouseEvents() to avoid button click behavior
                 ref={refs.dropdownRef}
                 className="studio-search"
             >
@@ -73,7 +65,9 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                     </Row>
                 </DropdownMenu>
             </Dropdown>
-            {isSearchDropdownOpen && <div className="modal-backdrop fade show" style={{ zIndex: 1 }} />}
+            {isSearchDropdownOpen && (
+                <div id={studioSearchBackdropId} className="modal-backdrop fade show" style={{ zIndex: 1 }} />
+            )}
         </>
     );
 }
