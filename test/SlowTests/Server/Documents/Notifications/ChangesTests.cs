@@ -162,9 +162,9 @@ namespace SlowTests.Server.Documents.Notifications
         public async Task NotificationOnWrongDatabase_ShouldNotCrashServer()
         {
             using (var store = GetDocumentStore())
-            {                
-                var taskObservable = store.Changes("does-not-exists");                                
-                Assert.True( await Assert.ThrowsAsync<DatabaseDoesNotExistException>(async () => await taskObservable.EnsureConnectedNow()).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(15)));                               
+            {
+                var taskObservable = store.Changes("does-not-exists");
+                Assert.True(await Assert.ThrowsAsync<DatabaseDoesNotExistException>(async () => await taskObservable.EnsureConnectedNow()).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(15)));
 
                 // ensure the db still works
                 store.Maintenance.Send(new GetStatisticsOperation());
@@ -210,26 +210,26 @@ namespace SlowTests.Server.Documents.Notifications
                 var taskObservable = store.Changes();
                 await taskObservable.EnsureConnectedNow();
                 var observableWithTask = taskObservable.ForDocumentsStartingWith("users/");
-                
+
                 observableWithTask.Subscribe(x =>
                 {
                     if (x.Type == DocumentChangeTypes.Put)
                         list.Add(x.Id);
                 });
                 await observableWithTask.EnsureSubscribedNow();
-                
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/1");
                     session.SaveChanges();
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "differentDocumentPrefix/1");
                     session.SaveChanges();
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/2");
@@ -241,7 +241,7 @@ namespace SlowTests.Server.Documents.Notifications
                 Assert.Contains("users/2", list);
             }
         }
-        
+
         [Fact]
         public async Task CanGetNotificationAboutDocumentsFromCollection()
         {
@@ -251,26 +251,26 @@ namespace SlowTests.Server.Documents.Notifications
                 var taskObservable = store.Changes();
                 await taskObservable.EnsureConnectedNow();
                 var observableWithTask = taskObservable.ForDocumentsInCollection("users");
-                
+
                 observableWithTask.Subscribe(x =>
                 {
                     if (x.Type == DocumentChangeTypes.Put)
                         list.Add(x.Id);
                 });
                 await observableWithTask.EnsureSubscribedNow();
-                
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/1");
                     session.SaveChanges();
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Employee(), "employees/1");
                     session.SaveChanges();
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/2");
@@ -358,83 +358,90 @@ namespace SlowTests.Server.Documents.Notifications
 
                 await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDatabaseName)));
 
-                using (var session = store.OpenAsyncSession(newDatabaseName))
+                try
                 {
-                    await session.StoreAsync(new User
+                    using (var session = store.OpenAsyncSession(newDatabaseName))
                     {
-                        Name = oldName
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
+                        await session.StoreAsync(new User
+                        {
+                            Name = oldName
+                        }, "users/1");
+                        await session.SaveChangesAsync();
+                    }
 
-                using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue, database: newDatabaseName))
-                using (var session = store.OpenAsyncSession(newDatabaseName))
-                {
-                    var loaded = await session.LoadAsync<User>("users/1");
-                    Assert.Equal(oldName, loaded.Name);
-                }
-
-                using (var session = store.OpenAsyncSession(newDatabaseName))
-                {
-                    var loaded = await session.LoadAsync<User>("users/1");
-                    loaded.Name = newName;
-                    await session.SaveChangesAsync();
-                }
-
-                var value = await WaitForValueAsync(async () =>
-                {
                     using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue, database: newDatabaseName))
                     using (var session = store.OpenAsyncSession(newDatabaseName))
                     {
                         var loaded = await session.LoadAsync<User>("users/1");
-                        return loaded.Name;
+                        Assert.Equal(oldName, loaded.Name);
                     }
-                }, newName);
 
-                Assert.Equal(newName, value);
+                    using (var session = store.OpenAsyncSession(newDatabaseName))
+                    {
+                        var loaded = await session.LoadAsync<User>("users/1");
+                        loaded.Name = newName;
+                        await session.SaveChangesAsync();
+                    }
 
-                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(newDatabaseName, hardDelete: true));
-
-                var exception = await WaitForValueAsync(async () =>
-                {
-                    try
+                    var value = await WaitForValueAsync(async () =>
                     {
                         using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue, database: newDatabaseName))
+                        using (var session = store.OpenAsyncSession(newDatabaseName))
                         {
+                            var loaded = await session.LoadAsync<User>("users/1");
+                            return loaded.Name;
                         }
+                    }, newName);
 
-                        return false;
-                    }
-                    catch (DatabaseDoesNotExistException)
+                    Assert.Equal(newName, value);
+
+                    await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(newDatabaseName, hardDelete: true));
+
+                    var exception = await WaitForValueAsync(async () =>
                     {
-                        return true;
-                    }
-                }, true);
+                        try
+                        {
+                            using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue, database: newDatabaseName))
+                            {
+                            }
 
-                Assert.True(exception);
+                            return false;
+                        }
+                        catch (DatabaseDoesNotExistException)
+                        {
+                            return true;
+                        }
+                    }, true);
 
-                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDatabaseName)));
+                    Assert.True(exception);
 
-                using (var session = store.OpenAsyncSession(newDatabaseName))
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = oldName
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
+                    await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDatabaseName)));
 
-                value = await WaitForValueAsync(async () =>
-                {
-                    using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue, database: newDatabaseName))
                     using (var session = store.OpenAsyncSession(newDatabaseName))
                     {
-                        var loaded = await session.LoadAsync<User>("users/1");
-                        return loaded.Name;
+                        await session.StoreAsync(new User
+                        {
+                            Name = oldName
+                        }, "users/1");
+                        await session.SaveChangesAsync();
                     }
-                }, oldName);
 
-                Assert.Equal(oldName, value);
+                    value = await WaitForValueAsync(async () =>
+                    {
+                        using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue, database: newDatabaseName))
+                        using (var session = store.OpenAsyncSession(newDatabaseName))
+                        {
+                            var loaded = await session.LoadAsync<User>("users/1");
+                            return loaded.Name;
+                        }
+                    }, oldName);
+
+                    Assert.Equal(oldName, value);
+                }
+                finally
+                {
+                    await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(newDatabaseName, hardDelete: true));
+                }
             }
         }
 
