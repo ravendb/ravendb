@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         }
     }
 
-    public sealed class OutgoingPullReplicationHandlerAsHub : OutgoingPullReplicationHandler
+    internal sealed class OutgoingPullReplicationHandlerAsHub : OutgoingPullReplicationHandler
     {
         // In case this is an outgoing pull replication from the hub
         // we need to associate this instance to the replication definition.

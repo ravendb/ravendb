@@ -39,15 +39,18 @@ namespace Raven.Server.NotificationCenter
             var list = new List<BlockingTombstoneDetails>();
             using (_notificationCenter.Storage.Read(id, out var notification))
             {
-                if (notification == null ||
-                    notification.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject details) == false ||
-                    details.TryGet(nameof(BlockingTombstonesDetails.BlockingTombstones), out BlittableJsonReaderArray blockingTombstonesDetails) == false)
-                    return list;
+                using (notification)
+                {
+                    if (notification == null ||
+                        notification.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject details) == false ||
+                        details.TryGet(nameof(BlockingTombstonesDetails.BlockingTombstones), out BlittableJsonReaderArray blockingTombstonesDetails) == false)
+                        return list;
 
-                list.AddRange(
-                    from BlittableJsonReaderObject detail in blockingTombstonesDetails 
-                    select JsonDeserializationServer.BlockingTombstoneDetails(detail));
+                    list.AddRange(
+                        from BlittableJsonReaderObject detail in blockingTombstonesDetails
+                        select JsonDeserializationServer.BlockingTombstoneDetails(detail));
                 }
+            }
 
             return list;
         }
@@ -85,16 +88,16 @@ namespace Raven.Server.NotificationCenter
         }
     }
 
-        public sealed class BlockingTombstoneDetails
-        {
-            public string Source { get; set; }
+    public sealed class BlockingTombstoneDetails
+    {
+        public string Source { get; set; }
         public ITombstoneAware.TombstoneDeletionBlockerType BlockerType { get; set; }
         public long BlockerTaskId { get; set; }
-            public string Collection { get; set; }
-            public long NumberOfTombstones { get; set; }
+        public string Collection { get; set; }
+        public long NumberOfTombstones { get; set; }
         public long SizeOfTombstonesInBytes { get; set; }
         public string SizeOfTombstonesHumane => new Size(SizeOfTombstonesInBytes, SizeUnit.Bytes).ToString();
-        }
+    }
 
     public sealed class TombstoneDeletionBlockageSource : IEquatable<TombstoneDeletionBlockageSource>
     {
@@ -107,7 +110,7 @@ namespace Raven.Server.NotificationCenter
             TaskId = taskId;
             Type = blockerType;
             Name = name;
-    }
+        }
 
         public bool Equals(TombstoneDeletionBlockageSource other)
         {
@@ -118,7 +121,7 @@ namespace Raven.Server.NotificationCenter
             return string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase)
                    && Type == other.Type
                    && TaskId == other.TaskId;
-}
+        }
 
         public override bool Equals(object obj)
         {

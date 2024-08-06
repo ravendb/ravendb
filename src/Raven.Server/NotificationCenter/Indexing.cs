@@ -28,8 +28,8 @@ namespace Raven.Server.NotificationCenter
         private MismatchedReferencesLoadWarning _mismatchedReferencesLoadWarning;
 
         private readonly ConcurrentQueue<(string indexName, string fieldName)> _warningComplexFieldAutoIndexing = new();
-        
-        private readonly HashSet<string> _cpuExhaustionWarningIndexNames = new ();
+
+        private readonly HashSet<string> _cpuExhaustionWarningIndexNames = new();
         private bool _isCpuExhaustionWarningAdded = false;
 
         private Timer _indexingTimer;
@@ -103,7 +103,7 @@ namespace Raven.Server.NotificationCenter
         {
             _cpuExhaustionWarningIndexNames.Remove(indexName);
         }
-        
+
         public void ProcessCpuCreditsExhaustion()
         {
             if (_cpuExhaustionWarningIndexNames.Count > 0)
@@ -155,7 +155,7 @@ namespace Raven.Server.NotificationCenter
                     _notificationCenter.Add(GetCpuCreditsExhaustionAlert(cpuCreditsExhaustionAlertMessage));
                     _isCpuExhaustionWarningAdded = true;
                 }
-                
+
                 if (_warningIndexOutputsPerDocumentQueue.IsEmpty && _warningReferenceDocumentLoadsQueue.IsEmpty && _mismatchedReferencesLoadWarning == null && _warningComplexFieldAutoIndexing.IsEmpty)
                     return;
 
@@ -208,15 +208,18 @@ namespace Raven.Server.NotificationCenter
         {
             using (_notificationCenter.Storage.Read(HighOutputsRate, out NotificationTableValue ntv))
             {
-                WarnIndexOutputsPerDocument details;
-                if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
-                    details = new WarnIndexOutputsPerDocument();
-                else
-                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<WarnIndexOutputsPerDocument>(detailsJson, HighOutputsRate);
+                using (ntv)
+                {
+                    WarnIndexOutputsPerDocument details;
+                    if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                        details = new WarnIndexOutputsPerDocument();
+                    else
+                        details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<WarnIndexOutputsPerDocument>(detailsJson, HighOutputsRate);
 
-                return PerformanceHint.Create(_notificationCenter.Database, "High indexing fanout ratio",
-                    "Number of map results produced by an index exceeds the performance hint configuration key (MaxIndexOutputsPerDocument).",
-                    PerformanceHintType.Indexing, NotificationSeverity.Warning, Source, details);
+                    return PerformanceHint.Create(_notificationCenter.Database, "High indexing fanout ratio",
+                        "Number of map results produced by an index exceeds the performance hint configuration key (MaxIndexOutputsPerDocument).",
+                        PerformanceHintType.Indexing, NotificationSeverity.Warning, Source, details);
+                }
             }
         }
 
@@ -224,16 +227,19 @@ namespace Raven.Server.NotificationCenter
         {
             using (_notificationCenter.Storage.Read(ReferencesLoad, out NotificationTableValue ntv))
             {
-                IndexingReferenceLoadWarning details;
-                if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
-                    details = new IndexingReferenceLoadWarning();
-                else
-                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<IndexingReferenceLoadWarning>(detailsJson, ReferencesLoad);
+                using (ntv)
+                {
+                    IndexingReferenceLoadWarning details;
+                    if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                        details = new IndexingReferenceLoadWarning();
+                    else
+                        details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<IndexingReferenceLoadWarning>(detailsJson, ReferencesLoad);
 
-                return PerformanceHint.Create(_notificationCenter.Database, "High indexing load reference rate",
-                    "We have detected high number of LoadDocument() / LoadCompareExchangeValue() calls per single reference item. The update of a reference will result in reindexing all documents that reference it. " +
-                    "Please see Indexing Performance graph to check the performance of your indexes.",
-                    PerformanceHintType.Indexing_References, NotificationSeverity.Warning, Source, details);
+                    return PerformanceHint.Create(_notificationCenter.Database, "High indexing load reference rate",
+                        "We have detected high number of LoadDocument() / LoadCompareExchangeValue() calls per single reference item. The update of a reference will result in reindexing all documents that reference it. " +
+                        "Please see Indexing Performance graph to check the performance of your indexes.",
+                        PerformanceHintType.Indexing_References, NotificationSeverity.Warning, Source, details);
+                }
             }
         }
 
@@ -248,7 +254,7 @@ namespace Raven.Server.NotificationCenter
         {
             return AlertRaised.Create(_notificationCenter.Database, $"Complex field in Corax auto index", $"We have detected a complex field in an auto index. To avoid higher resources usage when processing JSON objects, the values of these fields will be replaced with 'JSON_VALUE'. Please consider querying on individual fields of that object or using a static index.", AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning, Source, complexFieldsWarning);
         }
-        
+
         private AlertRaised GetCpuCreditsExhaustionAlert(CpuCreditsExhaustionWarning cpuCreditsExhaustionWarning)
         {
             return AlertRaised.Create(_notificationCenter.Database, "Indexing paused because of CPU credits exhaustion",

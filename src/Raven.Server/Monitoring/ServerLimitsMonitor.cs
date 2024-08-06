@@ -80,15 +80,18 @@ namespace Raven.Server.Monitoring
 
                     using (_notificationsStorage.Read(id, out var ntv))
                     {
-                        if (ntv == null ||
-                            ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false ||
-                            detailsJson == null)
+                        using (ntv)
                         {
-                            details = new ServerLimitsDetails();
-                        }
-                        else
-                        {
-                            details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ServerLimitsDetails>(detailsJson);
+                            if (ntv == null ||
+                                ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false ||
+                                detailsJson == null)
+                            {
+                                details = new ServerLimitsDetails();
+                            }
+                            else
+                            {
+                                details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ServerLimitsDetails>(detailsJson);
+                            }
                         }
 
                         hint = AlertRaised.Create(

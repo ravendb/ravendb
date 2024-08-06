@@ -80,15 +80,18 @@ public class ConflictRevisionsExceeded
     {
         using (_notificationCenter.Storage.Read(ConflictRevisionExceededMaxId, out NotificationTableValue ntv))
         {
-            ConflictPerformanceDetails details;
-            if (ntv == null || ntv.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
-                details = new ConflictPerformanceDetails();
-            else
-                details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ConflictPerformanceDetails>(detailsJson, ConflictRevisionExceededMaxId);
+            using (ntv)
+            {
+                ConflictPerformanceDetails details;
+                if (ntv == null || ntv.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                    details = new ConflictPerformanceDetails();
+                else
+                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ConflictPerformanceDetails>(detailsJson, ConflictRevisionExceededMaxId);
 
-            return AlertRaised.Create(_notificationCenter.Database, "Excess number of Conflict Revisions",
-                "We have detected that some of the documents conflict/resolved revisions exceeded the configured value (set on the conflict revisions configuration).",
-                AlertType.ConflictRevisionsExceeded, NotificationSeverity.Warning, ConflictRevisionExceededMaxId, details);
+                return AlertRaised.Create(_notificationCenter.Database, "Excess number of Conflict Revisions",
+                    "We have detected that some of the documents conflict/resolved revisions exceeded the configured value (set on the conflict revisions configuration).",
+                    AlertType.ConflictRevisionsExceeded, NotificationSeverity.Warning, ConflictRevisionExceededMaxId, details);
+            }
         }
     }
 
@@ -116,7 +119,7 @@ public class ConflictRevisionsExceeded
 
         public string GetId()
         {
-            if(IdPrefix.EndsWith((char)SpecialChars.RecordSeparator))
+            if (IdPrefix.EndsWith((char)SpecialChars.RecordSeparator))
                 return IdPrefix.Substring(0, IdPrefix.Length - 1); // cut the prefix last char (SpecialChars.RecordSeparator)
             return IdPrefix;
         }
