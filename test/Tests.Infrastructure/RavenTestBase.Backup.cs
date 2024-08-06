@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -589,6 +590,25 @@ namespace FastTests
                 {
                     tcs.TrySetResult(null);
                 }
+            }
+            
+            public async Task<string[]> GetBackupFilesAndAssertCountAsync(string backupPath, int count, string databaseName, long backupOpId)
+            {
+                var backupDir = Directory.GetDirectories(backupPath).First();
+                var filesEnumerable = Directory.GetFiles(backupDir)
+                    .Where(Raven.Client.Documents.Smuggler.BackupUtils.IsBackupFile);
+                var files = Raven.Client.Documents.Smuggler.BackupUtils.OrderBackups(filesEnumerable).ToArray();
+                
+                if (files.Length != count)
+                {
+                    using var context = JsonOperationContext.ShortTermSingleUse();
+                    var database = await _parent.GetDatabase(databaseName);
+                    var operation = database.Operations.GetOperation(backupOpId);
+                    var jsonOperation = context.ReadObject(operation.ToJson(), "backup operation"); 
+                    Assert.True(false, $"Expected 3 but found {files.Length}.\n{string.Join("\n", files)}\n{jsonOperation}");
+                }
+
+                return files;
             }
         }
     }

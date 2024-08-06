@@ -50,6 +50,8 @@ public class RavenDB_21050 : RavenTestBase
             var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
             await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
+            await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, source.Database, backupStatus2.Id);
+
             var restoreConfig = new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = destination.Database };
             using (Backup.RestoreDatabase(destination, restoreConfig))
             {
@@ -59,8 +61,6 @@ public class RavenDB_21050 : RavenTestBase
                     Assert.Null(shouldBeDeleted); //Fails here
                 }
             }
-
-
         }
     }
 
