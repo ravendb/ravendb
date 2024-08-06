@@ -10,18 +10,18 @@ public partial class Pager
 {
     public class TxStateFor32Bits
     {
-        public Dictionary<long, LoadedPage> LoadedPages = [];
-        public List<MappedAddresses> AddressesToUnload = [];
+        public readonly Dictionary<long, LoadedPage> LoadedPages = [];
+        public readonly List<MappedAddresses> AddressesToUnload = [];
         public long TotalLoadedSize;
     }
 
-    public sealed class MappedAddresses
+    public sealed class MappedAddresses(string file, IntPtr address, long startPage, long size)
     {
-        public string File;
-        public IntPtr Address;
-        public long StartPage;
-        public long Size;
-        public int Usages;
+        public string File = file;
+        public IntPtr Address = address;
+        public long StartPage = startPage;
+        public long Size = size;
+        public int Usages = 1;
     }
 
     public sealed unsafe class LoadedPage

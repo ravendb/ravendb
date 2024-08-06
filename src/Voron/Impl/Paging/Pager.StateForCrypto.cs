@@ -70,14 +70,14 @@ public unsafe partial class Pager
     }
     
     
-    public sealed class EncryptionBuffer(EncryptionBuffersPool pool)
+    public sealed class EncryptionBuffer(EncryptionBuffersPool pool, NativeMemory.ThreadStats thread, byte* ptr, long size)
     {
         public readonly long Generation = pool.Generation;
-        public long Size;
+        public long Size = size;
+        public byte* Pointer = ptr;
+        public NativeMemory.ThreadStats AllocatingThread = thread;
         public long OriginalSize;
-        public byte* Pointer;
-
-        public NativeMemory.ThreadStats AllocatingThread;
+        
         public bool SkipOnTxCommit;
         public bool ExcessStorageFromAllocationBreakup;
         public bool Modified;
