@@ -6,6 +6,7 @@ using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 
@@ -23,21 +24,34 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
     public override async ValueTask ExecuteAsync()
     {
         await RequestHandler.ServerStore.EnsureNotPassiveAsync();
-
+        
         using (ClusterContextPool.AllocateOperationContext(out ClusterOperationContext context))
         {
             var databaseSettingsJson = await context.ReadForDiskAsync(RequestHandler.RequestBodyStream(), Constants.DatabaseSettings.StudioId);
 
-            var settings = new Dictionary<string, string>();
+            var settingsToUpdate = new Dictionary<string, string>();
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
             for (int i = 0; i < databaseSettingsJson.Count; i++)
             {
                 databaseSettingsJson.GetPropertyByIndex(i, ref prop);
-                settings.Add(prop.Name, prop.Value?.ToString());
+                settingsToUpdate.Add(prop.Name, prop.Value?.ToString());
+            }
+            
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                using (context.OpenReadTransaction())
+                {
+                    var databaseRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName);
+                    var currentSettings = databaseRecord.Settings;
+
+                    var updatedSettingsKeys = GetUpdatedSettingsKeys(currentSettings, settingsToUpdate);
+
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "CHANGE", $"Database configuration. Changed settings: {string.Join(" ", updatedSettingsKeys)}");
+                }
             }
 
-            var command = new PutDatabaseSettingsCommand(settings, RequestHandler.DatabaseName, RequestHandler.GetRaftRequestIdFromQuery());
+            var command = new PutDatabaseSettingsCommand(settingsToUpdate, RequestHandler.DatabaseName, RequestHandler.GetRaftRequestIdFromQuery());
 
             long index = (await RequestHandler.Server.ServerStore.SendToLeaderAsync(command)).Index;
 
@@ -45,5 +59,18 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
         }
 
         RequestHandler.NoContentStatus(HttpStatusCode.Created);
+    }
+    
+    private static List<string> GetUpdatedSettingsKeys(Dictionary<string, string> currentSettings, Dictionary<string, string> settingsToUpdate)
+    {
+        var updatedSettings = new List<string>();
+
+        foreach (var settingToUpdate in settingsToUpdate)
+        {
+            if (currentSettings.TryGetValue(settingToUpdate.Key, out var currentSettingValue) == false || currentSettingValue != settingToUpdate.Value)
+                updatedSettings.Add(settingToUpdate.Key);
+        }
+
+        return updatedSettings;
     }
 }

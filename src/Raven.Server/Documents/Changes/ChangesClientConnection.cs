@@ -186,10 +186,7 @@ namespace Raven.Server.Documents.Changes
         private static readonly SendQueueItem AggressiveCachingPulseValue = new()
         {
             AllowSkip = true,
-            ValueToSend = new DynamicJsonValue
-            {
-                ["Type"] = nameof(AggressiveCacheChange),
-            }
+            ValueToSend = new AggressiveCacheChangeFactory()
         };
 
         private void PulseAggressiveCaching()
@@ -475,6 +472,17 @@ namespace Raven.Server.Documents.Changes
             djv["WatchAllTimeSeriesOfDocument"] = _matchingAllDocumentTimeSeries.ToArray();
 
             return djv;
+        }
+
+        private class AggressiveCacheChangeFactory : DatabaseChangeFactory
+        {
+            public override DynamicJsonValue CreateJson()
+            {
+                return new DynamicJsonValue
+                {
+                    ["Type"] = nameof(AggressiveCacheChange),
+                };
+            }
         }
     }
 }

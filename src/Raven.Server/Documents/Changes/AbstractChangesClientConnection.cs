@@ -194,6 +194,9 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
                                 case BlittableJsonReaderObject bjro:
                                     context.Write(writer, bjro.CloneForConcurrentRead(context));
                                     break;
+                                case ChangesClientConnection.DatabaseChangeFactory cf:
+                                    context.Write(writer, cf.CreateJson());
+                                    break;
                             }
                             messagesCount++;
                             await writer.FlushAsync(DisposeToken);
@@ -676,5 +679,10 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
         }
 
         public void Dispose() => _onDispose?.Invoke(Value);
+    }
+
+    protected abstract class DatabaseChangeFactory
+    {
+        public abstract DynamicJsonValue CreateJson();
     }
 }

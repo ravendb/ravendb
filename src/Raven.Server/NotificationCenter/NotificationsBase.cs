@@ -57,12 +57,7 @@ namespace Raven.Server.NotificationCenter
 
         public IDisposable TrackActions(AsyncQueue<DynamicJsonValue> notificationsQueue, IWebsocketWriter webSocketWriter, CanAccessDatabase shouldWriteByDb = null)
         {
-            var watcher = new ConnectedWatcher
-            {
-                NotificationsQueue = notificationsQueue,
-                Writer = webSocketWriter,
-                Filter = shouldWriteByDb
-            };
+            var watcher = new ConnectedWatcher(notificationsQueue, 16 * 1024, webSocketWriter, shouldWriteByDb);
 
             lock (_watchersLock)
             {

@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
@@ -21,6 +22,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Integrations.PostgreSQL;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
@@ -1184,6 +1186,26 @@ namespace SlowTests.Smuggler
                 store.Maintenance.Server.Send(new ConfigureRevisionsForConflictsOperation(store.Database,
                     new RevisionsCollectionConfiguration() { Disabled = false, MinimumRevisionAgeToKeep = TimeSpan.FromDays(5) }));
 
+                // add data archival configuration
+                await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, new DataArchivalConfiguration { Disabled = false, ArchiveFrequencyInSec = 100 });
+
+                //add queue sink configuration
+                store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(
+                    new QueueConnectionString
+                    {
+                        Name = "test",
+                        BrokerType = QueueBrokerType.Kafka,
+                        KafkaConnectionSettings =
+                            new KafkaConnectionSettings() { BootstrapServers = "http://localhost:1234" }
+                    })); //wrong bootstrap servers
+                store.Maintenance.Send(new AddQueueSinkOperation<QueueConnectionString>(new QueueSinkConfiguration()
+                {
+                    Name = "QueueSink",
+                    Disabled = false,
+                    ConnectionStringName = "test",
+                    Scripts = new List<QueueSinkScript>(){ new QueueSinkScript(){Script = "from Users", Disabled = false, Name = "QueueSinkScript"}}
+                }));
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -1278,6 +1300,15 @@ namespace SlowTests.Smuggler
                     Assert.NotNull(record.RevisionsForConflicts);
                     Assert.False(record.Disabled);
                     Assert.Equal(TimeSpan.FromDays(5), record.RevisionsForConflicts.MinimumRevisionAgeToKeep);
+
+                    Assert.NotNull(record.DataArchival);
+                    Assert.False(record.DataArchival.Disabled);
+
+                    Assert.NotNull(record.QueueSinks);
+                    Assert.Equal(1, record.QueueSinks.Count);
+                    Assert.False(record.QueueSinks.First().Disabled);
+                    Assert.Equal("QueueSink", record.QueueSinks.First().Name);
+                    Assert.Equal(1, record.QueueSinks.First().Scripts.Count);
                 }
             }
         }

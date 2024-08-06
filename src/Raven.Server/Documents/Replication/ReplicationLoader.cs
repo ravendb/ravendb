@@ -422,7 +422,7 @@ namespace Raven.Server.Documents.Replication
                     $"PullReplicationDefinitionName '{initialRequest.PullReplicationDefinitionName}' does not match the pull replication definition name: {pullReplicationDefinition.Name}");
 
             var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the hub will have the same task id.
-            var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);
+            var externalReplication = pullReplicationDefinition.ToPullReplicationAsHub(initialRequest, taskId);
 
             var outgoingReplication = new OutgoingPullReplicationHandlerAsHub(this, Database, externalReplication, initialRequest.Info)
             {

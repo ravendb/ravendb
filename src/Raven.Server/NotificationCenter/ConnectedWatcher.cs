@@ -6,10 +6,27 @@ namespace Raven.Server.NotificationCenter
 {
     public sealed class ConnectedWatcher
     {
-        public AsyncQueue<DynamicJsonValue> NotificationsQueue;
+        private readonly AsyncQueue<DynamicJsonValue> _notificationsQueue;
+        private readonly int _maxNotificationsQueueSize;
 
-        public IWebsocketWriter Writer;
+        public readonly IWebsocketWriter Writer;
 
-        public CanAccessDatabase Filter;
+        public readonly CanAccessDatabase Filter;
+
+        public ConnectedWatcher(AsyncQueue<DynamicJsonValue> notificationsQueue, int maxNotificationsQueueSize, IWebsocketWriter writer, CanAccessDatabase filter)
+        {
+            _notificationsQueue = notificationsQueue;
+            _maxNotificationsQueueSize = maxNotificationsQueueSize;
+            Writer = writer;
+            Filter = filter;
+        }
+
+        public void Enqueue(DynamicJsonValue json)
+        {
+            if (_notificationsQueue.Count >= _maxNotificationsQueueSize)
+                return;
+
+            _notificationsQueue.Enqueue(json);
+        }
     }
 }

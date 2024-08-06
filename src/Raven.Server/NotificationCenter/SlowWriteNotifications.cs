@@ -111,30 +111,33 @@ namespace Raven.Server.NotificationCenter
 
             using (_notificationCenter.Storage.Read(id, out var ntv))
             {
-                if (ntv == null || 
-                    ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || 
-                    detailsJson == null)
+                using (ntv)
                 {
-                    details = new SlowIoDetails();
-                    _shouldUpdateStorageKeys = false;
-                }
-                else
-                {
-                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<SlowIoDetails>(detailsJson);
+                    if (ntv == null ||
+                        ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false ||
+                        detailsJson == null)
+                    {
+                        details = new SlowIoDetails();
+                        _shouldUpdateStorageKeys = false;
+                    }
+                    else
+                    {
+                        details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<SlowIoDetails>(detailsJson);
 
-                    // Modified the key structure from {Path} to {Type}/{Path} to support the inclusion of all IO metric types, not just JournalWrite entries.
-                    UpdateStorageKeysIfNeeded(details); 
-                }
+                        // Modified the key structure from {Path} to {Type}/{Path} to support the inclusion of all IO metric types, not just JournalWrite entries.
+                        UpdateStorageKeysIfNeeded(details);
+                    }
 
-                return PerformanceHint.Create(
-                    _notificationCenter.Database,
-                    "An extremely slow write to disk",
-                    "We have detected very slow writes",
-                    PerformanceHintType.SlowIO,
-                    NotificationSeverity.Info,
-                    source,
-                    details
-                );
+                    return PerformanceHint.Create(
+                        _notificationCenter.Database,
+                        "An extremely slow write to disk",
+                        "We have detected very slow writes",
+                        PerformanceHintType.SlowIO,
+                        NotificationSeverity.Info,
+                        source,
+                        details
+                    );
+                }
             }
         }
 
