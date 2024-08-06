@@ -23,7 +23,7 @@ public class RavenDB_22531 : ClusterTestBase
     private static readonly string ExpectedException = "System.InvalidOperationException: We have databases with 'NoChange' status, but our last report from this node is 'OutOfCredits'";
 
     [RavenFact(RavenTestCategory.Cluster)]
-    public async Task Test()
+    public async Task Shouldnt_Throw_Exception_About_CpuCredits_On_Update_NodeReport()
     {
         using var server = GetNewServer();
         using var store = GetDocumentStore(new Options()
@@ -65,28 +65,5 @@ public class RavenDB_22531 : ClusterTestBase
         return true;
     }
 
-    private async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
-    {
-        using (var ms = new MemoryStream())
-        {
-            WebSocketReceiveResult result;
-            do
-            {
-                try
-                {
-                    result = await source.ReceiveAsync(buffer, CancellationToken.None);
-                }
-                catch (Exception)
-                {
-                    break;
-                }
-                ms.Write(buffer.Array, buffer.Offset, result.Count);
-            }
-            while (!result.EndOfMessage);
-            ms.Seek(0, SeekOrigin.Begin);
-
-            return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
-        }
-    }
 }
 
