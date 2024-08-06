@@ -76,6 +76,19 @@ namespace FastTests
 
         private IDictionary<string, string> _customServerSettings;
 
+        private static readonly int ReservedPortStartRange = 23000;
+        private static readonly int ReservedPortEndRange = 32000;
+        private static int LastUsedReservedPort = ReservedPortStartRange;
+
+        public static int GetReservedPort()
+        {
+            var port = Interlocked.Increment(ref LastUsedReservedPort);
+            if (port > ReservedPortEndRange)
+                throw new InvalidOperationException($"No more reserved ports left between [{ReservedPortStartRange} - {ReservedPortEndRange}], consider increase the range but be aware of ephemeral port range of each OS.");
+
+            return port;
+        }
+
         public static void IgnoreProcessorAffinityChanges(bool ignore)
         {
             LicenseManager.IgnoreProcessorAffinityChanges = ignore;
