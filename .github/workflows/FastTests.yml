@@ -3,11 +3,11 @@ name: tests/fast
 on:
   push:
     branches:
-        - v6.1
+        - v6.2
 
   pull_request:
     branches:
-        - v6.1
+        - v6.2
 
 env:
   DOTNET_VERSION: 8.0.303
