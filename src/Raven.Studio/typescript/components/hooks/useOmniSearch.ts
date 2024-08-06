@@ -31,7 +31,7 @@ interface UseOmniSearchArgs {
 }
 
 export function useOmniSearch<TItem extends OmniSearchItem<TType>, TType>(args: UseOmniSearchArgs = {}) {
-    const { resultsLimit = 15, threshold = 0.3 } = args;
+    const { resultsLimit = 15, threshold = 0.35 } = args;
 
     const [registeredItems, setRegisteredItems] = useState<TItem[]>([]);
 
@@ -119,18 +119,18 @@ export function useOmniSearch<TItem extends OmniSearchItem<TType>, TType>(args: 
 const keys: Array<{ name: KeyName; weight: number }> = [
     {
         name: "text",
-        weight: 0.7,
+        weight: 1,
     },
     {
         name: "alternativeTexts",
-        weight: 0.3,
+        weight: 0.5,
     },
     {
         name: "innerActions.text",
-        weight: 0.4,
+        weight: 0.6,
     },
     {
         name: "innerActions.alternativeTexts",
-        weight: 0.3,
+        weight: 0.4,
     },
 ];
