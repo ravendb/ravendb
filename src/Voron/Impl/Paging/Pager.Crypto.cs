@@ -177,12 +177,9 @@ public unsafe partial class Pager
         private static EncryptionBuffer GetBufferAndAddToTxState(Pager pager, long pageNumber, CryptoTransactionState state, int numberOfPages)
         {
             var ptr = pager._encryptionBuffersPool.Get(numberOfPages, out var size, out var thread);
-            var buffer = new EncryptionBuffer(pager._encryptionBuffersPool)
+            var buffer = new EncryptionBuffer(pager._encryptionBuffersPool, thread, ptr, size)
             {
-                Size = size,
                 OriginalSize = size,
-                Pointer = ptr,
-                AllocatingThread = thread
             };
 
             buffer.AddRef();

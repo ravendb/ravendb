@@ -202,14 +202,7 @@ public unsafe partial class Pager
                 }
 
                 NativeMemory.RegisterFileMapping(pager.FileName, new IntPtr(result), size, null);
-                var mappedAddresses = new MappedAddresses
-                {
-                    Address = (IntPtr)result,
-                    File = pager.FileName,
-                    Size = size,
-                    StartPage = startPage,
-                    Usages = 1
-                };
+                var mappedAddresses = new MappedAddresses(pager.FileName, (IntPtr)result, startPage, size);
                 addresses.Add(mappedAddresses);
                 return AddMappingToTransaction(pagerTxState, startPage, size, mappedAddresses);
             }

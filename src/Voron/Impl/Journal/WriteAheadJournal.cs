@@ -647,7 +647,6 @@ namespace Voron.Impl.Journal
                     }
                     else
                     {
-                        Console.WriteLine("What the hell!!!!!");
                         (bufferOfPageFromScratchBuffersToFree, record) = _stateFromPreviousFailedAttempt;
                     }
 
