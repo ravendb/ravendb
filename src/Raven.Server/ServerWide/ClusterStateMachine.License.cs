@@ -105,8 +105,6 @@ public sealed partial class ClusterStateMachine
 
             case nameof(UpdatePeriodicBackupCommand):
                 AssertPeriodicBackupLicenseLimits(serverStore, databaseRecord, context);
-                if (AssertPeriodicBackup(serverStore.LicenseManager.LicenseStatus, context) == false)
-                    throw new LicenseLimitException(LimitType.PeriodicBackup, "Your license doesn't support adding periodic backups.");
                 break;
 
             case nameof(PutDatabaseClientConfigurationCommand):
@@ -168,9 +166,6 @@ public sealed partial class ClusterStateMachine
                 break;
             case nameof(EditDocumentsCompressionCommand):
                 AssertDocumentsCompressionLicenseLimits(serverStore, databaseRecord, context);
-                break;
-            case nameof(PutServerWideExternalReplicationCommand):
-                AssertServerWideExternalReplicationLicenseLimits(serverStore, context);
                 break;
         }
     }
@@ -454,8 +449,7 @@ public sealed partial class ClusterStateMachine
     {
         if (licenseStatus.HasPeriodicBackup)
             return true;
-
-        return CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false;
+        return false;
     }
 
     private void AssertDatabaseClientConfiguration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
@@ -760,8 +754,14 @@ public sealed partial class ClusterStateMachine
     }
     private void AssertPeriodicBackupLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
     {
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
             return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+        {
+            if (AssertPeriodicBackup(serverStore.LicenseManager.LicenseStatus, context) == false)
+                throw new LicenseLimitException(LimitType.PeriodicBackup, "Your license doesn't support adding periodic backups.");
+        }
 
         foreach (var configuration in databaseRecord.PeriodicBackups)
         {
@@ -950,20 +950,6 @@ public sealed partial class ClusterStateMachine
             return;
 
         throw new LicenseLimitException(LimitType.AdditionalAssembliesFromNuGet, "Your license doesn't support Additional Assemblies From NuGet feature.");
-    }
-
-    private void AssertServerWideExternalReplicationLicenseLimits(ServerStore serverStore, ClusterOperationContext context)
-    {
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
-        if (serverStore.LicenseManager.LicenseStatus.HasDelayedExternalReplication)
-            return;
-
-        if (serverStore.LicenseManager.LicenseStatus.HasExternalReplication == false)
-            throw new LicenseLimitException(LimitType.ExternalReplication, "Your license doesn't support adding server wide External Replication.");
-
-        throw new LicenseLimitException(LimitType.DelayedExternalReplication, "Your license doesn't support adding server wide Delayed External Replication.");
     }
 
     private enum DatabaseRecordElementType
