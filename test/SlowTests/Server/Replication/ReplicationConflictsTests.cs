@@ -312,15 +312,19 @@ namespace SlowTests.Server.Replication
 
                 var db1 = await GetDatabase(store1.Database);
                 var db2 = await GetDatabase(store2.Database);
-                using (db1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx1))
-                using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx2))
-                using (ctx1.OpenReadTransaction())
-                using (ctx2.OpenReadTransaction())
+
+                await WaitAndAssertForValueAsync(() =>
                 {
-                    var cv1 = DocumentsStorage.GetDatabaseChangeVector(ctx1);
-                    var cv2 = DocumentsStorage.GetDatabaseChangeVector(ctx2);
-                    Assert.True(cv1.SequenceEqual(cv2));
-                }
+                    using (db1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx1))
+                    using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx2))
+                    using (ctx1.OpenReadTransaction())
+                    using (ctx2.OpenReadTransaction())
+                    {
+                        var cv1 = DocumentsStorage.GetDatabaseChangeVector(ctx1);
+                        var cv2 = DocumentsStorage.GetDatabaseChangeVector(ctx2);
+                        return cv1.SequenceEqual(cv2);
+                    }
+                }, true);
             }
         }
 
