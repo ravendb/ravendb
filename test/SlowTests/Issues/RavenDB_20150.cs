@@ -105,7 +105,7 @@ public class RavenDB_20150 : ClusterTestBase
             //unsuspend and wait for the tombstone cleaner
             leader.ServerStore.Observer.Suspended = false;
 
-            await WaitAndAssertForValueAsync(() => leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks > timeBeforeCxDeletion.Ticks, true);
+            await WaitAndAssertForGreaterThanAsync(() => Task.FromResult(leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks), timeBeforeCxDeletion.Ticks);
 
             //ensure compare exchange tombstones were deleted after the tombstone cleanup
             foreach (var node in nodes)
