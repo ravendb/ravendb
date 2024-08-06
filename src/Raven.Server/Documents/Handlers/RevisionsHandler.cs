@@ -383,13 +383,12 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
 
-            long loadedRevisionsCount;
-            long totalDocumentsSizeInBytes;
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
-                (loadedRevisionsCount, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, revisions, metadataOnly, token);
+                var (loadedRevisionsCount, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, revisions, metadataOnly, token);
+                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext.Request.QueryString.Value, loadedRevisionsCount, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
 
                 writer.WriteComma();
 
@@ -397,8 +396,6 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteInteger(count);
                 writer.WriteEndObject();
             }
-
-            AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext.Request.QueryString.Value, loadedRevisionsCount, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
         }
 
         [RavenAction("/databases/*/revisions/resolved", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
