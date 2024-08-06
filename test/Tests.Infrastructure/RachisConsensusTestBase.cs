@@ -178,9 +178,9 @@ namespace Tests.Infrastructure
             return sb.ToString();
         }
 
-        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null)
+        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int electionTimeout = 300, [CallerMemberName] string caller = null)
         {
-            var tcpListener = new TcpListener(IPAddress.Loopback, port);
+            var tcpListener = new TcpListener(IPAddress.Loopback, 0);
             tcpListener.Start();
             char ch;
             if (bootstrap)

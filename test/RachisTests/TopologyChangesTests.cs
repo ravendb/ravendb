@@ -56,8 +56,8 @@ namespace RachisTests
         [Fact]
         public async Task Adding_additional_node_that_goes_offline_and_then_online_should_still_work()
         {
-            var node4 = SetupServer(false, 53899);
-            var node5 = SetupServer(false, 53898);
+            var node4 = SetupServer();
+            var node5 = SetupServer();
             DisconnectFromNode(node4);
             DisconnectFromNode(node5);
             var leader = await CreateNetworkAndGetLeader(3);
