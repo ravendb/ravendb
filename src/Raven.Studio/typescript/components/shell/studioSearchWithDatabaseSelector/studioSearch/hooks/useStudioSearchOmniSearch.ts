@@ -94,13 +94,6 @@ export function useStudioSearchOmniSearch(searchQuery: string) {
 
 const emptyResult: StudioSearchResult = {
     server: [],
-    database: {
-        collections: [],
-        documents: [],
-        indexes: [],
-        tasks: [],
-        settings: [],
-        stats: [],
-    },
+    database: {},
     switchToDatabase: [],
 };

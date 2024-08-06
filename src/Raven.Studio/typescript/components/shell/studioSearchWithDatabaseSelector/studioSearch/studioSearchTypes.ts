@@ -16,12 +16,12 @@ export type StudioSearchItemEvent = React.MouseEvent<HTMLElement, MouseEvent> | 
 export interface StudioSearchResult {
     server: StudioSearchResultItem[];
     database: {
-        collections: StudioSearchResultItem[];
-        documents: StudioSearchResultItem[];
-        indexes: StudioSearchResultItem[];
-        tasks: StudioSearchResultItem[];
-        settings: StudioSearchResultItem[];
-        stats: StudioSearchResultItem[];
+        collections?: StudioSearchResultItem[];
+        documents?: StudioSearchResultItem[];
+        indexes?: StudioSearchResultItem[];
+        tasks?: StudioSearchResultItem[];
+        settings?: StudioSearchResultItem[];
+        stats?: StudioSearchResultItem[];
     };
     switchToDatabase: StudioSearchResultItem[];
 }
