@@ -6,6 +6,7 @@ import { useStudioSearchKeyboardEvents } from "./useStudioSearchKeyboardEvents";
 import { useStudioSearchSyncRegister } from "./useStudioSearchSyncRegister";
 import { useStudioSearchOmniSearch } from "./useStudioSearchOmniSearch";
 import { useStudioSearchUtils } from "./useStudioSearchUtils";
+import { useStudioSearchMouseEvents } from "./useStudioSearchMouseEvents";
 
 export function useStudioSearch(menuItems: menuItem[]) {
     const { value: isSearchDropdownOpen, setValue: setIsDropdownOpen } = useBoolean(false);
@@ -28,9 +29,8 @@ export function useStudioSearch(menuItems: menuItem[]) {
         databaseColumnRef,
     };
 
-    const { toggleDropdown, goToUrl, resetDropdown } = useStudioSearchUtils({
+    const { goToUrl, resetDropdown } = useStudioSearchUtils({
         inputRef,
-        studioSearchInputId,
         setIsDropdownOpen,
         setSearchQuery,
         setActiveItem,
@@ -59,6 +59,12 @@ export function useStudioSearch(menuItems: menuItem[]) {
         setSearchQuery,
     });
 
+    useStudioSearchMouseEvents({
+        inputRef,
+        studioSearchBackdropId,
+        setIsDropdownOpen,
+    });
+
     const matchStatus = {
         hasServerMatch: results.server.length > 0,
         hasSwitchToDatabaseMatch: results.switchToDatabase.length > 0,
@@ -70,7 +76,6 @@ export function useStudioSearch(menuItems: menuItem[]) {
     return {
         refs,
         isSearchDropdownOpen,
-        toggleDropdown,
         searchQuery,
         setSearchQuery,
         matchStatus,
@@ -80,3 +85,4 @@ export function useStudioSearch(menuItems: menuItem[]) {
 }
 
 export const studioSearchInputId = "studio-search-input";
+export const studioSearchBackdropId = "studio-search-backdrop";
