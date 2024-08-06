@@ -76,62 +76,6 @@
       <Pack>true</Pack>
     </Content>
   </ItemGroup>
-  <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
-    <None Include="..\..\libs\libzstd\libzstd.win.x64.dll" Link="libzstd.win.x64.dll">
-      <PackagePath>runtimes/win-x64/native/</PackagePath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-      <Pack>true</Pack>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
-    <None Include="..\..\libs\libzstd\libzstd.win.x86.dll" Link="libzstd.win.x86.dll">
-      <PackagePath>runtimes/win-x86/native/</PackagePath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-      <Pack>true</Pack>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
-    <None Include="..\..\libs\libzstd\libzstd.linux.x64.so" Link="libzstd.linux.x64.so">
-      <PackagePath>runtimes/linux-x64/native/</PackagePath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-      <Pack>true</Pack>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
-    <None Include="..\..\libs\libzstd\libzstd.linux.arm.64.so" Link="libzstd.linux.arm.64.so">
-      <PackagePath>runtimes/linux-arm64/native/</PackagePath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-      <Pack>true</Pack>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
-    <None Include="..\..\libs\libzstd\libzstd.linux.arm.32.so" Link="libzstd.linux.arm.32.so">
-      <PackagePath>runtimes/linux-arm/native/</PackagePath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-      <Pack>true</Pack>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
-    <None Include="..\..\libs\libzstd\libzstd.mac.x64.dylib" Link="libzstd.mac.x64.dylib">
-      <PackagePath>runtimes/osx-x64/native/</PackagePath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-      <Pack>true</Pack>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
-    <None Include="..\..\libs\libzstd\libzstd.mac.arm64.dylib" Link="libzstd.mac.arm64.dylib">
-      <PackagePath>runtimes/osx-arm64/native/</PackagePath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-      <Pack>true</Pack>
-    </None>
-  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
   </ItemGroup>

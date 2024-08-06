@@ -97,13 +97,14 @@ namespace Sparrow.Server.Platform
             Int64 initialFileSize,
             OpenFileFlags flags,
             out void* handle,
-            out byte* baseAddress,
+            out byte* readAddress,
+            out byte* writeAddress,
             out Int64 memorySize,
             out Int32 errorCode)
         {
             using var convert = new Converter(filename);
             return rvn_init_pager(convert.Pointer, initialFileSize, flags,
-                out handle, out baseAddress, out memorySize, out errorCode);
+                out handle, out readAddress, out writeAddress, out memorySize, out errorCode);
         }
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
@@ -111,7 +112,8 @@ namespace Sparrow.Server.Platform
             void* handle,
             Int64 newFileSize,
             out void* newHandle,
-            out byte* baseAddress,
+            out byte* readAddress,
+            out byte* writeAddress,
             out Int64 memorySize,
             out Int32 errorCode);
         
@@ -121,7 +123,8 @@ namespace Sparrow.Server.Platform
             Int64 initialFileSize,
             OpenFileFlags flags,
             out void* handle,
-            out byte* baseAddress,
+            out byte* readAddress,
+            out byte* writeAddress,
             out Int64 memorySize,
             out Int32 errorCode);
 
