@@ -8,6 +8,7 @@ using Raven.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
@@ -26,7 +27,8 @@ namespace SlowTests.Issues
 
             // Verifying that each node in the cluster has issued the same number of `UpdateLicenseLimitsCommand` commands,
             // as each node is expected to independently send its own details.
-            await Cluster.AssertNumberOfCommandsPerNode(expectedNumberOfCommands: numberOfNodes, servers, nameof(UpdateLicenseLimitsCommand));
+            (_, Dictionary<string, long> numberOfCommandsPerNode) = await Cluster.GetNumberOfCommandsPerNode(expectedNumberOfCommands: numberOfNodes, servers, nameof(UpdateLicenseLimitsCommand));
+            var expectedNumberOfCommands = numberOfCommandsPerNode.Values.First();
 
             // 10 leader changes
             for (int i = 0; i < 10; i++)
@@ -37,7 +39,8 @@ namespace SlowTests.Issues
                 });
 
             // Nothing should have changed
-            await Cluster.AssertNumberOfCommandsPerNode(expectedNumberOfCommands: numberOfNodes, servers, nameof(UpdateLicenseLimitsCommand));
+            (bool isExpectedNumberOfCommandsPerNode, numberOfCommandsPerNode) = await Cluster.GetNumberOfCommandsPerNode(expectedNumberOfCommands, servers, nameof(UpdateLicenseLimitsCommand));
+            Assert.True(isExpectedNumberOfCommandsPerNode, Cluster.BuildErrorMessage(expectedNumberOfCommands, numberOfCommandsPerNode, servers));
         }
 
         [RavenFact(RavenTestCategory.Cluster)]
