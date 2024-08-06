@@ -839,37 +839,41 @@ namespace Voron
                 return;
             try
             {
-                if (tx.Flags != (TransactionFlags.ReadWrite))
+                if (tx.Flags != TransactionFlags.ReadWrite)
                     return;
-
-                if (tx.WrittenToJournalNumber >= 0)
-                {
-                    var totalPages = 0;
-                    foreach (var page in tx.GetTransactionPages())
-                    {
-                        totalPages += page.NumberOfPages;
-                    }
-
-                    Interlocked.Add(ref Journal.Applicator.TotalCommittedSinceLastFlushPages, totalPages);
-
-                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                }
-
-                
-                // this must occur when we are holding the transaction lock
-                Journal.Applicator.OnTransactionCompleted(tx);
-
-                if (tx.AsyncCommit != null)
-                    return;
-                _currentWriteTransactionIdHolder = -1;
-                _writeTransactionRunning.Reset();
-                _transactionWriter.Release();
-                Journal.Applicator.AfterTransactionWriteLockReleased();
+                WriteTransactionCompleted(tx);
             }
             finally
             {
                 _envDispose.Signal();
             }
+        }
+
+        private void WriteTransactionCompleted(LowLevelTransaction tx)
+        {
+            if (tx.WrittenToJournalNumber >= 0)
+            {
+                var totalPages = 0;
+                foreach (var page in tx.GetTransactionPages())
+                {
+                    totalPages += page.NumberOfPages;
+                }
+
+                Interlocked.Add(ref Journal.Applicator.TotalCommittedSinceLastFlushPages, totalPages);
+
+                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+            }
+
+                
+            // this must occur when we are holding the transaction lock
+            Journal.Applicator.OnTransactionCompleted(tx);
+
+            if (tx.AsyncCommit != null)
+                return;
+            _currentWriteTransactionIdHolder = -1;
+            _writeTransactionRunning.Reset();
+            _transactionWriter.Release();
+            Journal.Applicator.AfterTransactionWriteLockReleased();
         }
 
         public SizeReport GenerateSizeReport(bool includeTempBuffers)

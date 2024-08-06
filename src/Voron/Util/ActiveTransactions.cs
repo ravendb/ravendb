@@ -55,6 +55,11 @@ namespace Voron.Util
 
             var oldTx = _oldestTransaction;
 
+            // PERF: No point in trying to scan for older transactions, the current 
+            // transaction is already the latest published one, so we won't change it
+            if (tx.Environment.CurrentStateRecord.TransactionId == oldTx)
+                return true;
+
             while (tx.Id <= oldTx)
             {
                 var currentOldest = _activeTxs.ScanOldest(); // This is non-thread safe call (therefor from time to time we ForceRecheckingOldestTransactionByFlusherThread)
