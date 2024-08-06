@@ -27,7 +27,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
     const { register, menuItems, goToUrl, resetDropdown } = props;
 
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const allDatabaseNames = useAppSelector(databaseSelectors.allDatabaseNames);
+    const allDatabases = useAppSelector(databaseSelectors.allDatabases);
     const collectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
     const getCanHandleOperation = useAppSelector(accessManagerSelectors.getCanHandleOperation);
 
@@ -75,19 +75,21 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
         );
     }, [collectionNames, goToCollection, register]);
 
-    // Register databases
+    // Register databases to switch (show only enabled and not currently active)
     useEffect(() => {
         register(
             "database",
-            allDatabaseNames.map((databaseName) => ({
-                type: "database",
-                icon: "database",
-                onSelected: (e) => handleDatabaseSwitch(databaseName, e),
-                text: databaseName,
-                alternativeTexts: ["db", "Database", "Active Database", "Select Database"],
-            }))
+            allDatabases
+                .filter((x) => x.name !== activeDatabaseName && !x.isDisabled)
+                .map((db) => ({
+                    type: "database",
+                    icon: "database",
+                    onSelected: (e) => handleDatabaseSwitch(db.name, e),
+                    text: db.name,
+                    alternativeTexts: ["db", "Database", "Active Database", "Select Database"],
+                }))
         );
-    }, [allDatabaseNames, appUrl, register, handleDatabaseSwitch]);
+    }, [activeDatabaseName, allDatabases, appUrl, register, handleDatabaseSwitch]);
 
     const getMenuItemType = useCallback((route: string): StudioSearchMenuItemType => {
         if (route === "virtual") {
