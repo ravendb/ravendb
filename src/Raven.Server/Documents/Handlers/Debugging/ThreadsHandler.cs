@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.Dashboard;
+using Raven.Server.EventListener;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -130,6 +131,69 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
 
                 return results;
+            }
+        }
+
+        [RavenAction("/admin/debug/threads/contention", "GET", AuthorizationStatus.Operator,
+            // intentionally not calling it debug endpoint because it isn't valid for us
+            // to do so in debug package (since we force a wait)
+            IsDebugInformationEndpoint = false)]
+        public async Task Contention()
+        {
+            var delay = GetIntValueQueryString("delay", required: false) ?? 30;
+
+            IReadOnlyCollection<ContentionEventsHandler.ContentionEvent> events;
+            using (var listener = new ContentionEventsListener())
+            {
+                await Task.Delay(TimeSpan.FromSeconds(delay));
+                events = listener.Events;
+            }
+
+            var sortedEvents = new SortedSet<ContentionEventsHandler.ContentionEvent>(events, new EventComparerByDuration());
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName("TopFiveByDuration");
+                writer.WriteStartArray();
+
+                var first = true;
+                var count = 0;
+                foreach (var @event in sortedEvents)
+                {
+                    if (++count > 5)
+                        break;
+
+                    if (first == false)
+                        writer.WriteComma();
+
+                    first = false;
+
+                    context.Write(writer, @event.ToJson());
+                }
+
+                writer.WriteEndArray();
+
+                writer.WriteComma();
+                writer.WritePropertyName("Events");
+                writer.WriteStartArray();
+
+                first = true;
+                foreach (var @event in events.OrderBy(x => x.StartTime))
+                {
+                    if (first == false)
+                        writer.WriteComma();
+
+                    first = false;
+
+                    context.Write(writer, @event.ToJson());
+                }
+
+                writer.WriteEndArray();
+
+                writer.WriteEndObject();
             }
         }
 
