@@ -452,6 +452,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 SourceDatabaseId = ConnectionInfo.SourceDatabaseId,
                 SupportedFeatures = SupportedFeatures,
+                IncomingHandler = this,
                 Logger = Logger
             })
             {
@@ -690,6 +691,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             internal ReplicationBatchItem[] ReplicatedItems { get; set; }
 
             internal Dictionary<Slice, AttachmentReplicationItem> ReplicatedAttachmentStreams { get; set; }
+
+            internal IAbstractIncomingReplicationHandler IncomingHandler { get; set; }
 
             public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
