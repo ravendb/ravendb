@@ -375,10 +375,19 @@ namespace Raven.Server.ServerWide.Maintenance
                 // we take the last received and not the last successful.
                 // we don't want to reuse by mistake a successful report when we receive an 'unchanged' error.
                 var lastReport = ReceivedReport;
-                if (lastReport.Status != ClusterNodeStatusReport.ReportStatus.Ok)
+                switch (lastReport!.Status)
                 {
-                    throw new InvalidOperationException(
-                        $"We have databases with '{DatabaseStatus.NoChange}' status, but our last report from this node is '{lastReport.Status}'");
+                    case ClusterNodeStatusReport.ReportStatus.WaitingForResponse:
+                    case ClusterNodeStatusReport.ReportStatus.Timeout:
+                    case ClusterNodeStatusReport.ReportStatus.Error:
+                        throw new InvalidOperationException($"We have databases with '{DatabaseStatus.NoChange}' status, but our last report from this node is '{lastReport.Status}'");
+                    case ClusterNodeStatusReport.ReportStatus.Ok:
+                    case ClusterNodeStatusReport.ReportStatus.OutOfCredits:
+                    case ClusterNodeStatusReport.ReportStatus.EarlyOutOfMemory:
+                    case ClusterNodeStatusReport.ReportStatus.HighDirtyMemory:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
 
                 foreach (var dbReport in unchangedReports)
