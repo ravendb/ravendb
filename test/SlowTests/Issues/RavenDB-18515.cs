@@ -23,7 +23,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Can_Set_Pin_To_Node_Pull_Replication_As_Sink()
         {
-            var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
+            var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true, useReservedPorts: true);
 
             var followers = nodes.Where(s => s.ServerStore.NodeTag != leader.ServerStore.NodeTag).ToList();
 

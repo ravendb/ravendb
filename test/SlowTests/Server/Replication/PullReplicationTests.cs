@@ -226,6 +226,7 @@ namespace SlowTests.Server.Replication
 
                 var pull = new PullReplicationAsSink(hub2.Database, $"ConnectionString2-{sink.Database}", definitionName2)
                 {
+                    Url = sink.Urls[0],
                     TaskId = pullTasks[0].TaskId
                 };
                 await AddWatcherToReplicationTopology(sink, pull, hub2.Urls);
@@ -317,6 +318,7 @@ namespace SlowTests.Server.Replication
 
                 var pull = new PullReplicationAsSink(hub.Database, $"ConnectionString-{sink.Database}", definitionName)
                 {
+                    Url = sink.Urls[0],
                     Disabled = true,
                     TaskId = pullTasks[0].TaskId
                 };
@@ -731,7 +733,7 @@ namespace SlowTests.Server.Replication
             var resList = new List<ModifyOngoingTaskResult>();
             foreach (var store in hub)
             {
-                var pull = new PullReplicationAsSink(store.Database, $"ConnectionString-{store.Database}", remoteName);
+                var pull = new PullReplicationAsSink(store.Database, $"ConnectionString-{store.Database}", remoteName) { Url = sink.Urls[0] };
                 if (certificate != null)
                 {
                     pull.CertificateWithPrivateKey = Convert.ToBase64String(certificate.Export(X509ContentType.Pfx));
