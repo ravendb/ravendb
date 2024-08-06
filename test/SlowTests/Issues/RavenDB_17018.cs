@@ -205,7 +205,9 @@ namespace SlowTests.Issues
                         .GetFor<Company>("companies/1", pageSize: 4);
                 }
 
-                var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out string reason);
+                string reason = string.Empty;
+
+                var outcome = await WaitForValueAsync(() => database.NotificationCenter.Paging.UpdatePagingInternal(null, out reason), true);
                 Assert.True(outcome, reason);
 
                 using (database.NotificationCenter.GetStored(out var actions))
