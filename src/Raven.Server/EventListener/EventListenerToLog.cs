@@ -1,20 +1,18 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Raven.Client.ServerWide.Operations.EventListener;
-using Raven.Server.Config.Categories;
-using Raven.Server.Config.Settings;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.EventListener;
 
-public class EventListenerToLog
+public class EventListenerToLog : IDynamicJson
 {
     public static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("EventListener");
     private readonly SemaphoreSlim _sm = new(1, 1);
 
     private EventsListener _listener;
-    private EventListenerMode _eventListenerMode;
+    private EventListenerConfiguration _configuration;
 
     public static readonly HashSet<EventType> GcEvents = [EventType.GC, EventType.GCSuspend, EventType.GCRestart, EventType.GCFinalizers];
     public static readonly HashSet<EventType> ContentionTypes = [EventType.Contention];
@@ -26,7 +24,7 @@ public class EventListenerToLog
 
     public static EventListenerToLog Instance = new();
 
-    public bool LogToFile => _eventListenerMode == EventListenerMode.ToLogFile && Logger.IsOperationsEnabled;
+    public bool LogToFile => _configuration.EventListenerMode == EventListenerMode.ToLogFile && Logger.IsOperationsEnabled;
 
     public void UpdateConfiguration(EventListenerConfiguration configuration)
     {
@@ -34,13 +32,11 @@ public class EventListenerToLog
 
         try
         {
-            _eventListenerMode = configuration.EventListenerMode;
-            var eventTypes = configuration.EventTypes;
-            var minimumDurationInMs = configuration.MinimumDuration.GetValue(TimeUnit.Milliseconds);
+            _configuration = configuration;
 
-            var effectiveEventTypes = (eventTypes == null || eventTypes.Length == 0)
+            var effectiveEventTypes = (_configuration.EventTypes == null || _configuration.EventTypes.Length == 0)
                 ? AllEvents
-                : new HashSet<EventType>(eventTypes);
+                : new HashSet<EventType>(_configuration.EventTypes);
 
             if (LogToFile == false)
             {
@@ -49,13 +45,39 @@ public class EventListenerToLog
             }
             else
             {
-                _listener ??= new EventsListener(Logger, effectiveEventTypes, minimumDurationInMs);
-                _listener.Update(effectiveEventTypes, minimumDurationInMs);
+                _listener ??= new EventsListener(effectiveEventTypes, _configuration.MinimumDurationInMs,
+                    onEvent: e =>
+                    {
+                        if (LogToFile)
+                            Logger.Operations(e.ToString());
+                    });
+                _listener.Update(effectiveEventTypes, _configuration.MinimumDurationInMs);
             }
         }
         finally
         {
             _sm.Release();
         }
+    }
+
+    public class EventListenerConfiguration
+    {
+        public EventListenerMode EventListenerMode { get; set; }
+
+        public EventType[] EventTypes { get; set; }
+
+        public long MinimumDurationInMs { get; set; }
+
+        public bool Persist { get; set; }
+    }
+
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(EventListenerConfiguration.EventListenerMode)] = Instance._configuration.EventListenerMode,
+            [nameof(EventListenerConfiguration.EventTypes)] = Instance._configuration.EventTypes == null ? null : new DynamicJsonArray(Instance._configuration.EventTypes),
+            [nameof(EventListenerConfiguration.MinimumDurationInMs)] = Instance._configuration.MinimumDurationInMs
+        };
     }
 }

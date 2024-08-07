@@ -110,7 +110,12 @@ namespace Raven.Server
                 );
 
             TrafficWatchToLog.Instance.UpdateConfiguration(configuration.TrafficWatch);
-            EventListenerToLog.Instance.UpdateConfiguration(configuration.EventListener);
+            EventListenerToLog.Instance.UpdateConfiguration(new EventListenerToLog.EventListenerConfiguration
+            {
+                EventListenerMode = configuration.EventListener.EventListenerMode,
+                EventTypes = configuration.EventListener.EventTypes,
+                MinimumDurationInMs = configuration.EventListener.MinimumDuration.GetValue(TimeUnit.Milliseconds)
+            });
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
