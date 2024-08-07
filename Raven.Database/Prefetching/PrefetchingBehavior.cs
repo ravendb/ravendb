@@ -1583,7 +1583,7 @@ namespace Raven.Database.Prefetching
         {
             var batchId = Guid.NewGuid();
 
-            autoTuner.CurrentlyUsedBatchSizesInBytes.TryAdd(batchId, docBatch.Sum(x => x.SerializedSizeOnDisk));
+            autoTuner.CurrentlyUsedBatchSizesInBytes.TryAdd(batchId, docBatch.Sum(x => (long)x.SerializedSizeOnDisk));
             return new DisposableAction(() =>
             {
                 long _;
