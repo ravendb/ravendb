@@ -21,7 +21,7 @@ export const databaseAccessSelectors = databaseAccessAdapter.getSelectors();
 const initialState: AccessManagerState = {
     databaseAccess: databaseAccessAdapter.getInitialState(),
     securityClearance: null,
-    isSecureServer: false,
+    isSecureServer: true,
 };
 
 export const accessManagerSlice = createSlice({
