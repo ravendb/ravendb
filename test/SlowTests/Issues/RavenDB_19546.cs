@@ -207,6 +207,8 @@ namespace SlowTests.Issues
                                     };
 
                 OutputReduceToCollection = "UserAndUserAuthDetails";
+
+                Index(x => x.UserAuthDetailIds, FieldIndexing.No);
             }
         }
 
@@ -258,6 +260,8 @@ for (var i = 0; i < auth.UserAuthDetailIds.length; i++) {
         })";
 
                 OutputReduceToCollection = "UserClaims";
+
+                Fields = new Dictionary<string, IndexFieldOptions>() { { "ClaimsPerProvider", new IndexFieldOptions() { Indexing = FieldIndexing.No } } };
             }
         }
 

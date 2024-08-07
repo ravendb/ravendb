@@ -144,6 +144,7 @@ public class IndexSearcherTest : StorageTest
                 builder.Write(ContentIndex, it[i]);
             }
         }
+        builder.EndWriting();
 
         Span<byte> PrepareString(string value)
         {
