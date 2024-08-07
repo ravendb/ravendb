@@ -146,9 +146,12 @@ namespace Raven.Server.Web.System
 
             private readonly Dictionary<string, AllocationInfo> _allocations = new();
 
-            protected override DotNetEventType? EventKeywords => DotNetEventType.GC;
-
             public IReadOnlyCollection<AllocationInfo> Allocations => _allocations.Values;
+
+            public GcAllocationsEventListener()
+            {
+                EnableEvents(DotNetEventType.GC);
+            }
 
             public class AllocationInfo
             {

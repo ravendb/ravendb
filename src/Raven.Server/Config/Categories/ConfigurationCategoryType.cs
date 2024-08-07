@@ -38,6 +38,7 @@ namespace Raven.Server.Config.Categories
         [Description("Traffic Watch")]
         TrafficWatch,
         [Description("Export & Import")]
-        ExportImport
+        ExportImport,
+        Etw
     }
 }

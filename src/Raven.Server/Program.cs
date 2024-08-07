@@ -13,6 +13,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Static.NuGet;
+using Raven.Server.EventListener;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.TrafficWatch;
@@ -123,7 +124,8 @@ namespace Raven.Server
                 );
 
             TrafficWatchToLog.Instance.UpdateConfiguration(configuration.TrafficWatch);
-            
+            EventListenerToLog.Instance.UpdateConfiguration(configuration.EventListener);
+
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
 
