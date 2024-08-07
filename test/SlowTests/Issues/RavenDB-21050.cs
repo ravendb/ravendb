@@ -56,6 +56,8 @@ public class RavenDB_21050 : RavenTestBase
                 path = Directory.GetDirectories(backupPath).First(p => p.Contains($"${shardNumber}"));
             }
 
+            await Backup.GetBackupFilesAndAssertCountAsync(path, 2, source.Database, backupStatus2.Id);
+
             var restoreConfig = new RestoreBackupConfiguration { BackupLocation = path, DatabaseName = destination.Database };
             using (Backup.RestoreDatabase(destination, restoreConfig))
             {
