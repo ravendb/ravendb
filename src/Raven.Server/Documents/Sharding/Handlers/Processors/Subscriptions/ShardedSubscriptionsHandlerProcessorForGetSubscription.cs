@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
@@ -14,61 +12,46 @@ using static Raven.Server.Documents.Subscriptions.SubscriptionStorage;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Subscriptions
 {
-    internal sealed class ShardedSubscriptionsHandlerProcessorForGetSubscription : AbstractSubscriptionsHandlerProcessorForGetSubscription<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedSubscriptionsHandlerProcessorForGetSubscription : AbstractSubscriptionsHandlerProcessorForGetSubscription<ShardedDatabaseRequestHandler, TransactionOperationContext, ShardedSubscriptionData>
     {
         public ShardedSubscriptionsHandlerProcessorForGetSubscription([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
-        protected override IEnumerable<ShardedSubscriptionData> GetSubscriptions(ClusterOperationContext context, int start, int pageSize, bool history, bool running, long? id, string name)
+        protected override IEnumerable<ShardedSubscriptionData> GetAllSubscriptions(ClusterOperationContext context, int start, int pageSize, bool history, bool running)
         {
-            IEnumerable<ShardedSubscriptionData> subscriptions;
-            if (string.IsNullOrEmpty(name) && id == null)
-            {
-                subscriptions = running
-                    ? RequestHandler.DatabaseContext.SubscriptionsStorage.GetAllRunningSubscriptions(context, history, start, pageSize)
-                    : RequestHandler.DatabaseContext.SubscriptionsStorage.GetAllSubscriptions(context, history, start, pageSize);
-            }
-            else
-            {
-                var subscription = running
-                    ? RequestHandler.DatabaseContext.SubscriptionsStorage
-                        .GetRunningSubscription(context, id, name, history)
-                    : RequestHandler.DatabaseContext.SubscriptionsStorage
-                        .GetSubscription(context, id, name, history);
-
-                if (subscription == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return null;
-                }
-
-                subscriptions = new[] { subscription };
-            }
-
-            return subscriptions;
+            return running
+                ? RequestHandler.DatabaseContext.SubscriptionsStorage.GetAllRunningSubscriptions(context, history, start, pageSize)
+                : RequestHandler.DatabaseContext.SubscriptionsStorage.GetAllSubscriptions(context, history, start, pageSize);
         }
 
-        protected override DynamicJsonValue SubscriptionStateAsJson(SubscriptionState state)
+        protected override ShardedSubscriptionData GetSubscriptionByName(ClusterOperationContext context, bool history, bool running, string name)
+        {
+            return RequestHandler.DatabaseContext.SubscriptionsStorage.GetSubscriptionWithDataByNameFromServerStore(context, name, history, running);
+        }
+
+        protected override ShardedSubscriptionData GetSubscriptionById(ClusterOperationContext context, bool history, bool running, long id)
+        {
+            return RequestHandler.DatabaseContext.SubscriptionsStorage.GetSubscriptionWithDataByIdFromServerStore(context, id, history, running);
+            ;
+        }
+
+        protected override DynamicJsonValue SubscriptionStateAsJson(ShardedSubscriptionData state)
         {
             var json = base.SubscriptionStateAsJson(state);
-
-            if (state is ShardedSubscriptionData shardedSubscriptionData)
-            {
-                json[nameof(SubscriptionGeneralDataAndStats.Connections)] = GetSubscriptionConnectionsJson(shardedSubscriptionData.Connections);
-                json[nameof(SubscriptionGeneralDataAndStats.RecentConnections)] = shardedSubscriptionData.RecentConnections == null
-                    ? Array.Empty<SubscriptionConnectionInfo>()
-                    : shardedSubscriptionData.RecentConnections.Select(r => r.ToJson());
-                json[nameof(SubscriptionGeneralDataAndStats.RecentRejectedConnections)] = shardedSubscriptionData.RecentRejectedConnections == null
-                    ? Array.Empty<SubscriptionConnectionInfo>()
-                    : shardedSubscriptionData.RecentRejectedConnections.Select(r => r.ToJson());
-                json[nameof(SubscriptionGeneralDataAndStats.CurrentPendingConnections)] = shardedSubscriptionData.CurrentPendingConnections == null
-                    ? Array.Empty<SubscriptionConnectionInfo>()
-                    : shardedSubscriptionData.CurrentPendingConnections.Select(r => r.ToJson());
-                json[nameof(ShardedSubscriptionData.RecentShardedWorkers)] = shardedSubscriptionData.RecentShardedWorkers == null ? Array.Empty<ShardedSubscriptionWorkerInfo>() 
-                    : shardedSubscriptionData.RecentShardedWorkers.Select(x=>x.ToJson());
-                json[nameof(ShardedSubscriptionData.ShardedWorkers)] = GetShardedWorkersJson(shardedSubscriptionData.ShardedWorkers);
-            }
+            json[nameof(SubscriptionGeneralDataAndStats.Connections)] = GetSubscriptionConnectionsJson(state.Connections);
+            json[nameof(SubscriptionGeneralDataAndStats.RecentConnections)] = state.RecentConnections == null
+                ? Array.Empty<SubscriptionConnectionInfo>()
+                : state.RecentConnections.Select(r => r.ToJson());
+            json[nameof(SubscriptionGeneralDataAndStats.RecentRejectedConnections)] = state.RecentRejectedConnections == null
+                ? Array.Empty<SubscriptionConnectionInfo>()
+                : state.RecentRejectedConnections.Select(r => r.ToJson());
+            json[nameof(SubscriptionGeneralDataAndStats.CurrentPendingConnections)] = state.CurrentPendingConnections == null
+                ? Array.Empty<SubscriptionConnectionInfo>()
+                : state.CurrentPendingConnections.Select(r => r.ToJson());
+            json[nameof(ShardedSubscriptionData.RecentShardedWorkers)] = state.RecentShardedWorkers == null ? Array.Empty<ShardedSubscriptionWorkerInfo>()
+                : state.RecentShardedWorkers.Select(x => x.ToJson());
+            json[nameof(ShardedSubscriptionData.ShardedWorkers)] = GetShardedWorkersJson(state.ShardedWorkers);
 
             return json;
         }

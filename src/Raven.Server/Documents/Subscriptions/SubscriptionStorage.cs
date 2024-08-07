@@ -158,11 +158,9 @@ namespace Raven.Server.Documents.Subscriptions
 
         public override IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(ClusterOperationContext context, bool history, int start, int take)
         {
-            foreach (var task in base.GetAllSubscriptions(context, history, start, take))
+            foreach (var task in GetAllSubscriptionsFromServerStore(context, start, take))
             {
-                var subscriptionGeneralData = new SubscriptionGeneralDataAndStats(task);
-
-                GetSubscriptionInternal(subscriptionGeneralData, history);
+                var subscriptionGeneralData = GetSubscriptionInternal(task, history, running: false);
                 yield return subscriptionGeneralData;
             }
         }
@@ -173,7 +171,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             foreach (var (state, subscriptionConnectionsState) in GetAllRunningSubscriptionsInternal(context, history, start, take))
             {
-                var subscriptionData = GetRunningSubscriptionInternal(history, state, subscriptionConnectionsState);
+                var subscriptionData = PopulateSubscriptionData(state, history, subscriptionConnectionsState);
 
                 yield return subscriptionData;
             }
@@ -193,26 +191,17 @@ namespace Raven.Server.Documents.Subscriptions
             return c;
         }
 
-        public override SubscriptionGeneralDataAndStats GetSubscription(ClusterOperationContext context, long? id, string name, bool history)
+        public override SubscriptionGeneralDataAndStats GetSubscriptionWithDataByNameFromServerStore(ClusterOperationContext context, string name, bool history, bool running)
         {
-            SubscriptionState state = base.GetSubscription(context, id, name, history);
-            var subscription = GetSubscriptionInternal(state, history);
-
+            var state = GetSubscriptionByName(context, name);
+            var subscription = GetSubscriptionInternal(state, history, running);
             return subscription;
         }
 
-        public override SubscriptionState GetSubscriptionFromServerStore(ClusterOperationContext context, string name)
+        public override SubscriptionGeneralDataAndStats GetSubscriptionWithDataByIdFromServerStore(ClusterOperationContext context, long id, bool history, bool running)
         {
-            var subscriptionState = base.GetSubscriptionFromServerStore(context, name);
-            subscriptionState.ArchivedDataProcessingBehavior ??= _db.Configuration.Subscriptions.ArchivedDataProcessingBehavior; // persisted state from v5.x  
-            
-            return subscriptionState;
-        }
-
-        public override SubscriptionGeneralDataAndStats GetRunningSubscription(ClusterOperationContext context, long? id, string name, bool history)
-        {
-            SubscriptionState state = GetRunningSubscriptionInternal(context, id, name, history, out var subscriptionConnectionsState);
-            var subscription = GetRunningSubscriptionInternal(history, state, subscriptionConnectionsState);
+            var state = GetSubscriptionById(context, id);
+            var subscription = GetSubscriptionInternal(state, history, running);
             return subscription;
         }
 
@@ -230,29 +219,30 @@ namespace Raven.Server.Documents.Subscriptions
             return _subscriptions.Count(x => x.Value.IsSubscriptionActive());
         }
 
-        private static SubscriptionGeneralDataAndStats GetRunningSubscriptionInternal(bool history, SubscriptionState state, SubscriptionConnectionsState subscriptionConnectionsState)
+        private SubscriptionGeneralDataAndStats GetSubscriptionInternal(SubscriptionState state, bool history, bool running)
         {
-            var subscriptionData = new SubscriptionGeneralDataAndStats(state)
+            if (GetSubscriptionConnectionsStateAndCheckRunningIfNeeded(state, running, out SubscriptionConnectionsState concurrentSubscription) == null)
             {
-                Connections = subscriptionConnectionsState.GetConnections()
-            };
+                // not mine running subscription
+                return null;
+            }
 
-            if (history) // Only valid for this node
-                SetSubscriptionHistory(subscriptionConnectionsState, subscriptionData);
-
-            return subscriptionData;
+            return PopulateSubscriptionData(state, history, concurrentSubscription);
         }
 
-        private SubscriptionGeneralDataAndStats GetSubscriptionInternal(SubscriptionState state, bool history)
+        private static SubscriptionGeneralDataAndStats PopulateSubscriptionData(SubscriptionState state, bool history, SubscriptionConnectionsState concurrentSubscription)
         {
             var subscriptionData = new SubscriptionGeneralDataAndStats(state);
-            if (_subscriptions.TryGetValue(subscriptionData.SubscriptionId, out SubscriptionConnectionsState concurrentSubscription))
+            if (concurrentSubscription == null)
             {
-                subscriptionData.Connections = concurrentSubscription.GetConnections();
-
-                if (history)//Only valid if this is my subscription
-                    SetSubscriptionHistory(concurrentSubscription, subscriptionData);
+                // not mine subscription
+                return subscriptionData;
             }
+
+            subscriptionData.Connections = concurrentSubscription.GetConnections();
+
+            if (history)
+                SetSubscriptionHistory(concurrentSubscription, subscriptionData);
 
             return subscriptionData;
         }
