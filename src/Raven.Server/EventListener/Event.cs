@@ -18,4 +18,9 @@ public abstract class Event : IDynamicJson
             [nameof(Type)] = Type
         };
     }
+
+    public override string ToString()
+    {
+        return $"Type: {Type}";
+    }
 }
