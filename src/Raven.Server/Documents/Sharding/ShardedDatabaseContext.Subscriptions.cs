@@ -77,74 +77,74 @@ public partial class ShardedDatabaseContext
             return _context.Configuration.Subscriptions.ArchivedDataProcessingBehavior;
         }
 
+        public override ShardedSubscriptionData GetSubscriptionWithDataByNameFromServerStore(ClusterOperationContext context, string name, bool history, bool running)
+        {
+            var state = GetSubscriptionByName(context, name);
+            var shardedSubscriptionData = new ShardedSubscriptionData(new SubscriptionGeneralDataAndStats(state));
+            var subscription = GetSubscriptionInternal(shardedSubscriptionData, history, running);
+
+            return subscription;
+        }
+
+        public override ShardedSubscriptionData GetSubscriptionWithDataByIdFromServerStore(ClusterOperationContext context, long id, bool history, bool running)
+        {
+            var state = GetSubscriptionById(context, id);
+            var shardedSubscriptionData = new ShardedSubscriptionData(new SubscriptionGeneralDataAndStats(state));
+            var subscription = GetSubscriptionInternal(shardedSubscriptionData, history, running);
+
+            return subscription;
+        }
+
         public override IEnumerable<ShardedSubscriptionData> GetAllSubscriptions(ClusterOperationContext context, bool history, int start, int take)
         {
-            foreach (var task in base.GetAllSubscriptions(context, history, start, take))
+            foreach (var task in GetAllSubscriptionsFromServerStore(context, start, take))
             {
-                var shardedSubscriptionData = GetSubscriptionInternal(task, history);
+                var shardedSubscriptionData = GetSubscriptionInternal(task, history, running: false);
 
                 yield return shardedSubscriptionData;
             }
-        }
-
-        private ShardedSubscriptionData GetSubscriptionInternal(SubscriptionState task, bool history)
-        {
-            var shardedSubscriptionData = new ShardedSubscriptionData(new SubscriptionGeneralDataAndStats(task));
-            if (_subscriptions.TryGetValue(shardedSubscriptionData.SubscriptionId, out SubscriptionConnectionsStateOrchestrator orchestratorSubscription))
-            {
-                shardedSubscriptionData.ShardedWorkers = orchestratorSubscription.ShardWorkers;
-                shardedSubscriptionData.Connections = orchestratorSubscription.GetConnections();
-                if (history)//Only valid if this is my subscription
-                {
-                    SetSubscriptionHistory(orchestratorSubscription, shardedSubscriptionData);
-                    shardedSubscriptionData.RecentShardedWorkers = orchestratorSubscription.RecentShardedWorkers;
-                }
-            }
-            return shardedSubscriptionData;
         }
 
         public IEnumerable<ShardedSubscriptionData> GetAllRunningSubscriptions(ClusterOperationContext context, bool history, int start, int take)
         {
             foreach (var (state, subscriptionConnectionsState) in GetAllRunningSubscriptionsInternal(context, history, start, take))
             {
-                var shardedSubscriptionData = GetRunningSubscriptionInternal(history, state, subscriptionConnectionsState);
+                var shardedSubscriptionData = PopulateSubscriptionData(state, history, subscriptionConnectionsState);
 
                 yield return shardedSubscriptionData;
             }
         }
 
-        private static ShardedSubscriptionData GetRunningSubscriptionInternal(bool history, SubscriptionState state,
-            SubscriptionConnectionsStateOrchestrator subscriptionConnectionsState)
+        private ShardedSubscriptionData GetSubscriptionInternal(SubscriptionState state, bool history, bool running)
         {
-            var shardedSubscriptionData = new ShardedSubscriptionData(new SubscriptionGeneralDataAndStats(state))
+            if (GetSubscriptionConnectionsStateAndCheckRunningIfNeeded(state, running, out SubscriptionConnectionsStateOrchestrator orchestratorSubscription) == null)
             {
-                ShardedWorkers = subscriptionConnectionsState.ShardWorkers,
-                Connections = subscriptionConnectionsState.GetConnections()
-            };
+                // not mine running subscription
+                return null;
+            }
 
-            if (history)//Only valid if this is my subscription
+            return PopulateSubscriptionData(state, history, orchestratorSubscription);
+        }
+
+        private static ShardedSubscriptionData PopulateSubscriptionData(SubscriptionState state, bool history, SubscriptionConnectionsStateOrchestrator orchestratorSubscription)
+        {
+            var shardedSubscriptionData = new ShardedSubscriptionData(new SubscriptionGeneralDataAndStats(state));
+            if (orchestratorSubscription == null)
             {
-                SetSubscriptionHistory(subscriptionConnectionsState, shardedSubscriptionData);
-                shardedSubscriptionData.RecentShardedWorkers = subscriptionConnectionsState.RecentShardedWorkers;
+                // not mine subscription
+                return shardedSubscriptionData;
+            }
+
+            shardedSubscriptionData.ShardedWorkers = orchestratorSubscription.ShardWorkers;
+            shardedSubscriptionData.Connections = orchestratorSubscription.GetConnections();
+
+            if (history)
+            {
+                SetSubscriptionHistory(orchestratorSubscription, shardedSubscriptionData);
+                shardedSubscriptionData.RecentShardedWorkers = orchestratorSubscription.RecentShardedWorkers;
             }
 
             return shardedSubscriptionData;
-        }
-
-        public override ShardedSubscriptionData GetSubscription(ClusterOperationContext context, long? id, string name, bool history)
-        {
-            SubscriptionState state = base.GetSubscription(context, id, name, history);
-            var shardedSubscriptionData = new ShardedSubscriptionData(new SubscriptionGeneralDataAndStats(state));
-            var subscription = GetSubscriptionInternal(shardedSubscriptionData, history);
-
-            return subscription;
-        }
-
-        public override ShardedSubscriptionData GetRunningSubscription(ClusterOperationContext context, long? id, string name, bool history)
-        {
-            SubscriptionState state = GetRunningSubscriptionInternal(context, id, name, history, out var subscriptionConnectionsState);
-            var subscription = GetRunningSubscriptionInternal(history, state, subscriptionConnectionsState);
-            return subscription;
         }
 
         public sealed class ShardedSubscriptionData : SubscriptionDataBase<OrchestratedSubscriptionConnection>
@@ -178,9 +178,13 @@ public partial class ShardedDatabaseContext
                 string address = null;
                 try
                 {
-                    address = ((IPEndPoint)w._tcpClient?.Client?.RemoteEndPoint)?.Address.ToString();
+                    var e = (IPEndPoint)w._tcpClient?.Client?.RemoteEndPoint;
+                    if (e != null)
+                    {
+                        address = $"{e.Address}:{e.Port}";
+                    }
                 }
-                catch (Exception e)
+                catch
                 {
                     // might be disposed
                 }
