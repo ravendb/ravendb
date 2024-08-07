@@ -13,7 +13,7 @@ public class EventListenerToLog
     public static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("EventListener");
     private readonly SemaphoreSlim _sm = new(1, 1);
 
-    private EventsToLogListener _listener;
+    private EventsListener _listener;
     private EventListenerMode _eventListenerMode;
 
     public static readonly HashSet<EventType> GcEvents = [EventType.GC, EventType.GCSuspend, EventType.GCRestart, EventType.GCFinalizers];
@@ -49,7 +49,7 @@ public class EventListenerToLog
             }
             else
             {
-                _listener ??= new EventsToLogListener(Logger, effectiveEventTypes, minimumDurationInMs);
+                _listener ??= new EventsListener(Logger, effectiveEventTypes, minimumDurationInMs);
                 _listener.Update(effectiveEventTypes, minimumDurationInMs);
             }
         }
