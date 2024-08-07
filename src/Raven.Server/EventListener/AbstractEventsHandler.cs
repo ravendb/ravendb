@@ -4,29 +4,33 @@ using System.Diagnostics.Tracing;
 
 namespace Raven.Server.EventListener;
 
-public abstract class AbstractEventsHandler<TEvent> where TEvent : Event
+public interface IEventsHandler
 {
+    public bool HandleEvent(EventWrittenEventArgs eventData);
+
+    public void Update(HashSet<EventType> eventTypes, long minimumDurationInMs);
+}
+
+public abstract class AbstractEventsHandler<TEvent> : IEventsHandler where TEvent : Event
+{
+    protected HashSet<EventType> EventTypes { get; set; }
+
+    protected long MinimumDurationInMs { get; set; }
+
+    protected abstract HashSet<EventType> DefaultEventTypes { get; }
+
     protected abstract Action<TEvent> OnEvent { get; }
 
     public abstract bool HandleEvent(EventWrittenEventArgs eventData);
+
+    public void Update(HashSet<EventType> eventTypes, long minimumDurationInMs)
+    {
+        EventTypes = eventTypes ?? DefaultEventTypes;
+        MinimumDurationInMs = minimumDurationInMs;
+    }
 }
 
 public interface IDurationEvent
 {
     public double DurationInMs { get; }
-}
-
-public class EventComparerByDuration : IComparer<IDurationEvent>
-{
-    public int Compare(IDurationEvent x, IDurationEvent y)
-    {
-        if (ReferenceEquals(x, y))
-            return 0;
-        if (ReferenceEquals(null, y))
-            return 1;
-        if (ReferenceEquals(null, x))
-            return -1;
-
-        return y.DurationInMs.CompareTo(x.DurationInMs);
-    }
 }
