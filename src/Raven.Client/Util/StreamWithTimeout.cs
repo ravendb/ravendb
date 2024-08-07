@@ -2,7 +2,6 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Sparrow.Utils;
 
 namespace Raven.Client.Util
 {
@@ -157,15 +156,9 @@ namespace Raven.Client.Util
         {
             _readCts?.Dispose();
             _readCts = cancellationToken == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            
-            Task timeout = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(_readTimeout), _readCts.Token);
-            Task<int> readTask = _stream.ReadAsync(buffer, offset, count, _readCts.Token);
-            Task first = await Task.WhenAny(timeout, readTask).ConfigureAwait(false);
-            if (first == timeout)
-            {
-                _readCts.Cancel();
-            }
-            var read = await readTask.ConfigureAwait(false);
+            _readCts.CancelAfter(_readTimeout);
+
+            var read = await _stream.ReadAsync(buffer, offset, count, _readCts.Token).ConfigureAwait(false);
             _totalRead += read;
             return read;
         }
@@ -200,18 +193,13 @@ namespace Raven.Client.Util
             return WriteAsyncWithTimeout(buffer, offset, count, cancellationToken);
         }
 
-        private async Task WriteAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        private Task WriteAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             _writeCts?.Dispose();
             _writeCts = cancellationToken == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            Task timeout = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(_writeTimeout), _writeCts.Token);
-            Task write = _stream.WriteAsync(buffer, offset, count, _writeCts.Token);
-            Task first = await Task.WhenAny(timeout, write).ConfigureAwait(false);
-            if(first == timeout)
-            {
-                _writeCts.Cancel();
-            }
-            await write.ConfigureAwait(false);
+            _writeCts.CancelAfter(_writeTimeout);
+
+            return _stream.WriteAsync(buffer, offset, count, _writeCts.Token);
         }
 
         public override bool CanRead => _stream.CanRead;
