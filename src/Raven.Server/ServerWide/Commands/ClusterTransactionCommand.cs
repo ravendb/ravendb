@@ -306,18 +306,17 @@ namespace Raven.Server.ServerWide.Commands
                         }
                         break;
                     case CommandType.PUT:
+                        if (document.SeenAttachments)
+                            throw new NotSupportedException($"The document {document.Id} has attachments, this is not supported in cluster wide transaction.");
+
+                        if (document.SeenCounters)
+                            throw new NotSupportedException($"The document {document.Id} has counters, this is not supported in cluster wide transaction.");
+
+                        if (document.SeenTimeSeries)
+                            throw new NotSupportedException($"The document {document.Id} has time series, this is not supported in cluster wide transaction.");
+                        
+                        break;
                     case CommandType.DELETE:
-                        if (document.Type == CommandType.PUT)
-                        {
-                            if (document.SeenAttachments)
-                                throw new NotSupportedException($"The document {document.Id} has attachments, this is not supported in cluster wide transaction.");
-
-                            if (document.SeenCounters)
-                                throw new NotSupportedException($"The document {document.Id} has counters, this is not supported in cluster wide transaction.");
-
-                            if (document.SeenTimeSeries)
-                                throw new NotSupportedException($"The document {document.Id} has time series, this is not supported in cluster wide transaction.");
-                        }
                         break;
 
                     default:
