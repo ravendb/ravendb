@@ -1396,13 +1396,13 @@ namespace SlowTests.Cluster
                 {
                     TransactionMode = TransactionMode.ClusterWide
                 });
-
+            
                 var entity = new User { Id = id };
                 await session.StoreAsync(entity);
                 await session.SaveChangesAsync();
             });
-            Assert.True(ContainsRachisException(e));
-
+            Assert.True(ContainsRachisException(e), e.ToString());
+            
             static bool ContainsRachisException(Exception e)
             {
                 while (true)
@@ -1411,7 +1411,7 @@ namespace SlowTests.Cluster
                         return true;
                     if (e is AggregateException ae)
                         return ae.InnerExceptions.Any(ex => ContainsRachisException(ex));
-
+            
                     if (e.InnerException == null)
                         return false;
                     e = e.InnerException;

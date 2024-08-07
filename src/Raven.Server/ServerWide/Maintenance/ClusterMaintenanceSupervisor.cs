@@ -387,7 +387,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     case ClusterNodeStatusReport.ReportStatus.HighDirtyMemory:
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new ArgumentOutOfRangeException($"The status {lastReport.Status} is not supported.");
                 }
 
                 foreach (var dbReport in unchangedReports)

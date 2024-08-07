@@ -267,6 +267,8 @@ namespace Raven.Client.Documents.Indexes
 
         DocumentConventions Conventions { get; set; }
 
+        SearchEngineType? SearchEngineType { get; }
+
         IndexDefinition CreateIndexDefinition();
 
         void Execute(IDocumentStore store, DocumentConventions conventions = null, string database = null);
