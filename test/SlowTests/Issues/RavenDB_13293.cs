@@ -83,11 +83,9 @@ namespace SlowTests.Issues
                 databaseChanges = store.Changes(store.Database, "XYZ");
                 await Assert.ThrowsAsync<RequestedNodeUnavailableException>(async () => await databaseChanges.EnsureConnectedNow());
 
-                databaseChanges = store.Changes(store.Database, "");
-                await Assert.ThrowsAsync<RequestedNodeUnavailableException>(async () => await databaseChanges.EnsureConnectedNow());
+                Assert.Throws<ArgumentNullException>(() => store.Changes(store.Database, ""));
 
-                databaseChanges = store.Changes(store.Database, " ");
-                await Assert.ThrowsAsync<RequestedNodeUnavailableException>(async () => await databaseChanges.EnsureConnectedNow());
+                Assert.Throws<ArgumentNullException>(() => store.Changes(store.Database, " "));
             }
         }
 
