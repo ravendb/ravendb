@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Linq;
-using Sparrow.Logging;
 
 namespace Raven.Server.EventListener;
 
@@ -12,10 +11,10 @@ public class EventsListener : AbstractEventListener
     private readonly Dictionary<string, IEventsHandler> _handlerByEventName = new();
     private DotNetEventType _dotNetEventType;
 
-    public EventsListener(Logger logger, HashSet<EventType> eventTypes, long minimumDurationInMs)
+    public EventsListener(HashSet<EventType> eventTypes, long minimumDurationInMs, Action<Event> onEvent)
     {
-        _handlers.Add(new GcEventsHandler(e => logger.Operations(e.ToString()), eventTypes, minimumDurationInMs));
-        _handlers.Add(new ContentionEventsHandler(e => logger.Operations(e.ToString()), eventTypes, minimumDurationInMs));
+        _handlers.Add(new GcEventsHandler(onEvent, eventTypes, minimumDurationInMs));
+        _handlers.Add(new ContentionEventsHandler(onEvent, eventTypes, minimumDurationInMs));
 
         _dotNetEventType = GetDotNetEventTypes(eventTypes);
         EnableEvents(_dotNetEventType);
