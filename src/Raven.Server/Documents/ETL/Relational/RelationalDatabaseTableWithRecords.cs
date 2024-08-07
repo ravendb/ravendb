@@ -57,7 +57,7 @@ public sealed class RelationalDatabaseTableWithRecords
         {
             [nameof(TableName)] = TableName,
             [nameof(DocumentIdColumn)] = DocumentIdColumn,
-            [nameof(InsertOnlyMode)] = InsertOnlyMode //todo: shouldn't put inserts&deletes here? do i need it?
+            [nameof(InsertOnlyMode)] = InsertOnlyMode
         };
     }
 }

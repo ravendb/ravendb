@@ -53,7 +53,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         _commandBuilder = GetInitializedCommandBuilder();
         Logger = LoggingSource.Instance
             .GetLogger<
-                RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration>>(Database.Name); // todo: logger passed type shouldn't be abstract
+                RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration>>(Database.Name);
 
         var connectionString = GetConnectionString(configuration);
         _connection.ConnectionString = connectionString;

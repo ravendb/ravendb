@@ -293,7 +293,6 @@ namespace SlowTests.Issues
             if (newEtlTypes.Any())
                 throw new Exception($"New EtlType values detected: {string.Join(", ", newEtlTypes)}. Update {nameof(TombstoneCleaningAfterEtlLoaderDisabled)} test to cover it.");
         }
-        // todo: elaborate on this
         [Theory]
         [InlineData(EtlType.Raven)]
         [InlineData(EtlType.Sql)]
