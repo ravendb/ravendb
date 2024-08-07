@@ -6,12 +6,13 @@ using Sparrow.Logging;
 
 namespace Raven.Server.EventListener;
 
-public class EventsToLogListener : AbstractEventListener
+public class EventsListener : AbstractEventListener
 {
     private readonly List<IEventsHandler> _handlers = new();
+    private readonly Dictionary<string, IEventsHandler> _handlerByEventName = new();
     private DotNetEventType _dotNetEventType;
 
-    public EventsToLogListener(Logger logger, HashSet<EventType> eventTypes, long minimumDurationInMs)
+    public EventsListener(Logger logger, HashSet<EventType> eventTypes, long minimumDurationInMs)
     {
         _handlers.Add(new GcEventsHandler(e => logger.Operations(e.ToString()), eventTypes, minimumDurationInMs));
         _handlers.Add(new ContentionEventsHandler(e => logger.Operations(e.ToString()), eventTypes, minimumDurationInMs));
@@ -25,11 +26,22 @@ public class EventsToLogListener : AbstractEventListener
         if (eventData.EventName == null)
             return;
 
+        if (_handlerByEventName.TryGetValue(eventData.EventName, out var handlerToUse))
+        {
+            handlerToUse?.HandleEvent(eventData);
+            return;
+        }
+
         foreach (var handler in _handlers)
         {
             if (handler.HandleEvent(eventData))
+            {
+                _handlerByEventName[eventData.EventName] = handler;
                 return;
+            }
         }
+
+        _handlerByEventName[eventData.EventName] = null;
     }
 
     public void Update(HashSet<EventType> eventTypes, long minimumDurationInMs)
