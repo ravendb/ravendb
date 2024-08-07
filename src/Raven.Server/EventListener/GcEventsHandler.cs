@@ -44,7 +44,10 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
 
                     if (_timeGcStartByIndex.TryGetValue(endIndex, out var tuple))
                     {
-                        OnEvent.Invoke(new GCEvent(tuple.DateTime, eventData, endIndex, tuple.Generation, tuple.Reason));
+                        var @event = new GCEvent(tuple.DateTime, eventData, endIndex, tuple.Generation, tuple.Reason);
+                        if (@event.DurationInMs >= MinimumDurationInMs)
+                            OnEvent.Invoke(@event);
+
                         _timeGcStartByIndex.Remove(endIndex);
                     }
                 }
@@ -58,38 +61,49 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
                 return true;
 
             case "GCSuspendEEEnd_V1":
-                if (_suspendData != null)
+                if (EventTypes.Contains(EventType.GCSuspend) && _suspendData != null)
                 {
                     var index = (uint)_suspendData.Payload[1];
                     var suspendReason = (uint)_suspendData.Payload[0];
 
-                    OnEvent.Invoke(new GCSuspendEvent(_suspendData.TimeStamp, eventData, index, suspendReason));
+                    var @event = new GCSuspendEvent(_suspendData.TimeStamp, eventData, index, suspendReason);
+                    if (@event.DurationInMs >= MinimumDurationInMs)
+                        OnEvent.Invoke(@event);
+
                     _suspendData = null;
                 }
 
                 return true;
 
             case "GCRestartEEBegin_V1":
-                _timeGcRestartStart = eventData.TimeStamp;
-                break;
+                if (EventTypes.Contains(EventType.GCRestart))
+                    _timeGcRestartStart = eventData.TimeStamp;
+                return true;
 
             case "GCRestartEEEnd_V1":
-                if (_timeGcRestartStart != null)
+                if (EventTypes.Contains(EventType.GCRestart) && _timeGcRestartStart != null)
                 {
-                    OnEvent.Invoke(new GCEventBase(EventType.GCRestart, _timeGcRestartStart.Value, eventData));
+                    var @event = new GCEventBase(EventType.GCRestart, _timeGcRestartStart.Value, eventData);
+                    if (@event.DurationInMs >= MinimumDurationInMs)
+                        OnEvent.Invoke(@event);
+
                     _timeGcRestartStart = null;
                 }
 
                 return true;
 
             case "GCFinalizersBegin_V1":
-                _timeGcFinalizersStart = eventData.TimeStamp;
+                if (EventTypes.Contains(EventType.GCFinalizers))
+                    _timeGcFinalizersStart = eventData.TimeStamp;
                 return true;
 
             case "GCFinalizersEnd_V1":
-                if (_timeGcFinalizersStart != null)
+                if (EventTypes.Contains(EventType.GCFinalizers) && _timeGcFinalizersStart != null)
                 {
-                    OnEvent.Invoke(new GCEventBase(EventType.GCFinalizers, _timeGcFinalizersStart.Value, eventData));
+                    var @event = new GCEventBase(EventType.GCFinalizers, _timeGcFinalizersStart.Value, eventData);
+                    if (@event.DurationInMs >= MinimumDurationInMs)
+                        OnEvent.Invoke(@event);
+
                     _timeGcFinalizersStart = null;
                 }
 
@@ -139,7 +153,8 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
 
         public override string ToString()
         {
-            return $"{Type}, duration: {DurationInMs}";
+            var str = base.ToString();
+            return $"{str}, thread id: {OSThreadId}, duration: {DurationInMs}";
         }
     }
 
@@ -170,7 +185,8 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
 
         public override string ToString()
         {
-            return $"{Type}, duration: {DurationInMs}, index: {Index}, generation: {Generation}, reason: {Reason}";
+            var str = base.ToString();
+            return $"{str}, index: {Index}, generation: {Generation}, reason: {Reason}";
         }
 
         private static string GetGcReason(uint valueReason)
@@ -223,7 +239,8 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
 
         public override string ToString()
         {
-            return $"{Type}, duration: {DurationInMs}, index: {Index}, reason: {Reason}";
+            var str = base.ToString();
+            return $"{str}, index: {Index}, reason: {Reason}";
         }
 
         private static string GetSuspendReason(uint? suspendReason)
@@ -252,5 +269,4 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
             }
         }
     }
-
 }

@@ -12,15 +12,11 @@ public class ContentionEventsHandler : AbstractEventsHandler<ContentionEventsHan
     protected override Action<ContentionEvent> OnEvent { get; }
 
     private readonly Dictionary<Guid, DateTime> _contentionStarts = new ();
-    private HashSet<EventType> _eventTypes;
-    private readonly long _minimumDurationInMs;
 
     public ContentionEventsHandler(Action<ContentionEvent> onEvent, HashSet<EventType> eventTypes = null, long minimumDurationInMs = 0)
     {
         Update(eventTypes, minimumDurationInMs);
         OnEvent = onEvent;
-        _eventTypes = eventTypes;
-        _minimumDurationInMs = minimumDurationInMs;
     }
 
     public override bool HandleEvent(EventWrittenEventArgs eventData)
@@ -28,16 +24,16 @@ public class ContentionEventsHandler : AbstractEventsHandler<ContentionEventsHan
         switch (eventData.EventName)
         {
             case "ContentionStart":
-                if (_eventTypes.Contains(EventType.Contention))
+                if (EventTypes.Contains(EventType.Contention))
                     _contentionStarts[eventData.ActivityId] = DateTime.UtcNow;
                 return true;
 
             case "ContentionStop":
-                if (_eventTypes.Contains(EventType.Contention) &&
+                if (EventTypes.Contains(EventType.Contention) &&
                     _contentionStarts.TryGetValue(eventData.ActivityId, out var startTime))
                 {
                     var duration = (double)eventData.Payload[2] / 1_000_000.0;
-                    if (duration >= _minimumDurationInMs)
+                    if (duration >= MinimumDurationInMs)
                         OnEvent.Invoke(new ContentionEvent(startTime, duration));
 
                     _contentionStarts.Remove(eventData.ActivityId);
@@ -69,6 +65,12 @@ public class ContentionEventsHandler : AbstractEventsHandler<ContentionEventsHan
             json[nameof(DurationInMs)] = DurationInMs;
 
             return json;
+        }
+
+        public override string ToString()
+        {
+            var str = base.ToString();
+            return $"{str}, start time: {StartTime}, duration: {DurationInMs}";
         }
     }
 }
