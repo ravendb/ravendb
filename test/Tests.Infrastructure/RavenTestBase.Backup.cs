@@ -605,7 +605,7 @@ namespace FastTests
                     var database = await _parent.GetDatabase(databaseName);
                     var operation = database.Operations.GetOperation(backupOpId);
                     var jsonOperation = context.ReadObject(operation.ToJson(), "backup operation"); 
-                    Assert.True(false, $"Expected 3 but found {files.Length}.\n{string.Join("\n", files)}\n{jsonOperation}");
+                    Assert.Fail($"Expected {count} backup files but found {files.Length}.\n{string.Join("\n", files)}\n{jsonOperation}");
                 }
 
                 return files;
