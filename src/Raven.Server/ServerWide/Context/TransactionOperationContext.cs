@@ -254,13 +254,7 @@ namespace Raven.Server.ServerWide.Context
         {
             base.Renew();
 
-            if (_allocatedChangeVectors == null)
-            {
-                if (ChangeVector.PerCoreChangeVectors.TryPull(out _allocatedChangeVectors) == false)
-                    _allocatedChangeVectors = new FastList<ChangeVector>(256);
-
-                _numberOfAllocatedChangeVectors = 0;
-            }
+            _numberOfAllocatedChangeVectors = 0;
         }
 
         protected internal override void Reset(bool forceResetLongLivedAllocator = false)
@@ -271,15 +265,7 @@ namespace Raven.Server.ServerWide.Context
 
             Allocator.Reset();
 
-            if (_allocatedChangeVectors != null)
-            {
-                if (ChangeVector.PerCoreChangeVectors.TryPush(_allocatedChangeVectors) == false)
-                {
-                    // GC will take care of this
-                }
-
-                _allocatedChangeVectors = null;
-            }
+            _numberOfAllocatedChangeVectors = 0;
         }
 
         public ChangeVector GetChangeVector(string changeVector) => GetChangeVector(changeVector, throwOnRecursion: false);
