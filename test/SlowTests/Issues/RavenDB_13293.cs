@@ -59,7 +59,7 @@ namespace SlowTests.Issues
                 }
                 await WaitForDocumentInClusterAsync<User>(store.GetRequestExecutor().Topology.Nodes, "users/1-A", predicate: null, TimeSpan.FromSeconds(15));
 
-                IDatabaseChanges databaseChanges;
+                ISingleNodeDatabaseChanges databaseChanges;
                 foreach (var node in myNodesList)
                 {
                     databaseChanges = store.Changes(store.Database, node);
@@ -79,6 +79,7 @@ namespace SlowTests.Issues
                     DocumentChange documentChange;
                     Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(15)));
                 }
+
                 databaseChanges = store.Changes(store.Database, "XYZ");
                 await Assert.ThrowsAsync<RequestedNodeUnavailableException>(async () => await databaseChanges.EnsureConnectedNow());
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Raven.Client.Http;
 
 namespace Raven.Client.Documents.Changes;
@@ -12,5 +13,11 @@ internal class AggressiveCacheDatabaseChanges : DatabaseChanges
     internal override void NotifyAboutReconnection(Exception e)
     {
         NotifyAboutError(e);
+    }
+
+    public async Task<AggressiveCacheDatabaseChanges> EnsureConnectedNow()
+    {
+        var changes = await EnsureConnectedNowAsync().ConfigureAwait(false);
+        return changes as AggressiveCacheDatabaseChanges;
     }
 }
