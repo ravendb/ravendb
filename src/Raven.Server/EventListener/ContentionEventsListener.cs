@@ -5,8 +5,6 @@ namespace Raven.Server.EventListener;
 
 public class ContentionEventsListener : AbstractEventListener
 {
-    protected override DotNetEventType? EventKeywords => DotNetEventType.Contention;
-
     private readonly ContentionEventsHandler _handler;
     private List<ContentionEventsHandler.ContentionEvent> _events = new();
 
@@ -15,6 +13,7 @@ public class ContentionEventsListener : AbstractEventListener
     public ContentionEventsListener()
     {
         _handler = new ContentionEventsHandler(e => _events.Add(e));
+        EnableEvents(DotNetEventType.Contention);
     }
 
     protected override void OnEventWritten(EventWrittenEventArgs eventData)

@@ -7,13 +7,20 @@ namespace Raven.Server.EventListener;
 
 public class ContentionEventsHandler : AbstractEventsHandler<ContentionEventsHandler.ContentionEvent>
 {
+    protected override HashSet<EventType> DefaultEventTypes => EventListenerToLog.ContentionTypes;
+
     protected override Action<ContentionEvent> OnEvent { get; }
 
     private readonly Dictionary<Guid, DateTime> _contentionStarts = new ();
+    private HashSet<EventType> _eventTypes;
+    private readonly long _minimumDurationInMs;
 
-    public ContentionEventsHandler(Action<ContentionEvent> onEvent)
+    public ContentionEventsHandler(Action<ContentionEvent> onEvent, HashSet<EventType> eventTypes = null, long minimumDurationInMs = 0)
     {
+        Update(eventTypes, minimumDurationInMs);
         OnEvent = onEvent;
+        _eventTypes = eventTypes;
+        _minimumDurationInMs = minimumDurationInMs;
     }
 
     public override bool HandleEvent(EventWrittenEventArgs eventData)
@@ -21,13 +28,18 @@ public class ContentionEventsHandler : AbstractEventsHandler<ContentionEventsHan
         switch (eventData.EventName)
         {
             case "ContentionStart":
-                _contentionStarts[eventData.ActivityId] = DateTime.UtcNow;
+                if (_eventTypes.Contains(EventType.Contention))
+                    _contentionStarts[eventData.ActivityId] = DateTime.UtcNow;
                 return true;
 
             case "ContentionStop":
-                if (_contentionStarts.TryGetValue(eventData.ActivityId, out var startTime))
+                if (_eventTypes.Contains(EventType.Contention) &&
+                    _contentionStarts.TryGetValue(eventData.ActivityId, out var startTime))
                 {
-                    OnEvent.Invoke(new ContentionEvent(startTime, (double)eventData.Payload[2] / 1_000_000.0));
+                    var duration = (double)eventData.Payload[2] / 1_000_000.0;
+                    if (duration >= _minimumDurationInMs)
+                        OnEvent.Invoke(new ContentionEvent(startTime, duration));
+
                     _contentionStarts.Remove(eventData.ActivityId);
                 }
 

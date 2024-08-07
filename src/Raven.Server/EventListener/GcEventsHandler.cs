@@ -2,19 +2,21 @@
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using Sparrow.Json.Parsing;
-using static Raven.Server.EventListener.GcEventsHandler;
 
 namespace Raven.Server.EventListener;
 
-public class GcEventsHandler : AbstractEventsHandler<GCEventBase>
+public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase>
 {
     private Dictionary<long, (DateTime DateTime, uint Generation, uint Reason)> _timeGcStartByIndex = new();
     private EventWrittenEventArgs _suspendData;
     private DateTime? _timeGcRestartStart;
     private DateTime? _timeGcFinalizersStart;
 
-    public GcEventsHandler(Action<GCEventBase> onEvent)
+    protected override HashSet<EventType> DefaultEventTypes => EventListenerToLog.GcEvents;
+
+    public GcEventsHandler(Action<GCEventBase> onEvent, HashSet<EventType> eventTypes = null, long minimumDurationInMs =0)
     {
+        Update(eventTypes, minimumDurationInMs);
         OnEvent = onEvent;
     }
 
@@ -25,25 +27,34 @@ public class GcEventsHandler : AbstractEventsHandler<GCEventBase>
         switch (eventData.EventName)
         {
             case "GCStart_V2":
-                var startIndex = long.Parse(eventData.Payload[0].ToString());
-                var generation = (uint)eventData.Payload[1];
-                var reason = (uint)eventData.Payload[2];
-                _timeGcStartByIndex[startIndex] = (eventData.TimeStamp, generation, reason);
+                if (EventTypes.Contains(EventType.GC))
+                {
+                    var startIndex = long.Parse(eventData.Payload[0].ToString());
+                    var generation = (uint)eventData.Payload[1];
+                    var reason = (uint)eventData.Payload[2];
+                    _timeGcStartByIndex[startIndex] = (eventData.TimeStamp, generation, reason);
+                }
+                
                 return true;
 
             case "GCEnd_V1":
-                var endIndex = long.Parse(eventData.Payload[0].ToString());
-
-                if (_timeGcStartByIndex.TryGetValue(endIndex, out var tuple))
+                if (EventTypes.Contains(EventType.GC))
                 {
-                    OnEvent.Invoke(new GCEvent(tuple.DateTime, eventData, endIndex, tuple.Generation, tuple.Reason));
-                    _timeGcStartByIndex.Remove(endIndex);
+                    var endIndex = long.Parse(eventData.Payload[0].ToString());
+
+                    if (_timeGcStartByIndex.TryGetValue(endIndex, out var tuple))
+                    {
+                        OnEvent.Invoke(new GCEvent(tuple.DateTime, eventData, endIndex, tuple.Generation, tuple.Reason));
+                        _timeGcStartByIndex.Remove(endIndex);
+                    }
                 }
                 
                 return true;
 
             case "GCSuspendEEBegin_V1":
-                _suspendData = eventData;
+                if (EventTypes.Contains(EventType.GCSuspend))
+                    _suspendData = eventData;
+
                 return true;
 
             case "GCSuspendEEEnd_V1":
