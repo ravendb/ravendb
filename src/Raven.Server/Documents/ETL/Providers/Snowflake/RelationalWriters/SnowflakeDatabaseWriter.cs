@@ -22,10 +22,9 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
     public SnowflakeDatabaseWriter(DocumentDatabase database, SnowflakeEtlConfiguration configuration, RelationalDatabaseEtlMetricsCountersManager sqlMetrics, EtlProcessStatistics statistics) : base(database, configuration, sqlMetrics, statistics)
     {
         _snowflakeEtlConfiguration = configuration;
-        ParametrizeDeletes = configuration.ParameterizeDeletes; // todo: remove
     }
 
-    public override bool ParametrizeDeletes { get; }
+    public override bool ParametrizeDeletes => false;
 
     protected override string GetConnectionString(EtlConfiguration<SnowflakeConnectionString> configuration)
     {

@@ -28,6 +28,6 @@ public sealed class SnowflakeEtl(Transformation transformation, SnowflakeEtlConf
 
     protected override RelationalDatabaseWriterSimulator GetWriterSimulator()
     {
-        return new RelationalDatabaseWriterSimulator(GetRelationalDatabaseWriterInstance(), Configuration.ParameterizeDeletes);
+        return new RelationalDatabaseWriterSimulator(GetRelationalDatabaseWriterInstance());
     }
 }

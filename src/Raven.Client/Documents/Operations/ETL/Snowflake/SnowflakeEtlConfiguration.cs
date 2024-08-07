@@ -15,12 +15,6 @@ public sealed class SnowflakeEtlConfiguration : EtlConfiguration<SnowflakeConnec
         SnowflakeTables = new List<SnowflakeEtlTable>();
     }
 
-    public bool ParameterizeDeletes { get; set; } = false; // todo: elaborate on this class - think what's needed, check if set to false is ok
-
-    public bool ForceQueryRecompile { get; set; } //todo: its' for some provider specific - most likely to be removed 
-
-    public bool QuoteTables { get; set; } = false; //todo: check if needed 
-
     public int? CommandTimeout { get; set; }
 
     public List<SnowflakeEtlTable> SnowflakeTables { get; set; }
@@ -43,10 +37,7 @@ public sealed class SnowflakeEtlConfiguration : EtlConfiguration<SnowflakeConnec
         return _name ??= Connection?.GetDestination();
     }
 
-    public override bool UsingEncryptedCommunicationChannel()
-    {
-        return true; // todo: Snowflake is using https by default?
-    }
+    public override bool UsingEncryptedCommunicationChannel() => true;
 
     public override string GetDefaultTaskName()
     {
@@ -57,9 +48,6 @@ public sealed class SnowflakeEtlConfiguration : EtlConfiguration<SnowflakeConnec
     {
         var result = base.ToJson();
 
-        result[nameof(ParameterizeDeletes)] = ParameterizeDeletes;
-        result[nameof(ForceQueryRecompile)] = ForceQueryRecompile;
-        result[nameof(QuoteTables)] = QuoteTables;
         result[nameof(CommandTimeout)] = CommandTimeout;
         result[nameof(SnowflakeTables)] = new DynamicJsonArray(SnowflakeTables.Select(x => x.ToJson()));
 
