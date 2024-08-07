@@ -782,7 +782,7 @@ namespace Tests.Infrastructure
             bool? shouldRunInMemory = null,
             int? leaderIndex = null,
             bool useSsl = false,
-            IDictionary<string, string> customSettings = null,
+            IDictionary<string, string> commonCustomSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false,
             bool useReservedPorts = false,
@@ -806,12 +806,16 @@ namespace Tests.Infrastructure
 
             for (var i = 0; i < numberOfNodes; i++)
             {
+                IDictionary<string, string> customSettings;
                 if (customSettingsList == null)
                 {
-                    customSettings ??= new Dictionary<string, string>(DefaultClusterSettings)
+                    customSettings = new Dictionary<string, string>(commonCustomSettings ?? DefaultClusterSettings);
+                    
+                    var electionKey = RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout);
+                    if (customSettings.ContainsKey(electionKey) == false)
                     {
-                        [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = _electionTimeoutInMs.ToString(),
-                    };
+                        customSettings[electionKey] = _electionTimeoutInMs.ToString();
+                    }
                 }
                 else
                 {
