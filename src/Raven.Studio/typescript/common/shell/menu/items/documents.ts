@@ -47,7 +47,10 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: "icon-documents-query",
             alias: true,
-            dynamicHash: appUrls.query("")
+            dynamicHash: appUrls.query(""),
+            search: {
+                isExcluded: true, // it is also defined in indexes menu
+            }
         }),
         new leafMenuItem({
             route: "databases/edit",

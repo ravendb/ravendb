@@ -217,12 +217,14 @@ class shell extends viewModelBase {
 
         this.upgradeModalView = ko.pureComputed(() => ({ component: UpgradeModal }))
         
-        this.studioSearchWithDatabaseSwitcherView = ko.pureComputed(() => ({
-            component: StudioSearchWithDatabaseSwitcher,
-            props: {
-                mainMenu: this.mainMenu
-            }
-        }));
+        this.studioSearchWithDatabaseSwitcherView = ko.computed(() => {
+            return {
+                component: StudioSearchWithDatabaseSwitcher,
+                props: {
+                    menuItems: this.mainMenu.items(),
+                },
+            };
+        });
 
         this.serverEnvironmentClass = ko.pureComputed(() => {
             const env = this.serverEnvironment();

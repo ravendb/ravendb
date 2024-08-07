@@ -58,8 +58,7 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync(); // Fail: throws ConcurrencyException
             }
 
-
-            using (var session = store.OpenAsyncSession())
+            using (var session = followerStore.OpenAsyncSession())
             {
                 var u1 = await session.LoadAsync<User>(user1.Id);
                 Assert.NotNull(u1);

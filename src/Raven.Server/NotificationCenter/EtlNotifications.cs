@@ -73,16 +73,19 @@ namespace Raven.Server.NotificationCenter
 
             using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
-                details = GetDetails<T>(ntv);
+                using (ntv)
+                {
+                    details = GetDetails<T>(ntv);
 
-                return AlertRaised.Create(
-                    _notificationCenter.Database,
-                    $"{processTag}: '{processName}'",
-                    message,
-                    etlAlertType,
-                    NotificationSeverity.Warning,
-                    key: key,
-                    details: details);
+                    return AlertRaised.Create(
+                        _notificationCenter.Database,
+                        $"{processTag}: '{processName}'",
+                        message,
+                        etlAlertType,
+                        NotificationSeverity.Warning,
+                        key: key,
+                        details: details);
+                }
             }
         }
 
@@ -116,16 +119,19 @@ namespace Raven.Server.NotificationCenter
 
             using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
-                details = GetDetails<T>(ntv);
+                using (ntv)
+                {
+                    details = GetDetails<T>(ntv);
 
-                return PerformanceHint.Create(
-                    _notificationCenter.Database,
-                    $"{processTag}: '{processName}'",
-                    message,
-                    etlHintType,
-                    NotificationSeverity.Warning,
-                    source: key,
-                    details: details);
+                    return PerformanceHint.Create(
+                        _notificationCenter.Database,
+                        $"{processTag}: '{processName}'",
+                        message,
+                        etlHintType,
+                        NotificationSeverity.Warning,
+                        source: key,
+                        details: details);
+                }
             }
         }
 

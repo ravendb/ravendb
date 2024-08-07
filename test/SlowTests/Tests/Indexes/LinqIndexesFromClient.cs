@@ -44,7 +44,7 @@ namespace SlowTests.Tests.Indexes
             }.ToIndexDefinition(DocumentConventions.Default);
 
             indexDefinition.Name = "Index1";
-            var index = (StaticIndexBase)IndexCompiler.Compile(indexDefinition);
+            var index = (StaticIndexBase)IndexCompiler.Compile(indexDefinition, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
             var map = index.Maps.Values.First().First().Value.First();
 
@@ -108,7 +108,7 @@ namespace SlowTests.Tests.Indexes
             }.ToIndexDefinition(DocumentConventions.Default);
 
             indexDefinition.Name = "Index1";
-            IndexCompiler.Compile(indexDefinition);
+            IndexCompiler.Compile(indexDefinition, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
         }
 
         private class Person

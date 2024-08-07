@@ -651,10 +651,7 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisionsMetadata[3].GetString(Constants.Documents.Metadata.Flags));
                 }
 
-                await store1.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
-                {
-                    DocumentIds = new[] { id, "users/not/exists" }
-                }));
+                await store1.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { id, "users/not/exists" }));
 
                 WaitForMarker(store1, store2, $"marker/{Guid.NewGuid()}${id}");
 

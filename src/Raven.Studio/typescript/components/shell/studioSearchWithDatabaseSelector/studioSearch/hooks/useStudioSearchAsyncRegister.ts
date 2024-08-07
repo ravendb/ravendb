@@ -1,4 +1,3 @@
-import { OmniSearch } from "common/omniSearch/omniSearch";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -13,18 +12,17 @@ import { useAppSelector } from "components/store";
 import assertUnreachable from "components/utils/assertUnreachable";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAsync } from "react-async-hook";
 
 interface UseStudioSearchAsyncRegisterProps {
-    omniSearch: OmniSearch<StudioSearchItem, StudioSearchItemType>;
+    register: (type: StudioSearchItemType, newItems: StudioSearchItem[]) => void;
     goToUrl: (url: string, newTab: boolean) => void;
-    handleOmniSearch: () => void;
     searchQuery: string;
 }
 
 export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegisterProps) {
-    const { omniSearch, goToUrl, handleOmniSearch, searchQuery } = props;
+    const { register, goToUrl, searchQuery } = props;
 
     const activeDatabase = useAppSelector(databaseSelectors.activeDatabase);
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -161,10 +159,10 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
                     onSelected: (e) => goToReplication(x.Mode, x.TaskId, e),
                 }));
 
-                omniSearch.register("task", [...ongoingTasks, ...pullReplications]);
+                register("task", [...ongoingTasks, ...pullReplications]);
             },
             onError() {
-                omniSearch.register("task", []);
+                register("task", []);
             },
         }
     );
@@ -180,7 +178,7 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
         [activeDatabaseName, location],
         {
             onSuccess(results) {
-                omniSearch.register(
+                register(
                     "index",
                     results.map((x) => ({
                         type: "index",
@@ -191,13 +189,15 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
                 );
             },
             onError() {
-                omniSearch.register("index", []);
+                register("index", []);
             },
         }
     );
 
+    const [lastDocumentsCount, setLastDocumentsCount] = useState(0);
+
     // Register documents
-    const asyncGetDocuments = useAsyncDebounce(
+    useAsyncDebounce(
         async (searchQuery, activeDatabaseName) => {
             if (!activeDatabaseName || !searchQuery) {
                 return [];
@@ -210,13 +210,15 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
         {
             onSuccess: (results) => {
                 // When previous and current results are empty do nothing
-                if (results?.length === 0 && asyncGetDocuments.result?.length === 0) {
+                if (results?.length === 0 && lastDocumentsCount === 0) {
                     return;
                 }
 
+                setLastDocumentsCount(results?.length ?? 0);
+
                 const mappedResults = results.map((x) => x["@metadata"]["@id"]);
 
-                omniSearch.register(
+                register(
                     "document",
                     mappedResults.map((result) => ({
                         type: "document",
@@ -226,10 +228,9 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
                         subText: null,
                     }))
                 );
-                handleOmniSearch();
             },
             onError() {
-                omniSearch.register("document", []);
+                register("document", []);
             },
         }
     );

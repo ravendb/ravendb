@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -54,10 +55,7 @@ namespace SlowTests.Sharding.Issues
                     }
                 }
 
-                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
-                {
-                    DocumentIds = new[] { id }
-                }));
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(id));
 
             
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));

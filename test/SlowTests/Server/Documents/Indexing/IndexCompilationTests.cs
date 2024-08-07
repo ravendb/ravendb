@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
 using Xunit.Abstractions;
@@ -26,7 +27,7 @@ namespace SlowTests.Server.Documents.Indexing
                             Total = order.Lines.Sum(l => l.PricePerUnit)
                     }"
                 }
-            });
+            }, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
         }
     }
 }

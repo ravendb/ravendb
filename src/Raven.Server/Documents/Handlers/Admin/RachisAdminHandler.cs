@@ -156,20 +156,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/log", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetLogs()
         {
-            var start = GetStart();
-            var take = GetPageSize(defaultPageSize: 1024);
-            var detailed = GetBoolValueQueryString("detailed", required: false) ?? false;
-            var debugView = ServerStore.Engine.DebugView();
-
-            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            {
-                using (context.OpenReadTransaction())
-                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
-                {
-                    debugView.PopulateLogs(context, start, take, detailed);
-                    context.Write(writer, debugView.ToJson());
-                }
-            }
+            using (var processor = new RachisAdminHandlerProcessorForGetClusterLogs(this)) 
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/admin/debug/cluster/history-logs", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]

@@ -6,9 +6,9 @@ import { useStudioSearchKeyboardEvents } from "./useStudioSearchKeyboardEvents";
 import { useStudioSearchSyncRegister } from "./useStudioSearchSyncRegister";
 import { useStudioSearchOmniSearch } from "./useStudioSearchOmniSearch";
 import { useStudioSearchUtils } from "./useStudioSearchUtils";
-import menu from "common/shell/menu";
+import { useStudioSearchMouseEvents } from "./useStudioSearchMouseEvents";
 
-export function useStudioSearch(mainMenu: menu) {
+export function useStudioSearch(menuItems: menuItem[]) {
     const { value: isSearchDropdownOpen, setValue: setIsDropdownOpen } = useBoolean(false);
 
     const dropdownRef = useRef<any>(null);
@@ -20,7 +20,7 @@ export function useStudioSearch(mainMenu: menu) {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeItem, setActiveItem] = useState<StudioSearchResultItem>(null);
 
-    const { omniSearch, results, handleOmniSearch } = useStudioSearchOmniSearch(searchQuery);
+    const { register, results } = useStudioSearchOmniSearch(searchQuery);
 
     const refs = {
         inputRef,
@@ -29,26 +29,24 @@ export function useStudioSearch(mainMenu: menu) {
         databaseColumnRef,
     };
 
-    const { toggleDropdown, goToUrl, resetDropdown } = useStudioSearchUtils({
+    const { goToUrl, resetDropdown } = useStudioSearchUtils({
         inputRef,
-        studioSearchInputId,
         setIsDropdownOpen,
         setSearchQuery,
         setActiveItem,
     });
 
     useStudioSearchSyncRegister({
-        omniSearch,
-        mainMenu,
+        register,
+        menuItems,
         goToUrl,
         resetDropdown,
     });
 
     useStudioSearchAsyncRegister({
-        omniSearch,
+        register,
         searchQuery,
         goToUrl,
-        handleOmniSearch,
     });
 
     useStudioSearchKeyboardEvents({
@@ -59,6 +57,12 @@ export function useStudioSearch(mainMenu: menu) {
         setIsDropdownOpen,
         setActiveItem,
         setSearchQuery,
+    });
+
+    useStudioSearchMouseEvents({
+        inputRef,
+        studioSearchBackdropId,
+        setIsDropdownOpen,
     });
 
     const matchStatus = {
@@ -72,7 +76,6 @@ export function useStudioSearch(mainMenu: menu) {
     return {
         refs,
         isSearchDropdownOpen,
-        toggleDropdown,
         searchQuery,
         setSearchQuery,
         matchStatus,
@@ -82,3 +85,4 @@ export function useStudioSearch(mainMenu: menu) {
 }
 
 export const studioSearchInputId = "studio-search-input";
+export const studioSearchBackdropId = "studio-search-backdrop";

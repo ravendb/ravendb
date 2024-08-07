@@ -46,7 +46,7 @@ public sealed class ThreadsInfoNotificationSender : BackgroundWorkBase
             {
                 // serialize to avoid race conditions
                 // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
-                watcher.NotificationsQueue.Enqueue(threadsInfo.ToJson());
+                watcher.Enqueue(threadsInfo.ToJson());
             }
         }
         finally

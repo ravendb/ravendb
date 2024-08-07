@@ -10,6 +10,8 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Changes;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -289,10 +291,9 @@ namespace SlowTests.Server.Documents.Notifications
             {
                 var database = await GetDatabase(Server, store.Database);
                 var count = 0;
-                database.ForTestingPurposesOnly().OnNextMessageChangesApi = (djv, webSocket) =>
+                database.ForTestingPurposesOnly().OnNextMessageChangesApi = (value, webSocket) =>
                 {
-                    var nameValue = djv.Properties.FirstOrDefault(x => x.Name == "Type");
-                    if (nameValue.Name == null || (string)nameValue.Value != nameof(AggressiveCacheChange))
+                    if (value != ChangesClientConnection.AggressiveCachingPulseValue.ValueToSend)
                         return;
 
                     if (++count == 1)
