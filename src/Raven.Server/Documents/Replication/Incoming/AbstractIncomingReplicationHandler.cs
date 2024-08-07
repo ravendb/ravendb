@@ -452,6 +452,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 SourceDatabaseId = ConnectionInfo.SourceDatabaseId,
                 SupportedFeatures = SupportedFeatures,
+                IncomingHandler = this,
                 Logger = Logger
             })
             {
@@ -523,9 +524,13 @@ namespace Raven.Server.Documents.Replication.Incoming
                         {
                             Logger.Info("Replication batch contained missing attachments will request the batch to be re-sent with those attachments.", mae);
                         }
+                        else if (_cts.IsCancellationRequested || e.ExtractSingleInnerException() is ObjectDisposedException)
+                        {
+                            Logger.Info($"Shutting down the replication connection {FromToString}, likely because the sender has closed the connection.");
+                        }
                         else
                         {
-                            Logger.Info("Failed to receive documents replication batch. This is not supposed to happen, and is likely a bug.", e);
+                            Logger.Info("Failed to receive documents replication batch.", e);
                         }
                     }
                     throw;
@@ -686,6 +691,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             internal ReplicationBatchItem[] ReplicatedItems { get; set; }
 
             internal Dictionary<Slice, AttachmentReplicationItem> ReplicatedAttachmentStreams { get; set; }
+
+            internal IAbstractIncomingReplicationHandler IncomingHandler { get; set; }
 
             public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 

@@ -87,8 +87,11 @@ public abstract class AbstractNotificationCenter : NotificationsBase
 
             using (Storage.Read(notification.Id, out NotificationTableValue existing))
             {
-                if (existing?.PostponedUntil > SystemTime.UtcNow)
-                    return;
+                using (existing)
+                {
+                    if (existing?.PostponedUntil > SystemTime.UtcNow)
+                        return;
+                }
             }
 
             foreach (var watcher in Watchers)
@@ -100,7 +103,7 @@ public abstract class AbstractNotificationCenter : NotificationsBase
 
                 // serialize to avoid race conditions
                 // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
-                watcher.NotificationsQueue.Enqueue(notification.ToJson());
+                watcher.Enqueue(notification.ToJson());
             }
         }
         catch (ObjectDisposedException)
@@ -121,19 +124,42 @@ public abstract class AbstractNotificationCenter : NotificationsBase
         if (postponed)
             return scope;
 
-        var now = SystemTime.UtcNow;
-
-        actions = actions.Where(x => x.PostponedUntil == null || x.PostponedUntil <= now);
+        actions = Filter(actions);
 
         return scope;
+
+        static IEnumerable<NotificationTableValue> Filter(IEnumerable<NotificationTableValue> actions)
+        {
+            var now = SystemTime.UtcNow;
+
+            foreach (var ntv in actions)
+            {
+                if (ntv.PostponedUntil == null)
+                {
+                    yield return ntv;
+                    continue;
+                }
+
+                if (ntv.PostponedUntil <= now)
+                {
+                    yield return ntv;
+                    continue;
+                }
+
+                ntv.Dispose();
+            }
+        }
     }
 
     public string GetStoredMessage(string id)
     {
         using (Storage.Read(id, out var value))
         {
-            value.Json.TryGet(nameof(Notification.Message), out string message);
-            return message;
+            using (value)
+            {
+                value.Json.TryGet(nameof(Notification.Message), out string message);
+                return message;
+            }
         }
     }
 

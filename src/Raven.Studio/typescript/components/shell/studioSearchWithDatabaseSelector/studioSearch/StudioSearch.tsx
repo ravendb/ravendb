@@ -1,5 +1,5 @@
 import "./StudioSearch.scss";
-import { studioSearchInputId, useStudioSearch } from "./hooks/useStudioSearch";
+import { studioSearchInputId, useStudioSearch, studioSearchBackdropId } from "./hooks/useStudioSearch";
 import React from "react";
 import { Dropdown, DropdownItem, DropdownMenu, Input, Row, DropdownToggle } from "reactstrap";
 import classNames from "classnames";
@@ -7,25 +7,16 @@ import StudioSearchLegend from "./bits/StudioSearchLegend";
 import StudioSearchDatabaseResults from "./bits/StudioSearchDatabaseResults";
 import StudioSearchSwitchToDatabaseResults from "./bits/StudioSearchSwitchToDatabaseResults";
 import StudioSearchServerResults from "./bits/StudioSearchServerResults";
-import menu from "common/shell/menu";
 
-export default function StudioSearch(props: { mainMenu: menu }) {
-    const {
-        refs,
-        isSearchDropdownOpen,
-        toggleDropdown,
-        searchQuery,
-        setSearchQuery,
-        matchStatus,
-        results,
-        activeItem,
-    } = useStudioSearch(props.mainMenu);
+export default function StudioSearch(props: { menuItems?: menuItem[] }) {
+    const { refs, isSearchDropdownOpen, searchQuery, setSearchQuery, matchStatus, results, activeItem } =
+        useStudioSearch(props.menuItems);
 
     return (
         <>
             <Dropdown
                 isOpen={isSearchDropdownOpen}
-                toggle={toggleDropdown}
+                toggle={() => {}} // handled manually in useStudioSearchMouseEvents() to avoid button click behavior
                 ref={refs.dropdownRef}
                 className="studio-search"
             >
@@ -74,7 +65,9 @@ export default function StudioSearch(props: { mainMenu: menu }) {
                     </Row>
                 </DropdownMenu>
             </Dropdown>
-            {isSearchDropdownOpen && <div className="modal-backdrop fade show" style={{ zIndex: 1 }} />}
+            {isSearchDropdownOpen && (
+                <div id={studioSearchBackdropId} className="modal-backdrop fade show" style={{ zIndex: 1 }} />
+            )}
         </>
     );
 }

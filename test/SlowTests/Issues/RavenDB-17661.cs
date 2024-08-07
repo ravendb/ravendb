@@ -1,6 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Revisions;
 using Sparrow.Json;
 using Xunit;
@@ -33,10 +35,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
-                {
-                    DocumentIds = new[] { "non-existing-id" }
-                }));
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { "non-existing-id" }));
             }
         }
     }

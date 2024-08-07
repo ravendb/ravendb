@@ -79,6 +79,11 @@ namespace Raven.Server.Smuggler.Documents
                 AddWarning(DatabaseRecordItemType.QueueEtls);
             }
 
+            if (databaseRecord.QueueSinks.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.QueueSinks))
+            {
+                AddWarning(DatabaseRecordItemType.QueueSinks);
+            }
+
             //warn and remove mentor nodes
             foreach (var externalReplication in databaseRecord.ExternalReplications)
             {

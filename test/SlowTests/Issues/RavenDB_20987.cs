@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -52,10 +53,7 @@ namespace SlowTests.Issues
                 await SetupReplicationAsync(store1, store2);
                 await EnsureReplicatingAsync(store1, store2);
 
-                await store1.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
-                {
-                    DocumentIds = new[] { id }
-                }));
+                await store1.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { id }));
 
                 await EnsureReplicatingAsync(store1, store2);
 
@@ -85,10 +83,7 @@ namespace SlowTests.Issues
                 await SetupReplicationAsync(store1, store2);
                 await EnsureReplicatingAsync(store1, store2);
 
-                await store1.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
-                {
-                    DocumentIds = new[] { id }
-                }));
+                await store1.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { id }));
 
                 await EnsureReplicatingAsync(store1, store2);
 
@@ -123,10 +118,7 @@ namespace SlowTests.Issues
                         await session.SaveChangesAsync();
                     }
 
-                    await store1.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
-                    {
-                        DocumentIds = new[] { id }
-                    }));
+                    await store1.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { id }));
 
                     await CheckData(store1, options.DatabaseMode, id, expectedRevisionTombstones: 2);
 
@@ -175,10 +167,7 @@ namespace SlowTests.Issues
                         await session.SaveChangesAsync();
                     }
 
-                    await store1.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
-                    {
-                        DocumentIds = new[] { id }
-                    }));
+                    await store1.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { id }));
 
                     await CheckData(store1, options.DatabaseMode, id, expectedRevisionTombstones: 2, expectedAttachmentTombstones: 1);
 

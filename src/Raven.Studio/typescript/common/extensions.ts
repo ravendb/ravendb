@@ -230,15 +230,20 @@ class extensions {
             update: function (element, valueAccessor) {
                 const options = ko.unwrap(valueAccessor());
 
+                const root: Root = $(element).data("root");
+                if (!root) {
+                    const newRoot = createRoot(element);
+                    $(element).data("root", newRoot);
+                }
+
                 if (options && options.component) {
-                    const root = createRoot(element);
+                    const root = $(element).data("root");
                     const component = createElement(options.component, options.props);
                     const dirtyFlagWrapper = createElement(DirtyFlagProvider, options.dirtyFlag, component);
                     const reduxWrapper = createElement(ReduxProvider, { store: store } as ReduxProviderProps, dirtyFlagWrapper);
                     const confirmDialogProvider = createElement(ConfirmDialogProvider, null, reduxWrapper);
 
                     root.render(confirmDialogProvider);
-                    $(element).data("root", root);
                 }
             }
         }

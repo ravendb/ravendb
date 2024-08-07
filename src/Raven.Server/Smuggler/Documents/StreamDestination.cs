@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
@@ -352,6 +353,22 @@ namespace Raven.Server.Smuggler.Documents
                     WriteIndexesHistory(databaseRecord.IndexesHistory);
                 }
 
+                if (databaseRecord.Studio != null)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.Studio));
+
+                    WriteStudioConfiguration(databaseRecord.Studio);
+                }
+
+                if (databaseRecord.RevisionsForConflicts != null)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.RevisionsForConflicts));
+
+                    WriteRevisionsForConflictsConfiguration(databaseRecord.RevisionsForConflicts);
+                }
+
                 if (databaseRecord.IsSharded)
                 {
                     _writer.WriteComma();
@@ -462,6 +479,13 @@ namespace Raven.Server.Smuggler.Documents
                             WriteQueueEtls(databaseRecord.QueueEtls);
                         }
 
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.QueueSinks))
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.QueueSinks));
+                            WriteQueueSinks(databaseRecord.QueueSinks);
+                        }
+
                         if (databaseRecord.Integrations != null)
                         {
                             _writer.WriteComma();
@@ -476,22 +500,6 @@ namespace Raven.Server.Smuggler.Documents
                             }
 
                             _writer.WriteEndObject();
-                        }
-
-                        if (databaseRecord.Studio != null)
-                        {
-                            _writer.WriteComma();
-                            _writer.WritePropertyName(nameof(databaseRecord.Studio));
-
-                            WriteStudioConfiguration(databaseRecord.Studio);
-                        }
-
-                        if (databaseRecord.RevisionsForConflicts != null)
-                        {
-                            _writer.WriteComma();
-                            _writer.WritePropertyName(nameof(databaseRecord.RevisionsForConflicts));
-
-                            WriteRevisionsForConflictsConfiguration(databaseRecord.RevisionsForConflicts);
                         }
 
                         break;
@@ -786,6 +794,27 @@ namespace Raven.Server.Smuggler.Documents
                         _writer.WriteComma();
                     first = false;
                     _context.Write(_writer, etl.ToJson());
+                }
+
+                _writer.WriteEndArray();
+            }
+
+            private void WriteQueueSinks(List<QueueSinkConfiguration> queueSinkConfiguration)
+            {
+                if (queueSinkConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _writer.WriteStartArray();
+
+                var first = true;
+                foreach (var configuration in queueSinkConfiguration)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+                    _context.Write(_writer, configuration.ToJson());
                 }
 
                 _writer.WriteEndArray();
@@ -1531,7 +1560,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (stream == null)
                             {
                                 progress.Attachments.ErroredCount++;
-                                throw new ArgumentException($"Document {document.Id} seems to have a attachment hash: {hash}, but no correlating hash was found in the storage.");
+                                throw new ArgumentException($"Document {document.Id} seems to have an attachment hash: {hash}, but no correlating hash was found in the storage.");
                             }
                             await WriteAttachmentStreamAsync(hash, stream, tag);
                         }

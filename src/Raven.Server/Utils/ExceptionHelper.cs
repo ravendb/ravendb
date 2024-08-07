@@ -66,8 +66,10 @@ namespace Raven.Server.Utils
             var folderPath = Path.GetDirectoryName(path); // file Absolute Path
             var driveInfo = DiskUtils.GetDiskSpaceInfo(folderPath);
             var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
+            var totalSize = driveInfo != null ? driveInfo.TotalSize.ToString() : "N/A";
+
             throw new DiskFullException($"There isn't enough space to flush the buffer in: {folderPath}. " +
-                                        $"Currently available space: {freeSpace}");
+                                        $"Currently available space: {freeSpace}/{totalSize}");
         }
     }
 }

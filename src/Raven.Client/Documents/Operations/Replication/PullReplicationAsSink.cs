@@ -34,6 +34,7 @@ namespace Raven.Client.Documents.Operations.Replication
             if (other is PullReplicationAsSink sink)
             {
                 return base.IsEqualTo(other) &&
+                       string.Equals(Url, sink.Url, StringComparison.OrdinalIgnoreCase) &&
                        Mode == sink.Mode &&
                        string.Equals(HubName, sink.HubName) &&
                        string.Equals(CertificatePassword, sink.CertificatePassword) &&

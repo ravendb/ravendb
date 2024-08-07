@@ -103,13 +103,16 @@ namespace Raven.Server.Documents
             //Read() is transactional, so this is thread-safe
             using (_notificationCenter.Storage.Read(HugeDocumentsId, out var ntv))
             {
-                if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                using (ntv)
                 {
-                    details = new HugeDocumentsDetails();
-                }
-                else
-                {
-                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<HugeDocumentsDetails>(detailsJson, HugeDocumentsId);
+                    if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                    {
+                        details = new HugeDocumentsDetails();
+                    }
+                    else
+                    {
+                        details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<HugeDocumentsDetails>(detailsJson, HugeDocumentsId);
+                    }
                 }
 
                 string message = $"We have detected that some documents have surpassed the configured threshold size ({new Size(_maxWarnSize, SizeUnit.Bytes)}). " +

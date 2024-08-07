@@ -58,6 +58,7 @@ namespace Raven.Client.Documents.Replication
         {
             External,
             PullAsSink,
+            PullAsHub,
             Internal,
             Migration
         }

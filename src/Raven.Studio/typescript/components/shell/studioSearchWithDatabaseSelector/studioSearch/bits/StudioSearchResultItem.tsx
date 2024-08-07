@@ -10,6 +10,8 @@ interface StudioSearchDropdownItemProps {
 }
 
 export default function StudioSearchDropdownItem({ item, activeItemId }: StudioSearchDropdownItemProps) {
+    const isCapitalized = item.type.includes("MenuItem");
+
     return (
         <DropdownItem
             onClick={item.onSelected}
@@ -24,12 +26,17 @@ export default function StudioSearchDropdownItem({ item, activeItemId }: StudioS
                         <StudioSearchFuzzyHighlightedText
                             text={item.innerActionText}
                             indices={item.innerActionIndices}
+                            isCapitalized={isCapitalized}
                         />
                         <br />
                         <span className="studio-search__route">{item.route}</span>
                     </>
                 ) : (
-                    <StudioSearchFuzzyHighlightedText text={item.text} indices={item.indices} />
+                    <StudioSearchFuzzyHighlightedText
+                        text={item.text}
+                        indices={item.indices}
+                        isCapitalized={isCapitalized}
+                    />
                 )}
             </div>
         </DropdownItem>

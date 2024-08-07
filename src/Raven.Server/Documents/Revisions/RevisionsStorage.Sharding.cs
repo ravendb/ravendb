@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
@@ -31,33 +32,6 @@ namespace Raven.Server.Documents.Revisions
         {
             ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)RevisionsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
         }
-
-        public void ForceDeleteAllRevisionsFor(DocumentsOperationContext context, string id)
-        {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
-            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
-            {
-                var collectionName = GetCollectionFor(context, prefixSlice);
-                if (collectionName == null)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Tried to delete all revisions for '{id}' but no revisions found.");
-                    return;
-                }
-
-                var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-                var newEtag = _documentsStorage.GenerateNextEtag();
-                var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-
-                var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
-                var result = new DeleteOldRevisionsResult();
-                var revisionsToDelete = GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate: null, skipForceCreated: false, result);
-                var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
-                var deleted = DeleteRevisionsInternal(context, table, lowerId, collectionName, changeVector, lastModifiedTicks, revisionsPreviousCount, revisionsToDelete, result, tombstoneFlags: DocumentFlags.FromResharding | DocumentFlags.Artificial);
-                IncrementCountOfRevisions(context, prefixSlice, -deleted);
-            }
-        }
-
 
     }
 }

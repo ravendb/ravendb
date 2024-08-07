@@ -55,6 +55,13 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             css: 'icon-manage-ongoing-tasks',
             dynamicHash: appUrls.ongoingTasksUrl,
             search: {
+                alternativeTitles:[
+                    "ETL",
+                    "Hub",
+                    "Sink",
+                    "Subscription",
+                    "Replication",
+                ],
                 innerActions: [
                     { name: "Enable Database Task" },
                     { name: "Disable Database Task" },
