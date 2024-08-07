@@ -265,7 +265,7 @@ namespace Raven.Database.Indexing
 
                             reduceParams.Take = context.CurrentNumberOfItemsToReduceInSingleBatch;
 
-                            int size = 0;                  
+                            long size = 0;                  
           
                             IList<MappedResultInfo> persistedResults;
                             var reduceKeys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
@@ -454,7 +454,7 @@ namespace Raven.Database.Indexing
 
                             var getItemsToReduceDuration = new Stopwatch();
 
-                            int scheduledItemsSum = 0;
+                            long scheduledItemsSum = 0;
                             int scheduledItemsCount = 0;
                             List<int> scheduledItemsMappedBuckets = new List<int>();
                             using (StopwatchScope.For(getItemsToReduceDuration))
