@@ -1318,30 +1318,6 @@ loadToOrders(orderData);
             }
         }
 
-        private async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
-        {
-            using (var ms = new MemoryStream())
-            {
-                WebSocketReceiveResult result;
-                do
-                {
-                    try
-                    {
-                        result = await source.ReceiveAsync(buffer, CancellationToken.None);
-                    }
-                    catch (Exception)
-                    {
-                        break;
-                    }
-                    ms.Write(buffer.Array, buffer.Offset, result.Count);
-                }
-                while (!result.EndOfMessage);
-                ms.Seek(0, SeekOrigin.Begin);
-
-                return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
-            }
-        }
-
         private static void AssertCounts(int ordersCount, int orderLineCounts, string connectionString)
         {
             using (var con = new SqlConnection())

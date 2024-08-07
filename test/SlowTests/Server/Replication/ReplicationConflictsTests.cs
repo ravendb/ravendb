@@ -324,6 +324,9 @@ namespace SlowTests.Server.Replication
                 var db2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(options.DatabaseMode == RavenDatabaseMode.Single
                     ? store2.Database
                     : await Sharding.GetShardDatabaseNameForDocAsync(store2, "foo/bar"));
+
+                await WaitAndAssertForValueAsync(() =>
+                {
                 using (db1.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx1))
                 using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx2))
                 using (ctx1.OpenReadTransaction())
@@ -331,8 +334,9 @@ namespace SlowTests.Server.Replication
                 {
                     var cv1 = DocumentsStorage.GetDatabaseChangeVector(ctx1).AsString();
                     var cv2 = DocumentsStorage.GetDatabaseChangeVector(ctx2).AsString();
-                    Assert.True(cv1.SequenceEqual(cv2));
+                        return cv1.SequenceEqual(cv2);
                 }
+                }, true);
             }
         }
 

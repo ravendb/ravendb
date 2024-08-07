@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Changes
             }
         }
 
-        private static readonly SendQueueItem AggressiveCachingPulseValue = new()
+        internal static readonly SendQueueItem AggressiveCachingPulseValue = new()
         {
             AllowSkip = true,
             ValueToSend = new AggressiveCacheChangeFactory()

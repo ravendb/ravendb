@@ -684,9 +684,10 @@ namespace Tests.Infrastructure
             IDictionary<string, string> customSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false,
+            bool useReservedPorts = false,
             [CallerMemberName] string caller = null)
         {
-            var result = await CreateRaftClusterInternalAsync(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: false, customSettings, customSettingsList, watcherCluster, caller);
+            var result = await CreateRaftClusterInternalAsync(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: false, customSettings, customSettingsList, watcherCluster, useReservedPorts, caller);
             return (result.Nodes, result.Leader);
         }
 
@@ -696,9 +697,10 @@ namespace Tests.Infrastructure
             int? leaderIndex = null,
             IDictionary<string, string> customSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
-            bool watcherCluster = false)
+            bool watcherCluster = false,
+            bool useReservedPorts = false)
         {
-            return CreateRaftClusterInternalAsync(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, customSettings, customSettingsList, watcherCluster);
+            return CreateRaftClusterInternalAsync(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, customSettings, customSettingsList, watcherCluster, useReservedPorts);
         }
 
         protected async Task<(RavenServer Leader, Dictionary<RavenServer, ProxyServer> Proxies)> CreateRaftClusterWithProxiesAsync(
@@ -782,6 +784,7 @@ namespace Tests.Infrastructure
             IDictionary<string, string> customSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false,
+            bool useReservedPorts = false,
             [CallerMemberName] string caller = null)
         {
             string[] allowedNodeTags = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
@@ -815,15 +818,21 @@ namespace Tests.Infrastructure
                 }
 
                 customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.ServerUrls), out string serverUrl);
+                var port = 0;
+                if (useReservedPorts)
+                {
+                    port = GetReservedPort();
+                }
+
                 if (useSsl)
                 {
-                    serverUrl ??= UseFiddlerUrl("https://127.0.0.1:0");
+                    serverUrl ??= UseFiddlerUrl($"https://127.0.0.1:{port}");
                     if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.SetupMode), out var setupMode) == false || setupMode != nameof(SetupMode.LetsEncrypt))
                         certificates = Certificates.SetupServerAuthentication(customSettings, serverUrl);
                 }
                 else
                 {
-                    serverUrl ??= UseFiddlerUrl("http://127.0.0.1:0");
+                    serverUrl ??= UseFiddlerUrl($"http://127.0.0.1:{port}");
                     customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl;
                 }
                 var co = new ServerCreationOptions
@@ -834,7 +843,7 @@ namespace Tests.Infrastructure
                     NodeTag = allowedNodeTags[i]
                 };
                 var server = GetNewServer(co, caller);
-                var port = Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2]);
+                port = Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2]);
                 var prefix = useSsl ? "https" : "http";
                 var ip = serverUrl.Split(':')[1].Replace("//", "");
                 serverUrl = UseFiddlerUrl($"{prefix}://{ip}:{port}");

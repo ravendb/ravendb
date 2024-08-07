@@ -2100,7 +2100,7 @@ namespace Raven.Server.Documents
 
             internal Action AfterSnapshotOfDocuments;
 
-            internal Action<DynamicJsonValue, WebSocket> OnNextMessageChangesApi;
+            internal Action<object, WebSocket> OnNextMessageChangesApi;
 
             internal bool SkipDrainAllRequests = false;
 

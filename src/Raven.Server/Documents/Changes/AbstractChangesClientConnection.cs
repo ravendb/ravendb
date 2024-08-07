@@ -661,7 +661,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
         }
     }
 
-    protected sealed class SendQueueItem
+    protected internal sealed class SendQueueItem
     {
         public object ValueToSend;
         public bool AllowSkip;
