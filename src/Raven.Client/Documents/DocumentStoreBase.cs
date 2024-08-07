@@ -48,7 +48,7 @@ namespace Raven.Client.Documents
         public abstract IDatabaseChanges Changes(string database = null);
 
         /// <inheritdoc />
-        public abstract IDatabaseChanges Changes(string database, string nodeTag);
+        public abstract ISingleNodeDatabaseChanges Changes(string database, string nodeTag);
 
         public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, string database = null);
 
