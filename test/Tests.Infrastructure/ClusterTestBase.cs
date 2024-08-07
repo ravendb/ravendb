@@ -529,7 +529,8 @@ namespace Tests.Infrastructure
                     Certificate = certificate,
                     Conventions =
                     {
-                        DisableTopologyUpdates = disableTopologyUpdates
+                        DisableTopologyUpdates = disableTopologyUpdates,
+                        DisposeCertificate = false
                     }
                 };
                 store.Initialize();
