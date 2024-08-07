@@ -54,10 +54,23 @@ namespace Sparrow.Collections
         // Removes all Objects from the Stack.
         public void Clear()
         {
-            Array.Clear(_array, 0, _size);
+            // PERF: We are using this to avoid the Array.Clear cost when using structs. 
+            //       When RuntimeHelpers.IsReferenceOrContainsReferences<T>() becomes available, we can use Clear instead. 
+            if (typeof(T) == typeof(int) || typeof(T) == typeof(uint) || typeof(T) == typeof(byte) ||
+                typeof(T) == typeof(short) || typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
+            {
+                _size = 0;
+                _version++;
+            }
+            else
+            {
+                int size = (int)_size;
 
-            _size = 0;
-            _version++;
+                _size = 0;
+                _version++;
+                if (size > 0)
+                    Array.Clear(_array, 0, size); // Clear the elements so that the gc can reclaim the references.
+            }
         }
 
         // Removes all Objects from the Stack.
