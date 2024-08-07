@@ -381,6 +381,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
                             objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Value), out object fieldValue))
                         {
                             HandleCustomDbTypeObject(colParam, column, dbType, fieldValue, objectValue);
+                            break;
                         }
                     }
 
