@@ -261,6 +261,9 @@ public class RavenDB_22523 : RavenTestBase
             Map = docs => from doc in docs
                 select new { doc.Account, doc.Amount, doc.Tags, TagIds = Enumerable.ToArray(doc.Tags.Select(x => x.Id)) };
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
+
+            Index(x => x.Tags, FieldIndexing.No);
+            Store(x => x.Tags, FieldStorage.Yes);
         }
     }
 
@@ -271,6 +274,9 @@ public class RavenDB_22523 : RavenTestBase
             Map = docs => from doc in docs
                 select new { doc.Account, doc.Amount, doc.Tags, TagIds = Enumerable.ToArray(doc.Tags.Select(x => x.Id)) };
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Lucene;
+
+            Index(x => x.Tags, FieldIndexing.No);
+            Store(x => x.Tags, FieldStorage.Yes);
         }
     }
 }

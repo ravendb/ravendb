@@ -3,6 +3,8 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -112,6 +114,9 @@ public class RavenDB_21557 : RavenTestBase
                 };
 
             StoreAllFields(FieldStorage.Yes);
+
+            Configuration[RavenConfiguration.GetKey(x => x.Indexing.CoraxStaticIndexComplexFieldIndexingBehavior)] =
+                IndexingConfiguration.CoraxComplexFieldIndexingBehavior.Skip.ToString();
         }
     }
 

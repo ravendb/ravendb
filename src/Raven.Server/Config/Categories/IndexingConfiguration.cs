@@ -580,6 +580,12 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         public IndexResetMode ResetMode { get; set; }
 
+        [Description("The default complex field indexing behavior for static Corax indexes")]
+        [DefaultValue(CoraxComplexFieldIndexingBehavior.Throw)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Corax.Static.ComplexFieldIndexingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public CoraxComplexFieldIndexingBehavior CoraxStaticIndexComplexFieldIndexingBehavior { get; protected set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);
@@ -616,6 +622,13 @@ namespace Raven.Server.Config.Categories
             Immediate,
             Pause,
             Delay
+        }
+
+        public enum CoraxComplexFieldIndexingBehavior
+        {
+            None,
+            Throw,
+            Skip
         }
     }
 }

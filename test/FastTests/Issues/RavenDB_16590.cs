@@ -87,6 +87,7 @@ namespace FastTests.Issues
                 "Indexing.Corax.IncludeSpatialDistance",
                 "Indexing.Corax.MaxMemoizationSizeInMb",
                 "Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb",
+                "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
 
                 //Obsolete studio keys:
                 "Indexing.Static.SearchEngineType",

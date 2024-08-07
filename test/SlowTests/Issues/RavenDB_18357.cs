@@ -14,24 +14,6 @@ public class RavenDB_18357 : RavenTestBase
     public RavenDB_18357(ITestOutputHelper output) : base(output)
     {
     }
-    
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public void StaticIndexShouldNotThrowWhenTryingToIndexComplexObjectAndIndexFieldOptionsWereNotExplicitlySetInDefinition(Options options)
-    {
-        using var store = GetDocumentStore(options);
-        {
-            using var s = store.OpenSession();
-            s.Store(new Input {Nested = new NestedItem {Name = "Matt"}});
-            s.SaveChanges();
-        }
-        var index = new InputIndex();
-
-        index.Execute(store);
-        Indexes.WaitForIndexing(store);
-        var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
-        Assert.Null(errors);
-    }
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
