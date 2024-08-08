@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.EventListener;
@@ -21,8 +20,8 @@ namespace Raven.Server.Web.System
         {
             var delay = GetIntValueQueryString("delay", required: false) ?? 5;
 
-            IReadOnlyCollection<GcAllocationsEventListener.AllocationInfo> allocations;
-            using (var listener = new GcAllocationsEventListener())
+            IReadOnlyCollection<AllocationsHandler.AllocationInfo> allocations;
+            using (var listener = new AllocationsEventListener())
             {
                 await Task.Delay(TimeSpan.FromSeconds(delay));
                 allocations = listener.Allocations;
@@ -40,7 +39,7 @@ namespace Raven.Server.Web.System
                         writer.WriteComma();
 
                     first = false;
-                    writer.WritePropertyName(alloc.Type);
+                    writer.WritePropertyName(alloc.AllocationType);
                     writer.WriteStartObject();
                     writer.WritePropertyName("Allocated");
                     writer.WriteString(new Size((long)alloc.Allocations, SizeUnit.Bytes).ToString());
@@ -137,74 +136,6 @@ namespace Raven.Server.Web.System
                 writer.WriteEndArray();
 
                 writer.WriteEndObject();
-            }
-        }
-
-        internal class GcAllocationsEventListener : AbstractEventListener
-        {
-            internal const string AllocationEventName = "GCAllocationTick_V4";
-
-            private readonly Dictionary<string, AllocationInfo> _allocations = new();
-
-            public IReadOnlyCollection<AllocationInfo> Allocations => _allocations.Values;
-
-            public GcAllocationsEventListener()
-            {
-                EnableEvents(DotNetEventType.GC);
-            }
-
-            public class AllocationInfo
-            {
-                private ulong? _allocations;
-
-                public string Type;
-                public ulong SmallObjectAllocations;
-                public ulong LargeObjectAllocations;
-                public long NumberOfSmallObjectAllocations;
-                public long NumberOfLargeObjectAllocations;
-
-                public ulong Allocations
-                {
-                    get
-                    {
-                        // used for ordering
-                        _allocations ??= SmallObjectAllocations + LargeObjectAllocations;
-                        return _allocations.Value;
-                    }
-                }
-
-                public long NumberOfAllocations => NumberOfSmallObjectAllocations + NumberOfLargeObjectAllocations;
-            }
-
-            protected override void OnEventWritten(EventWrittenEventArgs eventData)
-            {
-                switch (eventData.EventName)
-                {
-                    case AllocationEventName:
-                        var type = (string)eventData.Payload[5];
-                        if (_allocations.TryGetValue(type, out var info) == false)
-                        {
-                            _allocations[type] = info = new AllocationInfo
-                            {
-                                Type = type
-                            };
-                        }
-                        var allocations = (ulong)eventData.Payload[3];
-
-                        var smallObjectAllocation = (uint)eventData.Payload[1] == 0x0;
-                        if (smallObjectAllocation)
-                        {
-                            _allocations[type].SmallObjectAllocations += allocations;
-                            _allocations[type].NumberOfSmallObjectAllocations++;
-                        }
-                        else
-                        {
-                            _allocations[type].LargeObjectAllocations += allocations;
-                            _allocations[type].NumberOfLargeObjectAllocations++;
-                        }
-
-                        break;
-                }
             }
         }
     }

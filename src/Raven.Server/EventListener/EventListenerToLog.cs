@@ -15,8 +15,9 @@ public class EventListenerToLog : IDynamicJson
     private EventListenerConfiguration _configuration;
 
     public static readonly HashSet<EventType> GcEvents = [EventType.GC, EventType.GCSuspend, EventType.GCRestart, EventType.GCFinalizers];
+    public static readonly HashSet<EventType> AllocationEvents = [EventType.Allocations];
     public static readonly HashSet<EventType> ContentionTypes = [EventType.Contention];
-    private static readonly HashSet<EventType> AllEvents = new(GcEvents.Concat(ContentionTypes));
+    private static readonly HashSet<EventType> AllEvents = new(GcEvents.Concat(ContentionTypes).Concat(AllocationEvents));
 
     private EventListenerToLog()
     {
@@ -46,12 +47,13 @@ public class EventListenerToLog : IDynamicJson
             else
             {
                 _listener ??= new EventsListener(effectiveEventTypes, _configuration.MinimumDurationInMs,
+                    _configuration.AllocationsLoggingIntervalInMs, _configuration.AllocationsLoggingCount,
                     onEvent: e =>
                     {
                         if (LogToFile)
                             Logger.Operations(e.ToString());
                     });
-                _listener.Update(effectiveEventTypes, _configuration.MinimumDurationInMs);
+                _listener.Update(effectiveEventTypes, _configuration.MinimumDurationInMs, _configuration.AllocationsLoggingIntervalInMs, _configuration.AllocationsLoggingCount);
             }
         }
         finally
@@ -67,6 +69,10 @@ public class EventListenerToLog : IDynamicJson
         public EventType[] EventTypes { get; set; }
 
         public long MinimumDurationInMs { get; set; }
+
+        public long AllocationsLoggingIntervalInMs { get; set; }
+
+        public int AllocationsLoggingCount { get; set; }
 
         public bool Persist { get; set; }
     }

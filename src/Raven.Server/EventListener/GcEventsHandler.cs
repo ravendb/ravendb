@@ -14,7 +14,7 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
 
     protected override HashSet<EventType> DefaultEventTypes => EventListenerToLog.GcEvents;
 
-    public GcEventsHandler(Action<GCEventBase> onEvent, HashSet<EventType> eventTypes = null, long minimumDurationInMs =0)
+    public GcEventsHandler(Action<GCEventBase> onEvent, HashSet<EventType> eventTypes = null, long minimumDurationInMs = 0)
     {
         Update(eventTypes, minimumDurationInMs);
         OnEvent = onEvent;
@@ -154,7 +154,7 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
         public override string ToString()
         {
             var str = base.ToString();
-            return $"{str}, thread id: {OSThreadId}, duration: {DurationInMs}";
+            return $"{str}, thread id: {OSThreadId}, duration: {DurationInMs}ms";
         }
     }
 

@@ -6,5 +6,6 @@ public enum EventType
     GCSuspend,
     GCRestart,
     GCFinalizers,
-    Contention
+    Contention,
+    Allocations
 }
