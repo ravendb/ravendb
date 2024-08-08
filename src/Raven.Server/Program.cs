@@ -128,7 +128,9 @@ namespace Raven.Server
             {
                 EventListenerMode = configuration.EventListener.EventListenerMode,
                 EventTypes = configuration.EventListener.EventTypes,
-                MinimumDurationInMs = configuration.EventListener.MinimumDuration.GetValue(TimeUnit.Milliseconds)
+                MinimumDurationInMs = configuration.EventListener.MinimumDuration.GetValue(TimeUnit.Milliseconds),
+                AllocationsLoggingIntervalInMs = configuration.EventListener.AllocationsLoggingInterval.GetValue(TimeUnit.Milliseconds),
+                AllocationsLoggingCount = configuration.EventListener.AllocationsLoggingCount
             });
 
             if (Logger.IsInfoEnabled)
