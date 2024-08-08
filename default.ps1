@@ -59,9 +59,12 @@ task NuGetRestore {
 task Init -depends Verify40, Clean, NuGetRestore {
     Write-Host "Start Init"
     
-    $global:msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe"
+    $global:msbuild = "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
     if (!(Test-Path -Path $global:msbuild)) {
-        $global:msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe"
+        $global:msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe"
+        if (!(Test-Path -Path $global:msbuild)) {
+            $global:msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe"
+        }
     }
     
     $informationalVersion = Get-InformationalVersion $version $global:buildlabel $global:uploadCategory 
