@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide
     public sealed partial class ClusterStateMachine
     {
 
-        private const int MinBuildVersion54201 = 54_201;
+        private const int MinBuildVersion54201 = 54_136;
 
         private static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new()
         {
