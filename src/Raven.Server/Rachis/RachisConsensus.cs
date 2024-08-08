@@ -1054,14 +1054,17 @@ namespace Raven.Server.Rachis
                 topologyJson.CopyTo(ptr);
             }
 
-            if (engine.ServerStore._lastClusterTopologyIndex < clusterTopology.Etag)
-                engine.ServerStore._lastClusterTopologyIndex = clusterTopology.Etag;
-
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 clusterTopology.AllNodes.TryGetValue(engine.Tag, out var key);
                 engine.Url = key;
                 TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
+
+                // make sure transaction was committed before updating index in-memory
+                if (tx is LowLevelTransaction llt && llt.Committed &&
+                    engine.ServerStore._lastClusterTopologyIndex < clusterTopology.Etag)
+                    engine.ServerStore._lastClusterTopologyIndex = clusterTopology.Etag;
+
                 engine.TopologyChanged?.Invoke(engine, clusterTopology);
             };
 
