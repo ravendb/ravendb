@@ -26,8 +26,8 @@ public sealed class SnowflakeEtl(Transformation transformation, SnowflakeEtlConf
         return new SnowflakeDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics);
     }
 
-    protected override RelationalDatabaseWriterSimulator GetWriterSimulator()
+    protected override RelationalDatabaseWriterSimulator GetWriterSimulator(bool withConnection)
     {
-        return new RelationalDatabaseWriterSimulator(GetRelationalDatabaseWriterInstance());
+        return new RelationalDatabaseWriterSimulator(new SnowflakeDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics, withConnection));
     }
 }

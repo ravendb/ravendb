@@ -40,7 +40,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
     private const int LongStatementWarnThresholdInMs = 3000;
 
     protected RelationalDatabaseWriterBase(DocumentDatabase database, EtlConfiguration<TRelationalConnectionString> configuration,
-        RelationalDatabaseEtlMetricsCountersManager sqlMetrics, EtlProcessStatistics statistics)
+        RelationalDatabaseEtlMetricsCountersManager sqlMetrics, EtlProcessStatistics statistics, bool shouldConnectToTarget = true)
     {
         _sqlMetrics = sqlMetrics;
         _statistics = statistics;
@@ -57,10 +57,13 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
 
         var connectionString = GetConnectionString(configuration);
         _connection.ConnectionString = connectionString;
-        OpenConnection(database, configuration.Name, configuration.ConnectionStringName);
 
-        _tx = _connection.BeginTransaction();
-        _stringParserList = GenerateStringParsers();
+        if (shouldConnectToTarget)
+        {
+            OpenConnection(database, configuration.Name, configuration.ConnectionStringName);
+            _tx = _connection.BeginTransaction();
+            _stringParserList = GenerateStringParsers();
+        }
     }
 
     public abstract bool ParametrizeDeletes { get; }

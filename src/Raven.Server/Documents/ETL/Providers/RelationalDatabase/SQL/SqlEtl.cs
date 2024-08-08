@@ -26,8 +26,9 @@ public sealed class SqlEtl(Transformation transformation, SqlEtlConfiguration co
         return new SqlDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics);
     }
 
-    protected override RelationalDatabaseWriterSimulator GetWriterSimulator()
+    protected override RelationalDatabaseWriterSimulator GetWriterSimulator(bool withConnection)
     {
-        return new RelationalDatabaseWriterSimulator(GetRelationalDatabaseWriterInstance(), Configuration.ParameterizeDeletes);
+        return new RelationalDatabaseWriterSimulator(new SqlDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics, withConnection),
+            Configuration.ParameterizeDeletes);
     }
 }

@@ -19,7 +19,9 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
     private const string SnowflakeEtlTag = "Snowflake ETL";
 
     private readonly SnowflakeEtlConfiguration _snowflakeEtlConfiguration;
-    public SnowflakeDatabaseWriter(DocumentDatabase database, SnowflakeEtlConfiguration configuration, RelationalDatabaseEtlMetricsCountersManager sqlMetrics, EtlProcessStatistics statistics) : base(database, configuration, sqlMetrics, statistics)
+
+    public SnowflakeDatabaseWriter(DocumentDatabase database, SnowflakeEtlConfiguration configuration, RelationalDatabaseEtlMetricsCountersManager sqlMetrics,
+        EtlProcessStatistics statistics, bool shouldConnectToTarget = true) : base(database, configuration, sqlMetrics, statistics, shouldConnectToTarget)
     {
         _snowflakeEtlConfiguration = configuration;
     }

@@ -33,8 +33,8 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
     private readonly SqlEtlConfiguration _sqlEtlConfiguration;
 
     public SqlDatabaseWriter(DocumentDatabase database, SqlEtlConfiguration configuration,
-        RelationalDatabaseEtlMetricsCountersManager metrics, EtlProcessStatistics statistics) : base(database,
-        configuration, metrics, statistics)
+        RelationalDatabaseEtlMetricsCountersManager metrics, EtlProcessStatistics statistics, bool shouldConnectToTarget = false) : base(database,
+        configuration, metrics, statistics, shouldConnectToTarget)
     {
         _sqlEtlConfiguration = configuration;
         ParametrizeDeletes = configuration.ParameterizeDeletes;
