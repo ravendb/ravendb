@@ -95,6 +95,9 @@ function initRedux() {
     accessManager.default.secureServer.subscribe((isSecureServer) =>
         globalDispatch(accessManagerActions.onIsSecureServerSet(isSecureServer))
     );
+    accessManager.default.allowEncryptedDatabasesOverHttp.subscribe((isAllowEncryptedDatabasesOverHttp) =>
+        globalDispatch(accessManagerActions.onIsAllowEncryptedDatabasesOverHttpSet(isAllowEncryptedDatabasesOverHttp))
+    );
 }
 
 declare module "yup" {
