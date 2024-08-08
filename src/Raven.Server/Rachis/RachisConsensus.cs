@@ -1054,6 +1054,9 @@ namespace Raven.Server.Rachis
                 topologyJson.CopyTo(ptr);
             }
 
+            if (engine.ServerStore._lastClusterTopologyIndex < clusterTopology.Etag)
+                engine.ServerStore._lastClusterTopologyIndex = clusterTopology.Etag;
+
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
             {
                 clusterTopology.AllNodes.TryGetValue(engine.Tag, out var key);
