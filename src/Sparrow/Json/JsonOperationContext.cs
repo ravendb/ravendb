@@ -867,7 +867,7 @@ namespace Sparrow.Json
             }
             else
             {
-                CachedProperties.Renew();
+                CachedProperties.Reset();
             }
         }
 
