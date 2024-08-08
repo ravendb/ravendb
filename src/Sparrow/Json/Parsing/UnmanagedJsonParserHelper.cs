@@ -199,7 +199,7 @@ namespace Sparrow.Json.Parsing
                 {
                     if (cachedItemsRenew)
                     {
-                        context.CachedProperties.ClearRenew();
+                        context.CachedProperties.Reset();
                         ++docsCountOnCachedRenewSession;
                     }
                 }
