@@ -40,6 +40,7 @@ using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Debugging;

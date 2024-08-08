@@ -1,6 +1,6 @@
 ﻿using Sparrow.Json;
 
-namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 
 public sealed class RelationalDatabaseColumn
 {

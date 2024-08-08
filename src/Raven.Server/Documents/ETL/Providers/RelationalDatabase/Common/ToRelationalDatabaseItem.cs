@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 
 public sealed class ToRelationalDatabaseItem : ExtractedItem 
 {

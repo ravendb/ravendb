@@ -5,7 +5,7 @@ using System.Data.Common;
 using System.Linq;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 
-namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Test;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 
 public sealed class TableQuerySummary
 {

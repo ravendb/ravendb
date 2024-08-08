@@ -7,7 +7,7 @@ using Jint.Native;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 
@@ -21,7 +21,7 @@ internal sealed class
 
     protected override List<RelationalDatabaseTableWithRecords> GetEtlTables()
     {
-        return _config.SqlTables.Select(RelationalDatabaseTableWithRecords.FromSqlEtlTable).ToList();
+        return Config.SqlTables.Select(RelationalDatabaseTableWithRecords.FromSqlEtlTable).ToList();
     }
     
     public override void Initialize(bool debugMode)

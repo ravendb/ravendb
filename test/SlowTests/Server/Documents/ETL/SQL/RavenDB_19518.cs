@@ -15,8 +15,8 @@ using System.Threading;
 using System;
 using Tests.Infrastructure;
 using Npgsql;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Test;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 
 namespace SlowTests.Server.Documents.ETL.SQL;
 

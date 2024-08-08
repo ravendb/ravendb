@@ -11,26 +11,26 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 
 internal abstract class RelationalDatabaseDocumentTransformerBase<TRelationalConnectionString, TRelationalEtlConfiguration>  : EtlTransformer<ToRelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
 where TRelationalConnectionString: ConnectionString
 where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
 {
     private readonly Transformation _transformation;
-    protected readonly TRelationalEtlConfiguration _config;
+    protected readonly TRelationalEtlConfiguration Config;
     private readonly Dictionary<string, RelationalDatabaseTableWithRecords> _tables;
-    private Dictionary<string, Queue<Attachment>> _loadedAttachments;
+    private readonly Dictionary<string, Queue<Attachment>> _loadedAttachments;
     private readonly List<RelationalDatabaseTableWithRecords> _tablesForScript;
     private readonly List<RelationalDatabaseTableWithRecords> _etlTablesWithRecords;
 
     private EtlStatsScope _stats;
 
-    public RelationalDatabaseDocumentTransformerBase(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, TRelationalEtlConfiguration config, PatchRequestType patchRequestType)
+    protected RelationalDatabaseDocumentTransformerBase(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, TRelationalEtlConfiguration config, PatchRequestType patchRequestType)
         : base(database, context, new PatchRequest(transformation.Script, patchRequestType), null)
     {
         _transformation = transformation;
-        _config = config;
+        Config = config;
 
         var destinationTables = transformation.GetCollectionsFromScript();
 
@@ -130,12 +130,12 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
     
     protected override void AddLoadedCounter(JsValue reference, string name, long value)
     {
-        throw new NotSupportedException($"Counters aren't supported by {_config.EtlType.ToString()} ETL");
+        throw new NotSupportedException($"Counters aren't supported by {Config.EtlType.ToString()} ETL");
     }
 
     protected override void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries)
     {
-        throw new NotSupportedException($"Time series aren't supported by {_config.EtlType.ToString()} ETL");
+        throw new NotSupportedException($"Time series aren't supported by {Config.EtlType.ToString()} ETL");
     }
 
     private RelationalDatabaseTableWithRecords GetOrAdd(string tableName)
@@ -158,7 +158,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
     [DoesNotReturn]
     private void ThrowTableNotDefinedInConfig(string tableName)
     {
-        throw new InvalidOperationException($"Table '{tableName}' was not defined in the configuration of {_config.EtlType.ToString()} ETL task");
+        throw new InvalidOperationException($"Table '{tableName}' was not defined in the configuration of {Config.EtlType.ToString()} ETL task");
     }
 
     public override IEnumerable<RelationalDatabaseTableWithRecords> GetTransformedResults()

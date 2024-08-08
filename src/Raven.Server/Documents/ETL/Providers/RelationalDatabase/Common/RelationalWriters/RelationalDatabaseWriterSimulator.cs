@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 
-namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.RelationalWriters;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters;
 
 public class RelationalDatabaseWriterSimulator(IRelationalDatabaseWriter writer, bool parametrizeDeletes = false)
 {

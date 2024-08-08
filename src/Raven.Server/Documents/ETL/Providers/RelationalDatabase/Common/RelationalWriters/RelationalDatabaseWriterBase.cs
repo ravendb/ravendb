@@ -12,7 +12,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Extensions.Streams;
 using Raven.Client.Util;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Metrics;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
@@ -20,7 +20,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using DbProviderFactories = System.Data.Common.DbProviderFactories;
 
-namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.RelationalWriters;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters;
 
 public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration> : IDisposable, IRelationalDatabaseWriter
     where TRelationalConnectionString : ConnectionString

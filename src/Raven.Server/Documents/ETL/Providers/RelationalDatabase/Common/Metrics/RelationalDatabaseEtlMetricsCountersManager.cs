@@ -3,7 +3,7 @@ using System.Linq;
 using Raven.Server.Documents.ETL.Metrics;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Metrics;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Metrics;
 
 public sealed class RelationalDatabaseEtlMetricsCountersManager: EtlMetricsCountersManager
 {

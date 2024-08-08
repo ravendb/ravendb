@@ -1,7 +1,8 @@
 ﻿using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.ServerWide;

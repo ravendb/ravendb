@@ -5,10 +5,10 @@ using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Enumerators;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Metrics;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase.RelationalWriters;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Test;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Enumerators;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Metrics;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
@@ -16,7 +16,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
-namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 
 public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRelationalConnectionString>
     : EtlProcess<ToRelationalDatabaseItem, RelationalDatabaseTableWithRecords, TRelationalEtlConfiguration, TRelationalConnectionString, EtlStatsScope, EtlPerformanceOperation>
@@ -25,7 +25,7 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
 {
     public readonly RelationalDatabaseEtlMetricsCountersManager RelationalMetrics = new();
 
-    public RelationalDatabaseEtlBase(Transformation transformation, TRelationalEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore,
+    protected RelationalDatabaseEtlBase(Transformation transformation, TRelationalEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore,
         string relationalEtlTag)
         : base(transformation, configuration, database, serverStore, relationalEtlTag)
     {

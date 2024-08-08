@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 
-namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Enumerators;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Enumerators;
 
 public sealed class TombstonesToRelationalDatabaseItems: IEnumerator<ToRelationalDatabaseItem>
 {

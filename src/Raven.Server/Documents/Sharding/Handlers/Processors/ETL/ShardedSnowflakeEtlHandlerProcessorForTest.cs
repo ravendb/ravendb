@@ -3,6 +3,7 @@ using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.ETL;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Json;
 using Sparrow.Json;
 

@@ -30,6 +30,7 @@ using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.Snowflake;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;

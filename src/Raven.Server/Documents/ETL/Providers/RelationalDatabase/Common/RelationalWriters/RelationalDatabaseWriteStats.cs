@@ -1,4 +1,4 @@
-﻿namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.RelationalWriters;
+﻿namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters;
 
 public sealed class RelationalDatabaseWriteStats
 {

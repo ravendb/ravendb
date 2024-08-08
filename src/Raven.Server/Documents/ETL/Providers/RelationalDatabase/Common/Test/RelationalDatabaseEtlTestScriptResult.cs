@@ -2,7 +2,7 @@
 using Raven.Server.Documents.ETL.Test;
 using Raven.Server.NotificationCenter.Notifications.Details;
 
-namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Test;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 
 public sealed class RelationalDatabaseEtlTestScriptResult : TestEtlScriptResult
 {
