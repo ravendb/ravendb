@@ -112,4 +112,21 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
             _ => throw new NotSupportedException($"Type {dbTypeString} isn't currently supported by Snowflake ETL.")
         };
     }
+
+    public static void TestConnection(string connectionString)
+    {
+        var providerFactory = SnowflakeDbFactory.Instance;
+        var connection = providerFactory.CreateConnection();
+        connection.ConnectionString = connectionString;
+
+        try
+        {
+            connection.Open();
+            connection.Close();
+        }
+        finally
+        {
+            connection.Dispose();
+        }
+    }
 }
