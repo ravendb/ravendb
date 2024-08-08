@@ -70,7 +70,7 @@ public class ContentionEventsHandler : AbstractEventsHandler<ContentionEventsHan
         public override string ToString()
         {
             var str = base.ToString();
-            return $"{str}, start time: {StartTime}, duration: {DurationInMs}";
+            return $"{str}, start time: {StartTime}, duration: {DurationInMs}ms";
         }
     }
 }
