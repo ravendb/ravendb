@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using Raven.Client.ServerWide.Operations.EventListener;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.EventListener;
@@ -24,4 +23,15 @@ public class EventListenerConfiguration : ConfigurationCategory
     [TimeUnit(TimeUnit.Milliseconds)]
     [ConfigurationEntry("EventListener.MinimumDurationInMs", ConfigurationEntryScope.ServerWideOnly)]
     public TimeSetting MinimumDuration { get; set; }
+
+    [Description("The duration on which we'll collect the allocations info.")]
+    [DefaultValue(5000)]
+    [TimeUnit(TimeUnit.Milliseconds)]
+    [ConfigurationEntry("EventListener.AllocationsLoggingIntervalInMs", ConfigurationEntryScope.ServerWideOnly)]
+    public TimeSetting AllocationsLoggingInterval { get; set; }
+
+    [Description("Number of top allocation events to log")]
+    [DefaultValue(5)]
+    [ConfigurationEntry("EventListener.AllocationsLoggingCount", ConfigurationEntryScope.ServerWideOnly)]
+    public int AllocationsLoggingCount { get; set; }
 }
