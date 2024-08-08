@@ -51,29 +51,33 @@ namespace Sparrow.Collections
 
         public int Count => _size;
 
-        // Removes all Objects from the Stack.
+        /// <summary>
+        /// Removes all objects from the Stack but clearing the backing array unless the type is native.
+        /// </summary>
         public void Clear()
         {
-            // PERF: We are using this to avoid the Array.Clear cost when using structs. 
-            //       When RuntimeHelpers.IsReferenceOrContainsReferences<T>() becomes available, we can use Clear instead. 
             if (typeof(T) == typeof(int) || typeof(T) == typeof(uint) || typeof(T) == typeof(byte) ||
-                typeof(T) == typeof(short) || typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
+                typeof(T) == typeof(short) || typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
+                typeof(T) == typeof(nint) || typeof(T) == typeof(nuint) || typeof(T) == typeof(IntPtr))
             {
                 _size = 0;
                 _version++;
-            }
-            else
-            {
-                int size = (int)_size;
 
-                _size = 0;
-                _version++;
-                if (size > 0)
-                    Array.Clear(_array, 0, size); // Clear the elements so that the gc can reclaim the references.
+                return;
             }
+
+            int size = _size;
+
+            _size = 0;
+            _version++;
+            if (size > 0)
+                Array.Clear(_array, 0, size); // Clear the elements so that the gc can reclaim the references.
         }
 
-        // Removes all Objects from the Stack.
+        /// <summary>
+        /// This method is like Clear but will not release the references contained in it; therefore
+        /// the garbage collector will not collect those objects even if they are not being used.
+        /// </summary>
         public void WeakClear()
         {
             _size = 0;
@@ -323,10 +327,7 @@ namespace Sparrow.Collections
                 }
 
                 retval = (--_index >= 0);
-                if (retval)
-                    _currentElement = _stack._array[_index];
-                else
-                    _currentElement = default(T);
+                _currentElement = retval ? _stack._array[_index] : default;
 
                 return retval;
             }
