@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 
@@ -8,10 +9,10 @@ namespace Sparrow.Collections
 {
     public sealed class FastList<T> : IList<T>
     {
-        private uint _version = 0;
-        private uint _size = 0;
+        private uint _version;
+        private uint _size;
 
-        private static readonly T[] EmptyArray = new T[0];
+        private static readonly T[] EmptyArray = Array.Empty<T>();
 
         private T[] _items;
 
@@ -112,14 +113,13 @@ namespace Sparrow.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Add(T item)
         {
-            if (_size == _items.Length)
-                goto Unlikely;
+            if (_size != _items.Length)
+            {
+                _items[_size++] = item;
+                _version++;
+                return;
+            }
 
-            _items[_size++] = item;
-            _version++;
-            return;
-
-            Unlikely:
             AddUnlikely(item, (int)_size + 1);
         }
 
@@ -127,14 +127,13 @@ namespace Sparrow.Collections
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddByRef(in T item)
         {
-            if (_size == _items.Length)
-                goto Unlikely;
+            if (_size != _items.Length)
+            {
+                _items[_size++] = item;
+                _version++;
+                return;
+            }
 
-            _items[_size++] = item;
-            _version++;
-            return;
-
-            Unlikely:
             AddUnlikely(item, (int)_size + 1);
         }
 
@@ -181,26 +180,33 @@ namespace Sparrow.Collections
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Removes all objects from the Stack but clearing the backing array unless the type is native.
+        /// </summary>
         public void Clear()
         {
-            // PERF: We are using this to avoid the Array.Clear cost when using structs. 
-            //       When RuntimeHelpers.IsReferenceOrContainsReferences<T>() becomes available, we can use Clear instead. 
             if (typeof(T) == typeof(int) || typeof(T) == typeof(uint) || typeof(T) == typeof(byte) ||
-                typeof(T) == typeof(short) || typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
+                typeof(T) == typeof(short) || typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
+                typeof(T) == typeof(nint) || typeof(T) == typeof(IntPtr))
             {
                 _size = 0;
                 _version++;
-            }
-            else
-            {
-                int size = (int)_size;
 
-                _size = 0;
-                _version++;
-                if (size > 0)
-                    Array.Clear(_items, 0, size); // Clear the elements so that the gc can reclaim the references.
+                return;
             }
+
+            int size = (int)_size;
+
+            _size = 0;
+            _version++;
+
+#if NET6_0_OR_GREATER
+            // PERF: We are using this to avoid the Array.Clear cost when using structs. 
+            if (size <= 0 || RuntimeHelpers.IsReferenceOrContainsReferences<T>() == false)
+                return;
+#endif
+            
+            Array.Clear(_items, 0, size); // Clear the elements so that the gc can reclaim the references.
         }
 
         public void Trim(int size)
@@ -293,31 +299,28 @@ namespace Sparrow.Collections
         public void RemoveAt(int index)
         {
             if ((uint) index >= _size)
-                goto ERROR;
+                ThrowWhenIndexIsOutOfRange(index);
 
             _size--;
             _version++;
 
             if (index < _size)
                 Array.Copy(_items, index + 1, _items, index, (int)_size - index);
-            return;
-
-            ERROR:
-            ThrowWhenIndexIsOutOfRange(index);
         }
 
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
         public void ThrowWhenIndexIsOutOfRange(int index)
         {
             throw new ArgumentOutOfRangeException(nameof(index));
         }
 
         // Removes a range of elements from this list.
-        // 
         public void RemoveRange(int index, int count)
         {
-            uint uindex = (uint)index;
-            if (uindex >= _size || (int)_size - index < count)
-                goto ERROR;
+            if ((uint)index >= _size || (int)_size - index < count)
+                ThrowWhenIndexIsOutOfRange(index);
 
             if (count <= 0)
                 return;
@@ -330,16 +333,17 @@ namespace Sparrow.Collections
 
             _version++;
 
-            if (typeof(T) != typeof(int) && typeof(T) != typeof(uint) && typeof(T) != typeof(byte) &&
-                typeof(T) != typeof(short) && typeof(T) != typeof(long) && typeof(T) != typeof(ulong))
-            {
-                Array.Clear(_items, (int) _size, count);
-            }
-
-            return;            
-
-            ERROR:
-            ThrowWhenIndexIsOutOfRange(index);
+            if (typeof(T) == typeof(int) || typeof(T) == typeof(uint) || typeof(T) == typeof(byte) ||
+                typeof(T) == typeof(short) || typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
+                typeof(T) == typeof(nint) || typeof(T) == typeof(nuint) || typeof(T) == typeof(IntPtr))
+                return;
+            
+#if NET6_0_OR_GREATER
+            if (RuntimeHelpers.IsReferenceOrContainsReferences<T>() == false)
+                return;
+#endif
+            
+            Array.Clear(_items, (int)_size, count);
         }
 
         public Span<T> AsUnsafeSpan()
@@ -406,7 +410,7 @@ namespace Sparrow.Collections
 
             public T Current => _current;
 
-            Object IEnumerator.Current
+            object IEnumerator.Current
             {
                 get
                 {
