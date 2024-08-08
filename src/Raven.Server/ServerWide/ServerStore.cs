@@ -126,7 +126,7 @@ namespace Raven.Server.ServerWide
 
         private RequestExecutor _leaderRequestExecutor;
 
-        private long _lastClusterTopologyIndex = -1;
+        internal long _lastClusterTopologyIndex = -1;
 
         public readonly RavenConfiguration Configuration;
         private readonly RavenServer _server;
@@ -1136,9 +1136,6 @@ namespace Raven.Server.ServerWide
 
         private void OnTopologyChangeInternal(ClusterTopology topology, Dictionary<string, NodeStatus> status = null)
         {
-            if (_lastClusterTopologyIndex < topology.Etag)
-                _lastClusterTopologyIndex = topology.Etag;
-
             NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag,
                 NodeTag, _engine.CurrentTerm, _engine.CurrentState, status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
 
