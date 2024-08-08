@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Data.Common;
 
-namespace Raven.Server.Documents.ETL.Relational.RelationalWriters;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.RelationalWriters;
 
 public interface IRelationalDatabaseWriter
 {

@@ -3,21 +3,21 @@ using System.Data;
 using System.Data.Common;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
-using Raven.Server.Documents.ETL.Relational;
-using Raven.Server.Documents.ETL.Relational.Metrics;
-using Raven.Server.Documents.ETL.Relational.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Metrics;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.RelationalWriters;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Snowflake.Data.Client;
 using Sparrow.Json;
-using DbCommandBuilder = Raven.Server.Documents.ETL.Relational.RelationalWriters.DbCommandBuilder;
+using DbCommandBuilder = Raven.Server.Documents.ETL.Providers.RelationalDatabase.RelationalWriters.DbCommandBuilder;
 
 namespace Raven.Server.Documents.ETL.Providers.Snowflake.RelationalWriters;
 
 public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConnectionString, SnowflakeEtlConfiguration>
 {
-    private readonly string SnowflakeEtlTag = "Snowflake ETL";
-    
+    private const string SnowflakeEtlTag = "Snowflake ETL";
+
     private readonly SnowflakeEtlConfiguration _snowflakeEtlConfiguration;
     public SnowflakeDatabaseWriter(DocumentDatabase database, SnowflakeEtlConfiguration configuration, RelationalDatabaseEtlMetricsCountersManager sqlMetrics, EtlProcessStatistics statistics) : base(database, configuration, sqlMetrics, statistics)
     {
@@ -51,7 +51,6 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
             NotificationSeverity.Error,
             key: $"{etlConfigurationName}/{connectionStringName}",
             details: new ExceptionDetails(e)));
-
     }
 
     protected override int? GetCommandTimeout()

@@ -3,20 +3,20 @@ using System.Linq;
 using Raven.Server.Documents.ETL.Metrics;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.ETL.Relational.Metrics;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Metrics;
 
 public sealed class RelationalDatabaseEtlMetricsCountersManager: EtlMetricsCountersManager
 {
-    public ConcurrentDictionary<string, RelationalEtlTableMetrics> TablesMetrics { get; set; }
+    public ConcurrentDictionary<string, RelationalDatabaseEtlTableMetrics> TablesMetrics { get; set; }
 
     public RelationalDatabaseEtlMetricsCountersManager()
     {
-        TablesMetrics = new ConcurrentDictionary<string, RelationalEtlTableMetrics>();
+        TablesMetrics = new ConcurrentDictionary<string, RelationalDatabaseEtlTableMetrics>();
     }
 
-    public RelationalEtlTableMetrics GetTableMetrics(string tableName)
+    public RelationalDatabaseEtlTableMetrics GetTableMetrics(string tableName)
     {
-        return TablesMetrics.GetOrAdd(tableName, new RelationalEtlTableMetrics(tableName));
+        return TablesMetrics.GetOrAdd(tableName, new RelationalDatabaseEtlTableMetrics(tableName));
     }
 
     public override DynamicJsonValue ToJson()

@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using Jint;
 using Jint.Native;
-using Jint.Runtime.Interop;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Stats;
@@ -14,7 +11,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.ETL.Relational;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase;
 
 internal abstract class RelationalDatabaseDocumentTransformerBase<TRelationalConnectionString, TRelationalEtlConfiguration>  : EtlTransformer<ToRelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
 where TRelationalConnectionString: ConnectionString

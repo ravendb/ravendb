@@ -7,20 +7,17 @@ using Jint.Native;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
-using Raven.Server.Documents.ETL.Relational;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL;
 
 internal sealed class
-    SqlDocumentTransformer : RelationalDatabaseDocumentTransformerBase<SqlConnectionString, SqlEtlConfiguration>
+    SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
+    : RelationalDatabaseDocumentTransformerBase<SqlConnectionString, SqlEtlConfiguration>(transformation, database, context, config, PatchRequestType.SqlEtl)
 {
     private static readonly JsValue DefaultVarCharSize = 50;
-    
-    public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config) : base(transformation, database, context, config, PatchRequestType.SqlEtl)
-    {
-    }
 
     protected override List<RelationalDatabaseTableWithRecords> GetEtlTables()
     {

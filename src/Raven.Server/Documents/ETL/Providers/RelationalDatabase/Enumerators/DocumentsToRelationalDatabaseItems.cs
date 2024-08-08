@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 
-namespace Raven.Server.Documents.ETL.Relational.Enumerators;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Enumerators;
 
 public sealed class DocumentsToRelationalDatabaseItems : IEnumerator<ToRelationalDatabaseItem>
 {

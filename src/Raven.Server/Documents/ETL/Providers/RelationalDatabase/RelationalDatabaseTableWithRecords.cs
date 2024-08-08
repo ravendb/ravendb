@@ -4,7 +4,7 @@ using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.ETL.Relational;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase;
 
 public sealed class RelationalDatabaseTableWithRecords
 {

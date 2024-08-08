@@ -8,13 +8,13 @@ using NpgsqlTypes;
 using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
-using Raven.Server.Documents.ETL.Relational;
-using Raven.Server.Documents.ETL.Relational.Metrics;
-using Raven.Server.Documents.ETL.Relational.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Metrics;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.RelationalWriters;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
-using DbCommandBuilder = Raven.Server.Documents.ETL.Relational.RelationalWriters.DbCommandBuilder;
+using DbCommandBuilder = Raven.Server.Documents.ETL.Providers.RelationalDatabase.RelationalWriters.DbCommandBuilder;
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 
 internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnectionString, SqlEtlConfiguration>

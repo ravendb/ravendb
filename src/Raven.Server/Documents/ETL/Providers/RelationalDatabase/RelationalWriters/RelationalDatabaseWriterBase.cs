@@ -12,15 +12,15 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Extensions.Streams;
 using Raven.Client.Util;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL;
-using Raven.Server.Documents.ETL.Relational.Metrics;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using DbProviderFactories = System.Data.Common.DbProviderFactories;
 
-namespace Raven.Server.Documents.ETL.Relational.RelationalWriters;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.RelationalWriters;
 
 public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration> : IDisposable, IRelationalDatabaseWriter
     where TRelationalConnectionString : ConnectionString
@@ -39,7 +39,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
     private readonly List<Func<DbParameter, string, bool>> _stringParserList;
     private const int LongStatementWarnThresholdInMs = 3000;
 
-    public RelationalDatabaseWriterBase(DocumentDatabase database, EtlConfiguration<TRelationalConnectionString> configuration,
+    protected RelationalDatabaseWriterBase(DocumentDatabase database, EtlConfiguration<TRelationalConnectionString> configuration,
         RelationalDatabaseEtlMetricsCountersManager sqlMetrics, EtlProcessStatistics statistics)
     {
         _sqlMetrics = sqlMetrics;
@@ -327,7 +327,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
     {
         var stats = new RelationalDatabaseWriteStats();
 
-        var collectCommands = commands != null ? commands.Add : (System.Action<DbCommand>)null;
+        var collectCommands = commands != null ? commands.Add : (Action<DbCommand>)null;
 
         if (table.InsertOnlyMode == false && table.Deletes.Count > 0)
         {
@@ -542,14 +542,14 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
             }
             else
             {
-                sb.Append("'").Append(SanitizeSqlValue(toDeleteSqlItems[j].DocumentId)).Append("'");
+                sb.Append('\'').Append(SanitizeSqlValue(toDeleteSqlItems[j].DocumentId)).Append('\'');
             }
 
             if (toDeleteSqlItems[j].IsDelete) // count only "real" deletions, not the ones because of insert
                 countOfDeletes++;
         }
 
-        sb.Append(")");
+        sb.Append(')');
 
         var endSyntax = GetPostDeleteSyntax(toDeleteSqlItems[currentToDeleteIndex]);
         sb.Append(endSyntax);

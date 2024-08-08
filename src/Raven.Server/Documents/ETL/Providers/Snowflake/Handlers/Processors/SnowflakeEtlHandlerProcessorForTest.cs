@@ -1,7 +1,7 @@
 ﻿using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Server.Documents.ETL.Providers.Raven.Handlers.Processors;
-using Raven.Server.Documents.ETL.Relational;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
 using Raven.Server.Json;
 using Sparrow.Json;
 

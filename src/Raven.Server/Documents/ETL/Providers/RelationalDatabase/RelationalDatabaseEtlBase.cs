@@ -5,10 +5,10 @@ using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Server.Documents.ETL.Relational.Enumerators;
-using Raven.Server.Documents.ETL.Relational.Metrics;
-using Raven.Server.Documents.ETL.Relational.RelationalWriters;
-using Raven.Server.Documents.ETL.Relational.Test;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Enumerators;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Metrics;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
@@ -16,7 +16,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
-namespace Raven.Server.Documents.ETL.Relational;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase;
 
 public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRelationalConnectionString>
     : EtlProcess<ToRelationalDatabaseItem, RelationalDatabaseTableWithRecords, TRelationalEtlConfiguration, TRelationalConnectionString, EtlStatsScope, EtlPerformanceOperation>
