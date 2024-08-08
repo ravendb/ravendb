@@ -858,11 +858,11 @@ namespace Sparrow.Json
             }
             else
             {
-                CachedProperties.Renew();
+                CachedProperties.Reset();
             }
         }
 
-        protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false)
+        protected internal virtual void Reset(bool forceReleaseLongLivedAllocator = false)
         {
             _documentBuilder.Reset();
 

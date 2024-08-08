@@ -85,21 +85,18 @@ public sealed class ReadContinuationState : IDisposable
 
     public bool TryRenewCacheIfNeeded(int limit)
     {
-        if (_builderContext.AllocatedMemory > 4 * 1024 * 1024 ||
-            limit > _maxCachedLimit)
+        if (_builderContext.AllocatedMemory > 4 * 1024 * 1024 || limit > _maxCachedLimit)
         {
             _builderContext.Reset();
             _builderContext.Renew();
             return true;
         }
 
-        if (_builderContext.CachedProperties.NeedClearPropertiesCache())
-        {
-            _builderContext.CachedProperties.ClearRenew();
-            return true;
-        }
-
-        return false;
+        if (_builderContext.CachedProperties.NeedClearPropertiesCache() == false) 
+            return false;
+        
+        _builderContext.CachedProperties.Reset();
+        return true;
     }
 
     public void Dispose()

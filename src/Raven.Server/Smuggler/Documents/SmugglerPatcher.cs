@@ -74,7 +74,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (ctx.CachedProperties.NeedClearPropertiesCache())
                 {
-                    ctx.CachedProperties.ClearRenew();
+                    ctx.CachedProperties.Reset();
                 }
 
                 return document.CloneWith(ctx, bjro);
