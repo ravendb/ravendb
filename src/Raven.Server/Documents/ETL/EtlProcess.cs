@@ -1084,7 +1084,7 @@ namespace Raven.Server.Documents.ETL
 
             TCS connection = null;
 
-            var relationalTestScript = testScript as TestRelationalEtlScript<TCS, TC>;
+            var relationalTestScript = testScript as TestRelationalDatabaseEtlScript<TCS, TC>;
 
             if (relationalTestScript != null)
             {

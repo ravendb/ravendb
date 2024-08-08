@@ -4,7 +4,7 @@ using Raven.Server.Documents.ETL.Test;
 
 namespace Raven.Server.Documents.ETL.Relational
 {
-    public sealed class TestRelationalEtlScript<TRelationalConnectionString, TRelationalEtlConfiguration> : TestEtlScript<TRelationalEtlConfiguration, TRelationalConnectionString>
+    public sealed class TestRelationalDatabaseEtlScript<TRelationalConnectionString, TRelationalEtlConfiguration> : TestEtlScript<TRelationalEtlConfiguration, TRelationalConnectionString>
     where TRelationalConnectionString: ConnectionString
     where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
     {

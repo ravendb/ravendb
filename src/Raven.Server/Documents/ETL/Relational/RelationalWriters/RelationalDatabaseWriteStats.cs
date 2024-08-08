@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.ETL.Relational.RelationalWriters;
 
-public sealed class RelationalWriteStats
+public sealed class RelationalDatabaseWriteStats
 {
     public int InsertedRecordsCount;
 

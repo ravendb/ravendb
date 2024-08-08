@@ -63,7 +63,7 @@ public class RavenDB_19518 : SqlAwareTestBase
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var testResult = SqlEtl.TestScript(
-                    new TestRelationalEtlScript<SqlConnectionString, SqlEtlConfiguration>
+                    new TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration>
                     {
                         PerformRolledBackTransaction = false,
                         DocumentId = docId,

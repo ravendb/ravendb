@@ -9,13 +9,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.ETL
 {
-    internal sealed class ShardedSqlEtlHandlerProcessorForTest : AbstractShardedEtlHandlerProcessorForTest<TestRelationalEtlScript<SqlConnectionString, SqlEtlConfiguration>, SqlEtlConfiguration, SqlConnectionString>
+    internal sealed class ShardedSqlEtlHandlerProcessorForTest : AbstractShardedEtlHandlerProcessorForTest<TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration>, SqlEtlConfiguration, SqlConnectionString>
     {
         public ShardedSqlEtlHandlerProcessorForTest([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
-        protected override TestRelationalEtlScript<SqlConnectionString, SqlEtlConfiguration> GetTestEtlScript(BlittableJsonReaderObject json) => JsonDeserializationServer.TestRelationalEtlScriptSql(json);
+        protected override TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration> GetTestEtlScript(BlittableJsonReaderObject json) => JsonDeserializationServer.TestRelationalEtlScriptSql(json);
 
         protected override RavenCommand CreateCommand(BlittableJsonReaderObject json) => new SqlEtlTestCommand(RequestHandler.ShardExecutor.Conventions, json);
     }

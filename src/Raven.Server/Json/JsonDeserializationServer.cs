@@ -126,9 +126,9 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ScriptResolver> ScriptResolver = GenerateJsonDeserializationRoutine<ScriptResolver>();
 
-        public static readonly Func<BlittableJsonReaderObject, TestRelationalEtlScript<SqlConnectionString, SqlEtlConfiguration>> TestRelationalEtlScriptSql = GenerateJsonDeserializationRoutine<TestRelationalEtlScript<SqlConnectionString, SqlEtlConfiguration>>();
+        public static readonly Func<BlittableJsonReaderObject, TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration>> TestRelationalEtlScriptSql = GenerateJsonDeserializationRoutine<TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration>>();
         
-        public static readonly Func<BlittableJsonReaderObject, TestRelationalEtlScript<SnowflakeConnectionString, SnowflakeEtlConfiguration>> TestRelationalEtlScriptSnowflake = GenerateJsonDeserializationRoutine<TestRelationalEtlScript<SnowflakeConnectionString, SnowflakeEtlConfiguration>>();
+        public static readonly Func<BlittableJsonReaderObject, TestRelationalDatabaseEtlScript<SnowflakeConnectionString, SnowflakeEtlConfiguration>> TestRelationalEtlScriptSnowflake = GenerateJsonDeserializationRoutine<TestRelationalDatabaseEtlScript<SnowflakeConnectionString, SnowflakeEtlConfiguration>>();
 
         public static readonly Func<BlittableJsonReaderObject, TestRavenEtlScript> TestRavenEtlScript = GenerateJsonDeserializationRoutine<TestRavenEtlScript>();
 

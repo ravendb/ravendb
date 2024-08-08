@@ -110,7 +110,7 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
 
     protected abstract RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration> GetRelationalDatabaseWriterInstance();
     
-    private void LogStats(RelationalWriteStats stats, RelationalDatabaseTableWithRecords table)
+    private void LogStats(RelationalDatabaseWriteStats stats, RelationalDatabaseTableWithRecords table)
     {
         if (table.Inserts.Count > 0)
         {

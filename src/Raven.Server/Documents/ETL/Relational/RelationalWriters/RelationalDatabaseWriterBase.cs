@@ -323,9 +323,9 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
 
     protected abstract string GetPostDeleteSyntax(ToRelationalDatabaseItem itemToDelete);
 
-    public RelationalWriteStats Write(RelationalDatabaseTableWithRecords table, List<DbCommand> commands, CancellationToken token)
+    public RelationalDatabaseWriteStats Write(RelationalDatabaseTableWithRecords table, List<DbCommand> commands, CancellationToken token)
     {
-        var stats = new RelationalWriteStats();
+        var stats = new RelationalDatabaseWriteStats();
 
         var collectCommands = commands != null ? commands.Add : (System.Action<DbCommand>)null;
 

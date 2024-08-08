@@ -730,7 +730,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var testResult = SqlEtl.TestScript(
-                            new TestRelationalEtlScript<SqlConnectionString,SqlEtlConfiguration>
+                            new TestRelationalDatabaseEtlScript<SqlConnectionString,SqlEtlConfiguration>
                             {
                                 PerformRolledBackTransaction = performRolledBackTransaction,
                                 DocumentId = docId,
@@ -814,7 +814,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var testResult = SqlEtl.TestScript(
-                            new TestRelationalEtlScript<SqlConnectionString, SqlEtlConfiguration>
+                            new TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration>
                             {
                                 PerformRolledBackTransaction = performRolledBackTransaction,
                                 DocumentId = docId,
