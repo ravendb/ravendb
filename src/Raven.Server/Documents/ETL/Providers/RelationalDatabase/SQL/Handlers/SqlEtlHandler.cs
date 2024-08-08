@@ -5,11 +5,11 @@
 // -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
-using Raven.Server.Documents.ETL.Providers.SQL.Handlers.Processors;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.Handlers.Processors;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.Handlers
 {
     public sealed class SqlEtlHandler : DatabaseRequestHandler
     {

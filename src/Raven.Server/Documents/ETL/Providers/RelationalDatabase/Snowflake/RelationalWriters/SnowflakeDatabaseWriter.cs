@@ -3,7 +3,6 @@ using System.Data;
 using System.Data.Common;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Metrics;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters;
@@ -13,7 +12,7 @@ using Snowflake.Data.Client;
 using Sparrow.Json;
 using DbCommandBuilder = Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters.DbCommandBuilder;
 
-namespace Raven.Server.Documents.ETL.Providers.Snowflake.RelationalWriters;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake.RelationalWriters;
 
 public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConnectionString, SnowflakeEtlConfiguration>
 {

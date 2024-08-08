@@ -2,13 +2,13 @@
 using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers.Processors;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.Handlers.Processors;
 
 internal sealed class SqlEtlHandlerProcessorForTestConnection<TOperationContext> : AbstractDatabaseHandlerProcessor<TOperationContext>
     where TOperationContext : JsonOperationContext

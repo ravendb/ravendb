@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
-using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters;
 
 namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 

@@ -3,7 +3,6 @@ using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.ETL.Providers.Raven;
-using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications;
@@ -34,7 +33,8 @@ using System.Text;
 using Newtonsoft.Json;
 using Raven.Client.Util;
 using Raven.Server;
-using Raven.Server.Documents.ETL.Providers.Snowflake;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
 using Tests.Infrastructure;
 
 namespace FastTests

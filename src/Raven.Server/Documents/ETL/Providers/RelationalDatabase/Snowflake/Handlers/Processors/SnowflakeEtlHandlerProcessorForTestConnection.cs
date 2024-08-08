@@ -2,13 +2,13 @@
 using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Documents.ETL.Providers.Snowflake.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake.RelationalWriters;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.ETL.Providers.Snowflake.Handlers.Processors;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake.Handlers.Processors;
 
 internal sealed class SnowflakeEtlHandlerProcessorForTestConnection<TOperationContext>([NotNull] AbstractDatabaseRequestHandler<TOperationContext> requestHandler)
     : AbstractDatabaseHandlerProcessor<TOperationContext>(requestHandler)

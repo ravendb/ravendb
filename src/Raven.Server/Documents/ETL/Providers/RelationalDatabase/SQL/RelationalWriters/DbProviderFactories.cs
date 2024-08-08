@@ -6,7 +6,7 @@ using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using DbCommandBuilder = Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters.DbCommandBuilder;
 
-namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters
 {
     public sealed class DbProviderFactories
     {

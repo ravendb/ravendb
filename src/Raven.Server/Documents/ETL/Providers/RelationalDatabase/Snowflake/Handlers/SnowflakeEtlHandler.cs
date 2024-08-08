@@ -5,11 +5,11 @@
 // -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
-using Raven.Server.Documents.ETL.Providers.Snowflake.Handlers.Processors;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake.Handlers.Processors;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.ETL.Providers.Snowflake.Handlers;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake.Handlers;
 
 public sealed class SnowflakeEtlHandler : DatabaseRequestHandler
 {

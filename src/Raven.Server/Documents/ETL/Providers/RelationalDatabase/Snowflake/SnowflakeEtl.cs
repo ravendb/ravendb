@@ -1,14 +1,13 @@
 ﻿using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters;
-using Raven.Server.Documents.ETL.Providers.Snowflake.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake.RelationalWriters;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.ETL.Providers.Snowflake;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake;
 
 public sealed class SnowflakeEtl(Transformation transformation, SnowflakeEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
     : RelationalDatabaseEtlBase<SnowflakeEtlConfiguration, SnowflakeConnectionString>(transformation, configuration, database, serverStore, SnowflakeEtlTag)

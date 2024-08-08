@@ -1,6 +1,4 @@
-﻿using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
-using Raven.Server.Documents.ETL.Providers.SQL;
-using Raven.Server.ServerWide.Context;
+﻿using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using SlowTests.Server.Documents.Migration;
 using System.Collections.Generic;
@@ -17,6 +15,7 @@ using Tests.Infrastructure;
 using Npgsql;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
 
 namespace SlowTests.Server.Documents.ETL.SQL;
 

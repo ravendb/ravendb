@@ -11,7 +11,7 @@ using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.ETL.Providers.SQL;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
 
 internal sealed class
     SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)

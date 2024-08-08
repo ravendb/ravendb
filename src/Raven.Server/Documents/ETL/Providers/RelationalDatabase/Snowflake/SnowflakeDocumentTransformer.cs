@@ -6,7 +6,7 @@ using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.ETL.Providers.Snowflake;
+namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake;
 
 internal sealed class SnowflakeDocumentTransformer(
     Transformation transformation,
