@@ -2,14 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using Sparrow;
+using Sparrow.Json;
+using Sparrow.Server;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using Sparrow.Json;
-using Sparrow.Server;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Lookups;
@@ -24,7 +25,7 @@ using static Voron.VoronExceptions;
 
 namespace Voron.Impl
 {
-    public sealed unsafe class Transaction : IDisposable
+    public sealed unsafe class Transaction : IDisposable, IDisposableQueryable
     {
         public LowLevelTransaction LowLevelTransaction
         {
@@ -507,6 +508,8 @@ namespace Voron.Impl
 
             return tree;
         }
+
+        bool IDisposableQueryable.IsDisposed => _lowLevelTransaction == null || _lowLevelTransaction.IsDisposed;
         
         public void Dispose()
         {
@@ -708,16 +711,10 @@ namespace Voron.Impl
             return state;
         }
 
-        private readonly struct TableKey
+        private readonly struct TableKey(Slice tableName, bool compressed)
         {
-            private readonly Slice _tableName;
-            private readonly bool _compressed;
-
-            public TableKey(Slice tableName, bool compressed)
-            {
-                _tableName = tableName;
-                _compressed = compressed;
-            }
+            private readonly Slice _tableName = tableName;
+            private readonly bool _compressed = compressed;
 
             private bool Equals(TableKey other) =>
                 SliceComparer.Equals(_tableName, other._tableName) && _compressed == other._compressed;

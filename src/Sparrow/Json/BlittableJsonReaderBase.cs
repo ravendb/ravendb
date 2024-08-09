@@ -2,10 +2,11 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow.Compression;
+using static Sparrow.DisposableExceptions;
 
 namespace Sparrow.Json
 {
-    public abstract unsafe class BlittableJsonReaderBase
+    public abstract unsafe class BlittableJsonReaderBase : IDisposableQueryable
     {
         protected BlittableJsonReaderObject _parent;
         protected internal byte* _mem;
@@ -14,14 +15,18 @@ namespace Sparrow.Json
         protected BlittableJsonReaderBase(JsonOperationContext context)
         {
             _context = context;
-            AssertContextNotDisposed();
+
+            ThrowIfDisposedOnDebug(this);
         }
 
         public bool BelongsToContext(JsonOperationContext context)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
             return context == _context;
         }
+
+        bool IDisposableQueryable.IsDisposed => _context?.IsDisposed ?? false;
+
 
         public bool HasParent => _parent != null;
 
@@ -124,7 +129,8 @@ namespace Sparrow.Json
 
         public BlittableJsonReaderObject ReadNestedObject(int pos)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
+            
             var size = VariableSizeEncoding.Read<int>(_mem + pos, out var offset);
             return new BlittableJsonReaderObject(_mem + pos + offset, size, _context)
             {
@@ -135,7 +141,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue ReadStringLazily(int pos)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
+            
             var size = VariableSizeEncoding.Read<int>(_mem + pos, out var offset);
 
             return _context.AllocateStringValue(null, _mem + pos + offset, size);
@@ -144,7 +151,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyCompressedStringValue ReadCompressStringLazily(int pos)
         {
-            AssertContextNotDisposed();
+            ThrowIfDisposedOnDebug(this);
+            
             var uncompressedSize = VariableSizeEncoding.Read<int>(_mem + pos, out var offset);
             pos += offset;
             var compressedSize = VariableSizeEncoding.Read<int>(_mem + pos, out offset);
@@ -217,15 +225,6 @@ namespace Sparrow.Json
         protected long ReadVariableSizeLong(int pos)
         {
             return ZigZagEncoding.Decode<long>(_mem, out _, pos: pos);
-        }
-
-        [Conditional("DEBUG")]
-        protected void AssertContextNotDisposed()
-        {
-            if (_context?.IsDisposed ?? false)
-            {
-                throw new ObjectDisposedException("blittable's context has been disposed, blittable should not be used now in that case!");
-            }
         }
 
         [Conditional("DEBUG")]

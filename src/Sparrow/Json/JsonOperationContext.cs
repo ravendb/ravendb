@@ -12,13 +12,15 @@ using Sparrow.Global;
 using Sparrow.Json.Parsing;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using static Sparrow.DisposableExceptions;
+using static Sparrow.PortableExceptions;
 
 namespace Sparrow.Json
 {
     /// <summary>
     /// Single threaded for contexts
     /// </summary>
-    public partial class JsonOperationContext : PooledItem
+    public partial class JsonOperationContext : PooledItem, IDisposableQueryable
     {
         private int _generation;
         internal long PoolGeneration;
@@ -169,7 +171,7 @@ namespace Sparrow.Json
 
         public unsafe MemoryBuffer.ReturnBuffer GetMemoryBuffer(int size, out MemoryBuffer buffer)
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
 
             var rawMemory = GetMemory(size);
             buffer = new MemoryBuffer(rawMemory.Address, rawMemory.SizeInBytes, rawMemory.ContextGeneration, this);
@@ -375,15 +377,10 @@ namespace Sparrow.Json
             if (requestedSize <= 0)
                 throw new ArgumentException(nameof(requestedSize));
 #endif
-            //we should use JsonOperationContext in single thread
-            if (_arenaAllocatorForLongLivedValues == null)
-            {
-                //_arenaAllocatorForLongLivedValues == null when the context is after Reset() but before Renew()
-                ThrowAlreadyDisposedForLongLivedAllocator();
 
-                //make compiler happy, previous row will throw
-                return null;
-            }
+            // we should use JsonOperationContext in single thread
+            // _arenaAllocatorForLongLivedValues == null when the context is after Reset() but before Renew()
+            ThrowIf<ObjectDisposedException>(_arenaAllocatorForLongLivedValues == null, "Could not allocated long lived memory, because the context is after Reset() but before Renew(). Is it possible that you have tried to use the context AFTER it was returned to the context pool?");
 
             var allocatedMemory = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
             allocatedMemory.ContextGeneration = Generation;
@@ -392,11 +389,6 @@ namespace Sparrow.Json
             allocatedMemory.IsLongLived = true;
 #endif
             return allocatedMemory;
-        }
-
-        private static void ThrowAlreadyDisposedForLongLivedAllocator()
-        {
-            throw new ObjectDisposedException("Could not allocated long lived memory, because the context is after Reset() but before Renew(). Is it possible that you have tried to use the context AFTER it was returned to the context pool?");
         }
 
         /// <summary>
@@ -419,7 +411,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
 
             if (_fieldNames.TryGetValue(key, out LazyStringValue value))
             {
@@ -434,7 +426,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
+            
             if (_fieldNames.TryGetValue(field, out LazyStringValue value))
             {
                 // PERF: This is usually the most common scenario, so actually being contiguous improves the behavior.
@@ -451,13 +444,14 @@ namespace Sparrow.Json
             using (new SingleThreadAccessAssertion(_threadId, "GetLazyStringForFieldWithCachingUnlikely"))
             {
 #endif
-            EnsureNotDisposed();
-            LazyStringValue value = GetLazyString(key, longLived: true);
-            _fieldNames[key.Value] = value;
+                ThrowIfDisposed(this);
+                
+                LazyStringValue value = GetLazyString(key, longLived: true);
+                _fieldNames[key.Value] = value;
 
-            //sanity check, in case the 'value' is manually disposed outside of this function
-            Debug.Assert(value.IsDisposed == false);
-            return value;
+                //sanity check, in case the 'value' is manually disposed outside of this function
+                Debug.Assert(value.IsDisposed == false);
+                return value;
 #if DEBUG || VALIDATE
             }
 #endif
@@ -465,7 +459,7 @@ namespace Sparrow.Json
 
         public LazyStringValue GetLazyString(string field)
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
 
             if (field == null)
                 return null;
@@ -588,9 +582,8 @@ namespace Sparrow.Json
             string debugTag,
             CancellationToken token)
         {
-            if (IsDisposed)
-                ThrowObjectDisposed();
-
+            ThrowIfDisposed(this);
+            
             _jsonParserState.Reset();
             UnmanagedJsonParser parser = null;
             BlittableJsonDocumentBuilder builder = null;
@@ -609,7 +602,7 @@ namespace Sparrow.Json
                     var result = await webSocket.ReceiveAsync(bytes.Memory.Memory, token).ConfigureAwait(false);
 
                     token.ThrowIfCancellationRequested();
-                    EnsureNotDisposed();
+                    ThrowIfDisposed(this);
 
                     if (result.MessageType == WebSocketMessageType.Close)
                         return null;
@@ -624,8 +617,10 @@ namespace Sparrow.Json
                         if (read)
                             break;
                         result = await webSocket.ReceiveAsync(bytes.Memory.Memory, token).ConfigureAwait(false);
+                        
                         token.ThrowIfCancellationRequested();
-                        EnsureNotDisposed();
+                        ThrowIfDisposed(this);
+                        
                         bytes.Valid = result.Count;
                         bytes.Used = 0;
                         parser.SetBuffer(bytes);
@@ -650,7 +645,7 @@ namespace Sparrow.Json
         public unsafe BlittableJsonReaderObject ParseBuffer(byte* buffer, int length, string debugTag,
             BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null)
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
 
             _jsonParserState.Reset();
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
@@ -673,7 +668,7 @@ namespace Sparrow.Json
         public BlittableJsonReaderArray ParseBufferToArray(string value, string debugTag,
             BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null)
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
 
             _jsonParserState.Reset();
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
@@ -712,7 +707,7 @@ namespace Sparrow.Json
             IBlittableDocumentModifier modifier = null,
             CancellationToken token = default)
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
 
             _jsonParserState.Reset();
             UnmanagedJsonParser parser = null;
@@ -729,11 +724,10 @@ namespace Sparrow.Json
                     if (bytes.Valid == bytes.Used)
                     {
                         var read = await webSocket.ReceiveAsync(bytes.Memory.Memory, token).ConfigureAwait(false);
+                        ThrowIfDisposed(this);
 
-                        EnsureNotDisposed();
-
-                        if (read.Count == 0)
-                            throw new EndOfStreamException("Stream ended without reaching end of json content");
+                        ThrowIf<EndOfStreamException>(read.Count == 0, "Stream ended without reaching end of json content");
+                        
                         bytes.Valid = read.Count;
                         bytes.Used = 0;
                     }
@@ -754,12 +748,6 @@ namespace Sparrow.Json
             }
         }
 
-        private void EnsureNotDisposed()
-        {
-            if (IsDisposed)
-                ThrowObjectDisposed();
-        }
-
         public async ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(
             Stream stream,
             string documentId,
@@ -769,7 +757,7 @@ namespace Sparrow.Json
             CancellationToken? token = null,
             int maxSize = int.MaxValue)
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
 
             _jsonParserState.Reset();
             UnmanagedJsonParser parser = null;
@@ -791,16 +779,16 @@ namespace Sparrow.Json
                         var read = token.HasValue
                             ? await stream.ReadAsync(bytes.Memory.Memory, token.Value).ConfigureAwait(false)
                             : await stream.ReadAsync(bytes.Memory.Memory).ConfigureAwait(false);
+                        
+                        ThrowIfDisposed(this);
 
-                        EnsureNotDisposed();
+                        ThrowIf<EndOfStreamException>(read == 0, "Stream ended without reaching end of json content");
 
-                        if (read == 0)
-                            throw new EndOfStreamException("Stream ended without reaching end of json content");
                         bytes.Valid = read;
                         bytes.Used = 0;
                         maxSize -= read;
-                        if (maxSize < 0)
-                            throw new ArgumentException($"The maximum size allowed for {documentId} ({maxSize}) has been exceeded, aborting");
+                        
+                        ThrowIf<ArgumentException>(maxSize < 0, $"The maximum size allowed for {documentId} ({maxSize}) has been exceeded, aborting");
                     }
 
                     parser.SetBuffer(bytes);
@@ -835,15 +823,9 @@ namespace Sparrow.Json
             }
         }
 
-        private void ThrowObjectDisposed()
-        {
-            throw new ObjectDisposedException(nameof(JsonOperationContext));
-        }
-
         protected internal virtual void Renew()
         {
-            if (IsDisposed)
-                ThrowObjectDisposed();
+            ThrowIfDisposed(this);
 
             if (_activeAllocatePathCaches == null)
             {
@@ -899,10 +881,10 @@ namespace Sparrow.Json
 
                 _arenaAllocatorForLongLivedValues = null;
                 CachedProperties = null;
-                // at this point, the long lived section is far too large, this is something that can happen
+                // at this point, the long-lived section is far too large, this is something that can happen
                 // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K
                 // property names before this kicks in, which is a true abuse of the system. In this case,
-                // in order to avoid unlimited growth, we'll reset the long lived section
+                // in order to avoid unlimited growth, we'll reset the long-lived section
                 allocatorForLongLivedValues.Dispose();
 
                 _fieldNames.Clear();
@@ -963,7 +945,8 @@ namespace Sparrow.Json
 
         public async ValueTask WriteAsync(Stream stream, BlittableJsonReaderObject json, CancellationToken token = default)
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
+            
             await using (AsyncBlittableJsonTextWriter.Create(this, stream, out var writer))
             {
                 writer.WriteObject(json);
@@ -974,7 +957,7 @@ namespace Sparrow.Json
         public void Write<TWriter>(TWriter writer, BlittableJsonReaderObject json)
             where TWriter : IBlittableJsonTextWriter
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
             WriteInternal(writer, json);
         }
 
@@ -994,14 +977,16 @@ namespace Sparrow.Json
         public void Write<TWriter>(TWriter writer, DynamicJsonValue json)
             where TWriter : IBlittableJsonTextWriter
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
+            
             WriteInternal(writer, json);
         }
 
         public void Write<TWriter>(TWriter writer, DynamicJsonArray json)
             where TWriter : IBlittableJsonTextWriter
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
+            
             _jsonParserState.Reset();
             _objectJsonParser.Reset(json);
 
@@ -1015,7 +1000,8 @@ namespace Sparrow.Json
         public void WriteObject<TWriter>(TWriter writer, JsonParserState state, ObjectJsonParser parser)
             where TWriter : IBlittableJsonTextWriter
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
+            
             if (state.CurrentTokenType != JsonParserToken.StartObject)
                 throw new InvalidOperationException("StartObject expected, but got " + state.CurrentTokenType);
 
@@ -1122,7 +1108,8 @@ namespace Sparrow.Json
         public void WriteArray<TWriter>( TWriter writer, JsonParserState state, ObjectJsonParser parser)
             where TWriter : IBlittableJsonTextWriter
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
+            
             if (state.CurrentTokenType != JsonParserToken.StartArray)
                 throw new InvalidOperationException("StartArray expected, but got " + state.CurrentTokenType);
 
@@ -1147,13 +1134,15 @@ namespace Sparrow.Json
 
         public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
+            
             return _arenaAllocator.GrowAllocation(allocation, sizeIncrease);
         }
 
         public MemoryStream CheckoutMemoryStream()
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
+            
             if (_cachedMemoryStreams.Count == 0)
             {
                 return new MemoryStream();
@@ -1178,7 +1167,7 @@ namespace Sparrow.Json
                 return;
             }
 
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
 
             stream.SetLength(0);
             _cachedMemoryStreams.Push(stream);
@@ -1187,7 +1176,8 @@ namespace Sparrow.Json
 
         public void ReturnMemory(AllocatedMemoryData allocation)
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
+            
             if (_generation != allocation.ContextGeneration)
                 ThrowUseAfterFree(allocation);
 
@@ -1207,7 +1197,8 @@ namespace Sparrow.Json
 
         public AvoidOverAllocationScope AvoidOverAllocation()
         {
-            EnsureNotDisposed();
+            ThrowIfDisposed(this);
+            
             _arenaAllocator.AvoidOverAllocation = true;
             return new AvoidOverAllocationScope(this);
         }
