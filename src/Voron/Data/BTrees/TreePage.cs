@@ -10,6 +10,7 @@ using Sparrow.Server;
 using Voron.Data.Compression;
 using Voron.Debugging;
 using Voron.Impl;
+using static Sparrow.PortableExceptions;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.BTrees
@@ -320,8 +321,10 @@ namespace Voron.Data.BTrees
         {
             Debug.Assert(index <= NumberOfEntries && index >= 0);
             Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
-            if (HasSpaceFor(key, len) == false)
-                throw new InvalidOperationException(string.Format("The page is full and cannot add an entry, this is probably a bug. Key: {0}, data length: {1}, size left: {2}", key, len, SizeLeft));
+            
+            ThrowIf<InvalidOperationException>(HasSpaceFor(key, len) == false,
+                $"The page is full and cannot add an entry, this is probably a bug. Key: {key}, data length: {len}, size left: {SizeLeft}");
+                
 
             // move higher pointers up one slot
             ushort* offsets = KeysOffsets;

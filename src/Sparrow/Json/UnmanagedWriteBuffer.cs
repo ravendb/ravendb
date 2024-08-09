@@ -293,8 +293,10 @@ namespace Sparrow.Json
         {
             Debug.Assert(required > 0);
 
-            ThrowIf<InvalidOperationException>(required > ArenaMemoryAllocator.MaxArenaSize, 
-                $"Tried to allocate {new Size(required, SizeUnit.Bytes)}, which exceeds maximum allocation size of {new Size(ArenaMemoryAllocator.MaxArenaSize, SizeUnit.Bytes)}");
+            if (required > ArenaMemoryAllocator.MaxArenaSize)
+            {
+                Throw<InvalidOperationException>($"Tried to allocate {new Size(required, SizeUnit.Bytes)}, which exceeds maximum allocation size of {new Size(ArenaMemoryAllocator.MaxArenaSize, SizeUnit.Bytes)}");
+            }
             
             // Grow by doubling segment size until we get to 1 MB, then just use 1 MB segments
             // otherwise a document with 17 MB will waste 15 MB and require very big allocations
@@ -315,8 +317,11 @@ namespace Sparrow.Json
             // mutate it to ensure all copies have the same allocations.
             var allocation = _context.GetMemory(segmentSize);
 
-            ThrowIf<InvalidOperationException>(allocation.SizeInBytes < required,
-                $"Allocated {new Size(allocation.SizeInBytes, SizeUnit.Bytes)} but we requested at least {new Size(required, SizeUnit.Bytes)}");
+            if (allocation.SizeInBytes < required)
+            {
+                Throw<InvalidOperationException>($"Allocated {new Size(allocation.SizeInBytes, SizeUnit.Bytes)} but we requested at least {new Size(required, SizeUnit.Bytes)}");
+            }
+
 
             // Copy the head
             Segment previousHead = _head.ShallowCopy();

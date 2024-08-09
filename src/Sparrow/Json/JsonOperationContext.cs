@@ -787,8 +787,11 @@ namespace Sparrow.Json
                         bytes.Valid = read;
                         bytes.Used = 0;
                         maxSize -= read;
-                        
-                        ThrowIf<ArgumentException>(maxSize < 0, $"The maximum size allowed for {documentId} ({maxSize}) has been exceeded, aborting");
+
+                        if (maxSize < 0)
+                        {
+                            Throw<ArgumentException>($"The maximum size allowed for {documentId} ({maxSize}) has been exceeded, aborting");
+                        }
                     }
 
                     parser.SetBuffer(bytes);
