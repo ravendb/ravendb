@@ -13,6 +13,7 @@ namespace Voron.Exceptions
 {
     public class VoronUnrecoverableErrorException : Exception
     {
+        [DoesNotReturn]
         public static void Raise(LowLevelTransaction tx, string message)
         {
             try
@@ -43,6 +44,7 @@ namespace Voron.Exceptions
             }
         }
 
+        [DoesNotReturn]
         public static void Raise(StorageEnvironment env, string message, Exception inner)
         {
             try
@@ -57,19 +59,10 @@ namespace Voron.Exceptions
             }
         }
 
+        [DoesNotReturn]
         public static void Raise(string message, Exception inner)
         {
             throw new VoronUnrecoverableErrorException(message, inner);
-        }
-
-        protected VoronUnrecoverableErrorException(string message)
-            : base(message)
-        {
-        }
-
-        private VoronUnrecoverableErrorException(string message, Exception inner)
-            : base(message, inner)
-        {
         }
 
         [DoesNotReturn]
@@ -84,6 +77,16 @@ namespace Voron.Exceptions
                 options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                 throw;
             }
+        }
+
+        protected VoronUnrecoverableErrorException(string message)
+            : base(message)
+        {
+        }
+
+        private VoronUnrecoverableErrorException(string message, Exception inner)
+            : base(message, inner)
+        {
         }
     }
 }

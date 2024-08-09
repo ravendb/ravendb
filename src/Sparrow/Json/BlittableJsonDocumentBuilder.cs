@@ -7,7 +7,7 @@ using Sparrow.Threading;
 
 namespace Sparrow.Json
 {
-    public sealed class BlittableJsonDocumentBuilder : AbstractBlittableJsonDocumentBuilder
+    public sealed class BlittableJsonDocumentBuilder : AbstractBlittableJsonDocumentBuilder, IDisposableQueryable
     {
         private static readonly StringSegment UnderscoreSegment = new("_");
 
@@ -50,6 +50,8 @@ namespace Sparrow.Json
         {
             Renew(debugTag, mode);
         }
+
+        bool IDisposableQueryable.IsDisposed => _disposed.IsRaised();
 
         public void Reset()
         {
@@ -127,6 +129,9 @@ namespace Sparrow.Json
 
         public override void Dispose()
         {
+            // We may not want to execute `.Dispose()` more than once in release, but we want to fail fast in debug if it happens.
+            DisposableExceptions.ThrowIfDisposedOnDebug(this);
+            
             if (_disposed.Raise() == false)
                 return;
 
