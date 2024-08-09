@@ -41,10 +41,15 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ReadOnlySpan<byte> ToReadOnlySpan(TreeNodeHeader* node, ByteStringType type)
+        {
+            return new ReadOnlySpan<byte>((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope ToSlice(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice str)
         {
-            ByteString byteString;
-            var scope = context.From((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize, type | (ByteStringType) SliceOptions.Key, out byteString);
+            var scope = context.From((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize, type | (ByteStringType) SliceOptions.Key, out ByteString byteString);
             str = new Slice(byteString);
             return scope;
         }
@@ -60,8 +65,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.ExternalScope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice slice)
         {
-            ByteString str;
-            var scope = context.FromPtr((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize, type, out str);
+            var scope = context.FromPtr((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize, type, out ByteString str);
             slice = new Slice(str);
             return scope;
         }
