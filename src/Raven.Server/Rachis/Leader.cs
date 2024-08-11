@@ -524,12 +524,11 @@ namespace Raven.Server.Rachis
                 if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < Term)
                     return;// can't commit until at least one entry from our term has been published
 
-                changedFromLeaderElectToLeader = _engine.TakeOffice();
-
                 var sp = Stopwatch.StartNew();
                 maxIndexOnQuorum = _engine.Apply(context, maxIndexOnQuorum, this, sp);
-
                 context.Transaction.Commit();
+                
+                changedFromLeaderElectToLeader = _engine.TakeOffice();
 
                 var elapsed = sp.Elapsed;
                 if (RachisStateMachine.EnableDebugLongCommit && elapsed > TimeSpan.FromSeconds(5))
