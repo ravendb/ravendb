@@ -39,6 +39,7 @@ namespace Raven.Server.Config.Categories
         TrafficWatch,
         [Description("Export & Import")]
         ExportImport,
-        Etw
+        [Description("Event Listener")]
+        EventListener
     }
 }

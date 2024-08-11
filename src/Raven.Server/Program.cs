@@ -126,11 +126,11 @@ namespace Raven.Server
             TrafficWatchToLog.Instance.UpdateConfiguration(configuration.TrafficWatch);
             EventListenerToLog.Instance.UpdateConfiguration(new EventListenerToLog.EventListenerConfiguration
             {
-                EventListenerMode = configuration.EventListener.EventListenerMode,
-                EventTypes = configuration.EventListener.EventTypes,
-                MinimumDurationInMs = configuration.EventListener.MinimumDuration.GetValue(TimeUnit.Milliseconds),
-                AllocationsLoggingIntervalInMs = configuration.EventListener.AllocationsLoggingInterval.GetValue(TimeUnit.Milliseconds),
-                AllocationsLoggingCount = configuration.EventListener.AllocationsLoggingCount
+                EventListenerMode = configuration.DebugConfiguration.EventListenerMode,
+                EventTypes = configuration.DebugConfiguration.EventTypes,
+                MinimumDurationInMs = configuration.DebugConfiguration.MinimumDuration.GetValue(TimeUnit.Milliseconds),
+                AllocationsLoggingIntervalInMs = configuration.DebugConfiguration.AllocationsLoggingInterval.GetValue(TimeUnit.Milliseconds),
+                AllocationsLoggingCount = configuration.DebugConfiguration.AllocationsLoggingCount
             });
 
             if (Logger.IsInfoEnabled)

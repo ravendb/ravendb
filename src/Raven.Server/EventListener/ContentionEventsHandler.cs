@@ -23,12 +23,13 @@ public class ContentionEventsHandler : AbstractEventsHandler<ContentionEventsHan
     {
         switch (eventData.EventName)
         {
-            case "ContentionStart":
+            case EventListener.Constants.EventNames.Contention.ContentionStart:
                 if (EventTypes.Contains(EventType.Contention))
                     _contentionStarts[eventData.ActivityId] = DateTime.UtcNow;
+
                 return true;
 
-            case "ContentionStop":
+            case EventListener.Constants.EventNames.Contention.ContentionStop:
                 if (EventTypes.Contains(EventType.Contention) &&
                     _contentionStarts.TryGetValue(eventData.ActivityId, out var startTime))
                 {
