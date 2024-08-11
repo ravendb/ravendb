@@ -17,6 +17,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
@@ -2758,6 +2759,377 @@ public class PrefixedSharding : ClusterTestBase
         }));
 
         Assert.Contains("Prefix 'users/us/' already exists in different casing", ex.Message);
+    }
+
+    [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Querying)]
+    public void CanQueryByPrefix()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/us/",
+                        Shards = [0]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/eu/",
+                        Shards = [1]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/asia/",
+                        Shards = [2]
+                    }
+                ];
+            }
+        });
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User(), "users/us/1");
+                session.Store(new User(), "users/us/2");
+                session.Store(new User(), "users/us/3");
+
+                session.Store(new User(), "users/eu/1");
+                session.Store(new User(), "users/eu/2");
+
+                session.Store(new User(), "users/asia/1");
+                session.Store(new User(), "users/asia/2");
+                session.Store(new User(), "users/asia/3");
+                session.Store(new User(), "users/asia/4");
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var results = session.Query<User>()
+                    .Customize(x => x.ShardContext(s => s.ByPrefix("users/us/")))
+                    .ToList();
+
+                Assert.Equal(3, results.Count);
+
+                var results2 = session.Query<User>()
+                    .Customize(x => x.ShardContext(s => s.ByPrefix("users/eu/")))
+                    .Statistics(out var s)
+                    .Select(x => x.Id)
+                    .ToList();
+
+                Assert.Equal(2, results2.Count);
+
+                var results3 = session.Query<User>()
+                    .Customize(x => x.ShardContext(s => s.ByDocumentId("users/asia/")))
+                    .ToList();
+
+                Assert.Equal(4, results3.Count);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var results = session.Advanced.DocumentQuery<User>()
+                    .ShardContext(s => s.ByPrefix("users/us/"))
+                    .ToList();
+
+                Assert.Equal(3, results.Count);
+
+                var results2 = session.Advanced.DocumentQuery<User>()
+                    .ShardContext(s => s.ByPrefix("users/eu/"))
+                    .ToList();
+
+                Assert.Equal(2, results2.Count);
+
+                var results3 = session.Advanced.DocumentQuery<User>()
+                    .ShardContext(s => s.ByPrefix("users/asia/"))
+                    .ToList();
+
+                Assert.Equal(4, results3.Count);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Querying)]
+    public void CanQueryByPrefix_WithPrefixedDocsSpreadAcrossMultipleShards()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "orders/",
+                        Shards = [0, 1]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "products/",
+                        Shards = [1]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "companies/",
+                        Shards = [2]
+                    }
+                ];
+            }
+        });
+        {
+            using (var session = store.OpenSession())
+            {
+                for (int i = 0; i < 100; i++)
+                {
+                    session.Store(new Order(), $"orders/{i}");
+                }
+
+                session.Store(new Product(), "products/1");
+                session.Store(new Product(), "products/2");
+                session.Store(new Company(), "companies/1");
+                session.Store(new User(), "users/ayende");
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var orders = session.Query<Order>()
+                    .Customize(x => x.ShardContext(s => s.ByPrefix("orders/")))
+                    .ToList();
+
+                Assert.Equal(100, orders.Count);
+
+                var products = session.Query<Product>()
+                    .Customize(x => x.ShardContext(s => s.ByPrefix("Products/")))
+                    .ToList();
+
+                Assert.Equal(2, products.Count);
+
+                var companies = session.Query<Company>()
+                    .Customize(x => x.ShardContext(s => s.ByDocumentId("COMPANIES/"))) // should be case-insensitive
+                    .ToList();
+
+                Assert.Equal(1, companies.Count);
+            }
+
+            int numOfOrdersInShard1;
+            using (var session = store.OpenSession(ShardHelper.ToShardName(store.Database, 1)))
+            {
+                numOfOrdersInShard1 = session.Query<Order>().Count();
+                Assert.True(numOfOrdersInShard1 > 0);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                // we know that all docs starting with 'products/' reside on shard #1 =>
+                // query should return just the orders from shard #1
+
+                var orders = session.Query<Order>()
+                    .Customize(x => x.ShardContext(s => s.ByPrefix("products/")))
+                    .ToList();
+
+                Assert.Equal(numOfOrdersInShard1, orders.Count);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Querying)]
+    public void QueryByPrefix_ShouldThrowOnNonExistingPrefix()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "orders/",
+                        Shards = [0]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "products/",
+                        Shards = [1]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "companies/",
+                        Shards = [2]
+                    }
+                ];
+            }
+        });
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Order(), "orders/1");
+                session.Store(new Product(), "products/1");
+                session.Store(new Company(), "companies/1");
+                session.Store(new User(), "users/1");
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var query = session.Query<object>()
+                    .Customize(x => x.ShardContext(s => s.ByPrefix("users/")));
+
+                var ex = Assert.Throws<RavenException>(() => query.ToList());
+                Assert.Contains("Prefix 'users/' wasn't found in Sharding Configuration", ex.Message);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Querying)]
+    public void CanQueryByPrefix_Raw()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/",
+                        Shards = [1]
+                    }
+                ];
+            }
+        });
+        {
+            using (var session = store.OpenSession())
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    session.Store(new User(), $"users/{i}");
+                    session.Store(new Order(), $"orders/{i}");
+                    session.Store(new Company(), $"companies/{i}");
+                    session.Store(new Product(), $"products/{i}");
+                }
+
+                session.SaveChanges();
+            }
+
+            int numOfDocsInShard1 = 0;
+            using (var session = store.OpenSession(ShardHelper.ToShardName(store.Database, 1)))
+            {
+                numOfDocsInShard1 = session.Query<object>().Count();
+                Assert.True(numOfDocsInShard1 > 0);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var p = new
+                {
+                    Prefixes = new List<string> { "users/" }
+                };
+
+                var allDocsQuery = session.Advanced.RawQuery<BlittableJsonReaderObject>("from @all_docs")
+                    .AddParameter(Raven.Client.Constants.Documents.Querying.Sharding.ShardContextParameterName, p);
+
+                var results = allDocsQuery.ToList();
+                Assert.Equal(numOfDocsInShard1, results.Count);
+
+                var usersQuery = session.Advanced.RawQuery<BlittableJsonReaderObject>("from Users")
+                    .AddParameter(Raven.Client.Constants.Documents.Querying.Sharding.ShardContextParameterName, p);
+
+                var users = usersQuery.ToList();
+                Assert.Equal(10, users.Count);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Querying)]
+    public void CanQueryByMultiplePrefixes()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed =
+                [
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/asia/",
+                        Shards = [0]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/eu/",
+                        Shards = [1]
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "users/us/",
+                        Shards = [2]
+                    }
+                ];
+            }
+        });
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User(), "users/us/1");
+                session.Store(new User(), "users/us/2");
+                session.Store(new User(), "users/us/3");
+
+                session.Store(new User(), "users/eu/1");
+                session.Store(new User(), "users/eu/2");
+
+                session.Store(new User(), "users/asia/1");
+                session.Store(new User(), "users/asia/2");
+                session.Store(new User(), "users/asia/3");
+                session.Store(new User(), "users/asia/4");
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var results = session.Query<User>()
+                    .Customize(x => x.ShardContext(s => s.ByPrefixes(["users/us/", "users/eu/"])))
+                    .OrderBy(u => u.Id)
+                    .ToList();
+
+                Assert.Equal(5, results.Count);
+
+                Assert.Equal("users/eu/1", results[0].Id);
+                Assert.Equal("users/eu/2", results[1].Id);
+
+                Assert.Equal("users/us/1", results[2].Id);
+                Assert.Equal("users/us/2", results[3].Id);
+                Assert.Equal("users/us/3", results[4].Id);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var results = session.Advanced.DocumentQuery<User>()
+                    .ShardContext(s => s.ByPrefixes(["users/us/", "users/eu/"]))
+                    .OrderBy(u => u.Id)
+                    .ToList();
+
+                Assert.Equal(5, results.Count);
+
+                Assert.Equal("users/eu/1", results[0].Id);
+                Assert.Equal("users/eu/2", results[1].Id);
+
+                Assert.Equal("users/us/1", results[2].Id);
+                Assert.Equal("users/us/2", results[3].Id);
+                Assert.Equal("users/us/3", results[4].Id);
+            }
+        }
     }
 
     private class Item
