@@ -89,11 +89,6 @@ namespace Raven.Server.ServerWide
                 case nameof(PutIndexesCommand):
                     AssertAdditionalAssembliesFromNuGetLicenseLimits(serverStore, databaseRecord, context);
                     break;
-                case nameof(PutServerWideExternalReplicationCommand):
-                    AssertServerWideExternalReplicationLicenseLimits(serverStore, context);
-                    break;
-
-
             }
         }
 
@@ -332,18 +327,13 @@ namespace Raven.Server.ServerWide
             throw new LicenseLimitException(LimitType.AdditionalAssembliesFromNuGet, "Your license doesn't support Additional Assemblies From NuGet feature.");
         }
 
-        private void AssertServerWideExternalReplicationLicenseLimits(ServerStore serverStore, ClusterOperationContext context)
+        private void AssertServerWideForExternalReplication(ServerStore serverStore, ClusterOperationContext context)
         {
             if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion54201) == false)
                 return;
 
-            if (serverStore.LicenseManager.LicenseStatus.HasDelayedExternalReplication)
-                return;
-
-            if (serverStore.LicenseManager.LicenseStatus.HasExternalReplication == false)
-                throw new LicenseLimitException(LimitType.ExternalReplication, "Your license doesn't support adding server wide External Replication.");
-
-            throw new LicenseLimitException(LimitType.DelayedExternalReplication, "Your license doesn't support adding server wide Delayed External Replication.");
+            if (serverStore.LicenseManager.LicenseStatus.HasServerWideExternalReplications == false)
+                throw new LicenseLimitException(LimitType.ServerWideExternalReplications, "Your license doesn't support adding server wide external replication.");
         }
 
     }

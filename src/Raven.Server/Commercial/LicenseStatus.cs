@@ -187,6 +187,7 @@ namespace Raven.Server.Commercial
 
         public bool HasPostgreSqlIntegration => GetValue<bool>(LicenseAttribute.PostgreSqlIntegration);
 
+        public bool HasServerWideExternalReplications => Enabled(LicenseAttribute.ServerWideExternalReplications);
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
