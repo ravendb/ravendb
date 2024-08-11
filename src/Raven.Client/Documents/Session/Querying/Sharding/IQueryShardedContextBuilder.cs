@@ -7,4 +7,10 @@ public interface IQueryShardedContextBuilder
     IQueryShardedContextBuilder ByDocumentId(string id);
 
     IQueryShardedContextBuilder ByDocumentIds(IEnumerable<string> ids);
+
+    IQueryShardedContextBuilder ByPrefix(string prefix);
+
+    IQueryShardedContextBuilder ByPrefixes(IEnumerable<string> prefixes);
+
+
 }
