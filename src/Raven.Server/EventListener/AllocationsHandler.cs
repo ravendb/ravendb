@@ -11,7 +11,6 @@ public class AllocationsHandler : AbstractEventsHandler<AllocationsHandler.Alloc
 
     protected override Action<AllocationInfo> OnEvent { get; }
 
-    internal const string AllocationEventName = "GCAllocationTick_V4";
 
     public AllocationsHandler(Action<AllocationInfo> onEvent, HashSet<EventType> eventTypes = null, long minimumDurationInMs = 0)
     {
@@ -23,7 +22,7 @@ public class AllocationsHandler : AbstractEventsHandler<AllocationsHandler.Alloc
     {
         switch (eventData.EventName)
         {
-            case AllocationEventName:
+            case EventListener.Constants.EventNames.Allocations.Allocation:
                 if (EventTypes.Contains(EventType.Allocations) == false)
                     return true;
 
