@@ -26,14 +26,14 @@ public class EventsListener : AbstractEventListener
         _allocationsLoggingIntervalInMs = allocationsLoggingIntervalInMs;
         _allocationsLoggingCount = allocationsLoggingCount;
         _handlers.Add(new GcEventsHandler(onEvent, eventTypes, minimumDurationInMs));
-        _handlers.Add(new AllocationsHandler(OnEvent(onEvent), eventTypes, minimumDurationInMs));
+        _handlers.Add(new AllocationsHandler(OnAllocationEvent(onEvent), eventTypes, minimumDurationInMs));
         _handlers.Add(new ContentionEventsHandler(onEvent, eventTypes, minimumDurationInMs));
 
         _dotNetEventType = GetDotNetEventTypes(eventTypes);
         EnableEvents(_dotNetEventType);
     }
 
-    private Action<AllocationsHandler.AllocationInfo> OnEvent(Action<Event> onEvent)
+    private Action<AllocationsHandler.AllocationInfo> OnAllocationEvent(Action<Event> onEvent)
     {
         return e =>
         {
