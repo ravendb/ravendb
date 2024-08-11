@@ -570,7 +570,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideExternalReplicationCommand):
-                        AssertLicenseLimits(type, serverStore, databaseRecord:null, context);
+                        AssertServerWideForExternalReplication(serverStore, context);
                         var serverWideExternalReplication = UpdateValue<ServerWideExternalReplication>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication, index);
                         break;

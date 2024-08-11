@@ -89,6 +89,9 @@ namespace Raven.Client.Exceptions.Commercial
         ReadOnlyCertificates,
 
         [Description("Concurrent Subscriptions")]
-        ConcurrentSubscriptions
+        ConcurrentSubscriptions,
+
+        [Description("Server Wide External Replications")]
+        ServerWideExternalReplications,
     }
 }

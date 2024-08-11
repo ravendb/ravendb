@@ -38,5 +38,6 @@
         PostgreSqlIntegration,
         CanBeActivatedUntil,
         QueueEtl,
+        ServerWideExternalReplications
     }
 }
