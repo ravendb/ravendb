@@ -26,7 +26,7 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
     {
         switch (eventData.EventName)
         {
-            case "GCStart_V2":
+            case EventListener.Constants.EventNames.GC.GCStart:
                 if (EventTypes.Contains(EventType.GC))
                 {
                     var startIndex = long.Parse(eventData.Payload[0].ToString());
@@ -37,7 +37,7 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
                 
                 return true;
 
-            case "GCEnd_V1":
+            case EventListener.Constants.EventNames.GC.GCEnd:
                 if (EventTypes.Contains(EventType.GC))
                 {
                     var endIndex = long.Parse(eventData.Payload[0].ToString());
@@ -54,13 +54,13 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
                 
                 return true;
 
-            case "GCSuspendEEBegin_V1":
+            case EventListener.Constants.EventNames.GC.GCSuspendBegin:
                 if (EventTypes.Contains(EventType.GCSuspend))
                     _suspendData = eventData;
 
                 return true;
 
-            case "GCSuspendEEEnd_V1":
+            case EventListener.Constants.EventNames.GC.GCSuspendEnd:
                 if (EventTypes.Contains(EventType.GCSuspend) && _suspendData != null)
                 {
                     var index = (uint)_suspendData.Payload[1];
@@ -75,12 +75,12 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
 
                 return true;
 
-            case "GCRestartEEBegin_V1":
+            case EventListener.Constants.EventNames.GC.GCRestartBegin:
                 if (EventTypes.Contains(EventType.GCRestart))
                     _timeGcRestartStart = eventData.TimeStamp;
                 return true;
 
-            case "GCRestartEEEnd_V1":
+            case EventListener.Constants.EventNames.GC.GCRestartEnd:
                 if (EventTypes.Contains(EventType.GCRestart) && _timeGcRestartStart != null)
                 {
                     var @event = new GCEventBase(EventType.GCRestart, _timeGcRestartStart.Value, eventData);
@@ -92,12 +92,12 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
 
                 return true;
 
-            case "GCFinalizersBegin_V1":
+            case EventListener.Constants.EventNames.GC.GCFinalizersBegin:
                 if (EventTypes.Contains(EventType.GCFinalizers))
                     _timeGcFinalizersStart = eventData.TimeStamp;
                 return true;
 
-            case "GCFinalizersEnd_V1":
+            case EventListener.Constants.EventNames.GC.GCFinalizersEnd:
                 if (EventTypes.Contains(EventType.GCFinalizers) && _timeGcFinalizersStart != null)
                 {
                     var @event = new GCEventBase(EventType.GCFinalizers, _timeGcFinalizersStart.Value, eventData);

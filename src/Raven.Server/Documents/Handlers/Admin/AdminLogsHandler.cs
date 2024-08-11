@@ -341,9 +341,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                     try
                     {
                         using var jsonFileModifier = SettingsJsonModifier.Create(context, ServerStore.Configuration.ConfigPath);
-                        jsonFileModifier.SetOrRemoveIfDefault(configuration.EventListenerMode, x => x.EventListener.EventListenerMode);
-                        jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.EventTypes, x => x.EventListener.EventTypes);
-                        jsonFileModifier.SetOrRemoveIfDefault(configuration.MinimumDurationInMs, x => x.EventListener.MinimumDuration);
+                        jsonFileModifier.SetOrRemoveIfDefault(configuration.EventListenerMode, x => x.DebugConfiguration.EventListenerMode);
+                        jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.EventTypes, x => x.DebugConfiguration.EventTypes);
+                        jsonFileModifier.SetOrRemoveIfDefault(configuration.MinimumDurationInMs, x => x.DebugConfiguration.MinimumDuration);
+                        jsonFileModifier.SetOrRemoveIfDefault(configuration.AllocationsLoggingIntervalInMs, x => x.DebugConfiguration.AllocationsLoggingInterval);
+                        jsonFileModifier.SetOrRemoveIfDefault(configuration.AllocationsLoggingCount, x => x.DebugConfiguration.AllocationsLoggingCount);
                         await jsonFileModifier.ExecuteAsync();
                     }
                     catch (Exception e)

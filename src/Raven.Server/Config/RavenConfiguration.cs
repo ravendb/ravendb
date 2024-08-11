@@ -103,7 +103,7 @@ namespace Raven.Server.Config
 
         public TrafficWatchConfiguration TrafficWatch { get; }
 
-        public EventListenerConfiguration EventListener { get; }
+        public DebugConfiguration DebugConfiguration { get; }
 
         public ExportImportConfiguration ExportImport { get; }
 
@@ -156,7 +156,7 @@ namespace Raven.Server.Config
             Updates = new UpdatesConfiguration();
             Migration = new MigrationConfiguration();
             TrafficWatch = new TrafficWatchConfiguration();
-            EventListener = new EventListenerConfiguration();
+            DebugConfiguration = new DebugConfiguration();
             Integrations = new IntegrationsConfiguration();
             ExportImport = new ExportImportConfiguration();
         }
@@ -219,7 +219,7 @@ namespace Raven.Server.Config
             Updates.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Migration.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             TrafficWatch.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
-            EventListener.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            DebugConfiguration.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Integrations.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             ExportImport.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
 
