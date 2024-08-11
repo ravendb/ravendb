@@ -31,8 +31,8 @@ namespace RachisTests
                     RaftCommandIndex = 322
                 };
 
-                var t = leader.PutAsync(cmd);
-                await leader.PutAsync(cmd);
+                var t = leader.SendToLeaderAsync(cmd);
+                await leader.SendToLeaderAsync(cmd);
 
                 // this should not throw timeout exception.
                 var exception = await Record.ExceptionAsync(async () => await t);
@@ -59,7 +59,7 @@ namespace RachisTests
             {
                 for (var i = 0; i < commandCount; i++)
                 {
-                    tasks.Add(leader.PutAsync(new TestCommand { Name = "test", Value = i }));
+                    tasks.Add(leader.SendToLeaderAsync(new TestCommand { Name = "test", Value = i }));
                 }
                 using (context.OpenReadTransaction())
                     lastIndex = leader.GetLastEntryIndex(context);
@@ -85,7 +85,7 @@ namespace RachisTests
             {
                 for (var i = 0; i < commandCount; i++)
                 {
-                    tasks.Add(leader.PutAsync(new TestCommand { Name = "test", Value = i }));
+                    tasks.Add(leader.SendToLeaderAsync(new TestCommand { Name = "test", Value = i }));
                 }
                 using (context.OpenReadTransaction())
                     lastIndex = leader.GetLastEntryIndex(context);
@@ -98,8 +98,8 @@ namespace RachisTests
             
             try
             {
-                var task = leader.PutAsync(new TestCommand { Name = "test", Value = commandCount });
-                Assert.True(await task.WaitWithoutExceptionAsync((int)leader.ElectionTimeout.TotalMilliseconds * 10));
+                var task = leader.CurrentLeader.PutAsync(new TestCommand { Name = "test", Value = commandCount },
+                    TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 10));
                 await task;
                 Assert.True(false, "We should have gotten an error");
             }

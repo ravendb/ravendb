@@ -287,7 +287,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task<bool> ProxyToLeaderIfNeeded(TransactionOperationContext context, DatabaseRecord databaseRecord, int replicationFactor, long? index)
+        private async Task<bool> ProxyToLeaderIfNeeded(JsonOperationContext context, DatabaseRecord databaseRecord, int replicationFactor, long? index)
         {
             var leaderTag = ServerStore.Engine.LeaderTag;
             if (leaderTag == null)
@@ -300,7 +300,7 @@ namespace Raven.Server.Web.System
             if (leaderTag != ServerStore.NodeTag)
             {
                 // proxy the command to the leader
-                var leaderRequestExecutor = ServerStore.GetLeaderRequestExecutor(context, leaderTag);
+                var leaderRequestExecutor = ServerStore.GetLeaderRequestExecutor(leaderTag);
                 var command = new CreateDatabaseOperation.CreateDatabaseCommand(databaseRecord, replicationFactor, index);
                 await leaderRequestExecutor.ExecuteAsync(command, context);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
