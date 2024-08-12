@@ -126,7 +126,7 @@ namespace Raven.Server.ServerWide
         public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
 
         private RequestExecutor _leaderRequestExecutor;
-        private long _lastClusterTopologyIndex = -1;
+        internal long _lastClusterTopologyIndex = -1;
 
         public readonly RavenConfiguration Configuration;
         private readonly RavenServer _server;

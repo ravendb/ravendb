@@ -616,7 +616,7 @@ update {{
                         (string DataDirectory, string Url, string NodeTag) result = default;
 
                         //set up node-specific tracking
-                        IDatabaseChanges changes = store.Changes(store.Database, leader.ServerStore.NodeTag);
+                        var changes = store.Changes(store.Database, leader.ServerStore.NodeTag);
 
                         var list = new BlockingCollection<DocumentChange>();
 

@@ -25,6 +25,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -32,6 +33,7 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Global;
+using ConnectionStatus = Raven.Server.Documents.Subscriptions.ISubscriptionConnection.ConnectionStatus;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -822,13 +824,6 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public enum ConnectionStatus
-        {
-            Create,
-            Fail,
-            Info
-        }
-
         public sealed class StatusMessageDetails
         {
             public string DatabaseName;
@@ -836,7 +831,7 @@ namespace Raven.Server.Documents.Subscriptions
             public string SubscriptionType;
         }
 
-        protected string CreateStatusMessage(ConnectionStatus status, string info = null)
+        public string CreateStatusMessage(ConnectionStatus status, string info = null)
         {
             var message = GetStatusMessageDetails();
             var dbNameStr = message.DatabaseName;
@@ -847,13 +842,13 @@ namespace Raven.Server.Documents.Subscriptions
             switch (status)
             {
                 case ConnectionStatus.Create:
-                    m = $"[CREATE] Received a connection for {subsType}, {dbNameStr} from {clientType}";
+                    m = $"{DateTime.UtcNow.GetDefaultRavenFormat()}: [CREATE] Received a connection for {subsType}, {dbNameStr} from {clientType}";
                     break;
                 case ConnectionStatus.Fail:
-                    m = $"[FAIL] for {subsType}, {dbNameStr} from {clientType}";
+                    m = $"{DateTime.UtcNow.GetDefaultRavenFormat()}: [FAIL] for {subsType}, {dbNameStr} from {clientType}";
                     break;
                 case ConnectionStatus.Info:
-                    return $"[INFO] Update for {subsType}, {dbNameStr}, with {clientType}: {info}";
+                    return $"{DateTime.UtcNow.GetDefaultRavenFormat()}: [INFO] Update for {subsType}, {dbNameStr}, with {clientType}: {info}";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(status), status, null);
             }

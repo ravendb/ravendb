@@ -338,7 +338,7 @@ namespace RachisTests.DatabaseCluster
                 var backupStatus3 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 await backupStatus3.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
-                var files = await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 3, source.Database, backupStatus3.Id);
+                var files = await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 3, backupStatus3.Id, source.Database);
 
                 var smugglerOptions = new DatabaseSmugglerImportOptions();
                 DatabaseSmuggler.ConfigureOptionsForIncrementalImport(smugglerOptions);
@@ -452,7 +452,7 @@ namespace RachisTests.DatabaseCluster
                 var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
-                await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, source.Database, backupStatus2.Id);
+                await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, backupStatus2.Id, source.Database);
                 
                 await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
             }
@@ -517,7 +517,7 @@ namespace RachisTests.DatabaseCluster
                 var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
-                await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, source.Database, backupStatus2.Id);
+                await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, backupStatus2.Id, source.Database);
                 
                 await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
             }
