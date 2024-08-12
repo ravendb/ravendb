@@ -17,7 +17,7 @@ class certificateUtils {
     
     static extractCertificatesFromPkcs12(base64EncodedCertificate: string, password: string): string[] {
         const der = forge.util.decode64(base64EncodedCertificate);
-        const asn1 = forge.asn1.fromDer(der);
+        const asn1 = forge.asn1.fromDer(der, { parseAllBytes: false, strict: true, decodeBitStrings: true });
         const p12 = forge.pkcs12.pkcs12FromAsn1(asn1, password);
         
         const bags = p12.getBags({

@@ -1114,11 +1114,12 @@ namespace Raven.Server.Rachis
                 topologyJson.CopyTo(ptr);
             }
 
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 clusterTopology.AllNodes.TryGetValue(engine.Tag, out var key);
                 engine.Url = key;
                 TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
+
                 engine.TopologyChanged?.Invoke(engine, clusterTopology);
             };
 
