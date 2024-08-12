@@ -980,11 +980,13 @@ namespace Sparrow.Server
             // We will allocate from the current segment.
             int allocationSize = length + sizeof(ByteStringStorage);
             int allocationUnit = Bits.PowerOf2(allocationSize);
+            _currentlyAllocated += allocationUnit;
+            
             if (allocationUnit <= _internalCurrent.SizeLeft)
             {
                 var byteString = Create(_internalCurrent.Current, length, allocationUnit, ByteStringType.Mutable);
                 _internalCurrent.Current += byteString._pointer->Size;
-
+                
                 output = byteString;
                 return new InternalScope(this, output);
             }
@@ -1004,6 +1006,8 @@ namespace Sparrow.Server
             // We will allocate from the current segment.
             int allocationSize = length + sizeof(ByteStringStorage);
             int allocationUnit = Bits.PowerOf2(allocationSize);
+            _currentlyAllocated += allocationUnit;
+            
             if (allocationUnit <= _internalCurrent.SizeLeft)
             {
                 var byteString = Create(_internalCurrent.Current, length, allocationUnit, type);
