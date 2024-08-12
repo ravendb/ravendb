@@ -88,6 +88,46 @@ public class RavenDB_21777 : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Querying)]
+    public void TestQueryWithAnyOnStaticIndex()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                var m1 = new Member() { UserId = "abc", Role = Role.Contributor, Value = 21 };
+                var m2 = new Member() { UserId = "bcd", Role = Role.Contributor, Value = 37 };
+
+                var e1 = new Entity() { Name = "CoolName", Members = new List<Member>() { m1, m2 } };
+                
+                session.Store(m1);
+                session.Store(m2);
+                session.Store(e1);
+                
+                session.SaveChanges();
+
+                var index = new DummyIndex();
+                
+                index.Execute(store);
+                
+                Indexes.WaitForIndexing(store);
+
+                // We don't want to throw an exception for static indexes
+                var firstResult = session.Query<Entity, DummyIndex>()
+                    .Where(x => x.Members.Any(y => y.UserId == "abc" && y.Value == 37 && y.Role == Role.Contributor))
+                    .ToList();
+
+                Assert.Equal(0, firstResult.Count);
+                
+                var secondResult = session.Query<Entity, DummyIndex>()
+                    .Where(x => x.Members.Any(y => y.UserId == "abc" && y.Value == 21 && y.Role == Role.Contributor))
+                    .ToList();
+                
+                Assert.Equal(1, secondResult.Count);
+            }
+        }
+    }
+
     private class Entity
     {
         public string Name { get; set; }
@@ -111,21 +151,13 @@ public class RavenDB_21777 : RavenTestBase
         public Dictionary<string, int> SomeDict { get; set; }
     }
 
-    private class DummyIndex : AbstractIndexCreationTask<Entity, DummyIndex.Result>
+    private class DummyIndex : AbstractIndexCreationTask<Entity>
     {
-        public class Result
-        {
-            public string Name { get; set; }
-            public string UserId { get; set; }
-            public Role Role { get; set; }
-            public int Value { get; set; }
-        }
-        
         public DummyIndex()
         {
             Map = entities => from entity in entities
                 from member in entity.Members
-                select new { entity.Name, member.UserId, member.Role, member.Value };
+                select new { entity.Name, Members_UserId = member.UserId, Members_Role = member.Role, Members_Value = member.Value };
         }
     }
 }
