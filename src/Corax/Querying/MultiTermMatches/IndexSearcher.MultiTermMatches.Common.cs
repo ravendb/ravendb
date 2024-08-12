@@ -17,8 +17,7 @@ public partial class IndexSearcher
     private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, Slice term, bool streamingEnabled = false, bool validatePostfixLen = false, in CancellationToken token = default)
         where TTermProvider : struct, ITermProvider
     {
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (terms == null)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
         
         CompactKey termKey;
@@ -48,8 +47,7 @@ public partial class IndexSearcher
     private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(in FieldMetadata field, string term, bool streamingEnabled, CancellationToken token)
         where TTermProvider : struct, ITermProvider
     {
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (terms == null)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
         var slicedTerm = EncodeAndApplyAnalyzer(field, term);

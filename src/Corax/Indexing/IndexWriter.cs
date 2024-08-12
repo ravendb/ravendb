@@ -614,7 +614,9 @@ namespace Corax.Indexing
             if (_indexedEntries.Contains(termSlice) == false)
             {
                 _compactKeyScope.Key.Set(termSlice);
-                var exists = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(Constants.IndexWriter.PrimaryKeyFieldId).FieldName).TryGetValue(_compactKeyScope.Key, out var containerId);
+                var exists = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(Constants.IndexWriter.PrimaryKeyFieldId).FieldName)
+                                             .TryGetValue(_compactKeyScope.Key, out var containerId);
+                
                 if (exists)
                 {
                     // note that the containerId may be a single value or many(!), if it is many items
