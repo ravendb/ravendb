@@ -4,7 +4,6 @@ import assertUnreachable from "components/utils/assertUnreachable";
 type S3Settings = Raven.Client.Documents.Operations.Backups.S3Settings;
 type AzureSettings = Raven.Client.Documents.Operations.Backups.AzureSettings;
 type GoogleCloudSettings = Raven.Client.Documents.Operations.Backups.GoogleCloudSettings;
-type BackupEncryptionSettings = Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings;
 type RestoreType = Raven.Client.Documents.Operations.Backups.RestoreType;
 
 const defaultPointsWithTags: FormData["sourceStep"]["sourceData"][RestoreSource]["pointsWithTags"] = [
@@ -87,47 +86,60 @@ function getRestoreDtoType(sourceType: RestoreSource): RestoreType {
     }
 }
 
-// TODO maybe refactor to get rid of nesting? this is copy-paste from 5.4
 function getEncryptionDto(
     selectedSourceData: FormData["sourceStep"]["sourceData"][RestoreSource],
-    encryptionDataIsEncrypted: boolean,
-    encryptionDataKey: string
+    sourceStepIsEncrypted: boolean,
+    encryptionStepKey: string
 ): Pick<CreateDatabaseFromBackupDto, "EncryptionKey" | "BackupEncryptionSettings"> {
-    let encryptionSettings: BackupEncryptionSettings = null;
-    let databaseEncryptionKey = null;
-
     const restorePoint = selectedSourceData.pointsWithTags[0].restorePoint;
 
-    if (restorePoint.isEncrypted) {
-        if (restorePoint.isSnapshotRestore) {
-            if (encryptionDataIsEncrypted) {
-                encryptionSettings = {
-                    EncryptionMode: "UseDatabaseKey",
-                    Key: null,
-                };
-                databaseEncryptionKey = selectedSourceData.encryptionKey;
-            }
-        } else {
-            // backup of type backup
-            encryptionSettings = {
-                EncryptionMode: "UseProvidedKey",
-                Key: selectedSourceData.encryptionKey,
-            };
-
-            if (encryptionDataIsEncrypted) {
-                databaseEncryptionKey = encryptionDataKey;
-            }
-        }
-    } else {
-        // backup is not encrypted
-        if (!restorePoint.isSnapshotRestore && encryptionDataIsEncrypted) {
-            databaseEncryptionKey = encryptionDataKey;
-        }
+    // Restoring 'Full' unencrypted backup and encrypt it
+    if (!restorePoint.isSnapshotRestore && !restorePoint.isEncrypted && sourceStepIsEncrypted) {
+        return {
+            BackupEncryptionSettings: null,
+            EncryptionKey: encryptionStepKey,
+        };
     }
 
+    // Restoring 'Full' encrypted backup and encrypt it
+    if (!restorePoint.isSnapshotRestore && restorePoint.isEncrypted && sourceStepIsEncrypted) {
+        return {
+            BackupEncryptionSettings: {
+                EncryptionMode: "UseProvidedKey",
+                Key: selectedSourceData.encryptionKey,
+            },
+            EncryptionKey: encryptionStepKey,
+        };
+    }
+
+    // Restoring 'Full' encrypted backup and don't encrypt it
+    if (!restorePoint.isSnapshotRestore && restorePoint.isEncrypted && !sourceStepIsEncrypted) {
+        return {
+            BackupEncryptionSettings: {
+                EncryptionMode: "UseProvidedKey",
+                Key: selectedSourceData.encryptionKey,
+            },
+            EncryptionKey: null,
+        };
+    }
+
+    // Restoring 'Snapshot' encrypted backup
+    if (restorePoint.isSnapshotRestore && restorePoint.isEncrypted) {
+        return {
+            BackupEncryptionSettings: {
+                EncryptionMode: "UseDatabaseKey",
+                Key: null,
+            },
+            EncryptionKey: selectedSourceData.encryptionKey,
+        };
+    }
+
+    // 'Snapshot' unencrypted backup can't be encrypted (so we return nulls)
+    // In other cases we return nulls
+
     return {
-        BackupEncryptionSettings: encryptionSettings,
-        EncryptionKey: databaseEncryptionKey,
+        BackupEncryptionSettings: null,
+        EncryptionKey: null,
     };
 }
 
@@ -139,10 +151,10 @@ type SelectedSourceDto = Pick<
 function getSelectedSourceDto(
     isSharded: boolean,
     selectedSourceData: FormData["sourceStep"]["sourceData"][RestoreSource],
-    encryptionDataIsEncrypted: boolean,
-    encryptionDataKey: string
+    sourceStepIsEncrypted: boolean,
+    encryptionStepKey: string
 ): SelectedSourceDto {
-    const encryptionDto = getEncryptionDto(selectedSourceData, encryptionDataIsEncrypted, encryptionDataKey);
+    const encryptionDto = getEncryptionDto(selectedSourceData, sourceStepIsEncrypted, encryptionStepKey);
 
     const dto: SelectedSourceDto = {
         ...encryptionDto,
@@ -174,8 +186,8 @@ function getSelectedSourceDto(
 function getSourceDto(
     sourceStep: FormData["sourceStep"],
     isSharded: boolean,
-    encryptionDataIsEncrypted: boolean,
-    encryptionDataKey: string
+    sourceStepIsEncrypted: boolean,
+    encryptionStepKey: string
 ): SelectedSourceDto & Pick<CreateDatabaseFromBackupDto, "BackupLocation" | "Settings"> {
     const backupLocation = isSharded
         ? null
@@ -186,7 +198,7 @@ function getSourceDto(
             const data = sourceStep.sourceData.local;
 
             return {
-                ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
+                ...getSelectedSourceDto(isSharded, data, sourceStepIsEncrypted, encryptionStepKey),
                 BackupLocation: backupLocation,
             };
         }
@@ -194,7 +206,7 @@ function getSourceDto(
             const data = sourceStep.sourceData.ravenCloud;
 
             return {
-                ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
+                ...getSelectedSourceDto(isSharded, data, sourceStepIsEncrypted, encryptionStepKey),
                 Settings: {
                     AwsAccessKey: data.awsSettings.accessKey,
                     AwsSecretKey: data.awsSettings.secretKey,
@@ -213,7 +225,7 @@ function getSourceDto(
             const data = sourceStep.sourceData.amazonS3;
 
             return {
-                ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
+                ...getSelectedSourceDto(isSharded, data, sourceStepIsEncrypted, encryptionStepKey),
                 Settings: {
                     AwsAccessKey: data.accessKey,
                     AwsSecretKey: data.secretKey,
@@ -232,7 +244,7 @@ function getSourceDto(
             const data = sourceStep.sourceData.azure;
 
             return {
-                ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
+                ...getSelectedSourceDto(isSharded, data, sourceStepIsEncrypted, encryptionStepKey),
                 Settings: {
                     AccountKey: data.accountKey,
                     SasToken: "",
@@ -249,7 +261,7 @@ function getSourceDto(
             const data = sourceStep.sourceData.googleCloud;
 
             return {
-                ...getSelectedSourceDto(isSharded, data, encryptionDataIsEncrypted, encryptionDataKey),
+                ...getSelectedSourceDto(isSharded, data, sourceStepIsEncrypted, encryptionStepKey),
                 Settings: {
                     BucketName: data.bucketName,
                     GoogleCredentialsJson: data.credentialsJson,
