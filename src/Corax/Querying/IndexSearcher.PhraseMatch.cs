@@ -4,6 +4,7 @@ using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
 using Voron;
 using Voron.Data.CompactTrees;
+using static Voron.Global.Constants;
 
 namespace Corax.Querying;
 
@@ -12,8 +13,7 @@ public partial class IndexSearcher
     public IQueryMatch PhraseQuery<TInner>(TInner inner, in FieldMetadata field, ReadOnlySpan<Slice> terms)
         where TInner : IQueryMatch
     {
-        var compactTree = _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (compactTree == null)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var compactTree) == false)
             return default;
 
         Allocator.Allocate(terms.Length * sizeof(long), out var sequenceBuffer);

@@ -159,11 +159,17 @@ namespace Voron.Impl
                 return LookupFor<TKey>(nameSlice);
             }
         }
+        
         public Lookup<TKey> LookupFor<TKey>(Slice name) where TKey : struct, ILookupKey
         {
             return LowLevelTransaction.RootObjects.LookupFor<TKey>(name);
         }
 
+        public bool TryGetLookupFor<TKey>(Slice name, out Lookup<TKey> lookup) where TKey : struct, ILookupKey
+        {
+            return LowLevelTransaction.RootObjects.TryGetLookupFor(name, out lookup);
+        }
+        
         public long OpenContainer(Slice name)
         {
             var exists = LowLevelTransaction.RootObjects.DirectRead(name);
@@ -525,6 +531,11 @@ namespace Voron.Impl
             return CompactTreeFor(treeNameSlice);
         }
 
+        public bool TryGetCompactTreeFor(Slice treeName, out CompactTree tree)
+        {
+            return _lowLevelTransaction.RootObjects.TryGetCompactTreeFor(treeName, out tree);
+        }
+        
         public CompactTree CompactTreeFor(Slice treeName)
         {
             return _lowLevelTransaction.RootObjects.CompactTreeFor(treeName);

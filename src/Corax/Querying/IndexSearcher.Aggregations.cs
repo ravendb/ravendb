@@ -132,8 +132,7 @@ public partial class IndexSearcher
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (terms == null)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false)
             return new EmptyAggregationProvider();
 
         return forward switch

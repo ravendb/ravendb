@@ -118,7 +118,8 @@ namespace Voron.Data.Fixed
             new DirectAddScope(tree).Dispose();// verifying that we aren't holding a ptr out
 
             // Setting the name of the tree has to happen before returning even if the return is null
-            // TODO: Make sure that is no longer the case by prohibiting the direct creation of trees.
+            // because we are repurposing the tree and we dont want the tree to be returned with the wrong
+            // name.
             if (clone)
             {
                 if (tree._treeName.HasValue)

@@ -13,15 +13,16 @@ using Voron.Impl;
 using Voron.Impl.Paging;
 using Sparrow.Collections;
 using Sparrow.Server;
-using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Constants = Voron.Global.Constants;
 using System.Diagnostics.CodeAnalysis;
-using Sparrow.Json;
 
 using static Sparrow.DisposableExceptions;
 using static Sparrow.PortableExceptions;
 using static Voron.VoronExceptions;
+
+using CompactTree = Voron.Data.CompactTrees.CompactTree;
+using FixedSizeTree = Voron.Data.Fixed.FixedSizeTree;
 
 namespace Voron.Data.BTrees
 {
@@ -1391,10 +1392,10 @@ namespace Voron.Data.BTrees
             using var _ = Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out var keySlice);
             return CompactTreeFor(keySlice);
         }
-        
+
         // RavenDB-21678: If you're keeping a reference to CompactTree, it may happen that you can actually override the prepareLocator and 
         // have more than one object of the same tree in memory but with different states. It's dangerous to mix usage since the object retains states.
-        public CompactTree CompactTreeFor(Slice key)
+        public bool TryGetCompactTreeFor(Slice key, out CompactTree tree)
         {
             // RavenDB-21678: Indexes with dynamic fields can generate a lot of fields, which can lead to overflow in the locator.
             // We've observed indexes with more than ~150 fields, and since performance is crucial, we increased it by one order of magnitude.
@@ -1406,22 +1407,39 @@ namespace Voron.Data.BTrees
 
             if (_prepareLocator.TryGetValue(key, out var prep) == false)
             {
-                var compactTree = CompactTree.InternalCreate(this, key);
-                if (compactTree == null) // missing value on read transaction
-                    return null;
+                tree = CompactTree.InternalCreate(this, key);
+                if (tree == null) // missing value on read transaction
+                    return false;
 
                 var keyClone = key.Clone(_llt.Allocator);
-                _prepareLocator.Add(keyClone, compactTree);
-                prep = compactTree;
+                _prepareLocator.Add(keyClone, tree);
+                prep = tree;
             }
 
             Debug.Assert(_header.Flags.HasFlag(TreeFlags.CompactTrees));
 
-            return (CompactTree)prep;
+            tree = (CompactTree)prep;
+            return true;
         }
 
+        public CompactTree CompactTreeFor(Slice key)
+        {
+            if (TryGetCompactTreeFor(key, out var tree))
+                return tree;
+
+            throw new InvalidOperationException($"{nameof(CompactTree)} with key '{key}' does not exist.");
+        }
 
         public Lookup<TKey> LookupFor<TKey>(Slice key)
+            where TKey : struct, ILookupKey
+        {
+            if (TryGetLookupFor<TKey>(key, out var lookup))
+                return lookup;
+
+            throw new InvalidOperationException($"{nameof(Lookup<TKey>)} with key '{key}' does not exist.");
+        }
+
+        public bool TryGetLookupFor<TKey>(Slice key, out Lookup<TKey> lookup)
             where TKey : struct, ILookupKey
         {
             if (_prepareLocator == null)
@@ -1432,10 +1450,10 @@ namespace Voron.Data.BTrees
 
             if (_prepareLocator.TryGetValue(key, out var prep) == false)
             {
-                var lookup = Lookup<TKey>.InternalCreate(this, key);
-                if (lookup == null) // missing value on read transaction
-                    return null;
-
+                lookup = Lookup<TKey>.InternalCreate(this, key);
+                if (lookup == null)
+                    return false;
+                
                 var keyClone = key.Clone(_llt.Allocator);
                 _prepareLocator.Add(keyClone, lookup);
                 prep = lookup;
@@ -1443,7 +1461,8 @@ namespace Voron.Data.BTrees
 
             Debug.Assert(_header.Flags.HasFlag(TreeFlags.Lookups));
 
-            return (Lookup<TKey>)prep;
+            lookup = (Lookup<TKey>)prep;
+            return true;
         }
 
         public FixedSizeTree FixedTreeFor(Slice key, byte valSize = 0)

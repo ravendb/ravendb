@@ -120,10 +120,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int freq = (ir != null && field != null) ? ir.DocFreq(new Term(FWord, word), _state) : 0;
             int goalFreq = (morePopular && ir != null && field != null) ? freq : 0;
 
-            // if the word exists in the real index and we don't care for word frequency, return the word itself
+            // if the word exists in the real index, and we don't care for word frequency, return the word itself
             if (!morePopular && freq > 0)
             {
-                return new[] { new SuggestWord { Term = word } };
+                return [new SuggestWord { Term = word }];
             }
 
             var query = new BooleanQuery();
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (BoostEnd > 0)
                 {
                     // should we boost suffixes
-                    Add(query, table[ng].End, grams[grams.Length - 1], BoostEnd); // matches end of word
+                    Add(query, table[ng].End, grams[^1], BoostEnd); // matches end of word
                 }
 
                 for (int i = 0; i < grams.Length; i++)
@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         continue;
                 }
 
-                if (alreadySeen.Add(suggestedWord.Term) == false) // we already seen this word, no point returning it twice
+                if (alreadySeen.Add(suggestedWord.Term) == false) // we have already seen this word, no point returning it twice
                     continue;
 
                 queue.InsertWithOverflow(suggestedWord);

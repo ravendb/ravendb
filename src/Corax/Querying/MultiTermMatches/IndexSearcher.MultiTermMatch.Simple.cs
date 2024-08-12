@@ -90,8 +90,7 @@ public partial class IndexSearcher
     
     public MultiTermMatch RegexQuery(in FieldMetadata field, Regex regex, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (terms == null)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
         return forward
