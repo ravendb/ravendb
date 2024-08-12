@@ -169,7 +169,7 @@
     <PackageReference Include="JetBrains.Annotations" Version="2024.2.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Jint" Version="3.1.4" />
+    <PackageReference Include="Jint" Version="3.1.6" />
     <PackageReference Include="Google.Api.Gax.Rest" Version="4.8.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.10.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
