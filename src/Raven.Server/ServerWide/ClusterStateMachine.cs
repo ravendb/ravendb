@@ -685,7 +685,7 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.UnrecoverableClusterError, $"{index}"), context.Transaction, sendNotificationEvenIfDoesntExist: false);
+                    serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.UnrecoverableClusterError, $"{_parent.CurrentTerm}/{index}"), context.Transaction, sendNotificationEvenIfDoesntExist: false);
                 }
                 catch
                 {
@@ -702,11 +702,11 @@ namespace Raven.Server.ServerWide
                     {
                         serverStore.NotificationCenter.Add(AlertRaised.Create(
                             null,
-                            $"Unrecoverable Cluster Error at Index {index}",
+                            "Unrecoverable Cluster Error",
                             error,
                             AlertType.UnrecoverableClusterError,
                             NotificationSeverity.Error,
-                            key: $"{index}",
+                            key: $"{_parent.CurrentTerm}/{index}",
                             details: new ExceptionDetails(exception)));
                     }
                     catch

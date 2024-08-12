@@ -335,7 +335,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 foreach (var (cmd, updateReason) in cleanUnusedAutoIndexesCommands)
                 {
-                    await _engine.SendToLeaderAsync(cmd);
+                    await _engine.PutAsync(cmd);
                     AddToDecisionLog(cmd.DatabaseName, updateReason);
                 }
 
@@ -399,7 +399,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     ResponsibleNodePerDatabase = responsibleNodePerDatabase
                 }, RaftIdGenerator.NewId());
 
-                await _engine.SendToLeaderAsync(command);
+                await _engine.PutAsync(command);
             }
 
             if (deletions != null)
@@ -430,7 +430,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         throw new NotLeadingException("This node is no longer the leader, so abort the cleaning.");
                     }
 
-                    await _engine.SendToLeaderAsync(cmd);
+                    await _engine.PutAsync(cmd);
                 }
             }
         }
@@ -1714,7 +1714,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 throw new NotLeadingException("This node is no longer the leader, so we abort updating the database databaseTopology");
             }
 
-            return _engine.SendToLeaderAsync(cmd);
+            return _engine.PutAsync(cmd);
         }
 
         private Task<(long Index, object Result)> Delete(DeleteDatabaseCommand cmd)
@@ -1723,7 +1723,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 throw new NotLeadingException("This node is no longer the leader, so we abort the deletion command");
             }
-            return _engine.SendToLeaderAsync(cmd);
+            return _engine.PutAsync(cmd);
         }
 
         public void Dispose()

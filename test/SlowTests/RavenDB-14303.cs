@@ -59,7 +59,7 @@ namespace SlowTests
                     var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     var index = await db.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { age }), Guid.NewGuid().ToString());
 
-                    await leader.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(index.Name, IndexState.Idle, db.Name, Guid.NewGuid().ToString()));
+                    await leader.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index.Name, IndexState.Idle, db.Name, Guid.NewGuid().ToString()));
                     db.ServerStore.ForTestingPurposesOnly().StopIndex = true;
 
                     var addRes = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));

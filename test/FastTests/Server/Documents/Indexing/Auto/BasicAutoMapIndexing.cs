@@ -968,7 +968,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(config.SearchEngine.ToString(), database.Configuration.Indexing.AutoIndexingEngineType.ToString());
                 var index0 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Job", Storage = FieldStorage.No, Id = 1 } }), Guid.NewGuid().ToString());
 
-                await database.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(index0.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
+                await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index0.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
 
                 var now = database.Time.GetUtcNow();
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1147,7 +1147,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 WaitForIndex(database, index1.Name, index => index.State == IndexState.Normal);
                 WaitForIndex(database, index2.Name, index => index.State == IndexState.Idle);
 
-                await database.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(index2.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
+                await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index2.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
 
                 now = database.Time.GetUtcNow();
                 database.Time.UtcDateTime = () =>
@@ -1209,8 +1209,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 WaitForIndex(database, index1.Name, index => index.State == IndexState.Idle);
                 WaitForIndex(database, index2.Name, index => index.State == IndexState.Idle);
 
-                await database.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(index1.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
-                await database.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(index2.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
+                await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index1.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
+                await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index2.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
 
 
                 now = database.Time.GetUtcNow();
@@ -1278,7 +1278,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             var indexCleanupCommands = Server.ServerStore.Observer.GetUnusedAutoIndexes(state);
             foreach (var (cmd, _) in indexCleanupCommands)
             {
-                await Server.ServerStore.Engine.SendToLeaderAsync(cmd);
+                await Server.ServerStore.Engine.PutAsync(cmd);
             }
         }
 

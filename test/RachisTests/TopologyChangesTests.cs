@@ -151,8 +151,8 @@ namespace RachisTests
             var node2 = await CreateNetworkAndGetLeader(1);
             var url = node2.Url;
 
-            await node1.SendToLeaderAsync(new TestCommand { Name = "test", Value = 10 });
-            await node2.SendToLeaderAsync(new TestCommand { Name = "test", Value = 20 });
+            await node1.PutAsync(new TestCommand { Name = "test", Value = 10 });
+            await node2.PutAsync(new TestCommand { Name = "test", Value = 20 });
 
             string id;
             using (node1.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
