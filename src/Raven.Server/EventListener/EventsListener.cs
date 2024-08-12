@@ -28,6 +28,7 @@ public class EventsListener : AbstractEventListener
         _handlers.Add(new GcEventsHandler(onEvent, eventTypes, minimumDurationInMs));
         _handlers.Add(new AllocationsHandler(OnAllocationEvent(onEvent), eventTypes, minimumDurationInMs));
         _handlers.Add(new ContentionEventsHandler(onEvent, eventTypes, minimumDurationInMs));
+        _handlers.Add(new ThreadsHandler(onEvent, eventTypes, minimumDurationInMs));
 
         _dotNetEventType = GetDotNetEventTypes(eventTypes);
         EnableEvents(_dotNetEventType);
@@ -164,6 +165,19 @@ public class EventsListener : AbstractEventListener
                     break;
                 case EventType.Contention:
                     dotNetEventType = (dotNetEventType ?? DotNetEventType.Contention) | DotNetEventType.Contention;
+                    break;
+                case EventType.ThreadPoolWorkerThreadStart:
+                case EventType.ThreadPoolWorkerThreadWait:
+                case EventType.ThreadPoolWorkerThreadStop:
+                case EventType.ThreadPoolMinMaxThreads:
+                case EventType.ThreadPoolWorkerThreadAdjustment:
+                case EventType.ThreadPoolWorkerThreadAdjustmentSample:
+                case EventType.ThreadPoolWorkerThreadAdjustmentStats:
+                case EventType.ThreadCreating:
+                case EventType.ThreadCreated:
+                case EventType.ThreadRunning:
+                case EventType.GCCreateConcurrentThread_V1:
+                    dotNetEventType = (dotNetEventType ?? DotNetEventType.Threading) | DotNetEventType.Threading;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
