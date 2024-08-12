@@ -7,7 +7,7 @@ namespace Raven.Server.EventListener;
 
 public class AllocationsHandler : AbstractEventsHandler<AllocationsHandler.AllocationInfo>
 {
-    protected override HashSet<EventType> DefaultEventTypes => new HashSet<EventType>(EventListenerToLog.AllocationEvents);
+    protected override HashSet<EventType> DefaultEventTypes => EventListenerToLog.AllocationEvents;
 
     protected override Action<AllocationInfo> OnEvent { get; }
 

@@ -16,8 +16,21 @@ public class EventListenerToLog : IDynamicJson
 
     public static readonly HashSet<EventType> GcEvents = [EventType.GC, EventType.GCSuspend, EventType.GCRestart, EventType.GCFinalizers];
     public static readonly HashSet<EventType> AllocationEvents = [EventType.Allocations];
-    public static readonly HashSet<EventType> ContentionTypes = [EventType.Contention];
-    private static readonly HashSet<EventType> AllEvents = new(GcEvents.Concat(ContentionTypes).Concat(AllocationEvents));
+    public static readonly HashSet<EventType> ContentionEvents = [EventType.Contention];
+    public static readonly HashSet<EventType> ThreadEvents = [
+        EventType.ThreadPoolWorkerThreadStart,
+        EventType.ThreadPoolWorkerThreadWait,
+        EventType.ThreadPoolWorkerThreadStop,
+        EventType.ThreadPoolMinMaxThreads,
+        EventType.ThreadPoolWorkerThreadAdjustment,
+        EventType.ThreadPoolWorkerThreadAdjustmentSample,
+        EventType.ThreadPoolWorkerThreadAdjustmentStats,
+        EventType.ThreadCreating,
+        EventType.ThreadCreated,
+        EventType.ThreadRunning,
+        EventType.GCCreateConcurrentThread_V1
+    ];
+    private static readonly HashSet<EventType> AllEvents = new(GcEvents.Concat(ContentionEvents).Concat(AllocationEvents).Concat(ThreadEvents));
 
     private EventListenerToLog()
     {
