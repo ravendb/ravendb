@@ -37,4 +37,11 @@ public interface ISubscriptionConnection : IDisposable
     internal Task SendHeartBeatAsync(string reason);
 
     long LastModifiedIndex { get; }
+
+    public enum ConnectionStatus
+    {
+        Create,
+        Fail,
+        Info
+    }
 }

@@ -32,6 +32,13 @@ public abstract class AbstractSubscriptionConnectionsState : IDisposable
     public string Query;
     public string LastChangeVectorSent;
 
+    protected readonly ConcurrentSet<SubscriptionConnectionInfo> _pendingConnections = new();
+    protected readonly ConcurrentQueue<SubscriptionConnectionInfo> _recentConnections = new();
+    protected readonly ConcurrentQueue<SubscriptionConnectionInfo> _rejectedConnections = new();
+    public IEnumerable<SubscriptionConnectionInfo> RecentConnections => _recentConnections;
+    public IEnumerable<SubscriptionConnectionInfo> RecentRejectedConnections => _rejectedConnections;
+    public IEnumerable<SubscriptionConnectionInfo> PendingConnections => _pendingConnections;
+
     protected AbstractSubscriptionConnectionsState(CancellationToken token)
     {
         CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -204,13 +211,6 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
     public SubscriptionState SubscriptionState => _subscriptionState;
 
     public bool IsConcurrent => _connections.FirstOrDefault()?.Strategy == SubscriptionOpeningStrategy.Concurrent;
-
-    private readonly ConcurrentSet<SubscriptionConnectionInfo> _pendingConnections = new();
-    private readonly ConcurrentQueue<SubscriptionConnectionInfo> _recentConnections = new();
-    private readonly ConcurrentQueue<SubscriptionConnectionInfo> _rejectedConnections = new();
-    public IEnumerable<SubscriptionConnectionInfo> RecentConnections => _recentConnections;
-    public IEnumerable<SubscriptionConnectionInfo> RecentRejectedConnections => _rejectedConnections;
-    public IEnumerable<SubscriptionConnectionInfo> PendingConnections => _pendingConnections;
 
 
     private readonly SemaphoreSlim _subscriptionActivelyWorkingLock;

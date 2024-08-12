@@ -22,6 +22,13 @@ import PerfHintsPopover from "./ValidDatabasePropertiesPanelPerfHintsPopover";
 import "./ValidDatabasePropertiesPanel.scss";
 import { locationAwareLoadableData } from "components/models/common";
 
+interface LocalGeneralInfo {
+    hasLocalNodeAllData: boolean;
+    totalSizeWithTempBuffers: number;
+    totalDocuments: number;
+    backupStatus: { color: string; text: string };
+}
+
 export interface ValidDatabasePropertiesPanelPopoverProps {
     isCurrentNodeRelevant: boolean;
     localNodeTag: string;
@@ -75,23 +82,12 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
 
     const remoteTopLevelStates = nonEmptyTopLevelState.filter((x) => x.nodeTag !== localNodeTag);
 
-    const maxSizes = genUtils.maxByShard(
-        nonEmptyDbState,
-        (x) => x.location.shardNumber,
-        (x) => (x.totalSize?.SizeInBytes ?? 0) + (x.tempBuffersSize?.SizeInBytes ?? 0)
-    );
-    const totalSize = sumBy(maxSizes);
-
-    const totalDocuments = sumBy(
-        genUtils.maxByShard(
-            nonEmptyDbState,
-            (x) => x.location.shardNumber,
-            (x) => x.documentsCount
-        )
+    const { hasLocalNodeAllData, totalSizeWithTempBuffers, totalDocuments, backupStatus } = getLocalGeneralInfo(
+        dbState,
+        localNodeTag
     );
 
     const hasAnyLoadError = dbState.some((x) => x.data?.loadError);
-    const isGeneralInfoVisible = getIsGeneralInfoVisible(dbState, db.isSharded);
 
     const localDocumentsUrl = appUrl.forDocuments(null, db.name);
     const documentsUrl = db.currentNode.isRelevant
@@ -114,12 +110,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
         : appUrl.toExternalDatabaseUrl(db, localStorageReportUrl);
 
     const localBackupUrl = appUrl.forBackups(db.name);
-    const backupUrl = db.currentNode.isRelevant ? localBackupUrl : appUrl.toExternalDatabaseUrl(db, localBackupUrl);
-
     const linksTarget = db.currentNode.isRelevant ? undefined : "_blank";
-
-    const backupInfo = findLatestBackup(nonEmptyDbState);
-    const backupStatus = DatabaseUtils.computeBackupStatus(backupInfo);
 
     const [perfHintsPopoverElement, setPerfHintsPopoverElement] = useState<HTMLElement>();
     const [alertsPopoverElement, setAlertsPopoverElement] = useState<HTMLElement>();
@@ -174,12 +165,11 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                     )}
                 </div>
             </RichPanelDetailItem>
-
-            {isGeneralInfoVisible && (
+            {hasLocalNodeAllData && (
                 <>
                     <RichPanelDetailItem>
                         <a href={storageReportUrl} target={linksTarget}>
-                            <Icon icon="drive" /> {genUtils.formatBytesToSize(totalSize)}
+                            <Icon icon="drive" /> {genUtils.formatBytesToSize(totalSizeWithTempBuffers)}
                         </a>
                     </RichPanelDetailItem>
                     <RichPanelDetailItem>
@@ -187,18 +177,20 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
                             <Icon icon="documents" /> {totalDocuments.toLocaleString()}
                         </a>
                     </RichPanelDetailItem>
-                    <RichPanelDetailItem>
-                        <a href={indexingListUrl} target={linksTarget}>
-                            <Icon icon="index" /> {db.indexesCount}
-                        </a>
-                    </RichPanelDetailItem>
-                    <RichPanelDetailItem title="Click to navigate to Backups view" className="text-danger">
-                        <a href={backupUrl} target={linksTarget} className={"text-" + backupStatus.color}>
-                            <Icon icon="backup" />
-                            {backupStatus.text}
-                        </a>
-                    </RichPanelDetailItem>
                 </>
+            )}
+            <RichPanelDetailItem>
+                <a href={indexingListUrl} target={linksTarget}>
+                    <Icon icon="index" /> {db.indexesCount}
+                </a>
+            </RichPanelDetailItem>
+            {hasLocalNodeAllData && (
+                <RichPanelDetailItem title="Click to navigate to Backups view" className="text-danger">
+                    <a href={localBackupUrl} target={linksTarget} className={"text-" + backupStatus.color}>
+                        <Icon icon="backup" />
+                        {backupStatus.text}
+                    </a>
+                </RichPanelDetailItem>
             )}
 
             <div className="rich-panel-details-right">
@@ -339,31 +331,36 @@ function findLatestBackup(localInfos: DatabaseLocalInfo[]): BackupInfo {
     return backupInfos[0];
 }
 
-function getIsGeneralInfoVisible(
+function getLocalGeneralInfo(
     dbStates: locationAwareLoadableData<DatabaseLocalInfo>[],
-    isSharded: boolean
-): boolean {
-    if (isSharded) {
-        const shardNumbers = [...new Set(dbStates.map((x) => x.location?.shardNumber))];
+    localNodeTag: string
+): LocalGeneralInfo {
+    const allShards = new Set(dbStates.map((x) => x.location.shardNumber ?? -1));
 
-        return shardNumbers.every((shardNumber) => {
-            const stateForShard = dbStates.filter((x) => x.location?.shardNumber === shardNumber);
-            return getIsSuccessWithNoLoadError(stateForShard);
-        });
-    }
+    const localDbStatesWithoutErrors = dbStates.filter(
+        (x) => x.location.nodeTag === localNodeTag && x.status === "success" && !x.data?.loadError
+    );
+    const hasLocalNodeAllData = localDbStatesWithoutErrors.length === allShards.size;
 
-    return getIsSuccessWithNoLoadError(dbStates);
-}
+    const totalSizeWithTempBuffers = sumBy(
+        localDbStatesWithoutErrors,
+        (x) => (x.data?.totalSize?.SizeInBytes ?? 0) + (x.data?.tempBuffersSize?.SizeInBytes ?? 0)
+    );
 
-function getIsSuccessWithNoLoadError(dbStates: locationAwareLoadableData<DatabaseLocalInfo>[]) {
-    if (dbStates.some((x) => x.status === "success" && !x.data?.loadError)) {
-        return true;
-    }
+    const totalDocuments = sumBy(localDbStatesWithoutErrors, (x) => x.data?.documentsCount ?? 0);
 
-    return false;
+    const backupInfo = findLatestBackup(localDbStatesWithoutErrors.map((x) => x.data));
+    const backupStatus = DatabaseUtils.computeBackupStatus(backupInfo);
+
+    return {
+        hasLocalNodeAllData,
+        totalSizeWithTempBuffers,
+        totalDocuments,
+        backupStatus,
+    };
 }
 
 export const exportedForTesting = {
     findLatestBackup,
-    getIsGeneralInfoVisible,
+    getLocalGeneralInfo,
 };

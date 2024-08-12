@@ -159,9 +159,12 @@ const selectGetCanHandleOperation = createSelector(
 );
 
 const selectIsSecureServer = (store: RootState) => store.accessManager.isSecureServer;
+const selectIsAllowEncryptedDatabasesOverHttp = (store: RootState) =>
+    store.accessManager.isAllowEncryptedDatabasesOverHttp;
 
 export const accessManagerSelectors = {
     isSecureServer: selectIsSecureServer,
+    isAllowEncryptedDatabasesOverHttp: selectIsAllowEncryptedDatabasesOverHttp,
     isOperatorOrAbove: selectIsOperatorOrAbove,
     isClusterAdminOrClusterNode: selectIsClusterAdminOrClusterNode,
     getHasDatabaseAdminAccess: selectGetHasDatabaseAccessAdmin,

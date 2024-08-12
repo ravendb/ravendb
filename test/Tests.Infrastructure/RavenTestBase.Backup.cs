@@ -649,20 +649,28 @@ namespace FastTests
                 }
             }
             
-            public async Task<string[]> GetBackupFilesAndAssertCountAsync(string backupPath, int count, string databaseName, long backupOpId)
+            public async Task<string[]> GetBackupFilesAndAssertCountAsync(string backupPath, int expectedCount, long backupOpId, string databaseName, int? shardNumber = null)
             {
-                var backupDir = Directory.GetDirectories(backupPath).First();
-                var filesEnumerable = Directory.GetFiles(backupDir)
-                    .Where(Raven.Client.Documents.Smuggler.BackupUtils.IsBackupFile);
-                var files = Raven.Client.Documents.Smuggler.BackupUtils.OrderBackups(filesEnumerable).ToArray();
-                
-                if (files.Length != count)
+                var directory = Directory.GetDirectories(backupPath)
+                    .FirstOrDefault(x => shardNumber == null || x.EndsWith($"${shardNumber}"));
+
+                string[] files = null;
+                if (directory != null)
                 {
+                    var filesEnumerable = Directory.GetFiles(directory)
+                        .Where(Raven.Client.Documents.Smuggler.BackupUtils.IsBackupFile);
+                    files = Raven.Client.Documents.Smuggler.BackupUtils.OrderBackups(filesEnumerable).ToArray();
+                }
+                
+                if (files != null && files.Length != expectedCount)
+                {
+                    if (shardNumber != null)
+                        databaseName += $"${shardNumber}";
                     using var context = JsonOperationContext.ShortTermSingleUse();
                     var database = await _parent.GetDatabase(databaseName);
                     var operation = database.Operations.GetOperation(backupOpId);
                     var jsonOperation = context.ReadObject(operation.ToJson(), "backup operation"); 
-                    Assert.Fail($"Expected {count} backup files but found {files.Length}.\n{string.Join("\n", files)}\n{jsonOperation}");
+                    Assert.Fail($"Expected {expectedCount} backup files but found {files.Length}.\n{string.Join("\n", files)}\n{jsonOperation}");
                 }
 
                 return files;
