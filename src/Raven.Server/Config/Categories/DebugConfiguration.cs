@@ -5,7 +5,7 @@ using Raven.Server.EventListener;
 
 namespace Raven.Server.Config.Categories;
 
-[ConfigurationCategory(ConfigurationCategoryType.EventListener)]
+[ConfigurationCategory(ConfigurationCategoryType.Debug)]
 public class DebugConfiguration : ConfigurationCategory
 {
     [Description("Event listener logging mode.")]
