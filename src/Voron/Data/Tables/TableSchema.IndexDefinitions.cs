@@ -284,6 +284,7 @@ namespace Voron.Data.Tables
                         if (OnEntryChanged == null)
                         {
                             serializer.Add((byte)0);
+                            serializer.Add(SupportDuplicateKeys);
                             serialized = new byte[serializer.Size];
 
                             fixed (byte* destination = serialized)
@@ -310,6 +311,7 @@ namespace Voron.Data.Tables
                             fixed (byte* onEntryChangedDeclaringTypePtr = onEntryChangedDeclaringTypeBytes)
                             {
                                 serializer.Add(onEntryChangedDeclaringTypePtr, onEntryChangedDeclaringTypeBytes.Length);
+                                serializer.Add(SupportDuplicateKeys);
                                 serialized = new byte[serializer.Size];
 
                                 fixed (byte* destination = serialized)
@@ -324,22 +326,45 @@ namespace Voron.Data.Tables
                 }
             }
 
+            private const int SupportDuplicateKeysSmallTableIndex = 6;
+            private enum DynamicIndexTable
+            {
+                Type = 0,
+                IsGlobal = 1,
+                Name = 2,
+                IndexEntryKeyGeneratorMethodName = 3,
+                IndexEntryKeyGeneratorDeclaringType = 4,
+                HasOnEntryChanged = 5,
+                OnEntryChangedMethodName = 6,
+                OnEntryChangedDeclaringType = 7,
+                SupportDuplicateKeys = 8 // if HasOnEntryChanged is false then SupportDuplicateKeys index will be the value of SupportDuplicateKeysSmallTableIndex
+            }
+
+            // OnEntryChanged not persisted
+            private const int SmallDynamicIndexTableLengthOld = 6;
+            private const int SmallDynamicIndexTableLengthNew = 7;
+
+            // OnEntryChanged Persisted
+            private const int BigDynamicIndexTableLengthOld = 8;
+            private const int BigDynamicIndexTableLengthNew = 9;
+
+
             public static DynamicKeyIndexDef ReadFrom(ByteStringContext context, ref TableValueReader input)
             {
                 var indexDef = new DynamicKeyIndexDef();
 
-                byte* currentPtr = input.Read(1, out _);
+                byte* currentPtr = input.Read((int)DynamicIndexTable.IsGlobal, out _);
                 indexDef.IsGlobal = Convert.ToBoolean(*currentPtr);
 
-                currentPtr = input.Read(2, out var currentSize);
+                currentPtr = input.Read((int)DynamicIndexTable.Name, out var currentSize);
                 Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable, out indexDef.Name);
 
                 // read IndexEntryKeyGenerator method name
-                currentPtr = input.Read(3, out currentSize);
+                currentPtr = input.Read((int)DynamicIndexTable.IndexEntryKeyGeneratorMethodName, out currentSize);
                 var methodName = Encodings.Utf8.GetString(currentPtr, currentSize);
 
                 // read IndexEntryKeyGenerator declaring type
-                currentPtr = input.Read(4, out currentSize);
+                currentPtr = input.Read((int)DynamicIndexTable.IndexEntryKeyGeneratorDeclaringType, out currentSize);
                 var declaringType = Encodings.Utf8.GetString(currentPtr, currentSize);
 
                 var type = System.Type.GetType(declaringType);
@@ -360,17 +385,35 @@ namespace Voron.Data.Tables
                 indexDef.GenerateKey = (IndexEntryKeyGenerator)@delegate;
 
                 // read if this index has OnEntryChanged
-                currentPtr = input.Read(5, out currentSize);
+                currentPtr = input.Read((int)DynamicIndexTable.HasOnEntryChanged, out currentSize);
                 var hasIndexEntryChangedDelegate = Convert.ToBoolean(*currentPtr);
-                if (hasIndexEntryChangedDelegate == false) 
-                    return indexDef;
+                if (hasIndexEntryChangedDelegate == false)
+                {
+                    if (input.Count == SmallDynamicIndexTableLengthOld)
+                    {
+                        // RavenDB-22717: this for backward compatibility since we might get old dynamic index schema where we didn't persist SupportDuplicateKeys 
+                        indexDef.SupportDuplicateKeys = false;
+                        return indexDef;
+                    }
+
+                    if (input.Count == SmallDynamicIndexTableLengthNew)
+                    {
+                        // read if this index has SupportDuplicateKeys
+                        currentPtr = input.Read(SupportDuplicateKeysSmallTableIndex, out currentSize);
+                        var supportDuplicateKeys = Convert.ToBoolean(*currentPtr);
+                        indexDef.SupportDuplicateKeys = supportDuplicateKeys;
+                        return indexDef;
+                    }
+
+                    throw new InvalidDataException($"{nameof(DynamicKeyIndexDef)} length have to be 6 or 7 in case of {nameof(OnEntryChanged)} is false.");
+                }
 
                 // read OnEntryChanged method name
-                currentPtr = input.Read(6, out currentSize);
+                currentPtr = input.Read((int)DynamicIndexTable.OnEntryChangedMethodName, out currentSize);
                 methodName = Encodings.Utf8.GetString(currentPtr, currentSize);
 
                 // read OnEntryChanged declaring type
-                currentPtr = input.Read(7, out currentSize);
+                currentPtr = input.Read((int)DynamicIndexTable.OnEntryChangedDeclaringType, out currentSize);
                 declaringType = Encodings.Utf8.GetString(currentPtr, currentSize);
 
                 type = System.Type.GetType(declaringType);
@@ -387,7 +430,22 @@ namespace Voron.Data.Tables
                 var onIndexEntryChangedDelegate = Delegate.CreateDelegate(typeof(OnIndexEntryChangedDelegate), method);
                 indexDef.OnEntryChanged = (OnIndexEntryChangedDelegate)onIndexEntryChangedDelegate;
 
-                return indexDef;
+                if (input.Count == BigDynamicIndexTableLengthOld)
+                {
+                    // RavenDB-22717: this for backward compatibility since we might get old dynamic index schema where we didn't persist SupportDuplicateKeys 
+                    indexDef.SupportDuplicateKeys = false;
+                    return indexDef;
+                }
+                if (input.Count == BigDynamicIndexTableLengthNew)
+                {
+                    // read if this index has SupportDuplicateKeys
+                    currentPtr = input.Read((int)DynamicIndexTable.SupportDuplicateKeys, out currentSize);
+                    var supportDuplicateKeys = Convert.ToBoolean(*currentPtr);
+                    indexDef.SupportDuplicateKeys = supportDuplicateKeys;
+                    return indexDef;
+                }
+
+                throw new InvalidDataException($"{nameof(DynamicKeyIndexDef)} length have to be 8 or 9 in case of {nameof(OnEntryChanged)} is true.");
             }
 
             public void EnsureIdentical(DynamicKeyIndexDef actual)
@@ -432,6 +490,11 @@ namespace Voron.Data.Tables
                     throw new ArgumentException(
                         $"Expected index {Name} to have {nameof(OnEntryChanged)}.Method.DeclaringType='{OnEntryChanged?.Method.DeclaringType}', " +
                         $"got {nameof(GenerateKey)}.Method.DeclaringType='{actual.OnEntryChanged?.Method.DeclaringType}' instead",
+                        nameof(actual));
+
+                if (SupportDuplicateKeys != actual.SupportDuplicateKeys)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have SupportDuplicateKeys='{SupportDuplicateKeys}', got SupportDuplicateKeys='{actual.SupportDuplicateKeys}' instead",
                         nameof(actual));
             }
 

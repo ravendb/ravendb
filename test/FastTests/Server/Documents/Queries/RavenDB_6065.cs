@@ -11,7 +11,7 @@ namespace FastTests.Server.Documents.Queries
         {
         }
 
-        private class Person
+        internal class Person
         {
             public string Name { get; set; }
             public char Gender { get; set; }

@@ -561,6 +561,8 @@ namespace Raven.Client.Http
             {
                 if (Disposed == false)
                     throw;
+
+                return false;
             }
             finally
             {
@@ -831,6 +833,12 @@ namespace Raven.Client.Http
                         ApplicationIdentifier = applicationIdentifier
                     }).ConfigureAwait(false);
 
+                    if (Disposed && _nodeSelector == null)
+                    {
+                        // we are disposing, need to prevent NRE in case NodeSelector will be used
+                        SetupNodeSelectorOnFailure(initialUrls);
+                    }
+
                     InitializeUpdateTopologyTimer();
                     _topologyTakenFromNode = serverNode;
                     return;
@@ -855,17 +863,7 @@ namespace Raven.Client.Http
                 }
             }
 
-            _nodeSelector = new NodeSelector(new Topology
-            {
-                Nodes = TopologyNodes?.ToList() ?? initialUrls.Select(url => new ServerNode
-                {
-                    Url = url,
-                    Database = _databaseName,
-                    ServerRole = ServerNode.Role.Member,
-                    ClusterTag = "!"
-                }).ToList(),
-                Etag = TopologyEtag
-            });
+            SetupNodeSelectorOnFailure(initialUrls);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -879,6 +877,21 @@ namespace Raven.Client.Http
             _lastKnownUrls = initialUrls;
 
             ThrowExceptions(list);
+        }
+
+        private void SetupNodeSelectorOnFailure(string[] initialUrls)
+        {
+            _nodeSelector = new NodeSelector(new Topology
+            {
+                Nodes = TopologyNodes?.ToList() ?? initialUrls.Select(url => new ServerNode
+                {
+                    Url = url,
+                    Database = _databaseName,
+                    ServerRole = ServerNode.Role.Member,
+                    ClusterTag = "!"
+                }).ToList(),
+                Etag = TopologyEtag
+            });
         }
 
         protected virtual void ThrowExceptions(List<(string, Exception)> list)
@@ -2041,7 +2054,7 @@ namespace Raven.Client.Http
         protected Task _firstTopologyUpdate;
         protected string[] _lastKnownUrls;
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
-        protected bool Disposed => _disposeOnceRunner.Disposed;
+        internal bool Disposed => _disposeOnceRunner.Disposed;
 
         public static bool HasServerCertificateCustomValidationCallback => _serverCertificateCustomValidationCallback?.Length > 0;
 
@@ -2404,7 +2417,7 @@ namespace Raven.Client.Http
 
             _nodeSelector ??= new NodeSelector(new Topology
             {
-                Nodes = TopologyNodes.ToList(),
+                Nodes = TopologyNodes == null ? [] : TopologyNodes.ToList(),
                 Etag = TopologyEtag
             });
         }

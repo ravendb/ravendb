@@ -21,6 +21,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Utils;
+using static Raven.Server.Documents.Subscriptions.ISubscriptionConnection;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions
 {

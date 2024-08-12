@@ -16,6 +16,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using ConnectionStatus = Raven.Server.Documents.Subscriptions.ISubscriptionConnection.ConnectionStatus;
 
 namespace Raven.Server.Documents.TcpHandlers;
 

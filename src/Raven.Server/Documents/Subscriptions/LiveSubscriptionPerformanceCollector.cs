@@ -286,7 +286,7 @@ namespace Raven.Server.Documents.Subscriptions
             using (Database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var subscription = Database.SubscriptionStorage.GetSubscription(context, null, subscriptionName, history: false);
+                var subscription = Database.SubscriptionStorage.GetSubscriptionWithDataByNameFromServerStore(context, subscriptionName, history: false, running: false);
                 _perSubscriptionConnectionStats.TryAdd(subscriptionName, new SubscriptionAndPerformanceConnectionStatsList(subscription));
                 
                 if (_perSubscriptionBatchStats.ContainsKey(subscriptionName))
