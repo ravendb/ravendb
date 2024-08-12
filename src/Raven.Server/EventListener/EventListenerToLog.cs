@@ -75,7 +75,7 @@ public class EventListenerToLog : IDynamicJson
         }
     }
 
-    public class EventListenerConfiguration
+    public class EventListenerConfiguration : IDynamicJson
     {
         public EventListenerMode EventListenerMode { get; set; }
 
@@ -88,15 +88,22 @@ public class EventListenerToLog : IDynamicJson
         public int AllocationsLoggingCount { get; set; }
 
         public bool Persist { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(EventListenerMode)] = Instance._configuration.EventListenerMode,
+                [nameof(EventTypes)] = Instance._configuration.EventTypes == null ? null : new DynamicJsonArray(Instance._configuration.EventTypes),
+                [nameof(MinimumDurationInMs)] = Instance._configuration.MinimumDurationInMs,
+                [nameof(AllocationsLoggingIntervalInMs)] = Instance._configuration.AllocationsLoggingIntervalInMs,
+                [nameof(AllocationsLoggingCount)] = Instance._configuration.AllocationsLoggingCount,
+            };
+        }
     }
 
     public DynamicJsonValue ToJson()
     {
-        return new DynamicJsonValue
-        {
-            [nameof(EventListenerConfiguration.EventListenerMode)] = Instance._configuration.EventListenerMode,
-            [nameof(EventListenerConfiguration.EventTypes)] = Instance._configuration.EventTypes == null ? null : new DynamicJsonArray(Instance._configuration.EventTypes),
-            [nameof(EventListenerConfiguration.MinimumDurationInMs)] = Instance._configuration.MinimumDurationInMs
-        };
+        return _configuration.ToJson();
     }
 }
