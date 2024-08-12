@@ -793,6 +793,75 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
         }
     }
 
+    [RequiresMsSqlRetryTheory(delayBetweenRetriesMs: 1000)]
+    [InlineData(RavenDatabaseMode.Single)]
+    [InlineData(RavenDatabaseMode.Sharded)]
+    public async Task Should_not_error_if_attachment_doesnt_exist(RavenDatabaseMode databaseMode)
+    {
+        // the same test for sql should fail - snowflake accepts null as a binary value
+        using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
+        {
+            using (WithSnowflakeDatabase(out var connectionString, out var _, out var _))
+            {
+                CreateOrdersWithAttachmentTable(connectionString);
+
+                var attachmentBytes = new byte[] { 1, 2, 3 };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order(), "orders/1-A");
+                    await session.StoreAsync(new Order(), "orders/2-A");
+                    await session.StoreAsync(new Order(), "orders/3-A");
+
+                    await session.SaveChangesAsync();
+                }
+
+                store.Operations.Send(new PutAttachmentOperation("orders/1-A", "abc.jpg", new MemoryStream(attachmentBytes), "image/png"));
+                store.Operations.Send(new PutAttachmentOperation("orders/2-A", "photo.jpg", new MemoryStream(attachmentBytes), "image/png"));
+
+                var etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
+
+                SetupSnowflakeEtl(store, connectionString, @"
+var orderData = {
+    Id: id(this),
+    Name: 'photo.jpg',
+    Pic: loadAttachment('photo.jpg')
+};
+
+loadToOrders(orderData);
+");
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                using (var con = new SnowflakeDbConnection())
+                {
+                    con.ConnectionString = connectionString;
+                    con.Open();
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                        Assert.Equal(1, dbCommand.ExecuteScalar());
+                    }
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/2-A'";
+
+                        var sqlDataReader = dbCommand.ExecuteReader();
+
+                        Assert.True(sqlDataReader.Read());
+                        var stream = sqlDataReader.GetStream(0);
+
+                        var bytes = stream.ReadData();
+
+                        Assert.Equal(attachmentBytes, bytes);
+                    }
+                }
+            }
+        }
+    }
+
     [RequiresSnowflakeFact]
     public async Task CanLoadSingleAttachment()
     {

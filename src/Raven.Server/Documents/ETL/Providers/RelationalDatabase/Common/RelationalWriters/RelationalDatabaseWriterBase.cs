@@ -353,6 +353,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
     public void SetParamValue(DbParameter colParam, RelationalDatabaseColumn column, List<Func<DbParameter, string, bool>> stringParsers)
     {
         if (column.Value == null)
+            // we'll end up here e.g. if we can't find attachment loaded from the script - the value will be null 
             colParam.Value = DBNull.Value;
         else
         {
