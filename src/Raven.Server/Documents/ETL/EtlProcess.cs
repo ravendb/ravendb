@@ -1101,27 +1101,58 @@ namespace Raven.Server.Documents.ETL
                 }
                 else
                 {
-                    Dictionary<string, SqlConnectionString> sqlConnectionStrings;
-                    using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
-                    using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(ctx, database.Name))
+                    if (typeof(TCS) == typeof(SqlConnectionString))
                     {
-                        sqlConnectionStrings = rawRecord.SqlConnectionStrings;
-                        if (sqlConnectionStrings == null)
-                            throw new InvalidOperationException($"{nameof(DatabaseRecord.SqlConnectionStrings)} was not found in the database record");
+                        Dictionary<string, SqlConnectionString> connectionStrings;
+                        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(ctx, database.Name))
+                        {
+                            connectionStrings = rawRecord.SqlConnectionStrings;
+                            if (connectionStrings == null)
+                                throw new InvalidOperationException($"{nameof(DatabaseRecord.SqlConnectionStrings)} was not found in the database record");
+                        }
+    
+                        if (connectionStrings.TryGetValue(testScript.Configuration.ConnectionStringName, out var sqlConnection) == false)
+                        {
+                            throw new InvalidOperationException(
+                                $"Connection string named '{testScript.Configuration.ConnectionStringName}' was not found in the database record");
+                        }
+    
+                        if (sqlConnection.Validate(ref csErrors) == false)
+                            throw new InvalidOperationException(
+                                $"Invalid '{testScript.Configuration.ConnectionStringName}' connection string due to {string.Join(";", csErrors)}");
+    
+                        connection = sqlConnection as TCS;
                     }
-
-                    if (sqlConnectionStrings.TryGetValue(testScript.Configuration.ConnectionStringName, out var sqlConnection) == false)
+                    else if (typeof(TCS) == typeof(SnowflakeConnectionString))
                     {
-                        throw new InvalidOperationException(
-                            $"Connection string named '{testScript.Configuration.ConnectionStringName}' was not found in the database record");
+                        Dictionary<string, SnowflakeConnectionString> connectionStrings;
+                        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(ctx, database.Name))
+                        {
+                            connectionStrings = rawRecord.SnowflakeConnectionStrings;
+                            if (connectionStrings == null)
+                                throw new InvalidOperationException($"{nameof(DatabaseRecord.SnowflakeConnectionStrings)} was not found in the database record");
+                        }
+    
+                        if (connectionStrings.TryGetValue(testScript.Configuration.ConnectionStringName, out var snowflakeConnection) == false)
+                        {
+                            throw new InvalidOperationException(
+                                $"Connection string named '{testScript.Configuration.ConnectionStringName}' was not found in the database record");
+                        }
+    
+                        if (snowflakeConnection.Validate(ref csErrors) == false)
+                            throw new InvalidOperationException(
+                                $"Invalid '{testScript.Configuration.ConnectionStringName}' connection string due to {string.Join(";", csErrors)}");
+    
+                        connection = snowflakeConnection as TCS;
                     }
-
-                    if (sqlConnection.Validate(ref csErrors) == false)
-                        throw new InvalidOperationException(
-                            $"Invalid '{testScript.Configuration.ConnectionStringName}' connection string due to {string.Join(";", csErrors)}");
-
-                    connection = sqlConnection as TCS;
+                    else
+                    {
+                        throw new InvalidOperationException($"Unexpected connection string type {typeof(TCS)}");
+                    }
                 }
             }
 
