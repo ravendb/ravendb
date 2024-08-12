@@ -187,7 +187,7 @@ namespace SlowTests.Client.Subscriptions
             using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var subscriptionData = currentDatabase.SubscriptionStorage.GetSubscriptionFromServerStore(context, "Subs1");
+                var subscriptionData = currentDatabase.SubscriptionStorage.GetSubscriptionByName(context, "Subs1");
                 return subscriptionData.ChangeVectorForNextBatchStartingPoint;
             }
         }

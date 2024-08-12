@@ -3867,7 +3867,7 @@ namespace Raven.Server.ServerWide
             return doc;
         }
 
-        public static IEnumerable<(Slice Key, BlittableJsonReaderObject Value)> ReadValuesStartingWith<TTransaction>(TransactionOperationContext<TTransaction> context, string startsWithKey)
+        public static IEnumerable<(Slice Key, BlittableJsonReaderObject Value)> ReadValuesStartingWith<TTransaction>(TransactionOperationContext<TTransaction> context, string startsWithKey, long skip = 0L)
             where TTransaction : RavenTransaction
         {
             var startsWithKeyLower = startsWithKey.ToLowerInvariant();
@@ -3875,7 +3875,7 @@ namespace Raven.Server.ServerWide
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-                foreach (var holder in items.SeekByPrimaryKeyPrefix(startsWithSlice, Slices.Empty, 0))
+                foreach (var holder in items.SeekByPrimaryKeyPrefix(startsWithSlice, Slices.Empty, skip))
                 {
                     var reader = holder.Value.Reader;
                     var size = GetDataAndEtagTupleFromReader(context, reader, out BlittableJsonReaderObject doc, out long _);

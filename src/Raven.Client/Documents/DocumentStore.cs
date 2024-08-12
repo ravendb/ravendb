@@ -30,7 +30,7 @@ namespace Raven.Client.Documents
     /// </summary>
     public sealed class DocumentStore : DocumentStoreBase
     {
-        private readonly ConcurrentDictionary<DatabaseChangesOptions, IDatabaseChanges> _databaseChanges = new ConcurrentDictionary<DatabaseChangesOptions, IDatabaseChanges>();
+        private readonly ConcurrentDictionary<DatabaseChangesOptions, DatabaseChanges> _databaseChanges = new ConcurrentDictionary<DatabaseChangesOptions, DatabaseChanges>();
 
         internal readonly ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>> _aggressiveCacheChanges = new ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>>();
 
@@ -311,11 +311,19 @@ namespace Raven.Client.Documents
         /// </summary>
         public override IDatabaseChanges Changes(string database = null)
         {
-            return Changes(database, null);
+            return ChangesInternal(database, nodeTag: null);
         }
 
         /// <inheritdoc />
-        public override IDatabaseChanges Changes(string database, string nodeTag)
+        public override ISingleNodeDatabaseChanges Changes(string database, string nodeTag)
+        {
+            if (string.IsNullOrWhiteSpace(nodeTag))
+                throw new ArgumentNullException(nameof(nodeTag));
+
+            return ChangesInternal(database, nodeTag);
+        }
+
+        private DatabaseChanges ChangesInternal(string database, string nodeTag)
         {
             AssertInitialized();
 
@@ -326,7 +334,7 @@ namespace Raven.Client.Documents
             }, CreateDatabaseChanges);
         }
 
-        internal IDatabaseChanges CreateDatabaseChanges(DatabaseChangesOptions node)
+        internal DatabaseChanges CreateDatabaseChanges(DatabaseChangesOptions node)
         {
             return new DatabaseChanges(GetRequestExecutor(node.DatabaseName), node.DatabaseName, () => _databaseChanges.TryRemove(node, out var _), node.NodeTag);
         }

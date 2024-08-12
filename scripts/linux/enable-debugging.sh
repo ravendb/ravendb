@@ -1,13 +1,8 @@
 #!/bin/bash
 
-LD_SO_CONF_DIR='/etc/ld.so.conf.d/'
-
 DEFPATH=$( cd `dirname $0` && pwd )
 SERVER_DIR="$DEFPATH/Server"
-CREATEDUMP_PATH="$SERVER_DIR/createdump"
 RAVEN_DEBUG_PATH="$SERVER_DIR/Raven.Debug"
-LIB_MSCORDACCORE_DIR="$SERVER_DIR/libmscordaccore"
-LIB_MSCORDACCORE_SO="$SERVER_DIR/libmscordaccore.so"
 
 if [[ $UID != 0 ]]; then
     echo "This script needs to be run as root."
@@ -50,7 +45,7 @@ else
     fi
 fi
 
-binList=("$CREATEDUMP_PATH" "$RAVEN_DEBUG_PATH")
+binList=("$RAVEN_DEBUG_PATH")
 for binFilePath in "${binList[@]}"
 do
     binFilename="$(basename $binFilePath)"

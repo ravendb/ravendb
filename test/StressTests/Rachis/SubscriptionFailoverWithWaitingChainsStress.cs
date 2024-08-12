@@ -202,7 +202,7 @@ namespace StressTests.Rachis
                 {
                     var subscription = db
                         .SubscriptionStorage
-                        .GetRunningSubscription(context, null, "Subscription" + k, false);
+                        .GetSubscriptionWithDataByNameFromServerStore(context, "Subscription" + k, history: false, running: true);
 
                     if (subscription != null)
                         Assert.Fail("no subscriptions should be alive at this point");
@@ -474,7 +474,7 @@ namespace StressTests.Rachis
                         var name = $"Subscription{k}";
                         var subscription = db
                             .SubscriptionStorage
-                            .GetRunningSubscription(context, null, name, false);
+                            .GetSubscriptionWithDataByNameFromServerStore(context, name, history: false, running: true);
 
                         if (subscription == null)
                         {
@@ -513,7 +513,7 @@ namespace StressTests.Rachis
                     {
                         subscription = db
                             .SubscriptionStorage
-                            .GetSubscription(context, id: null, name, history: false);
+                            .GetSubscriptionWithDataByNameFromServerStore(context, name, history: false, running: false);
                     }
                     catch (SubscriptionDoesNotExistException)
                     {

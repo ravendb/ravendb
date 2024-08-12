@@ -82,7 +82,7 @@ namespace SlowTests.Client.Subscriptions
                     else
                     {
                         var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                        var s = db.SubscriptionStorage.GetSubscription(context, null, subsId, false);
+                        var s = db.SubscriptionStorage.GetSubscriptionWithDataByNameFromServerStore(context, subsId, history: false, running: false);
                         Assert.Equal(cv, s.ChangeVectorForNextBatchStartingPoint);
                         Assert.Equal("From Shipments", s.Query);
                     }

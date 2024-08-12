@@ -14,6 +14,8 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.Utils;
 using Sparrow.Utils;
+using static Raven.Server.Documents.Sharding.ShardedDatabaseContext.ShardedSubscriptionsStorage;
+using static Raven.Server.Documents.Subscriptions.ISubscriptionConnection;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions;
 
@@ -35,6 +37,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions;
 public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscriptionConnectionsState<OrchestratedSubscriptionConnection, OrchestratorIncludesCommandImpl>
 {
     internal readonly ShardedDatabaseContext _databaseContext;
+    public Dictionary<string, ShardedSubscriptionWorker> ShardWorkers => _shardWorkers;
     private Dictionary<string, ShardedSubscriptionWorker> _shardWorkers;
     private TaskCompletionSource _initialConnection;
     private SubscriptionWorkerOptions _options;
@@ -43,6 +46,8 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
 
     public int ClosedDueToNoDocs;
     public bool SubscriptionClosedDueNoDocs => ClosedDueToNoDocs == _shardWorkers.Count;
+    private readonly ConcurrentQueue<ShardedSubscriptionWorkerInfo> _recentShardedWorkers = new();
+    public IEnumerable<ShardedSubscriptionWorkerInfo> RecentShardedWorkers => _recentShardedWorkers;
 
     public SubscriptionConnectionsStateOrchestrator(ServerStore server, ShardedDatabaseContext databaseContext, long subscriptionId) : 
         base(server, databaseContext.DatabaseName, subscriptionId, databaseContext.DatabaseShutdown)
@@ -58,7 +63,7 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
         {
             _options = connection.Options;
             _shardWorkers = new Dictionary<string, ShardedSubscriptionWorker>();
-            StartShardSubscriptionWorkers();
+            StartShardSubscriptionWorkers(connection);
 
             _initialConnection.SetResult();
             return result;
@@ -68,13 +73,15 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
         return result;
     }
 
-    private void StartShardSubscriptionWorkers()
+    private void StartShardSubscriptionWorkers(OrchestratedSubscriptionConnection connection)
     {
         ClosedDueToNoDocs = 0;
         foreach (var shardNumber in _databaseContext.ShardsTopology.Keys)
         {
             var re = _databaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber);
             var shard = ShardHelper.ToShardName(_databaseContext.DatabaseName, shardNumber);
+
+            connection.AddToStatusDescription(connection.CreateStatusMessage(ConnectionStatus.Create, $"Creating {nameof(ShardedSubscriptionWorker)} for shard '{shard}'."));
             var worker = CreateShardedWorkerHolder(shard, re, lastErrorDateTime: null);
             _shardWorkers.Add(shard, worker);
         }
@@ -204,6 +211,8 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
         var list = new List<Task>();
         foreach (var w in workers)
         {
+            AddToRecentShardedWorkers(w);
+
             var t = w.Value.DisposeAsync(waitForSubscriptionTask).AsTask();
             list.Add(t);
         }
@@ -213,5 +222,13 @@ public sealed class SubscriptionConnectionsStateOrchestrator : AbstractSubscript
         {
             _shardWorkers = null;
         }
+    }
+
+    private void AddToRecentShardedWorkers(KeyValuePair<string, ShardedSubscriptionWorker> w)
+    {
+        if (_recentShardedWorkers.Count > 10)
+            _recentShardedWorkers.TryDequeue(out _);
+
+        _recentShardedWorkers.Enqueue(ShardedSubscriptionWorkerInfo.Create(w.Key, w.Value));
     }
 }

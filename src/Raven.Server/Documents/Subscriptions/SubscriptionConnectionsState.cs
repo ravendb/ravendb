@@ -20,6 +20,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
 using Voron;
+using ConnectionStatus = Raven.Server.Documents.Subscriptions.ISubscriptionConnection.ConnectionStatus;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -87,7 +88,7 @@ namespace Raven.Server.Documents.Subscriptions
                 return;
             }
 
-            connection.AddToStatusDescription("Starting to subscribe.");
+            connection.AddToStatusDescription(connection.CreateStatusMessage(ConnectionStatus.Info, "Starting to subscribe."));
 
             if (_subscriptionState == null)
             {

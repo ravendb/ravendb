@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Smuggler
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Client", typeof(DatabaseSmuggler).FullName);
 
-        private readonly Func<string, string, IDatabaseChanges> _getChanges;
+        private readonly Func<string, string, ISingleNodeDatabaseChanges> _getChanges;
         private readonly Func<string, RequestExecutor> _getRequestExecutor;
         private readonly string _databaseName;
         private RequestExecutor _requestExecutor;
@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Smuggler
         {
         }
 
-        internal DatabaseSmuggler(Func<string, string, IDatabaseChanges> getChanges, Func<string, RequestExecutor> getRequestExecutor, string databaseName)
+        internal DatabaseSmuggler(Func<string, string, ISingleNodeDatabaseChanges> getChanges, Func<string, RequestExecutor> getRequestExecutor, string databaseName)
         {
             _getChanges = getChanges;
             _databaseName = databaseName;

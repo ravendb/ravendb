@@ -69,6 +69,7 @@ using Raven.Server.Web.System;
 using Raven.Server.Web.System.Processors.Studio;
 using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
+using Raven.Server.EventListener;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.Documents.Sharding.Handlers.Processors;
@@ -133,7 +134,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, TestElasticSearchEtlScript> TestElasticSearchEtlScript = GenerateJsonDeserializationRoutine<TestElasticSearchEtlScript>();
 
         public static readonly Func<BlittableJsonReaderObject, TestQueueEtlScript> TestQueueEtlScript = GenerateJsonDeserializationRoutine<TestQueueEtlScript>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, TestQueueSinkScript> TestQueueSinkScript = GenerateJsonDeserializationRoutine<TestQueueSinkScript>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionCreationOptions> SubscriptionCreationParams = GenerateJsonDeserializationRoutine<SubscriptionCreationOptions>();
@@ -273,9 +274,9 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, BackupConfiguration> BackupConfiguration = GenerateJsonDeserializationRoutine<BackupConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> GetPeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, TestIndexParameters> TestIndexParameters = GenerateJsonDeserializationRoutine<TestIndexParameters>();
-        
+
         internal static readonly Func<BlittableJsonReaderObject, AutoSpatialOptions> AutoSpatialOptions = GenerateJsonDeserializationRoutine<AutoSpatialOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, BlockingTombstoneDetails> BlockingTombstoneDetails = GenerateJsonDeserializationRoutine<BlockingTombstoneDetails>();
@@ -313,6 +314,8 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionsDetails> SubscriptionConnectionsDetails = GenerateJsonDeserializationRoutine<SubscriptionConnectionsDetails>();
 
         internal static readonly Func<BlittableJsonReaderObject, UpgradeInfoHandler.UpgradeInfoResponse> UpgradeInfoResponse = GenerateJsonDeserializationRoutine<UpgradeInfoHandler.UpgradeInfoResponse>();
+
+        internal static readonly Func<BlittableJsonReaderObject, EventListenerToLog.EventListenerConfiguration> EventListenerConfiguration = GenerateJsonDeserializationRoutine<EventListenerToLog.EventListenerConfiguration>();
 
         public sealed class Parameters
         {
