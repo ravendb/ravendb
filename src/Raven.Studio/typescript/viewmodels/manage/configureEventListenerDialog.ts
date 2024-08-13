@@ -2,7 +2,6 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 import licenseModel from "models/auth/licenseModel";
 import awesomeMultiselect = require("common/awesomeMultiselect");
-import generalUtils = require("common/generalUtils");
 
 type EventListenerConfigurationDto = Omit<
     Raven.Server.EventListener.EventListenerToLog.EventListenerConfiguration,
@@ -14,7 +13,7 @@ class configureEventListenerDialog extends dialogViewModelBase {
 
     canPersist = !licenseModel.cloudLicense();
 
-    eventListenerMode = ko.observable<Raven.Server.EventListener.EventListenerMode>();
+    enabled = ko.observable<boolean>(false);
     eventTypes = ko.observableArray<Raven.Server.EventListener.EventType>([]);
     allocationsLoggingCount = ko.observable<number>();
     allocationsLoggingIntervalInMs = ko.observable<number>();
@@ -54,8 +53,8 @@ class configureEventListenerDialog extends dialogViewModelBase {
 
         this.validatedServerData(config);
 
+        this.enabled(config.EventListenerMode === "ToLogFile");
         this.eventTypes(config.EventTypes || []);
-        this.eventListenerMode(config.EventListenerMode);
         this.allocationsLoggingCount(config.AllocationsLoggingCount);
         this.allocationsLoggingIntervalInMs(config.AllocationsLoggingIntervalInMs);
         this.minimumDurationInMs(config.MinimumDurationInMs);
@@ -78,20 +77,6 @@ class configureEventListenerDialog extends dialogViewModelBase {
         }
     }
 
-    formattedEventListenerMode(): string {
-        const mode = this.eventListenerMode();
-        
-        switch (mode) {
-            case "Off":
-            case "None":
-                return mode;
-            case "ToLogFile":
-                return "To Log File";
-            default:
-                return generalUtils.assertUnreachable(mode);
-        }
-    }
-
     attached() {
         awesomeMultiselect.build($("#eventTypes"), opts => {
             opts.includeSelectAllOption = true;
@@ -109,7 +94,7 @@ class configureEventListenerDialog extends dialogViewModelBase {
 
         const result: Raven.Server.EventListener.EventListenerToLog.EventListenerConfiguration = {
             Persist: this.persist(),
-            EventListenerMode: this.eventListenerMode(),
+            EventListenerMode: this.enabled() ? "ToLogFile" : "Off",
             EventTypes: this.eventTypes(),
             MinimumDurationInMs: this.minimumDurationInMs(),
             AllocationsLoggingIntervalInMs: this.allocationsLoggingIntervalInMs(),
