@@ -145,6 +145,7 @@ class adminLogs extends viewModelBase {
     endDateToUse: KnockoutComputed<string>;
 
     trafficWatchEnabled: KnockoutComputed<boolean>;
+    isEventListenerEnabled: KnockoutComputed<boolean>;
 
     // show user location of traffic watch in logs configuration button
     highlightTrafficWatch: boolean;
@@ -201,6 +202,11 @@ class adminLogs extends viewModelBase {
         this.trafficWatchEnabled = ko.pureComputed(() => {
             const config = this.trafficWatchConfiguration();
             return config?.enabled() ?? false;
+        });
+
+        this.isEventListenerEnabled = ko.pureComputed(() => {
+            const config = this.eventListenerConfiguration();
+            return config?.EventListenerMode === "ToLogFile";
         });
     }
     
