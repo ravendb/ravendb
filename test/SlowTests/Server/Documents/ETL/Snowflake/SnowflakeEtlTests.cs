@@ -16,10 +16,12 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake;
 using Raven.Server.ServerWide.Context;
+using SlowTests.Core.Utils.Entities;
 using Snowflake.Data.Client;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -841,7 +843,7 @@ loadToOrders(orderData);
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(1, dbCommand.ExecuteScalar());
+                        Assert.Equal(3L, dbCommand.ExecuteScalar());
                     }
 
                     using (var dbCommand = con.CreateCommand())
@@ -861,7 +863,237 @@ loadToOrders(orderData);
             }
         }
     }
+    
+    [RequiresMsSqlRetryTheory(delayBetweenRetriesMs: 1000)]
+    [InlineData(RavenDatabaseMode.Single)]
+    [InlineData(RavenDatabaseMode.Sharded)]
+    public async Task LoadingMultipleAttachments(RavenDatabaseMode databaseMode)
+    {
+        using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
+        {
+            using (WithSnowflakeDatabase(out var connectionString, out var _, out var _))
+            {
+                CreateSnowflakeTable(connectionString,
+                    "create or replace TABLE ATTACHMENTS (\n\tID STRING,\n\tUSERID STRING,\n\tATTACHMENTNAME VARCHAR(50),\n\tDATA BINARY\n);");
 
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User());
+                    await session.SaveChangesAsync();
+                }
+
+                store.Operations.Send(new PutAttachmentOperation("users/1-A", "profile.jpg", new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6, 7 }), "image/jpeg"));
+                store.Operations.Send(new PutAttachmentOperation("users/1-A", "profile-small.jpg", new MemoryStream(new byte[] { 1, 2, 3 }), "image/jpeg"));
+
+                var etlDone = Etl.WaitForEtlToComplete(store);
+
+                Etl.AddEtl(store, new SnowflakeEtlConfiguration()
+                {
+                    Name = "LoadingMultipleAttachments",
+                    ConnectionStringName = "test",
+                    SnowflakeTables = { new SnowflakeEtlTable { TableName = "Attachments", DocumentIdColumn = "UserId", InsertOnlyMode = false }, },
+                    Transforms =
+                    {
+                        new Transformation()
+                        {
+                            Name = "Attachments",
+                            Collections = {"Users"},
+                            Script = @"
+
+var attachments = this['@metadata']['@attachments'];
+
+for (var i = 0; i < attachments.length; i++)
+{
+    var attachment = {
+        UserId: id(this),
+        AttachmentName: attachments[i].Name,
+        Data: loadAttachment(attachments[i].Name)
+    };
+
+    loadToAttachments(attachment);
+}
+"
+                            }
+                        }
+                }, new SnowflakeConnectionString() { Name = "test", ConnectionString = connectionString });
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                using (var con = new SnowflakeDbConnection())
+                {
+                    con.ConnectionString = connectionString;
+                    con.Open();
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM Attachments";
+                        Assert.Equal(2L, dbCommand.ExecuteScalar());
+                    }
+                }
+            }
+        }
+    }
+
+
+    [RequiresMsSqlRetryTheory(delayBetweenRetriesMs: 1000)]
+    [InlineData(RavenDatabaseMode.Single)]
+    [InlineData(RavenDatabaseMode.Sharded)]
+    public async Task CanSkipSettingFieldIfAttachmentDoesntExist(RavenDatabaseMode databaseMode)
+    {
+        using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
+        {
+            using (WithSnowflakeDatabase(out var connectionString, out var _, out var _))
+            {
+                CreateSnowflakeTable(connectionString, "create or replace table Orders (ID VARCHAR(50), PIC BINARY);");
+                
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order());
+                    await session.SaveChangesAsync();
+                }
+
+                var etlDone = Etl.WaitForEtlToComplete(store);
+
+                SetupSnowflakeEtl(store, connectionString, @"
+
+var orderData = {
+    Id: id(this),
+    // Pic: loadAttachment('non-existing') // skip loading non existing attachment
+};
+
+loadToOrders(orderData);
+");
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                using (var con = new SnowflakeDbConnection())
+                {
+                    con.ConnectionString = connectionString;
+                    con.Open();
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                        Assert.Equal(1L, dbCommand.ExecuteScalar());
+
+                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
+
+                        var sqlDataReader = dbCommand.ExecuteReader();
+
+                        Assert.True(sqlDataReader.Read());
+                        Assert.True(sqlDataReader.IsDBNull(0));
+                    }
+                }
+            }
+        }
+    }
+    
+    [RequiresMsSqlRetryTheory(delayBetweenRetriesMs: 1000)]
+    [InlineData(RavenDatabaseMode.Single)]
+    [InlineData(RavenDatabaseMode.Sharded)]
+    public async Task LoadingFromMultipleCollections(RavenDatabaseMode databaseMode)
+    {
+        using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
+        {
+            using (WithSnowflakeDatabase(out var connectionString, out var _, out var _))
+            {
+                CreateOrdersAndOrderLinesTables(connectionString);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order
+                    {
+                        OrderLines = new List<OrderLine>
+                        {
+                            new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                        }
+                    });
+
+                    await session.StoreAsync(new FavouriteOrder { OrderLines = new List<OrderLine> { new OrderLine { Cost = 3, Product = "Milk", Quantity = 3 }, } });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
+
+                SetupSnowflakeEtl(store, connectionString, DefaultScript, collections: new List<string> { "Orders", "FavouriteOrders" });
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                using (var con = new SnowflakeDbConnection())
+                {
+                    con.ConnectionString = connectionString;
+                    con.Open();
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                        Assert.Equal(2L, dbCommand.ExecuteScalar());
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM OrderLines";
+                        Assert.Equal(3L, dbCommand.ExecuteScalar());
+                    }
+                }
+            }
+        }
+    }
+    
+    [RequiresSnowflakeRetryFact(delayBetweenRetriesMs: 1000)]
+    public void Should_stop_batch_if_size_limit_exceeded_RavenDB_12800()
+    {
+        using (var store = GetDocumentStore(new Options { ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5" }))
+        {
+            using (WithSnowflakeDatabase(out var connectionString, out var _, out var _))
+            {
+                CreateSnowflakeTable(connectionString, "create or replace table orders (id varchar(50), pic binary);");
+                using (var session = store.OpenSession())
+                {
+
+                    for (int i = 0; i < 6; i++)
+                    {
+                        var order = new Orders.Order();
+                        session.Store(order);
+
+                        var r = new Random(i);
+
+                        var bytes = new byte[1024 * 1024 * 1];
+
+                        r.NextBytes(bytes);
+
+                        session.Advanced.Attachments.Store(order, "my-attachment", new MemoryStream(bytes));
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var etlDone = Etl.WaitForEtlToComplete(store, (n, statistics) => statistics.LoadSuccesses >= 5);
+
+                SetupSnowflakeEtl(store, connectionString, @"
+
+var orderData = {
+    Id: id(this),
+    Pic: loadAttachment('my-attachment') 
+};
+
+loadToOrders(orderData);
+");
+    
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                var database = GetDatabase(store.Database).Result;
+
+                var etlProcess = (SnowflakeEtl)database.EtlLoader.Processes.First();
+
+                var stats = etlProcess.GetPerformanceStats();
+
+                Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchTransformationCompleteReason).ToList());
+
+                etlDone = Etl.WaitForEtlToComplete(store, (n, s) => s.LoadSuccesses >= 6);
+
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+            }
+        }
+    }
+    
     [RequiresSnowflakeFact]
     public async Task CanLoadSingleAttachment()
     {
