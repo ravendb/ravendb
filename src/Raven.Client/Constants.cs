@@ -502,6 +502,11 @@ namespace Raven.Client
             public const string CsvImportOptions = "csvImportOptions";
         }
 
+        internal static class Operations
+        {
+            public const long InvalidOperationId = -1;
+        }
+
         internal sealed class CompareExchange
         {
             private CompareExchange()

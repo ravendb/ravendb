@@ -189,6 +189,37 @@ internal static class BackupUtils
         }
     }
 
+    internal static async ValueTask<string> WaitAndGetResponsibleNodeAsync(long taskId, DocumentDatabase database)
+    {
+        // task id == raft index
+        // we must wait here to ensure that the task was actually created on this node
+        await database.ServerStore.Cluster.WaitForIndexNotification(taskId);
+
+        var nodeTag = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+        if (nodeTag == null)
+        {
+            // this can happen if the database was just created or if a new task that was just created
+            // we'll wait for the cluster observer to give more time for the database stats to become stable,
+            // and then we'll wait for the cluster observer to determine the responsible node for the backup
+
+            var task = Task.Delay(database.Configuration.Cluster.StabilizationTime.AsTimeSpan + database.Configuration.Cluster.StabilizationTime.AsTimeSpan);
+
+            while (true)
+            {
+                if (Task.WaitAny(new[] { task }, millisecondsTimeout: 100) == 0)
+                {
+                    throw new InvalidOperationException($"Couldn't find a node which is responsible for backup task id: {taskId}");
+                }
+
+                nodeTag = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                if (nodeTag != null)
+                    break;
+            }
+        }
+
+        return nodeTag;
+    }
+
     internal static PeriodicBackupStatus ComparePeriodicBackupStatus(long taskId, PeriodicBackupStatus backupStatus, PeriodicBackupStatus inMemoryBackupStatus)
     {
         if (backupStatus == null)
