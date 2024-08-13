@@ -57,8 +57,25 @@ namespace Voron.Util
 
             // PERF: No point in trying to scan for older transactions, the current 
             // transaction is already the latest published one, so we won't change it
-            if (tx.Environment.CurrentStateRecord.TransactionId == oldTx)
+            long latestReadTransactionId = tx.Environment.CurrentStateRecord.TransactionId;
+            if (latestReadTransactionId == oldTx)
                 return true;
+
+            if (tx.Flags is TransactionFlags.ReadWrite)
+            {
+                if (_activeTxs.HasTransactions == false)
+                {
+                    // To be safe, we publish the latest _read_ transaction, because we aren't done committing the current one yet 
+                    Interlocked.CompareExchange(ref _oldestTransaction, latestReadTransactionId, oldTx);
+                }
+                // ReSharper disable once RedundantIfElseBlock
+                else
+                {
+                    // nothing to do here, we'll let the cleanup of the read transactions to move it for us.
+                }
+                return true;
+
+            }
 
             while (tx.Id <= oldTx)
             {
@@ -246,6 +263,8 @@ namespace Voron.Util
             }
         }
 
+        public bool HasTransactions => _inUse != 0;
+
         public long ScanOldest()
         {
             var copy = _array;
@@ -253,11 +272,10 @@ namespace Voron.Util
             for (int i = 0; i < copy.Length; i++)
             {
                 var item = copy[i].Value;
-                if (item != null || item == InvalidLowLevelTransaction)
-                {
-                    if (val > item.Id)
-                        val = item.Id;
-                }
+                if (item is null || item == InvalidLowLevelTransaction) 
+                    continue;
+                if (val > item.Id)
+                    val = item.Id;
             }
             if (val == long.MaxValue)
                 return 0;
