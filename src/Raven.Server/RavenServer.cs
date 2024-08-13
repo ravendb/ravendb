@@ -970,9 +970,9 @@ namespace Raven.Server
             return false;
         }
 
-        private Task _currentRefreshTask = Task.CompletedTask;
+        private Task<Task> _currentRefreshTask = Task.FromResult(Task.CompletedTask);
 
-        public Task RefreshTask => _currentRefreshTask;
+        public Task RefreshTask => _currentRefreshTask.Unwrap();
 
         public void RefreshClusterCertificateTimerCallback(object state)
         {
@@ -1010,18 +1010,17 @@ namespace Raven.Server
             var forceRenew = state as bool? ?? false;
 
             var currentRefreshTask = _currentRefreshTask;
-            if (currentRefreshTask.IsCompleted == false)
+            if (currentRefreshTask.Unwrap().IsCompleted == false)
             {
                 _refreshClusterCertificate?.Change(TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
                 return false;
             }
 
-            var refreshCertificate = new Task(async () => { await DoActualCertificateRefresh(currentCertificate, raftRequestId, forceRenew: forceRenew); });
-            if (Interlocked.CompareExchange(ref _currentRefreshTask, currentRefreshTask, refreshCertificate) != currentRefreshTask)
+            var refreshCertificate = new Task<Task>(() => DoActualCertificateRefresh(currentCertificate, raftRequestId, forceRenew: forceRenew));
+            if (Interlocked.CompareExchange(ref _currentRefreshTask, refreshCertificate, currentRefreshTask) != currentRefreshTask)
                 return false;
 
             refreshCertificate.Start();
-
             return true;
         }
 
