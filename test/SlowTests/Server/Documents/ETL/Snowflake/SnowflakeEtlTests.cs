@@ -1148,6 +1148,48 @@ loadToOrders(orderData);
         }
     }
 
+
+    [RequiresSnowflakeFact]
+    public async Task CanDelete()
+    {
+        using (var store = GetDocumentStore(Options.ForMode(RavenDatabaseMode.Single)))
+        {
+            using (WithSnowflakeDatabase(out var connectionString, out var _, out var _))
+            {
+                CreateOrdersAndOrderLinesTables(connectionString);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order
+                    {
+                        OrderLines = new List<OrderLine>
+                        {
+                            new OrderLine { Cost = 3, Product = "Milk", Quantity = 3 }, new OrderLine { Cost = 4, Product = "Bear", Quantity = 2 },
+                        }
+                    });
+                    await session.SaveChangesAsync();
+                }
+
+                var etlDone = Etl.WaitForEtlToComplete(store);
+
+                SetupSnowflakeEtl(store, connectionString, DefaultScript);
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                AssertCounts(1, 2, connectionString);
+
+                etlDone.Reset();
+
+                using (var commands = store.Commands())
+                    await commands.DeleteAsync("orders/1-A", null);
+                
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                AssertCounts(0, 0, connectionString);
+            }
+        }
+    }
+
     internal static long GetOrdersCount(string connectionString)
     {
         using (var con = new SnowflakeDbConnection())

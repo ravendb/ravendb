@@ -114,6 +114,11 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
         };
     }
 
+    protected override string GetAfterDeleteWhereIdentifierBeforeInExtraSyntax()
+    {
+        return " COLLATE 'en-ci'";
+    }
+
     public static void TestConnection(string connectionString)
     {
         var providerFactory = SnowflakeDbFactory.Instance;

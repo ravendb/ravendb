@@ -238,6 +238,11 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
         }
     }
 
+    protected override string GetAfterDeleteWhereIdentifierBeforeInExtraSyntax()
+    {
+        return string.Empty;
+    }
+
     internal static void SetProviderSpecificDbType(string dbTypeString, ref DbParameter colParam, SqlProvider? providerType)
     {
         if (providerType is null)

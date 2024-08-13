@@ -322,9 +322,12 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
     protected abstract void SetPrimaryKeyParamValue(ToRelationalDatabaseItem itemToReplicate, DbParameter pkParam);
 
     protected abstract string GetPostInsertIntoStartSyntax(ToRelationalDatabaseItem itemToReplicate);
+    
     protected abstract string GetPostInsertIntoEndSyntax(ToRelationalDatabaseItem itemToReplicate);
 
     protected abstract string GetPostDeleteSyntax(ToRelationalDatabaseItem itemToDelete);
+        
+    protected abstract string GetAfterDeleteWhereIdentifierBeforeInExtraSyntax();
 
     public RelationalDatabaseWriteStats Write(RelationalDatabaseTableWithRecords table, List<DbCommand> commands, CancellationToken token)
     {
@@ -528,6 +531,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
             .Append(GetTableNameString(tableName))
             .Append(" WHERE ")
             .Append(_commandBuilder.QuoteIdentifier(pkName))
+            .Append(GetAfterDeleteWhereIdentifierBeforeInExtraSyntax())
             .Append(" IN (");
 
         countOfDeletes = 0;
