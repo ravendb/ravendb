@@ -10,26 +10,14 @@
             <form class="flex-form form-inline" autocomplete="off">
                 <div class="modal-details">
 
-                    <div class="margin-bottom">
-                        <div class="form-group">
-                            <label class="control-label">Event Listener Mode</label>
-                            <div class="margin-left">
-                                <div class="dropdown">
-                                    <button class="btn btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
-                                        <span data-bind="text: formattedEventListenerMode()"></span>
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a href="#" data-bind="click: _.partial(eventListenerMode, 'Off')">Off</a></li>
-                                        <li><a href="#" data-bind="click: _.partial(eventListenerMode, 'None')">None</a></li>
-                                        <li><a href="#" data-bind="click: _.partial(eventListenerMode, 'ToLogFile')">To Log File</a></li>
-                                    </ul>
-                                </div>
-                            </div>
+                    <div class="margin-left margin-bottom">
+                        <div class="toggle">
+                            <input id="enableEventListener" type="checkbox" data-bind="checked: enabled">
+                            <label for="enableEventListener">Enable event listener logging</label>
                         </div>
                     </div>
 
-                    <div data-bind="visible: eventListenerMode() !== 'Off' && eventListenerMode() !== 'None'">
+                    <div data-bind="collapse: enabled">
                         <div class="margin-bottom">
                             <div class="form-group">
                                 <label class="control-label">Event Types</label>

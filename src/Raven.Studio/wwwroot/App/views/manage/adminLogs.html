@@ -147,6 +147,8 @@
                                                 <i class="icon-settings"></i>
                                                 <span>Configure</span>
                                             </button>
+                                            <span class="text-success" data-bind="visible: $root.isEventListenerEnabled()">Active</span>
+                                            <span class="text-default" data-bind="visible: !$root.isEventListenerEnabled()">Disabled</span>
                                         </div>
                                     </div>
                                 </div>
