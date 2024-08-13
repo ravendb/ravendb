@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var isClusterAdmin = IsClusterAdmin();
                     command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
 
-                    var (etag, result) = await ServerStore.Engine.SendToLeaderAsync(command);
+                    var (etag, result) = await ServerStore.Engine.PutToLeaderAsync(command);
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                     var ms = context.CheckoutMemoryStream();
                     try
