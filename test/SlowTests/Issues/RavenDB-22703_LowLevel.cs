@@ -22,7 +22,7 @@ public class RavenDB_22703_LowLevel : StorageTest
     private const int IdIndex = 0, BarBoolIndex = 1;
     
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    public void LowLevelTest()
+    public void TestNonExistingPostingList()
     {
         using (var bsc = new ByteStringContext(SharedMultipleUseFlag.None))
         {

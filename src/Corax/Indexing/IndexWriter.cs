@@ -1142,7 +1142,7 @@ namespace Corax.Indexing
                     termsToIgnore++;
                 }
                 
-                if (sortedTerms.Length > 1 && sortedTerms[termsToIgnore].AsReadOnlySpan().SequenceEqual(Constants.NonExistingValueSlice.AsReadOnlySpan()))
+                if (sortedTerms.Length > termsToIgnore && sortedTerms[termsToIgnore].AsReadOnlySpan().SequenceEqual(Constants.NonExistingValueSlice.AsReadOnlySpan()))
                 {
                     HandleSpecialTerm(termsOffsets, sortedTerms, termsToIgnore, _writer._nonExistingEntriesPostingListsTree, ref totalLengthOfTerm);
                     termsToIgnore++;
