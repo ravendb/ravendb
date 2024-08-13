@@ -29,67 +29,68 @@
                         </div>
                     </div>
 
-                    <div class="margin-bottom">
-                        <div class="form-group">
-                            <label class="control-label">Event Types</label>
-                            <div class="flex-grow margin-left">
-                                <div class="toggle-margin">
-                                    <div data-bind="validationElement: eventTypes">
-                                        <select
-                                        id="eventTypes"
-                                        size="5"
-                                        multiple="multiple"
-                                        data-bind="options: allEventTypes, selectedOptions: eventTypes"
-                                        ></select>
+                    <div data-bind="visible: eventListenerMode() !== 'Off' && eventListenerMode() !== 'None'">
+                        <div class="margin-bottom">
+                            <div class="form-group">
+                                <label class="control-label">Event Types</label>
+                                <div class="flex-grow margin-left">
+                                    <div class="toggle-margin">
+                                        <div data-bind="validationElement: eventTypes">
+                                            <select
+                                            id="eventTypes"
+                                            size="5"
+                                            multiple="multiple"
+                                            data-bind="options: allEventTypes, selectedOptions: eventTypes"
+                                            ></select>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="margin-bottom">
-                        <div class="form-group" data-bind="validationElement: minimumDurationInMs">
-                            <label class="control-label">Minimum Duration</label>
-                            <div class="margin-left">
-                                <div class="input-group">
-                                    <input type="number" class="form-control" data-bind="numericInput: minimumDurationInMs" />
-                                    <div class="input-group-addon">ms</div>
+                        
+                        <div class="margin-bottom">
+                            <div class="form-group" data-bind="validationElement: minimumDurationInMs">
+                                <label class="control-label">Minimum Duration</label>
+                                <div class="margin-left">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" data-bind="numericInput: minimumDurationInMs" />
+                                        <div class="input-group-addon">ms</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="margin-bottom">
-                        <div class="form-group" data-bind="validationElement: allocationsLoggingIntervalInMs">
-                            <label class="control-label">Allocations Logging Interval</label>
-                            <div class="margin-left">
-                                <div class="input-group">
-                                    <input type="number" class="form-control" data-bind="numericInput: allocationsLoggingIntervalInMs" />
-                                    <div class="input-group-addon">ms</div>
+                        <div class="margin-bottom">
+                            <div class="form-group" data-bind="validationElement: allocationsLoggingIntervalInMs">
+                                <label class="control-label">Allocations Logging Interval</label>
+                                <div class="margin-left">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" data-bind="numericInput: allocationsLoggingIntervalInMs" />
+                                        <div class="input-group-addon">ms</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="margin-bottom">
-                        <div class="form-group" data-bind="validationElement: allocationsLoggingCount">
-                            <label class="control-label">Allocations Logging Count</label>
-                            <div class="margin-left">
-                                <input type="number" class="form-control" data-bind="numericInput: allocationsLoggingCount" />
+                        <div class="margin-bottom">
+                            <div class="form-group" data-bind="validationElement: allocationsLoggingCount">
+                                <label class="control-label">Allocations Logging Count</label>
+                                <div class="margin-left">
+                                    <input type="number" class="form-control" data-bind="numericInput: allocationsLoggingCount" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="margin-left margin-top" data-bind="visible: $root.canPersist">
+                            <div class="toggle">
+                                <input id="persistToSettings" type="checkbox" data-bind="checked: persist">
+                                <label for="persistToSettings">Save this configuration in <code>settings.json</code></label>
+                            </div>
+                            <div class="bg-info padding padding-xs" data-bind="visible: !persist()">
+                                <i class="icon-info"></i> <span>If not saved, above settings will reset after a server restart</span>
                             </div>
                         </div>
                     </div>
-
-                    <div class="margin-left margin-top" data-bind="visible: $root.canPersist">
-                        <div class="toggle">
-                            <input id="persistToSettings" type="checkbox" data-bind="checked: persist">
-                            <label for="persistToSettings">Save this configuration in <code>settings.json</code></label>
-                        </div>
-                        <div class="bg-info padding padding-xs" data-bind="visible: !persist()">
-                            <i class="icon-info"></i> <span>If not saved, above settings will reset after a server restart</span>
-                        </div>
-                    </div>
-
                 </div>
             </form>
         </div>
