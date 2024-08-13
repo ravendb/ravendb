@@ -953,8 +953,8 @@ namespace Raven.Server.Rachis
         public Task<(long Index, object Result)> PutAsync(CommandBase cmd)
         {
             var leader = _currentLeader;
-            if (leader == null)
-                throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
+            if (leader == null || CurrentState != RachisState.Leader)
+                throw new NotLeadingException("Not a valid leader, cannot accept commands. " + _lastStateChangeReason);
 
             Validator.AssertPutCommandToLeader(cmd);
             return leader.PutAsync(cmd, cmd.Timeout ?? OperationTimeout);
