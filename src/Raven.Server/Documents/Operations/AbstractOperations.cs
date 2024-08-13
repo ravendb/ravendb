@@ -20,11 +20,13 @@ namespace Raven.Server.Documents.Operations;
 public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
     where TOperation : AbstractOperation, new()
 {
+    internal const long InvalidOperationId = -1;
+
     private readonly IDocumentsChanges _changes;
     private readonly TimeSpan _maxCompletedTaskLifeTime;
 
     protected readonly ConcurrentDictionary<long, AbstractOperation> Active = new();
-    protected readonly ConcurrentDictionary<long, AbstractOperation> Completed = new();
+    internal readonly ConcurrentDictionary<long, AbstractOperation> Completed = new();
 
     protected AbstractOperations(IDocumentsChanges changes, TimeSpan maxCompletedTaskLifeTime)
     {

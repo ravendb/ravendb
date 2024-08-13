@@ -32,6 +32,7 @@ namespace Raven.Client.Documents.Operations.Backups
             private readonly long _taskId;
             private readonly long? _operationId;
             private readonly DateTime? _startTime;
+            private readonly bool _inProgressOnAnotherShard;
 
             public StartBackupCommand(bool? isFullBackup, long taskId)
             {
@@ -39,9 +40,10 @@ namespace Raven.Client.Documents.Operations.Backups
                 _taskId = taskId;
             }
 
-            internal StartBackupCommand(bool? isFullBackup, long taskId, long operationId, DateTime? startTime = null) : this(isFullBackup, taskId)
+            internal StartBackupCommand(bool? isFullBackup, long taskId, long operationId, bool inProgressOnAnotherShard, DateTime? startTime = null) : this(isFullBackup, taskId)
             {
                 _operationId = operationId;
+                _inProgressOnAnotherShard = inProgressOnAnotherShard;
                 _startTime = startTime;
             }
 
@@ -55,6 +57,8 @@ namespace Raven.Client.Documents.Operations.Backups
                     url += $"&operationId={_operationId}";
                 if (_startTime.HasValue)
                     url += $"&startTime={_startTime.Value.GetDefaultRavenFormat()}";
+                if (_inProgressOnAnotherShard)
+                    url += $"&inProgressOnAnotherShard=true";
 
                 var request = new HttpRequestMessage
                 {

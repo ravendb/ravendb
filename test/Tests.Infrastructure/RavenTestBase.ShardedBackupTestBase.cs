@@ -359,6 +359,8 @@ public partial class RavenTestBase
         {
             var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
+            WaitForResponsibleNodeUpdateInCluster(store, servers, result.TaskId);
+
             await RunBackupAsync(store.Database, result.TaskId, isFullBackup, servers);
 
             return result.TaskId;

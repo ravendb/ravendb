@@ -27,6 +27,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
@@ -220,6 +221,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 throw new InvalidOperationException($"Backup task id: {taskId} doesn't exist");
             }
+
+            if (operationId == AbstractOperations<Operations.Operation>.InvalidOperationId)
+                return periodicBackup.RunningTask != null ? periodicBackup.RunningTask.Id : AbstractOperations<Operations.Operation>.InvalidOperationId;
 
             return CreateBackupTask(periodicBackup, isFullBackup, startTimeUtc ?? SystemTime.UtcNow, operationId);
         }
@@ -507,8 +511,11 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             try
             {
-                _serverStore.ConcurrentBackupsCounter.FinishBackup(_originalDatabaseName, periodicBackup.Configuration.Name, periodicBackup.RunningBackupStatus, elapsed, _logger);
+                if (_forTestingPurposes?.HoldBackupFromFinishing != null)
+                    AsyncHelpers.RunSync(() => _forTestingPurposes.HoldBackupFromFinishing.WaitAsync());
 
+                _serverStore.ConcurrentBackupsCounter.FinishBackup(_originalDatabaseName, periodicBackup.Configuration.Name, periodicBackup.RunningBackupStatus, elapsed, _logger);
+                
                 periodicBackup.RunningTask = null;
                 periodicBackup.CancelToken = null;
                 periodicBackup.RunningBackupStatus = null;
@@ -1094,6 +1101,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             internal TaskCompletionSource<object> OnBackupTaskRunHoldBackupExecution;
 
             internal Action AfterBackupBatchCompleted;
+
+            internal AsyncManualResetEvent HoldBackupFromFinishing;
         }
     }
 }

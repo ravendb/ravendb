@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -12,6 +11,7 @@ using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Expiration;
@@ -21,12 +21,15 @@ using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Utils;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Extensions;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
 using Directory = System.IO.Directory;
 
 namespace RachisTests.DatabaseCluster
@@ -277,6 +280,146 @@ namespace RachisTests.DatabaseCluster
             }
 
             await LoadAndDeleteWhileUpdated(nodes, documentStore.Database, entity.Id);
+        }
+
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task CallingStartBackupOperationWhileBackupRunningShouldKeepTrackingOldOperationId(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                // hold backup from finishing
+                var mre = new AsyncManualResetEvent();
+                database.PeriodicBackupRunner.ForTestingPurposesOnly().HoldBackupFromFinishing = mre;
+
+                // start backup
+                var backupPath = NewDataPath(suffix: "BackupFolder");
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
+                long taskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, opStatus: OperationStatus.InProgress);
+                
+                // call StartBackupOperation - this will not start a new backup task for that id since we already have one running
+                var backupStatus = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId));
+                var waitForCompletion = backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+
+                // release original backup task  ,it can finish up now
+                mre.Set();
+
+                // WaitForCompletion should be able to finish now by still tracking the original id
+                await waitForCompletion;
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task CallingStartBackupOperationWhileBackupRunningShouldKeepTrackingOldOperationId_sharded(Options options)
+        {
+            options.ReplicationFactor = 1;
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                var database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, 0));
+
+                //make sure replication factor is 1 for all shards
+                var record = await GetDatabaseRecordAsync(store);
+                foreach (var (_, shardTopology) in record.Sharding.Shards)
+                {
+                    Assert.Equal(1, shardTopology.ReplicationFactor);
+                }
+                
+                // hold backup from finishing
+                var mreShard0 = new AsyncManualResetEvent();
+                database.PeriodicBackupRunner.ForTestingPurposesOnly().HoldBackupFromFinishing = mreShard0;
+
+                // start backup
+                var backupPath = NewDataPath(suffix: "BackupFolder");
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *");
+                long taskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config, isFullBackup: true);
+
+                var backupShard0 = database.PeriodicBackupRunner.PeriodicBackups.Single(x => x.Configuration.TaskId == taskId);
+                var mre_for_2_other_shards = new AsyncManualResetEvent();
+                
+                // wait for the backup to finish on 2 of the shards
+                var shardDatabases = await Sharding.GetShardsDocumentDatabaseInstancesFor(store.Database).ToListAsync();
+                foreach (var shard in shardDatabases)
+                {
+                    if (shard.ShardNumber == 0)
+                        continue;
+
+                    // wait for completed
+                    WaitForValue(() => shard.Operations.Completed.ContainsKey(backupShard0.RunningTask.Id), true);
+
+                    // for the next backup the other 2 shards should NOT start a new task, but we will set the mre just in case,
+                    // to catch the bugs if it happens when we later make sure the running task is null
+                    shard.PeriodicBackupRunner.ForTestingPurposesOnly().HoldBackupFromFinishing = mre_for_2_other_shards;
+                }
+                
+                // call StartBackupOperation - this should not start a new backup task for that id since we already have one running
+                var backupStatus = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId));
+                var waitForCompletion = backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+
+                backupShard0 = database.PeriodicBackupRunner.PeriodicBackups.Single(x => x.Configuration.TaskId == taskId);
+                
+                // check the other backups have not started again under a new operation id
+                foreach (var shard in shardDatabases)
+                {
+                    if (shard.ShardNumber == 0)
+                        continue;
+
+                    var backup = shard.PeriodicBackupRunner.PeriodicBackups.Single(x => x.Configuration.TaskId == taskId);
+
+                    // backup task should be null here, but check the operation ids anyway for more info on the bug
+                    if (backup.RunningTask != null)
+                    {
+                        Assert.Equal(backupShard0.RunningTask.Id, backup.RunningTask.Id);
+                        Assert.Fail($"backup task should not have started again");
+                    }
+
+                    Assert.Null(backup.RunningTask);
+                }
+
+                mre_for_2_other_shards.Set();
+
+                // release original backup task, it can finish up now
+                mreShard0.Set();
+
+                // WaitForCompletion should be able to finish now by still tracking the original id
+                await waitForCompletion;
+
+                // check here the number of folders for each shard
+                Assert.Equal(1, GetBackupDirCountForShard(store.Database, 1, backupPath));
+                Assert.Equal(1, GetBackupDirCountForShard(store.Database, 2, backupPath));
+                Assert.Equal(1, GetBackupDirCountForShard(store.Database, 0, backupPath));
+
+                // run the backup one last time now that everything is settled. should create another one
+                var oldOpId = backupStatus.Id;
+                backupStatus = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId));
+                Assert.NotEqual(backupStatus.Id, oldOpId);
+                await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+
+                Assert.Equal(2, GetBackupDirCountForShard(store.Database, 1, backupPath));
+                Assert.Equal(2, GetBackupDirCountForShard(store.Database, 2, backupPath));
+                Assert.Equal(2, GetBackupDirCountForShard(store.Database, 0, backupPath));
+            }
+        }
+
+        public int GetBackupDirCountForShard(string db, int shardNumber, string baseBackupPath)
+        {
+            var backupDirs = Directory.GetDirectories(baseBackupPath);
+            var shardDirs = backupDirs.Where(f => f.Contains(ShardHelper.ToShardName(db, shardNumber))).ToList();
+            return shardDirs.Count;
         }
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]

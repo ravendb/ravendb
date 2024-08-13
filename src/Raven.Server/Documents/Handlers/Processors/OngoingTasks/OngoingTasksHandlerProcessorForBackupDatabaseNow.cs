@@ -18,8 +18,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
             return RequestHandler.Database.Operations.GetNextOperationId();
         }
-
-        protected override async ValueTask<bool> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId, DateTime? startTime)
+        
+        protected override async ValueTask<(long, bool)> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId, bool inProgressInAnotherShard, DateTime? startTime)
         {
             // task id == raft index
             // we must wait here to ensure that the task was actually created on this node
@@ -49,12 +49,16 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             if (nodeTag == ServerStore.NodeTag)
             {
-                RequestHandler.Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup, operationId, startTime);
-                return true;
+                // if in progress in a different shard, don't call the backup. but we must return the operationId so WaitForCompletion will know this shard is done
+                if (inProgressInAnotherShard)
+                    return (operationId, true);
+
+                operationId = RequestHandler.Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup, operationId, startTime);
+                return (operationId, true);
             }
 
             RedirectToRelevantNode(nodeTag);
-            return false;
+            return (operationId, false);
         }
 
         private void RedirectToRelevantNode(string nodeTag)
