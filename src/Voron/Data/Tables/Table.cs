@@ -54,12 +54,20 @@ namespace Voron.Data.Tables
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
+                if (_tablePageAllocator != null)
+                    return _tablePageAllocator;
+                
                 if (_tx.LowLevelTransaction.Flags is TransactionFlags.Read)
                     return null;
                 
-                _tablePageAllocator ??= new NewPageAllocator(_tx.LowLevelTransaction, _tableTree);
+                EnsureTablePageAllocator();
                 return _tablePageAllocator;
             }
+        }
+
+        private void EnsureTablePageAllocator()
+        {
+            _tablePageAllocator ??= new NewPageAllocator(_tx.LowLevelTransaction, _tableTree);
         }
 
         private NewPageAllocator GlobalPageAllocator
@@ -67,12 +75,19 @@ namespace Voron.Data.Tables
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
+                if (_globalPageAllocator != null)
+                    return _globalPageAllocator;
                 if (_tx.LowLevelTransaction.Flags is TransactionFlags.Read)
                     return null;
                 
-                _globalPageAllocator ??= new NewPageAllocator(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects);
+                EnsureGlobalPageAllocator();
                 return _globalPageAllocator;
             }
+        }
+
+        private void EnsureGlobalPageAllocator()
+        {
+            _globalPageAllocator ??= new NewPageAllocator(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects);
         }
 
         public FixedSizeTree InactiveSections => _inactiveSections ??= GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0, isGlobal: false, isIndexTree: true);
@@ -2367,6 +2382,9 @@ namespace Voron.Data.Tables
         public TableReport GetReport(bool includeDetails, StorageReportGenerator generatorInstance = null)
         {
             generatorInstance ??= new StorageReportGenerator(_tx.LowLevelTransaction);
+
+            EnsureGlobalPageAllocator();
+            EnsureTablePageAllocator();
 
             var overflowSize = _stats.OverflowPageCount * Constants.Storage.PageSize;
             var report = new TableReport(overflowSize, overflowSize, includeDetails, generatorInstance)
