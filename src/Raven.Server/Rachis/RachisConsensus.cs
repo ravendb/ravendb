@@ -901,7 +901,7 @@ namespace Raven.Server.Rachis
             leader.Start(connections);
         }
 
-        private Task<(long Index, object Result)> PutToLeaderAsync(CommandBase cmd)
+        public Task<(long Index, object Result)> PutToLeaderAsync(CommandBase cmd)
         {
             var leader = _currentLeader;
             if (leader == null || CurrentState != RachisState.Leader)
