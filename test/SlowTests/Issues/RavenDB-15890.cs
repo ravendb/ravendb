@@ -138,7 +138,7 @@ namespace SlowTests.Issues
 
                 await ActionWithLeader(async l =>
                 {
-                    var (index, _) = await l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString()));
+                    var (index, _) = await l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString()));
                     await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
                 });
 
@@ -195,7 +195,7 @@ namespace SlowTests.Issues
 
                 await ActionWithLeader(async l =>
                 {
-                    var (index, _) = await l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Error, database, Guid.NewGuid().ToString()));
+                    var (index, _) = await l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Error, database, Guid.NewGuid().ToString()));
                     await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
                 });
 
@@ -250,7 +250,7 @@ namespace SlowTests.Issues
 
                 await ActionWithLeader(async l =>
                 {
-                    var (index, _) = await l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString()));
+                    var (index, _) = await l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString()));
                     await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
                 });
 
@@ -304,7 +304,7 @@ namespace SlowTests.Issues
 
                 await ActionWithLeader(async l =>
                 {
-                    var (index, _) = await l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Error, database, Guid.NewGuid().ToString()));
+                    var (index, _) = await l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Error, database, Guid.NewGuid().ToString()));
                     await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
                 });
 
@@ -358,7 +358,7 @@ namespace SlowTests.Issues
 
                 await ActionWithLeader(async l =>
                 {
-                    var (index, _) = await l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Idle, database, Guid.NewGuid().ToString()));
+                    var (index, _) = await l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Idle, database, Guid.NewGuid().ToString()));
                     await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
                 });
 
@@ -407,7 +407,7 @@ namespace SlowTests.Issues
 
                 await ActionWithLeader(async l =>
                 {
-                    var (index, _) = await l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString()));
+                    var (index, _) = await l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString()));
                     await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
                 });
 
@@ -429,7 +429,7 @@ namespace SlowTests.Issues
 
                 await ActionWithLeader(async l =>
                 {
-                    var (index, _) = await l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Normal, database, Guid.NewGuid().ToString()));
+                    var (index, _) = await l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Normal, database, Guid.NewGuid().ToString()));
                     await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
                 });
 
@@ -451,7 +451,7 @@ namespace SlowTests.Issues
 
                 await ActionWithLeader(async l =>
                 {
-                    var (index, _) = await l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Error, database, Guid.NewGuid().ToString()));
+                    var (index, _) = await l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Error, database, Guid.NewGuid().ToString()));
                     await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
                 });
 
@@ -467,7 +467,7 @@ namespace SlowTests.Issues
 
                 await ActionWithLeader(async l =>
                 {
-                    var (index, _) = await l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Normal, database, Guid.NewGuid().ToString()));
+                    var (index, _) = await l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Normal, database, Guid.NewGuid().ToString()));
                     await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
                 });
 
@@ -526,7 +526,7 @@ namespace SlowTests.Issues
                 var count = 0;
                 string info = "";
                
-                await ActionWithLeader((l) => l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString())),
+                await ActionWithLeader((l) => l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString())),
                     Servers);
 
                 foreach (var server in Servers)
@@ -610,7 +610,7 @@ namespace SlowTests.Issues
 
                 Assert.Equal(1, count);
 
-                await ActionWithLeader((l) => l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Normal, database, Guid.NewGuid().ToString())),
+                await ActionWithLeader((l) => l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Normal, database, Guid.NewGuid().ToString())),
                     Servers);
 
                 foreach (var server in Servers)
@@ -669,7 +669,7 @@ namespace SlowTests.Issues
                 }
 
                 // Disable index cluster wide
-                var (index, _) = await leader.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString()));
+                var (index, _) = await leader.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString()));
 
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
@@ -694,7 +694,7 @@ namespace SlowTests.Issues
                     Assert.Equal(IndexState.Normal, documentDatabase.IndexStore.GetIndex(indexName).State);
                 } 
                 //Change priority cluster wide
-                (index, _) = await leader.ServerStore.Engine.PutAsync(new SetIndexPriorityCommand(indexName, IndexPriority.Low, database, Guid.NewGuid().ToString()));
+                (index, _) = await leader.ServerStore.Engine.SendToLeaderAsync(new SetIndexPriorityCommand(indexName, IndexPriority.Low, database, Guid.NewGuid().ToString()));
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
                 foreach (var server in Servers)
@@ -761,7 +761,7 @@ namespace SlowTests.Issues
                 }
                 Assert.Equal(2, count);
                 //Change priority cluster wide
-                var (index, _) = await leader.ServerStore.Engine.PutAsync(new SetIndexPriorityCommand(indexName, IndexPriority.Low, database, Guid.NewGuid().ToString()));
+                var (index, _) = await leader.ServerStore.Engine.SendToLeaderAsync(new SetIndexPriorityCommand(indexName, IndexPriority.Low, database, Guid.NewGuid().ToString()));
 
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
                 count = 0;
@@ -806,7 +806,7 @@ namespace SlowTests.Issues
                 documentDatabase.IndexStore.StopIndex(indexName);
                 Assert.Equal(IndexRunningStatus.Paused, documentDatabase.IndexStore.GetIndex(indexName).Status);
 
-                var (index, _) = await leader.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString()));
+                var (index, _) = await leader.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString()));
 
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
@@ -814,7 +814,7 @@ namespace SlowTests.Issues
                 Assert.Equal(IndexState.Disabled, documentDatabase.IndexStore.GetIndex(indexName).State);
 
                 // Enable index cluster wide
-                (index, _) = await leader.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Normal, database, Guid.NewGuid().ToString()));
+                (index, _) = await leader.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(indexName, IndexState.Normal, database, Guid.NewGuid().ToString()));
 
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
