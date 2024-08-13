@@ -16,7 +16,7 @@ public class RavenDB_22703 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void Test(Options options)
+    public void TestQueryWithOrderByClauseAndNoWhereClause(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
