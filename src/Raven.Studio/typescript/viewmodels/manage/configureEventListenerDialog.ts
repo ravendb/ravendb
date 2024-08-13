@@ -2,6 +2,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 import licenseModel from "models/auth/licenseModel";
 import awesomeMultiselect = require("common/awesomeMultiselect");
+import genUtils = require("common/generalUtils");
 
 type EventListenerConfigurationDto = Omit<
     Raven.Server.EventListener.EventListenerToLog.EventListenerConfiguration,
@@ -22,7 +23,7 @@ class configureEventListenerDialog extends dialogViewModelBase {
 
     filterChangeTypes = ko.observable<boolean>();
 
-    allEventTypes: Raven.Server.EventListener.EventType[] = [
+    allEventTypes = genUtils.exhaustiveStringTuple<Raven.Server.EventListener.EventType>()(
         "Allocations",
         "Contention",
         "GC",
@@ -40,7 +41,7 @@ class configureEventListenerDialog extends dialogViewModelBase {
         "ThreadPoolWorkerThreadStop",
         "ThreadPoolWorkerThreadWait",
         "ThreadRunning",
-    ];
+    );
 
     validationGroup = ko.validatedObservable({
         allocationsLoggingCount: this.allocationsLoggingCount,
@@ -50,8 +51,6 @@ class configureEventListenerDialog extends dialogViewModelBase {
 
     constructor(config: EventListenerConfigurationDto) {
         super();
-
-        this.validatedServerData(config);
 
         this.enabled(config.EventListenerMode === "ToLogFile");
         this.eventTypes(config.EventTypes || []);
@@ -66,15 +65,6 @@ class configureEventListenerDialog extends dialogViewModelBase {
         this.allocationsLoggingCount.extend({ min: 0 });
         this.allocationsLoggingIntervalInMs.extend({ min: 0 });
         this.minimumDurationInMs.extend({ min: 0 });
-    }
-
-    private validatedServerData(config: EventListenerConfigurationDto) {
-        // Checking if the EventTypes from the server matches the list of all possible eventType defined here
-        const unexpectedEventTypes = config.EventTypes?.filter(x => !this.allEventTypes.includes(x)) || [];
-        
-        if (unexpectedEventTypes.length > 0) {
-            throw new Error(`Unexpected event type(s): ${unexpectedEventTypes}`);
-        }
     }
 
     attached() {
