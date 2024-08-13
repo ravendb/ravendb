@@ -2560,6 +2560,8 @@ namespace Raven.Client.Http
             internal Action<GetDatabaseTopologyCommand> SetCommandTimeout;
 
             internal Task WaitBeforeFetchOperationStatus;
+
+            internal ConcurrentQueue<string> Logs;
         }
     }
 }

@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -299,6 +298,7 @@ namespace RachisTests.DatabaseCluster
                 var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, source.Database, backupTaskId);
 
+                Console.WriteLine($"TEST: backupTaskId: {backupTaskId}");
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     for (int i = 0; i < count; i++)
@@ -322,8 +322,36 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
 
+                var database = await Databases.GetDocumentDatabaseInstanceFor(source);
+                database.PeriodicBackupRunner.ForTestingPurposesOnly().Logs = new ConcurrentQueue<string>();
+
+                var re = source.GetRequestExecutor();
+                re.ForTestingPurposesOnly().Logs = new ConcurrentQueue<string>();
+
                 var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                try
+                {
+                    await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                }
+                catch(Exception e)
+                {
+                    var msg = "TEST: "+ e.ToString() + "\n";
+                    msg += "TEST: Second StartBackupOperation\n";
+                    var backups = database.PeriodicBackupRunner.PeriodicBackups;
+                    foreach (var backup in backups)
+                    {
+                        msg += $"RunningTask: {{ id: {backup.RunningTask?.Id}, Task: {backup.RunningTask?.Task} }}\n";
+                        msg +=
+                            $"BackupStatus: {{ LastIncrementalBackup : {backup.BackupStatus?.LastIncrementalBackup}, TaskId: {backup.BackupStatus?.TaskId}, backupType: {backup.BackupStatus?.BackupType}, nodeTag: {backup.BackupStatus?.NodeTag} }}\n";
+                    }
+
+                    msg += $"TEST: PeriodicBackupRunner ForTesting logs: \n{string.Join("\n", database.PeriodicBackupRunner._forTestingPurposes.Logs)}\n";
+                    msg +=
+                        $"TEST: {DateTime.UtcNow}: Operations: Completed: {database.Operations.Completed.Count}. Active: {database.Operations.GetActive().Count}\n All: {string.Join(",", database.Operations.GetAll().Select(x => $"{{{x.Id}, {x.State.Status}}}"))}\n";
+                    msg += $"TEST: {DateTime.UtcNow}: RequestExecutor Logs: {string.Join("\n", re.ForTestingPurposes.Logs)}";
+                    Assert.Fail(msg);
+                    throw;
+                }
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -334,9 +362,30 @@ namespace RachisTests.DatabaseCluster
                     await session.StoreAsync(new TestObj(), notDelete);
                     await session.SaveChangesAsync();
                 }
-
+                
+                re.ForTestingPurposes.Logs.Clear();
                 var backupStatus3 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus3.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                try
+                {
+                    await backupStatus3.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                }
+                catch(Exception e)
+                {
+                    var msg = "TEST: " + e.ToString() + "\n";
+                    msg += "TEST: Third StartBackupOperation\n";
+                    var backups = database.PeriodicBackupRunner.PeriodicBackups;
+                    foreach (var backup in backups)
+                    {
+                        msg += $"RunningTask: {{ id: {backup.RunningTask?.Id}, Task: {backup.RunningTask?.Task} }}\n";
+                        msg += $"BackupStatus: {{ LastIncrementalBackup : {backup.BackupStatus?.LastIncrementalBackup}, TaskId: {backup.BackupStatus?.TaskId}, backupType: {backup.BackupStatus?.BackupType}, nodeTag: {backup.BackupStatus?.NodeTag} }}\n";
+                    }
+                    msg += $"TEST: PeriodicBackupRunner ForTesting logs: \n{string.Join("\n", database.PeriodicBackupRunner._forTestingPurposes.Logs)}\n";
+                    msg += $"TEST: {DateTime.UtcNow}: Operations: Completed: {database.Operations.Completed.Count}. Active: {database.Operations.GetActive().Count}\n All: {string.Join(",", database.Operations.GetAll().Select(x => $"{{{x.Id}, {x.State.Status}}}"))}\n";
+                    msg += $"TEST: {DateTime.UtcNow}: RequestExecutor Logs: {string.Join("\n", re.ForTestingPurposes.Logs)}";
+
+                    Assert.Fail(msg);
+                    throw;
+                }
 
                 var files = await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 3, backupStatus3.Id, source.Database);
 
@@ -433,8 +482,33 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
 
+                var database = await Databases.GetDocumentDatabaseInstanceFor(source);
+                var re = source.GetRequestExecutor();
+                re.ForTestingPurposesOnly().Logs = new ConcurrentQueue<string>();
                 var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                try
+                {
+                    await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                }
+                catch (Exception e)
+                {
+                    var msg = "TEST: " + e.ToString() + "\n";
+                    msg += "TEST: First StartBackupOperation\n";
+                    var backups = database.PeriodicBackupRunner.PeriodicBackups;
+                    foreach (var backup in backups)
+                    {
+                        msg += $"RunningTask: {{ id: {backup.RunningTask?.Id}, Task: {backup.RunningTask?.Task} }}\n";
+                        msg +=
+                            $"BackupStatus: {{ LastIncrementalBackup : {backup.BackupStatus?.LastIncrementalBackup}, TaskId: {backup.BackupStatus?.TaskId}, backupType: {backup.BackupStatus?.BackupType}, nodeTag: {backup.BackupStatus?.NodeTag} }}\n";
+                    }
+
+                    msg += $"TEST: PeriodicBackupRunner ForTesting logs: \n{string.Join("\n", database.PeriodicBackupRunner._forTestingPurposes.Logs)}\n";
+                    msg +=
+                        $"TEST: {DateTime.UtcNow}: Operations: Completed: {database.Operations.Completed.Count}. Active: {database.Operations.GetActive().Count}\n All: {string.Join(",", database.Operations.GetAll().Select(x => $"{{{x.Id}, {x.State.Status}}}"))}\n";
+                    msg += $"TEST: {DateTime.UtcNow}: RequestExecutor Logs: {string.Join("\n", re.ForTestingPurposes.Logs)}";
+                    Assert.Fail(msg);
+                    throw;
+                }
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -448,9 +522,32 @@ namespace RachisTests.DatabaseCluster
 
                     await session.SaveChangesAsync();
                 }
-
+                re.ForTestingPurposes.Logs.Clear();
                 var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                try
+                {
+                    await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                }
+                catch (Exception e)
+                {
+                    var msg = "TEST: " + e.ToString() + "\n";
+                    msg += "TEST: Second StartBackupOperation\n";
+                    var backups = database.PeriodicBackupRunner.PeriodicBackups;
+                    foreach (var backup in backups)
+                    {
+                        msg += $"RunningTask: {{ id: {backup.RunningTask?.Id}, Task: {backup.RunningTask?.Task} }}\n";
+                        msg +=
+                            $"BackupStatus: {{ LastIncrementalBackup : {backup.BackupStatus?.LastIncrementalBackup}, TaskId: {backup.BackupStatus?.TaskId}, backupType: {backup.BackupStatus?.BackupType}, nodeTag: {backup.BackupStatus?.NodeTag} }}\n";
+                    }
+
+                    msg += $"TEST: PeriodicBackupRunner ForTesting logs: \n{string.Join("\n", database.PeriodicBackupRunner._forTestingPurposes.Logs)}\n";
+                    msg +=
+                        $"TEST: {DateTime.UtcNow}: Operations: Completed: {database.Operations.Completed.Count}. Active: {database.Operations.GetActive().Count}\n All: {string.Join(",", database.Operations.GetAll().Select(x => $"{{{x.Id}, {x.State.Status}}}"))}\n";
+                    msg += $"TEST: {DateTime.UtcNow}: RequestExecutor Logs: {string.Join("\n", re.ForTestingPurposes.Logs)}";
+                    Assert.Fail(msg);
+                    throw;
+                }
+
 
                 await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, backupStatus2.Id, source.Database);
                 
@@ -496,7 +593,9 @@ namespace RachisTests.DatabaseCluster
                     await session.StoreAsync(new TestObj(), notToModify);
                     await session.SaveChangesAsync();
                 }
-
+                var database = await Databases.GetDocumentDatabaseInstanceFor(source);
+                var re = source.GetRequestExecutor();
+                re.ForTestingPurposesOnly().Logs = new ConcurrentQueue<string>();
                 var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
@@ -515,7 +614,29 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                try
+                {
+                    await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                }
+                catch (Exception e)
+                {
+                    var msg = "TEST: " + e.ToString() + "\n";
+                    msg += "TEST: Second StartBackupOperation\n";
+                    var backups = database.PeriodicBackupRunner.PeriodicBackups;
+                    foreach (var backup in backups)
+                    {
+                        msg += $"RunningTask: {{ id: {backup.RunningTask?.Id}, Task: {backup.RunningTask?.Task} }}\n";
+                        msg +=
+                            $"BackupStatus: {{ LastIncrementalBackup : {backup.BackupStatus?.LastIncrementalBackup}, TaskId: {backup.BackupStatus?.TaskId}, backupType: {backup.BackupStatus?.BackupType}, nodeTag: {backup.BackupStatus?.NodeTag} }}\n";
+                    }
+
+                    msg += $"TEST: PeriodicBackupRunner ForTesting logs: \n{string.Join("\n", database.PeriodicBackupRunner._forTestingPurposes.Logs)}\n";
+                    msg +=
+                        $"TEST: {DateTime.UtcNow}: Operations: Completed: {database.Operations.Completed.Count}. Active: {database.Operations.GetActive().Count}\n All: {string.Join(",", database.Operations.GetAll().Select(x => $"{{{x.Id}, {x.State.Status}}}"))}\n";
+                    msg += $"TEST: {DateTime.UtcNow}: RequestExecutor Logs: {string.Join("\n", re.ForTestingPurposes.Logs)}";
+                    Assert.Fail(msg);
+                    throw;
+                }
 
                 await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, backupStatus2.Id, source.Database);
                 

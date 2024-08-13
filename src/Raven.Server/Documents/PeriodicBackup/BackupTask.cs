@@ -94,6 +94,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public BackupResult RunPeriodicBackup(Action<IOperationProgress> onProgress, ref PeriodicBackupStatus runningBackupStatus)
         {
+            if (_forTestingPurposes?.Logs != null)
+            {
+                _forTestingPurposes.Logs.Enqueue($"{DateTime.UtcNow}: RunPeriodicBackup");
+                _forTestingPurposes.Logs.Enqueue($"{DateTime.UtcNow}: Operations: {string.Join(",", Database.ServerStore.Operations.GetAll().Select(x => $"{{{x.Id}, {x.State}}}"))}");
+            }
+
             _onProgress = onProgress;
             AddInfo($"Started task: '{_taskName}'");
 

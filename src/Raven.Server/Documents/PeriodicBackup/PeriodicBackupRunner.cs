@@ -388,7 +388,15 @@ namespace Raven.Server.Documents.PeriodicBackup
                         taskFactory: onProgress => StartBackupThread(periodicBackup, backupTask, tcs, onProgress),
                         token: backupTask.TaskCancelToken);
 
-                    task.ContinueWith(_ => backupTask.TaskCancelToken.Dispose());
+                    task.ContinueWith(_ =>
+                    {
+                        _forTestingPurposes?.Logs.Enqueue($"{DateTime.UtcNow}: {_serverStore.NodeTag}: backup local operation is in ContinueWith");
+                        if (task.Result is BackupResult br)
+                        {
+                            _forTestingPurposes?.Logs.Enqueue($"\tBackup Result Messages: {string.Join("\n", br.Messages)}\n");
+                        }
+                        backupTask.TaskCancelToken.Dispose();
+                    });
 
                     return operationId.Value;
                 }
@@ -440,6 +448,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void RunBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, string threadName, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
         {
+            _forTestingPurposes?.Logs?.Enqueue($"{DateTime.UtcNow}: {_serverStore.NodeTag}: ScheduleNextBackup: finished backup {periodicBackup.BackupStatus.TaskId}");
             BackupResult backupResult = null;
             var runningBackupStatus = new PeriodicBackupStatus
             {
@@ -503,7 +512,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             try
             {
                 _serverStore.ConcurrentBackupsCounter.FinishBackup(_originalDatabaseName, periodicBackup.Configuration.Name, periodicBackup.RunningBackupStatus, elapsed, _logger);
-
+                _forTestingPurposes?.Logs?.Enqueue($"{DateTime.UtcNow}: {_serverStore.NodeTag}: ScheduleNextBackup: finished backup {periodicBackup.BackupStatus.TaskId}");
                 periodicBackup.RunningTask = null;
                 periodicBackup.CancelToken = null;
                 periodicBackup.RunningBackupStatus = null;
@@ -1089,6 +1098,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             internal TaskCompletionSource<object> OnBackupTaskRunHoldBackupExecution;
 
             internal Action AfterBackupBatchCompleted;
+
+            internal ConcurrentQueue<string> Logs;
         }
     }
 }

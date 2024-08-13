@@ -159,6 +159,11 @@ namespace Raven.Client.Documents.Operations
 
                 await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 var node = command.SelectedNodeTag ?? command.Result.OperationNodeTag;
+
+                if(_requestExecutor.ForTestingPurposes?.Logs != null)
+                    _requestExecutor.ForTestingPurposes?.Logs.Enqueue($"OperationsExecutor: SendAsync: node of changes api: {node} (command.SelectedNodeTag ({command.SelectedNodeTag}) ?? command.Result.OperationNodeTag({command.Result.OperationNodeTag}))");
+                
+                Console.WriteLine($"OperationsExecutor: SendAsync: node of changes api: {node} (command.SelectedNodeTag ({command.SelectedNodeTag}) ?? command.Result.OperationNodeTag({command.Result.OperationNodeTag}))");
                 return new Operation<TResult>(RequestExecutor, () => _store.Changes(_databaseName, node), RequestExecutor.Conventions, command.Result.Result, command.Result.OperationId, node);
             }
         }
