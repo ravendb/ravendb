@@ -54,6 +54,9 @@ namespace Voron.Data.Tables
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
+                if (_tx.LowLevelTransaction.Flags is TransactionFlags.Read)
+                    return null;
+                
                 _tablePageAllocator ??= new NewPageAllocator(_tx.LowLevelTransaction, _tableTree);
                 return _tablePageAllocator;
             }
@@ -64,6 +67,9 @@ namespace Voron.Data.Tables
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
+                if (_tx.LowLevelTransaction.Flags is TransactionFlags.Read)
+                    return null;
+                
                 _globalPageAllocator ??= new NewPageAllocator(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects);
                 return _globalPageAllocator;
             }
