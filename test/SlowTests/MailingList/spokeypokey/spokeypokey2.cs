@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.ObjectModel;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Tests.Infrastructure;
 using Xunit;
@@ -73,8 +74,67 @@ namespace SlowTests.MailingList.spokeypokey
             public Collection<AddressTypeEnumPto2> AddressTypes { get; set; }
         }
 
+        private class DummyIndex : AbstractMultiMapIndexCreationTask
+        {
+            public class IndexEntry
+            {
+                public DateTime? EffectiveFrom { get; set; }   
+                public DateTime? EffectiveThrough { get; set; }  
+                public string Zip { get; set; }
+                public AddressTypeEnumPto2 AddressTypePto { get; set; }
+                public DateTime? ContactEffectiveFrom { get; set; }
+                public DateTime? ContactEffectiveThrough { get; set; }
+                public DateTime? AddressEffectiveFrom { get; set; }
+                public DateTime? AddressEffectiveThrough { get; set; }
+            }
+            
+            public DummyIndex()
+            {
+                AddMap<ProviderPto2>(providers => from provider in providers
+                    from providerAddressAssignmentPto in provider.AddressesPto
+                    select new IndexEntry()
+                    {
+                        EffectiveFrom = providerAddressAssignmentPto.EffectiveFrom, 
+                        EffectiveThrough = providerAddressAssignmentPto.EffectiveThrough,
+                        Zip = providerAddressAssignmentPto.Address.Zip,
+                        AddressTypePto = providerAddressAssignmentPto.Address.AddressTypePto,
+                        ContactEffectiveFrom = null,
+                        ContactEffectiveThrough = null,
+                        AddressEffectiveFrom = null,
+                        AddressEffectiveThrough = null
+                    });
+                
+                AddMap<ProviderPto2>(providers => from provider in providers
+                    from practiceOfficeAssignmentPto in provider.PracticeOfficesPto
+                    select new IndexEntry()
+                    {
+                        EffectiveFrom = practiceOfficeAssignmentPto.EffectiveFrom,
+                        EffectiveThrough = practiceOfficeAssignmentPto.EffectiveThrough,
+                        Zip = practiceOfficeAssignmentPto.PrimaryContact.Address.Zip,
+                        AddressTypePto = practiceOfficeAssignmentPto.PrimaryContact.Address.AddressTypePto,
+                        ContactEffectiveFrom = practiceOfficeAssignmentPto.PrimaryContact.ContactEffectiveFrom,
+                        ContactEffectiveThrough = practiceOfficeAssignmentPto.PrimaryContact.ContactEffectiveThrough,
+                        AddressEffectiveFrom = practiceOfficeAssignmentPto.PrimaryContact.AddressEffectiveFrom,
+                        AddressEffectiveThrough = practiceOfficeAssignmentPto.PrimaryContact.AddressEffectiveThrough
+                    });
+                
+                AddMap<ProviderPto2>(providers => from provider in providers
+                    from payToPto in provider.PayTosPto
+                    select new IndexEntry()
+                    {
+                        EffectiveFrom = null,
+                        EffectiveThrough = null,
+                        Zip = payToPto.PrimaryContact.Zip,
+                        AddressTypePto = payToPto.PrimaryContact.AddressTypePto,
+                        ContactEffectiveFrom = null,
+                        ContactEffectiveThrough = null,
+                        AddressEffectiveFrom = null,
+                        AddressEffectiveThrough = null
+                    });
+            }
+        }
 
-        private static void CreateTestData(IDocumentStore DocStore)
+        private void CreateTestData(IDocumentStore DocStore)
         {
             var provider1 = new ProviderPto2();
             provider1.AddressesPto =
@@ -134,6 +194,12 @@ namespace SlowTests.MailingList.spokeypokey
             {
                 session.Store(provider1);
                 session.SaveChanges();
+
+                var index = new DummyIndex();
+                
+                index.Execute(DocStore);
+                
+                Indexes.WaitForIndexing(DocStore);
             }
         }
 
@@ -152,46 +218,46 @@ namespace SlowTests.MailingList.spokeypokey
                 {
                     Zip = "WA000",
                     AddressTypes = new Collection<AddressTypeEnumPto2>
-                                                            {
-                                                                AddressTypeEnumPto2.PayToAddress,
-                                                                AddressTypeEnumPto2.PracticeOfficeAddress,
-                                                                AddressTypeEnumPto2.ProviderAddress
-
-                                                            }
+                    {
+                        AddressTypeEnumPto2.PayToAddress,
+                        AddressTypeEnumPto2.PracticeOfficeAddress,
+                        AddressTypeEnumPto2.ProviderAddress
+                    }
                 };
 
                 using (var session = store.OpenSession())
                 {
-                    var query = from p in session.Query<ProviderPto2>()
-                                where
-                                    // Search for Provider Addresses: Zip
-                                    (p.AddressesPto.Any(x => x.Address.Zip == searchCriteria.Zip
-                                                             && x.Address.AddressTypePto.In(searchCriteria.AddressTypes)))
+                    var query = from indexEntry in session.Query<DummyIndex.IndexEntry, DummyIndex>()
+                        where
+                            // Search for Provider Addresses: Zip
+                            (indexEntry.Zip == searchCriteria.Zip
+                             && indexEntry.AddressTypePto.In(searchCriteria.AddressTypes))
 
-                                    // ... or PracticeOffice Addresses : Zip
-                                    || (p.PracticeOfficesPto.Any(x => x.PrimaryContact.Address.Zip == searchCriteria.Zip
-                                                                      &&
-                                                                      x.PrimaryContact.Address.AddressTypePto.In(
-                                                                        searchCriteria.AddressTypes) &&
-                                                                      // Check PracticeOffice effective dates
-                                                                      (x.EffectiveFrom <= fromCutoffDate)
-                                                                      &&
-                                                                      ((x.EffectiveThrough == null) ||
-                                                                       (x.EffectiveThrough >= thruCutoffDate)) &&
-                                                                      // Check Contact effective dates
-                                                                      (x.PrimaryContact.ContactEffectiveFrom <= fromCutoffDate) &&
-                                                                      ((x.PrimaryContact.ContactEffectiveThrough == null) ||
-                                                                       (x.PrimaryContact.ContactEffectiveThrough >= thruCutoffDate)) &&
-                                                                      // Check Contact address effective dates
-                                                                      (x.PrimaryContact.AddressEffectiveFrom <= fromCutoffDate) &&
-                                                                      ((x.PrimaryContact.AddressEffectiveThrough == null) ||
-                                                                       (x.PrimaryContact.AddressEffectiveThrough >= thruCutoffDate))
-                                        ))
+                            // ... or PracticeOffice Addresses : Zip
+                            || (indexEntry.Zip == searchCriteria.Zip
+                                &&
+                                indexEntry.AddressTypePto.In(
+                                    searchCriteria.AddressTypes) &&
+                                // Check PracticeOffice effective dates
+                                (indexEntry.EffectiveFrom <= fromCutoffDate)
+                                &&
+                                ((indexEntry.EffectiveThrough == null) ||
+                                 (indexEntry.EffectiveThrough >= thruCutoffDate)) &&
+                                // Check Contact effective dates
+                                (indexEntry.ContactEffectiveFrom <= fromCutoffDate) &&
+                                ((indexEntry.ContactEffectiveThrough == null) ||
+                                 (indexEntry.ContactEffectiveThrough >= thruCutoffDate)) &&
+                                // Check Contact address effective dates
+                                (indexEntry.AddressEffectiveFrom <= fromCutoffDate) &&
+                                ((indexEntry.AddressEffectiveThrough == null) ||
+                                 (indexEntry.AddressEffectiveThrough >= thruCutoffDate))
+                            )
 
-                                    // ... or Vendor Addresses: Zip
-                                    || (p.PayTosPto.Any(x => x.PrimaryContact.Zip == searchCriteria.Zip
-                                                             && x.PrimaryContact.AddressTypePto.In(searchCriteria.AddressTypes)))
-                                select p;
+                            // ... or Vendor Addresses: Zip
+                            || (indexEntry.Zip == searchCriteria.Zip
+                                && indexEntry.AddressTypePto.In(searchCriteria.AddressTypes))
+                        select indexEntry;
+
                     Assert.Equal(1, query.ToArray().Length);
                 }
             }
