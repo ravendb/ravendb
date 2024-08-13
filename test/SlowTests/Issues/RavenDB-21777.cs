@@ -16,7 +16,7 @@ public class RavenDB_21777 : RavenTestBase
     {
     }
 
-    private const string ExpectedExceptionMessage = "Using multiple fields inside method 'Any' can lead to unexpected query results.";
+    private const string ExpectedExceptionMessage = "Using multiple fields inside method 'Any' can lead to unexpected query results for auto index.";
 
     [RavenFact(RavenTestCategory.Querying)]
     public void TestEnumerableMethodCallAccessingMultipleFields()

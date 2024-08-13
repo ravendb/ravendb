@@ -1046,7 +1046,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                             if (UsesKeyAndValue(left, right))
                                 continue;
                             
-                            throw new InvalidOperationException($"Using multiple fields inside method '{nameof(Enumerable.Any)}' can lead to unexpected query results.");
+                            throw new InvalidOperationException($"Using multiple fields inside method '{nameof(Enumerable.Any)}' can lead to unexpected query results for auto index. " +
+                                                                $"A static fanout index should be used instead.");
                         }
                     }
                 }
