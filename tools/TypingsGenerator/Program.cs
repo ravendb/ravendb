@@ -72,6 +72,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Debugging;
+using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Indexes.Spatial;
@@ -328,6 +329,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TestIndexParameters));
             scripter.AddType(typeof(TestIndexResult));
             scripter.AddType(typeof(IndexResetMode));
+            scripter.AddType(typeof(ConversionOutputType));
 
             // cluster
             scripter.AddType(typeof(ClusterTopology));
