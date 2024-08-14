@@ -950,14 +950,121 @@ namespace Raven.Server.Rachis
             leader.Start(connections);
         }
 
-        public Task<(long Index, object Result)> PutAsync(CommandBase cmd)
+        public Task<(long Index, object Result)> PutToLeaderAsync(CommandBase cmd)
         {
             var leader = _currentLeader;
-            if (leader == null)
-                throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
+            if (leader == null || CurrentState != RachisState.Leader)
+                throw new NotLeadingException("Not a valid leader, cannot accept commands. " + _lastStateChangeReason);
 
             Validator.AssertPutCommandToLeader(cmd);
             return leader.PutAsync(cmd, cmd.Timeout ?? OperationTimeout);
+        }
+        public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd, CancellationToken token = default)
+        {
+            //I think it is reasonable to expect timeout twice of error retry
+            var timeoutTask = TimeoutManager.WaitFor(OperationTimeout, token);
+            Exception requestException = null;
+            while (true)
+            {
+                token.ThrowIfCancellationRequested();
+
+                if (CurrentState == RachisState.Leader && CurrentLeader?.Running == true)
+                {
+                    try
+                    {
+                        return await PutToLeaderAsync(cmd);
+                    }
+                    catch (Exception e) when (e is ConcurrencyException || e is NotLeadingException)
+                    {
+                        // if the leader was changed during the PutAsync, we will retry.
+                        continue;
+                    }
+                }
+                if (CurrentState == RachisState.Passive)
+                {
+                    ThrowInvalidEngineState(cmd);
+                }
+
+                var logChange = WaitForHeartbeat();
+
+                var reachedLeader = new Reference<bool>();
+                var cachedLeaderTag = LeaderTag; // not actually working
+                try
+                {
+                    if (cachedLeaderTag == null || cachedLeaderTag == Tag)
+                    {
+                        await Task.WhenAny(logChange, timeoutTask);
+                        token.ThrowIfCancellationRequested();
+
+                        if (timeoutTask.IsCompleted)
+                            ThrowTimeoutException(cmd, requestException);
+
+                        continue;
+                    }
+
+                    using var _ = ContextPool.AllocateOperationContext(out ClusterOperationContext context);
+                    var response = await SendToNodeAsync(context, cachedLeaderTag, cmd, reachedLeader, token);
+                    return (response.Index, cmd.FromRemote(response.Result));
+                }
+                catch (Exception ex)
+                {
+                    if (Log.IsInfoEnabled)
+                        Log.Info($"Tried to send message to leader (reached: {reachedLeader.Value}), retrying", ex);
+
+                    if (reachedLeader.Value)
+                        throw;
+
+                    requestException = ex;
+                }
+
+                await Task.WhenAny(logChange, timeoutTask);
+                token.ThrowIfCancellationRequested();
+
+                if (timeoutTask.IsCompleted)
+                {
+                    ThrowTimeoutException(cmd, requestException);
+                }
+            }
+        }
+
+        private static void ThrowInvalidEngineState(CommandBase cmd)
+        {
+            throw new NotSupportedException("Cannot send command " + cmd.GetType().FullName + " to the cluster because this node is passive." + Environment.NewLine +
+                                            "Passive nodes aren't members of a cluster and require admin action (such as creating a db) " +
+                                            "to indicate that this node should create its own cluster");
+        }
+
+        private void ThrowTimeoutException(CommandBase cmd, Exception requestException)
+        {
+            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {Tag} to leader because there is no leader, " +
+                                       $"and we timed out waiting for one after {OperationTimeout}", requestException);
+        }
+
+        private async Task<(long Index, object Result)> SendToNodeAsync(JsonOperationContext context, string engineLeaderTag, CommandBase cmd,
+            Reference<bool> reachedLeader, CancellationToken token)
+        {
+            var requestExecutor = ServerStore.GetLeaderRequestExecutor(engineLeaderTag);
+
+            var djv = cmd.ToJson(context);
+            var cmdJson = context.ReadObject(djv, "raft/command");
+
+            cmdJson.TryGet("Type", out string commandType);
+            var command = new PutRaftCommand(requestExecutor.Conventions, cmdJson, Url, commandType)
+            {
+                Timeout = cmd.Timeout
+            };
+
+            try
+            {
+                await requestExecutor.ExecuteAsync(command, context, token: token);
+            }
+            catch
+            {
+                reachedLeader.Value = command.HasReachLeader();
+                throw;
+            }
+
+            return (command.Result.RaftCommandIndex, command.Result.Data);
         }
 
         public void SwitchToCandidateStateOnTimeout()

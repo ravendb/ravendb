@@ -1817,7 +1817,7 @@ namespace Voron.Data.Tables
             // If we have to big skips we should get as many documents as possible to obtain as high locality as data allows.
             int ChunkSize = 1024 * 16;
 
-            int ReadChunked(FixedSizeTree<long>.IFixedSizeIterator it, ByteString chunk, out bool hasMore)
+            unsafe int ReadChunked(FixedSizeTree<long>.IFixedSizeIterator it, ByteString chunk, out bool hasMore)
             {
                 // We will fill the buffer with the chunk expecting to have many documents in the chunk that end up 
                 // being stored in segments that are close to each other.
@@ -1867,7 +1867,7 @@ namespace Voron.Data.Tables
                 return localChunkSize;
             }
 
-            long GetTableValueReader(ByteString chunk, long index, out TableValueReader reader)
+            unsafe long GetTableValueReader(ByteString chunk, long index, out TableValueReader reader)
             {
                 // We will load from the actual memory location.
                 long location = ((long*)chunk.Ptr)[index];
