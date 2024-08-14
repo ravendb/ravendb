@@ -23,7 +23,7 @@ namespace Bench.Utils
             double unitValue = TimeUnit.Convert(value, TimeUnit.Nanosecond, unit);
             if (showUnit)
             {
-                string unitName = unit.Name.PadLeft(unitNameWidth);
+                string unitName = unit.FullName.PadLeft(unitNameWidth);
                 return $"{unitValue.ToStr(format)} {unitName}";
             }
 

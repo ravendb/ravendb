@@ -381,7 +381,7 @@ namespace Tests.Infrastructure
         {
             for (var i = 0; i < numberOfCommands; i++)
             {
-                await ActionWithLeader(l => l.PutAsync(new TestCommand
+                await ActionWithLeader(l => l.SendToLeaderAsync(new TestCommand
                 {
                     Name = name,
                     Value = value
@@ -406,11 +406,11 @@ namespace Tests.Infrastructure
             List<Task> waitingList = new List<Task>();
             for (var i = 1; i <= numberOfCommands; i++)
             {
-                var task = leader.PutAsync(new TestCommand
+                var task = leader.CurrentLeader.PutAsync(new TestCommand
                 {
                     Name = name,
                     Value = value ?? i
-                });
+                }, Timeout.InfiniteTimeSpan);
 
                 waitingList.Add(task);
             }
