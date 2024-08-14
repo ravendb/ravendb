@@ -45,7 +45,7 @@ public class RavenDB_22498 : RavenTestBase
 
             var autoIndex = record.AutoIndexes.Values.First();
 
-            var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out _);
+            var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex);
 
             RavenTestHelper.AssertEqualRespectingNewLines("""
                                                           public class Index_Orders_ByEmployeeAndSearch_Company_AndShipTo_City : Raven.Client.Documents.Indexes.AbstractIndexCreationTask<Order>
@@ -99,7 +99,7 @@ public class RavenDB_22498 : RavenTestBase
 
             var autoIndex = record.AutoIndexes.Values.First();
 
-            var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out _);
+            var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex);
 
             RavenTestHelper.AssertEqualRespectingNewLines("""
                                                           public class Index_Orders_By_metadata_Is_Nice : Raven.Client.Documents.Indexes.AbstractIndexCreationTask<Order>
@@ -148,7 +148,7 @@ public class RavenDB_22498 : RavenTestBase
 
             var autoIndex = record.AutoIndexes.Values.First();
 
-            var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out _);
+            var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex);
 
             RavenTestHelper.AssertEqualRespectingNewLines("""
                                                           public class Index__empty_ByColl : Raven.Client.Documents.Indexes.AbstractIndexCreationTask<object>
@@ -202,7 +202,7 @@ public class RavenDB_22498 : RavenTestBase
 
             var autoIndex = record.AutoIndexes.Values.First();
 
-            var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out _);
+            var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex);
 
             RavenTestHelper.AssertEqualRespectingNewLines("""
                                                           public class Index_Orders_ByCountReducedByCompany : Raven.Client.Documents.Indexes.AbstractIndexCreationTask<Order, Index_Orders_ByCountReducedByCompany.Result>
@@ -287,7 +287,7 @@ public class RavenDB_22498 : RavenTestBase
                     IndexDefinition def = null;
                     try
                     {
-                        var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out _);
+                        var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex);
                         def = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
                     }
                     catch (NotSupportedException)
