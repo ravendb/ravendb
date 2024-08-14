@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Documents.Session;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents.Revisions;
 using Sparrow.Json;
 
 namespace FastTests.Utils
@@ -113,5 +117,69 @@ namespace FastTests.Utils
                 return index;
             }
         }
+
+        public class RevertRevisionsOperation : IMaintenanceOperation<OperationIdResult>
+        {
+            private readonly RevertRevisionsRequest _request;
+
+            public RevertRevisionsOperation(DateTime time, long window)
+            {
+                _request = new RevertRevisionsRequest()
+                {
+                    Time = time,
+                    WindowInSec = window,
+                };
+            }
+
+            public RevertRevisionsOperation(DateTime time, long window, string[] collections) : this(time, window)
+            {
+                if (collections == null || collections.Length == 0)
+                    throw new InvalidOperationException("Collections array cant be null or empty.");
+                _request.Collections = collections;
+            }
+
+            public RevertRevisionsOperation(RevertRevisionsRequest request)
+            {
+                _request = request ?? throw new ArgumentNullException(nameof(request));
+            }
+
+            public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new RevertRevisionsCommand(_request);
+            }
+
+            private class RevertRevisionsCommand : RavenCommand<OperationIdResult>
+            {
+                private readonly RevertRevisionsRequest _request;
+
+                public RevertRevisionsCommand(RevertRevisionsRequest request)
+                {
+                    _request = request;
+                }
+
+                public override bool IsReadRequest => false;
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}/revisions/revert";
+
+                    return new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Post,
+                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)).ConfigureAwait(false))
+                    };
+                }
+
+                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+                {
+                    if (response == null)
+                        ThrowInvalidResponse();
+
+                    Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<OperationIdResult>(response);
+                }
+            }
+        }
+
+
     }
 }
