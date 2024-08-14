@@ -8,6 +8,7 @@ using BenchmarkDotNet.Diagnostics.Windows.Configs;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Reports;
 using Perfolizer.Horology;
+using Perfolizer.Metrology;
 using Sparrow.Server.Utils.VxSort;
 
 namespace Bench
