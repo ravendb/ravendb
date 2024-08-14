@@ -14,6 +14,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -25,6 +26,7 @@ using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Sharding;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -42,7 +44,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     private readonly bool _indexEntriesOnly;
     private readonly bool _ignoreLimit;
     private readonly string _raftUniqueRequestId;
-    private readonly HashSet<int> _filteredShardIndexes;
+    private HashSet<int> _filteredShardIndexes;
 
     protected readonly TransactionOperationContext Context;
     protected readonly ShardedDatabaseRequestHandler RequestHandler;
@@ -87,13 +89,21 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         _raftUniqueRequestId = RequestHandler.GetRaftRequestIdFromQuery() ?? RaftIdGenerator.NewId();
 
         if (Query.QueryParameters != null && Query.QueryParameters.TryGetMember(Constants.Documents.Querying.Sharding.ShardContextParameterName, out object filter))
+            HandleShardsFiltering(context, filter);
+    }
+
+    private void HandleShardsFiltering(TransactionOperationContext context, object filter)
+    {
+        _filteredShardIndexes = new HashSet<int>();
+
+        if (filter is not BlittableJsonReaderObject filterBlittable)
         {
+            // v6.0 
             // User can define a query parameter ("__shardContext") which is an id or an array
             // that contains the ids whose shards the query should be limited to.
             // Advanced: Optimization if user wants to run a query and knows what shards it is on. Such as:
             // from Orders where State = $state and User = $user where all the orders are on the same share as the user
 
-            _filteredShardIndexes = new HashSet<int>();
             switch (filter)
             {
                 case LazyStringValue:
@@ -101,21 +111,52 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                     _filteredShardIndexes.Add(RequestHandler.DatabaseContext.GetShardNumberFor(context, filter.ToString()));
                     break;
                 case BlittableJsonReaderArray arr:
-                    {
-                        for (int i = 0; i < arr.Length; i++)
-                        {
-                            var it = arr.GetStringByIndex(i);
-                            _filteredShardIndexes.Add(RequestHandler.DatabaseContext.GetShardNumberFor(context, it));
-                        }
-                        break;
-                    }
+                    GetShardNumbersForFiltering(context, arr);
+                    break;
                 default:
                     throw new NotSupportedException($"Unknown type of a shard context query parameter: {filter.GetType().Name}");
             }
         }
+
         else
         {
-            _filteredShardIndexes = null;
+            // v6.1
+            // "__shardContext" can also be an object, with DocumentIds and Prefixes fields
+            // now, in addition to document ids, users can also specify prefixes to query by
+
+            var prefixedSetting = RequestHandler.DatabaseContext.DatabaseRecord.Sharding.Prefixed;
+
+            if (prefixedSetting.Count > 0 &&
+                filterBlittable.TryGetMember(Constants.Documents.Querying.Sharding.ShardContextPrefixes, out var p) &&
+                p is BlittableJsonReaderArray { Length: > 0 } prefixesArr)
+            {
+                foreach (var item in prefixesArr)
+                {
+                    var location = prefixedSetting.BinarySearch(new PrefixedShardingSetting(item.ToString()), PrefixedSettingComparer.Instance);
+                    if (location < 0)
+                        throw new InvalidOperationException($"Prefix '{item}' wasn't found in Sharding Configuration");
+
+                    foreach (var shard in prefixedSetting[location].Shards)
+                    {
+                        _filteredShardIndexes.Add(shard);
+                    }
+                }
+            }
+
+            if (filterBlittable.TryGetMember(Constants.Documents.Querying.Sharding.ShardContextDocumentIds, out var o) &&
+                o is BlittableJsonReaderArray { Length: > 0 } idsArr)
+            {
+                GetShardNumbersForFiltering(context, idsArr);
+            }
+        }
+    }
+
+    private void GetShardNumbersForFiltering(TransactionOperationContext context, BlittableJsonReaderArray array)
+    {
+        for (int i = 0; i < array.Length; i++)
+        {
+            var it = array.GetStringByIndex(i);
+            _filteredShardIndexes.Add(RequestHandler.DatabaseContext.GetShardNumberFor(context, it));
         }
     }
 
