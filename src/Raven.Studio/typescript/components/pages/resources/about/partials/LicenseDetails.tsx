@@ -747,6 +747,14 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "HasQueueEtl",
             },
             {
+                name: "ETL to Azure Queue Storage",
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: true },
+                developer: { value: true },
+                fieldInLicense: "HasQueueEtl",
+            },
+            {
                 name: "Kafka Sink",
                 community: { value: false },
                 professional: { value: false },
