@@ -78,6 +78,12 @@ namespace Sparrow.Server.Platform
             out Int32 errorCode);
         
         [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_set_sparse_region_pager(void* mem,
+            Int64 offset,
+            Int64 size,
+            out Int32 errorCode);
+        
+        [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_map_memory(void* handle,
             Int64 offset,
             Int64 size,

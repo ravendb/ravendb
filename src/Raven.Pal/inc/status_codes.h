@@ -47,7 +47,11 @@ enum
     FAIL_UNMAP_VIEW_OF_FILE     =      37,
     FAIL_DUPLICATE_HANDLE       =      38,
     FAIL_SIZE_INVALID_32_BITS   =      39,
-    FAIL_SIZE_NEGATIVE_OR_ZERO  =      40
+    FAIL_SIZE_NEGATIVE_OR_ZERO  =      40,
+    FAIL_SPARSE_NOT_SUPPORTED   =      41, 
+    FAIL_GET_VOLUME_DETAILS     =      42,
+    FAIL_SET_SPARSE             =      43,
+    FAIL_SET_SPARSE_RANGE       =      44,
     
 };
 #define ERRNO_SPECIAL_CODES_NONE        0
