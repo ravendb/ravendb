@@ -63,7 +63,7 @@ namespace RachisTests
             var leaderSelected = followers.Select(x => x.WaitForState(RachisState.Leader, CancellationToken.None).ContinueWith(_ => x)).ToArray();
             for (int i = 0; i < 10; i++)
             {
-                await a.PutAsync(new TestCommand { Name = "test", Value = i });
+                await a.SendToLeaderAsync(new TestCommand { Name = "test", Value = i });
             }
             foreach (var follower in followers)
             {
@@ -73,7 +73,7 @@ namespace RachisTests
             var leader = await await Task.WhenAny(leaderSelected);
             for (int i = 10; i < 20; i++)
             {
-                await leader.PutAsync(new TestCommand { Name = "test", Value = i });
+                await leader.SendToLeaderAsync(new TestCommand { Name = "test", Value = i });
             }
 
             followers = followers.Except(new[] { leader }).ToArray();
@@ -87,7 +87,7 @@ namespace RachisTests
             leader = await await Task.WhenAny(leaderSelected);
             for (int i = 20; i < 30; i++)
             {
-                await leader.PutAsync(new TestCommand { Name = "test", Value = i });
+                await leader.SendToLeaderAsync(new TestCommand { Name = "test", Value = i });
             }
 
             using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -124,7 +124,7 @@ namespace RachisTests
             {
                 for (int i = 0; i < 10; i++)
                 {
-                    await a.PutAsync(new TestCommand { Name = "test", Value = i });
+                    await a.SendToLeaderAsync(new TestCommand { Name = "test", Value = i });
                 }
             }
 
@@ -142,7 +142,7 @@ namespace RachisTests
 
             for (var i = 0; i < 5; i++)
             {
-                await a.PutAsync(new TestCommand { Name = "test", Value = i });
+                await a.SendToLeaderAsync(new TestCommand { Name = "test", Value = i });
             }
 
             var b = SetupServer();
@@ -151,7 +151,7 @@ namespace RachisTests
             long lastIndex = 0;
             for (var i = 0; i < 5; i++)
             {
-                var (etag, _) = await a.PutAsync(new TestCommand { Name = "test", Value = i + 5 });
+                var (etag, _) = await a.SendToLeaderAsync(new TestCommand { Name = "test", Value = i + 5 });
                 lastIndex = etag;
             }
 
@@ -176,10 +176,10 @@ namespace RachisTests
             var tasks = new List<Task>();
             for (var i = 0; i < 9; i++)
             {
-                tasks.Add(a.PutAsync(new TestCommand { Name = "test", Value = i }));
+                tasks.Add(a.SendToLeaderAsync(new TestCommand { Name = "test", Value = i }));
             }
 
-            var (lastIndex, _) = await a.PutAsync(new TestCommand { Name = "test", Value = 9 });
+            var (lastIndex, _) = await a.SendToLeaderAsync(new TestCommand { Name = "test", Value = 9 });
             var waitForCommitIndexChange = b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
             Assert.True(await waitForCommitIndexChange.WaitWithoutExceptionAsync(TimeSpan.FromSeconds(5)));
 
@@ -197,7 +197,7 @@ namespace RachisTests
 
             for (var i = 0; i < 10; i++)
             {
-                await rachis.PutAsync(new TestCommand { Name = "test", Value = i });
+                await rachis.SendToLeaderAsync(new TestCommand { Name = "test", Value = i });
             }
 
             using (rachis.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
