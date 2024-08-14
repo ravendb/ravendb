@@ -2559,13 +2559,13 @@ namespace Raven.Server.Documents
 
                 yield return new CounterGroupItemMetadata(null, null, null, null, null, etag, size);
 
-                LazyStringValue CounterGroupKey()
+                unsafe LazyStringValue CounterGroupKey()
                 {
                     var p = tvr.Read((int)CountersTable.CounterKey, out var size);
                     return context.GetLazyString(p, size);
                 }
 
-                LazyStringValue ExtractDocId()
+                unsafe LazyStringValue ExtractDocId()
                 {
                     var p = tvr.Read((int)CountersTable.CounterKey, out var size);
                     int sizeOfDocId = 0;
@@ -2578,14 +2578,14 @@ namespace Raven.Server.Documents
                     return context.GetLazyString(p, sizeOfDocId);
                 }
 
-                IDisposable ToDocumentIdPrefix(LazyStringValue documentId, out Slice documentIdPrefix)
+                unsafe IDisposable ToDocumentIdPrefix(LazyStringValue documentId, out Slice documentIdPrefix)
                 {
                     var p = tvr.Read((int)CountersTable.CounterKey, out _);
 
                     return Slice.From(context.Allocator, p, documentId.Size + 1, out documentIdPrefix);
                 }
 
-                IDisposable ToKey(Slice documentIdPrefix, LazyStringValue counterName, out LazyStringValue key)
+                unsafe IDisposable ToKey(Slice documentIdPrefix, LazyStringValue counterName, out LazyStringValue key)
                 {
                     using (DocumentIdWorker.GetLower(context.Allocator, counterName, out var counterNameSlice))
                     {
@@ -2597,7 +2597,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                LazyStringValue ToLuceneKey(LazyStringValue documentId, LazyStringValue counterName)
+                unsafe LazyStringValue ToLuceneKey(LazyStringValue documentId, LazyStringValue counterName)
                 {
                     using (DocumentIdWorker.GetLower(context.Allocator, counterName, out var counterNameSlice))
                     {
