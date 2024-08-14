@@ -9,6 +9,7 @@ using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Reports;
 using Perfolizer.Horology;
+using Perfolizer.Metrology;
 using static Sparrow.Server.Utils.VxSort.BitonicSort;
 
 namespace Bench
