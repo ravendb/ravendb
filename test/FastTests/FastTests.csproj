@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.7</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.8</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>FastTests</AssemblyName>
     <PackageId>FastTests</PackageId>
@@ -74,7 +74,7 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Hl7.Fhir.R4" Version="5.8.1" />
+    <PackageReference Include="Hl7.Fhir.R4" Version="5.9.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
     <PackageReference Include="NodaTime" Version="3.1.11" />
     <PackageReference Include="Spatial4n" Version="0.4.1.1" />

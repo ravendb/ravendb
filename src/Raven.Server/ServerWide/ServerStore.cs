@@ -3266,135 +3266,17 @@ namespace Raven.Server.ServerWide
                     cts.CancelAfter(cmd.Timeout.Value);
                 }
 
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    return await SendToLeaderAsyncInternal(context, cmd, cts.Token);
+                return await Engine.SendToLeaderAsync(cmd, cts.Token);
             }
         }
 
-        private async Task<(long Index, object Result)> SendToLeaderAsyncInternal(TransactionOperationContext context, CommandBase cmd, CancellationToken token)
-        {
-            //I think it is reasonable to expect timeout twice of error retry
-            var timeoutTask = TimeoutManager.WaitFor(Engine.OperationTimeout, token);
-            Exception requestException = null;
-            while (true)
-            {
-                token.ThrowIfCancellationRequested();
 
-                if (_engine.CurrentState == RachisState.Leader && _engine.CurrentLeader?.Running == true)
-                {
-                    try
-                    {
-                        return await _engine.PutAsync(cmd);
-                    }
-                    catch (Exception e) when (e is ConcurrencyException || e is NotLeadingException)
-                    {
-                        // if the leader was changed during the PutAsync, we will retry.
-                        continue;
-                    }
-                }
-                if (_engine.CurrentState == RachisState.Passive)
-                {
-                    ThrowInvalidEngineState(cmd);
-                }
-
-                var logChange = _engine.WaitForHeartbeat();
-
-                var reachedLeader = new Reference<bool>();
-                var cachedLeaderTag = _engine.LeaderTag; // not actually working
-                try
-                {
-                    if (cachedLeaderTag == null)
-                    {
-                        await Task.WhenAny(logChange, timeoutTask);
-                        token.ThrowIfCancellationRequested();
-
-                        if (timeoutTask.IsCompleted)
-                            ThrowTimeoutException(cmd, requestException);
-
-                        continue;
-                    }
-
-                    var response = await SendToNodeAsync(context, cachedLeaderTag, cmd, reachedLeader, token);
-                    return (response.Index, cmd.FromRemote(response.Result));
-                }
-                catch (Exception ex)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Tried to send message to leader (reached: {reachedLeader.Value}), retrying", ex);
-
-                    if (reachedLeader.Value)
-                        throw;
-
-                    requestException = ex;
-                }
-
-                await Task.WhenAny(logChange, timeoutTask);
-                token.ThrowIfCancellationRequested();
-
-                if (timeoutTask.IsCompleted)
-                {
-                    ThrowTimeoutException(cmd, requestException);
-                }
-            }
-        }
-
-        [DoesNotReturn]
-        private static void ThrowInvalidEngineState(CommandBase cmd)
-        {
-            throw new NotSupportedException("Cannot send command " + cmd.GetType().FullName + " to the cluster because this node is passive." + Environment.NewLine +
-                                            "Passive nodes aren't members of a cluster and require admin action (such as creating a db) " +
-                                            "to indicate that this node should create its own cluster");
-        }
-
-        [DoesNotReturn]
-        private void ThrowTimeoutException(CommandBase cmd, Exception requestException)
-        {
-            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {NodeTag} to leader because there is no leader, " +
-                                       $"and we timed out waiting for one after {Engine.OperationTimeout}", requestException);
-        }
-
-        private async Task<(long Index, object Result)> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, CommandBase cmd,
-            Reference<bool> reachedLeader, CancellationToken token)
-        {
-            var djv = cmd.ToJson(context);
-            var cmdJson = context.ReadObject(djv, "raft/command");
-
-            ClusterTopology clusterTopology;
-            using (context.OpenReadTransaction())
-                clusterTopology = _engine.GetTopology(context);
-
-            if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
-                throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
-
-            var requestExecutor = GetLeaderRequestExecutor(context, engineLeaderTag);
-
-            cmdJson.TryGet("Type", out string commandType);
-            var command = new PutRaftCommand(requestExecutor.Conventions, cmdJson, _engine.Url, commandType)
-            {
-                Timeout = cmd.Timeout
-            };
-
-            try
-            {
-                await requestExecutor.ExecuteAsync(command, context, token: token);
-            }
-            catch
-            {
-                reachedLeader.Value = command.HasReachLeader();
-                throw;
-            }
-
-            return (command.Result.RaftCommandIndex, command.Result.Data);
-        }
-        
-        public RequestExecutor GetLeaderRequestExecutor(TransactionOperationContext context, string leaderTag)
+        public RequestExecutor GetLeaderRequestExecutor(string leaderTag)
         {
             if (string.IsNullOrEmpty(leaderTag))
                 throw new NoLeaderException();
 
-            ClusterTopology clusterTopology;
-            using (context.OpenReadTransaction())
-                clusterTopology = _engine.GetTopology(context);
+            var clusterTopology = GetClusterTopology();
 
             if (clusterTopology.Members.TryGetValue(leaderTag, out string leaderUrl) == false)
                 throw new InvalidOperationException("Leader " + leaderTag + " was not found in the topology members");
@@ -3495,67 +3377,6 @@ namespace Raven.Server.ServerWide
 
             return requestExecutor;
         }
-
-        private sealed class PutRaftCommand : RavenCommand<PutRaftCommandResult>, IRaftCommand
-        {
-            private readonly DocumentConventions _conventions;
-            private readonly BlittableJsonReaderObject _command;
-            private bool _reachedLeader;
-            public override bool IsReadRequest => false;
-
-            public bool HasReachLeader() => _reachedLeader;
-
-            private readonly string _source;
-            private readonly string _commandType;
-
-            public PutRaftCommand(DocumentConventions conventions, BlittableJsonReaderObject command, string source, string commandType)
-            {
-                _conventions = conventions;
-                _command = command;
-                _source = source;
-                _commandType = commandType;
-            }
-
-            public override void OnResponseFailure(HttpResponseMessage response)
-            {
-                if (response.Headers.Contains("Reached-Leader") == false)
-                    return;
-                _reachedLeader = response.Headers.GetValues("Reached-Leader").Contains("true");
-            }
-
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-            {
-                url = $"{node.Url}/admin/rachis/send?source={_source}&commandType={_commandType}";
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream =>
-                    {
-                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
-                        {
-                            writer.WriteObject(_command);
-                        }
-                    }, _conventions)
-                };
-
-                return request;
-            }
-
-            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {
-                Result = JsonDeserializationCluster.PutRaftCommandResult(response);
-            }
-
-            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
-        }
-
-        public sealed class PutRaftCommandResult
-        {
-            public long RaftCommandIndex { get; set; }
-
-            public object Data { get; set; }
-        }
-
         public Task WaitForTopology(Leader.TopologyModification state, CancellationToken token)
         {
             return _engine.WaitForTopology(state, token: token);
