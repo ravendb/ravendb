@@ -19,6 +19,7 @@ __forceinline int clzl(uint64_t x)
 }
 #endif
 
+
 struct handle
 {
     HANDLE file_handle;
@@ -27,6 +28,7 @@ struct handle
     void *write_address;
     uint64_t allocation_size;
     int32_t open_flags;
+    int32_t status_flags;
 };
 
 BOOL CALLBACK InitializeCriticalSectionOnce(PINIT_ONCE initOnce, PVOID Parameter, PVOID *Context)
@@ -133,6 +135,65 @@ Exit:
     *detailed_error_code = GetLastError();
     return rc;
 }
+
+
+EXPORT int32_t
+rvn_set_sparse_region_pager(void* handle,
+    int64_t offset,
+    int64_t size,
+    int32_t* detailed_error_code)
+{
+    struct handle *handle_ptr = handle;
+    if((handle_ptr->status_flags & PAGER_STATUS_SPARSE) == 0)
+    {
+        if(handle_ptr->status_flags & PAGER_STATUS_SPARSE_NOT_SUPPORTED)
+            return FAIL_SPARSE_NOT_SUPPORTED;
+
+        DWORD fileSystemFlags;
+        if(!GetVolumeInformationByHandleW(handle_ptr->file_handle, 
+                NULL, 0, NULL, NULL, &fileSystemFlags, NULL, 0))
+        {
+            *detailed_error_code = GetLastError();
+            return FAIL_GET_VOLUME_DETAILS;
+        }
+        if((fileSystemFlags & FILE_SUPPORTS_SPARSE_FILES) == 0)
+        {
+            handle_ptr->status_flags |= PAGER_STATUS_SPARSE_NOT_SUPPORTED;
+            return FAIL_SPARSE_NOT_SUPPORTED;
+        }
+        if (!DeviceIoControl(handle_ptr->file_handle,
+            FSCTL_SET_SPARSE,
+            NULL,
+            0,
+            NULL,
+            0,
+            NULL,
+            NULL))
+        {
+            *detailed_error_code = GetLastError();
+            return FAIL_SET_SPARSE;
+        }
+        handle_ptr->status_flags |= PAGER_STATUS_SPARSE;
+    }
+    DWORD dwTemp;
+    FILE_ZERO_DATA_INFORMATION fzdi;
+    fzdi.FileOffset.QuadPart = offset;
+    fzdi.BeyondFinalZero.QuadPart = offset + size;
+    if(!DeviceIoControl(handle_ptr->file_handle,
+        FSCTL_SET_ZERO_DATA,
+         &fzdi,
+        sizeof(fzdi),
+        NULL,
+        0,
+        &dwTemp,
+        NULL))
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_SET_SPARSE_RANGE;
+    }
+    return SUCCESS;
+}
+
 
 EXPORT
 int32_t rvn_unmap_memory(

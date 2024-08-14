@@ -48,6 +48,10 @@ namespace Sparrow.Server.Platform
             FailDuplicateHandle = 38,
             FailSizeInvalid32Bits = 39,
             FailSizeNegativeOrZero = 40,
+            FailSparseNotSupported = 41,
+            FailGetVolumeDetails = 42,
+            FailSetSparse = 43,
+            FailSetSparseRange = 44,
         };
 
         [Flags]

@@ -37,6 +37,13 @@ enum
     OPEN_FILE_DO_NOT_MAP = (1<<9)
 };
 
+enum
+{
+    PAGER_STATUS_SPARSE = (1<<1),
+    PAGER_STATUS_SPARSE_NOT_SUPPORTED = (1<<2),
+};
+
+
 #define ALLOCATION_GRANULARITY (64*1024)
 
 struct SYSTEM_INFORMATION
@@ -100,6 +107,13 @@ rvn_close_pager(
 EXPORT int32_t
 rvn_sync_pager(void* handle,
     int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_set_sparse_region_pager(void* handle,
+    int64_t offset,
+    int64_t size,
+    int32_t* detailed_error_code);
+
 
 EXPORT uint64_t
 rvn_get_current_thread_id(void);

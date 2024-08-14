@@ -588,4 +588,16 @@ public unsafe partial class Pager : IDisposable
     {
         return _functions.ConvertToWritePointer(this, state, ptr);
     }
+
+    public void SetSparseRange(State state, long offset, long size)
+    {
+        var rc = Pal.rvn_set_sparse_region_pager(state.Handle, offset, size, out int errorCode);
+
+        if (rc is PalFlags.FailCodes.Success or
+            PalFlags.FailCodes.FailSparseNotSupported)  // explicitly ignoring this
+            return;
+        
+        PalHelper.ThrowLastError(rc, errorCode, "Failed to set sparse range on " + state.Pager.FileName);
+
+    }
 }

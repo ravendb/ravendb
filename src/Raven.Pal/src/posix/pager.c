@@ -28,6 +28,7 @@ struct handle
     uint64_t allocation_size;
     int file_fd;
     int32_t open_flags;
+    int32_t status_flags;
 };
 
 int32_t rvn_lock_memory(int32_t open_flags, void *mem, int64_t size, int32_t *detailed_error_code)
@@ -334,6 +335,30 @@ int32_t rvn_pager_get_file_handle(
     return SUCCESS;
 }
 
+EXPORT int32_t
+rvn_set_sparse_region_pager(void* handle,
+    int64_t offset,
+    int64_t size,
+    int32_t* detailed_error_code)
+{
+    struct handle *handle_ptr = handle;
+    if(handle_ptr->status_flags & PAGER_STATUS_SPARSE_NOT_SUPPORTED)
+    {
+        return FAIL_SPARSE_NOT_SUPPORTED;
+    }
+    if(!fallocate(handle_ptr->file_fd, FALLOC_FL_KEEP_SIZE | FALLOC_KEEP_SIZE, offset, size))
+    {
+        if(errno == ENOTSUP)
+        {
+            handle_ptr->status_flags |= PAGER_STATUS_SPARSE_NOT_SUPPORTED;
+            return FAIL_SPARSE_NOT_SUPPORTED;
+        }
+
+        *detailed_error_code = errno;
+        return FAIL_SET_SPARSE_RANGE;
+    }
+    return SUCCESS;
+}
 
 EXPORT
 int32_t rvn_unmap_memory(
