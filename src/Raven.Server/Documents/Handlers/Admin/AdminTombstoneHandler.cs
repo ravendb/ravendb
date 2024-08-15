@@ -115,8 +115,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                             writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.NumberOfTombstoneLeft));
                             writer.WriteInteger(info.Value.NumberOfTombstoneLeft);
                             writer.WriteComma();
-                            writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.TombStoneTypes));
-                            writer.WriteString(info.Value.TombStoneTypes.ToString());
+                            writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.Types));
+                            context.Write(writer, info.Value.Types.ToJson());
                             writer.WriteComma();
                             writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.Collection));
                             writer.WriteString(info.Value.Collection);

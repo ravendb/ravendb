@@ -5,6 +5,7 @@ import getTombstonesStateCommand = require("commands/database/debug/getTombstone
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import SubscriptionInfo = Raven.Server.Documents.TombstoneCleaner.TombstonesState.SubscriptionInfo;
+import TombstoneTypes = Raven.Server.Documents.TombstoneCleaner.TombstonesState.TombstoneTypes;
 import forceTombstonesCleanup = require("commands/database/debug/forceTombstonesCleanupCommand");
 
 class tombstonesState extends viewModelBase {
@@ -93,7 +94,7 @@ class tombstonesState extends viewModelBase {
                 new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.NumberOfTombstoneLeft, "Number of tombstones left", "10%", {
                     sortable: "number"
                 }),
-                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.TombStoneTypes, "Tombstone Types", "25%", {
+                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => this.formatTombstoneTypes(x.Types), "Tombstone Types", "25%", {
                     sortable: "string"
                 }),
                 new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Collection, "Collection", "10%", {
@@ -192,6 +193,15 @@ class tombstonesState extends viewModelBase {
         }
         
         return "Can remove any tombstone";
+    }
+
+    private formatTombstoneTypes(types: TombstoneTypes) {
+        if (!types) {
+            return '';
+        }
+
+        // Return a string representation of the TombstoneTypes
+        return `Documents: ${types.Documents}, TimeSeries: ${types.TimeSeries}, Counters: ${types.Counters}`;
     }
 }
 

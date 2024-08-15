@@ -11,6 +11,7 @@ using Raven.Server.Background;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
@@ -409,18 +410,18 @@ namespace Raven.Server.Documents
 
             private void SetTombstoneTypes(ITombstoneAware.TombstoneType type, SubscriptionInfo subscriptionInfo, long numberOfTombstoneLeft)
             {
-                subscriptionInfo.TombStoneTypes ??= new TombStoneTypes();
+                subscriptionInfo.Types ??= new TombstoneTypes();
 
                 switch (type)
                 {
                     case ITombstoneAware.TombstoneType.Documents:
-                        subscriptionInfo.TombStoneTypes.Documents = numberOfTombstoneLeft;
+                        subscriptionInfo.Types.Documents = numberOfTombstoneLeft;
                         break;
                     case ITombstoneAware.TombstoneType.TimeSeries:
-                        subscriptionInfo.TombStoneTypes.TimeSeries = numberOfTombstoneLeft;
+                        subscriptionInfo.Types.TimeSeries = numberOfTombstoneLeft;
                         break;
                     case ITombstoneAware.TombstoneType.Counters:
-                        subscriptionInfo.TombStoneTypes.Counters = numberOfTombstoneLeft;
+                        subscriptionInfo.Types.Counters = numberOfTombstoneLeft;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported tombstone type: {type}");
@@ -447,7 +448,7 @@ namespace Raven.Server.Documents
 
                 public string Identifier { get; set; }
 
-                public TombStoneTypes TombStoneTypes { get; set; }
+                public TombstoneTypes Types { get; set; }
 
                 public string Collection { get; set; }
 
@@ -458,7 +459,7 @@ namespace Raven.Server.Documents
                 public CleanupStatus CleanupStatus { get; set; }
             }
 
-            public class TombStoneTypes
+            public class TombstoneTypes : IDynamicJson
             {
                 public long Documents;
 
@@ -466,11 +467,14 @@ namespace Raven.Server.Documents
 
                 public long Counters;
 
-                public override string ToString()
+                public DynamicJsonValue ToJson()
                 {
-                    return $"{nameof(Documents)}: {Documents}, " +
-                           $"{nameof(TimeSeries)} : {TimeSeries}, " +
-                           $"{nameof(Counters)} : {Counters}";
+                    return new DynamicJsonValue
+                    {
+                        [nameof(Documents)] = Documents,
+                        [nameof(TimeSeries)] = TimeSeries,
+                        [nameof(Counters)] = Counters
+                    };
                 }
             }
 
