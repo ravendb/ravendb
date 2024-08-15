@@ -1012,7 +1012,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 if (includeDocumentsCommand != null && includeDocumentsCommand.HasIncludesIds())
                                 {
                                     var includes = new List<Document>();
-                                    includeDocumentsCommand.Fill(includes);
+                                    includeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
                                     writer.WriteStartObject();
 
                                     writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));

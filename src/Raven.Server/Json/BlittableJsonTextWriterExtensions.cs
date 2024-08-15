@@ -1480,6 +1480,12 @@ namespace Raven.Server.Json
                 return;
             }
 
+            if (document.Data == null && document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.AllowDataAsNull))
+            {
+                writer.WriteNull();
+                return;
+            }
+
             // Explicitly not disposing it, a single document can be
             // used multiple times in a single query, for example, due to projections
             // so we will let the context handle it, rather than handle it directly ourselves

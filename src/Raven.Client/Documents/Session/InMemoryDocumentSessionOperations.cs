@@ -1514,7 +1514,7 @@ more responsive application.
             _knownMissingIds.UnionWith(ids);
         }
 
-        internal void RegisterIncludes(BlittableJsonReaderObject includes)
+        internal void RegisterIncludes(BlittableJsonReaderObject includes, bool registerMissingIds = false)
         {
             if (NoTracking)
                 return;
@@ -1528,7 +1528,12 @@ more responsive application.
                 includes.GetPropertyByIndex(i, ref propertyDetails);
 
                 if (propertyDetails.Value is not BlittableJsonReaderObject json)
+                {
+                    if (registerMissingIds)
+                        RegisterMissing(propertyDetails.Name);
+
                     continue;
+                }
 
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
                 if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
