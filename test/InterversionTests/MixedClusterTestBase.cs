@@ -61,8 +61,25 @@ namespace InterversionTests
                     if (processNode == leader)
                         continue;
 
-                    var addCommand = new AddClusterNodeCommand(processNode.Url, watcher: watcherCluster);
-                    await requestExecutor.ExecuteAsync(addCommand, context);
+                    int retries = 5;
+                    while (true)
+                    {
+                        try
+                        {
+                            var addCommand = new AddClusterNodeCommand(processNode.Url, watcher: watcherCluster);
+                            await requestExecutor.ExecuteAsync(addCommand, context);
+                        }
+                        catch (Exception e)
+                        {
+                            if (--retries == 0) 
+                                throw new InvalidOperationException($"failed to add node '{processNode.Url}' to the cluster", e);
+                            
+                            await Task.Delay(10);
+                            continue;
+                        }
+
+                        break;
+                    }
                 }
 
                 var result = watcherCluster ? (1, peers.Length - 1) : (peers.Length, 0);
