@@ -17,9 +17,9 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Server;
 using Sparrow.Json;
 using Sparrow.Platform;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -879,6 +879,27 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
+        [RavenFact(RavenTestCategory.Subscriptions)]
+        public void AllPropertiesOfSubscriptionCreationOptionsAreInUpdateOfSubscriptionHandler()
+        {
+            // This test is here to make sure that if we add a new property to SubscriptionCreationOptions
+            // we will remember to add it to SubscriptionHasChanges method in SubscriptionHandler as well
+            var expected = new List<string>()
+            {
+                "Name",
+                "Query",
+                "ChangeVector",
+                "MentorNode",
+                "Disabled",
+                "PinToMentorNode"
+            };
+
+            var props = typeof(SubscriptionCreationOptions).GetProperties().Where(x => x.PropertyType.IsPublic).ToList();
+
+            Assert.Equal(expected.Count, props.Count);
+            Assert.All(props, x => Assert.Contains(x.Name, expected));
+        }
+
         [Fact]
         public async Task CanUpdateSubscriptionByName()
         {
@@ -901,7 +922,8 @@ namespace FastTests.Client.Subscriptions
                 store.Subscriptions.Update(new SubscriptionUpdateOptions
                 {
                     Name = subsId,
-                    Query = newQuery
+                    Query = newQuery,
+                    Disabled = true
                 });
 
                 var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
@@ -910,6 +932,74 @@ namespace FastTests.Client.Subscriptions
                 Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
                 Assert.Equal(newQuery, newState.Query);
                 Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+                Assert.True(newState.Disabled);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions)]
+        public async Task CanUpdateSubscriptionPinToMentorNodeByName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var subsId = store.Subscriptions.Create(new SubscriptionCreationOptions
+                {
+                    Query = "from Users",
+                    Name = "Created",
+                    MentorNode = "A"
+                });
+
+                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var state = subscriptions.First();
+                Assert.Equal(1, subscriptions.Count);
+                Assert.Equal("Created", state.SubscriptionName);
+                Assert.Equal("from Users", state.Query);
+                Assert.Equal("A", state.MentorNode);
+
+                store.Subscriptions.Update(new SubscriptionUpdateOptions
+                {
+                    Name = subsId,
+                    PinToMentorNode = true
+                });
+
+                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var newState = newSubscriptions.First();
+                Assert.Equal(1, newSubscriptions.Count);
+                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
+                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+                Assert.True(newState.PinToMentorNode);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions)]
+        public async Task CanUpdateDisabledByName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var subsId = store.Subscriptions.Create(new SubscriptionCreationOptions
+                {
+                    Query = "from Users",
+                    Name = "Created",
+                });
+
+                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var state = subscriptions.First();
+                Assert.Equal(1, subscriptions.Count);
+                Assert.Equal("Created", state.SubscriptionName);
+                Assert.Equal("from Users", state.Query);
+                Assert.False(state.Disabled);
+
+                store.Subscriptions.Update(new SubscriptionUpdateOptions
+                {
+                    Name = subsId,
+                    Disabled = true
+                });
+
+                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var newState = newSubscriptions.First();
+                Assert.Equal(1, newSubscriptions.Count);
+                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
+                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+                Assert.True(newState.Disabled);
             }
         }
 
@@ -953,7 +1043,8 @@ namespace FastTests.Client.Subscriptions
                     {
                         Query = newQuery,
                         Id = state.SubscriptionId,
-                        PinToMentorNode = update.Value
+                        PinToMentorNode = update.Value,
+                        Disabled = update.Value
                     });
                 }
 
@@ -971,6 +1062,7 @@ namespace FastTests.Client.Subscriptions
                 else
                 {
                     Assert.Equal(update.Value, newState.PinToMentorNode);
+                    Assert.Equal(update.Value, newState.Disabled);
                     Assert.NotEqual(create, newState.PinToMentorNode);
                 }
             }
@@ -1108,6 +1200,36 @@ namespace FastTests.Client.Subscriptions
                 Assert.Equal(oldId, newState.SubscriptionId);
             }
         }
+
+        [RavenFact(RavenTestCategory.Subscriptions)]
+        public async Task CanCreateDisabledSubscriptionByUpdateSubscriptionAndThenUpdate()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var query = "from Users";
+                var name = "Created";
+
+                var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                Assert.Equal(0, subscriptions.Count);
+
+                store.Subscriptions.Update(new SubscriptionUpdateOptions
+                {
+                    Query = query,
+                    Name = name,
+                    Disabled = true,
+                    CreateNew = true
+                });
+
+                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                Assert.Equal(1, newSubscriptions.Count);
+                var newState = newSubscriptions.FirstOrDefault();
+                Assert.NotNull(newState);
+                Assert.Equal("Created", newState.SubscriptionName);
+                Assert.Equal("from Users", newState.Query);
+                Assert.True(newState.Disabled);
+            }
+        }
+
 
 
         class A

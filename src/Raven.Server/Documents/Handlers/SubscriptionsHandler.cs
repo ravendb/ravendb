@@ -552,7 +552,8 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
-                bool pinToMentorNodeWasSet = json.TryGet(nameof(SubscriptionUpdateOptions.PinToMentorNode), out bool pinToMentorNode);
+                bool pinToMentorNodeWasSet = json.TryGet(nameof(SubscriptionUpdateOptions.PinToMentorNode), out bool _);
+                bool disabledWasSet = json.TryGet(nameof(SubscriptionUpdateOptions.Disabled), out bool _);
                 var options = JsonDeserializationServer.SubscriptionUpdateOptions(json);
 
                 var id = options.Id;
@@ -581,14 +582,14 @@ namespace Raven.Server.Documents.Handlers
                         if (id == null)
                         {
                             // subscription with such name doesn't exist, add new subscription
-                            await CreateInternal(json, options, context, id: null, disabled: false);
+                            await CreateInternal(json, options, context, id: null, options.Disabled);
                             return;
                         }
 
                         if (options.Name == null)
                         {
                             // subscription with such id doesn't exist, add new subscription using id
-                            await CreateInternal(json, options, context, id, disabled: false);
+                            await CreateInternal(json, options, context, id, options.Disabled);
                             return;
                         }
 
@@ -602,7 +603,7 @@ namespace Raven.Server.Documents.Handlers
                         catch (SubscriptionDoesNotExistException)
                         {
                             // subscription with such id or name doesn't exist, add new subscription using both name and id
-                            await CreateInternal(json, options, context, id, disabled: false);
+                            await CreateInternal(json, options, context, id, options.Disabled);
                             return;
                         }
                     }
@@ -621,6 +622,9 @@ namespace Raven.Server.Documents.Handlers
                 if (pinToMentorNodeWasSet == false)
                     options.PinToMentorNode = state.PinToMentorNode;
 
+                if (disabledWasSet == false)
+                    options.Disabled = state.Disabled;
+
                 if (options.Query == null)
                     options.Query = state.Query;
 
@@ -630,7 +634,7 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                await CreateInternal(json, options, context, id, disabled: false);
+                await CreateInternal(json, options, context, id, options.Disabled);
             }
         }
 
@@ -639,7 +643,9 @@ namespace Raven.Server.Documents.Handlers
             bool gotChanges = options.Name != state.SubscriptionName
                               || options.ChangeVector != state.ChangeVectorForNextBatchStartingPoint
                               || options.MentorNode != state.MentorNode
-                              || options.Query != state.Query;
+                              || options.Query != state.Query
+                              || options.PinToMentorNode != state.PinToMentorNode
+                              || options.Disabled != state.Disabled;
 
             return gotChanges;
         }
