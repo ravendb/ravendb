@@ -215,4 +215,11 @@ namespace Tests.Infrastructure.InterversionTest
                 stores[0].Database));
         }
     }
+
+    public class Version60X : Version54X
+    {
+        public Version60X(InterversionTestBase infrastructure) : base(infrastructure)
+        {
+        }
+    }
 }
