@@ -914,7 +914,7 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 loadedCert;
             try
             {
-                loadedCert = CertificateLoaderUtil.CreateCertificate(certBytes, flags:CertificateLoaderUtil.FlagsForExport);
+                loadedCert = CertificateLoaderUtil.CreateCertificate(certBytes, flags:CertificateLoaderUtil.FlagsForPersist);
             }
             catch (Exception e)
             {
@@ -929,7 +929,7 @@ namespace Raven.Server.Utils.Cli
             {
                 var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), cli._server.ServerStore.ServerShutdown);
 
-                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(certBytes, replaceImmediately, RaftIdGenerator.NewId());
+                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(loadedCert, replaceImmediately, RaftIdGenerator.NewId());
 
                 Task.WhenAny(replicationTask, timeoutTask).Wait();
                 if (replicationTask.IsCompleted == false)

@@ -22,6 +22,8 @@ using xRetry;
 using Xunit;
 using Xunit.Abstractions;
 using Sparrow.Server;
+using System.Linq;
+using Raven.Server.ServerWide.Context;
 
 namespace SlowTests.Authentication
 {
@@ -61,6 +63,42 @@ namespace SlowTests.Authentication
 
             UseNewLocalServer();
             await RenewCertificate(serverCert, firstServerCertThumbprint);
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var local = Server.ServerStore.Cluster.GetCertificateThumbprintsFromLocalState(context).ToList();
+                Assert.Equal(0, local.Count);
+
+                var cluster = Server.ServerStore.Cluster.GetCertificateThumbprintsFromCluster(context).ToList();
+                Assert.Equal(0, cluster.Count);
+            }
+        }
+
+        [RetryFact(delayBetweenRetriesMs: 1000)]
+        public async Task CanGetLetsEncryptCertificateAndRenewAfterFailure()
+        {
+            var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
+            
+            SetupLocalServer();
+            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
+
+            var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
+            var firstServerCertThumbprint = serverCert.Thumbprint;
+            Server.Dispose();
+
+            UseNewLocalServer();
+            Server.ForTestingPurposesOnly().ThrowExceptionAfterLetsEncryptRefresh = true;
+            await RenewCertificate(serverCert, firstServerCertThumbprint);
+
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var local = Server.ServerStore.Cluster.GetCertificateThumbprintsFromLocalState(context).ToList();
+                Assert.Equal(0, local.Count);
+
+                var cluster = Server.ServerStore.Cluster.GetCertificateThumbprintsFromCluster(context).ToList();
+                Assert.Equal(0, cluster.Count);
+            }
         }
 
         private static void RemoveAcmeCache(string acmeUrl)
