@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Includes
             }
         }
 
-        public void Fill(List<Document> result)
+        public void Fill(List<Document> result, bool includeMissingAsNull)
         {
             if (_includedIds == null || _includedIds.Count == 0)
                 return;
@@ -145,7 +145,19 @@ namespace Raven.Server.Documents.Includes
                 {
                     includedDoc = _storage.Get(_context, includedDocId);
                     if (includedDoc == null)
-                        continue;
+                        if (includedDoc == null)
+                        {
+                            if (includeMissingAsNull)
+                            {
+                                result.Add(new Document
+                                {
+                                    Id = _context.GetLazyString(includedDocId),
+                                    NonPersistentFlags = NonPersistentDocumentFlags.AllowDataAsNull
+                                });
+                            }
+
+                            continue;
+                        }
                 }
                 catch (DocumentConflictException e)
                 {

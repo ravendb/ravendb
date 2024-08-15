@@ -3364,7 +3364,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 using (fillScope?.Start())
                                 {
-                                    includeDocumentsCommand.Fill(resultToFill.Includes);
+                                    includeDocumentsCommand.Fill(resultToFill.Includes, includeMissingAsNull: false);
                                     includeCompareExchangeValuesCommand?.Materialize(maxAllowedAtomicGuardIndex: null);
                                 }
 
@@ -3596,7 +3596,7 @@ namespace Raven.Server.Documents.Indexes
                                                 cmd.Gather(result.Results);
 
                                             using (includesScope?.For(nameof(QueryTimingsScope.Names.Fill)))
-                                                cmd.Fill(result.Includes);
+                                                cmd.Fill(result.Includes, includeMissingAsNull: false);
                                         }
                                     }
 

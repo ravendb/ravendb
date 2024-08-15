@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
                     writer.WritePropertyName("Includes");
                     var includes = new List<Document>();
-                    includeCmd.Fill(includes);
+                    includeCmd.Fill(includes, includeMissingAsNull: false);
                     await writer.WriteIncludesAsync(context, includes);
                     writer.WriteEndObject();
                 }
