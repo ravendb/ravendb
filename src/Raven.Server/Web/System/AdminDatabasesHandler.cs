@@ -20,7 +20,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
@@ -33,7 +32,6 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands;
-using Raven.Server.Documents.Handlers.Processors.Stats;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
@@ -269,6 +267,14 @@ namespace Raven.Server.Web.System
                         var indexDefinition = kvp.Value;
                         Server.ServerStore.LicenseManager.AssertCanAddAdditionalAssembliesFromNuGet(indexDefinition);
                     }
+                }
+
+                if (databaseRecord.IsSharded && databaseRecord.Sharding.Prefixed.Count > 0)
+                {
+                    if (ServerStore.Engine.CommandsVersionManager.CurrentClusterMinimalVersion < 61_000)
+                        throw new InvalidOperationException($"Cannot enable Prefixed Sharding for database '{databaseRecord.DatabaseName}'. " +
+                                                            $"Some nodes in the cluster are running older versions of RavenDB that do not support the Prefixed Sharding feature. " +
+                                                            $"To use Prefixed Sharding, all cluster nodes must be running version 6.1 or later.");
                 }
 
                 using (var raw = new RawDatabaseRecord(context, json))
