@@ -120,7 +120,7 @@ namespace Raven.Client.Documents.Subscriptions
             if (_includes?.Count > 0)
             {
                 foreach (var item in _includes)
-                    s.RegisterIncludes(item);
+                    s.RegisterIncludes(item, registerMissingIds: true);
             }
 
             if (_counterIncludes?.Count > 0)

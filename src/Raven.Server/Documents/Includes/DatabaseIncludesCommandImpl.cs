@@ -23,7 +23,7 @@ public class DatabaseIncludesCommandImpl : AbstractIncludesCommand
     public override ValueTask<(long count, long sizeInBytes)> WriteIncludedDocumentsInternalAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
     {
         var includes = new List<Document>();
-        IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: false);
+        IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
         return writer.WriteIncludesAsync(context, includes, token);
     }
 
