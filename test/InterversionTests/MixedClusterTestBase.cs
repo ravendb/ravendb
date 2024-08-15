@@ -74,7 +74,7 @@ namespace InterversionTests
                             if (--retries == 0) 
                                 throw new InvalidOperationException($"failed to add node '{processNode.Url}' to the cluster", e);
                             
-                            await Task.Delay(10);
+                            await Task.Delay(500);
                             continue;
                         }
 
