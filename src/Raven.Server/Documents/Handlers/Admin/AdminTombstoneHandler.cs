@@ -106,17 +106,26 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                             writer.WriteStartObject();
 
-                            writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.Identifier));
-                            writer.WriteString(info.Identifier);
+                            writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.Process));
+                            writer.WriteString(info.Value.Process);
                             writer.WriteComma();
-                            writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.Type));
-                            writer.WriteString(info.Type.ToString());
+                            writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.Identifier));
+                            writer.WriteString(info.Value.Identifier);
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.NumberOfTombstoneLeft));
+                            writer.WriteInteger(info.Value.NumberOfTombstoneLeft);
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.TombStoneTypes));
+                            writer.WriteString(info.Value.TombStoneTypes.ToString());
                             writer.WriteComma();
                             writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.Collection));
-                            writer.WriteString(info.Collection);
+                            writer.WriteString(info.Value.Collection);
                             writer.WriteComma();
                             writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.Etag));
-                            writer.WriteInteger(info.Etag);
+                            writer.WriteInteger(info.Value.Etag);
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfo.CleanupStatus));
+                            writer.WriteString(info.Value.CleanupStatus.ToString());
 
                             writer.WriteEndObject();
                         }

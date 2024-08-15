@@ -132,7 +132,7 @@ namespace FastTests.Server.Documents.Tombstones
 
                 var tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
                 Assert.Equal(1, tombstones.Count);
-                Assert.Equal(0, tombstones["Users"]);
+                Assert.Equal(0, tombstones["Users"].Etag);
 
                 using (context.OpenReadTransaction())
                 {
@@ -151,7 +151,7 @@ namespace FastTests.Server.Documents.Tombstones
 
                 tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
                 Assert.Equal(1, tombstones.Count);
-                Assert.Equal(0, tombstones["Users"]);
+                Assert.Equal(0, tombstones["Users"].Etag);
 
                 using (context.OpenReadTransaction())
                 {
@@ -173,7 +173,7 @@ namespace FastTests.Server.Documents.Tombstones
 
                 tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
                 Assert.Equal(1, tombstones.Count);
-                Assert.Equal(4, tombstones["Users"]);
+                Assert.Equal(4, tombstones["Users"].Etag);
 
                 using (var tx = context.OpenWriteTransaction())
                 {
@@ -239,8 +239,8 @@ namespace FastTests.Server.Documents.Tombstones
 
                 var tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
                 Assert.Equal(2, tombstones.Count);
-                Assert.Equal(0, tombstones["Orders"]);
-                Assert.Equal(0, tombstones["Companies"]);
+                Assert.Equal(0, tombstones["Orders"].Etag);
+                Assert.Equal(0, tombstones["Companies"].Etag);
 
                 using (context.OpenReadTransaction())
                 {
@@ -256,8 +256,8 @@ namespace FastTests.Server.Documents.Tombstones
 
                 tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
                 Assert.Equal(2, tombstones.Count);
-                Assert.Equal(0, tombstones["Orders"]);
-                Assert.Equal(0, tombstones["Companies"]);
+                Assert.Equal(0, tombstones["Orders"].Etag);
+                Assert.Equal(0, tombstones["Companies"].Etag);
 
                 using (context.OpenReadTransaction())
                 {
@@ -279,8 +279,8 @@ namespace FastTests.Server.Documents.Tombstones
 
                 tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
                 Assert.Equal(2, tombstones.Count);
-                Assert.Equal(2, tombstones["Orders"]);
-                Assert.Equal(0, tombstones["Companies"]);
+                Assert.Equal(2, tombstones["Orders"].Etag);
+                Assert.Equal(0, tombstones["Companies"].Etag);
 
                 await database.TombstoneCleaner.ExecuteCleanup();
 

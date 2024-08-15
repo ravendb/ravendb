@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -259,7 +260,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public static Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(
+        public static Dictionary<string, LastTombstoneInfo> GetLastProcessedDocumentTombstonesPerCollection(
             Index index, HashSet<string> referencedCollections, IEnumerable<string> collections,
             Dictionary<string, HashSet<CollectionName>> compiledReferencedCollections,
             IndexStorage indexStorage)
@@ -267,10 +268,10 @@ namespace Raven.Server.Documents.Indexes
             using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
-                var etags = index.GetLastProcessedDocumentTombstonesPerCollection(tx);
+                var tombstonePerCollection = index.GetLastProcessedDocumentTombstonesPerCollection(tx);
 
                 if (referencedCollections.Count <= 0)
-                    return etags;
+                    return tombstonePerCollection;
 
                 foreach (var collection in collections)
                 {
@@ -280,12 +281,18 @@ namespace Raven.Server.Documents.Indexes
                     foreach (var collectionName in collectionNames)
                     {
                         var etag = indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(tx.InnerTransaction, collection, collectionName);
-                        if (etags.TryGetValue(collectionName.Name, out long currentEtag) == false || etag < currentEtag)
-                            etags[collectionName.Name] = etag;
+                        var key = $"{index.Name}/{collectionName.Name}";
+                        if (tombstonePerCollection.TryGetValue(key, out LastTombstoneInfo currentEtag) == false )
+                            tombstonePerCollection[key] = new LastTombstoneInfo(index.Name, collectionName.Name, etag);
+                        else  if (etag < currentEtag.Etag)
+                        {
+                            currentEtag.Etag = etag;
+                            tombstonePerCollection[key] = currentEtag;
+                        }
                     }
                 }
 
-                return etags;
+                return tombstonePerCollection;
             }
         }
 
@@ -309,15 +316,16 @@ namespace Raven.Server.Documents.Indexes
             return (lastProcessedCompareExchangeReferenceEtag, lastProcessedCompareExchangeReferenceTombstoneEtag);
         }
 
-        internal static Dictionary<string, long> GetLastProcessedEtagsPerCollection(Index index, HashSet<string> collections, IndexStorage indexStorage)
+        internal static Dictionary<string, LastTombstoneInfo> GetLastProcessedEtagsPerCollection(Index index, HashSet<string> collections, IndexStorage indexStorage)
         {
             using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
-                var etags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+                var etags = new Dictionary<string, LastTombstoneInfo>(StringComparer.OrdinalIgnoreCase);
                 foreach (var collection in collections)
                 {
-                    etags[collection] = indexStorage.ReadLastIndexedEtag(tx, collection);
+                    var key = $"{index.Name}/{collection}";
+                    etags[key] = new LastTombstoneInfo(index.Name, collection, indexStorage.ReadLastIndexedEtag(tx, collection));
                 }
 
                 return etags;

@@ -838,11 +838,11 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        public string TombstoneCleanerIdentifier => $"ETL loader for {_database.Name}";
+        public string TombstoneCleanerIdentifier => $"ETL";
 
-        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
+        public Dictionary<string, LastTombstoneInfo> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
-            var lastProcessedTombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            var lastProcessedTombstones = new Dictionary<string, LastTombstoneInfo>(StringComparer.OrdinalIgnoreCase);
 
             var ravenEtls = _databaseRecord.RavenEtls;
             if (tombstoneType == ITombstoneAware.TombstoneType.TimeSeries)
@@ -909,7 +909,7 @@ namespace Raven.Server.Documents.ETL
             return dict;
         }
 
-        private void MarkDocumentTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
+        private void MarkDocumentTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, LastTombstoneInfo> lastProcessedTombstones) where T : ConnectionString
         {
             foreach (var transform in config.Transforms)
             {
@@ -919,53 +919,55 @@ namespace Raven.Server.Documents.ETL
                 // the default in this case is '0', which means that nothing of this node was consumed and therefore we cannot delete anything
                 if (transform.ApplyToAllDocuments)
                 {
-                    AddOrUpdate(lastProcessedTombstones, Constants.Documents.Collections.AllDocumentsCollection, etag);
+                    AddOrUpdate(lastProcessedTombstones, $"{config.Name}/{Constants.Documents.Collections.AllDocumentsCollection}", Constants.Documents.Collections.AllDocumentsCollection, etag, config.Name);
                     continue;
                 }
 
                 foreach (var collection in transform.Collections)
-                    AddOrUpdate(lastProcessedTombstones, collection, etag);
+                    AddOrUpdate(lastProcessedTombstones, $"{config.Name}/{collection}", collection, etag, config.Name);
 
                 if (typeof(T) == typeof(RavenConnectionString))
                 {
                     if (RavenEtl.ShouldTrackAttachmentTombstones(transform))
-                        AddOrUpdate(lastProcessedTombstones, AttachmentsStorage.AttachmentsTombstones, etag);
+                        AddOrUpdate(lastProcessedTombstones, $"{config.Name}/{AttachmentsStorage.AttachmentsTombstones}" , AttachmentsStorage.AttachmentsTombstones, etag, config.Name);
                 }
             }
         }
 
-        private void MarkTimeSeriesTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
+        private void MarkTimeSeriesTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, LastTombstoneInfo> lastProcessedTombstones) where T : ConnectionString
         {
             foreach (var transform in config.Transforms)
             {
                 var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
                 var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
 
-                AddOrUpdate(lastProcessedTombstones, Constants.TimeSeries.All, etag);
+                AddOrUpdate(lastProcessedTombstones, $"{config.Name}/{Constants.TimeSeries.All}", Constants.TimeSeries.All, etag, config.Name);
             }
         }
 
-        private void MarkCounterTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
+        private void MarkCounterTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, LastTombstoneInfo> lastProcessedTombstones) where T : ConnectionString
         {
             foreach (var transform in config.Transforms)
             {
                 var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
                 var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
 
-                AddOrUpdate(lastProcessedTombstones, Constants.Counters.All, etag);
+                AddOrUpdate(lastProcessedTombstones, $"{config.Name}/{Constants.Counters.All}", Constants.Counters.All, etag, config.Name);
             }
         }
 
-        private void AddOrUpdate(Dictionary<string, long> dic, string key, long value)
+        private void AddOrUpdate(Dictionary<string, LastTombstoneInfo> dic, string key, string collection, long value, string name)
         {
+            //dic key is {etl_name}/{collection}
             if (dic.TryGetValue(key, out var old) == false)
             {
-                dic[key] = value;
-                return;
+                dic[key] = new LastTombstoneInfo(name, collection, value);
             }
-
-            var min = Math.Min(value, old);
-            dic[key] = min;
+            else if (value < old.Etag)
+            {
+                old.Etag = value;
+                dic[key] = old;
+            }
         }
     }
 }

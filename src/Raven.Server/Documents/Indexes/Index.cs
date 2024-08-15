@@ -20,7 +20,6 @@ using Raven.Client.Exceptions.Corax;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -4156,11 +4155,9 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public string TombstoneCleanerIdentifier => $"Index '{Name}'";
+        public string TombstoneCleanerIdentifier => "Index";
 
-        public string BlockingSourceName => TombstoneCleanerIdentifier;
-
-        public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
+        public virtual Dictionary<string, LastTombstoneInfo> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
                 return null;
@@ -4190,15 +4187,16 @@ namespace Raven.Server.Documents.Indexes
             return dict;
         }
 
-        internal Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(RavenTransaction tx)
+        internal Dictionary<string, LastTombstoneInfo> GetLastProcessedDocumentTombstonesPerCollection(RavenTransaction tx)
         {
-            var etags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            var indexTombstonesInfo = new Dictionary<string, LastTombstoneInfo>(StringComparer.OrdinalIgnoreCase);
             foreach (var collection in Collections)
             {
-                etags[collection] = _indexStorage.ReadLastProcessedTombstoneEtag(tx, collection);
+                var key = $"{Name}/{collection}";
+                indexTombstonesInfo[key] = new LastTombstoneInfo(Name, collection, _indexStorage.ReadLastProcessedTombstoneEtag(tx, collection));
             }
 
-            return etags;
+            return indexTombstonesInfo;
         }
 
         private void AddIndexingPerformance(IndexingStatsAggregator stats)
