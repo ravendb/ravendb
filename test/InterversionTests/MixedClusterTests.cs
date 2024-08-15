@@ -124,6 +124,19 @@ namespace InterversionTests
         }
 
         [RavenMultiplatformTheory(RavenTestCategory.Interversion, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [InlineData("6.0.104")]
+        public async Task UpgradeDirectlyFrom60X(string latest)
+        {
+            var initialVersions = new[] { latest, latest, latest };
+            var upgradeTo = new List<string>
+            {
+                "current"
+            };
+            var suit = new Version60X(this);
+            await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
+        }
+
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion, RavenPlatform.Windows | RavenPlatform.Linux)]
         [InlineData("5.4.5")]
         [InlineData("5.4.109")]
         public async Task UpgradeDirectlyFrom54X(string latest)
