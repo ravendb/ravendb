@@ -91,6 +91,7 @@ using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.EventListener;
 using Raven.Server.Integrations.PostgreSQL.Handlers;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
@@ -579,6 +580,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LogMode));
             scripter.AddType(typeof(SetLogsConfigurationOperation.Parameters));
             scripter.AddType(typeof(PutTrafficWatchConfigurationOperation.Parameters));
+            scripter.AddType(typeof(EventListenerToLog.EventListenerConfiguration));
 
             // adminJs console
             scripter.AddType(typeof(AdminJsScript));

@@ -6,14 +6,21 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations;
 
+/// <summary>
+/// Retrieves essential database statistics, focusing on critical metrics such as
+/// the number of documents and document extensions, and essential index information.
+/// </summary>
 public sealed class GetEssentialStatisticsOperation : IMaintenanceOperation<EssentialDatabaseStatistics>
 {
     private readonly string _debugTag;
 
+    /// <inheritdoc cref="GetEssentialStatisticsOperation"/>
     public GetEssentialStatisticsOperation()
     {
     }
 
+    /// <inheritdoc cref="GetEssentialStatisticsOperation"/>
+    /// <param name="debugTag">An optional tag for enhanced logging or debugging purposes.</param>
     internal GetEssentialStatisticsOperation(string debugTag)
     {
         _debugTag = debugTag;

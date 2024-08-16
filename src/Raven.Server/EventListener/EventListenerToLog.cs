@@ -16,8 +16,21 @@ public class EventListenerToLog : IDynamicJson
 
     public static readonly HashSet<EventType> GcEvents = [EventType.GC, EventType.GCSuspend, EventType.GCRestart, EventType.GCFinalizers];
     public static readonly HashSet<EventType> AllocationEvents = [EventType.Allocations];
-    public static readonly HashSet<EventType> ContentionTypes = [EventType.Contention];
-    private static readonly HashSet<EventType> AllEvents = new(GcEvents.Concat(ContentionTypes).Concat(AllocationEvents));
+    public static readonly HashSet<EventType> ContentionEvents = [EventType.Contention];
+    public static readonly HashSet<EventType> ThreadEvents = [
+        EventType.ThreadPoolWorkerThreadStart,
+        EventType.ThreadPoolWorkerThreadWait,
+        EventType.ThreadPoolWorkerThreadStop,
+        EventType.ThreadPoolMinMaxThreads,
+        EventType.ThreadPoolWorkerThreadAdjustment,
+        EventType.ThreadPoolWorkerThreadAdjustmentSample,
+        EventType.ThreadPoolWorkerThreadAdjustmentStats,
+        EventType.ThreadCreating,
+        EventType.ThreadCreated,
+        EventType.ThreadRunning,
+        EventType.GCCreateConcurrentThread_V1
+    ];
+    private static readonly HashSet<EventType> AllEvents = new(GcEvents.Concat(ContentionEvents).Concat(AllocationEvents).Concat(ThreadEvents));
 
     private EventListenerToLog()
     {
@@ -62,7 +75,7 @@ public class EventListenerToLog : IDynamicJson
         }
     }
 
-    public class EventListenerConfiguration
+    public class EventListenerConfiguration : IDynamicJson
     {
         public EventListenerMode EventListenerMode { get; set; }
 
@@ -75,15 +88,22 @@ public class EventListenerToLog : IDynamicJson
         public int AllocationsLoggingCount { get; set; }
 
         public bool Persist { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(EventListenerMode)] = Instance._configuration.EventListenerMode,
+                [nameof(EventTypes)] = Instance._configuration.EventTypes == null ? null : new DynamicJsonArray(Instance._configuration.EventTypes),
+                [nameof(MinimumDurationInMs)] = Instance._configuration.MinimumDurationInMs,
+                [nameof(AllocationsLoggingIntervalInMs)] = Instance._configuration.AllocationsLoggingIntervalInMs,
+                [nameof(AllocationsLoggingCount)] = Instance._configuration.AllocationsLoggingCount,
+            };
+        }
     }
 
     public DynamicJsonValue ToJson()
     {
-        return new DynamicJsonValue
-        {
-            [nameof(EventListenerConfiguration.EventListenerMode)] = Instance._configuration.EventListenerMode,
-            [nameof(EventListenerConfiguration.EventTypes)] = Instance._configuration.EventTypes == null ? null : new DynamicJsonArray(Instance._configuration.EventTypes),
-            [nameof(EventListenerConfiguration.MinimumDurationInMs)] = Instance._configuration.MinimumDurationInMs
-        };
+        return _configuration.ToJson();
     }
 }

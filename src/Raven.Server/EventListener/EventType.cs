@@ -6,6 +6,17 @@ public enum EventType
     GCSuspend,
     GCRestart,
     GCFinalizers,
+    Allocations,
     Contention,
-    Allocations
+    ThreadPoolWorkerThreadStart,
+    ThreadPoolWorkerThreadWait,
+    ThreadPoolWorkerThreadStop,
+    ThreadPoolMinMaxThreads,
+    ThreadPoolWorkerThreadAdjustment,
+    ThreadPoolWorkerThreadAdjustmentSample,
+    ThreadPoolWorkerThreadAdjustmentStats,
+    ThreadCreating,
+    ThreadCreated,
+    ThreadRunning,
+    GCCreateConcurrentThread_V1
 }

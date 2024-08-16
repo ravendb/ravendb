@@ -6,14 +6,22 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
+    /// <summary>
+    /// Retrieves detailed database statistics, providing in-depth information such as the count of compare exchange entries,
+    /// compare exchange tombstones, and time series deleted ranges. It also includes base statistics like index information,
+    /// storage sizes, and other relevant metrics.
+    /// </summary>
     public sealed class GetDetailedStatisticsOperation : IMaintenanceOperation<DetailedDatabaseStatistics>
     {
         private readonly string _debugTag;
 
+        /// <inheritdoc cref="GetDetailedStatisticsOperation"/>
         public GetDetailedStatisticsOperation()
         {
         }
 
+        /// <inheritdoc cref = "GetDetailedStatisticsOperation" />
+        /// <param name="debugTag">An optional tag for enhanced logging or debugging purposes.</param>
         internal GetDetailedStatisticsOperation(string debugTag)
         {
             _debugTag = debugTag;
