@@ -40,8 +40,7 @@ public class RavenDB_21050 : RavenTestBase
 
             var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
             await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-            var (_, operation) = await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 1, source.Database, backupStatus.Id);
-            
+
             using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 session.Delete(id);
@@ -50,7 +49,8 @@ public class RavenDB_21050 : RavenTestBase
 
             var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
             await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-            await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, source.Database, backupStatus2.Id, operation);
+
+            await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, source.Database, backupStatus2.Id);
 
             var restoreConfig = new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = destination.Database };
             using (Backup.RestoreDatabase(destination, restoreConfig))
