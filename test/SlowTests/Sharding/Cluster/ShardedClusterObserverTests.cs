@@ -631,6 +631,39 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task CmpxchgTombstoneCleaner_WhenClusterTransactionMadeOnOneShard_ShouldUpdateRaftIndexOnAllShards()
+        {
+            const string id = "TestObjs/0";
+            const string id2 = "TestObjs/2";
+            
+            var database = GetDatabaseName();
+            var settings = new Dictionary<string, string>
+            {
+                { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "0" },
+            };
+
+            using var store = GetDocumentStore(Sharding.GetOptionsForCluster(Server, 2, 1, 1));
+            Assert.NotEqual(await Sharding.GetShardNumberForAsync(store, id), await Sharding.GetShardNumberForAsync(store, id2));
+            
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new TestOjb(), id);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true}))
+            {
+                await session.StoreAsync(new TestOjb(), id2);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                _ = await session.LoadAsync<TestOjb>(id);
+            }
+        }
+
         [Fact]
         public async Task CompareExchangeTombstoneWillBeCleanedOnlyWhenAllShardsHaveBackedUpPreviousOnes()
         {
