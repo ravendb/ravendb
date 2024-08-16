@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -20,7 +22,6 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
@@ -59,6 +60,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
@@ -69,7 +71,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.ServerWide
 {
-    public sealed partial class ClusterStateMachine : RachisStateMachine
+    public class ClusterStateMachine : RachisStateMachine
     {
         private readonly Logger _clusterAuditLog = LoggingSource.AuditLog.GetLogger("ClusterStateMachine", "Audit");
 
@@ -570,7 +572,6 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideExternalReplicationCommand):
-                        AssertServerWideForExternalReplication(serverStore, context);
                         var serverWideExternalReplication = UpdateValue<ServerWideExternalReplication>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication, index);
                         break;
@@ -617,7 +618,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(AddDatabaseCommand):
-                        var addedNodes = AddDatabase(context, type, cmd, index, serverStore);
+                        var addedNodes = AddDatabase(context, cmd, index, leader);
                         if (addedNodes != null)
                         {
                             result = addedNodes;
@@ -892,8 +893,7 @@ namespace Raven.Server.ServerWide
                    e is SubscriptionException ||
                    e is DatabaseDoesNotExistException ||
                    e is AuthorizationException ||
-                   e is CompareExchangeKeyTooBigException ||
-                   e is LicenseLimitException;
+                   e is CompareExchangeKeyTooBigException;
         }
 
         private void ClusterStateCleanUp(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
@@ -1362,7 +1362,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void NotifyLeaderAboutError(long index, Leader leader, Exception e)
+        protected void NotifyLeaderAboutError(long index, Leader leader, Exception e)
         {
             _rachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
             {
@@ -1382,7 +1382,7 @@ namespace Raven.Server.ServerWide
             leader.SetStateOf(index, tcs => { tcs.TrySetException(e); });
         }
 
-        private void NotifyLeaderAboutFatalError(long index, Leader leader, Exception e)
+        protected void NotifyLeaderAboutFatalError(long index, Leader leader, Exception e)
         {
             _rachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
             {
@@ -1603,7 +1603,7 @@ namespace Raven.Server.ServerWide
 
         };
 
-        private unsafe List<string> AddDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        private unsafe List<string> AddDatabase(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
             Exception exception = null;
@@ -1630,11 +1630,6 @@ namespace Raven.Server.ServerWide
                             throw new RachisConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag +
                                                                  " but was expecting " + addDatabaseCommand.RaftCommandIndex);
                         }
-                    }
-
-                    foreach (var command in _licenseLimitsCommandsForCreateDatabase)
-                    {
-                        AssertLicenseLimits(command, serverStore, addDatabaseCommand.Record, context);
                     }
 
                     bool shouldSetClientConfigEtag;
@@ -2451,8 +2446,6 @@ namespace Raven.Server.ServerWide
                         DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName, serverStore);
                         return;
                     }
-
-                    AssertLicenseLimits(type, serverStore, databaseRecord, context);
 
                     UpdateIndexForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
@@ -4554,5 +4547,4 @@ namespace Raven.Server.ServerWide
             return false;
         }
     }
-
 }

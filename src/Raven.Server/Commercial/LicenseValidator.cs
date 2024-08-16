@@ -16,7 +16,17 @@ namespace Raven.Server.Commercial
         private const int TypeBitsToShift = 5;
         private const int Mask = 0x1F;
 
-        private static readonly LicenseAttribute[] Terms = (LicenseAttribute[])Enum.GetValues(typeof(LicenseAttribute));
+        private static readonly string[] Terms =
+        {
+            "type", "version", "expiration", "memory", "cores", "redist", "encryption", "snmp",
+            "distributedCluster", "maxClusterSize", "snapshotBackup", "cloudBackup", "dynamicNodesDistribution",
+            "externalReplication", "delayedExternalReplication", "ravenEtl", "sqlEtl", "highlyAvailableTasks",
+            "pullReplicationAsHub", "pullReplicationAsSink", "encryptedBackup", "letsEncryptAutoRenewal", "cloud",
+            "documentsCompression", "timeSeriesRollupsAndRetention", "additionalAssembliesNuget",
+            "monitoringEndpoints", "olapEtl", "readOnlyCertificates",
+            "tcpDataCompression", "concurrentSubscriptions", "elasticSearchEtl", "powerBI", "postgreSqlIntegration",
+            "canBeActivatedUntil", "queueEtl"
+        };
 
         private enum ValueType : byte
         {
@@ -41,11 +51,11 @@ namespace Raven.Server.Commercial
             return Convert.FromBase64String(str);
         }
 
-        public static Dictionary<LicenseAttribute, object> Validate(License licenseKey, RSAParameters rsaParameters)
+        public static Dictionary<string, object> Validate(License licenseKey, RSAParameters rsaParameters)
         {
             var keys = ExtractKeys(licenseKey.Keys);
 
-            var result = new Dictionary<LicenseAttribute, object>();
+            var result = new Dictionary<string, object>();
             using (var ms = new MemoryStream())
             using (var br = new BinaryReader(ms))
             {
@@ -55,7 +65,7 @@ namespace Raven.Server.Commercial
 
                 while (ms.Position < buffer.Length)
                 {
-                    var licensePropertyExists = TryGetTermIndexAndType(br, out var licenseProperty, out ValueType type);
+                    var licensePropertyExists = TryGetTermIndexAndType(br, out string licenseProperty, out ValueType type);
 
                     object val = type switch
                     {
@@ -102,7 +112,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static bool TryGetTermIndexAndType(BinaryReader br, out LicenseAttribute licenseProperty, out ValueType type)
+        private static bool TryGetTermIndexAndType(BinaryReader br, out string licenseProperty, out ValueType type)
         {
             var token = br.ReadByte();
             var index = token & Mask;

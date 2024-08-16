@@ -91,7 +91,7 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Concurrent Subscriptions")]
         ConcurrentSubscriptions,
 
-        [Description("Server Wide External Replications")]
-        ServerWideExternalReplications,
+        [Description("TCP Data Compression")]
+        TcpDataCompression
     }
 }

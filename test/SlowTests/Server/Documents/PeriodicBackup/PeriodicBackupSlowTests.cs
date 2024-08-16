@@ -32,7 +32,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
-using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
@@ -2386,7 +2385,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await WaitForDatabaseToBeDeleted(store, TimeSpan.FromSeconds(30));
 
                 var server = cluster.Nodes.FirstOrDefault(x => x.ServerStore.NodeTag == responsibleNode == false);
-                server.ServerStore.LicenseManager.LicenseStatus.Attributes[LicenseAttribute.HighlyAvailableTasks] = false;
+                server.ServerStore.LicenseManager.LicenseStatus.Attributes["highlyAvailableTasks"] = false;
 
                 Backup.WaitForResponsibleNodeUpdate(server.ServerStore, databaseName, backupTaskId, responsibleNode);
 
