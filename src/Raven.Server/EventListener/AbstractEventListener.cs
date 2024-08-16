@@ -12,7 +12,7 @@ public abstract class AbstractEventListener : System.Diagnostics.Tracing.EventLi
     public enum DotNetEventType
     {
         GC = 0x0000001,
-        //Threading = 0x10000,
+        Threading = 0x10000,
         //Exception = 0x8000,
         Contention = 0x4000
     }

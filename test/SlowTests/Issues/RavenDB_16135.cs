@@ -43,7 +43,7 @@ namespace SlowTests.Issues
                     Assert.Equal(2, companiesRevisions.Count);
                 }
 
-                var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60));
+                var operation = await store.Maintenance.SendAsync(new RevisionsHelper.RevertRevisionsOperation(last, 60));
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5));
 
                 using (var session = store.OpenAsyncSession())
@@ -57,5 +57,6 @@ namespace SlowTests.Issues
                 }
             }
         }
+
     }
 }

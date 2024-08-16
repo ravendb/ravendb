@@ -1926,7 +1926,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        internal bool AdoptOrphanedFor(DocumentsOperationContext context, string id)
+        internal bool AdoptOrphanedFor(DocumentsOperationContext context, string id, DocumentFlags additionalFlags = DocumentFlags.None)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
             using (GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
@@ -1943,7 +1943,7 @@ namespace Raven.Server.Documents.Revisions
                 if (ShouldAdoptRevision(context, lowerId, lowerIdPrefix, collectionName, out var table, out var lastRevision))
                 {
                     var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
-                    CreateDeletedRevision(context, table, id, collectionName, lastModifiedTicks, lastRevision.Flags);
+                    CreateDeletedRevision(context, table, id, collectionName, lastModifiedTicks, lastRevision.Flags | additionalFlags);
                     return true;
                 }
 
@@ -2246,6 +2246,8 @@ namespace Raven.Server.Documents.Revisions
                         {
                             documentsStorage.Delete(context, lowerId, document.Id, null, changeVector: documentsStorage.GetNewChangeVector(context).ChangeVector, newFlags: flags);
                         }
+
+                        documentsStorage.RevisionsStorage.AdoptOrphanedFor(context, document.Id, DocumentFlags.Reverted);
                     }
                 }
 

@@ -1271,6 +1271,9 @@ namespace Sparrow.Json
 
         public object ToType(Type conversionType, IFormatProvider provider)
         {
+            if (conversionType.IsEnum)
+                return Enum.Parse(conversionType, MaterializeStringValue);
+
             return ((IConvertible)MaterializeStringValue).ToType(conversionType, provider);
         }
 
