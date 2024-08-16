@@ -222,7 +222,7 @@ namespace RachisTests.DatabaseCluster
 
                 var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-                await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 1, source.Database, backupStatus.Id);
+                var (_, operation) = await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 1, source.Database, backupStatus.Id);
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -237,7 +237,7 @@ namespace RachisTests.DatabaseCluster
 
                 var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-                await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, source.Database, backupStatus2.Id);
+                var (_, operation2) = await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, source.Database, backupStatus2.Id, operation);
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -251,7 +251,7 @@ namespace RachisTests.DatabaseCluster
 
                 var backupStatus3 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 await backupStatus3.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-                var files = await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 3, source.Database, backupStatus3.Id);
+                var (files, _) = await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 3, source.Database, backupStatus3.Id, operation, operation2);
 
                 var options = new DatabaseSmugglerImportOptions();
                 DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
@@ -345,7 +345,7 @@ namespace RachisTests.DatabaseCluster
 
                 var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-                await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 1, source.Database, backupStatus.Id);
+                var (_, operation) = await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 1, source.Database, backupStatus.Id);
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -362,7 +362,7 @@ namespace RachisTests.DatabaseCluster
 
                 var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-                await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, source.Database, backupStatus2.Id);
+                await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, source.Database, backupStatus2.Id, operation);
                 
                 await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
             }
@@ -416,7 +416,7 @@ namespace RachisTests.DatabaseCluster
 
                 var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-                await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 1, source.Database, backupStatus.Id);
+                var (_, operation) = await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 1, source.Database, backupStatus.Id);
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -434,7 +434,7 @@ namespace RachisTests.DatabaseCluster
 
                 var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-                await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, source.Database, backupStatus2.Id);
+                await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, source.Database, backupStatus2.Id, operation);
                 
                 await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
             }
