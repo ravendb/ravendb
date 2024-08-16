@@ -1,0 +1,93 @@
+<div class="modal-dialog modal-lg prevent-close" role="document">
+    <div class="modal-content admin-logs-event-listener-dialog" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">Configure Event Listener</h4>
+        </div>
+        <div class="modal-body">
+            <form class="flex-form form-inline" autocomplete="off">
+                <div class="modal-details">
+
+                    <div class="margin-left margin-bottom">
+                        <div class="toggle">
+                            <input id="enableEventListener" type="checkbox" data-bind="checked: enabled">
+                            <label for="enableEventListener">Enable event listener logging</label>
+                        </div>
+                    </div>
+
+                    <div data-bind="collapse: enabled">
+                        <div class="margin-bottom">
+                            <div class="form-group">
+                                <label class="control-label">Event Types</label>
+                                <div class="flex-grow margin-left">
+                                    <div class="toggle-margin">
+                                        <div data-bind="validationElement: eventTypes">
+                                            <select
+                                            id="eventTypes"
+                                            size="5"
+                                            multiple="multiple"
+                                            data-bind="options: allEventTypes, selectedOptions: eventTypes"
+                                            ></select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="margin-bottom">
+                            <div class="form-group" data-bind="validationElement: minimumDurationInMs">
+                                <label class="control-label">Minimum Duration</label>
+                                <div class="margin-left">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" data-bind="numericInput: minimumDurationInMs" />
+                                        <div class="input-group-addon">ms</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="margin-bottom">
+                            <div class="form-group" data-bind="validationElement: allocationsLoggingIntervalInMs">
+                                <label class="control-label">Allocations Logging Interval</label>
+                                <div class="margin-left">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" data-bind="numericInput: allocationsLoggingIntervalInMs" />
+                                        <div class="input-group-addon">ms</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="margin-bottom">
+                            <div class="form-group" data-bind="validationElement: allocationsLoggingCount">
+                                <label class="control-label">Allocations Logging Count</label>
+                                <div class="margin-left">
+                                    <input type="number" class="form-control" data-bind="numericInput: allocationsLoggingCount" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="margin-left margin-top" data-bind="visible: $root.canPersist">
+                            <div class="toggle">
+                                <input id="persistToSettings" type="checkbox" data-bind="checked: persist">
+                                <label for="persistToSettings">Save this configuration in <code>settings.json</code></label>
+                            </div>
+                            <div class="bg-info padding padding-xs" data-bind="visible: !persist()">
+                                <i class="icon-info"></i> <span>If not saved, above settings will reset after a server restart</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: close">Cancel</button>
+            <button type="button" class="btn btn-primary" data-bind="click: save">
+                <i class="icon-save"></i>
+                <span>Save</span>
+            </button>
+        </div>
+    </div>
+</div>
