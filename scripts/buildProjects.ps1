@@ -177,6 +177,7 @@ function BuildEmbedded ( $srcDir, $outDir, $framework) {
     & dotnet build /p:GenerateDocumentationFile=true --no-incremental `
         --output $outDir `
         --framework $framework `
-        --configuration "Release" $srcDir;
+        --configuration "Release" $srcDir `
+        /p:Client_IncludeZstd=false
     CheckLastExitCode
 }
