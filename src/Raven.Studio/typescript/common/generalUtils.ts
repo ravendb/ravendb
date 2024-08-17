@@ -4,6 +4,8 @@ import moment = require("moment");
 import { MouseEvent } from "react";
 import { isBoolean } from "common/typeUtils";
 
+type AtLeastOne<T> = [T, ...T[]];
+
 type SelectionState = "AllSelected" | "SomeSelected" | "Empty";
 
 class genUtils {
@@ -714,11 +716,23 @@ class genUtils {
         throw new Error("Didn't expect to get here. " + msg);
     }
 
+    static exhaustiveStringTuple<T extends string>() {
+        return function <L extends AtLeastOne<T>>(
+          ...x: L extends any
+            ? Exclude<T, L[number]> extends never
+              ? L
+              : Exclude<T, L[number]>[]
+            : never
+        ) {
+          return x;
+        };
+      }
+
     static formatLocation(location: databaseLocationSpecifier) {
         if (location.shardNumber != null) {
             return "Shard #" + location.shardNumber + " on Node " + location.nodeTag;
         }
-        
+   
         return "Node " + location.nodeTag;
     }
     

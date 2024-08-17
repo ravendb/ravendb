@@ -7,7 +7,7 @@ namespace Raven.Server.EventListener;
 
 public class ContentionEventsHandler : AbstractEventsHandler<ContentionEventsHandler.ContentionEvent>
 {
-    protected override HashSet<EventType> DefaultEventTypes => EventListenerToLog.ContentionTypes;
+    protected override HashSet<EventType> DefaultEventTypes => EventListenerToLog.ContentionEvents;
 
     protected override Action<ContentionEvent> OnEvent { get; }
 
