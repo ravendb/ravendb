@@ -7,15 +7,23 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
+    /// <summary>
+    /// Retrieves database statistics. This operation provides various metrics about the database, such as the database change vector,
+    /// the number of documents, indexes, collections, and other relevant details.
+    /// </summary>
     public sealed class GetStatisticsOperation : IMaintenanceOperation<DatabaseStatistics>
     {
         private readonly string _debugTag;
         private readonly string _nodeTag;
 
+        /// <inheritdoc cref="GetStatisticsOperation"/>
         public GetStatisticsOperation()
         {
         }
 
+        /// <inheritdoc cref = "GetStatisticsOperation" />
+        /// <param name="debugTag">An optional tag for enhanced logging or debugging purposes.</param>
+        /// <param name="nodeTag">An optional node tag to target a specific server node.</param>
         internal GetStatisticsOperation(string debugTag, string nodeTag = null)
         {
             _debugTag = debugTag;
