@@ -65,7 +65,11 @@ namespace Voron.Util
             {
                 if (_activeTxs.HasTransactions == false)
                 {
-                    // To be safe, we publish the latest _read_ transaction, because we aren't done committing the current one yet 
+                    // We are in a write transaction, and there aren't any current read transactions _right now_.
+                    // The idea is to move the oldest transaction marker to the latest value we can. We cannot use the current transaction id
+                    // because we haven't finished publishing that. Instead, we mark the oldest transaction as the current published transaction.
+                    // This way, if a new read transaction is started _after_ this line, but before we finalize the commit, the oldest transaction
+                    // on record would match it.
                     Interlocked.CompareExchange(ref _oldestTransaction, latestReadTransactionId, oldTx);
                 }
                 // ReSharper disable once RedundantIfElseBlock
