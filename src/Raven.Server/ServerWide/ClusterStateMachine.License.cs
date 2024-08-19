@@ -290,7 +290,7 @@ namespace Raven.Server.ServerWide
             if (databaseRecord.TimeSeries == null)
                 return;
 
-            if (databaseRecord.TimeSeries.Collections.Count > 0 && databaseRecord.TimeSeries.Collections.All(x => x.Value.Disabled))
+            if (databaseRecord.TimeSeries.Collections.Count == 0 || databaseRecord.TimeSeries.Collections.All(x => x.Value.Disabled))
                 return;
 
             throw new LicenseLimitException(LimitType.TimeSeriesRollupsAndRetention, "Your license doesn't support adding Time Series Rollups And Retention feature.");
