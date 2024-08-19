@@ -133,7 +133,7 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
 
     protected override void EnsureParamTypeSupportedByDbProvider(DbParameter parameter)
     {
-        // empty by design - sql etl should support all db types todo: try to make it sure in SetValue method
+        // empty by design - sql etl should support all db types
     }
 
     protected override void  SetPrimaryKeyParamValue(RelationalDatabaseItem itemToReplicate, DbParameter pkParam)

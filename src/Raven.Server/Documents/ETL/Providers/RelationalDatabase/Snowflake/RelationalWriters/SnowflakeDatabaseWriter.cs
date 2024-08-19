@@ -77,6 +77,10 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
 
     protected override void EnsureParamTypeSupportedByDbProvider(DbParameter parameter)
     {
+        // By default, DbParameter has AnsiString DbType. SetParamValue changes it, so we don't care
+        // At null value, we can't update DbType, because there's no DbType.Null. DbType stays AnsiString
+        // Snowflake doesn't support AnsiString - we need to correct that to DbType.String
+        // Only Snowflake has this, so we need granular code, to not break Sql
         if (parameter.DbType == DbType.AnsiString)
             parameter.DbType = DbType.String;
     }
