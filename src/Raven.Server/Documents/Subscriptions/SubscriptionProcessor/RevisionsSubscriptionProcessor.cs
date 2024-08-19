@@ -130,15 +130,16 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             item.Current.EnsureMetadata();
             item.Previous?.EnsureMetadata();
 
-            if (Patch == null)
+            var transformResult = DocsContext.ReadObject(new DynamicJsonValue
             {
-                result.Data = CreateRevisionRecord(item, item.Current.Flags.Contain(DocumentFlags.DeleteRevision));
+                [nameof(RevisionRecord.Current)] = item.Current.Flags.Contain(DocumentFlags.DeleteRevision) ? null : item.Current.Data,
+                [nameof(RevisionRecord.Previous)] = item.Previous?.Data
+            }, item.Current.Id);
 
-                return true;
-            }
-
-            var transformResult = CreateRevisionRecord(item, isDeleteRevision: false);
             result.Data = transformResult;
+
+            if (Patch == null)
+                return true;
 
             item.Current.ResetModifications();
             item.Previous?.ResetModifications();
@@ -154,19 +155,6 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                     return false;
                 }
 
-                if (item.Current.Flags.Contain(DocumentFlags.DeleteRevision))
-                {
-                    result.Data.Modifications = new DynamicJsonValue(result.Data)
-                    {
-                        [nameof(RevisionRecord.Current)] = null
-                    };
-
-                    using (var old = result.Data)
-                    {
-                        result.Data = DocsContext.ReadObject(result.Data, item.Current.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                    }
-                }
-
                 return true;
             }
             catch (Exception ex)
@@ -175,15 +163,6 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 exception = ex;
                 return false;
             }
-        }
-
-        private BlittableJsonReaderObject CreateRevisionRecord((Document Previous, Document Current) item, bool isDeleteRevision)
-        {
-            return DocsContext.ReadObject(new DynamicJsonValue
-            {
-                [nameof(RevisionRecord.Current)] = isDeleteRevision ? null : item.Current.Data,
-                [nameof(RevisionRecord.Previous)] = item.Previous?.Data
-            }, item.Current.Id);
         }
     }
 }
