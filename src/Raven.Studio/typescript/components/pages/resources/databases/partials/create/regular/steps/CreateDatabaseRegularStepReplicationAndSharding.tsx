@@ -107,7 +107,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             <Icon id="ReplicationInfo" icon="info" color="info" margin="m-0" /> Available nodes:{" "}
                             <UncontrolledPopover
                                 target="ReplicationInfo"
-                                placement="left"
+                                placement="right"
                                 trigger="hover"
                                 className="bs5"
                             >
@@ -231,11 +231,11 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             message: (
                                 <LicenseRestrictedMessage>
                                     Current license doesn&apos;t include{" "}
-                                    <strong>Dynamic database distribution feature</strong>.
+                                    <strong className="text-info">Dynamic database distribution feature</strong>.
                                 </LicenseRestrictedMessage>
                             ),
                         }}
-                        popoverPlacement="left"
+                        popoverPlacement="top"
                     >
                         <FormSwitch
                             control={control}
@@ -266,7 +266,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                     "You need to select nodes manually because the encryption is enabled and there are more than 1 nodes in cluster.",
                             },
                         ]}
-                        popoverPlacement="left"
+                        popoverPlacement="top"
                     >
                         <FormSwitch
                             control={control}

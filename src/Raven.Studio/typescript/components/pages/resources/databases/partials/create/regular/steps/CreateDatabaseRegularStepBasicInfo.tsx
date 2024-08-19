@@ -52,6 +52,7 @@ export default function CreateDatabaseRegularStepBasicInfo() {
                         name="basicInfoStep.databaseName"
                         placeholder="Database Name"
                         id="DbName"
+                        autoComplete="off"
                     />
                 </Col>
             </Row>
@@ -82,7 +83,7 @@ function IsEncryptedField() {
                         message: <AuthenticationOffMessage />,
                     },
                 ]}
-                popoverPlacement="left"
+                popoverPlacement="top"
             >
                 <FormSwitch
                     color="primary"
