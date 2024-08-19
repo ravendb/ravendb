@@ -8,8 +8,8 @@ export function LicenseRestrictedMessage({ children }: PropsWithChildren) {
     return (
         <>
             {children}
-            <div className="text-center mt-2">
-                <a href={buyLink} target="_blank" className="btn btn-primary btn-xs rounded-pill">
+            <div className="mt-2">
+                <a href={buyLink} target="_blank" className="btn btn-primary btn-sm rounded-pill">
                     Licensing options <Icon icon="newtab" margin="ms-1" />
                 </a>
             </div>

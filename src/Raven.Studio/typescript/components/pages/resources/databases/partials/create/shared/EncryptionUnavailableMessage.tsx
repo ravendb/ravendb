@@ -6,7 +6,7 @@ export default function EncryptionUnavailableMessage() {
     return (
         <LicenseRestrictedMessage>
             Current license doesn&apos;t include{" "}
-            <strong className="text-primary nobr">
+            <strong className="text-info nobr">
                 <Icon icon="storage" addon="encryption" margin="m-0" /> Storage encryption
             </strong>
             .

@@ -1158,8 +1158,8 @@ $popover-header-padding-y: 0.5rem !default;
 $popover-header-padding-x: $spacer !default;
 
 $popover-body-color: var(--#{$prefix}body-color) !default;
-$popover-body-padding-y: $spacer !default;
-$popover-body-padding-x: $spacer !default;
+$popover-body-padding-y: $gutter-sm !default;
+$popover-body-padding-x: $gutter-sm !default;
 
 $popover-arrow-width: 1rem !default;
 $popover-arrow-height: 0.5rem !default;
