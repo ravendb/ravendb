@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Client.Documents.Smuggler;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
 
@@ -15,7 +16,14 @@ namespace FastTests.Server.Basic
         {
             using (var store = GetDocumentStore())
             {
-                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation(operateOnTypes: 
+                    DatabaseItemType.Documents | 
+                    DatabaseItemType.RevisionDocuments |
+                    DatabaseItemType.Indexes |
+                    DatabaseItemType.CompareExchange |
+                    DatabaseItemType.Attachments |
+                    DatabaseItemType.CounterGroups |
+                    DatabaseItemType.TimeSeries));
             }
         }
     }
