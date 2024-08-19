@@ -43,6 +43,8 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
                 size += new Size(item.Current.Data?.Size ?? 0, SizeUnit.Bytes);
 
+                using (var oldCurData = item.Current.Data)
+                using (var oldPrevData = item.Previous?.Data)
                 using (item.Current)
                 using (item.Previous)
                 {
