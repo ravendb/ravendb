@@ -119,7 +119,9 @@ class indexDefinition {
         this.priority(dto.Priority);
         this.configuration(this.parseConfiguration(dto.Configuration));
 
-        this.additionalSources(Object.entries(dto.AdditionalSources).map(([name, code]) => additionalSource.create(name, code)));
+        if (dto.AdditionalSources) {
+            this.additionalSources(Object.entries(dto.AdditionalSources).map(([name, code]) => additionalSource.create(name, code)));
+        }
         
         if (dto.AdditionalAssemblies) {
             this.additionalAssemblies(dto.AdditionalAssemblies.map(assembly => new additionalAssembly(assembly)));
