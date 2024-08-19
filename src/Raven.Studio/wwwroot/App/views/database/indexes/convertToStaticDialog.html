@@ -1,0 +1,37 @@
+<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h3 class="modal-title">Convert to static index</h3>
+        </div>
+        <div class="modal-body vstack gap-2">
+
+            <div class="form-group word-break">
+                <label class="control-label">Index Name</label>
+                <strong class="form-control-static" data-bind="text: indexName"></strong>
+            </div>
+            
+            <div class="hstack gap-2">
+                <button class="btn btn-primary" data-bind="click: createNewStaticIndex" title="Create static index">
+                    <i class="icon-index icon-addon-plus"></i> Create new static index
+                </button>
+                <button class="btn btn-secondary" data-bind="click: () => downloadConvertedIndex('Json')" title="Download static index as JSON">
+                    <i class="icon-download"></i> Download JSON
+                </button>
+                <button class="btn btn-secondary" data-bind="click: () => downloadConvertedIndex('CsharpClass')" title="Download static index as C# class">
+                    <i class="icon-download"></i> Download C# Class
+                </button>
+            </div>
+
+        </div>
+        <div class="modal-footer">
+            <div>
+                <button class="btn btn-default" data-bind="click: close" title="Close this dialog">
+                    <i class="icon-cancel"></i><span>Close</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
