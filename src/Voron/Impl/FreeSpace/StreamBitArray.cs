@@ -1,194 +1,207 @@
-//
-// Bit Array.cs
-//
-// Authors:
-// Ben Maurer (bmaurer@users.sourceforge.net)
-// Marek Safar (marek.safar@gmail.com)
-//
-// (C) 2003 Ben Maurer
-//
-
-//
-// Copyright (C) 2004 Novell, Inc (http://www.novell.com)
-//
-// Permission is hereby granted, free of charge, to any person obtaining
-// a copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to
-// permit persons to whom the Software is furnished to do so, subject to
-// the following conditions:
-// 
-// The above copyright notice and this permission notice shall be
-// included in all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-//
-
 using Sparrow;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Numerics;
+using System.Runtime.Intrinsics;
 using Sparrow.Server;
+using Sparrow.Server.Utils.VxSort;
+using Voron.Data.Fixed;
 
-namespace Voron.Impl.FreeSpace
+namespace Voron.Impl.FreeSpace;
+
+public unsafe struct StreamBitArray
 {
-    public sealed class StreamBitArray
+    private const int CountOfItems = 64;
+
+    private fixed uint _inner[CountOfItems];
+    public int SetCount;
+
+    public StreamBitArray()
     {
-        readonly int[] _inner = new int[64];
+        SetCount = 0;
+        Vector256<uint>.Zero.StoreUnsafe(ref _inner[0]);
+        Vector256<uint>.Zero.StoreUnsafe(ref _inner[8]);
+        Vector256<uint>.Zero.StoreUnsafe(ref _inner[16]);
+        Vector256<uint>.Zero.StoreUnsafe(ref _inner[24]);
+        Vector256<uint>.Zero.StoreUnsafe(ref _inner[32]);
+        Vector256<uint>.Zero.StoreUnsafe(ref _inner[40]);
+        Vector256<uint>.Zero.StoreUnsafe(ref _inner[48]);
+        Vector256<uint>.Zero.StoreUnsafe(ref _inner[56]);
+    }
 
-        public int SetCount { get; private set; }
+    public StreamBitArray(byte* ptr)
+    {
+        var ints = (uint*)ptr;
+        SetCount = (int)*ints;
+        var a = Vector256.LoadUnsafe(ref ints[1]);
+        var b = Vector256.LoadUnsafe(ref ints[9]);
+        var c = Vector256.LoadUnsafe(ref ints[17]);
+        var d = Vector256.LoadUnsafe(ref ints[25]);
+        var e = Vector256.LoadUnsafe(ref ints[33]);
+        var f = Vector256.LoadUnsafe(ref ints[41]);
+        var g = Vector256.LoadUnsafe(ref ints[49]);
+        var h = Vector256.LoadUnsafe(ref ints[57]);
 
-        public StreamBitArray()
+        a.StoreUnsafe(ref _inner[0]);
+        b.StoreUnsafe(ref _inner[8]);
+        c.StoreUnsafe(ref _inner[16]);
+        d.StoreUnsafe(ref _inner[24]);
+        e.StoreUnsafe(ref _inner[32]);
+        f.StoreUnsafe(ref _inner[40]);
+        g.StoreUnsafe(ref _inner[48]);
+        h.StoreUnsafe(ref _inner[56]);
+    }
+
+    public unsafe void Write(FixedSizeTree freeSpaceTree, long sectionId)
+    {
+        using (freeSpaceTree.DirectAdd(sectionId, out _, out var ptr))
         {
-            
+            Write(ptr);
         }
+    }
 
-        public StreamBitArray(ValueReader reader)
+    private void Write(byte* ptr)
+    {
+        var ints = (uint*)ptr;
+        *ints = (uint)SetCount;
+        var a = Vector256.LoadUnsafe(ref _inner[0]);
+        var b = Vector256.LoadUnsafe(ref _inner[8]);
+        var c = Vector256.LoadUnsafe(ref _inner[16]);
+        var d = Vector256.LoadUnsafe(ref _inner[24]);
+        var e = Vector256.LoadUnsafe(ref _inner[32]);
+        var f = Vector256.LoadUnsafe(ref _inner[40]);
+        var g = Vector256.LoadUnsafe(ref _inner[48]);
+        var h = Vector256.LoadUnsafe(ref _inner[56]);
+
+        a.StoreUnsafe(ref ints[1]);
+        b.StoreUnsafe(ref ints[9]);
+        c.StoreUnsafe(ref ints[17]);
+        d.StoreUnsafe(ref ints[25]);
+        e.StoreUnsafe(ref ints[33]);
+        f.StoreUnsafe(ref ints[41]);
+        g.StoreUnsafe(ref ints[49]);
+        h.StoreUnsafe(ref ints[57]);
+    }
+
+    public int FirstSetBit(int bitsToStart)
+    {
+        int vectorStart = (bitsToStart / 256) * Vector256<int>.Count;
+        var scalarSearch = bitsToStart % 256;
+        if (scalarSearch != 0)
         {
-            if (!BitConverter.IsLittleEndian)
-                throw new NotSupportedException("Big endian conversion is not supported yet.");
+            if (TryScalarSearch(scalarSearch, vectorStart, out int trailingZeroCount)) 
+                return trailingZeroCount;
 
-            SetCount = reader.ReadLittleEndianInt32();
-
-            unsafe
+            vectorStart += Vector256<int>.Count;
+        }
+        for (int i = vectorStart; i < CountOfItems; i += Vector256<int>.Count)
+        {
+            var a = Vector256.LoadUnsafe(ref _inner[i]);
+            var gt = Vector256.GreaterThan(a, Vector256<uint>.Zero);
+            if (gt == Vector256<uint>.Zero)
             {
-                fixed (int* i = _inner)
+                continue;
+            }
+            var mask = gt.ExtractMostSignificantBits();
+            var idx = BitOperations.TrailingZeroCount(mask) + i;
+            var item = _inner[idx];
+            return idx * 32 + BitOperations.TrailingZeroCount(item);
+        }
+        return -1;
+    }
+
+    private bool TryScalarSearch(int scalarSearch, int vectorStart, out int trailingZeroCount)
+    {
+        for (int i = scalarSearch / 32; i < Vector256<int>.Count; i++)
+        {
+            var bitsToZero = scalarSearch % 32;
+            scalarSearch = 0;
+            var bits = _inner[vectorStart + i] & (-1 << bitsToZero);
+            if (bits != 0)
+            {
                 {
-                    int read = reader.Read((byte*)i, _inner.Length * sizeof(int));
-                    if (read < _inner.Length * sizeof(int))
-                        throw new EndOfStreamException();
+                    trailingZeroCount = (vectorStart+i) * 32 + BitOperations.TrailingZeroCount(bits);
+                    return true;
                 }
             }
         }
 
-        public int FirstSetBit()
+        trailingZeroCount = -1;
+        return false;
+    }
+
+    public bool Get(int index)
+    {
+        return (_inner[index >> 5] & (1 << (index & 31))) != 0;
+    }
+
+    public void Set(int index, bool value)
+    {
+        if (value)
         {
-            for (int i = 0; i < _inner.Length; i++)
+            _inner[index >> 5] |= (uint)(1 << (index & 31));
+            SetCount++;
+        }
+        else
+        {
+            _inner[index >> 5] &= (uint)~(1 << (index & 31));
+            SetCount--;
+        }
+    }
+
+    public int GetEndRangeCount()
+    {
+        int count = 0;
+        for (int i = CountOfItems - Vector256<uint>.Count; i >= 0; i -= Vector256<uint>.Count)
+        {
+            var a = Vector256.LoadUnsafe(ref _inner[i]);
+            if (a == Vector256<uint>.AllBitsSet)
             {
-                if (_inner[i] == 0)
+                count += 256;
+                continue;
+            }
+
+            for (int j = i + Vector256<uint>.Count - 1; j >= 0; j--)
+            {
+                if (_inner[j] == uint.MaxValue)
+                {
+                    count += 32;
                     continue;
-                return i << 5 | HighestBitSet(_inner[i]);
-            }
-            return -1;
-        }
-        
-
-        // Code taken from http://graphics.stanford.edu/~seander/bithacks.html#IntegerLogDeBruijn
-        private static readonly int[] MultiplyDeBruijnBitPosition = 
-            {
-                0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
-                8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31
-            };
-
-        private static int HighestBitSet(int v)
-        {
-
-            v |= v >> 1; // first round down to one less than a power of 2 
-            v |= v >> 2;
-            v |= v >> 4;
-            v |= v >> 8;
-            v |= v >> 16;
-
-            return MultiplyDeBruijnBitPosition[(uint)(v * 0x07C4ACDDU) >> 27];
-        }
-
-        public bool this[int index]
-        {
-            get { return Get(index); }
-            set { Set(index, value); }
-        }
-
-        public bool Get(int index)
-        {
-            return (_inner[index >> 5] & (1 << (index & 31))) != 0;
-        }
-
-        public void Set(int index, bool value)
-        {
-            if (value)
-            {
-                _inner[index >> 5] |= (1 << (index & 31));
-                SetCount++;
-            }
-            else
-            {
-                _inner[index >> 5] &= ~(1 << (index & 31));
-                SetCount--;
-            }
-        }
-
-        public int GetEndRangeCount()
-        {
-            int c = 0;
-            for (int i = _inner.Length * 32 -1; i >= 0; i--)
-            {
-                if (Get(i) == false)
-                    break;
-                c++;
-            }
-            return c;
-        }
-
-        public bool HasStartRangeCount(int max)
-        {
-            int c = 0;
-            var len = _inner.Length*32;
-            for (int i = 0; i < len && c < max; i++)
-            {
-                if (Get(i) == false)
-                    break;
-                c++;
-            }
-            return c == max;
-        }
-
-        public Stream ToStream()
-        {
-            var ms = new MemoryStream(260);
-
-            var tmpBuffer = ToBuffer();
-
-            Debug.Assert(BitConverter.ToInt32(tmpBuffer,0) == SetCount); 
-
-            ms.Write(tmpBuffer, 0, tmpBuffer.Length);
-            ms.Position = 0;
-            return ms;
-        }
-
-        private unsafe byte[] ToBuffer()
-        {
-            var tmpBuffer = new byte[(_inner.Length + 1)*sizeof (int)];
-            unsafe
-            {
-                fixed (int* src = _inner)
-                fixed (byte* dest = tmpBuffer)
-                {
-                    *(int*) dest = SetCount;
-                    Memory.Copy(dest + sizeof (int), (byte*) src, tmpBuffer.Length - 1);
                 }
+
+                count += BitOperations.LeadingZeroCount(~_inner[j]);
+                break;
             }
-            return tmpBuffer;
+
+            break;
         }
 
-        public ByteStringContext.InternalScope ToSlice(ByteStringContext context, out Slice str)
+        return count;
+    }
+
+    public bool HasStartRangeCount(int max)
+    {
+        int count = 0;
+        for (int i = 0; i < CountOfItems; i += Vector256<int>.Count)
         {
-            return ToSlice(context, ByteStringType.Immutable, out str);
+            var a = Vector256.LoadUnsafe(ref _inner[i]);
+            var eq = Vector256.Equals(a, Vector256<uint>.AllBitsSet);
+            if (eq == Vector256<uint>.AllBitsSet)
+            {
+                count += 256;
+                if (count >= max)
+                    return true;
+                
+                continue;
+            }
+            var mask = eq.ExtractMostSignificantBits();
+            var idx = BitOperations.TrailingZeroCount(mask) + i;
+            var item = _inner[idx];
+            count += BitOperations.TrailingZeroCount(~item);
+            break;
         }
 
-        public ByteStringContext.InternalScope ToSlice(ByteStringContext context, ByteStringType type, out Slice str)
-        {
-            var buffer = ToBuffer();
-            ByteString byteString;
-            var scope = context.From(buffer, 0, buffer.Length, type, out byteString);
-            str = new Slice(byteString);
-            return scope;
-        }
+        return count >= max;
     }
 }
