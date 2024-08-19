@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -244,6 +245,82 @@ namespace FastTests.Voron.Trees
                 var sorted = freedPages.OrderBy(x => x).ToList();
 
                 Assert.Equal(sorted, retrievedFreePages);
+            }
+        }
+        
+         
+        [Fact]
+        public void ReproduceError()
+        {
+            var bitArray = new BitArray(1024 * 16);
+            using (var tx = Env.WriteTransaction())
+            {
+                void FreePage(int pageNumber)
+                {
+                    bitArray[pageNumber] = true;
+                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, pageNumber);
+                }
+
+                void TryAllocateFromFreeSpace(int numberOfPages)
+                {
+                    var match = Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, numberOfPages);
+                    if (match != null)
+                    {
+                        for (int i = 0; i < numberOfPages; i++)
+                        {
+                            var pageNum = (int)(i + match.Value);
+                            Assert.True(bitArray[pageNum]);
+                            bitArray[pageNum] = false;
+                        }
+                    }
+                }
+                
+                FreePage(3957);
+                FreePage(3958);
+                FreePage(3959);
+                FreePage(3941);
+                FreePage(3942);
+                FreePage(3943);
+                FreePage(3944);
+                FreePage(3945);
+                FreePage(3946);
+                FreePage(3947);
+                FreePage(3948);
+                FreePage(3949);
+                FreePage(3950);
+                FreePage(3951);
+                FreePage(3952);
+                FreePage(3953);
+                FreePage(3954);
+                FreePage(3955);
+                FreePage(3940);
+                
+                TryAllocateFromFreeSpace(1);
+                TryAllocateFromFreeSpace(16);
+                TryAllocateFromFreeSpace(256);
+                
+                FreePage(4229);
+                FreePage(4230);
+                FreePage(4231);
+                FreePage(4213);
+                FreePage(4214);
+                FreePage(4215);
+                FreePage(4216);
+                FreePage(4217);
+                FreePage(4218);
+                FreePage(4219);
+                FreePage(4220);
+                FreePage(4221);
+                FreePage(4222);
+                FreePage(4223);
+                FreePage(4224);
+                FreePage(4225);
+                FreePage(4226);
+                FreePage(4227);
+                FreePage(3940);
+                TryAllocateFromFreeSpace(1);
+                TryAllocateFromFreeSpace(16);
+                TryAllocateFromFreeSpace(256);
             }
         }
     }
