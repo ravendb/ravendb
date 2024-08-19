@@ -81,23 +81,23 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
             parameter.DbType = DbType.String;
     }
 
-    protected override void SetPrimaryKeyParamValue(ToRelationalDatabaseItem itemToReplicate, DbParameter pkParam)
+    protected override void SetPrimaryKeyParamValue(RelationalDatabaseItem itemToReplicate, DbParameter pkParam)
     {
         pkParam.Value = itemToReplicate.DocumentId.ToString();
         EnsureParamTypeSupportedByDbProvider(pkParam);
     }
 
-    protected override string GetPostInsertIntoStartSyntax(ToRelationalDatabaseItem itemToReplicate)
+    protected override string GetPostInsertIntoStartSyntax(RelationalDatabaseItem itemToReplicate)
     {
         return "SELECT ";
     }
 
-    protected override string GetPostInsertIntoEndSyntax(ToRelationalDatabaseItem itemToReplicate)
+    protected override string GetPostInsertIntoEndSyntax(RelationalDatabaseItem itemToReplicate)
     {
         return string.Empty;
     }
 
-    protected override string GetPostDeleteSyntax(ToRelationalDatabaseItem itemToDelete)
+    protected override string GetPostDeleteSyntax(RelationalDatabaseItem itemToDelete)
     {
         return string.Empty;
     }

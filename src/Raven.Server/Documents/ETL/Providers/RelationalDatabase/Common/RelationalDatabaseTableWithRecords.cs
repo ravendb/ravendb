@@ -24,9 +24,9 @@ public sealed class RelationalDatabaseTableWithRecords
         InsertOnlyMode = tableWithRecords.InsertOnlyMode;
     }
 
-    public readonly List<ToRelationalDatabaseItem> Inserts = [];
+    public readonly List<RelationalDatabaseItem> Inserts = [];
 
-    public readonly List<ToRelationalDatabaseItem> Deletes = [];
+    public readonly List<RelationalDatabaseItem> Deletes = [];
 
     public static RelationalDatabaseTableWithRecords FromSnowflakeEtlTable(SnowflakeEtlTable snowflakeEtlTable)
     {

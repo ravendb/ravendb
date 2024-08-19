@@ -13,7 +13,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 
-internal abstract class RelationalDatabaseDocumentTransformerBase<TRelationalConnectionString, TRelationalEtlConfiguration>  : EtlTransformer<ToRelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
+internal abstract class RelationalDatabaseDocumentTransformerBase<TRelationalConnectionString, TRelationalEtlConfiguration>  : EtlTransformer<RelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
 where TRelationalConnectionString: ConnectionString
 where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
 {
@@ -87,7 +87,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
             columns.Add(relationalColumn);
         }
 
-        var newItem = new ToRelationalDatabaseItem(Current);
+        var newItem = new RelationalDatabaseItem(Current);
         newItem.Columns = columns;
         
         GetOrAdd(tableName).Inserts.Add(newItem);
@@ -166,7 +166,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
         return _tables.Values;
     }
 
-    public override void Transform(ToRelationalDatabaseItem item, EtlStatsScope stats, EtlProcessState state)
+    public override void Transform(RelationalDatabaseItem item, EtlStatsScope stats, EtlProcessState state)
     {
         _stats = stats;
 

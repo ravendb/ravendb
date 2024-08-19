@@ -2,9 +2,9 @@
 
 namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 
-public sealed class ToRelationalDatabaseItem : ExtractedItem 
+public sealed class RelationalDatabaseItem : ExtractedItem 
 {
-    public ToRelationalDatabaseItem(ToRelationalDatabaseItem item)
+    public RelationalDatabaseItem(RelationalDatabaseItem item)
     {
         Etag = item.Etag;
         DocumentId = item.DocumentId;
@@ -14,11 +14,11 @@ public sealed class ToRelationalDatabaseItem : ExtractedItem
         ChangeVector = item.ChangeVector;
     }
 
-    public ToRelationalDatabaseItem(Document document, string collection) : base(document, collection, EtlItemType.Document)
+    public RelationalDatabaseItem(Document document, string collection) : base(document, collection, EtlItemType.Document)
     {
     }
 
-    public ToRelationalDatabaseItem(Tombstone tombstone, string collection) : base(tombstone, collection, EtlItemType.Document)
+    public RelationalDatabaseItem(Tombstone tombstone, string collection) : base(tombstone, collection, EtlItemType.Document)
     {
     }
 

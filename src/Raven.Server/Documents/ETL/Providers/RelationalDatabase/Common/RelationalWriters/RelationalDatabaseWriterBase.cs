@@ -144,7 +144,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         _tx.Rollback();
     }
 
-    private int InsertItems(string tableName, string pkName, List<ToRelationalDatabaseItem> toInsert, Action<DbCommand> commandCallback, CancellationToken token)
+    private int InsertItems(string tableName, string pkName, List<RelationalDatabaseItem> toInsert, Action<DbCommand> commandCallback, CancellationToken token)
     {
         var inserted = 0;
 
@@ -228,7 +228,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         }
     }
 
-    public int DeleteItems(string tableName, string pkName, bool parameterize, List<ToRelationalDatabaseItem> toDelete, Action<DbCommand> commandCallback,
+    public int DeleteItems(string tableName, string pkName, bool parameterize, List<RelationalDatabaseItem> toDelete, Action<DbCommand> commandCallback,
         CancellationToken token)
     {
         const int maxParams = 1000;
@@ -319,13 +319,13 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
 
     protected abstract void EnsureParamTypeSupportedByDbProvider(DbParameter parameter);
 
-    protected abstract void SetPrimaryKeyParamValue(ToRelationalDatabaseItem itemToReplicate, DbParameter pkParam);
+    protected abstract void SetPrimaryKeyParamValue(RelationalDatabaseItem itemToReplicate, DbParameter pkParam);
 
-    protected abstract string GetPostInsertIntoStartSyntax(ToRelationalDatabaseItem itemToReplicate);
+    protected abstract string GetPostInsertIntoStartSyntax(RelationalDatabaseItem itemToReplicate);
     
-    protected abstract string GetPostInsertIntoEndSyntax(ToRelationalDatabaseItem itemToReplicate);
+    protected abstract string GetPostInsertIntoEndSyntax(RelationalDatabaseItem itemToReplicate);
 
-    protected abstract string GetPostDeleteSyntax(ToRelationalDatabaseItem itemToDelete);
+    protected abstract string GetPostDeleteSyntax(RelationalDatabaseItem itemToDelete);
         
     protected abstract string GetAfterDeleteWhereIdentifierBeforeInExtraSyntax();
 
@@ -469,7 +469,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         };
     }
 
-    public DbCommand GetInsertCommand(string tableName, string pkName, ToRelationalDatabaseItem itemToReplicate)
+    public DbCommand GetInsertCommand(string tableName, string pkName, RelationalDatabaseItem itemToReplicate)
     {
         var cmd = CreateCommand();
         
@@ -523,7 +523,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         return cmd;
     }
 
-    public DbCommand GetDeleteCommand(string tableName, string pkName, List<ToRelationalDatabaseItem> toDeleteSqlItems, int currentToDeleteIndex, bool parameterize, int maxParams, out int countOfDeletes)
+    public DbCommand GetDeleteCommand(string tableName, string pkName, List<RelationalDatabaseItem> toDeleteSqlItems, int currentToDeleteIndex, bool parameterize, int maxParams, out int countOfDeletes)
     {
         var cmd = CreateCommand();
         cmd.Parameters.Clear();

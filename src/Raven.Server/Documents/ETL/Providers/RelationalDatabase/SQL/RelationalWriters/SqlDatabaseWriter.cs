@@ -136,22 +136,22 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
         // empty by design - sql etl should support all db types todo: try to make it sure in SetValue method
     }
 
-    protected override void  SetPrimaryKeyParamValue(ToRelationalDatabaseItem itemToReplicate, DbParameter pkParam)
+    protected override void  SetPrimaryKeyParamValue(RelationalDatabaseItem itemToReplicate, DbParameter pkParam)
     { 
         pkParam.Value = itemToReplicate.DocumentId.ToString();
     }
 
-    protected override string GetPostInsertIntoStartSyntax(ToRelationalDatabaseItem itemToReplicate)
+    protected override string GetPostInsertIntoStartSyntax(RelationalDatabaseItem itemToReplicate)
     {
         return "\r\nVALUES(";
     }
 
-    protected override string GetPostInsertIntoEndSyntax(ToRelationalDatabaseItem itemToReplicate)
+    protected override string GetPostInsertIntoEndSyntax(RelationalDatabaseItem itemToReplicate)
     {
         return _isSqlServerFactoryType && _sqlEtlConfiguration.ForceQueryRecompile ? ") OPTION(RECOMPILE)" : ")";
     }
 
-    protected override string GetPostDeleteSyntax(ToRelationalDatabaseItem itemToDelete)
+    protected override string GetPostDeleteSyntax(RelationalDatabaseItem itemToDelete)
     {
         return _isSqlServerFactoryType && _sqlEtlConfiguration.ForceQueryRecompile ? " OPTION(RECOMPILE)" : string.Empty;
     }

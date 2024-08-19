@@ -19,7 +19,7 @@ using Raven.Server.Utils;
 namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 
 public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRelationalConnectionString>
-    : EtlProcess<ToRelationalDatabaseItem, RelationalDatabaseTableWithRecords, TRelationalEtlConfiguration, TRelationalConnectionString, EtlStatsScope, EtlPerformanceOperation>
+    : EtlProcess<RelationalDatabaseItem, RelationalDatabaseTableWithRecords, TRelationalEtlConfiguration, TRelationalConnectionString, EtlStatsScope, EtlPerformanceOperation>
     where TRelationalConnectionString : ConnectionString
     where TRelationalEtlConfiguration : EtlConfiguration<TRelationalConnectionString>
 {
@@ -34,35 +34,35 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
 
     public abstract override EtlType EtlType { get; }
     
-    protected override IEnumerator<ToRelationalDatabaseItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
+    protected override IEnumerator<RelationalDatabaseItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
     {
         return new DocumentsToRelationalDatabaseItems(docs, collection);
     }
     
-    protected override IEnumerator<ToRelationalDatabaseItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
+    protected override IEnumerator<RelationalDatabaseItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
     {
         return new TombstonesToRelationalDatabaseItems(tombstones, collection);
     }
     
-    protected override IEnumerator<ToRelationalDatabaseItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
+    protected override IEnumerator<RelationalDatabaseItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
         List<string> collections)
     {
         throw new NotSupportedException($"Attachment tombstones aren't supported by {Configuration.EtlType.ToString()} ETL");
     }
 
-    protected override IEnumerator<ToRelationalDatabaseItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters,
+    protected override IEnumerator<RelationalDatabaseItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters,
         string collection)
     {
         throw new NotSupportedException($"Counters aren't supported by {Configuration.EtlType.ToString()} ETL");
     }
 
-    protected override IEnumerator<ToRelationalDatabaseItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries,
+    protected override IEnumerator<RelationalDatabaseItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries,
         string collection)
     {
         throw new NotSupportedException($"Time series aren't supported by {Configuration.EtlType.ToString()} ETL");
     }
 
-    protected override IEnumerator<ToRelationalDatabaseItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context,
+    protected override IEnumerator<RelationalDatabaseItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context,
         IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
     {
         throw new NotSupportedException($"Time series aren't supported by {Configuration.EtlType.ToString()} ETL");
@@ -77,7 +77,7 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
 
     public override bool ShouldTrackTimeSeries() => false;
 
-    protected abstract override EtlTransformer<ToRelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(
+    protected abstract override EtlTransformer<RelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(
         DocumentsOperationContext context);
 
     protected override int LoadInternal(IEnumerable<RelationalDatabaseTableWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)

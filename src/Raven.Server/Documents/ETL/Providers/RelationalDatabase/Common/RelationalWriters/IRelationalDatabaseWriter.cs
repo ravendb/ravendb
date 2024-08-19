@@ -5,6 +5,6 @@ namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Relatio
 
 public interface IRelationalDatabaseWriter
 {
-    DbCommand GetInsertCommand(string tableName, string pkName, ToRelationalDatabaseItem itemToReplicate);
-    DbCommand GetDeleteCommand(string tableName, string pkName, List<ToRelationalDatabaseItem> toDeleteSqlItems, int currentToDeleteIndex, bool parametrizeDeletes , int maxParams, out int countOfDeletes);
+    DbCommand GetInsertCommand(string tableName, string pkName, RelationalDatabaseItem itemToReplicate);
+    DbCommand GetDeleteCommand(string tableName, string pkName, List<RelationalDatabaseItem> toDeleteSqlItems, int currentToDeleteIndex, bool parametrizeDeletes , int maxParams, out int countOfDeletes);
 }

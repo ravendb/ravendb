@@ -19,7 +19,7 @@ public class RelationalDatabaseWriterSimulator(IRelationalDatabaseWriter writer,
             yield return insertQuery;
     }
     
-    private IEnumerable<string> GenerateInsertItemCommandText(string tableName, string pkName, List<ToRelationalDatabaseItem> dataForTable, CancellationToken token)
+    private IEnumerable<string> GenerateInsertItemCommandText(string tableName, string pkName, List<RelationalDatabaseItem> dataForTable, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
         
@@ -32,7 +32,7 @@ public class RelationalDatabaseWriterSimulator(IRelationalDatabaseWriter writer,
         }
     }
 
-    private IEnumerable<string> GenerateDeleteItemsCommandText(string tableName, string pkName, bool parameterize, List<ToRelationalDatabaseItem> toSqlItems, CancellationToken token)
+    private IEnumerable<string> GenerateDeleteItemsCommandText(string tableName, string pkName, bool parameterize, List<RelationalDatabaseItem> toSqlItems, CancellationToken token)
     {
         const int maxParams = 1000;
 

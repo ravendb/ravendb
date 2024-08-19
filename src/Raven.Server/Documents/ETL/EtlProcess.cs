@@ -1211,7 +1211,7 @@ namespace Raven.Server.Documents.ETL
                         {
                             sqlEtl.EnsureThreadAllocationStats();
 
-                            var sqlItem = testScript.IsDelete ? new ToRelationalDatabaseItem(tombstone, docCollection) : new ToRelationalDatabaseItem(document, docCollection);
+                            var sqlItem = testScript.IsDelete ? new RelationalDatabaseItem(tombstone, docCollection) : new RelationalDatabaseItem(document, docCollection);
 
                             var transformed = sqlEtl.Transform(new[] { sqlItem }, context, new EtlStatsScope(new EtlRunStats()),
                                 new EtlProcessState());
@@ -1383,7 +1383,7 @@ namespace Raven.Server.Documents.ETL
                         {
                             snowflakeEtl.EnsureThreadAllocationStats();
 
-                            var snowflakeItem = testScript.IsDelete ? new ToRelationalDatabaseItem(tombstone, docCollection) : new ToRelationalDatabaseItem(document, docCollection);
+                            var snowflakeItem = testScript.IsDelete ? new RelationalDatabaseItem(tombstone, docCollection) : new RelationalDatabaseItem(document, docCollection);
 
                             var transformed = snowflakeEtl.Transform(new[] { snowflakeItem }, context, new EtlStatsScope(new EtlRunStats()),
                                 new EtlProcessState());
