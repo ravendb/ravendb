@@ -716,6 +716,101 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
         }
     }
     
+    
+    [RequiresMsSqlRetryTheory(delayBetweenRetriesMs: 1000)]
+    [InlineData(RavenDatabaseMode.Single)]
+    [InlineData(RavenDatabaseMode.Sharded)]
+    public async Task VarcharAndNVarcharFunctionsArentAvailable(RavenDatabaseMode databaseMode)
+    {
+        using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
+        {
+            using (WithSnowflakeDatabase(out var connectionString, out var _, out var _))
+            {
+                CreateSnowflakeTable(connectionString,
+                    "create or replace table USERS (ID VARCHAR(50), FIRSTNAME VARCHAR(30), LASTNAME VARCHAR(30), FIRSTNAME2 NVARCHAR(30), LASTNAME2 NVARCHAR(30));");
+
+                const string docId = "users/1-A";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Joe Doń" });
+
+                    await session.SaveChangesAsync();
+                }
+                
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SnowflakeConnectionString>(new SnowflakeConnectionString
+                {
+                    Name = "simulate",
+                    ConnectionString = connectionString,
+                }));
+                Assert.NotNull(result1.RaftCommandIndex);
+
+                var database = await Etl.GetDatabaseFor(store, docId);
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    var testResult = SnowflakeEtl.TestScript(
+                        new TestRelationalDatabaseEtlScript<SnowflakeConnectionString, SnowflakeEtlConfiguration>
+                        {
+                            PerformRolledBackTransaction = true,
+                            DocumentId = docId,
+                            IsDelete = false,
+                            Configuration = new SnowflakeEtlConfiguration()
+                            {
+                                Name = "CannotUseVarcharAndNVarcharFunctions",
+                                ConnectionStringName = "simulate",
+                                SnowflakeTables = { new SnowflakeEtlTable { TableName = "Users", DocumentIdColumn = "Id", InsertOnlyMode = false }, },
+                                Transforms = 
+                                {
+                                    new Transformation 
+                                    {
+                                        Name = "varchartest",
+                                        Collections = {"Users"},
+                                        Script = @"
+var names = this.Name.split(' ');
+
+loadToUsers(
+{
+    FirstName: varchar(names[0], 30),
+    LastName: varchar(names[1], 30),
+    FirstName2: nvarchar(names[0]),
+    LastName2:  nvarchar(names[1]),
+});
+
+// Checking if varchar and nvarchar functions exist in the current scope
+let varcharExists = typeof varchar === 'function';
+let nvarcharExists = typeof nvarchar === 'function';
+
+// Creating an object to store the result
+let result = {
+    varcharExists: varcharExists,
+    nvarcharExists: nvarcharExists
+};
+
+// Outputting the result
+output(result);
+"
+                                    }   
+                                }
+                            }
+                        }, database, database.ServerStore, context);
+                    
+                    var result = (RelationalDatabaseEtlTestScriptResult)testResult;
+                    Assert.Equal(0, result.TransformationErrors.Count);
+                    Assert.Equal(0, result.LoadErrors.Count);
+                    Assert.Equal(0, result.SlowSqlWarnings.Count);
+
+                    Assert.Equal(1, result.Summary.Count);
+
+                    var users = result.Summary.First(x => x.TableName == "Users");
+
+                    Assert.Equal(2, users.Commands.Length);  // insert & delete
+
+                    Assert.Equal("{\"varcharExists\":false,\"nvarcharExists\":false}", result.DebugOutput[0]);
+                }
+            }
+        }
+    }
+    
     [RequiresMsSqlRetryTheory(delayBetweenRetriesMs: 1000)]
     [InlineData(RavenDatabaseMode.Single, true)]
     [InlineData(RavenDatabaseMode.Single, false)]
@@ -913,8 +1008,8 @@ for (var i = 0; i < attachments.length; i++)
     loadToAttachments(attachment);
 }
 "
-                            }
                         }
+                    }
                 }, new SnowflakeConnectionString() { Name = "test", ConnectionString = connectionString });
 
                 etlDone.Wait(TimeSpan.FromMinutes(5));
