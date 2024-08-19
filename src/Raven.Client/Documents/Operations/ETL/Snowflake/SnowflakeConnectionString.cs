@@ -31,7 +31,13 @@ public sealed class SnowflakeConnectionString : ConnectionString
         var accountId = SqlConnectionStringParser.GetConnectionStringValue(ConnectionString, ["Account"]);
         var database = SqlConnectionStringParser.GetConnectionStringValue(ConnectionString, ["Database", "Db"]);
         var schema = SqlConnectionStringParser.GetConnectionStringValue(ConnectionString, ["Schema"]);
-        return $"{accountId}/{database}.{schema}";
+        var warehouse = SqlConnectionStringParser.GetConnectionStringValue(ConnectionString, ["Warehouse"]);
+        
+        var dest =  $"{accountId}/{database}.{schema}";
+        if (warehouse is not null)
+            dest += $"(Warehouse: '{warehouse}')";
+
+        return dest;
     }
 
     public override DynamicJsonValue ToJson()
