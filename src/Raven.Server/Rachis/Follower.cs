@@ -761,8 +761,10 @@ namespace Raven.Server.Rachis
 
             // if leader / candidate, this remove them from play and revert to follower mode
             await _engine.SetNewStateAsync(RachisState.Follower, this, _term,
-                $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}");
-            _engine.LeaderTag = _connection.Source;
+                $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}", beforeStateChangedEvent: () =>
+                {
+                    _engine.LeaderTag = _connection.Source;
+                });
 
             _debugRecorder.Record("Follower connection accepted");
 
