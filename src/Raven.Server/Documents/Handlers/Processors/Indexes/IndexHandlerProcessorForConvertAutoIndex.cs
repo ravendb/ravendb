@@ -56,6 +56,8 @@ internal class IndexHandlerProcessorForConvertAutoIndex<TRequestHandler, TOperat
         var name = GetName();
         var type = GetConvertType();
 
+        HttpContext.Response.Headers[Constants.Headers.ContentType] = "text/plain;charset=utf-8";
+
         using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
         {
