@@ -70,26 +70,22 @@ internal class IndexHandlerProcessorForConvertAutoIndex<TRequestHandler, TOperat
             switch (type)
             {
                 case ConversionOutputType.CsharpClass:
+                    var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex);
+
                     if (HasDownload())
-                    {
                         SetFileToDownload($"{sanitizedIndexName}.cs");
-                    }
 
                     await using (var writer = new StreamWriter(RequestHandler.ResponseBodyStream()))
-                    {
-                        var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex);
                         await writer.WriteLineAsync(result);
-                    }
                     break;
                 case ConversionOutputType.Json:
+                    var definition = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
+
                     if (HasDownload())
-                    {
                         SetFileToDownload($"{sanitizedIndexName}.json");
-                    }
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                     {
-                        var definition = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
                         writer.WriteStartObject();
 
                         writer.WritePropertyName("Indexes");
