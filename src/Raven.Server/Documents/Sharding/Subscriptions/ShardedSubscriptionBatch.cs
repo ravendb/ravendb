@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
@@ -109,11 +110,11 @@ public sealed class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJs
             // we have non-existing included document, need to return null for them to the actual client
             _result.Includes.Add(Context.ReadObject(new DynamicJsonValue
             {
-                [Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                 {
-                    [Client.Constants.Documents.Metadata.Id] = id
-                },
-                [nameof(NonPersistentDocumentFlags)] = NonPersistentDocumentFlags.AllowDataAsNull.ToString()
+                    [Constants.Documents.Metadata.Id] = id,
+                    [Constants.Documents.Metadata.Sharding.Subscription.NonPersistentFlags] = nameof(NonPersistentDocumentFlags.AllowDataAsNull)
+                }
             }, id));
         }
     }
