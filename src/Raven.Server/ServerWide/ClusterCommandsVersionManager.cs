@@ -189,10 +189,10 @@ namespace Raven.Server.ServerWide
             [nameof(DeletePrefixedShardingSettingCommand)] = 62_000,
             [nameof(UpdatePrefixedShardingSettingCommand)] = 62_000,
 
-            [nameof(AddSnowflakeEtlCommand)] = 61_000,
-            [nameof(UpdateSnowflakeEtlCommand)] = 61_000,
-            [nameof(PutSnowflakeConnectionStringCommand)] = 61_000,
-            [nameof(RemoveSnowflakeConnectionStringCommand)] = 61_000,
+            [nameof(AddSnowflakeEtlCommand)] = 62_000,
+            [nameof(UpdateSnowflakeEtlCommand)] = 62_000,
+            [nameof(PutSnowflakeConnectionStringCommand)] = 62_000,
+            [nameof(RemoveSnowflakeConnectionStringCommand)] = 62_000,
         };
 
         public bool CanPutCommand(string command)
