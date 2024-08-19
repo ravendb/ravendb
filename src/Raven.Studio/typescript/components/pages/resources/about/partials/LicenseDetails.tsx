@@ -500,6 +500,14 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 developer: { value: true },
                 fieldInLicense: "HasMonitoringEndpoints",
             },
+            {
+                name: "OpenTelemetry",
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: true },
+                developer: { value: true },
+                fieldInLicense: "HasMonitoringEndpoints",
+            },
         ],
     },
     {
