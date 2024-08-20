@@ -16,6 +16,7 @@ import DatabaseUtils from "components/utils/DatabaseUtils";
 import getDatabasesForStudioCommand from "commands/resources/getDatabasesForStudioCommand";
 import getDatabaseForStudioCommand from "commands/resources/getDatabaseForStudioCommand";
 import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
+import convertedIndexesToStaticStorage = require("common/storage/convertedIndexesToStaticStorage");
 
 class databasesManager {
 
@@ -39,7 +40,8 @@ class databasesManager {
         (q, n) => recentQueriesStorage.onDatabaseDeleted(q, n),
         (q, n) => starredDocumentsStorage.onDatabaseDeleted(q, n),
         (q, n) => savedPatchesStorage.onDatabaseDeleted(q, n),
-        (q, n) => mergedIndexesStorage.onDatabaseDeleted(q, n)
+        (q, n) => mergedIndexesStorage.onDatabaseDeleted(q, n),
+        (q, n) => convertedIndexesToStaticStorage.onDatabaseDeleted(q, n),
     ];
 
     getDatabaseByName(name: string): database {

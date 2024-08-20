@@ -46,10 +46,17 @@ internal class IndexHandlerProcessorForConvertAutoIndex<TRequestHandler, TOperat
         return RequestHandler.GetBoolValueQueryString("download", required: false) ?? false;
     }
 
+    private void SetFileToDownload(string fileName)
+    {
+        HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{fileName}";
+    }
+
     public override async ValueTask ExecuteAsync()
     {
         var name = GetName();
         var type = GetConvertType();
+
+        HttpContext.Response.Headers[Constants.Headers.ContentType] = "text/plain;charset=utf-8";
 
         using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
@@ -58,27 +65,27 @@ internal class IndexHandlerProcessorForConvertAutoIndex<TRequestHandler, TOperat
             if (record.AutoIndexes.TryGetValue(name, out var autoIndex) == false)
                 throw IndexDoesNotExistException.ThrowForAuto(name);
 
+            var sanitizedIndexName = AutoToStaticIndexConverter.GetSanitizedIndexName(autoIndex);
+
             switch (type)
             {
                 case ConversionOutputType.CsharpClass:
-                    var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex, out var csharpClassName);
+                    var result = AutoToStaticIndexConverter.Instance.ConvertToAbstractIndexCreationTask(autoIndex);
 
                     if (HasDownload())
-                    {
-                        csharpClassName = $"{csharpClassName}.cs";
-                        HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = $"attachment; filename=\"{csharpClassName}\"; filename*=UTF-8''{csharpClassName}";
-                    }
+                        SetFileToDownload($"{sanitizedIndexName}.cs");
 
                     await using (var writer = new StreamWriter(RequestHandler.ResponseBodyStream()))
-                    {
                         await writer.WriteLineAsync(result);
-                    }
                     break;
                 case ConversionOutputType.Json:
+                    var definition = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
+
+                    if (HasDownload())
+                        SetFileToDownload($"{sanitizedIndexName}.json");
+
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                     {
-                        var definition = AutoToStaticIndexConverter.Instance.ConvertToIndexDefinition(autoIndex);
-
                         writer.WriteStartObject();
 
                         writer.WritePropertyName("Indexes");
@@ -97,12 +104,12 @@ internal class IndexHandlerProcessorForConvertAutoIndex<TRequestHandler, TOperat
             }
         }
     }
+}
 
-    private enum ConversionOutputType
-    {
-        CsharpClass,
-        Json
-    }
+public enum ConversionOutputType
+{
+    CsharpClass,
+    Json
 }
 
 public class AutoToStaticIndexConverter
@@ -277,7 +284,7 @@ public class AutoToStaticIndexConverter
         }
     }
 
-    public string ConvertToAbstractIndexCreationTask(AutoIndexDefinition autoIndex, out string csharpClassName)
+    public string ConvertToAbstractIndexCreationTask(AutoIndexDefinition autoIndex)
     {
         if (autoIndex == null)
             throw new ArgumentNullException(nameof(autoIndex));
@@ -286,7 +293,7 @@ public class AutoToStaticIndexConverter
 
         var sb = new StringBuilder();
 
-        csharpClassName = GenerateClassName(autoIndex);
+        var csharpClassName = GetSanitizedIndexName(autoIndex);
         var className = autoIndex.Collection is Constants.Documents.Collections.AllDocumentsCollection or Constants.Documents.Collections.EmptyCollection
             ? "object"
             : Inflector.Singularize(autoIndex.Collection);
@@ -492,13 +499,13 @@ public class AutoToStaticIndexConverter
                 sb.AppendLine(");");
             }
         }
+    }
 
-        static string GenerateClassName(AutoIndexDefinition autoIndex)
-        {
-            var name = autoIndex.Name[AutoIndexNameFinder.AutoIndexPrefix.Length..];
-            name = Regex.Replace(name, @"[^\w\d]", "_");
-            return "Index_" + name;
-        }
+    public static string GetSanitizedIndexName(AutoIndexDefinition autoIndex)
+    {
+        var name = autoIndex.Name[AutoIndexNameFinder.AutoIndexPrefix.Length..];
+        name = Regex.Replace(name, @"[^\w\d]", "_");
+        return "Index_" + name;
     }
 
     private static void HandleMapFields(StringBuilder sb, AutoIndexDefinition autoIndex, AutoIndexConversionContext context)
