@@ -181,8 +181,6 @@ namespace Voron
 
         public Action<StorageEnvironment> BeforeSchemaUpgrade { get; set; }
 
-        public Action<StorageEnvironment> AfterDatabaseCreation { get; set; }
-
         public ScratchSpaceUsageMonitor ScratchSpaceUsage { get; }
 
         public TimeSpan LongRunningFlushingWarning = TimeSpan.FromMinutes(5);

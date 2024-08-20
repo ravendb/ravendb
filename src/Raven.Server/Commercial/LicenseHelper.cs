@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading;
 using Newtonsoft.Json;
 using Raven.Client.Exceptions.Commercial;
-using Raven.Client.Properties;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Json;
@@ -17,7 +16,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
-using Voron;
 
 namespace Raven.Server.Commercial
 {
@@ -86,20 +84,6 @@ namespace Raven.Server.Commercial
             }
 
             return null;
-        }
-
-        internal static bool TryValidateLicenseExpirationDate(License license, out DateTime expirationDate)
-        {
-            expirationDate = DateTime.MinValue;
-
-            if (license == null)
-                return false;
-
-            var licenseStatus = LicenseManager.GetLicenseStatus(license);
-            if (licenseStatus.Expiration.HasValue)
-                expirationDate = licenseStatus.Expiration.Value;
-
-            return expirationDate >= RavenVersionAttribute.Instance.ReleaseDate;
         }
 
         public License TryGetLicenseFromPath(bool throwOnFailure)
@@ -286,127 +270,6 @@ namespace Raven.Server.Commercial
 
             var licenseString = JsonConvert.SerializeObject(newLicense, Formatting.Indented);
             File.WriteAllText(_serverStore.Configuration.Licensing.LicensePath.FullPath, licenseString);
-        }
-
-        public static bool TryValidateAndHandleLicense(ServerStore serverStore, string licenseJson, Guid? inStorageLicenseId, LicenseVerificationErrorBuilder verificationErrorBuilder)
-        {
-            if (TryDeserializeLicense(licenseJson, out var deserializedLicense) == false)
-            {
-                verificationErrorBuilder.AppendDeserializationErrorMessage(licenseJson);
-            }
-            else
-            {
-                if (TryValidateLicenseExpirationDate(deserializedLicense, out var deserializedLicenseExpirationDate))
-                {
-                    serverStore.LicenseManager.OnBeforeInitialize += () => serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure).Wait(serverStore.ServerShutdown);
-                    return true;
-                }
-
-                verificationErrorBuilder.AppendConfigurationLicenseExpiredMessage(inStorageLicenseId, deserializedLicense.Id, deserializedLicenseExpirationDate);
-            }
-
-            return false;
-        }
-
-        public class LicenseVerificationErrorBuilder
-        {
-            private readonly RavenConfiguration _configuration;
-            private readonly StorageEnvironment _storageEnvironment;
-            private readonly TransactionContextPool _contextPool;
-            private readonly StringBuilder _errorBuilder = new();
-            private bool _isInStorageLicenseExpired;
-            private string _configurationKeyInAction;
-
-            public LicenseVerificationErrorBuilder(RavenConfiguration configuration, StorageEnvironment storageEnvironment, TransactionContextPool contextPool)
-            {
-                _configuration = configuration;
-                _storageEnvironment = storageEnvironment;
-                _contextPool = contextPool;
-            }
-
-            public LicenseVerificationErrorBuilder()
-            {
-            }
-
-            public void AppendInStorageLicenseExpiredMessage(DateTime expirationDate)
-            {
-                _isInStorageLicenseExpired = true;
-
-                _errorBuilder.AppendLine("The RavenDB server cannot start due to an expired license. Please review the details below to resolve the issue:");
-                _errorBuilder.AppendLine($"- License Expiration Date: {FormattedDateTime(expirationDate)}");
-                _errorBuilder.AppendLine($"- Server Version Release Date: {FormattedDateTime(RavenVersionAttribute.Instance.ReleaseDate)}");
-            }
-
-            public void AppendLicenseMissingMessage()
-            {
-                _errorBuilder.AppendLine("The RavenDB server cannot start due to a missing license. Please review the details below to resolve the issue:");
-            }
-
-            public void AppendConfigurationKeyUsageAttempt(string configurationKey)
-            {
-                _configurationKeyInAction = configurationKey;
-
-                _errorBuilder.AppendLine();
-                _errorBuilder.AppendLine($"We attempted to obtain a valid license using the configuration key '{configurationKey}', but this process was not successful for the following reason:");
-            }
-
-            public void AppendFileReadErrorMessage(Exception e)
-            {
-                _errorBuilder.AppendLine("- An error occurred while trying to read the license from the file:");
-                _errorBuilder.AppendLine($"  {e.Message}");
-            }
-
-            public void AppendResolutionSuggestions()
-            {
-                AppendGeneralSuggestions();
-
-                // We can suggest a downgrade only if in-storage license is expired
-                if (_isInStorageLicenseExpired)
-                {
-                    // Getting build number from the license storage, just in case the license is expired and we have ability to downgrade
-                    var licenseStorage = new LicenseStorage();
-                    licenseStorage.Initialize(_storageEnvironment, _contextPool);
-                    var buildInfo = licenseStorage.GetBuildInfo();
-
-                    if (buildInfo != null)
-                        _errorBuilder.AppendLine($"- As a temporary measure, consider downgrading to the last working build ({buildInfo.FullVersion}).");
-                }
-
-                AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(_configuration.Licensing.ThrowOnInvalidOrMissingLicense, _isInStorageLicenseExpired);
-            }
-
-            public void AppendGeneralSuggestions()
-            {
-                _errorBuilder.AppendLine();
-                _errorBuilder.AppendLine("To resolve this issue, you may consider the following options:");
-                _errorBuilder.AppendLine("- Ensure your license key is correctly embedded in 'settings.json', set as an environment variable, or included in your 'ServerOptions' if using an embedded server or Raven.TestDriver.");
-                _errorBuilder.AppendLine("- Alternatively, check the 'License.Path' in your configuration to ensure it points to a valid 'license.json' file.");
-            }
-
-            public void AppendConfigurationLicenseExpiredMessage(Guid? inStorageLicenseId, Guid deserializedLicenseId, DateTime deserializedLicenseExpirationDate)
-            {
-                _errorBuilder.AppendLine(deserializedLicenseId == inStorageLicenseId
-                    ? "- The license obtained matches the in-storage license but is also expired."
-                    : $"- The license '{deserializedLicenseId}' obtained from '{_configurationKeyInAction}' has an expiration date of '{FormattedDateTime(deserializedLicenseExpirationDate)}' and is also expired.");
-            }
-
-            public void AppendDeserializationErrorMessage(string licenseContent)
-            {
-                if (string.IsNullOrWhiteSpace(licenseContent))
-                    _errorBuilder.AppendLine("- The license is not provided in the configuration or environment variable.");
-                else
-                    _errorBuilder.AppendLine($"- Could not parse the license content: '{licenseContent}'.");
-            }
-
-            public void AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(bool throwOnInvalidOrMissingLicenseOptionEnabled, bool isInStorageLicenseExpired)
-            {
-                if (throwOnInvalidOrMissingLicenseOptionEnabled && isInStorageLicenseExpired == false)
-                    _errorBuilder.AppendLine($"- Configure the '{RavenConfiguration.GetKey(x => x.Licensing.ThrowOnInvalidOrMissingLicense)}' option by setting it to 'False' to disable this strict licensing requirement for server startup.");
-            }
-
-            public override string ToString() => _errorBuilder.ToString();
-
-            private static string FormattedDateTime(DateTime dateTime) => dateTime.ToString("dd MMMM yyyy");
         }
     }
 }

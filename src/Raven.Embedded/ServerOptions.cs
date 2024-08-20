@@ -21,13 +21,7 @@ namespace Raven.Embedded
 
         public string DotNetPath { get; set; } = "dotnet";
 
-        [Obsolete(
-            $"This property is no longer used and will be removed in the next version, please use '{nameof(LicenseConfiguration)}.{nameof(LicenseOptions.EulaAccepted)}' instead.")]
-        public bool AcceptEula
-        {
-            get => LicenseConfiguration.EulaAccepted;
-            set => LicenseConfiguration.EulaAccepted = value;
-        }
+        public bool AcceptEula { get; set; } = true;
 
         public string ServerUrl { get; set; }
 
@@ -52,7 +46,10 @@ namespace Raven.Embedded
             var cert = new X509Certificate2(certificate, certPassword);
             Security = new SecurityOptions
             {
-                CertificatePath = certificate, CertificatePassword = certPassword, ClientCertificate = cert, ServerCertificateThumbprint = cert.Thumbprint
+                CertificatePath = certificate,
+                CertificatePassword = certPassword,
+                ClientCertificate = cert,
+                ServerCertificateThumbprint = cert.Thumbprint
             };
 
             return this;
@@ -83,6 +80,7 @@ namespace Raven.Embedded
             return this;
         }
 
+
         public class SecurityOptions
         {
             internal SecurityOptions() { }
@@ -94,18 +92,7 @@ namespace Raven.Embedded
             public string CertificateLoadExecArguments { get; internal set; }
             public string ServerCertificateThumbprint { get; internal set; }
         }
-
-        public LicenseOptions LicenseConfiguration { get; set; } = new();
-
-        public class LicenseOptions
-        {
-            public string License { get; set; }
-            public string LicensePath { get; set; }
-            public bool EulaAccepted { get; set; }
-            public bool DisableAutoUpdate { get; set; }
-            public bool DisableAutoUpdateFromApi { get; set; }
-            public bool DisableLicenseSupportCheck { get; set; } = true;
-            public bool ThrowOnInvalidOrMissingLicense { get; set; }
-        }
     }
+
+
 }

@@ -47,6 +47,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("License.SkipLeasingErrorsLogging", ConfigurationEntryScope.ServerWideOnly)]
         public bool SkipLeasingErrorsLogging { get; set; }
 
+
         [Description("EXPERT ONLY. Disable automatic updating of the license")]
         [DefaultValue(false)]
         [ConfigurationEntry("License.DisableAutoUpdate", ConfigurationEntryScope.ServerWideOnly)]
@@ -57,14 +58,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("License.DisableAutoUpdateFromApi", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableAutoUpdateFromApi { get; set; }
 
+
         [Description("EXPERT ONLY. Disable checking the support options for the license")]
         [DefaultValue(false)]
         [ConfigurationEntry("License.DisableLicenseSupportCheck", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableLicenseSupportCheck { get; set; }
-
-        [Description("EXPERT ONLY. Throws an exception if the license cannot be activated or is not present")]
-        [DefaultValue(false)]
-        [ConfigurationEntry("License.ThrowOnInvalidOrMissingLicense", ConfigurationEntryScope.ServerWideOnly)]
-        public bool ThrowOnInvalidOrMissingLicense { get; set; }
     }
 }
