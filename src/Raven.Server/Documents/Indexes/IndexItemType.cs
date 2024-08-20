@@ -6,16 +6,16 @@ namespace Raven.Server.Documents.Indexes
     {
         None,
 
-        [Description("Document Item")]
+        [Description("document")]
         Document,
 
-        [Description("Time Series Item")]
+        [Description("time series item")]
         TimeSeries,
 
-        [Description("Time Series Deleted Range Item")]
+        [Description("time series deleted range")]
         TimeSeriesDeletedRange,
 
-        [Description("Counter Item")]
+        [Description("counter")]
         Counters
     }
 }
