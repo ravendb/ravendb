@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -37,6 +38,7 @@ namespace Sparrow
         /// - While it could be possible to avoid the usage of the shift operation, we are looking into a portable
         ///   version with the same behavior on Intel and ARM; even if it is at the expense of performance in this case.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int MoveMask(in Vector256<byte> input)
         {
             if (Avx2.IsSupported)
@@ -102,6 +104,7 @@ namespace Sparrow
         /// - While it could be possible to avoid the usage of the shift operation, we are looking into a portable
         ///   version with the same behavior on Intel and ARM; even if it is at the expense of performance in this case.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int MoveMask(in Vector128<byte> input)
         {
             if (Sse2.IsSupported)
