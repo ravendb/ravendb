@@ -57,6 +57,8 @@ import compoundField from "models/database/index/compoundField";
 import getDatabaseLicenseLimitsUsage = require("commands/licensing/getDatabaseLicenseLimitsUsage");
 import { LicenseLimitReachStatus, getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import getClusterLicenseLimitsUsage = require("commands/licensing/getClusterLicenseLimitsUsage");
+import convertToStaticDialog = require("viewmodels/database/indexes/convertToStaticDialog");
+import convertedIndexesToStaticStorage = require("common/storage/convertedIndexesToStaticStorage");
 
 class editIndex extends shardViewModelBase {
     
@@ -351,7 +353,7 @@ class editIndex extends shardViewModelBase {
                 if (indexToEditName) {
                     const canActivateResult = $.Deferred<canActivateResultDto>();
                     
-                    // before loading index from server check if it isn't merge suggestion
+                    // before loading index from server check if it isn't merge suggestion or converted to static index
                     try {
                         const merged = mergedIndexesStorage.getMergedIndex(db, indexToEditName);
                         if (merged) {
@@ -360,6 +362,15 @@ class editIndex extends shardViewModelBase {
                             this.initIndex();
                             this.originalIndexName = indexToEditName;
                             
+                            canActivateResult.resolve({ can: true });
+                            return canActivateResult;
+                        }
+
+                        const convertedToStatic = convertedIndexesToStaticStorage.getIndex(db.name, indexToEditName);
+                        if (convertedToStatic) {
+                            this.editedIndex(new indexDefinition(convertedToStatic.definition));
+                            this.initIndex();
+
                             canActivateResult.resolve({ can: true });
                             return canActivateResult;
                         }
@@ -1171,6 +1182,11 @@ class editIndex extends shardViewModelBase {
     openOptimizeDialog() {
         eventsCollector.default.reportEvent("index", "optimize");
         app.showBootstrapDialog(new optimizeDialog(this.editedIndex().name()));
+    }
+
+    openConvertToStaticDialog() {
+        eventsCollector.default.reportEvent("index", "convert-to-static");
+        app.showBootstrapDialog(new convertToStaticDialog(this.editedIndex().name(), this.db.name));
     }
 
     formatIndex(mapIndex: number) {

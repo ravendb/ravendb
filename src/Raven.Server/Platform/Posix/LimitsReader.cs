@@ -3,9 +3,11 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Pipelines;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Monitoring.Snmp;
@@ -23,7 +25,43 @@ namespace Raven.Server.Platform.Posix
 
         private static readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
 
-        public static async Task<LimitsInfo> ReadCurrentLimitsAsync()
+        public static Task<LimitsInfo> ReadCurrentLimitsAsync()
+        {
+            if (PlatformDetails.RunningOnLinux)
+                return ReadCurrentLimitsForLinuxAsync();
+
+            if (PlatformDetails.RunningOnWindows)
+                return ReadCurrentLimitsForWindowsAsync();
+
+            throw new NotSupportedException($"Current OS '{RuntimeInformation.OSDescription}' is not supported.");
+        }
+
+        private static async Task<LimitsInfo> ReadCurrentLimitsForWindowsAsync()
+        {
+            if (PlatformDetails.RunningOnWindows == false)
+                throw new InvalidOperationException("Cannot read Current Limits because it requires Windows");
+
+            if (await _lock.WaitAsync(0) == false)
+                return LimitsInfo.Current;
+
+            try
+            {
+                using (var process = Process.GetCurrentProcess())
+                {
+                    LimitsInfo.Current.MapCountCurrent = -1;
+                    LimitsInfo.Current.ThreadsCurrent = process.Threads.Count;
+                    LimitsInfo.Current.SetValues();
+                }
+            }
+            finally
+            {
+                _lock.Release();
+            }
+
+            return LimitsInfo.Current;
+        }
+
+        private static async Task<LimitsInfo> ReadCurrentLimitsForLinuxAsync()
         {
             if (PlatformDetails.RunningOnPosix == false)
                 throw new InvalidOperationException("Cannot read Current Limits because it requires POSIX");

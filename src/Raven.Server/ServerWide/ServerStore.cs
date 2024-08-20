@@ -854,18 +854,14 @@ namespace Raven.Server.ServerWide
             }
 
             CheckSwapOrPageFileAndRaiseNotification();
-            
-            
-            LicenseManager.Initialize(_env, ContextPool);
-            LatestVersionCheck.Instance.Check(this);
         }
 
         public void Initialize()
         {
-            var clusterChanges = new ClusterChanges();
             _sharding = new ShardingStore(this);
             _engine = new RachisConsensus<ClusterStateMachine>(this);
-
+            var clusterChanges = new ClusterChanges();
+            
             var myUrl = GetNodeHttpServerUrl();
             _engine.Initialize(_env, Configuration, clusterChanges, myUrl, Server.Time, out _lastClusterTopologyIndex, ServerShutdown);
 
@@ -887,6 +883,8 @@ namespace Raven.Server.ServerWide
             SorterCompilationCache.Instance.AddServerWideItems(this);
             AnalyzerCompilationCache.Instance.AddServerWideItems(this);
 
+            LicenseManager.Initialize(_env, ContextPool);
+            LatestVersionCheck.Instance.Check(this);
 
             ConcurrentBackupsCounter = new ConcurrentBackupsCounter(Configuration.Backup, LicenseManager);
 

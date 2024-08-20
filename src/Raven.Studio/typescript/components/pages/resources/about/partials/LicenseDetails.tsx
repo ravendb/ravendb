@@ -500,6 +500,14 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 developer: { value: true },
                 fieldInLicense: "HasMonitoringEndpoints",
             },
+            {
+                name: "OpenTelemetry",
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: true },
+                developer: { value: true },
+                fieldInLicense: "HasMonitoringEndpoints",
+            },
         ],
     },
     {
@@ -740,6 +748,14 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
             },
             {
                 name: "ETL to RabbitMQ",
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: true },
+                developer: { value: true },
+                fieldInLicense: "HasQueueEtl",
+            },
+            {
+                name: "ETL to Azure Queue Storage",
                 community: { value: false },
                 professional: { value: false },
                 enterprise: { value: true },
