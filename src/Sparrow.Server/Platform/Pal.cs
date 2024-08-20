@@ -76,9 +76,16 @@ namespace Sparrow.Server.Platform
         public static extern PalFlags.FailCodes rvn_unmap_memory(void* mem,
             Int64 size,
             out Int32 errorCode);
+
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_pager_get_file_size(void* handle,
+                out Int64 total_size,
+                out Int64 phyiscal_size,
+                out Int32 errorCode);
         
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_set_sparse_region_pager(void* mem,
+        public static extern PalFlags.FailCodes rvn_pager_set_sparse_region(void* mem,
             Int64 offset,
             Int64 size,
             out Int32 errorCode);

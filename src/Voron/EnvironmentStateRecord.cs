@@ -16,5 +16,5 @@ public record EnvironmentStateRecord(
     TreeMutableState Root,
     long NextPageNumber,
     (JournalFile Current, long Last4KWritePosition) Journal,
-    object ClientState
-    );
+    object ClientState,
+    List<long> SparsePageRanges);

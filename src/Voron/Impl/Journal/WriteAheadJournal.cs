@@ -41,6 +41,7 @@ using Microsoft.Win32.SafeHandles;
 using System.Runtime.CompilerServices;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform;
+using Voron.Impl.FreeSpace;
 
 namespace Voron.Impl.Journal
 {
@@ -586,10 +587,7 @@ namespace Voron.Impl.Journal
                 };
             }
 
-
-            record StateFromFailedApplyLogsToDataFile(List<PageFromScratchBuffer> Buffers, EnvironmentStateRecord Record);
-
-            private StateFromFailedApplyLogsToDataFile _stateFromPreviousFailedAttempt;
+            private ApplyLogsToDataFileState _applyLogsToDataFileStateFromPreviousFailedAttempt;
 
             public void ApplyLogsToDataFile(CancellationToken token, TimeSpan timeToWait)
             {
@@ -599,9 +597,9 @@ namespace Voron.Impl.Journal
                 if (Monitor.IsEntered(_flushingLock) && _ignoreLockAlreadyTaken == false)
                     throw new InvalidJournalFlushRequestException("Applying journals to the data file has been already requested on the same thread");
 
+                ApplyLogsToDataFileState currentState = null;
                 ByteStringContext byteStringContext = null;
                 bool lockTaken = false;
-                List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree = null;
                 try
                 {
                     ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken();
@@ -626,30 +624,26 @@ namespace Voron.Impl.Journal
 
                     _forTestingPurposes?.OnApplyLogsToDataFileUnderFlushingLock?.Invoke();
 
-                    EnvironmentStateRecord record;
-                    if (_stateFromPreviousFailedAttempt == null)
+                    if (_applyLogsToDataFileStateFromPreviousFailedAttempt != null)
+                    {
+                        // we have to keep this around since TryGetLatestEnvironmentStateToFlush will _consume_ the state
+                        // so until we successfully flush the data, we need to remember to repeat this operation
+                        // flushing can fail because of disk full, etc...
+                    }
+                    else
                     {
                         // RavenDB-13302: we need to force a re-check this before we make decisions here
                         _waj._env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
                         if (_waj._env.TryGetLatestEnvironmentStateToFlush(
                                 uptoTxIdExclusive: _waj._env.ActiveTransactions.OldestTransaction,
-                                out bufferOfPageFromScratchBuffersToFree,
-                                out record) == false)
+                                out _applyLogsToDataFileStateFromPreviousFailedAttempt) == false)
                         {
-                            Debug.Assert(bufferOfPageFromScratchBuffersToFree.Count == 0);
+                            Debug.Assert(_applyLogsToDataFileStateFromPreviousFailedAttempt.Buffers.Count == 0);
                             return; // nothing to do
                         }
 
-                        // we have to keep this around since TryGetLatestEnvironmentStateToFlush will _consume_ the state
-                        // so until we successfully flush the data, we need to remember to repeat this operation
-                        // flushing can fail because of disk full, etc...
-                        _stateFromPreviousFailedAttempt = new StateFromFailedApplyLogsToDataFile(bufferOfPageFromScratchBuffersToFree, record);
+                        Debug.Assert(_applyLogsToDataFileStateFromPreviousFailedAttempt != null);
                     }
-                    else
-                    {
-                        (bufferOfPageFromScratchBuffersToFree, record) = _stateFromPreviousFailedAttempt;
-                    }
-
 
                     var currentTotalCommittedSinceLastFlushPages = TotalCommittedSinceLastFlushPages;
 
@@ -657,7 +651,7 @@ namespace Voron.Impl.Journal
                     try
                     {
                         byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
-                        dataPagerState = ApplyPagesToDataFileFromScratch(record);
+                        dataPagerState = ApplyPagesToDataFileFromScratch(_applyLogsToDataFileStateFromPreviousFailedAttempt);
                     }
                     catch (Exception e) when (e is OutOfMemoryException or EarlyOutOfMemoryException)
                     {
@@ -682,19 +676,20 @@ namespace Voron.Impl.Journal
                     // we can clear this here, since we aren't handling any errors further down this function
                     // any error from here on out is a catastrophic failure, and will be handled by recovering from 
                     // scratch
-                    _stateFromPreviousFailedAttempt = null;
+                    currentState = _applyLogsToDataFileStateFromPreviousFailedAttempt;
+                    _applyLogsToDataFileStateFromPreviousFailedAttempt = null;
                     
                     Interlocked.Add(ref TotalCommittedSinceLastFlushPages, -currentTotalCommittedSinceLastFlushPages);
 
-                    ApplyJournalStateAfterFlush(token, bufferOfPageFromScratchBuffersToFree, record, dataPagerState, byteStringContext);
+                    ApplyJournalStateAfterFlush(token, currentState.Buffers, currentState.Record, dataPagerState, byteStringContext);
 
                     _waj._env.SuggestSyncDataFile();
                 }
                 finally
                 {
-                    if (_stateFromPreviousFailedAttempt == null) // cannot clear this if we are going to re-use it next time
+                    if (_applyLogsToDataFileStateFromPreviousFailedAttempt == null) // cannot clear this if we are going to re-use it next time 
                     {
-                        bufferOfPageFromScratchBuffersToFree?.Clear();
+                        currentState?.Buffers.Clear();
                     }
                     byteStringContext?.Dispose();
                     if (lockTaken)
@@ -1231,7 +1226,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private Pager.State ApplyPagesToDataFileFromScratch(EnvironmentStateRecord record)
+            private Pager.State ApplyPagesToDataFileFromScratch(ApplyLogsToDataFileState state)
             {
                 long written = 0;
                 var sp = Stopwatch.StartNew();
@@ -1239,12 +1234,21 @@ namespace Voron.Impl.Journal
                 var dataPager = _waj._env.DataPager;
                 var currentStateRecord = _waj._env.CurrentStateRecord;
                 var dataPagerState = currentStateRecord.DataPagerState;
+                var record = state.Record;
                 using (var meter = options.IoMetrics.MeterIoRate(dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
                 {
                     var pagesBuffer = ArrayPool<Page>.Shared.Rent(record.ScratchPagesTable.Count);
                     Pager.PagerTransactionState txState = default;
                     try
                     {
+                        if (state.SparseRegions?.Count > 0)
+                        {
+                            // This needs to happen _before_ we actually write to the disk
+                            // because we _first_ zero a range and then we may write data to that range (filling some of it up).
+                            // That is fine, and means that we don't need to track re-uses. 
+                            MarkSparseRegionsInDataFile(dataPagerState,CollectionsMarshal.AsSpan(state.SparseRegions));
+                        }
+                        
                         Span<Page> pages = GetSortedPages(ref txState, record, pagesBuffer);
 
                         Page lastPage = pages[^1];
@@ -1284,6 +1288,35 @@ namespace Voron.Impl.Journal
                 Interlocked.Add(ref _totalWrittenButUnsyncedBytes, written);
                 
                 return dataPagerState;
+            }
+
+            private void MarkSparseRegionsInDataFile(Pager.State dataPagerState, Span<long> sparseRegions)
+            {
+                var count = Sorting.SortAndRemoveDuplicates(sparseRegions);
+                var start = sparseRegions[0];
+                var len = FreeSpaceHandling.NumberOfPagesInSection; 
+                for (int i = 1; i < count; i++)
+                {
+                    if (start + len == sparseRegions[i])
+                    {
+                        len += FreeSpaceHandling.NumberOfPagesInSection;
+                        continue;
+                    }
+                    MarkSparseRegion();
+
+                    start = sparseRegions[i];
+                    len = FreeSpaceHandling.NumberOfPagesInSection;
+                }
+                
+                MarkSparseRegion();
+
+                void MarkSparseRegion()
+                {
+                    _waj._env.DataPager.SetSparseRange(dataPagerState, 
+                        start * Constants.Storage.PageSize,
+                        len *Constants.Storage.PageSize
+                    );
+                }
             }
 
             private Span<Page> GetSortedPages(ref Pager.PagerTransactionState txState, EnvironmentStateRecord record, Page[] pagesBuffer)

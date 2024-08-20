@@ -591,13 +591,21 @@ public unsafe partial class Pager : IDisposable
 
     public void SetSparseRange(State state, long offset, long size)
     {
-        var rc = Pal.rvn_set_sparse_region_pager(state.Handle, offset, size, out int errorCode);
+        var rc = Pal.rvn_pager_set_sparse_region(state.Handle, offset, size, out int errorCode);
 
         if (rc is PalFlags.FailCodes.Success or
             PalFlags.FailCodes.FailSparseNotSupported)  // explicitly ignoring this
             return;
         
         PalHelper.ThrowLastError(rc, errorCode, "Failed to set sparse range on " + state.Pager.FileName);
+    }
 
+    public (long AllocatedSize, long PhysicalSize) GetFileSize(State state)
+    {
+        var rc = Pal.rvn_pager_get_file_size(state.Handle, out var totalSize, out var physicalSize, out var errorCode);
+        if (rc is not PalFlags.FailCodes.Success)
+            PalHelper.ThrowLastError(rc, errorCode, "Failed to get file size for " + state.Pager.FileName);
+
+        return (totalSize, physicalSize);
     }
 }

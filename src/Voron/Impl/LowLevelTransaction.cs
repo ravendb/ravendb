@@ -45,7 +45,8 @@ namespace Voron.Impl
         private readonly bool _isValidationEnabled;
         private ImmutableDictionary<long,PageFromScratchBuffer>.Builder _scratchPagesInUse;
         private readonly ImmutableDictionary<long,PageFromScratchBuffer> _scratchPagesForReads;
-        private GetPageMethod _getPageMethod;
+        private List<long> _sparsePageRanges;
+        private readonly GetPageMethod _getPageMethod;
         
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
@@ -1462,5 +1463,13 @@ namespace Voron.Impl
 
             _scratchPagesInUse.Remove(value.PageNumberInDataFile);
         }
+
+        public void RecordSparseRange(long sectionPageNumber)
+        {
+            _sparsePageRanges ??= new();
+            _sparsePageRanges.Add(sectionPageNumber);
+        }
+
+        public List<long> GetSparsePageRanges() => _sparsePageRanges;
     }
 }

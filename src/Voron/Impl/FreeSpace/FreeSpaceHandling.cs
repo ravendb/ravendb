@@ -347,17 +347,19 @@ namespace Voron.Impl.FreeSpace
                 var freeSpaceTree = GetFreeSpaceTree(tx);
                 StreamBitArray sba;
                 var section = pageNumber / NumberOfPagesInSection;
-                Slice result;
-                using (freeSpaceTree.Read(section, out result))
+                using (freeSpaceTree.Read(section, out Slice result))
                 {
                     sba = !result.HasValue ? new StreamBitArray() : new StreamBitArray(result.CreateReader().Base);
                 }
                 sba.Set((int)(pageNumber % NumberOfPagesInSection), true);
+                if (sba.SetCount == NumberOfPagesInSection)
+                {
+                    tx.RecordSparseRange(section * NumberOfPagesInSection);
+                }
 
                 sba.Write(freeSpaceTree, section);
 
-                var onPageFreed = PageFreed;
-                onPageFreed?.Invoke(pageNumber);
+                PageFreed?.Invoke(pageNumber);
             }
         }
 
