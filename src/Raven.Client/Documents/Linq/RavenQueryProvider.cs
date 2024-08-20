@@ -232,7 +232,7 @@ namespace Raven.Client.Documents.Linq
         }
 
         /// <summary>
-        ///     Converts LINQ query to asynchronous DocumentQuery.
+        /// Converts LINQ query to asynchronous DocumentQuery.
         /// </summary>
         public IAsyncDocumentQuery<TResult> ToAsyncDocumentQuery<TResult>(Expression expression)
         {
@@ -344,7 +344,7 @@ namespace Raven.Client.Documents.Linq
         }
 
         /// <summary>
-        ///     Converts LINQ query to DocumentQuery.
+        /// Converts LINQ query to DocumentQuery.
         /// </summary>
         public IDocumentQuery<TResult> ToDocumentQuery<TResult>(Expression expression)
         {
