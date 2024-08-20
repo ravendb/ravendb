@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 using Raven.Client.Documents.Replication;
 using Sparrow.Json.Parsing;
 
@@ -54,7 +53,6 @@ namespace Raven.Client.Documents.Operations.Replication
         {
             var hashCode = base.GetTaskKey();
             hashCode = (hashCode * 397) ^ (ulong)Mode;
-            hashCode = (hashCode * 397) ^ CalculateStringHash(Url);
             hashCode = (hashCode * 397) ^ CalculateStringHash(CertificateWithPrivateKey);
             hashCode = (hashCode * 397) ^ CalculateStringHash(CertificatePassword);
             return (hashCode * 397) ^ CalculateStringHash(HubName);
@@ -94,22 +92,9 @@ namespace Raven.Client.Documents.Operations.Replication
             return djv;
         }
 
-        public override string ToString()
-        {
-            var sb = new StringBuilder($"Replication Sink {FromString()}. " +
-                                       $"Hub Task Name: '{HubName}', " +
-                                       $"Connection String: '{ConnectionStringName}', " +
-                                       $"Mode: '{Mode}'");
-
-            if (string.IsNullOrEmpty(AccessName) == false)
-                sb.Append($", Access Name: '{AccessName}'");
-
-            return sb.ToString();
-        }
-
         public override string GetDefaultTaskName()
         {
-            return ToString();
+            return $"Replication Sink for {HubName}";
         }
     }
 }

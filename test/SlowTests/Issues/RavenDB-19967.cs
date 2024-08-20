@@ -249,7 +249,7 @@ namespace SlowTests.Issues
                 var sinkNotificationDetails = sinkDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, sinkNotificationDetails.Count);
                 Assert.Equal("users", sinkNotificationDetails.First().Collection);
-                Assert.Contains(taskName, sinkNotificationDetails.First().Source);
+                Assert.Equal($"Replication Sink for {taskName}", sinkNotificationDetails.First().Source);
                 Assert.Equal(sinkTombstonesCount, sinkNotificationDetails.First().NumberOfTombstones);
                 Assert.Equal(sinkCreationTaskId.First().TaskId, sinkNotificationDetails.First().BlockerTaskId);
                 Assert.Equal(ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsSink, sinkNotificationDetails.First().BlockerType);

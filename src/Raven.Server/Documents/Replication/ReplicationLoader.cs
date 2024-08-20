@@ -310,21 +310,19 @@ namespace Raven.Server.Documents.Replication
                     break;
 
                 case RegisterReplicationHubAccessCommand reg:
-                    DisposeRelatedPullReplication(reg.HubName, reg.CertificateThumbprint, reg.Database);
+                    DisposeRelatedPullReplication(reg.HubName, reg.CertificateThumbprint);
                     break;
             }
             return Task.CompletedTask;
 
-            void DisposeRelatedPullReplication(string hub, string certThumbprint, string sourceDatabase = null)
+            void DisposeRelatedPullReplication(string hub, string certThumbprint)
             {
                 if (hub == null)
                     return;
 
                 foreach (var (_, repl) in _incoming)
                 {
-                    if (string.Equals(repl._incomingPullReplicationParams.Name, hub, StringComparison.OrdinalIgnoreCase) == false ||
-                        (string.IsNullOrEmpty(sourceDatabase) == false && 
-                         string.Equals(repl._incomingPullReplicationParams.SourceDatabaseName, sourceDatabase, StringComparison.OrdinalIgnoreCase) == false))
+                    if (string.Equals(repl._incomingPullReplicationParams.Name, hub, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 
                     if (certThumbprint != null && repl.CertificateThumbprint != certThumbprint)
@@ -343,9 +341,7 @@ namespace Raven.Server.Documents.Replication
 
                 foreach (var repl in _outgoing)
                 {
-                    if (string.Equals(repl.PullReplicationDefinitionName, hub, StringComparison.OrdinalIgnoreCase) == false ||
-                        (string.IsNullOrEmpty(sourceDatabase) == false && 
-                         string.Equals(sourceDatabase, repl.Destination.Database, StringComparison.OrdinalIgnoreCase) == false))
+                    if (string.Equals(repl.PullReplicationDefinitionName, hub, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 
                     if (certThumbprint != null && repl.CertificateThumbprint != certThumbprint)
@@ -471,7 +467,6 @@ namespace Raven.Server.Documents.Replication
                 pullReplicationParams = new PullReplicationParams()
                 {
                     Name = pullDefinitionName,
-                    SourceDatabaseName = initialRequest.Database,
                     AllowedPaths = allowedPaths,
                     Mode = PullReplicationMode.SinkToHub,
                     PreventDeletionsMode = preventDeletionsMode,
@@ -614,7 +609,6 @@ namespace Raven.Server.Documents.Replication
         public class PullReplicationParams
         {
             public string Name;
-            public string SourceDatabaseName;
             public string[] AllowedPaths;
             public PullReplicationMode Mode;
             public PreventDeletionsMode? PreventDeletionsMode;
@@ -1168,8 +1162,7 @@ namespace Raven.Server.Documents.Replication
                         TaskId = sink.TaskId,
                         ConnectionStringName = sink.ConnectionStringName,
                         HubName = sink.HubName,
-                        CertificateWithPrivateKey = sink.CertificateWithPrivateKey,
-                        AccessName = sink.AccessName
+                        CertificateWithPrivateKey = sink.CertificateWithPrivateKey
                     };
 
                     i += 1;
