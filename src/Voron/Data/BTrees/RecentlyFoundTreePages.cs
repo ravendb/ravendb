@@ -1,6 +1,6 @@
 using System;
-using System.Buffers;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -16,14 +16,17 @@ namespace Voron.Data.BTrees
         public const int MaxCursorPath = 8;
         public const int MaxKeyStorage = 256;
 
-        public TreePage Page;
-        public long Number;
+        // WARNING: We are putting the Key Storage at the start because we want it to be safe to do an unmasked load
+        //          using SIMD operations and still be in the boundary of the object (even if we are reading garbage)
+        //          in order to optimize the key comparison. 
+        public fixed byte KeyStorage[MaxKeyStorage];
 
         // We are setting ourselves to not allow pages whose path sequences are longer than MaxCursorPath, this makes sense
         // because if we are in such a long sequence, it is highly unlikely this cache would be useful anyway. 
         public fixed long PathSequence[MaxCursorPath];
 
-        public fixed byte KeyStorage[MaxKeyStorage];
+        public TreePage Page;
+        public long Number;
 
         public SliceOptions FirstKeyOptions;
         public SliceOptions LastKeyOptions;
@@ -32,34 +35,41 @@ namespace Voron.Data.BTrees
         public int FirstKeyLength;
         public int LastKeyLength;
 
-        public ReadOnlySpan<byte> FirstKey => MemoryMarshal.CreateSpan(ref KeyStorage[0], FirstKeyLength);
-        public ReadOnlySpan<byte> LastKey => MemoryMarshal.CreateSpan(ref KeyStorage[FirstKeyLength], LastKeyLength);
-
         public ReadOnlySpan<long> Cursor => MemoryMarshal.CreateReadOnlySpan(ref PathSequence[0], PathLength);
 
         public void SetFirstKey(ReadOnlySpan<byte> key, SliceOptions option)
         {
-            FirstKeyLength = key.Length;
             FirstKeyOptions = option;
 
-            Debug.Assert(FirstKey.Length == key.Length);
-
             if (key.Length <= 0)
-                return;
+            {
+                Debug.Assert(option != SliceOptions.Key, "There is no such thing as a key with 0 length.");
 
+                FirstKeyLength = sizeof(uint);
+                uint placeholderKey = option == SliceOptions.BeforeAllKeys ? 0 : 0xFFFFFFFF;
+                Unsafe.WriteUnaligned(ref KeyStorage[0], placeholderKey);
+                return;
+            }
+
+            FirstKeyLength = key.Length;
             Unsafe.CopyBlock(ref KeyStorage[0], in key[0], (uint)key.Length);
         }
 
         public void SetLastKey(ReadOnlySpan<byte> key, SliceOptions option)
         {
-            LastKeyLength = key.Length;
             LastKeyOptions = option;
 
-            Debug.Assert(LastKey.Length == key.Length);
-
             if (key.Length <= 0)
-                return;
+            {
+                Debug.Assert(option != SliceOptions.Key, "There is no such thing as a key with 0 length.");
 
+                LastKeyLength = sizeof(uint);
+                uint placeholderKey = option == SliceOptions.BeforeAllKeys ? 0 : 0xFFFFFFFF;
+                Unsafe.WriteUnaligned(ref KeyStorage[FirstKeyLength], placeholderKey);
+                return;
+            }
+
+            LastKeyLength = key.Length;
             Unsafe.CopyBlock(ref KeyStorage[FirstKeyLength], in key[0], (uint)key.Length);
         }
 
@@ -71,36 +81,6 @@ namespace Voron.Data.BTrees
 
             Span<byte> pathSequence = MemoryMarshal.Cast<long, byte>(MemoryMarshal.CreateSpan(ref PathSequence[0], MaxCursorPath));
             Unsafe.CopyBlock(ref pathSequence[0], in MemoryMarshal.Cast<long, byte>(cursorPath)[0], (uint)cursorPath.Length * sizeof(long));
-        }
-
-        public int CompareFirstKey(ReadOnlySpan<byte> key)
-        {
-            int x1Length = key.Length;
-            int y1Length = FirstKeyLength;
-
-            if (x1Length == 0)
-                return x1Length - y1Length;
-
-            ref readonly byte firstKeyStart = ref KeyStorage[0];
-            ref readonly byte keyStart = ref key[0];
-            var r = Memory.CompareInline(in keyStart, in firstKeyStart, Math.Min(x1Length, y1Length));
-
-            return r != 0 ? r : x1Length - y1Length;
-        }
-
-        public int CompareLastKey(ReadOnlySpan<byte> key)
-        {
-            int x1Length = key.Length;
-            int y1Length = LastKeyLength;
-
-            if (x1Length == 0)
-                return x1Length - y1Length;
-
-            ref readonly byte firstKeyStart = ref KeyStorage[FirstKeyLength];
-            ref readonly byte keyStart = ref key[0];
-            var r = Memory.CompareInline(in keyStart, in firstKeyStart, Math.Min(x1Length, y1Length));
-
-            return r != 0 ? r : x1Length - y1Length;
         }
     }
 
@@ -121,17 +101,35 @@ namespace Voron.Data.BTrees
 
         public bool TryFind(Slice key, out FoundTreePageDescriptor foundPage)
         {
-            return TryFind(key.Options, key.AsReadOnlySpan(), out foundPage);
-        }
-
-        public bool TryFind(SliceOptions keyOption, ReadOnlySpan<byte> key, out FoundTreePageDescriptor foundPage)
-        {
             Debug.Assert(_currentGeneration > 0);
             Debug.Assert(_pageDescriptors.Length == CacheSize);
 
-            var descriptors = _pageDescriptors;
+            // We do not require to initialize this.
+            Unsafe.SkipInit(out foundPage);
+
+            if (key.HasValue == false || key.Size == 0)
+                return false;
 
             uint location = FindMatchingByGeneration(_currentGeneration);
+            if (location == 0)
+                return false; // Early skip, we don't need to do anything
+            
+            var keyOption = key.Options;
+            if (keyOption == SliceOptions.Key)
+            {
+                return TryFindKey(location, key, out foundPage);
+            }
+
+            return TryFindNoKey(location, keyOption, out foundPage);
+        }
+
+        [SkipLocalsInit]
+        private bool TryFindKey(uint location, ReadOnlySpan<byte> key, out FoundTreePageDescriptor foundPage)
+        {
+            // PERF: We know this is for keys smaller than 128 bits (16 bytes) so we are going to be using that fact.
+            var descriptors = _pageDescriptors;
+
+            ref byte keyStart = ref Unsafe.AsRef(in key[0]);
 
             int i = -1;
             while (location != 0)
@@ -144,33 +142,64 @@ namespace Voron.Data.BTrees
                 // the re-entry check on the while loop. 
                 location >>= advance;
 
-                ref var current = ref descriptors[i];
+                ref readonly var current = ref descriptors[i];
 
-                switch (keyOption)
+                if (current.FirstKeyOptions != SliceOptions.BeforeAllKeys)
                 {
-                    case SliceOptions.Key:
-                        if (current.FirstKeyOptions != SliceOptions.BeforeAllKeys && current.CompareFirstKey(key) < 0)
-                            break;
-                        if (current.LastKeyOptions != SliceOptions.AfterAllKeys && current.CompareLastKey(key) > 0)
-                            break;
+                    var r = Memory.CompareSmallInlineNet7(in keyStart, in current.KeyStorage[0], Math.Min(current.FirstKeyLength, key.Length));
+                    r = r != 0 ? r : key.Length - current.FirstKeyLength;
+                    if (r < 0)
+                        continue;
+                }
 
+                if (current.LastKeyOptions != SliceOptions.AfterAllKeys)
+                {
+                    var r = Memory.CompareSmallInlineNet7(in keyStart, in current.KeyStorage[current.FirstKeyLength], Math.Min(current.LastKeyLength, key.Length));
+                    r = r != 0 ? r : key.Length - current.LastKeyLength;
+                    if (r > 0)
+                        continue;
+                }
+
+                foundPage = current;
+                return true;
+            }
+
+            Unsafe.SkipInit(out foundPage);
+            return false;
+        }
+
+        [SkipLocalsInit]
+        private bool TryFindNoKey(uint location, SliceOptions keyOption, out FoundTreePageDescriptor foundPage)
+        {
+            Debug.Assert(_currentGeneration > 0);
+            Debug.Assert(_pageDescriptors.Length == CacheSize);
+
+            var descriptors = _pageDescriptors;
+
+            int i = -1;
+            while (location != 0)
+            {
+                // We will find the next matching item in the cache and advance the pointer to its rightful place.
+                int advance = BitOperations.TrailingZeroCount(location) + 1;
+                i += advance;
+
+                // We will advance the bitmask to the location. If there are no more, it will be zero and fail
+                // the re-entry check on the while loop. 
+                location >>= advance;
+
+                ref readonly var current = ref descriptors[i];
+
+                var firstKeyOption = current.FirstKeyOptions;
+                var lastKeyOption = current.LastKeyOptions;
+
+                switch (keyOption, firstKeyOption, lastKeyOption)
+                {
+                    case (SliceOptions.BeforeAllKeys, SliceOptions.BeforeAllKeys, _):
+                    case (SliceOptions.AfterAllKeys, _, SliceOptions.AfterAllKeys):
                         foundPage = current;
                         return true;
-                    case SliceOptions.BeforeAllKeys:
-                        if (current.FirstKeyOptions == SliceOptions.BeforeAllKeys)
-                        {
-                            foundPage = current;
-                            return true;
-                        }
-                        break;
-                    case SliceOptions.AfterAllKeys:
-                        if (current.LastKeyOptions == SliceOptions.AfterAllKeys)
-                        {
-                            foundPage = current;
-                            return true;
-                        }
-
-                        break;
+                    default:
+                        continue;
                 }
             }
 
@@ -178,7 +207,7 @@ namespace Voron.Data.BTrees
             return false;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private uint FindMatchingByGeneration(uint generation)
         {
             // PERF: We will check the entire small cache for current generation matches all at the same time
@@ -191,7 +220,7 @@ namespace Voron.Data.BTrees
             ).ExtractMostSignificantBits();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private uint FindMatchingByPageNumber(long pageNumber)
         {
             // PERF: We will check the entire small cache for current page number matches all at the same time
@@ -249,13 +278,14 @@ namespace Voron.Data.BTrees
             Debug.Assert(FindMatchingByGeneration(_currentGeneration) == 0);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public void Add(TreePage page, SliceOptions firstKeyOption, ReadOnlySpan<byte> firstKey, SliceOptions lastKeyOption, ReadOnlySpan<byte> lastKey, ReadOnlySpan<long> cursorPath)
         {
             // PERF: The idea behind this check is that IF the page has a bigger cursor path than what we support
             // on the struct, and this been a performance improvement we are going to reject it outright. We will
             // not try to accomodate variability in this regard in order to avoid allocations.
             if (cursorPath.Length > FoundTreePageDescriptor.MaxCursorPath ||
-                firstKey.Length + lastKey.Length > FoundTreePageDescriptor.MaxKeyStorage)
+                firstKey.Length + lastKey.Length + sizeof(uint) * 2 > FoundTreePageDescriptor.MaxKeyStorage)
                 return;
 
             Debug.Assert(_currentGeneration > 0);
