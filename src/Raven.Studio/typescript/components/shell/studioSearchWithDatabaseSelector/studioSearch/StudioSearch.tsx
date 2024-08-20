@@ -9,28 +9,8 @@ import StudioSearchSwitchToDatabaseResults from "./bits/StudioSearchSwitchToData
 import StudioSearchServerResults from "./bits/StudioSearchServerResults";
 
 export default function StudioSearch(props: { menuItems?: menuItem[] }) {
-    const { refs, isSearchDropdownOpen, searchQuery, setSearchQuery, matchStatus, results, activeItem } =
+    const { refs, isSearchDropdownOpen, searchQuery, setSearchQuery, matchStatus, results, activeItem, columnWidths } =
         useStudioSearch(props.menuItems);
-
-    const hasServerMatchWithoutDatabase = matchStatus.hasServerMatch && !matchStatus.hasDatabaseMatch;
-    const hasServerMatchWithDatabase = matchStatus.hasServerMatch && matchStatus.hasDatabaseMatch;
-
-    // Define the column classes based on the conditions
-    let databaseColWidth;
-    let serverColWidth;
-
-    if (hasServerMatchWithDatabase) {
-        databaseColWidth = 7;
-        serverColWidth = 5;
-        // Both server and database matches
-    } else if (hasServerMatchWithoutDatabase) {
-        databaseColWidth = 5;
-        serverColWidth = 7;
-        // Server match without database match
-    } else {
-        databaseColWidth = 12;
-        serverColWidth = null;
-    }
 
     return (
         <>
@@ -57,7 +37,7 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                         <div
                             className={classNames(
                                 "col-sm-12 studio-search__database-col p-0",
-                                `col-md-${databaseColWidth}`
+                                `col-md-${columnWidths.database}`
                             )}
                             ref={refs.databaseColumnRef}
                         >
@@ -80,7 +60,7 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                             hasServerMatch={matchStatus.hasServerMatch}
                             serverResults={results.server}
                             activeItem={activeItem}
-                            colWidth={serverColWidth}
+                            colWidth={columnWidths.server}
                         />
                         <StudioSearchLegend />
                     </Row>

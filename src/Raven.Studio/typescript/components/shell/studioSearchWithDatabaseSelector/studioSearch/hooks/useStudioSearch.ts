@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import useBoolean from "components/hooks/useBoolean";
-import { StudioSearchResultDatabaseGroup, StudioSearchResultItem } from "../studioSearchTypes";
+import { StudioSearchResult, StudioSearchResultDatabaseGroup, StudioSearchResultItem } from "../studioSearchTypes";
 import { useStudioSearchAsyncRegister } from "./useStudioSearchAsyncRegister";
 import { useStudioSearchKeyboardEvents } from "./useStudioSearchKeyboardEvents";
 import { useStudioSearchSyncRegister } from "./useStudioSearchSyncRegister";
@@ -65,24 +65,49 @@ export function useStudioSearch(menuItems: menuItem[]) {
         setIsDropdownOpen,
     });
 
-    const matchStatus = {
-        hasServerMatch: results.server.length > 0,
-        hasSwitchToDatabaseMatch: results.switchToDatabase.length > 0,
-        hasDatabaseMatch: Object.keys(results.database).some(
-            (groupType: StudioSearchResultDatabaseGroup) => results.database[groupType].length > 0
-        ),
-    };
+    const matchStatus = getMatchStatus(results);
+
+    function getColumnWidths() {
+        const { hasServerMatch, hasDatabaseMatch } = matchStatus;
+
+        if (!hasServerMatch) {
+            return { database: 12, server: null };
+        }
+
+        if (hasDatabaseMatch) {
+            return { database: 7, server: 5 };
+        } else {
+            return { database: 5, server: 7 };
+        }
+    }
 
     return {
         refs,
         isSearchDropdownOpen,
         searchQuery,
         setSearchQuery,
-        matchStatus,
         results,
         activeItem,
+        matchStatus,
+        columnWidths: {
+            ...getColumnWidths(),
+        },
     };
 }
 
 export const studioSearchInputId = "studio-search-input";
 export const studioSearchBackdropId = "studio-search-backdrop";
+
+function getMatchStatus(results: StudioSearchResult) {
+    const hasServerMatch = results.server.length > 0;
+    const hasSwitchToDatabaseMatch = results.switchToDatabase.length > 0;
+    const hasDatabaseMatch = Object.keys(results.database).some(
+        (groupType: StudioSearchResultDatabaseGroup) => results.database[groupType].length > 0
+    );
+
+    return {
+        hasServerMatch,
+        hasSwitchToDatabaseMatch,
+        hasDatabaseMatch,
+    };
+}
