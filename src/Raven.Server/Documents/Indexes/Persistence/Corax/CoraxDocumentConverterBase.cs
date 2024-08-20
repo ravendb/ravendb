@@ -50,7 +50,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public List<long> LongsListForEnumerableScope;
     public List<double> DoublesListForEnumerableScope;
     public List<BlittableJsonReaderObject> BlittableJsonReaderObjectsListForEnumerableScope;
-    private HashSet<IndexField> _complexFields;
     public bool IgnoreComplexObjectsDuringIndex;
     public List<string[]> CompoundFields;
 
@@ -137,7 +136,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         out bool shouldSkip)
         where TBuilder : IIndexEntryBuilder
     {
-        if (_index.Type.IsMapReduce() == false && field.Indexing == FieldIndexing.No && field.Storage == FieldStorage.No && (_complexFields is null || _complexFields.Contains(field) == false))
+        if (_index.Type.IsMapReduce() == false && field.Indexing == FieldIndexing.No && field.Storage == FieldStorage.No && (_index.ComplexFieldsNotIndexedByCorax is null || _index.ComplexFieldsNotIndexedByCorax.Contains(field) == false))
             ThrowFieldIsNoIndexedAndStored(field);
         
         shouldSkip = false;
@@ -468,8 +467,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     private void DisableIndexingForComplexObject(IndexField field)
     {
         field.Indexing = FieldIndexing.No;
-        _complexFields ??= new();
-        _complexFields.Add(field);
+       _index.SetComplexFieldNotIndexedByCoraxStaticIndex(field);
         
         if (GetKnownFieldsForWriter().TryGetByFieldId(field.Id, out var binding))
         {
