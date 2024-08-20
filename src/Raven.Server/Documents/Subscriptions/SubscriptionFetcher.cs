@@ -114,10 +114,8 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected override IEnumerator<(Document Previous, Document Current)> FetchFromResend()
         {
-            return new TransactionForgetAboutCurrentPreviousRevisionEnumerator(SubscriptionConnectionsState.GetRevisionsFromResend(ClusterContext, Active).Select(r => (
-                Database.DocumentsStorage.RevisionsStorage.GetRevision(DocsContext, r.Previous),
-                Database.DocumentsStorage.RevisionsStorage.GetRevision(DocsContext, r.Current)
-            )).GetEnumerator(), DocsContext);
+            return new TransactionForgetAboutCurrentPreviousRevisionEnumerator(SubscriptionConnectionsState.GetRevisionsFromResend(Database, ClusterContext, DocsContext, Active)
+                .GetEnumerator(), DocsContext);
         }
     }
 
