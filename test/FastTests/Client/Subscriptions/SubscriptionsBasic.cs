@@ -909,7 +909,8 @@ namespace FastTests.Client.Subscriptions
                 "ChangeVector",
                 "MentorNode",
                 "Disabled",
-                "PinToMentorNode"
+                "PinToMentorNode",
+                "ArchivedDataProcessingBehavior"
             };
 
             var props = typeof(SubscriptionCreationOptions).GetProperties().Where(x => x.PropertyType.IsPublic).ToList();

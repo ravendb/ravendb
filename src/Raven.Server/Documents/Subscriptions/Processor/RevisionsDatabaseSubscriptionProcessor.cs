@@ -44,6 +44,8 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 if (item.Current == null)
                     continue; // this shouldn't happened, but in release let's keep running
 
+                using (var oldCurData = item.Current.Data)
+                using (var oldPrevData = item.Previous?.Data)
                 using (item.Current)
                 using (item.Previous)
                 {
@@ -140,15 +142,19 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             item.Current.EnsureMetadata();
             item.Previous?.EnsureMetadata();
 
+            var transformResult = DocsContext.ReadObject(new DynamicJsonValue
+            {
+                [nameof(RevisionRecord.Current)] = item.Current.Flags.Contain(DocumentFlags.DeleteRevision) ? null : item.Current.Data,
+                [nameof(RevisionRecord.Previous)] = item.Previous?.Data
+            }, item.Current.Id);
+
+            result.Document.Data = transformResult;
+
             if (Patch == null)
             {
-                result.Document.Data = CreateRevisionRecord(item, item.Current.Flags.Contain(DocumentFlags.DeleteRevision));
                 result.Status = SubscriptionBatchItemStatus.Send;
                 return result;
             }
-
-            var transformResult = CreateRevisionRecord(item, isDeleteRevision: false);
-            result.Document.Data = transformResult;
 
             item.Current.ResetModifications();
             item.Previous?.ResetModifications();
@@ -166,19 +172,6 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                     return result;
                 }
 
-                if (item.Current.Flags.Contain(DocumentFlags.DeleteRevision))
-                {
-                    result.Document.Data.Modifications = new DynamicJsonValue(result.Document.Data)
-                    {
-                        [nameof(RevisionRecord.Current)] = null
-                    };
-
-                    using (var old = result.Document.Data)
-                    {
-                        result.Document.Data = DocsContext.ReadObject(result.Document.Data, item.Current.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                    }
-                }
-
                 result.Status = SubscriptionBatchItemStatus.Send;
                 return result;
             }
@@ -189,15 +182,6 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 result.Status = SubscriptionBatchItemStatus.Exception;
                 return result;
             }
-        }
-
-        private BlittableJsonReaderObject CreateRevisionRecord((Document Previous, Document Current) item, bool isDeleteRevision)
-        {
-            return DocsContext.ReadObject(new DynamicJsonValue
-            {
-                [nameof(RevisionRecord.Current)] = isDeleteRevision ? null : item.Current.Data,
-                [nameof(RevisionRecord.Previous)] = item.Previous?.Data
-            }, item.Current.Id);
         }
     }
 }
