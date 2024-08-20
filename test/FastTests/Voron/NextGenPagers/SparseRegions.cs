@@ -75,4 +75,35 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         Assert.Equal(allocatedSize, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
         Assert.Equal(allocatedSize - (32 * 1024 * 1024), physicalSize);
     }
+    
+    [RavenFact(RavenTestCategory.Voron)]
+    public void WillReleaseFreeSpaceAfterRestart()
+    {
+        RequireFileBasedPager();
+        Options.ManualFlushing = true;
+        var pages = new List<long>();
+        using (var wtx = Env.WriteTransaction())
+        {
+            for (int i = 0; i < 32; i++)
+            {
+                // 2MB
+                Page allocatePage = wtx.LowLevelTransaction.AllocatePage(256);
+                allocatePage.Flags = PageFlags.Overflow | PageFlags.Single;
+                allocatePage.OverflowSize = (256 * Constants.Storage.PageSize) - PageHeader.SizeOf;
+                pages.Add(allocatePage.PageNumber);
+            }
+            for (int i = 0; i < 32; i++)
+            {
+                for (int j = 0; j < 256; j++)
+                {
+                    wtx.LowLevelTransaction.FreePage(pages[i] + j);    
+                }
+            }
+            wtx.Commit();
+        }
+
+        RestartDatabase();
+        
+        Assert.Equal([2048, 4096, 6144], Env.CurrentStateRecord.SparsePageRanges);
+    }
 }
