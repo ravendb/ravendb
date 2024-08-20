@@ -151,9 +151,17 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 var match = Patch.MatchCriteria(Run, DocsContext, transformResult, ProjectionMetadataModifier.Instance, ref result.Data);
                 if (match == false)
                 {
+                    transformResult?.Dispose();
+                    result.Data?.Dispose();
                     result.Data = null;
                     reason = $"{item.Current.Id} filtered by criteria";
                     return false;
+                }
+
+                if (transformResult.Location != result.Data.Location)
+                {
+                    // was modified by patch
+                    transformResult.Dispose();
                 }
 
                 return true;

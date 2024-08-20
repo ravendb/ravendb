@@ -1,45 +1,18 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Utils.Enumerators;
 
-public class TransactionForgetAboutDocumentEnumerator : IEnumerator<Document>
+public class TransactionForgetAboutDocumentEnumerator : TransactionForgetAboutAbstractEnumerator<Document>
 {
-    private readonly IEnumerator<Document> _innerEnumerator;
-    private readonly DocumentsOperationContext _docsContext;
-
-    public TransactionForgetAboutDocumentEnumerator([NotNull] IEnumerator<Document> innerEnumerator, [NotNull] DocumentsOperationContext docsContext)
+    public TransactionForgetAboutDocumentEnumerator([NotNull] IEnumerator<Document> innerEnumerator, [NotNull] DocumentsOperationContext docsContext) : base(innerEnumerator, docsContext)
     {
-        _innerEnumerator = innerEnumerator;
-        _docsContext = docsContext;
     }
 
-    public bool MoveNext()
+    protected override void ForgetAbout(Document item)
     {
-        _docsContext.Transaction.ForgetAbout(Current);
-
-        if (_innerEnumerator.MoveNext() == false)
-            return false;
-
-        Current = _innerEnumerator.Current;
-
-        return true;
-    }
-
-    public void Reset()
-    {
-        throw new System.NotImplementedException();
-    }
-
-    public Document Current { get; private set; }
-
-    object IEnumerator.Current => Current;
-
-    public void Dispose()
-    {
-        _innerEnumerator.Dispose();
+        DocsContext.Transaction.ForgetAbout(Current);
     }
 }
