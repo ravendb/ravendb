@@ -61,8 +61,8 @@ function CopyNativeBinariesRequiredForDebugging($buildOutputDir, $targetDir, $na
     Write-Host "Copy native binaries for debugging on POSIX."
 
     $nativeBinaries = @(
-        [io.path]::combine($buildOutputDir, "libmscordaccore.$nativeBinExtension")
-        #[io.path]::combine($buildOutputDir, "createdump")
+        [io.path]::combine($buildOutputDir, "libmscordaccore.$nativeBinExtension"),
+        [io.path]::combine($buildOutputDir, "createdump")
     );
 
     foreach ($asset in $nativeBinaries) {
