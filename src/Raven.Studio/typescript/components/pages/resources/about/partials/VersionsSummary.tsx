@@ -9,6 +9,7 @@ import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
+import genUtils from "common/generalUtils";
 
 interface VersionsSummaryProps {
     asyncLatestVersion: AsyncState<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>;
@@ -78,22 +79,6 @@ export function VersionsSummary(props: VersionsSummaryProps) {
     );
 }
 
-function isNewVersionAvailable(
-    serverVersion: serverBuildVersionDto,
-    latestVersion: Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo
-) {
-    if (!latestVersion) {
-        return false;
-    }
-
-    if (!serverVersion) {
-        return false;
-    }
-
-    const isDevBuildNumber = (num: number) => num >= 40 && num < 90;
-    return !isDevBuildNumber(latestVersion.BuildNumber) && latestVersion.BuildNumber > serverVersion.BuildVersion;
-}
-
 function LatestVersion(props: {
     asyncLatestVersion: AsyncState<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>;
     serverVersion: serverBuildVersionDto;
@@ -113,7 +98,7 @@ function LatestVersion(props: {
         return <LoadError error="Unable to load latest version" />;
     }
 
-    const hasNewerVersion = isNewVersionAvailable(serverVersion, asyncLatestVersion.result);
+    const hasNewerVersion = genUtils.isNewVersionAvailable(serverVersion, asyncLatestVersion.result);
 
     if (hasNewerVersion) {
         const latestVersion = asyncLatestVersion.result.Version;

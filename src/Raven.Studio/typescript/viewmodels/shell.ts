@@ -62,6 +62,7 @@ import { accessManagerActions } from "components/common/shell/accessManagerSlice
 import UpgradeModal from "./shell/UpgradeModal";
 import getStudioBootstrapCommand from "commands/resources/getStudioBootstrapCommand";
 import serverSettings from "common/settings/serverSettings";
+import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
 
 class shell extends viewModelBase {
 
@@ -109,8 +110,9 @@ class shell extends viewModelBase {
     clientCertificate = clientCertificateModel.certificateInfo;
     certificateExpirationState = clientCertificateModel.certificateExpirationState;
     
+    latestVersionInfo = ko.observable<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>();
 
-    mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
+    mainMenu: menu;
     searchBox = new searchBox();
     databaseSwitcher = new databaseSwitcher();
     favNodeBadge = new favNodeBadge();
@@ -215,6 +217,21 @@ class shell extends viewModelBase {
         this.bindToCurrentInstance("toggleMenu");
 
         this.upgradeModalView = ko.pureComputed(() => ({ component: UpgradeModal }))
+        
+        const menuItems = ko.pureComputed(() => {
+            const isNewVersionAvailable = genUtils.isNewVersionAvailable(buildInfo.serverBuildVersion(), this.latestVersionInfo());
+            
+            // we hide "What's new" menu item for all builds that buildNumber is less than 60_000, so nightly, local, etc
+            const isWhatsNewVisible = buildInfo.serverBuildVersion()?.BuildVersion >= 60_000;
+
+            return generateMenuItems({
+                db: activeDatabaseTracker.default.database(),
+                isNewVersionAvailable,
+                isWhatsNewVisible
+            })
+        });
+
+        this.mainMenu = new menu(menuItems);
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -227,6 +244,7 @@ class shell extends viewModelBase {
 
         this.fetchClientBuildVersion();
         const buildVersionTask = this.fetchServerBuildVersion();
+        const latestVersionInfoTask = this.fetchLatestVersionInfo();
 
         const licenseTask = license.fetchLicenseStatus();
         const topologyTask = this.clusterManager.init();
@@ -244,7 +262,7 @@ class shell extends viewModelBase {
                 this.initAnalytics();
             });
         
-        $.when<any>(licenseTask, topologyTask, clientCertificateTask, studioBootstrapTask)
+        $.when<any>(licenseTask, topologyTask, clientCertificateTask, studioBootstrapTask, latestVersionInfoTask)
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             .done(([license]: [LicenseStatus], 
                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -417,11 +435,6 @@ class shell extends viewModelBase {
 
     private initializeShellComponents() {
         this.mainMenu.initialize();
-        const updateMenu = (db: database) => {
-            const items = generateMenuItems(db);
-            this.mainMenu.update(items);
-        };
-
         
         const checkScreenSize = () => {
             if ($(window).width() < 992) {
@@ -434,9 +447,6 @@ class shell extends viewModelBase {
         checkScreenSize();
 
         $(window).resize(checkScreenSize);
-
-        updateMenu(activeDatabaseTracker.default.database());
-        activeDatabaseTracker.default.database.subscribe(updateMenu);
 
         this.databaseSwitcher.initialize();
         this.searchBox.initialize();
@@ -504,6 +514,12 @@ class shell extends viewModelBase {
                 
                 buildInfo.onServerBuildVersion(serverBuildResult);
             });
+    }
+
+    fetchLatestVersionInfo() {
+        new getLatestVersionInfoCommand(true).execute().then(result => {
+            this.latestVersionInfo(result);
+        });
     }
 
     fetchClientBuildVersion() {
