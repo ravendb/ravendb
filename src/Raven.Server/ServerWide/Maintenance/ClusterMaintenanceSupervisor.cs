@@ -401,6 +401,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
                     previous.LastSentEtag = dbReport.LastSentEtag;
                     previous.LastCompareExchangeIndex = dbReport.LastCompareExchangeIndex;
+                    previous.LastCompletedClusterTransaction = dbReport.LastCompletedClusterTransaction;
+                    previous.LastClusterWideTransactionRaftIndex = dbReport.LastClusterWideTransactionRaftIndex;
                     previous.UpTime = dbReport.UpTime;
                     nodeReport.Report[dbName] = previous;
                 }
