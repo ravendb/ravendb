@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Handlers
 
                                         using (var doc = context.ReadObject(documentWithException.ToJson(), itemDetails.Doc.Id))
                                         {
-                                                 writer.WriteObject(doc);
+                                            writer.WriteObject(doc);
                                         }
                                     }
 

@@ -59,6 +59,9 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                             });
 
                             yield return result;
+
+                            if (++numberOfDocs >= BatchSize)
+                                yield break;
                         }
                         else
                             yield return result;
@@ -66,8 +69,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                         if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
                             yield break;
 
-                        if (++numberOfDocs >= BatchSize)
-                            yield break;
+
                     }
                 }
             }
@@ -151,7 +153,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 var match = Patch.MatchCriteria(Run, DocsContext, transformResult, ProjectionMetadataModifier.Instance, ref result.Data);
                 if (match == false)
                 {
-                    transformResult?.Dispose();
+                    transformResult.Dispose();
                     result.Data?.Dispose();
                     result.Data = null;
                     reason = $"{item.Current.Id} filtered by criteria";
