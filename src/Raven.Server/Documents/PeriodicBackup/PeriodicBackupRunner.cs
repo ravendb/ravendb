@@ -4,14 +4,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Extensions;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
@@ -465,7 +463,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 using (_database.PreventFromUnloadingByIdleOperations())
                 {
-                    backupResult = (BackupResult)backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
+                    backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
+
+                    periodicBackup.BackupStatus = runningBackupStatus;
+                    ScheduleNextBackup(periodicBackup, backupResult?.Elapsed, lockTaken: false);
+
                     tcs.SetResult(backupResult);
                 }
             }
@@ -480,6 +482,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations($"Canceled the backup thread: '{periodicBackup.Configuration.Name}'", oce);
 
+                periodicBackup.BackupStatus = runningBackupStatus;
+                ScheduleNextBackup(periodicBackup, backupResult?.Elapsed, lockTaken: false);
+
                 tcs.SetCanceled();
             }
             catch (Exception e)
@@ -487,12 +492,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations($"Failed to run the backup thread: '{periodicBackup.Configuration.Name}'", e);
 
-                tcs.SetException(e);
-            }
-            finally
-            {
                 periodicBackup.BackupStatus = runningBackupStatus;
                 ScheduleNextBackup(periodicBackup, backupResult?.Elapsed, lockTaken: false);
+
+                tcs.SetException(e);
             }
         }
 
