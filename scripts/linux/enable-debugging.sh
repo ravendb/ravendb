@@ -1,8 +1,12 @@
 #!/bin/bash
 
+LD_SO_CONF_DIR='/etc/ld.so.conf.d/'
+
 DEFPATH=$( cd `dirname $0` && pwd )
 SERVER_DIR="$DEFPATH/Server"
 RAVEN_DEBUG_PATH="$SERVER_DIR/Raven.Debug"
+LIB_MSCORDACCORE_DIR="$SERVER_DIR/libmscordaccore"
+LIB_MSCORDACCORE_SO="$SERVER_DIR/libmscordaccore.so"
 
 if [[ $UID != 0 ]]; then
     echo "This script needs to be run as root."
@@ -45,6 +49,19 @@ else
     fi
 fi
 
+echo -n "Add mscordaccore.so to ldconfig..."
+if [[ ! -f "$LIB_MSCORDACCORE_SO" ]]; then
+    echo "$LIB_MSCORDACCORE_SO file does not exist. Exiting..."
+    exit 4
+fi
+
+mkdir -p $LIB_MSCORDACCORE_DIR
+chown root:root $LIB_MSCORDACCORE_DIR
+cp "$LIB_MSCORDACCORE_SO" "$LIB_MSCORDACCORE_DIR"
+echo "$LIB_MSCORDACCORE_DIR" > "$LD_SO_CONF_DIR/ravendb.conf"
+ldconfig
+echo "DONE"
+
 binList=("$RAVEN_DEBUG_PATH")
 for binFilePath in "${binList[@]}"
 do
@@ -63,4 +80,3 @@ do
 done
 
 echo "RavenDB debugging has been enabled."
-
