@@ -54,7 +54,9 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
             if (_timeSeriesStats.TryGetValue(tombstone.LuceneKey, out var result) == false)
             {
                 var tsStats = _tsStorage.Stats.GetStats(queryContext.Documents, tombstone.LowerId, tombstone.Name);
-                _timeSeriesStats.Add(tombstone.LuceneKey, (tsStats, false));
+                result.Item1 = tsStats;
+                result.Deleted = false;
+                _timeSeriesStats.Add(tombstone.LuceneKey, result);
             }
             
             // if the time series is not completely deleted, we can skip further processing
