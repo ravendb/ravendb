@@ -207,6 +207,7 @@ Foreach ($target in $targets) {
     $specOutDir = [io.path]::combine($OUT_DIR, $target.Name)
     CleanDir $specOutDir
 
+    BuildDummyApp $specOutDir $target
     BuildServer $SERVER_SRC_DIR $specOutDir $target
     BuildTool rvn $RVN_SRC_DIR $specOutDir $target
     BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $target

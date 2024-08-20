@@ -251,7 +251,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         var dbInstance = dbTask.Result;
                         var currentHash = dbInstance.GetEnvironmentsHash();
                         report.EnvironmentsHash = currentHash;
-                        report.LastCompareExchangeIndex = dbInstance.CompareExchangeStorage.GetLastCompareExchangeIndex(ctx);
+                        FillClusterTransactionInfo(ctx, dbInstance, report);
 
                         var documentsStorage = dbInstance.DocumentsStorage;
                         var indexStorage = dbInstance.IndexStore;
@@ -309,7 +309,6 @@ namespace Raven.Server.ServerWide.Maintenance
                             using (var context = QueryOperationContext.Allocate(dbInstance, needsServerContext: true))
                             {
                                 FillDocumentsInfo(prevDatabaseReport, dbInstance, report, context.Documents, documentsStorage);
-                                FillClusterTransactionInfo(report, dbInstance);
 
                                 if (indexStorage != null)
                                 {
@@ -345,9 +344,9 @@ namespace Raven.Server.ServerWide.Maintenance
             return result;
         }
 
-        private static void FillClusterTransactionInfo(DatabaseStatusReport report, DocumentDatabase dbInstance)
+        private void FillClusterTransactionInfo(ClusterOperationContext ctx, DocumentDatabase dbInstance, DatabaseStatusReport report)
         {
-            report.LastTransactionId = dbInstance.LastTransactionId;
+            report.LastCompareExchangeIndex = dbInstance.CompareExchangeStorage.GetLastCompareExchangeIndex(ctx);
             report.LastCompletedClusterTransaction = dbInstance.LastCompletedClusterTransaction;
             report.LastClusterWideTransactionRaftIndex = dbInstance.ClusterWideTransactionIndexWaiter.LastIndex;
         }
@@ -383,6 +382,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private static void FillDocumentsInfo(DatabaseStatusReport prevDatabaseReport, DocumentDatabase dbInstance, DatabaseStatusReport report,
             DocumentsOperationContext context, DocumentsStorage documentsStorage)
         {
+            report.LastTransactionId = dbInstance.LastTransactionId;
             if (prevDatabaseReport?.LastTransactionId != null && prevDatabaseReport.LastTransactionId == dbInstance.LastTransactionId)
             {
                 report.LastEtag = prevDatabaseReport.LastEtag;

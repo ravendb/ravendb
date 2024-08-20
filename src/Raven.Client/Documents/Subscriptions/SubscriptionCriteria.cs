@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string Query { get; set; }
         public string ChangeVector { get; set; }
         public string MentorNode { get; set; }
-        public bool Disabled { get; set; }
+        public virtual bool Disabled { get; set; }
         public virtual bool PinToMentorNode { get; set; }
         public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
     }
@@ -72,6 +72,20 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         internal bool PinToMentorNodeWasSet { get; set; }
+
+        private bool _disabled;
+
+        public override bool Disabled
+        {
+            get => _disabled;
+            set
+            {
+                _disabled = value;
+                DisabledWasSet = true;
+            }
+        }
+
+        internal bool DisabledWasSet { get; set; }
     }
 
     public sealed class Revision<T> where T : class

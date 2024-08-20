@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Handlers
             using (var processor = new SubscriptionsHandlerProcessorForGetSubscription(this))
                 await processor.ExecuteAsync();
         }
-        
+
         [RavenAction("/databases/*/subscriptions/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task PerformanceLive()
         {
@@ -92,6 +92,8 @@ namespace Raven.Server.Documents.Handlers
                               || options.ChangeVector != state.ChangeVectorForNextBatchStartingPoint
                               || options.MentorNode != state.MentorNode
                               || options.Query != state.Query
+                              || options.PinToMentorNode != state.PinToMentorNode
+                              || options.Disabled != state.Disabled
                               || options.ArchivedDataProcessingBehavior != state.ArchivedDataProcessingBehavior;
 
             return gotChanges;

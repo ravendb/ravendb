@@ -6,8 +6,12 @@ using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Diagnostics.NETCore.Client;
 using Raven.Debug.Utils;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
+using Sparrow.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -87,7 +91,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    DiagnosticsClient client = new(processId);
+                    //DiagnosticsClient client = new(processId);
 
                     DumpType dumpType = DumpType.Normal;
                     switch (type)
@@ -115,8 +119,74 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     {
                         flags |= WriteDumpFlags.CrashReportEnabled;
                     }
+
+                    var exec = "createdump";
+                    if (Path.Exists(exec) == false)
+                        throw new InvalidOperationException($"Could not find '{exec}' file.");
+
+                    var argumentsString = $"-f {CommandLineArgumentEscaper.EscapeSingleArg(output)} {GetDumpTypeArgument(dumpType)} {GetWriteDumpFlags(flags)} --single-file {processId}";
+
+                    Console.WriteLine($"{exec} {argumentsString}");
+
+                    var processStartInfo = new ProcessStartInfo
+                    {
+                        FileName = exec,
+                        Arguments = argumentsString,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        RedirectStandardInput = true,
+                        UseShellExecute = false
+                    };
+
                     // Send the command to the runtime to initiate the core dump
-                    client.WriteDump(dumpType, output, flags);
+                    // client.WriteDump(dumpType, output, flags);
+
+                    Process process = null;
+                    try
+                    {
+                        process = Process.Start(processStartInfo);
+                        process.EnableRaisingEvents = true;
+                    }
+                    catch (Exception e)
+                    {
+                        process?.Kill();
+                        throw new InvalidOperationException($"Unable to execute {exec}.{Environment.NewLine}Command was: {Environment.NewLine}{processStartInfo.WorkingDirectory}> {processStartInfo.FileName} {processStartInfo.Arguments}", e);
+                    }
+
+                    process.WaitForExit();
+
+                    static string GetWriteDumpFlags(WriteDumpFlags flags)
+                    {
+                        var sb = new StringBuilder();
+                        if (flags.HasFlag(WriteDumpFlags.LoggingEnabled))
+                            sb.Append(" --diag");
+
+                        if (flags.HasFlag(WriteDumpFlags.CrashReportEnabled))
+                            sb.Append(" --crashreport");
+
+                        if (flags.HasFlag(WriteDumpFlags.VerboseLoggingEnabled))
+                            sb.Append(" --verbose");
+
+                        return sb.ToString();
+                    }
+
+                    static string GetDumpTypeArgument(DumpType type)
+                    {
+                        switch (type)
+                        {
+                            case DumpType.Normal:
+                                return " --normal";
+                            case DumpType.WithHeap:
+                                return " --withheap";
+                            case DumpType.Triage:
+                                return " --triage";
+                            case DumpType.Full:
+                                return " --full";
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(type), type, null);
+                        }
+                    }
 
                     if (string.IsNullOrEmpty(outputOwner) == false)
                         PosixFileExtensions.ChangeFileOwner(output, outputOwner);

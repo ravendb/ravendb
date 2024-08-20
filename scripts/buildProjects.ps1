@@ -1,3 +1,49 @@
+function BuildDummyApp ($outDir, $target) {
+
+    if ($target) {
+        write-host "Building Dummy App for $($target.Name)..."
+    } else {
+        write-host "Building Dummy App no specific target..."
+    }
+
+    $output = [io.path]::combine($outDir, "DummyApp");
+    $quotedOutput = '"' + $output + '"'
+    New-Item -Path $output -ItemType "Directory"
+
+    Push-Location
+
+    try {
+        Set-Location $output
+
+        Invoke-Expression -Command "dotnet new console"
+
+        $command = "dotnet" 
+        $commandArgs = @( "publish" )
+
+        
+        $commandArgs += @( "--output", $quotedOutput )
+
+        $configuration = if ($global:isPublishConfigurationDebug) { 'Debug' } else { 'Release' }
+        $commandArgs += @( "--configuration", $configuration )
+
+        if ($target) {
+            $commandArgs += $( "--runtime", "$($target.Runtime)" )
+            $commandArgs += $( "--self-contained", "true" )
+        }
+
+        if ($target -and [string]::IsNullOrEmpty($target.Arch) -eq $false) {
+            $commandArgs += "/p:Platform=$($target.Arch)"
+        }
+
+        write-host -ForegroundColor Cyan "Publish Dummy App: $command $commandArgs"
+        Invoke-Expression -Command "$command $commandArgs"
+        CheckLastExitCode
+    } 
+    finally {
+        [Console]::ResetColor()
+        Pop-Location
+    }
+} 
 
 function BuildServer ( $srcDir, $outDir, $target) {
 

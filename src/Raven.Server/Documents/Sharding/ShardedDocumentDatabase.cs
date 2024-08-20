@@ -204,6 +204,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                 if (MaxIndex >= 0)
                 {
                     _database.RachisLogIndexNotifications.NotifyListenersAbout(MaxIndex, null);
+                    _database.ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(MaxIndex);
                     _database._nextClusterCommand = MaxCommandCount;
                 }
             }
