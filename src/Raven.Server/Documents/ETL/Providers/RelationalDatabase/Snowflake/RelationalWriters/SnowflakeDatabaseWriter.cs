@@ -120,7 +120,7 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
 
     protected override string GetAfterDeleteWhereIdentifierBeforeInExtraSyntax()
     {
-        return " COLLATE 'en-ci'";
+        return " COLLATE 'lower'";
     }
 
     public static void TestConnection(string connectionString)
