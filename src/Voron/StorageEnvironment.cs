@@ -1624,7 +1624,7 @@ namespace Voron
         private readonly List<PageFromScratchBuffer> _cachedScratchBuffers = [];
         private readonly List<long> _cachedSparseRegionsList = [];
 
-        internal bool TryGetLatestEnvironmentStateToFlush(long uptoTxIdExclusive, out ApplyLogsToDataFileState state)
+        internal ApplyLogsToDataFileState TryGetLatestEnvironmentStateToFlush(long uptoTxIdExclusive)
         {
             if (uptoTxIdExclusive == 0)
                 uptoTxIdExclusive = long.MaxValue;
@@ -1633,7 +1633,6 @@ namespace Voron
             scratchBuffers.Clear();
             var sparseRegions = _cachedSparseRegionsList;
             sparseRegions.Clear();
-            state = null;
             bool found = false;
             EnvironmentStateRecord record = null;
             while (true)
@@ -1641,8 +1640,10 @@ namespace Voron
                 if (_transactionsToFlush.TryPeek(out var maybe) == false ||
                     maybe.TransactionId >= uptoTxIdExclusive)
                 {
-                    state = new ApplyLogsToDataFileState(scratchBuffers, sparseRegions, record);
-                    return found;
+                    if (found == false)
+                        return null;
+                    Debug.Assert(record is not null);
+                    return new ApplyLogsToDataFileState(scratchBuffers, sparseRegions, record);
                 }
                 if (_transactionsToFlush.TryDequeue(out record) == false)
                     throw new InvalidOperationException("Failed to get transaction to flush after already peeked successfully");

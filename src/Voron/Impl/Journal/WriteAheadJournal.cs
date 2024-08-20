@@ -634,17 +634,13 @@ namespace Voron.Impl.Journal
                     {
                         // RavenDB-13302: we need to force a re-check this before we make decisions here
                         _waj._env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
-                        if (_waj._env.TryGetLatestEnvironmentStateToFlush(
-                                uptoTxIdExclusive: _waj._env.ActiveTransactions.OldestTransaction,
-                                out _applyLogsToDataFileStateFromPreviousFailedAttempt) == false)
-                        {
-                            Debug.Assert(_applyLogsToDataFileStateFromPreviousFailedAttempt.Buffers.Count == 0);
+                        _applyLogsToDataFileStateFromPreviousFailedAttempt = _waj._env.TryGetLatestEnvironmentStateToFlush(
+                            uptoTxIdExclusive: _waj._env.ActiveTransactions.OldestTransaction);
+                        if (_applyLogsToDataFileStateFromPreviousFailedAttempt == null)
                             return; // nothing to do
-                        }
-
-                        Debug.Assert(_applyLogsToDataFileStateFromPreviousFailedAttempt != null);
                     }
 
+                    Debug.Assert(_applyLogsToDataFileStateFromPreviousFailedAttempt is { Record: not null, Buffers: not null });
                     var currentTotalCommittedSinceLastFlushPages = TotalCommittedSinceLastFlushPages;
 
                     Pager.State dataPagerState;
