@@ -133,7 +133,7 @@ public sealed partial class ClusterStateMachine
                 break;
 
             case nameof(EditDataArchivalCommand):
-                if (AssertDataArchival(serverStore.LicenseManager.LicenseStatus, context) == false )
+                if (AssertDataArchival(serverStore.LicenseManager.LicenseStatus, context) == false)
                     throw new LicenseLimitException(LimitType.DataArchival, "Your license doesn't support using the data archival feature.");
                 break;
 
@@ -213,7 +213,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
             if (AssertQueueSink(newLicenseLimits, context) == false && databaseRecord.QueueSinks.Count > 0)
                 throw new LicenseLimitException(LimitType.QueueSink, "Your license doesn't support using the queue sink feature.");
-            if (AssertDataArchival(newLicenseLimits, context) == false && databaseRecord.DataArchival is { Disabled: false})
+            if (AssertDataArchival(newLicenseLimits, context) == false && databaseRecord.DataArchival is { Disabled: false })
                 throw new LicenseLimitException(LimitType.DataArchival, "Your license doesn't support using the data archival feature.");
         }
     }
@@ -915,7 +915,7 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.TimeSeries == null)
             return;
 
-        if (databaseRecord.TimeSeries.Collections.Count > 0 && databaseRecord.TimeSeries.Collections.All(x => x.Value.Disabled))
+        if (databaseRecord.TimeSeries.Collections.Count == 0 || databaseRecord.TimeSeries.Collections.All(x => x.Value.Disabled))
             return;
 
         throw new LicenseLimitException(LimitType.TimeSeriesRollupsAndRetention, "Your license doesn't support adding Time Series Rollups And Retention feature.");
