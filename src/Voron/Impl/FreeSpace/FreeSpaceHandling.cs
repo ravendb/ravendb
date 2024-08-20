@@ -335,6 +335,25 @@ namespace Voron.Impl.FreeSpace
             }
         }
 
+        public IEnumerable<long> GetAllFullyEmptySegments(LowLevelTransaction tx)
+        {
+            var freeSpaceTree = GetFreeSpaceTree(tx);
+            using (var it = freeSpaceTree.Iterate())
+            {
+                if (it.Seek(0) == false)
+                    yield break;
+
+                do
+                {
+                    int freePagesInSegment = it.CreateReaderForCurrent().ReadLittleEndianInt32();
+                    if (freePagesInSegment == NumberOfPagesInSection)
+                    {
+                        yield return it.CurrentKey * NumberOfPagesInSection;
+                    }
+                } while (it.MoveNext());
+            }
+        }
+
         public void FreePage(LowLevelTransaction tx, long pageNumber)
         {
             if (_guard.IsProcessingFixedSizeTree)

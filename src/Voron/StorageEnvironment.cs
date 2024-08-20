@@ -362,6 +362,11 @@ namespace Voron
                     metadataTree?.Add("db-id", DbId.ToByteArray());
                 }
 
+                foreach (long freeSegment in _freeSpaceHandling.GetAllFullyEmptySegments(tx))
+                {
+                    tx.RecordSparseRange(freeSegment);
+                }
+
                 tx.Commit();
             }
 
