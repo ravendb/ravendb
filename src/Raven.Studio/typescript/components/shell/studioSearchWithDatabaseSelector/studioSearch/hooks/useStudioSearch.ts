@@ -74,10 +74,8 @@ export function useStudioSearch(menuItems: menuItem[]) {
             return { database: 12, server: null };
         }
 
-        if (hasDatabaseMatch) {
+        else
             return { database: 7, server: 5 };
-        } else {
-            return { database: 5, server: 7 };
         }
     }
 
