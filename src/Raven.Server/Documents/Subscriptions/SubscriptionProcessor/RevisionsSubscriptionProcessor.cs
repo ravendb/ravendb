@@ -10,7 +10,6 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
@@ -60,15 +59,15 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                             });
 
                             yield return result;
-
-                            if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
-                                yield break;
-
-                            if (++numberOfDocs >= BatchSize)
-                                yield break;
                         }
                         else
                             yield return result;
+
+                        if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
+                            yield break;
+
+                        if (++numberOfDocs >= BatchSize)
+                            yield break;
                     }
                 }
             }
