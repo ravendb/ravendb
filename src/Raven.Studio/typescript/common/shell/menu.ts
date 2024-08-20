@@ -77,8 +77,20 @@ class menu {
         return Array.from(this.routeToItemCache().keys());
     });
 
-    constructor(items: Array<menuItem>) {
-        this.items(items);
+    private onUpdate() {
+        this.setActiveMenuItem();
+
+        $('#main-menu [data-toggle="tooltip"]').tooltip({
+            placement: "right",
+            container: ".main-menu",
+            html: true
+        });
+    }
+
+    constructor(items: KnockoutObservable<menuItem[]>) {
+        this.items = items;
+
+        this.items.subscribe(() => this.onUpdate());
     }
 
     handleIntermediateItemClick($data: { item: intermediateMenuItem }, $event: JQuery.TriggeredEvent) {
@@ -136,17 +148,6 @@ class menu {
         $($event.target)
             .closest('.level')
             .removeClass('level-show');
-    }
-
-    update(items: Array<menuItem>) {
-        this.items(items);
-        this.setActiveMenuItem();
-
-        $('#main-menu [data-toggle="tooltip"]').tooltip({
-            placement: "right",
-            container: ".main-menu",
-            html: true
-        });
     }
 
     handleLevelClick($data: any, $event: JQuery.TriggeredEvent) {
