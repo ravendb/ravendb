@@ -109,9 +109,15 @@ rvn_sync_pager(void* handle,
     int32_t* detailed_error_code);
 
 EXPORT int32_t
-rvn_set_sparse_region_pager(void* handle,
+rvn_pager_set_sparse_region(void* handle,
     int64_t offset,
     int64_t size,
+    int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_pager_get_file_size(void* handle,
+    int64_t* total_size,
+    int64_t* phyiscal_size,
     int32_t* detailed_error_code);
 
 

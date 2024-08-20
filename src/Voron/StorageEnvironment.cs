@@ -157,6 +157,7 @@ namespace Voron
                     null, 
                     -1,
                     (null, -1),
+                    null, 
                     null);
                 
                 _lastValidPageAfterLoad = dataPagerState.NumberOfAllocatedPages;
@@ -1600,7 +1601,8 @@ namespace Voron
                 ScratchPagesTable = tx.ModifiedPagesInTransaction,
                 NextPageNumber = tx.GetNextPageNumber(),
                 Root = tx.RootObjects.State,
-                DataPagerState = tx.DataPagerState
+                DataPagerState = tx.DataPagerState,
+                SparsePageRanges = tx.GetSparsePageRanges()
             };
 
             // we don't _have_ to make it using interlocked, but let's publish it immediately
@@ -1614,31 +1616,41 @@ namespace Voron
             }
         }
 
-        private readonly List<PageFromScratchBuffer> _cachedBuffer = [];
+        private readonly List<PageFromScratchBuffer> _cachedScratchBuffers = [];
+        private readonly List<long> _cachedSparseRegionsList = [];
 
-        internal bool TryGetLatestEnvironmentStateToFlush(long uptoTxIdExclusive, out List<PageFromScratchBuffer> bufferOfPageFromScratchBuffersToFree, out EnvironmentStateRecord record)
+        internal bool TryGetLatestEnvironmentStateToFlush(long uptoTxIdExclusive, out ApplyLogsToDataFileState state)
         {
             if (uptoTxIdExclusive == 0)
                 uptoTxIdExclusive = long.MaxValue;
 
-            _cachedBuffer.Clear();
-            bufferOfPageFromScratchBuffersToFree = _cachedBuffer;
-            
-            record = default;
+            var scratchBuffers = _cachedScratchBuffers;
+            scratchBuffers.Clear();
+            var sparseRegions = _cachedSparseRegionsList;
+            sparseRegions.Clear();
+            state = null;
             bool found = false;
+            EnvironmentStateRecord record = null;
             while (true)
             {
-                if (_transactionsToFlush.TryPeek(out var maybe) == false || 
+                if (_transactionsToFlush.TryPeek(out var maybe) == false ||
                     maybe.TransactionId >= uptoTxIdExclusive)
+                {
+                    state = new ApplyLogsToDataFileState(scratchBuffers, sparseRegions, record);
                     return found;
+                }
                 if (_transactionsToFlush.TryDequeue(out record) == false)
                     throw new InvalidOperationException("Failed to get transaction to flush after already peeked successfully");
 
+                if (record.SparsePageRanges != null)
+                {
+                    sparseRegions.AddRange(record.SparsePageRanges);
+                }
                 foreach (var (_, pageFromScratch) in record.ScratchPagesTable)
                 {
                     if (pageFromScratch.AllocatedInTransaction != record.TransactionId)
                         continue;
-                    bufferOfPageFromScratchBuffersToFree.Add(pageFromScratch);
+                    scratchBuffers.Add(pageFromScratch);
                 }
 
                 // single thread is reading from this, so we can be sure that peek + take gets the same value

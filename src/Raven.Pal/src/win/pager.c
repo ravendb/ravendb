@@ -136,9 +136,27 @@ Exit:
     return rc;
 }
 
+EXPORT int32_t
+rvn_pager_get_file_size(void* handle,
+    int64_t* total_size,
+    int64_t* phyiscal_size,
+    int32_t* detailed_error_code)
+{
+   struct handle *handle_ptr = handle;
+   FILE_STANDARD_INFO standard_info = {0};
+   
+   if(!GetFileInformationByHandleEx(handle_ptr->file_handle, FileStandardInfo , &standard_info, sizeof(FILE_STANDARD_INFO)))
+   {
+         *detailed_error_code = GetLastError();
+         return FAIL_GET_FILE_SIZE;
+   }
+   *phyiscal_size = standard_info.AllocationSize.QuadPart;
+   *total_size = standard_info.EndOfFile.QuadPart;
+   return SUCCESS;
+}
 
 EXPORT int32_t
-rvn_set_sparse_region_pager(void* handle,
+rvn_pager_set_sparse_region(void* handle,
     int64_t offset,
     int64_t size,
     int32_t* detailed_error_code)
