@@ -14,7 +14,9 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
@@ -1282,6 +1284,43 @@ loadToOrders(orderData);
 
                 AssertCounts(0, 0, connectionString);
             }
+        }
+    }
+    
+    [RequiresSnowflakeFact]
+    public async Task ShouldImportTask()
+    {
+        using (var srcStore = GetDocumentStore())
+        using (var dstStore = GetDocumentStore())
+        using (WithSnowflakeDatabase(out var connectionString, out var _, out var _))
+        {
+            SetupSnowflakeEtl(srcStore, connectionString, DefaultScript);
+            var exportFile = GetTempFileName();
+
+            var exportOperation = await srcStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
+            await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            var operation = await dstStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            var destinationRecord =
+                await dstStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dstStore.Database));
+            Assert.Equal(1, destinationRecord.SnowflakeEtls.Count);
+            Assert.Equal(1, destinationRecord.SnowflakeConnectionStrings.Count);
+
+            Assert.Equal(DefaultScript, destinationRecord.SnowflakeEtls[0].Transforms[0].Script);
+            Assert.Equal(["Orders"], destinationRecord.SnowflakeEtls[0].Transforms[0].Collections);
+            Assert.Equal("OrdersAndLines", destinationRecord.SnowflakeEtls[0].Transforms[0].Name);
+
+            Assert.Equal(2, destinationRecord.SnowflakeEtls[0].SnowflakeTables.Count);
+            Assert.Equal("Orders", destinationRecord.SnowflakeEtls[0].SnowflakeTables[0].TableName);
+            Assert.Equal("OrderLines", destinationRecord.SnowflakeEtls[0].SnowflakeTables[1].TableName);
+            
+            Assert.Equal("Id", destinationRecord.SnowflakeEtls[0].SnowflakeTables[0].DocumentIdColumn);
+            Assert.Equal("OrderId", destinationRecord.SnowflakeEtls[0].SnowflakeTables[1].DocumentIdColumn);
+            
+            Assert.False(destinationRecord.SnowflakeEtls[0].SnowflakeTables[0].InsertOnlyMode);
+            Assert.False(destinationRecord.SnowflakeEtls[0].SnowflakeTables[1].InsertOnlyMode);
         }
     }
 

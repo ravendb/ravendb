@@ -587,6 +587,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.QueueSinks = smugglerDatabaseRecord.QueueSinks;
                     databaseRecord.SupportedFeatures = smugglerDatabaseRecord.SupportedFeatures;
                     databaseRecord.SnowflakeEtls = smugglerDatabaseRecord.SnowflakeEtls;
+                    databaseRecord.SnowflakeConnectionStrings = smugglerDatabaseRecord.SnowflakeConnectionStrings;
                 };
             }
 
