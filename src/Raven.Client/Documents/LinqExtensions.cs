@@ -26,9 +26,9 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents
 {
-    ///<summary>
-    ///     Extensions to the LINQ syntax
-    ///</summary>
+    /// <summary>
+    /// Extensions to the LINQ syntax
+    /// </summary>
     public static class LinqExtensions
     {
 
@@ -205,7 +205,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        ///     Projects query results into the specified type.
+        /// Projects query results into the specified type.
         /// </summary>
         public static IRavenQueryable<TResult> ProjectInto<TResult>(this IQueryable queryable)
         {
@@ -402,7 +402,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        ///     Returns the number of query results as int64 type.
+        /// Returns the number of query results as int64 type.
         /// </summary>
         public static long LongCount<TSource>(this IQueryable<TSource> source)
         {
@@ -638,7 +638,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        ///     Performs secondary sorting of query results by score in ascending order.
+        /// Performs secondary sorting of query results by score in ascending order.
         /// </summary>
         public static IOrderedQueryable<T> ThenByScore<T>(this IOrderedQueryable<T> self)
         {
@@ -664,7 +664,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        ///     Performs secondary sorting of query results by score in descending order.
+        /// Performs secondary sorting of query results by score in descending order.
         /// </summary>
         public static IOrderedQueryable<T> ThenByScoreDescending<T>(this IOrderedQueryable<T> self)
         {
@@ -678,7 +678,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        ///     Returns the query results as a stream.
+        /// Returns the query results as a stream.
         /// </summary>
         public static void ToStream<T>(this IQueryable<T> self, Stream stream)
         {
@@ -696,7 +696,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        ///     Returns the query results as an asynchronous stream.
+        /// Returns the query results as an asynchronous stream.
         /// </summary>
         public static async Task ToStreamAsync<T>(this IQueryable<T> self, Stream stream, CancellationToken token = default)
         {
@@ -773,7 +773,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        ///     Performs spatial query.
+        /// Performs spatial query.
         /// </summary>
         /// <param name="path">Path to the spatial field used for querying.</param>
         /// <param name="clause">Spatial criteria that will be executed on a given spatial field.</param>
@@ -1089,7 +1089,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        ///     Performs secondary sorting of query results in ascending order.
+        /// Performs secondary sorting of query results in ascending order.
         /// </summary>
         /// <param name="path">Path to the field to order the query results by.</param>
         /// <param name="sorterName">Name of the custom sorter to be used.</param>
@@ -1130,7 +1130,7 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        ///     Performs secondary sorting of query results in descending order.
+        /// Performs secondary sorting of query results in descending order.
         /// </summary>
         /// <param name="path">Path to the field to order the query results by.</param>
         /// <param name="sorterName">Name of the custom sorter to be used.</param>
