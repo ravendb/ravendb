@@ -103,6 +103,9 @@
                         <div data-bind="attr: { class: sizeClass }"></div>
                     </div>
                 </div>
+                <div data-bind="if: badgeHtml != null">
+                    <div data-bind="html: badgeHtml"></div>
+                </div>
             </a>
         </li>
     </script>
