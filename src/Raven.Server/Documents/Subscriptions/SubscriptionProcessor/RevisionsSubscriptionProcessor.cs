@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
@@ -60,16 +61,14 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
                             yield return result;
 
+                            if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
+                                yield break;
+
                             if (++numberOfDocs >= BatchSize)
                                 yield break;
                         }
                         else
                             yield return result;
-
-                        if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
-                            yield break;
-
-
                     }
                 }
             }
@@ -153,17 +152,9 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 var match = Patch.MatchCriteria(Run, DocsContext, transformResult, ProjectionMetadataModifier.Instance, ref result.Data);
                 if (match == false)
                 {
-                    transformResult.Dispose();
-                    result.Data?.Dispose();
                     result.Data = null;
                     reason = $"{item.Current.Id} filtered by criteria";
                     return false;
-                }
-
-                if (transformResult.Location != result.Data.Location)
-                {
-                    // was modified by patch
-                    transformResult.Dispose();
                 }
 
                 return true;

@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public IEnumerable<RevisionRecord> GetRevisionsFromResendInternal(ClusterOperationContext context, HashSet<long> activeBatches)
+        public IEnumerable<RevisionRecord> GetRevisionsFromResend(ClusterOperationContext context, HashSet<long> activeBatches)
         {
             var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
             using (GetDatabaseAndSubscriptionKeyPrefix(context, DocumentDatabase.Name, SubscriptionId, SubscriptionType.Revision, out var prefix))
@@ -236,17 +236,6 @@ namespace Raven.Server.Documents.Subscriptions
                         Previous = previous
                     };
                 }
-            }
-        }
-
-        public IEnumerable<(Document Previous, Document Current)> GetRevisionsFromResend(DocumentDatabase database, ClusterOperationContext clusterContext, DocumentsOperationContext docsContext, HashSet<long> activeBatches)
-        {
-            foreach (var r in GetRevisionsFromResendInternal(clusterContext, activeBatches))
-            {
-                yield return (
-                    database.DocumentsStorage.RevisionsStorage.GetRevision(docsContext, r.Previous),
-                    database.DocumentsStorage.RevisionsStorage.GetRevision(docsContext, r.Current)
-                );
             }
         }
 
