@@ -201,7 +201,7 @@ export class LicenseStubs {
             DisableAutoUpdateFromApi: false,
             SkipLeasingErrorsLogging: false,
             LicensePath: null,
-            ThrowOnInvalidOrMissingLicense: false
+            ThrowOnInvalidOrMissingLicense: false,
         };
     }
 
