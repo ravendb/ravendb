@@ -28,7 +28,7 @@ public class RavenDB_21689 : StorageTest
             .CreateForWriter(false)
             .AddBinding(0, "id")
             .AddBinding(1, "boolean")
-            .AddBinding(2, "text", LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30)))
+            .AddBinding(2, "text", LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30), forQuerying: false))
             .Build();
     }
 
