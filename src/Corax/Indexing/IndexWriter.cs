@@ -430,8 +430,12 @@ namespace Corax.Indexing
             Page lastVisitedPage = default;
 
             var fieldsByRootPage = GetIndexedFieldByRootPage(_fieldsTree);
+            
             var nullTermsMarkers = new HashSet<long>();
-            Querying.IndexSearcher.LoadNullTermMarkers(_nullEntriesPostingListsTree, nullTermsMarkers);
+            Querying.IndexSearcher.LoadSpecialTermMarkers(_nullEntriesPostingListsTree, nullTermsMarkers);
+
+            var nonExistingTermsMarkers = new HashSet<long>();
+            Querying.IndexSearcher.LoadSpecialTermMarkers(_nonExistingEntriesPostingListsTree, nonExistingTermsMarkers);
             
             long dicId = CompactTree.GetDictionaryId(llt);
 
@@ -447,21 +451,20 @@ namespace Corax.Indexing
 
                 var termsPerEntryIndex = InsertTermsPerEntry(entryToDelete);
                 
-                RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, nullTermsMarkers, dicId, entryToDelete, termsPerEntryIndex);
+                RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, nullTermsMarkers, nonExistingTermsMarkers, dicId, entryToDelete, termsPerEntryIndex);
                 Container.Delete(llt, _entriesTermsContainerId, entryTermsId);
             }
         }
         
-        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, HashSet<long> nullTermMarkers, long dicId, long entryToDelete, int termsPerEntryIndex)
+        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, HashSet<long> nullTermMarkers, HashSet<long> nonExistingTermMarkers, long dicId, long entryToDelete, int termsPerEntryIndex)
         {
-            var reader = new EntryTermsReader(llt, nullTermMarkers, entryTerms.Address, entryTerms.Length, dicId);
+            var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId);
             reader.Reset();
             while (reader.MoveNextStoredField())
             {
-                //Null/empty is not stored in container, just exists as marker.
+                // Null/empty is not stored in container, just exists as marker.
                 if (reader.TermId == -1)
                     continue;
-                
                 
                 Container.Delete(llt, _storedFieldsContainerId, reader.TermId);
             }
@@ -475,15 +478,13 @@ namespace Corax.Indexing
 
                 if (reader.IsNull)
                 {
-                    ref var nullTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, Constants.NullValueSlice, out var nullExists);
-                    if (nullExists == false)
-                    {
-                        nullTermLocation = field.Storage.Count;
-                        field.Storage.AddByRef(new EntriesModifications(1));
-                          // We dont want to reclaim the term name
-                    }
-                    ref var nullTerm = ref field.Storage.GetAsRef(nullTermLocation);
-                    nullTerm.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency);
+                    RemoveSpecialTerm(field, reader, Constants.NullValueSlice, entryToDelete, termsPerEntryIndex);
+                    continue;
+                }
+
+                if (reader.IsNonExisting)
+                {
+                    RemoveSpecialTerm(field, reader, Constants.NonExistingValueSlice, entryToDelete, termsPerEntryIndex);
                     continue;
                 }
                 
@@ -527,6 +528,19 @@ namespace Corax.Indexing
                 term = ref field.Storage.GetAsRef(termLocation);
                 term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1);
             }
+        }
+
+        private void RemoveSpecialTerm(IndexedField field, EntryTermsReader reader, Slice termSlice, long entryToDelete, int termsPerEntryIndex)
+        {
+            ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
+            if (exists == false)
+            {
+                termLocation = field.Storage.Count;
+                field.Storage.AddByRef(new EntriesModifications(1));
+                // We dont want to reclaim the term name
+            }
+            ref var term = ref field.Storage.GetAsRef(termLocation);
+            term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency);
         }
         
         public Dictionary<long, string> GetIndexedFieldNamesByRootPage()

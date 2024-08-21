@@ -1,6 +1,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
@@ -51,6 +52,19 @@ public class RavenDB_22703 : RavenTestBase
                     .ToList();
 
                 Assert.Equal(4, res.Count);
+                
+                var deleteByQueryOp = new DeleteByQueryOperation("from 'Bars'");
+                
+                store.Operations.Send(deleteByQueryOp);
+                
+                Indexes.WaitForIndexing(store);
+                
+                res = session.Query<Bar>()
+                    .OrderByDescending(b => b.Foo.BarBool)
+                    .ThenByDescending(b => b.Foo.BarShort)
+                    .ToList();
+                
+                Assert.Equal(0, res.Count);
             }
         }
     }

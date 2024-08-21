@@ -38,9 +38,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private readonly IndexFieldsMapping _fieldMapping;
     private HashSet<long> _nullTermsMarkers;
+    private HashSet<long> _nonExistingTermsMarkers;
     private Tree _persistedDynamicTreeAnalyzer;
     private long? _numberOfEntries;
     public bool _nullTermsMarkersLoaded;
+    private bool _nonExistingTermsMarkersLoaded;
 
     /// <summary>
     /// When true no SIMD instruction will be used. Useful for checking that optimized algorithms behave in the same
@@ -124,14 +126,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
 
-        if (_nullTermsMarkersLoaded == false)
-        {
-            _nullTermsMarkersLoaded = true;
-            InitializeNullTermsMarkers();
-        }
+        InitializeSpecialTermsMarkers();
         
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, item.Address, item.Length, _dictionaryId);
+        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId);
     }
     
     internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref ContextBoundNativeList<Slice> terms)
@@ -584,26 +582,41 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new IncludeNonExistingMatch<TInner>(this, inner, field, forward);
     }
     
-    private void InitializeNullTermsMarkers()
+    private void InitializeSpecialTermsMarkers()
     {
-        _nullTermsMarkers = new HashSet<long>();
-        InitNullPostingList();
-        if (_nullPostingListsTree == null)
-            return;
+        if (_nullTermsMarkersLoaded == false)
+        {
+            _nullTermsMarkersLoaded = true;
+            _nullTermsMarkers = new HashSet<long>();
+            
+            InitNullPostingList();
+            
+            if (_nullPostingListsTree != null)
+                LoadSpecialTermMarkers(_nullPostingListsTree, _nullTermsMarkers);
+        }
 
-        LoadNullTermMarkers(_nullPostingListsTree, _nullTermsMarkers);
+        if (_nonExistingTermsMarkersLoaded == false)
+        {
+            _nonExistingTermsMarkersLoaded = true;
+            _nonExistingTermsMarkers = new HashSet<long>();
+            
+            InitNonExistingPostingList();
+            
+            if (_nonExistingPostingListsTree != null)
+                LoadSpecialTermMarkers(_nonExistingPostingListsTree, _nonExistingTermsMarkers);
+        }
     }
 
-    public static void LoadNullTermMarkers(Tree nullPostingList, HashSet<long> nullTermsMarkers)
+    public static void LoadSpecialTermMarkers(Tree postingList, HashSet<long> termsMarkers)
     {
-        using (var it = nullPostingList.Iterate(prefetch: false))
+        using (var it = postingList.Iterate(prefetch: false))
         {
             if (it.Seek(Slices.BeforeAllKeys))
             {
                 do
                 {
-                    (_, long nullTermId) = it.CreateReaderForCurrent().ReadStructure<(long, long)>();
-                    nullTermsMarkers.Add(nullTermId);
+                    (_, long termId) = it.CreateReaderForCurrent().ReadStructure<(long, long)>();
+                    termsMarkers.Add(termId);
                 } while (it.MoveNext());
             }
         }
