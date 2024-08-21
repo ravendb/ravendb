@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
 
         public override string CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
         {
-            return RetiredAttachmentHandlerProcessorForGetRetiredAttachment.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name);
+            return RetiredAttachmentHandlerProcessorForGetRetiredAttachment.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, "bulk");
         }
 
         public override async Task<Stream> GetAttachmentStream(DirectBackupDownloader downloader, Attachment attachment, string collection)

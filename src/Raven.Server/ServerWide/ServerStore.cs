@@ -2078,7 +2078,7 @@ namespace Raven.Server.ServerWide
                     $"Retire attachments frequency for database '{databaseName}' must be greater than 0.");
             }
 
-            var editExpiration = new EditRetireAttachmentsCommand(config, databaseName, raftRequestId);
+            var editRetireAttachmentsCommand = new EditRetireAttachmentsCommand(config, databaseName, raftRequestId);
 
             return SendToLeaderAsync(editExpiration);
         }

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
@@ -78,7 +77,6 @@ public sealed class DirectBackupUploader : BackupUploaderBase, IDisposable
 
     public void AddDelete(string folderName, string fileName)
     {
-
         switch (_destination)
         {
             case BackupConfiguration.BackupDestination.AmazonS3:
@@ -129,7 +127,8 @@ public sealed class DirectBackupUploader : BackupUploaderBase, IDisposable
 
         _threads.Add(thread);
     }
-    public async ValueTask<bool> TryCleanFinishedThread(Stopwatch sp, OperationCancelToken token)
+
+    public bool TryCleanFinishedThreads(Stopwatch sp, OperationCancelToken token)
     {
         if (_threads.Count < 8)
             return true;
@@ -154,22 +153,11 @@ public sealed class DirectBackupUploader : BackupUploaderBase, IDisposable
                 }
 
             }
-
-            //if (cleaned == false)
-            //{
-            //    //Console.WriteLine("cleaned == false");
-            //    //foreach (var t in _threads.Select(x=>x.Name))
-            //    //{
-            //    //    Console.WriteLine(t);
-            //    //}
-            //    await Task.Delay(256);
-            //}
         }
 
         if (_exceptions.IsEmpty == false)
         {
             // we should rethrow the actual exceptions when we will dispose this class.
-            Console.WriteLine("_exceptions.IsEmpty == false");
             token.Cancel();
             return false;
         }

@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                                      Base64Hash.Size 
                                      + sizeof(long)
                                      + sizeof(int)
-                                     + (RetiredAtUtc == null ? 0 : sizeof(long)); //TODO: egor DateTime is 8 bytes?
+                                     + (RetiredAtUtc == null ? 0 : sizeof(long));
       
 
         public long StreamSize => sizeof(byte) + // type
@@ -125,10 +125,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                     tempBufferPos += sizeof(long);
                 }
 
-
                 *(AttachmentFlags*)(pTemp + tempBufferPos) = Flags;
                 tempBufferPos += sizeof(AttachmentFlags);
-
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
                 stats.RecordAttachmentOutput(Size);
@@ -148,13 +146,12 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 var base64HashSize = *Reader.ReadExactly(sizeof(byte));
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
 
-
                 AttachmentSize = *(long*)Reader.ReadExactly(sizeof(long));
                 var ticks = *(long*)Reader.ReadExactly(sizeof(long));
                 if (ticks != -1)
                     RetiredAtUtc = new DateTime(ticks, DateTimeKind.Utc);
 
-                Flags = *(AttachmentFlags*)Reader.ReadExactly(sizeof(AttachmentFlags)) | AttachmentFlags.None; //TODO: egor do I want the | AttachmentFlags.None?
+                Flags = *(AttachmentFlags*)Reader.ReadExactly(sizeof(AttachmentFlags)) | AttachmentFlags.None;
 
                 stats.RecordAttachmentRead(Size);
             }

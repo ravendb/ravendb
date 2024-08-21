@@ -5,7 +5,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
-public partial class DirectUploadBackupTask : BackupTask
+public class DirectUploadBackupTask : BackupTask
 {
     internal DirectUploadBackupTask(DocumentDatabase database, BackupParameters backupParameters,
         BackupConfiguration configuration, OperationCancelToken token, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null) : base(database, backupParameters, configuration, token, logger, forTestingPurposes)

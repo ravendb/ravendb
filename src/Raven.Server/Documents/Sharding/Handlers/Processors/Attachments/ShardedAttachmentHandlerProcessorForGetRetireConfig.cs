@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments;
 
-internal sealed class ShardedAttachmentHandlerProcessorForGetRetireConfig : AbstractRetiredAttachmentHandlerrProcessorForGetRetireConfig<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedAttachmentHandlerProcessorForGetRetireConfig : AbstractRetiredAttachmentHandlerProcessorForGetRetireConfig<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
     public ShardedAttachmentHandlerProcessorForGetRetireConfig([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {

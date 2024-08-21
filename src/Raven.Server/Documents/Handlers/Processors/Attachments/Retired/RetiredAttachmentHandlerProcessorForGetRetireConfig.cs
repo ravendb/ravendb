@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired;
 
-internal sealed class RetiredAttachmentHandlerProcessorForGetRetireConfig : AbstractRetiredAttachmentHandlerrProcessorForGetRetireConfig<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class RetiredAttachmentHandlerProcessorForGetRetireConfig : AbstractRetiredAttachmentHandlerProcessorForGetRetireConfig<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public RetiredAttachmentHandlerProcessorForGetRetireConfig([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

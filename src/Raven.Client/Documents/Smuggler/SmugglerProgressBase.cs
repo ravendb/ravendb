@@ -244,7 +244,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
                 sb.AppendLine("- Data Archival");
 
             if (RetireAttachmentsConfigurationUpdated)
-                sb.AppendLine("- Data Archival");
+                sb.AppendLine("- Retire Attachments");
 
             if (RavenConnectionStringsUpdated)
                 sb.AppendLine("- RavenDB Connection Strings");

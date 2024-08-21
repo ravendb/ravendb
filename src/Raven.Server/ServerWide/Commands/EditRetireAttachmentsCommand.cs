@@ -9,10 +9,6 @@ namespace Raven.Server.ServerWide.Commands
     {
         public const int CommandVersion = 60_002;
         public RetireAttachmentsConfiguration Configuration;
-        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
-        {
-            databaseRecord.RetireAttachments = Configuration;
-        }
 
         public EditRetireAttachmentsCommand()
         {

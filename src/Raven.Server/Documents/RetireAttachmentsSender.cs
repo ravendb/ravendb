@@ -1,37 +1,23 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
-using Google.Api.Gax.ResourceNames;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
-using Raven.Server.Documents.ETL.Providers.OLAP;
-using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionMerger.Commands;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Voron;
-using Voron.Util;
 using static Raven.Server.Documents.AbstractBackgroundWorkStorage;
-using static Raven.Server.Utils.Cpu.WindowsCpuUsageCalculator;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents
 {
@@ -80,17 +66,7 @@ namespace Raven.Server.Documents
             });
             return t;
         }
-        //private DocumentInfoHelper _documentInfoHelper;
 
-        //public IDisposable Initialize(DocumentsOperationContext context)
-        //{
-        //    _documentInfoHelper = new DocumentInfoHelper(context);
-
-        //    return new DisposableAction(() =>
-        //    {
-        //        _documentInfoHelper.Dispose();
-        //    });
-        //}
         internal async Task<int> RetireAttachments(int batchSize, long maxItemsToProcess)
         {
             if (Configuration.HasUploader() == false)
@@ -138,9 +114,9 @@ namespace Raven.Server.Documents
                                 //Console.WriteLine("toRetire == null || toRetire.Count == 0");
                                 return totalCount;
                             }
-
+                            // TODO: egor this can be initilized once
                             // upload the attachments to cloud and update the document
-                            using (DirectBackupUploader directUpload = new DirectBackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, OlapEtl.GenerateUploadResult(), onProgress: ProgressNotification, _token))
+                            using (DirectBackupUploader directUpload = new DirectBackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _token))
                             {
                                 var shouldUpload = true;
 
@@ -176,7 +152,7 @@ namespace Raven.Server.Documents
                                                     continue;
                                                 }
 
-                                                if (await directUpload.TryCleanFinishedThread(duration, _token))
+                                                if (directUpload.TryCleanFinishedThreads(duration, _token))
                                                 {
                                                     string objKeyName = GetBlobDestination(keySlice, collection, out string folderName);
                                                     directUpload.CreateUploadTask(_database, attachmentStream, folderName, objKeyName, CancellationToken);
@@ -201,7 +177,7 @@ namespace Raven.Server.Documents
 
                                             break;
                                         case RetiredAttachmentsStorage.AttachmentRetireType.DeleteRetire:
-                                            if (await directUpload.TryCleanFinishedThread(duration, _token))
+                                            if (directUpload.TryCleanFinishedThreads(duration, _token))
                                             {
                                                 using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.RemoveTypeFromRetiredAttachmentsKey(options.Context, key, out var keySlice))
                                                 {

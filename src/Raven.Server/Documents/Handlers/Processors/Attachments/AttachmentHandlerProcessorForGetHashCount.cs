@@ -25,7 +25,6 @@ internal sealed class AttachmentHandlerProcessorForGetHashCount : AbstractAttach
                 RegularCount = count.RegularHashes,
                 RetiredCount = count.RetiredHashes,
                 TotalCount = count.TotalHashes,
-
             });
         }
     }

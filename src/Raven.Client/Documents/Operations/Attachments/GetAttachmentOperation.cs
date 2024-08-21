@@ -77,6 +77,7 @@ namespace Raven.Client.Documents.Operations.Attachments
 
                 ResponseType = RavenCommandResponseType.Empty;
             }
+
             protected virtual string GetUrl(ServerNode node)
             {
                 return $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";

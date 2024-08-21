@@ -25,7 +25,7 @@ namespace Raven.Server.Documents
 
         private List<TimeSeriesChange> _timeSeriesNotifications;
 
-        private Dictionary<bool, List<Slice>> _attachmentHashesToMaybeDelete;
+        private List<Slice> _attachmentHashesToMaybeDelete;
 
         private bool _executeDocumentsMigrationAfterCommit;
 
@@ -174,32 +174,11 @@ namespace Raven.Server.Documents
             _collectionCache.Add(collectionName, name);
         }
 
-        internal void CheckIfShouldDeleteAttachmentStream(Slice hash, bool fromRetire)
+        internal void CheckIfShouldDeleteAttachmentStream(Slice hash)
         {
             var clone = hash.Clone(InnerTransaction.Allocator);
-                _attachmentHashesToMaybeDelete ??= new();
-            if (fromRetire)
-            {
-                if (_attachmentHashesToMaybeDelete.TryGetValue(true, out var val) == false)
-                {
-                    _attachmentHashesToMaybeDelete.Add(true, new List<Slice>(){ clone });
-                    return;
-                }
-
-                val.Add(hash);
-                _attachmentHashesToMaybeDelete[true] = val;
-            }
-            else
-            {
-                if (_attachmentHashesToMaybeDelete.TryGetValue(false, out var val) == false)
-                {
-                    _attachmentHashesToMaybeDelete.Add(false, new List<Slice>() { clone });
-                    return;
-                }
-
-                val.Add(hash);
-                _attachmentHashesToMaybeDelete[false] = val;
-            }
+            _attachmentHashesToMaybeDelete ??= new();
+            _attachmentHashesToMaybeDelete.Add(clone);
         }
 
         internal void ExecuteDocumentsMigrationAfterCommit()

@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Amazon.Runtime;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
@@ -62,6 +59,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     writer.WritePropertyName(nameof(GetAttachmentsOperation.GetAttachmentsCommand.AttachmentsMetadata));
                     writer.WriteStartArray();
                     var first = true;
+
                     foreach (BlittableJsonReaderObject bjro in attachments)
                     {
                         if (bjro.TryGet(nameof(AttachmentRequest.DocumentId), out string id) == false)
@@ -81,8 +79,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
                         var attachmentStream = GetAttachmentStream(downloader, attachment, collection);
                         tasks.Add(attachmentStream);
-                        //var attachmentStream =await GetAttachmentStream(context, downloader, attachment, tcs);
-                        //attachmentsStreams.Add(attachmentStream);
 
                         WriteAttachmentDetails(writer, attachment, id);
 
@@ -102,6 +98,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     await t;
                     attachmentsStreams.Add(t.Result);
                 }
+
                 stream.Position = 0;
                 await stream.CopyToAsync(RequestHandler.ResponseBodyStream(), tcs.Token);
             }

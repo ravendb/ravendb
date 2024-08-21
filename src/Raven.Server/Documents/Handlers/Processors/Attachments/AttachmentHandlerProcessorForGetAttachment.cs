@@ -7,7 +7,6 @@ using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
@@ -74,10 +73,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 await WriteResponseStream(context, attachment, collection, token);
             }
         }
+
         public virtual void DisposeReadTransactionIfNeeded(DocumentsTransaction tx)
         {
             // noop
         }
+
         public virtual string CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
         {
             if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
