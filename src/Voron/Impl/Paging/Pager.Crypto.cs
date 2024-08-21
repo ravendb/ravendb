@@ -269,9 +269,6 @@ public unsafe partial class Pager
             {
                 foreach (var buffer in cryptoState)
                 {
-                    if (CanReturnBuffer(buffer.Value))
-                        continue;
-
                     buffer.Value.ReleaseRef();
 
                     ReturnBuffer(pager, buffer.Value);
@@ -304,12 +301,6 @@ public unsafe partial class Pager
             if(currentHash != hashFromPager)
                 throw new InvalidOperationException($"The hash of {pageNumber} was modified, but it was *not* changed in this transaction!");
 
-        }
-        private static bool CanReturnBuffer(EncryptionBuffer buffer)
-        {
-            // Pages that are marked with OriginalSize = 0 were separated from a larger allocation, we cannot free them directly.
-            // The first page of the section will be returned and when it will be freed, all the other parts will be freed as well.
-            return !buffer.PartOfLargerAllocation;
         }
     }
 }

@@ -81,7 +81,6 @@ public unsafe partial class Pager
         public bool SkipOnTxCommit;
         public bool ExcessStorageFromAllocationBreakup;
         public bool Modified;
-        public bool PartOfLargerAllocation;
         public int Usages;
 
         public bool CanRelease => Usages == 0;
