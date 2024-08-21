@@ -297,18 +297,36 @@ namespace Raven.Server.Commercial
             if (licenseStatus.Version.Major >= 6 || licenseStatus.IsCloud)
                 return;
 
-            if (usingApi && serverStore.Server.Configuration.Licensing.DisableAutoUpdateFromApi == false)
+            if (usingApi)
             {
-                var licenseFromApi = AsyncHelpers.RunSync(() => GetLicenseFromApi(license, contextPool, serverStore.ServerShutdown));
-                if (licenseFromApi != null)
+                if (serverStore.Server.Configuration.Licensing.DisableAutoUpdateFromApi == false)
                 {
-                    licenseStatus = LicenseManager.GetLicenseStatus(licenseFromApi);
-                    if (licenseStatus.Version.Major >= 6)
+                    var licenseFromApi = AsyncHelpers.RunSync(() => GetLicenseFromApi(license, contextPool, serverStore.ServerShutdown));
+                    if (licenseFromApi != null)
                     {
-                        serverStore.LicenseManager.OnBeforeInitialize += () =>
-                            AsyncHelpers.RunSync(() =>
-                                serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure));
-                        return;
+                        licenseStatus = LicenseManager.GetLicenseStatus(licenseFromApi);
+                        if (licenseStatus.Version.Major >= 6)
+                        {
+                            serverStore.LicenseManager.OnBeforeInitialize += () =>
+                                AsyncHelpers.RunSync(() =>
+                                    serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure));
+                            return;
+                        }
+                    }
+                }
+                else // The only way to update the license is to use the configuration option when the update from API is disabled
+                {
+                    string licenseJson = GetLicenseJson(serverStore);
+                    if (string.IsNullOrEmpty(licenseJson) == false && TryDeserializeLicense(licenseJson, out License localLicense))
+                    {
+                        licenseStatus = LicenseManager.GetLicenseStatus(localLicense);
+                        if (licenseStatus.Version.Major >= 6)
+                        {
+                            serverStore.LicenseManager.OnBeforeInitialize += () =>
+                                AsyncHelpers.RunSync(() =>
+                                    serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure));
+                            return;
+                        }
                     }
                 }
             }
@@ -345,6 +363,28 @@ namespace Raven.Server.Commercial
             }
 
             throw new LicenseLimitException(msg);
+        }
+
+        private static string GetLicenseJson(ServerStore serverStore)
+        {
+            string licenseJson = null;
+
+            if (string.IsNullOrEmpty(serverStore.Configuration.Licensing.License) == false)
+                licenseJson = serverStore.Configuration.Licensing.License;
+
+            if (File.Exists(serverStore.Configuration.Licensing.LicensePath.FullPath))
+            {
+                try
+                {
+                    licenseJson = File.ReadAllText(serverStore.Configuration.Licensing.LicensePath.FullPath);
+                }
+                catch
+                {
+                    // expected
+                }
+            }
+
+            return licenseJson;
         }
 
         private static async Task<License> GetLicenseFromApi(License license, TransactionContextPool contextPool, CancellationToken token)
