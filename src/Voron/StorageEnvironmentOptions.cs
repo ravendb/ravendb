@@ -11,6 +11,7 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
+using Mono.Unix.Native;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Logging;
@@ -862,7 +863,10 @@ namespace Voron
 
             public override (Pager Pager, Pager.State State) OpenJournalPager(string filename)
             {
-                return Pager.Create(this, filename, 0, Pal.OpenFileFlags.ReadOnly);
+                var flags = Pal.OpenFileFlags.ReadOnly;
+                if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
+                    flags |= Pal.OpenFileFlags.DoNotMap;
+                return Pager.Create(this, filename, 0, flags);
             }
 
             private FileInfo GetJournalFileInfo(long journalNumber, JournalInfo journalInfo)
