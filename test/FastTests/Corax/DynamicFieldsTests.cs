@@ -191,7 +191,7 @@ public unsafe class DynamicFieldsTests : StorageTest
 
         using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, aSlice)
-            .AddBinding(1, dSlice,  LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Version.LUCENE_29)));
+            .AddBinding(1, dSlice,  LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Version.LUCENE_29), forQuerying: false));
         var fields = builder.Build();
 
 

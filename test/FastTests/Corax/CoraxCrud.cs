@@ -171,7 +171,7 @@ public class CoraxCrud: StorageTest
 
         using (var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                    .AddBinding(0, idSlice)
-                   .AddBinding(1, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30))))
+                   .AddBinding(1, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30), forQuerying: true)))
             return builder.Build();
     }
 

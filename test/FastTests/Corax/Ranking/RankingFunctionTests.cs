@@ -29,7 +29,7 @@ public class RankingFunctionTests : StorageTest
     {
         //Lets use FullTextSearch analyzer for Content. This allows us to produce multiple items from one input string but
         //be careful what are you querying :) 
-        Analyzer fullTextSearch = LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30));
+        Analyzer fullTextSearch = LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30), forQuerying: false);
         _context = new ByteStringContext(SharedMultipleUseFlag.None);
         _mapping = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(IdIndex, "Id")
