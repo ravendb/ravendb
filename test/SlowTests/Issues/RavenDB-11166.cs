@@ -4,7 +4,6 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents.Subscriptions;
 using Sparrow.Server;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -267,66 +266,6 @@ select f(dog)
                             foreach (var item in batch.Items)
                             {
                                 s.Load<Person>(item.Result.Owner);
-                                var dog = s.Load<Dog>(item.Id);
-                                Assert.Same(dog, item.Result);
-                            }
-                            Assert.Equal(0, s.Advanced.NumberOfRequests);
-                        }
-                        mre.Set();
-                    });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
-                    await sub.DisposeAsync();
-                    await r;// no error
-                }
-
-            }
-        }
-
-        // RavenDB-20829
-        [RavenFact(RavenTestCategory.Subscriptions)]
-        public async Task CanUseSubscriptionWithIncludes2()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Person
-                    {
-                        Name = "Arava"
-                    }, "people/1");
-                    session.Store(new Dog
-                    {
-                        Name = "Oscar",
-                        Owner = "people/1"
-                    });
-                    session.Store(new Dog
-                    {
-                        Name = "Oscar2",
-                        Owner = "People/2"
-                    });
-                    session.SaveChanges();
-                }
-                var id = store.Subscriptions.Create(new SubscriptionCreationOptions
-                {
-                    Query = @"from Dogs include Owner"
-                });
-
-                using (var sub = store.Subscriptions.GetSubscriptionWorker<Dog>(id))
-                {
-                    var mre = new AsyncManualResetEvent();
-                    var r = sub.Run(batch =>
-                    {
-                        Assert.NotEmpty(batch.Items);
-                        using (var s = batch.OpenSession())
-                        {
-                            foreach (var item in batch.Items)
-                            {
-                                var owner = s.Load<Person>(item.Result.Owner);
-                                if (item.Result.Owner == "people/1")
-                                    Assert.NotNull(owner);
-                                else
-                                    Assert.Null(owner);
-
                                 var dog = s.Load<Dog>(item.Id);
                                 Assert.Same(dog, item.Result);
                             }

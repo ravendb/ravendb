@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Queries
                         }
                     }
 
-                    idc.Fill(final.Includes, includeMissingAsNull: false);
+                    idc.Fill(final.Includes);
 
                     final.TotalResults = final.Results.Count;
 
