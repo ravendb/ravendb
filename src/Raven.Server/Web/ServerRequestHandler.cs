@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 
 namespace Raven.Server.Web
@@ -15,6 +17,16 @@ namespace Raven.Server.Web
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
 
             return Task.CompletedTask;
+        }
+
+        protected void AssertCanPersistConfiguration()
+        {
+            var authenticateConnection = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            if (authenticateConnection != null && authenticateConnection.Status != RavenServer.AuthenticationStatus.ClusterAdmin)
+            {
+                throw new UnauthorizedAccessException($"Configuration was modified but couldn't be persistent because the authentication level is {authenticateConnection.Status}. " +
+                                                      "The configuration will be reverted on server restart.");
+            }
         }
     }
 }

@@ -99,6 +99,8 @@ namespace Raven.Server.TrafficWatch
 
                 if (configuration.Persist)
                 {
+                    AssertCanPersistConfiguration();
+
                     try
                     {
                         using var jsonFileModifier = SettingsJsonModifier.Create(context, ServerStore.Configuration.ConfigPath);
