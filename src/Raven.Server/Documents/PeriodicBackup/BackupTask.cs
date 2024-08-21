@@ -11,8 +11,6 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.PeriodicBackup.Aws;
-using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.PeriodicBackup.Retention;
@@ -30,7 +28,6 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Utils;
-using static Raven.Server.Documents.PeriodicBackup.DirectUpload.DirectUploadBackupTask;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
 using StorageEnvironmentType = Voron.StorageEnvironmentWithType.StorageEnvironmentType;
 
@@ -46,19 +43,19 @@ namespace Raven.Server.Documents.PeriodicBackup
         protected readonly BackupConfiguration Configuration;
         protected readonly BackupResult BackupResult;
         protected readonly RetentionPolicyBaseParameters RetentionPolicyParameters;
+        protected readonly bool _backupToLocalFolder;
+        protected readonly Logger _logger;
+        protected readonly bool _isServerWide;
+        protected Action<IOperationProgress> _onProgress;
+        protected readonly string _taskName;
 
         private readonly PeriodicBackupStatus _previousBackupStatus;
         internal readonly bool _isFullBackup;
         private readonly bool _isOneTimeBackup;
-        protected readonly bool _backupToLocalFolder;
         private readonly long _operationId;
         private readonly PathSetting _tempBackupPath;
-        protected readonly Logger _logger;
         public readonly OperationCancelToken TaskCancelToken;
-        protected readonly bool _isServerWide;
         private readonly bool _isBackupEncrypted;
-        protected  Action<IOperationProgress> _onProgress;
-        protected readonly string _taskName;
         internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
         private readonly DateTime _startTimeUtc;
         protected Action OnBackupException;
@@ -437,34 +434,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private BackupResult GenerateBackupResult()
         {
-            return new BackupResult
-            {
-                SnapshotBackup =
-                {
-                    Skipped = _isFullBackup == false || Configuration.BackupType == BackupType.Backup
-                },
-                S3Backup =
-                {
-                    // will be set before the actual upload if needed
-                    Skipped = true
-                },
-                AzureBackup =
-                {
-                    Skipped = true
-                },
-                GoogleCloudBackup =
-                {
-                    Skipped = true
-                },
-                GlacierBackup =
-                {
-                    Skipped = true
-                },
-                FtpBackup =
-                {
-                    Skipped = true
-                }
-            };
+            var backupResult = BackupUploaderBase.GenerateUploadResult();
+            backupResult.SnapshotBackup = new SmugglerProgressBase.Counts { Skipped = _isFullBackup == false || Configuration.BackupType == BackupType.Backup };
+            return backupResult;
         }
 
         public static bool DirectoryContainsBackupFiles(string fullPath, Func<string, bool> isBackupFile)

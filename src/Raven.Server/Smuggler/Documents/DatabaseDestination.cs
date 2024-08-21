@@ -7,7 +7,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Amqp.Framing;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -837,7 +836,6 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
                     hasAttachments = true;
-                    //TODO: egor add Size and flags, then pass them to PutAttachment() method
                     if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                         attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
                         attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||

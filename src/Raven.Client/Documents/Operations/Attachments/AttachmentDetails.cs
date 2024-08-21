@@ -44,10 +44,9 @@ namespace Raven.Client.Documents.Operations.Attachments
                 [nameof(ContentType)] = ContentType,
                 [nameof(Size)] = Size
             };
-            if (Flags != AttachmentFlags.None)
-                json[nameof(Flags)] = Flags.ToString();
-            if (RetireAt != null)
-                json[nameof(RetireAt)] = RetireAt;
+            json[nameof(Flags)] = Flags.ToString();
+            json[nameof(RetireAt)] = RetireAt;
+
             return json;
         }
     }

@@ -11,25 +11,22 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Voron;
 using Voron.Impl;
-
+using Voron.Util;
 
 namespace Raven.Server.Documents;
 
 public abstract unsafe class AbstractBackgroundWorkStorage
 {
     protected readonly DocumentDatabase Database;
-    protected readonly Logger Logger;
     protected readonly string MetadataPropertyName;
     protected readonly string _treeName;
 
-    protected AbstractBackgroundWorkStorage(Transaction tx, DocumentDatabase database, Logger logger, string treeName, string metadataPropertyName)
+    protected AbstractBackgroundWorkStorage(Transaction tx, DocumentDatabase database, string treeName, string metadataPropertyName)
     {
         tx.CreateTree(treeName);
 
-        Logger = logger;
         Database = database;
         _treeName = treeName;
         MetadataPropertyName = metadataPropertyName;
@@ -97,20 +94,23 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
                             try
                             {
-                                using var myDoc = GetDocumentAndIdOrCollection(options, clonedId);
-                                if (myDoc == null)
+                                var item = GetDocumentAndIdOrCollection(options, clonedId, ticksAsSlice);
+                                if (item.Document == null)
                                 {
-                                    toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id: null));
+                                    toProcess.Enqueue(item);
                                     totalCount++;
                                     continue;
                                 }
 
-                                if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
-                                    break;
+                                using (item.GetDocumentDisposable())
+                                {
+                                    if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
+                                        break;
 
-                                toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, myDoc.Id));
-                                totalCount++;
-                                options.Context.Transaction.ForgetAbout(myDoc.Document);
+                                    toProcess.Enqueue(item);
+                                    totalCount++;
+                                    options.Context.Transaction.ForgetAbout(item.Document);
+                                }
                             }
                             catch (DocumentConflictException)
                             {
@@ -130,21 +130,9 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         }
     }
 
-    protected class MyStruct : IDisposable
-    {
-        public Document Document { get; set; }
-        public string Id { get; set; }
-
-
-        public void Dispose()
-        {
-            Document.Dispose();
-            Document = null;
-        }
-    }
-
     public class DocumentExpirationInfo
     {
+        public Document Document { get; set; }
         public Slice Ticks { get; }
         public Slice LowerId { get; }
         public string Id { get; }
@@ -159,19 +147,31 @@ public abstract unsafe class AbstractBackgroundWorkStorage
             LowerId = lowerId;
             Id = id;
         }
+
+        public IDisposable GetDocumentDisposable()
+        {
+            return new DisposableAction(() =>
+            {
+                Document?.Dispose();
+                Document = null;
+            });
+        }
     }
 
-    protected virtual MyStruct GetDocumentAndIdOrCollection(BackgroundWorkParameters options, Slice clonedId)
+    protected virtual DocumentExpirationInfo GetDocumentAndIdOrCollection(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
     {
         var document = Database.DocumentsStorage.Get(options.Context, clonedId, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
         if (document == null ||
             document.TryGetMetadata(out var metadata) == false ||
             HasPassed(metadata, options.CurrentTime, MetadataPropertyName) == false)
         {
-            return null;
+            return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
         }
 
-        return new MyStruct { Document = document, Id = document.Id };
+        return new DocumentExpirationInfo(ticksSlice, clonedId, id: document.Id)
+        {
+            Document = document
+        };
     }
 
     protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount);

@@ -15,7 +15,6 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -265,35 +264,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        public static BackupResult GenerateUploadResult()
-        {
-            return new BackupResult
-            {
-                // Skipped will be set later, if needed
-                S3Backup = new UploadToS3
-                {
-                    Skipped = true
-                },
-                AzureBackup = new UploadToAzure
-                {
-                    Skipped = true
-                },
-                GoogleCloudBackup = new UploadToGoogleCloud
-                {
-                    Skipped = true
-                },
-                GlacierBackup = new UploadToGlacier
-                {
-                    Skipped = true
-                },
-                FtpBackup = new UploadToFtp
-                {
-                    Skipped = true
-                }
-            };
-        }
-
-
         private void UploadToRemoteDestinations(string localPath, UploadInfo uploadInfo, OlapEtlStatsScope scope)
         {
             CancellationToken.ThrowIfCancellationRequested();
@@ -302,7 +272,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _uploaderSettings.FileName = uploadInfo.FileName;
             _uploaderSettings.FolderName = uploadInfo.FolderName;
             
-            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
+            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
 
             try
             {
@@ -335,7 +305,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _uploaderSettings.FileName = uploadInfo.FileName;
             _uploaderSettings.FolderName = uploadInfo.FolderName;
 
-            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
+            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
 
             try
             {

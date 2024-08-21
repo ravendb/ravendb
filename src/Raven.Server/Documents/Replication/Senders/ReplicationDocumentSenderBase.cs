@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Mail;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
@@ -26,7 +24,6 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
-using static Raven.Server.Documents.Replication.ReplicationItems.ReplicationBatchItem;
 
 namespace Raven.Server.Documents.Replication.Senders
 {
@@ -497,10 +494,6 @@ namespace Raven.Server.Documents.Replication.Senders
 
                     if (MissingAttachmentsInLastBatch)
                         state.MissingAttachmentBase64Hashes?.Remove(attachment.Base64Hash);
-                }
-                else
-                {
-
                 }
             }
 

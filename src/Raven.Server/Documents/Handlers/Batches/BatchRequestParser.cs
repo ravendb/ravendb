@@ -960,24 +960,20 @@ namespace Raven.Server.Documents.Handlers.Batches
                     ThrowInvalidProperty(state, ctx);
                     break;
 
-
-
                 case 7:
 
                     if ("Retired"u8.IsEqualConstant(state.StringBuffer))
                         return AttachmentFlags.Retired;
 
-
                     ThrowInvalidProperty(state, ctx);
                     break;
+
                 case 10:
                     if ("Compressed"u8.IsEqualConstant(state.StringBuffer))
                         return AttachmentFlags.Compressed;
 
                     ThrowInvalidProperty(state, ctx);
                     break;
-
-
 
                 default:
                     ThrowInvalidProperty(state, ctx);

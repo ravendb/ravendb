@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (_attachment.RetiredAt.HasValue == false)
                 {
                     return null;
-                   // return DynamicNullObject.Null;
+                    // TODO: egor can I return simply null here? or return DynamicNullObject.Null; ? (also in GetContentAsStream)
                 }
 
                 return _attachment.RetiredAt.Value;

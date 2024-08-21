@@ -584,13 +584,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
 
             smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord =>
-            {
                 // need to enable revisions before import
                 database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 //RetireAttachmentsSender.LoadConfigurations(database, smugglerDatabaseRecord, null);
 
                 database.SupportedFeatures = new SupportedFeature(smugglerDatabaseRecord);
             };
+
+
         }
 
         private async Task OnErrorAsync(Action<IOperationProgress> onProgress, Exception e)

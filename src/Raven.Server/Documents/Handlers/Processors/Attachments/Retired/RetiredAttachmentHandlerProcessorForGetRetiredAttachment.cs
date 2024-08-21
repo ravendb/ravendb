@@ -16,21 +16,21 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
 
         public override string CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
         {
-            return CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name);
+            return CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, "get");
         }
 
-        public static string CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(DocumentsOperationContext context, DocumentDatabase database, Attachment attachment, string documentId, string name)
+        public static string CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(DocumentsOperationContext context, DocumentDatabase database, Attachment attachment, string documentId, string name, string method)
         {
             if (attachment.Flags.HasFlag(AttachmentFlags.Retired) == false)
             {
-                throw new InvalidOperationException($"Cannot get retired attachment '{name}' on document '{documentId}' because it is not retired. Please use dedicated API.");
+                throw new InvalidOperationException($"Cannot {method} retired attachment '{name}' on document '{documentId}' because it is not retired. Please use dedicated API.");
             }
 
             using var document = database.DocumentsStorage.Get(context, documentId, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
             if (document.TryGetCollection(out string collectionStr) == false)
             {
                 throw new InvalidOperationException(
-                    $"Cannot get retired attachment '{name}' on document '{documentId}' because it is doesn't have a collection. Should not happen a likely a bug !");
+                    $"Cannot {method} retired attachment '{name}' on document '{documentId}' because it is doesn't have a collection. Should not happen a likely a bug !");
             }
 
             var config = database.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(database.Name);
@@ -38,18 +38,18 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
             if (config == null)
             {
                 throw new InvalidOperationException(
-                    $"Cannot get retired attachment '{name}' on document '{documentId}' because it is doesn't have a {nameof(RetireAttachmentsConfiguration)}.");
+                    $"Cannot {method} retired attachment '{name}' on document '{documentId}' because it is doesn't have a {nameof(RetireAttachmentsConfiguration)}.");
             }
 
             if (config.Disabled)
             {
                 throw new InvalidOperationException(
-                    $"Cannot get retired attachment '{name}' on document '{documentId}' because {nameof(RetireAttachmentsConfiguration)} is disabled.");
+                    $"Cannot {method} retired attachment '{name}' on document '{documentId}' because {nameof(RetireAttachmentsConfiguration)} is disabled.");
             }
 
             if (config.RetirePeriods.ContainsKey(collectionStr) == false)
             {
-                throw new InvalidOperationException($"Cannot get retired attachment '{name}' on document '{documentId}' because doesn't have {nameof(RetireAttachmentsConfiguration)} for collection: '{collectionStr}'.");
+                throw new InvalidOperationException($"Cannot {method} retired attachment '{name}' on document '{documentId}' because doesn't have {nameof(RetireAttachmentsConfiguration)} for collection: '{collectionStr}'.");
             }
 
             return collectionStr;

@@ -1,37 +1,23 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Security.Policy;
 using System.Threading.Tasks;
-using CsvHelper.Configuration;
-using Elastic.Clients.Elasticsearch;
-using Google.Apis.Storage.v1.Data;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Extensions;
-using Raven.Client.Json.Serialization;
-using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Retired;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Schemas;
-using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
@@ -44,11 +30,11 @@ namespace Raven.Server.Documents;
 
 public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 {
-    //internal readonly TableSchema RetiredAttachmentsSchema;
-    public RetiredAttachmentsStorage(Transaction tx, DocumentDatabase database) : base(tx, database,
-        LoggingSource.Instance.GetLogger<RetiredAttachmentsStorage>(database.Name), AttachmentsByRetire, nameof(AttachmentName.RetireAt))
+    private readonly Logger _logger;
+
+    public RetiredAttachmentsStorage(Transaction tx, DocumentDatabase database) : base(tx, database, AttachmentsByRetire, nameof(AttachmentName.RetireAt))
     {
-        //RetiredAttachmentsSchema = database.DocumentsStorage.RetiredAttachmentsSchema;
+        _logger = LoggingSource.Instance.GetLogger<RetiredAttachmentsStorage>(database.Name);
     }
 
     private DocumentInfoHelper _documentInfoHelper;
@@ -111,7 +97,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                 var nameByKey = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentNameByKey(context, lowerId);
                 if (nameByKey == null)
                     return;
-                //var results = new DynamicJsonArray();
+
                 for (var i = 0; i < attachments.Length; i++)
                 {
                     var attachmentInMetadata = (BlittableJsonReaderObject)attachments[i];
@@ -127,71 +113,13 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                         {
                             Name = name,
                             DocumentId = doc.Id
-                            //DocumentId = lowerDocId
                         }, lowerId);
 
                         break;
-                        //results.Add(attachmentInMetadata);
+
                     }
                 }
-
-                //var results = new DynamicJsonArray();
-                //var hasRetired = false;
-                //for (var i = 0; i < attachments.Length; i++)
-                //{
-                //    var attachmentInMetadata = (BlittableJsonReaderObject)attachments[i];
-                //    if (attachmentInMetadata.TryGet(nameof(AttachmentName.Name), out string name) == false)
-                //        continue;
-
-                //    if (name == nameByKey)
-                //    {
-                //        hasRetired = true;
-                //        // mark as retired
-
-                //        attachmentInMetadata.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags);
-
-                //        flags |= AttachmentFlags.Retired;
-                //        attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
-                //        {
-                //            [nameof(AttachmentName.Flags)] = flags.ToString()
-                //        };
-                //        results.Add(attachmentInMetadata);
-                //    }
-                //    else
-                //    {
-                //        results.Add(attachmentInMetadata);
-                //    }
-                //}
-
-                //if (hasRetired)
-                //{
-                //    metadata.Modifications = new DynamicJsonValue(metadata)
-                //    {
-                //        [Constants.Documents.Metadata.Attachments] = results
-                //    };
-                //    doc.Data.Modifications = new DynamicJsonValue(doc.Data)
-                //    {
-                //        [Constants.Documents.Metadata.Key] = metadata
-                //    };
-                //}
-
-                //using (var old = doc.Data)
-                //{
-                //    var newDocument = context.ReadObject(old, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                //    Database.DocumentsStorage.Put(context, docId, null, newDocument, flags: DocumentFlags.HasAttachments, nonPersistentFlags: NonPersistentDocumentFlags.ByAttachmentUpdate);
-                //}
-
-                //foreach (BlittableJsonReaderObject res in results)
-                //{
-                //    if (res.TryGet(nameof(AttachmentName.Hash), out string hash) == false)
-                //        continue;
-
-                //    using (Slice.From(context.Allocator, hash, out Slice hashSlice))
-                //    {
-                //        context.Transaction.CheckIfShouldDeleteAttachmentStream(hashSlice, fromRetire: true);
-                //    }
-                //}
-
+                context.Transaction.ForgetAbout(doc);
             }
         }
     }
@@ -199,69 +127,23 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
     private void ProcessDocumentForDeleteRetire(DocumentsOperationContext context, Slice outSlice, string id, DateTime currentTime)
     {
         //TODO: egor do we want to do here anything?
-        // maybe the alcohoritm should be different for delete retire? like 1. add delete to retireTree then go over it, then delete the actual attachment (if exists) ?
-        //throw new NotImplementedException();
     }
-    //private void PutRetiredAttachment(DocumentsOperationContext context, Slice lowerId)
-    //{
-    //    if (context.Transaction == null)
-    //    {
-    //        DocumentPutAction.ThrowRequiresTransaction();
-    //        Debug.Assert(false);// never hit
-    //    }
 
-    //    var table = context.Transaction.InnerTransaction.OpenTable(RetiredAttachmentsSchema, RetiredAttachmentsSlice);
-
-    //    using (table.Allocate(out TableValueBuilder tvb))
-    //    {
-    //        unsafe
-    //        {
-
-    //            //LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType = 0,
-    //            //Name = 2,
-    //            //ContentType = 3,
-    //            //Hash = 4,
-    //            //Size = 5
-    //            tvb.Add(lowerId.Content.Ptr, lowerId.Size);
-    //            table.Insert(tvb);
-    //        }
-    //    }
-    //}
-
-    protected override MyStruct GetDocumentAndIdOrCollection(BackgroundWorkParameters options, Slice clonedId)
+    protected override DocumentExpirationInfo GetDocumentAndIdOrCollection(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
     {
-        var type = GetRetireType(clonedId);
         using var scope = RemoveTypeFromRetiredAttachmentsKey(options.Context, clonedId, out var keySlice);
-        switch (type)
-        {
-            case AttachmentRetireType.PutRetire:
-                return GetDocumentIdForPutRetire(options, keySlice);
-
-            case AttachmentRetireType.DeleteRetire:
-                return GetDocumentIdForDeleteRetire(options, keySlice);
-
-            default:
-                throw new ArgumentOutOfRangeException(nameof(type), type, null);
-            
-        }
-
-    }
-
-    private MyStruct GetDocumentIdForPutRetire(BackgroundWorkParameters options, Slice clonedId)
-    {
-
-        using (var id = _documentInfoHelper.GetDocumentId(clonedId))
+        using (var id = _documentInfoHelper.GetDocumentId(keySlice))
         {
             if (id == null)
             {
-                return null;
+                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
             }
             // document is disposed in caller method
             var document = Database.DocumentsStorage.Get(options.Context, id, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
             // doc was deleted
             if (document == null)
             {
-                return null;
+                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
             }
 
             if (document.TryGetCollection(out string collectionStr))
@@ -269,55 +151,14 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                 if (options.DatabaseRecord.RetireAttachments.RetirePeriods.ContainsKey(collectionStr) == false)
                 {
                     // we don't care about this collection, it was removed from the configuration
-                    return null;
+                    return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
                 }
-                //TODO: egor do I care regarding retireAt here?
-
-                //if (options.DatabaseRecord.RetireAttachments.RetirePeriods.TryGetValue(collectionStr, out var timeSpan))
-                //{
-                //    var retire = DateTime.UtcNow + timeSpan;
-                //    Database.DocumentsStorage.AttachmentsStorage.RetireAttachmentsStorage.Get(context, keySlice, retire.GetDefaultRavenFormat());
-                //}
-
             }
 
-            return new MyStruct() { Document = document, Id = collectionStr };
-        }
-    }
-
-    private MyStruct GetDocumentIdForDeleteRetire(BackgroundWorkParameters options, Slice clonedId)
-    {
-        using (var id = _documentInfoHelper.GetDocumentId(clonedId))
-        {
-            if (id == null)
+            return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionStr)
             {
-                return null;
-            }
-
-            var document = Database.DocumentsStorage.Get(options.Context, id, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
-            // doc was deleted
-            if (document == null)
-            {
-                return null;
-            }
-
-            if (document.TryGetCollection(out string collectionStr))
-            {
-                if (options.DatabaseRecord.RetireAttachments.RetirePeriods.ContainsKey(collectionStr) == false)
-                {
-                    // we don't care about this collection, it was removed from the configuration
-                    return null;
-                }
-                //TODO: egor do I care regarding retireAt here?
-
-                //if (options.DatabaseRecord.RetireAttachments.RetirePeriods.TryGetValue(collectionStr, out var timeSpan))
-                //{
-                //    var retire = DateTime.UtcNow + timeSpan;
-                //    Database.DocumentsStorage.AttachmentsStorage.RetireAttachmentsStorage.Get(context, keySlice, retire.GetDefaultRavenFormat());
-                //}
-
-            }
-            return new MyStruct() { Document = document, Id = collectionStr };
+                Document = document
+            };
         }
     }
 
@@ -328,7 +169,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
         var flags = *(int*)tvr.Read((int)AttachmentsTable.Flags, out var size);
         Debug.Assert(size == sizeof(int));
-        //flags = Bits.SwapBytes(flags);
         var scope = tx.Allocator.Allocate( hashSize + sizeof(int), out var buffer);
 
         var span = new Span<byte>(buffer.Ptr, buffer.Length);
@@ -339,20 +179,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         return scope;
     }
 
-    //internal static unsafe void UpdateHashAndFlagForAttachments(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
-    //{
-    //    //var hashPtrOld = oldValue.Read((int)AttachmentsTable.Hash, out var hashSizeOld);
-
-    //    //var flagsOld = *(int*)oldValue.Read((int)AttachmentsTable.Flags, out var sizeOld);
-    //    //var hashPtrNew = newValue.Read((int)AttachmentsTable.Hash, out var hashSizeNew);
-
-    //    //var flagsNew = *(int*)newValue.Read((int)AttachmentsTable.Flags, out var sizeNew);
-
-
-
-
-    //    //Console.WriteLine();
-    //}
     public override void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
     {
         using (CreateRetiredAttachmentsKeyWithType(context, lowerId, AttachmentRetireType.PutRetire, out Slice key))
@@ -364,8 +190,8 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         var ticksBigEndian = Bits.SwapBytes(ticks);
 
         var msg = $"Adding retired attachment delete with key: '{lowerId}' to '{_treeName}' tree.";
-        if (Logger.IsOperationsEnabled)
-            Logger.Operations(msg);
+        if (_logger.IsOperationsEnabled)
+            _logger.Operations(msg);
 
         var tree = context.Transaction.InnerTransaction.ReadTree(_treeName);
         using(CreateRetiredAttachmentsKeyWithType(context, lowerId,AttachmentRetireType.DeleteRetire, out Slice key))
@@ -398,6 +224,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         outSlice=new Slice(SliceOptions.Key, keyMem);
         return scope;
     }
+
     public unsafe ByteStringContext.InternalScope RemoveTypeFromRetiredAttachmentsKey(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
     {
         var pos = 2;
@@ -410,15 +237,9 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         return scope;
     }
 
-    public enum AttachmentRetireType : byte
-    {
-        PutRetire = 1,
-        DeleteRetire = 2
-    }
     protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
     {
-        // We somehow need to make sure we upload the attachment just once.
-  
+        // TODO: egor We somehow need to make sure we upload the attachment just once? or we dont care?
         if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
             return;
 
@@ -488,7 +309,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         return (allExpired, collection);
     }
 
-    public AttachmentRetireType GetRetireType(/*DocumentsOperationContext context, */Slice clonedId)
+    public AttachmentRetireType GetRetireType(Slice clonedId)
     {
         // this method get substring until record separator
         using (var type = _documentInfoHelper.GetDocumentId(clonedId))
@@ -517,7 +338,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetireAttachmentsConfiguration)} is disabled.");
 
         var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(RetiredAttachmentHandlerProcessorForGetRetiredAttachment), config.S3Settings, config.AzureSettings, config.GlacierSettings, config.GoogleCloudSettings, config.FtpSettings);
-        return new DirectBackupDownloader(settings, retentionPolicyParameters: null, Logger, OlapEtl.GenerateUploadResult(), progress => { }, tcs);
+        return new DirectBackupDownloader(settings, retentionPolicyParameters: null, _logger, BackupUploaderBase.GenerateUploadResult(), progress => { }, tcs);
     }
 
     public Task<Stream> GetRetiredAttachmentFromCloud(DocumentsOperationContext context, DirectBackupDownloader downloader, Attachment attachment, OperationCancelToken tcs)
@@ -537,10 +358,14 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         var keyStr = attachment.Key.ToString();
         var objKeyName = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(keyStr));
         var folderName = $"{collection}";
-        //  var folderName = $"{Database.Name}/{collection}";
-
 
         //TODO: egor in case the blob doesnt exists need to throw a custom exception ?
         return await downloader.StreamForDownloadDestination(Database, folderName, objKeyName);
+    }
+
+    public enum AttachmentRetireType : byte
+    {
+        PutRetire = 1,
+        DeleteRetire = 2
     }
 }

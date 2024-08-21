@@ -6,7 +6,6 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Voron;
 using Voron.Impl;
 
@@ -17,7 +16,7 @@ namespace Raven.Server.Documents.Refresh
         private const string DocumentsByRefresh = "DocumentsByRefresh";
 
         public RefreshStorage(DocumentDatabase database, Transaction tx) 
-            : base(tx, database, LoggingSource.Instance.GetLogger<RefreshStorage>(database.Name),DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
+            : base(tx, database,DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
         {
         }
 

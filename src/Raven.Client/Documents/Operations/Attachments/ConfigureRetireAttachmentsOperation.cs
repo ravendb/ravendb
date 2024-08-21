@@ -17,7 +17,6 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public ConfigureRetireAttachmentsOperation(RetireAttachmentsConfiguration configuration)
         {   
-
             if(configuration.RetirePeriods == null)
                 throw new ArgumentNullException(nameof(configuration.RetirePeriods));
             if (configuration.RetirePeriods.Count == 0)
@@ -57,21 +56,6 @@ namespace Raven.Client.Documents.Operations.Attachments
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/attachments/retire/config";
-
-
-                //if (BackupConfiguration.CanBackupUsing(_configuration.S3Settings) && string.IsNullOrEmpty(_configuration.S3Settings.RemoteFolderName))
-                //{
-                //    _configuration.S3Settings.RemoteFolderName = node.Database;
-                //}
-
-                //if (BackupConfiguration.CanBackupUsing(_configuration.AzureSettings) && string.IsNullOrEmpty(_configuration.AzureSettings.RemoteFolderName))
-                //{
-                //    _configuration.AzureSettings.RemoteFolderName = node.Database;
-                //}
-
-
-
-
 
                 var request = new HttpRequestMessage
                 {

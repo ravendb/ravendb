@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -10,7 +9,6 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Voron;
 
 namespace Raven.Server.Documents.DataArchival;
 
@@ -105,11 +103,11 @@ public class DataArchivist : BackgroundWorkBase
         try
         {
             string nodeTag;
-            DatabaseRecord dbRecord;
+            DatabaseRecord databaseRecord;
             using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
             using (serverContext.OpenReadTransaction())
             {
-                dbRecord = _database.ServerStore.Cluster.ReadDatabase(serverContext, _database.Name);
+                databaseRecord = _database.ServerStore.Cluster.ReadDatabase(serverContext, _database.Name);
                 nodeTag = _database.ServerStore.NodeTag;
             }
 
@@ -126,7 +124,7 @@ public class DataArchivist : BackgroundWorkBase
 
                     using (context.OpenReadTransaction())
                     {
-                        var options = new BackgroundWorkParameters(context, currentTime, dbRecord, nodeTag, batchSize, maxItemsToProcess);
+                        var options = new BackgroundWorkParameters(context, currentTime, databaseRecord, nodeTag, batchSize, maxItemsToProcess);
 
                         toArchive = _database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, ref totalCount, out duration, CancellationToken);
 
