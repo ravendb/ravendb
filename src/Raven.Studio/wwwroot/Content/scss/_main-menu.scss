@@ -68,13 +68,13 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
         height: 26px;
         padding: 4px;
         float: right;
-        color: $brand-ravendb;
+        color: $text-muted-var;
         text-transform: uppercase;
         line-height: 18px;
         font-weight: 700;
 
         &:before {
-            content: "\f117";
+            content: "\f168";
             font-size: 18px;
         }
 
