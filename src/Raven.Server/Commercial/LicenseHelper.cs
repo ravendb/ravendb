@@ -314,19 +314,18 @@ namespace Raven.Server.Commercial
                         }
                     }
                 }
-                else // The only way to update the license is to use the configuration option when the update from API is disabled
+
+                // The only way to update the license is to use the configuration option when the update from API is disabled
+                string licenseJson = GetLicenseJson(serverStore);
+                if (string.IsNullOrEmpty(licenseJson) == false && TryDeserializeLicense(licenseJson, out License localLicense))
                 {
-                    string licenseJson = GetLicenseJson(serverStore);
-                    if (string.IsNullOrEmpty(licenseJson) == false && TryDeserializeLicense(licenseJson, out License localLicense))
+                    licenseStatus = LicenseManager.GetLicenseStatus(localLicense);
+                    if (licenseStatus.Version.Major >= 6)
                     {
-                        licenseStatus = LicenseManager.GetLicenseStatus(localLicense);
-                        if (licenseStatus.Version.Major >= 6)
-                        {
-                            serverStore.LicenseManager.OnBeforeInitialize += () =>
-                                AsyncHelpers.RunSync(() =>
-                                    serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure));
-                            return;
-                        }
+                        serverStore.LicenseManager.OnBeforeInitialize += () =>
+                            AsyncHelpers.RunSync(() =>
+                                serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure));
+                        return;
                     }
                 }
             }
