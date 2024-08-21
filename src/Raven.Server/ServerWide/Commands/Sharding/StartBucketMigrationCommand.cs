@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
@@ -29,6 +30,9 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
         public StartBucketMigrationCommand(int bucket, int destShard, string database, string prefix, string raftId) : base(database, raftId)
         {
+            if (bucket >= ShardHelper.NumberOfBuckets && string.IsNullOrEmpty(prefix))
+                throw new InvalidOperationException($"Bucket {bucket} belongs to a prefixed range, but 'prefix' parameter wasn't provided");
+
             Bucket = bucket;
             DestinationShard = destShard;
             Prefix = prefix;
