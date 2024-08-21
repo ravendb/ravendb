@@ -37,6 +37,8 @@ public unsafe partial class Pager
         public readonly byte* WriteAddress;
         public long NumberOfAllocatedPages;
         public long TotalAllocatedSize;
+        public long TotalFileSize;
+        public long TotalDiskSpace;
 
         public bool Disposed;
 
