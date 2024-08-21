@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client.Documents.Changes;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Impl;
 using Xunit;
@@ -74,7 +75,7 @@ namespace FastTests.Voron.Bugs
             Assert.Equal(1, scratchBufferPoolInfo.ScratchFilesUsage.Count);
         }
 
-        [Fact]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.X64| RavenArchitecture.Arm64)]
         public unsafe void CanKeepReadScratchPagesWhenFlushingWhenThereIsTransactionThatMightReadFromIt()
         {
             RequireFileBasedPager();
