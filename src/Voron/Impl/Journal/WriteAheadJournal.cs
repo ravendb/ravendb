@@ -1254,6 +1254,9 @@ namespace Voron.Impl.Journal
                         {
                             PalHelper.ThrowLastError(rc, errorCode, $"Failed to get file handle for {dataPager.FileName}");
                         }
+
+                        (dataPagerState.TotalFileSize, dataPagerState.TotalDiskSpace) = dataPager.GetFileSize(dataPagerState);
+                        
                         using (fileHandle)
                         {
                             for (int i = 0; i < pages.Length; i++)
