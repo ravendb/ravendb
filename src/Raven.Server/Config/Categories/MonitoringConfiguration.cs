@@ -54,6 +54,11 @@ namespace Raven.Server.Config.Categories
             [ConfigurationEntry("Monitoring.OpenTelemetry.Enabled", ConfigurationEntryScope.ServerWideOnly)]
             public bool Enabled { get; set; }
             
+            [Description("Sets the OpenTelemetry service instance ID. When it's not set, RavenDB will use public hostname; if not available, node tag will be used as the identifier.")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ServiceInstanceId", ConfigurationEntryScope.ServerWideOnly)]
+            public string ServiceInstanceId { get; set; }
+            
             [Description("Indicates if RavenDB's OpenTelemetry metrics are enabled or not. Default: true")]
             [DefaultValue(true)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.Enabled", ConfigurationEntryScope.ServerWideOnly)]
