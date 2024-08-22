@@ -70,7 +70,10 @@ namespace Voron.Impl.Journal
 
         public (Pager Pager, Pager.State State) CreatePager()
         {
-            return Pager.Create(_options, FileName.FullPath, 0, Pal.OpenFileFlags.None);
+            var flags = Pal.OpenFileFlags.None;
+            if(_options.ForceUsing32BitsPager || PlatformDetails.Is32Bits)
+                flags |= Pal.OpenFileFlags.DoNotMap;
+            return Pager.Create(_options, FileName.FullPath, 0, flags);
         }
 
         public void Read(byte* buffer, long numOfBytes, long offsetInFile)

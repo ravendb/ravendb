@@ -501,6 +501,16 @@ rvn_close_pager(
             }
         }
     }
+    else // OPEN_FILE_DO_NOT_MAP
+    {
+        if(!CloseHandle(handle_ptr->file_mapping_handle))
+        {
+            if (*detailed_error_code == 0)
+                *detailed_error_code = GetLastError();
+            if (rc == SUCCESS)
+                rc = FAIL_CLOSE;
+        }
+    }
     if (!CloseHandle(handle_ptr->file_handle))
     {
         if (*detailed_error_code == 0)
