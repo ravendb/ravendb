@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.ETL
 
         public TimeSpan? FallbackTime { get; protected set; }
 
-        public abstract void Start();
+        public abstract void Start(string reason);
 
         public abstract void Stop(string reason);
 
@@ -666,7 +666,7 @@ namespace Raven.Server.Documents.ETL
                 _waitForChanges.Set();
         }
 
-        public override void Start()
+        public override void Start(string reason)
         {
             if (_longRunningWork != null)
                 return;
@@ -695,7 +695,7 @@ namespace Raven.Server.Documents.ETL
             }, null, ThreadNames.ForEtlProcess(threadName, Tag, Name));
 
             if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Starting {Tag} process: '{Name}'.");
+                Logger.Operations($"Starting {Tag} process: '{Name}'. Reason: {reason}");
 
         }
 
