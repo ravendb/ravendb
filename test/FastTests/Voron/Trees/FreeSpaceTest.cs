@@ -151,9 +151,9 @@ namespace FastTests.Voron.Trees
 
                 tx.Commit();
             }
-            
-            var freeSpaceHandling = (FreeSpaceHandling) Env.FreeSpaceHandling;
-            
+
+            var freeSpaceHandling = (FreeSpaceHandling)Env.FreeSpaceHandling;
+
             for (int i = 0; i < numberOfFreedPages; i++)
             {
                 long pageToFree;
@@ -209,7 +209,7 @@ namespace FastTests.Voron.Trees
             {
                 for (int i = 0; i < maxPageNumber; i++)
                 {
-                     allocatedPages.Add(tx.LowLevelTransaction.AllocatePage(1).PageNumber);
+                    allocatedPages.Add(tx.LowLevelTransaction.AllocatePage(1).PageNumber);
                 }
 
                 tx.Commit();
@@ -247,8 +247,8 @@ namespace FastTests.Voron.Trees
                 Assert.Equal(sorted, retrievedFreePages);
             }
         }
-        
-         
+
+
         [Fact]
         public void ReproduceError()
         {
@@ -274,7 +274,7 @@ namespace FastTests.Voron.Trees
                         }
                     }
                 }
-                
+
                 FreePage(3957);
                 FreePage(3958);
                 FreePage(3959);
@@ -294,11 +294,11 @@ namespace FastTests.Voron.Trees
                 FreePage(3954);
                 FreePage(3955);
                 FreePage(3940);
-                
+
                 TryAllocateFromFreeSpace(1);
                 TryAllocateFromFreeSpace(16);
                 TryAllocateFromFreeSpace(256);
-                
+
                 FreePage(4229);
                 FreePage(4230);
                 FreePage(4231);
