@@ -10,13 +10,13 @@ import BackupSourceAmazonS3 from "./BackupSourceAmazonS3";
 import BackupSourceRavenCloud from "./BackupSourceRavenCloud";
 import BackupSourceAzure from "./BackupSourceAzure";
 import BackupSourceGoogleCloud from "components/pages/resources/databases/partials/create/formBackup/steps/source/BackupSourceGoogleCloud";
-import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import AuthenticationOffMessage from "components/pages/resources/databases/partials/create/shared/AuthenticationOffMessage";
-import EncryptionUnavailableMessage from "components/pages/resources/databases/partials/create/shared/EncryptionUnavailableMessage";
 import { useAppSelector } from "components/store";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import AuthenticationOffMessage from "components/pages/resources/databases/partials/create/shared/AuthenticationOffMessage";
+import EncryptionUnavailableMessage from "components/pages/resources/databases/partials/create/shared/EncryptionUnavailableMessage";
 
 const backupSourceImg = require("Content/img/createDatabase/backup-source.svg");
 
@@ -28,23 +28,19 @@ export default function CreateDatabaseFromBackupStepSource() {
         control,
     });
 
+    const hasEncryption = useAppSelector(licenseSelectors.statusValue("HasEncryption"));
+    const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
+
     const firstRestorePoint = sourceData[sourceType]?.pointsWithTags?.[0]?.restorePoint;
-    const isFirstRestorePointEncrypted = firstRestorePoint?.isEncrypted ?? false;
-    const isFirstRestorePointSnapshot = firstRestorePoint?.isSnapshotRestore ?? false;
+    const isRestorePointEncrypted = firstRestorePoint?.isEncrypted ?? false;
+    const isRestorePointSnapshot = firstRestorePoint?.isSnapshotRestore ?? false;
 
-    const encryptionKeyFromSourceStep = sourceData[sourceType]?.encryptionKey ?? "";
-
-    // Toggle encryption step based on the first restore point encryption
     useEffect(() => {
-        setValue(`sourceStep.isEncrypted`, isFirstRestorePointEncrypted);
-    }, [isFirstRestorePointEncrypted, setValue]);
+        const canBeEncryptedOnServer = hasEncryption && isSecureServer;
+        const isEncrypted = canBeEncryptedOnServer && isRestorePointEncrypted && !isRestorePointSnapshot;
 
-    // Set encryption key in encryption step if the first restore point is encrypted snapshot
-    useEffect(() => {
-        if (isFirstRestorePointSnapshot && isFirstRestorePointEncrypted) {
-            setValue(`encryptionStep.key`, encryptionKeyFromSourceStep);
-        }
-    }, [isFirstRestorePointSnapshot, isFirstRestorePointEncrypted, encryptionKeyFromSourceStep, setValue]);
+        setValue(`sourceStep.isEncrypted`, isEncrypted);
+    }, [isSecureServer, hasEncryption, isRestorePointEncrypted, isRestorePointSnapshot, setValue]);
 
     return (
         <>
@@ -91,7 +87,10 @@ export default function CreateDatabaseFromBackupStepSource() {
                     <Icon icon="index" />
                     Skip indexes
                 </FormSwitch>
-                <IsEncryptedField isFirstRestorePointSnapshot={isFirstRestorePointSnapshot} />
+                <IsEncryptedField
+                    isRestorePointSnapshot={isRestorePointSnapshot}
+                    isRestorePointEncrypted={isRestorePointEncrypted}
+                />
             </Collapse>
         </>
     );
@@ -126,17 +125,17 @@ const sourceOptions: SelectOptionWithIcon<RestoreSource>[] = [
 ];
 
 interface IsEncryptedFieldProps {
-    isFirstRestorePointSnapshot: boolean;
+    isRestorePointSnapshot: boolean;
+    isRestorePointEncrypted: boolean;
 }
 
-function IsEncryptedField({ isFirstRestorePointSnapshot }: IsEncryptedFieldProps) {
+function IsEncryptedField({ isRestorePointSnapshot, isRestorePointEncrypted }: IsEncryptedFieldProps) {
     const { control, formState } = useFormContext<FormData>();
 
     const hasEncryption = useAppSelector(licenseSelectors.statusValue("HasEncryption"));
     const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
 
-    const isEncryptionDisabled =
-        !hasEncryption || !isSecureServer || isFirstRestorePointSnapshot || formState.isSubmitting;
+    const isEncryptionDisabled = !hasEncryption || !isSecureServer || formState.isSubmitting || isRestorePointSnapshot;
 
     return (
         <ConditionalPopover
@@ -148,6 +147,16 @@ function IsEncryptedField({ isFirstRestorePointSnapshot }: IsEncryptedFieldProps
                 {
                     isActive: !isSecureServer,
                     message: <AuthenticationOffMessage />,
+                },
+                {
+                    isActive: isRestorePointSnapshot,
+                    message: (
+                        <span>
+                            {isRestorePointEncrypted
+                                ? "To restore an encrypted snapshot, you only need to enter the key in the 'Backup Encryption Key' field above"
+                                : "Snapshot is not encrypted"}
+                        </span>
+                    ),
                 },
             ]}
             popoverPlacement="left"

@@ -128,27 +128,27 @@
                                 </div>
                                 <div class="cores" data-bind="if: utilizedCores">
                                     <h5><i class="icon-processor"></i> &nbsp; CORES</h5>
-                                    <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit" data-animation="true"></strong>
+                                    <strong data-bind="text: utilizedCores, css: cssCores, tooltipText: 'Assigned CPU cores limit'" data-toggle="tooltip" data-animation="true"></strong>
                                     <span data-bind="if: numberOfCores() && utilizedCores() != -1">
-                                        <span data-bind="numberOfCores() > 0">/ <strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count" data-animation="true"></strong></span>
+                                        <span data-bind="numberOfCores() > 0">/ <strong data-bind="text: numberOfCores, tooltipText: 'Total CPU cores count'" data-toggle="tooltip" data-animation="true"></strong></span>
                                     </span>
                                 </div>
                                 <div class="memory" data-bind="if: installedMemoryInGb">
                                     <h5><i class="icon-memory"></i> &nbsp; MEMORY</h5>
-                                    <strong class="text-emphasis" data-toggle="tooltip" data-html="true" data-bind="attr: { 'title': memoryTitle }" data-animation="true" data-placement="bottom">
+                                    <strong class="text-emphasis" data-toggle="tooltip" data-html="true" data-bind="tooltipText: memoryTitle " data-animation="true" data-placement="bottom">
                                         <span data-bind="text: utilizedMemoryInGb"></span>GB
                                     </strong>
                                     <span data-bind="if: installedMemoryInGb() && installedMemoryInGb() != -1">
-                                        / <strong data-toggle="tooltip" title="Total memory installed on machine" data-animation="true"><span data-bind="text: installedMemory"></span>GB</strong>
+                                        / <strong data-toggle="tooltip" data-animation="true" data-bind="tooltipText: 'Total memory installed on machine'"><span data-bind="text: installedMemory"></span>GB</strong>
                                     </span>
                                 </div>
                                 <div class="serverVersion" data-bind="if: nodeServerVersion">
                                     <h5><i class="icon-server"></i> &nbsp; VERSION</h5>
-                                    <strong class="text-emphasis" data-toggle="tooltip" data-bind="text: nodeServerVersion, attr: { title: 'Server version installed on this node: ' + nodeServerVersion() }" data-animation="true"></strong>
+                                    <strong class="text-emphasis" data-toggle="tooltip" data-bind="text: nodeServerVersion, tooltipText: 'Server version installed on this node: ' + nodeServerVersion()" data-animation="true"></strong>
                                 </div>
                                 <div class="os text-center" data-bind="if: osFullName">
                                     <h5>OS</h5>
-                                    <strong class="text-emphasis" data-toggle="tooltip" data-html="true" data-bind="attr: { 'title': osTitle }" data-animation="true">
+                                    <strong class="text-emphasis" data-toggle="tooltip" data-html="true" data-bind="tooltipText: osTitle" data-animation="true">
                                         <i data-bind="attr: { class: osIcon }"></i>
                                     </strong>
                                 </div>

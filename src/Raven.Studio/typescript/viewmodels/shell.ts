@@ -9,7 +9,6 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import accessManager = require("common/shell/accessManager");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import favNodeBadge = require("common/shell/favNodeBadge");
-import database = require("models/resources/database");
 import license = require("models/auth/licenseModel");
 import buildInfo = require("models/resources/buildInfo");
 import changesContext = require("common/changesContext");
@@ -60,6 +59,7 @@ import { accessManagerActions } from "components/common/shell/accessManagerSlice
 import UpgradeModal from "./shell/UpgradeModal";
 import getStudioBootstrapCommand from "commands/resources/getStudioBootstrapCommand";
 import serverSettings from "common/settings/serverSettings";
+import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
 import StudioSearchWithDatabaseSwitcher from "components/shell/studioSearchWithDatabaseSelector/StudioSearchWithDatabaseSwitcher";
 
 class shell extends viewModelBase {
@@ -107,8 +107,9 @@ class shell extends viewModelBase {
     allShardsUrl: KnockoutObservable<string>;
     clientCertificate = clientCertificateModel.certificateInfo;
     certificateExpirationState = clientCertificateModel.certificateExpirationState;
+    latestVersionInfo = ko.observable<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>();
     
-    mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
+    mainMenu: menu;
     favNodeBadge = new favNodeBadge();
 
     smallScreen = ko.observable<boolean>(false);
@@ -217,6 +218,21 @@ class shell extends viewModelBase {
 
         this.upgradeModalView = ko.pureComputed(() => ({ component: UpgradeModal }))
         
+        const menuItems = ko.pureComputed(() => {
+            const isNewVersionAvailable = genUtils.isNewVersionAvailable(buildInfo.serverBuildVersion(), this.latestVersionInfo());
+            
+            // we hide "What's new" menu item for all builds that buildNumber is less than 60_000, so nightly, local, etc
+            const isWhatsNewVisible = buildInfo.serverBuildVersion()?.BuildVersion >= 60_000;
+
+            return generateMenuItems({
+                db: activeDatabaseTracker.default.database(),
+                isNewVersionAvailable,
+                isWhatsNewVisible
+            })
+        });
+
+        this.mainMenu = new menu(menuItems);
+        
         this.studioSearchWithDatabaseSwitcherView = ko.computed(() => {
             return {
                 component: StudioSearchWithDatabaseSwitcher,
@@ -267,6 +283,7 @@ class shell extends viewModelBase {
 
         this.fetchClientBuildVersion();
         const buildVersionTask = this.fetchServerBuildVersion();
+        const latestVersionInfoTask = this.fetchLatestVersionInfo();
 
         const licenseTask = license.fetchLicenseStatus();
         const topologyTask = this.clusterManager.init();
@@ -284,7 +301,7 @@ class shell extends viewModelBase {
                 this.initAnalytics();
             });
         
-        $.when<any>(licenseTask, topologyTask, clientCertificateTask, studioBootstrapTask)
+        $.when<any>(licenseTask, topologyTask, clientCertificateTask, studioBootstrapTask, latestVersionInfoTask)
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             .done(([license]: [LicenseStatus], 
                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -457,10 +474,6 @@ class shell extends viewModelBase {
 
     private initializeShellComponents() {
         this.mainMenu.initialize();
-        const updateMenu = (db: database) => {
-            const items = generateMenuItems(db);
-            this.mainMenu.update(items);
-        };
         
         const checkScreenSize = () => {
             if ($(window).width() < 992) {
@@ -473,9 +486,6 @@ class shell extends viewModelBase {
         checkScreenSize();
 
         $(window).resize(checkScreenSize);
-
-        updateMenu(activeDatabaseTracker.default.database());
-        activeDatabaseTracker.default.database.subscribe(updateMenu);
 
         this.favNodeBadge.initialize(); 
         
@@ -541,6 +551,12 @@ class shell extends viewModelBase {
                 
                 buildInfo.onServerBuildVersion(serverBuildResult);
             });
+    }
+
+    fetchLatestVersionInfo() {
+        new getLatestVersionInfoCommand(true).execute().then(result => {
+            this.latestVersionInfo(result);
+        });
     }
 
     fetchClientBuildVersion() {

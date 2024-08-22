@@ -41,6 +41,7 @@ export interface StudioSearchItem {
     route?: string;
     icon?: IconName;
     innerActions?: SearchInnerAction[];
+    isCapitalizedDisabled?: boolean;
 }
 
 export interface StudioSearchResultItem {
@@ -53,6 +54,7 @@ export interface StudioSearchResultItem {
     indices?: readonly RangeTuple[];
     innerActionText?: string;
     innerActionIndices?: readonly RangeTuple[];
+    isCapitalizedDisabled?: boolean;
 }
 
 export type OngoingTaskWithBroker = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask & {

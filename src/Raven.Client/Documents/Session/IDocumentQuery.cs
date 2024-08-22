@@ -79,8 +79,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Register the query as a lazy query in the session and return a lazy
         ///     instance that will evaluate the query only when needed.
-        ///     Also provide a function to execute when the value is evaluated
         /// </summary>
+        /// <param name="onEval">A function to execute when the value is evaluated.</param>
         Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval = null);
     }
 

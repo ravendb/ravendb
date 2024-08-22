@@ -163,11 +163,6 @@ public sealed class SubscriptionConnectionForShard : SubscriptionConnection
         return state;
     }
 
-    protected override void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)
-    {
-        includeDocumentsCommand.IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
-    }
-
     internal override async Task HandleBatchStatusAsync<TState, TConnection>(TState state, SubscriptionBatchStatus status, Stopwatch sendingCurrentBatchStopwatch, SubscriptionConnectionInUse markInUse, SubscriptionBatchStatsScope batchScope)
     {
         if (status == SubscriptionBatchStatus.ActiveMigration)

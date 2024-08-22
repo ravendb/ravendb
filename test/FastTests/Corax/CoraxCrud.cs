@@ -8,6 +8,7 @@ using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,13 +17,13 @@ using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace FastTests.Corax;
 
-public class CoraxCrud: StorageTest
+public class CoraxCrud : StorageTest
 {
     public CoraxCrud(ITestOutputHelper output) : base(output)
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanIndexUsingBuilder()
     {
         var fields = CreateKnownFields(Allocator);
@@ -47,7 +48,7 @@ public class CoraxCrud: StorageTest
     }
     
       
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanDetectWhenFieldHasMultipleTerms()
     {
         var fields = CreateKnownFields(Allocator);
@@ -77,7 +78,7 @@ public class CoraxCrud: StorageTest
     }
     
      
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanUpdateWithDifferentFrequency()
     {
         var fields = CreateKnownFields(Allocator);
@@ -125,7 +126,7 @@ public class CoraxCrud: StorageTest
     }
 
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanUpdateUsingBuilder()
     {
         var fields = CreateKnownFields(Allocator);
@@ -171,7 +172,7 @@ public class CoraxCrud: StorageTest
 
         using (var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                    .AddBinding(0, idSlice)
-                   .AddBinding(1, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30))))
+                   .AddBinding(1, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30), forQuerying: true)))
             return builder.Build();
     }
 

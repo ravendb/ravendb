@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Raven.Server.Documents.Subscriptions.Sharding;
@@ -9,7 +10,7 @@ public sealed class ShardDocumentSubscriptionFetcher : DocumentSubscriptionFetch
     {
     }
 
-    protected override IEnumerable<Document> FetchFromResend()
+    protected override IEnumerator<Document> FetchFromResend()
     {
         var records = new SortedDictionary<long, Document>();
         foreach (var document in base.FetchFromResend())
@@ -25,6 +26,7 @@ public sealed class ShardDocumentSubscriptionFetcher : DocumentSubscriptionFetch
                 }
 
                 records.Add(current.Etag, document);
+                DocsContext.Transaction.ForgetAbout(current);
             }
         }
 

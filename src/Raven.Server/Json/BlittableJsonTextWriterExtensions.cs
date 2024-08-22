@@ -1896,8 +1896,13 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
-                writer.WritePropertyName(includeDoc.GetMetadata().GetId());
-                writer.WriteObject(includeDoc);
+                var metadata = includeDoc.GetMetadata();
+                writer.WritePropertyName(metadata.GetId());
+
+                if (metadata.TryGet(Constants.Documents.Metadata.Sharding.Subscription.NonPersistentFlags, out NonPersistentDocumentFlags flag) && flag.HasFlag(NonPersistentDocumentFlags.AllowDataAsNull))
+                    writer.WriteNull();
+                else
+                    writer.WriteObject(includeDoc);
 
                 await writer.MaybeOuterFlushAsync()
                             .ConfigureAwait(false);
