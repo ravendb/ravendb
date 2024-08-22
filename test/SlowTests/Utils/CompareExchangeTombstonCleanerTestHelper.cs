@@ -12,7 +12,8 @@ namespace SlowTests.Utils;
 
 internal static class CompareExchangeTombstoneCleanerTestHelper
 {
-    public static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> Clean(RavenServer server, string database, TransactionOperationContext context)
+    public static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> Clean(TransactionOperationContext context, string database, RavenServer server,
+        bool ignoreClustrTrx)
     {
         CleanCompareExchangeTombstonesCommand cmd;
         var serverStore = server.ServerStore;
@@ -33,6 +34,17 @@ internal static class CompareExchangeTombstoneCleanerTestHelper
                 Name = database
             };
 
+            if (ignoreClustrTrx)
+            {
+                foreach (var (_, value) in state.Current)
+                {
+                    foreach ( var (_, inValue) in value.Report)
+                    {
+                        inValue.LastClusterWideTransactionRaftIndex = long.MaxValue;
+                    }
+                }
+            }
+            
             cmd = serverStore.Observer.GetCompareExchangeTombstonesToCleanup(database, state: state, context, out var cleanupState);
             if (cleanupState != ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones)
                 return cleanupState;
