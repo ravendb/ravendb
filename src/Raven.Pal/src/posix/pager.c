@@ -349,7 +349,7 @@ rvn_pager_get_file_size(void* handle,
         return FAIL_GET_FILE_SIZE;
     }
     *total_size = st.st_size;
-    *phyiscal_size = st.st_blocks * st.st_blksize;
+    *phyiscal_size = st.st_blocks * 512;
     return SUCCESS;
 }
 
