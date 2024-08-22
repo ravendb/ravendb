@@ -91,14 +91,9 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
         EnsureParamTypeSupportedByDbProvider(pkParam);
     }
 
-    protected override string GetPostInsertIntoStartSyntax(RelationalDatabaseItem itemToReplicate)
+    protected override (string StartSyntax, string EndSyntax) GetSyntaxAroundParameters(RelationalDatabaseItem itemToReplicate)
     {
-        return "SELECT ";
-    }
-
-    protected override string GetPostInsertIntoEndSyntax(RelationalDatabaseItem itemToReplicate)
-    {
-        return string.Empty;
+        return ("SELECT ", string.Empty);
     }
 
     protected override string GetPostDeleteSyntax(RelationalDatabaseItem itemToDelete)

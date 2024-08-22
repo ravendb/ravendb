@@ -321,10 +321,8 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
 
     protected abstract void SetPrimaryKeyParamValue(RelationalDatabaseItem itemToReplicate, DbParameter pkParam);
 
-    protected abstract string GetPostInsertIntoStartSyntax(RelationalDatabaseItem itemToReplicate);
+    protected abstract (string StartSyntax, string EndSyntax) GetSyntaxAroundParameters(RelationalDatabaseItem itemToReplicate);
     
-    protected abstract string GetPostInsertIntoEndSyntax(RelationalDatabaseItem itemToReplicate);
-
     protected abstract string GetPostDeleteSyntax(RelationalDatabaseItem itemToDelete);
         
     protected abstract string GetAfterDeleteWhereIdentifierBeforeInExtraSyntax();
@@ -493,9 +491,9 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         SetPrimaryKeyParamValue(itemToReplicate, pkParam);
         cmd.Parameters.Add(pkParam);
 
-        var afterIntoSyntax = GetPostInsertIntoStartSyntax(itemToReplicate);
+         var syntax = GetSyntaxAroundParameters(itemToReplicate);
 
-        sb.Append($") {afterIntoSyntax}");
+        sb.Append($") {syntax.StartSyntax}");
 
         sb.Append(GetParameterNameForCommandString(pkName, false)).Append(", ");
 
@@ -514,8 +512,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         }
 
         sb.Length = sb.Length - 2;
-        var endSyntax = GetPostInsertIntoEndSyntax(itemToReplicate);
-        sb.Append(endSyntax);
+        sb.Append(syntax.EndSyntax);
 
         var stmt = sb.ToString();
         cmd.CommandText = stmt;

@@ -141,14 +141,9 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
         pkParam.Value = itemToReplicate.DocumentId.ToString();
     }
 
-    protected override string GetPostInsertIntoStartSyntax(RelationalDatabaseItem itemToReplicate)
+    protected override (string StartSyntax, string EndSyntax) GetSyntaxAroundParameters(RelationalDatabaseItem itemToReplicate)
     {
-        return "\r\nVALUES(";
-    }
-
-    protected override string GetPostInsertIntoEndSyntax(RelationalDatabaseItem itemToReplicate)
-    {
-        return _isSqlServerFactoryType && _sqlEtlConfiguration.ForceQueryRecompile ? ") OPTION(RECOMPILE)" : ")";
+        return ("\r\nVALUES(", _isSqlServerFactoryType && _sqlEtlConfiguration.ForceQueryRecompile ? ") OPTION(RECOMPILE)" : ")");
     }
 
     protected override string GetPostDeleteSyntax(RelationalDatabaseItem itemToDelete)
