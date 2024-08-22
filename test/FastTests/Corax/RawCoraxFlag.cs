@@ -37,7 +37,7 @@ public class RawCoraxFlag : StorageTest
         _bsc = new ByteStringContext(SharedMultipleUseFlag.None);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public unsafe void CanStoreBlittableWithWriterScopeDynamicField()
     {
         using var ctx = JsonOperationContext.ShortTermSingleUse();
@@ -188,7 +188,7 @@ public class RawCoraxFlag : StorageTest
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public unsafe void CanStoreBlittableWithWriterScope()
     {
         using var ctx = JsonOperationContext.ShortTermSingleUse();
