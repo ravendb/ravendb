@@ -209,6 +209,7 @@ interface menuSearchConfig {
     innerActions?: innerMenuAction[];
     overrideTitle?: string;
     isExcluded?: boolean;
+    isCapitalizedDisabled?: boolean;
 }
 
 interface innerMenuAction {

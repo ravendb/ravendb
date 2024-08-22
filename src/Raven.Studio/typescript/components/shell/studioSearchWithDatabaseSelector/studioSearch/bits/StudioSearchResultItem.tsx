@@ -10,7 +10,7 @@ interface StudioSearchDropdownItemProps {
 }
 
 export default function StudioSearchDropdownItem({ item, activeItemId }: StudioSearchDropdownItemProps) {
-    const isCapitalized = item.type.includes("MenuItem");
+    const isCapitalized = item.type.includes("MenuItem") && !item.isCapitalizedDisabled;
 
     return (
         <DropdownItem

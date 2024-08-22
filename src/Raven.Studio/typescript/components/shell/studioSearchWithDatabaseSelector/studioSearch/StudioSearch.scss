@@ -203,6 +203,7 @@
         @include make-icon-color(cluster-dashboard, colors.$color-4-2, colors.$color-4-2);
         @include make-icon-color(manage-server, colors.$color-4-3, colors.$color-4-3);
         @include make-icon-color(info, colors.$color-5, colors.$color-5);
+        @include make-icon-color(sparkles, colors.$color-2, colors.$color-2);
     }
 
     &__legend-col {

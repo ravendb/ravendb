@@ -59,7 +59,11 @@ function whatsNewItem({ isNewVersionAvailable = false, isWhatsNewVisible = false
         nav: isWhatsNewVisible,
         css: 'icon-sparkles',
         dynamicHash: appUrl.forWhatsNew,
-        badgeHtml
+        badgeHtml,
+        search: {
+            isExcluded: !isWhatsNewVisible,
+            isCapitalizedDisabled: true
+        }
     });
 }
 
