@@ -27,7 +27,7 @@ public unsafe class DynamicFieldsTests : StorageTest
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void WriteEmptyAsSimpleInDynamicField()
     {
         const string fieldName = "Scope_0";
@@ -66,7 +66,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void SimpleDynamicWrite()
     {
         using ByteStringContext bsc = new(SharedMultipleUseFlag.None);
@@ -142,7 +142,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void WillDeleteDynamicReferences()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -182,7 +182,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void WillDeleteDynamicReferencesWithOutOfOrderRepeats()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -225,7 +225,7 @@ public unsafe class DynamicFieldsTests : StorageTest
     }
 
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void DynamicFieldWithSameNameOfStatic()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -293,7 +293,7 @@ public unsafe class DynamicFieldsTests : StorageTest
     }
     
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void MixingStaticAndDynamicFieldsCorax()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -429,7 +429,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         return builder.Build();
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Spatial)]
     [InlineData(4, new double[]{ -10.5, 12.4, -123D, 53}, new double[]{-52.123, 23.32123, 52.32423, -42.1235})]
     public void WriteAndReadSpatialListDynamically(int size, double[] lat, double[] lon)
     {
@@ -480,7 +480,7 @@ public unsafe class DynamicFieldsTests : StorageTest
     }
     
      
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void MixingStaticAndDynamicFieldsCorax3()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -538,7 +538,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void MixingStaticAndDynamicFieldsCorax2()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);

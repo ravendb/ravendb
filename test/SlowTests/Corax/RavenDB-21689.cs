@@ -31,8 +31,7 @@ public class RavenDB_21689 : StorageTest
             .AddBinding(2, "text", LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30), forQuerying: false))
             .Build();
     }
-
-
+    
     [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     public void NotAcceleratedAndWithInsideSetTermMatchWillNotHaveInfinityLoop()
     {
