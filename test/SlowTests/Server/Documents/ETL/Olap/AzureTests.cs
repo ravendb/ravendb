@@ -35,7 +35,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         [AzureRetryFact]
         public async Task CanUploadToAzure()
         {
-            var settings = GetAzureSettings();
+            var settings = Etl.GetAzureSettings(_azureTestsPrefix);
 
             try
             {
@@ -111,7 +111,7 @@ loadToOrders(partitionBy(key),
         [AzureRetryFact]
         public async Task SimpleTransformation()
         {
-            var settings = GetAzureSettings();
+            var settings = Etl.GetAzureSettings(_azureTestsPrefix);
 
             try
             {
@@ -220,7 +220,7 @@ loadToOrders(partitionBy(key),
         public async Task CanLoadToMultipleTables()
         {
             const string salesTableName = "Sales";
-            var settings = GetAzureSettings();
+            var settings = Etl.GetAzureSettings(_azureTestsPrefix);
 
             try
             {
@@ -403,7 +403,7 @@ loadToOrders(partitionBy(key), orderData);
         [AzureRetryFact]
         public async Task CanModifyPartitionColumnName()
         {
-            var settings = GetAzureSettings();
+            var settings = Etl.GetAzureSettings(_azureTestsPrefix);
 
             try
             {
@@ -499,7 +499,7 @@ loadToOrders(partitionBy(['order_date', key]),
         [AzureRetryFact]
         public async Task SimpleTransformation_NoPartition()
         {
-            var settings = GetAzureSettings();
+            var settings = Etl.GetAzureSettings(_azureTestsPrefix);
             try
             {
                 using (var store = GetDocumentStore())
@@ -609,7 +609,7 @@ loadToOrders(noPartition(),
         [AzureRetryFact]
         public async Task SimpleTransformation_MultiplePartitions()
         {
-            var settings = GetAzureSettings();
+            var settings = Etl.GetAzureSettings(_azureTestsPrefix);
             var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
 
             try
@@ -747,7 +747,7 @@ loadToOrders(partitionBy(
         [AzureRetryFact]
         public async Task CanUseCustomPrefix()
         {
-            var settings = GetAzureSettings();
+            var settings = Etl.GetAzureSettings(_azureTestsPrefix);
             try
             {
                 using (var store = GetDocumentStore())
@@ -855,29 +855,6 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
             });
         }
 
-        private AzureSettings GetAzureSettings([CallerMemberName] string caller = null)
-        {
-            var settings = AzureRetryFactAttribute.AzureSettings;
-            if (settings == null)
-                return null;
-
-            var remoteFolderName = _azureTestsPrefix;
-            if (string.IsNullOrEmpty(caller) == false)
-                remoteFolderName = $"{remoteFolderName}/{caller}";
-
-            if (string.IsNullOrEmpty(settings.RemoteFolderName) == false)
-                remoteFolderName = $"{settings.RemoteFolderName}/{remoteFolderName}";
-
-            return new AzureSettings
-            {
-                RemoteFolderName = remoteFolderName,
-                AccountName = settings.AccountName,
-                StorageContainer = settings.StorageContainer,
-                AccountKey = settings.AccountKey,
-                SasToken = settings.SasToken
-            };
-        }
-
         private static async Task DeleteObjects(AzureSettings azureSettings, string additionalTable = null)
         {
             if (azureSettings == null)
@@ -891,7 +868,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
             await DeleteObjects(azureSettings, prefix: $"{azureSettings.RemoteFolderName}/{additionalTable}", delimiter: string.Empty);
         }
 
-        private static async Task DeleteObjects(AzureSettings azureSettings, string prefix, string delimiter, bool listFolder = false)
+        internal static async Task DeleteObjects(AzureSettings azureSettings, string prefix, string delimiter, bool listFolder = false)
         {
             if (azureSettings == null)
                 return;
