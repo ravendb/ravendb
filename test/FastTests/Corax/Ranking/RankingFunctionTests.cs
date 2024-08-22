@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using IndexSearcher = Corax.Querying.IndexSearcher;
@@ -29,7 +30,7 @@ public class RankingFunctionTests : StorageTest
     {
         //Lets use FullTextSearch analyzer for Content. This allows us to produce multiple items from one input string but
         //be careful what are you querying :) 
-        Analyzer fullTextSearch = LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30));
+        Analyzer fullTextSearch = LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30), forQuerying: false);
         _context = new ByteStringContext(SharedMultipleUseFlag.None);
         _mapping = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(IdIndex, "Id")
@@ -37,7 +38,7 @@ public class RankingFunctionTests : StorageTest
             .Build();
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanGenerateRankingForSingleInTermMatch()
     {
         // we've to provide at least two docs into index. If not IDF will be 0. Consequence of that is score equal to 0.
@@ -81,7 +82,7 @@ public class RankingFunctionTests : StorageTest
         query.Score(ids.Slice(0, read), scores, 0);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void TwoBoostingMatchesWithOr()
     {
         var list = new List<EntryData>();
@@ -113,7 +114,7 @@ public class RankingFunctionTests : StorageTest
         Assert.Equal("3", indexSearcher.TermsReaderFor(indexSearcher.GetFirstIndexedFiledName()).GetTermFor(id));
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void TwoBoostingMatchesWithAnd()
     {
         var list = new List<EntryData>();
@@ -146,7 +147,7 @@ public class RankingFunctionTests : StorageTest
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void MultiTermMatch()
     {
         var list = new List<EntryData>();

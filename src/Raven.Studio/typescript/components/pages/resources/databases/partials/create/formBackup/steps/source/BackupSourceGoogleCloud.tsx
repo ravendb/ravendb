@@ -5,7 +5,7 @@ import { CreateDatabaseFromBackupFormData as FormData } from "../../createDataba
 import { FormInput } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
-import { restorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/restorePointUtils";
+import { useRestorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/useRestorePointUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
 import RestorePointsFields, {
@@ -67,6 +67,7 @@ export default function BackupSourceGoogleCloud() {
 
 function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
     const { resourcesService } = useServices();
+    const { mapToSelectOptions } = useRestorePointUtils();
 
     const { control } = useFormContext<FormData>();
 
@@ -96,7 +97,7 @@ function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
                 true,
                 isSharded ? index : undefined
             );
-            return restorePointUtils.mapToSelectOptions(dto);
+            return mapToSelectOptions(dto);
         },
         [googleCloudData.bucketName, googleCloudData.credentialsJson, googleCloudData.remoteFolderName]
     );

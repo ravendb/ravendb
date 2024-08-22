@@ -94,6 +94,8 @@ namespace Raven.Server.TrafficWatch
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "traffic-watch/configuration");
 
                 var configuration = JsonDeserializationServer.Parameters.PutTrafficWatchConfigurationParameters(json);
+                if (configuration.Persist)
+                    AssertCanPersistConfiguration();
 
                 TrafficWatchToLog.Instance.UpdateConfiguration(configuration);
 

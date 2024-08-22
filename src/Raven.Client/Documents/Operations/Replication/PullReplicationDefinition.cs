@@ -91,11 +91,12 @@ namespace Raven.Client.Documents.Operations.Replication
             {
                 Url = request.SourceUrl,
                 Database = request.Database,
-                Name = request.PullReplicationSinkTaskName,
+                Name = request.PullReplicationDefinitionName,
                 DelayReplicationFor = DelayReplicationFor,
                 MentorNode = MentorNode,
                 PinToMentorNode = PinToMentorNode,
-                TaskId = taskId
+                TaskId = taskId,
+                Mode = Mode
             };
         }
     }

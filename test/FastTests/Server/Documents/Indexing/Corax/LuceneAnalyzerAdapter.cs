@@ -4,6 +4,7 @@ using Corax.Pipeline;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Version = Lucene.Net.Util.Version;
@@ -16,12 +17,14 @@ namespace FastTests.Server.Documents.Indexing.Corax
         {
         }
 
-        [Fact]
-        public void BasicStandardAnalyzer()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void BasicStandardAnalyzer(bool forQuerying)
         {
             Span<byte> source = Encoding.UTF8.GetBytes("This is a SiMple stop stop tEsT");
 
-            var analyzer = LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Version.LUCENE_30));
+            var analyzer = LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Version.LUCENE_30), forQuerying);
 
             Span<byte> outputBuffer = new byte[512];
             Span<Token> outputTokens = new Token[512];
@@ -44,12 +47,14 @@ namespace FastTests.Server.Documents.Indexing.Corax
             Assert.Equal(TokenType.Word, outputTokens[3].Type);
         }
 
-        [Fact]
-        public void StandardAnalyzerWithSampleDataUtf8()
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void StandardAnalyzerWithSampleDataUtf8(bool forQuerying)
         {
             Span<byte> source = Encoding.UTF8.GetBytes("Toms Spezialitäten");
             //Notice: Raven uses 29 version, not 30.
-            var analyzer = LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Version.LUCENE_29));
+            var analyzer = LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Version.LUCENE_29), forQuerying);
 
             Span<byte> outputBuffer = new byte[512];
             Span<Token> outputTokens = new Token[512];

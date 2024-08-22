@@ -51,14 +51,10 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         IRavenQueryProvider For<TS>();
 
-        /// <summary>
-        /// Convert the Linq query to a Lucene query
-        /// </summary>
+        /// <inheritdoc cref="RavenQueryProvider{T}.ToAsyncDocumentQuery{TResult}(Expression)"/>
         IAsyncDocumentQuery<T> ToAsyncDocumentQuery<T>(Expression expression);
 
-        /// <summary>
-        /// Convert the linq query to a Lucene query
-        /// </summary>
+        /// <inheritdoc cref="RavenQueryProvider{T}.ToDocumentQuery"/>
         IDocumentQuery<TResult> ToDocumentQuery<TResult>(Expression expression);
 
         /// <summary>

@@ -10,10 +10,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         public static HashSet<CompiledIndexField> ExtractFields(AnonymousObjectCreationExpressionSyntax anonymousObjectCreationExpressionSyntax, bool retrieveOriginal = false, bool nestFields = false)
         {
             var fields = new HashSet<CompiledIndexField>();
-            for (var i = 0; i < anonymousObjectCreationExpressionSyntax.Initializers.Count; i++)
+            foreach (var initializer in anonymousObjectCreationExpressionSyntax.Initializers)
             {
-                var initializer = anonymousObjectCreationExpressionSyntax.Initializers[i];
-                string name;
+                string name = null;
+                
                 if (initializer.NameEquals != null && retrieveOriginal == false)
                 {
                     name = initializer.NameEquals.Name.Identifier.Text;
@@ -26,13 +26,23 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         continue;
                     }
 
-                    var identifierNameSyntax = initializer.Expression as IdentifierNameSyntax;
+                    if (initializer.Expression is IdentifierNameSyntax identifierNameSyntax)
+                    {
+                        name = identifierNameSyntax.Identifier.Text;
+                        fields.Add(new SimpleField(name));
+                        continue;
+                    }
 
-                    if (identifierNameSyntax == null)
-                        throw new NotSupportedException($"Cannot extract field name from: {initializer}");
-
-                    name = identifierNameSyntax.Identifier.Text;
+                    // If expression isn't simple name or member access then we should try to get
+                    // field name from NameEquals
+                    if (initializer.NameEquals != null && retrieveOriginal)
+                    {
+                        name = initializer.NameEquals.Name.Identifier.Text;
+                    }
                 }
+                
+                if (name == null)
+                    throw new NotSupportedException($"Cannot extract field name from: {initializer}");
 
                 fields.Add(new SimpleField(name));
             }
