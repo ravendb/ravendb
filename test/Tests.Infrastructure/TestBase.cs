@@ -551,6 +551,7 @@ namespace FastTests
                 var hasDataDirectory = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.DataDirectory));
                 var hasFeaturesAvailability = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability));
                 var hasRunInMemory = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.RunInMemory));
+                var hasThrowOnInvalidOrMissingLicense = options.CustomSettings != null && options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Licensing.ThrowOnInvalidOrMissingLicense));
 
                 configuration.Initialize();
 
@@ -590,6 +591,9 @@ namespace FastTests
 
                 if (options.DeletePrevious)
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
+
+                if (hasThrowOnInvalidOrMissingLicense == false)
+                    configuration.Licensing.ThrowOnInvalidOrMissingLicense = true;
 
                 var server = new RavenServer(configuration, options.Conventions)
                 {
