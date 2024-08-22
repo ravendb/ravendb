@@ -107,9 +107,7 @@ namespace Raven.Embedded
             public bool DisableAutoUpdate { get; set; }
             public bool DisableAutoUpdateFromApi { get; set; }
             public bool DisableLicenseSupportCheck { get; set; } = true;
-            public bool ThrowOnInvalidOrMissingLicense { get; set; }
+            public bool ThrowOnInvalidOrMissingLicense { get; set; } = true;
         }
     }
-
-
 }

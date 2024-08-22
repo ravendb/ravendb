@@ -245,6 +245,94 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
         LicenseOptionTestHelper.AssertException<InvalidOperationException>(exception, expectedMessageBuilder);
     }
 
+    [RavenFact(RavenTestCategory.Embedded | RavenTestCategory.Licensing)]
+    public void VerifyLicense_EnforceDefaultValue_InvalidLicense_SystemEnvironmentVariableLicense_ShouldThrow()
+    {
+        ServerOptions options = new();
+        var exception = Assert.Throws(typeof(AggregateException), () =>
+            StartEmbeddedServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicenseConfigurationKey, out options));
+
+        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        expectedMessageBuilder.AppendLicenseMissingMessage();
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
+        expectedMessageBuilder.AppendDeserializationErrorMessage(LicenseOptionTestHelper.InvalidLicense);
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicensePathConfigurationKey);
+        var readErrorException = new FileNotFoundException($"Could not find file '{Path.Combine(options.ServerDirectory, "license.json")}'.");
+        expectedMessageBuilder.AppendFileReadErrorMessage(readErrorException);
+
+        expectedMessageBuilder.AppendGeneralSuggestions();
+        expectedMessageBuilder.AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(throwOnInvalidOrMissingLicenseOptionEnabled: true, isInStorageLicenseExpired: false);
+
+        LicenseOptionTestHelper.AssertException<InvalidOperationException>(exception, expectedMessageBuilder);
+    }
+
+    [RavenFact(RavenTestCategory.Embedded | RavenTestCategory.Licensing)]
+    public void VerifyLicense_EnforceDefaultValue_InvalidLicense_ServerOptionLicense_ShouldThrow()
+    {
+        ServerOptions options = null;
+        var exception = Assert.Throws(typeof(AggregateException), () =>
+            StartEmbeddedServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.ServerOption, LicenseOptionTestHelper.LicenseConfigurationKey, out options));
+
+        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        expectedMessageBuilder.AppendLicenseMissingMessage();
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
+        expectedMessageBuilder.AppendDeserializationErrorMessage(LicenseOptionTestHelper.InvalidLicense);
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicensePathConfigurationKey);
+        var readErrorException = new FileNotFoundException($"Could not find file '{Path.Combine(options.ServerDirectory, "license.json")}'.");
+        expectedMessageBuilder.AppendFileReadErrorMessage(readErrorException);
+
+        expectedMessageBuilder.AppendGeneralSuggestions();
+        expectedMessageBuilder.AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(throwOnInvalidOrMissingLicenseOptionEnabled: true, isInStorageLicenseExpired: false);
+
+        LicenseOptionTestHelper.AssertException<InvalidOperationException>(exception, expectedMessageBuilder);
+    }
+
+    [RavenFact(RavenTestCategory.Embedded | RavenTestCategory.Licensing)]
+    public void VerifyLicense_EnforceDefaultValue_InvalidLicense_SystemEnvironmentVariableLicensePath_ShouldThrow()
+    {
+        var exception = Assert.Throws(typeof(AggregateException), () =>
+            StartEmbeddedServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicensePathConfigurationKey, out _));
+
+        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        expectedMessageBuilder.AppendLicenseMissingMessage();
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
+        expectedMessageBuilder.AppendDeserializationErrorMessage(licenseContent: null);
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicensePathConfigurationKey);
+        expectedMessageBuilder.AppendDeserializationErrorMessage(LicenseOptionTestHelper.InvalidLicense);
+
+        expectedMessageBuilder.AppendGeneralSuggestions();
+        expectedMessageBuilder.AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(throwOnInvalidOrMissingLicenseOptionEnabled: true, isInStorageLicenseExpired: false);
+
+        LicenseOptionTestHelper.AssertException<InvalidOperationException>(exception, expectedMessageBuilder);
+    }
+
+    [RavenFact(RavenTestCategory.Embedded | RavenTestCategory.Licensing)]
+    public void VerifyLicense_EnforceDefaultValue_InvalidLicense_ServerOptionLicensePath_ShouldThrow()
+    {
+        var exception = Assert.Throws(typeof(AggregateException), () =>
+            StartEmbeddedServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.ServerOption, LicenseOptionTestHelper.LicensePathConfigurationKey, out _));
+
+        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        expectedMessageBuilder.AppendLicenseMissingMessage();
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
+        expectedMessageBuilder.AppendDeserializationErrorMessage(licenseContent: null);
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicensePathConfigurationKey);
+        expectedMessageBuilder.AppendDeserializationErrorMessage(LicenseOptionTestHelper.InvalidLicense);
+
+        expectedMessageBuilder.AppendGeneralSuggestions();
+        expectedMessageBuilder.AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(throwOnInvalidOrMissingLicenseOptionEnabled: true, isInStorageLicenseExpired: false);
+
+        LicenseOptionTestHelper.AssertException<InvalidOperationException>(exception, expectedMessageBuilder);
+    }
+
     private void StartEmbeddedServerLicenseOptionTest(bool throwOnInvalidOrMissingLicense, string license, LicenseSource licenseSource, string configurationKeyToTest, out ServerOptions options)
     {
         var originalLicense = Environment.GetEnvironmentVariable("RAVEN_License");
@@ -252,6 +340,37 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
 
         options = CopyServerAndCreateOptions();
         options.LicenseConfiguration.ThrowOnInvalidOrMissingLicense = throwOnInvalidOrMissingLicense;
+
+        try
+        {
+            if (configurationKeyToTest == LicenseOptionTestHelper.LicenseConfigurationKey)
+            {
+                HandleLicenseOption(license, licenseSource, ref options);
+            }
+            else if (configurationKeyToTest == LicenseOptionTestHelper.LicensePathConfigurationKey)
+            {
+                HandleLicensePathOption(license, licenseSource, ref options);
+            }
+
+            CreateEmbeddedServer(options);
+        }
+        catch
+        {
+            Task.Delay(1000).Wait(); // wait to ensure the server is fully disposed
+            throw;
+        }
+        finally
+        {
+            AfterTestCleanup(originalLicense, originalLicensePath);
+        }
+    }
+
+    private void StartEmbeddedServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(string license, LicenseSource licenseSource, string configurationKeyToTest, out ServerOptions options)
+    {
+        var originalLicense = Environment.GetEnvironmentVariable("RAVEN_License");
+        var originalLicensePath = Environment.GetEnvironmentVariable("RAVEN_License.Path");
+
+        options = CopyServerAndCreateOptions();
 
         try
         {
@@ -593,6 +712,92 @@ public class LicenseOptionsTestDriverTests : RavenTestBase
         LicenseOptionTestHelper.AssertException<LicenseExpiredException>(exception, expectedMessageBuilder);
     }
 
+    [RavenFact(RavenTestCategory.Licensing)]
+    public void VerifyLicense_EnforceDefaultValue_InvalidLicense_SystemEnvironmentVariableLicense_ShouldThrow()
+    {
+        var exception = Assert.Throws(typeof(ServerLoadFailureException), () =>
+            StartTestDriverServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicenseConfigurationKey, out _));
+
+        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        expectedMessageBuilder.AppendLicenseMissingMessage();
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
+        expectedMessageBuilder.AppendDeserializationErrorMessage(LicenseOptionTestHelper.InvalidLicense);
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicensePathConfigurationKey);
+        var readErrorException = new FileNotFoundException($"Could not find file '{Path.Combine(Environment.CurrentDirectory, "license.json")}'.");
+        expectedMessageBuilder.AppendFileReadErrorMessage(readErrorException);
+
+        expectedMessageBuilder.AppendGeneralSuggestions();
+        expectedMessageBuilder.AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(throwOnInvalidOrMissingLicenseOptionEnabled: true, isInStorageLicenseExpired: false);
+
+        LicenseOptionTestHelper.AssertException<LicenseExpiredException>(exception, expectedMessageBuilder);
+    }
+
+    [RavenFact(RavenTestCategory.Licensing)]
+    public void VerifyLicense_EnforceDefaultValue_InvalidLicense_ServerOptionLicense_ShouldThrow()
+    {
+        var exception = Assert.Throws(typeof(ServerLoadFailureException), () =>
+            StartTestDriverServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.ServerOption, LicenseOptionTestHelper.LicenseConfigurationKey, out _));
+
+        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        expectedMessageBuilder.AppendLicenseMissingMessage();
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
+        expectedMessageBuilder.AppendDeserializationErrorMessage(LicenseOptionTestHelper.InvalidLicense);
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicensePathConfigurationKey);
+        var readErrorException = new FileNotFoundException($"Could not find file '{Path.Combine(Environment.CurrentDirectory, "license.json")}'.");
+        expectedMessageBuilder.AppendFileReadErrorMessage(readErrorException);
+
+        expectedMessageBuilder.AppendGeneralSuggestions();
+        expectedMessageBuilder.AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(throwOnInvalidOrMissingLicenseOptionEnabled: true, isInStorageLicenseExpired: false);
+
+        LicenseOptionTestHelper.AssertException<LicenseExpiredException>(exception, expectedMessageBuilder);
+    }
+
+    [RavenFact(RavenTestCategory.Licensing)]
+    public void VerifyLicense_EnforceDefaultValue_InvalidLicense_SystemEnvironmentVariableLicensePath_ShouldThrow()
+    {
+        var exception = Assert.Throws(typeof(ServerLoadFailureException), () =>
+            StartTestDriverServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicensePathConfigurationKey, out _));
+
+        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        expectedMessageBuilder.AppendLicenseMissingMessage();
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
+        expectedMessageBuilder.AppendDeserializationErrorMessage(licenseContent: null);
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicensePathConfigurationKey);
+        expectedMessageBuilder.AppendDeserializationErrorMessage(LicenseOptionTestHelper.InvalidLicense);
+
+        expectedMessageBuilder.AppendGeneralSuggestions();
+        expectedMessageBuilder.AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(throwOnInvalidOrMissingLicenseOptionEnabled: true, isInStorageLicenseExpired: false);
+
+        LicenseOptionTestHelper.AssertException<LicenseExpiredException>(exception, expectedMessageBuilder);
+    }
+
+    [RavenFact(RavenTestCategory.Licensing)]
+    public void VerifyLicense_EnforceDefaultValue_InvalidLicense_ServerOptionLicensePath_ShouldThrow()
+    {
+        var exception = Assert.Throws(typeof(ServerLoadFailureException), () =>
+            StartTestDriverServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.ServerOption, LicenseOptionTestHelper.LicensePathConfigurationKey, out _));
+
+        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        expectedMessageBuilder.AppendLicenseMissingMessage();
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
+        expectedMessageBuilder.AppendDeserializationErrorMessage(licenseContent: null);
+
+        expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicensePathConfigurationKey);
+        expectedMessageBuilder.AppendDeserializationErrorMessage(LicenseOptionTestHelper.InvalidLicense);
+
+        expectedMessageBuilder.AppendGeneralSuggestions();
+        expectedMessageBuilder.AppendSuggestionToDisableThrowOnInvalidOrMissingLicenseOption(throwOnInvalidOrMissingLicenseOptionEnabled: true, isInStorageLicenseExpired: false);
+
+        LicenseOptionTestHelper.AssertException<LicenseExpiredException>(exception, expectedMessageBuilder);
+    }
+
     private void StartTestDriverServerLicenseOptionTest(bool throwOnInvalidOrMissingLicense, string license, LicenseSource licenseSource, string configurationKeyToTest, out ServerCreationOptions options)
     {
         var originalLicense = Environment.GetEnvironmentVariable("RAVEN_License");
@@ -600,6 +805,39 @@ public class LicenseOptionsTestDriverTests : RavenTestBase
 
         options = new ServerCreationOptions { CustomSettings = new Dictionary<string, string>() };
         options.CustomSettings[RavenConfiguration.GetKey(x => x.Licensing.ThrowOnInvalidOrMissingLicense)] = throwOnInvalidOrMissingLicense.ToString();
+
+        try
+        {
+            if (configurationKeyToTest == LicenseOptionTestHelper.LicenseConfigurationKey)
+            {
+                HandleLicenseOption(license, licenseSource, ref options);
+            }
+            else if (configurationKeyToTest == LicenseOptionTestHelper.LicensePathConfigurationKey)
+            {
+                HandleLicensePathOption(license, licenseSource, ref options);
+            }
+
+            using (_ = GetNewServer(options))
+            {
+            }
+        }
+        catch
+        {
+            Task.Delay(1000).Wait(); // wait to ensure the server is fully disposed
+            throw;
+        }
+        finally
+        {
+            AfterTestCleanup(originalLicense, originalLicensePath);
+        }
+    }
+
+    private void StartTestDriverServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(string license, LicenseSource licenseSource, string configurationKeyToTest, out ServerCreationOptions options)
+    {
+        var originalLicense = Environment.GetEnvironmentVariable("RAVEN_License");
+        var originalLicensePath = Environment.GetEnvironmentVariable("RAVEN_License.Path");
+
+        options = new ServerCreationOptions { CustomSettings = new Dictionary<string, string>() };
 
         try
         {
