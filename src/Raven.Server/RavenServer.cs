@@ -442,13 +442,9 @@ namespace Raven.Server
             var openTelemetryConfiguration = Configuration.Monitoring.OpenTelemetry;
             if (openTelemetryConfiguration.Enabled == false)
                 return;
-
-            if (ClusterStateMachine.TryReadNodeTag(ServerStore, out var nodeTag) == false)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("OpenTelemetry monitoring requires the node tag of the server for initialization; however, it is still unavailable. Therefore, OpenTelemetry initialization is skipped.");
+            
+            if (TryReadServiceInstanceId(out var serviceInstanceId) == false)
                 return;
-            }
             
             var openTelemetryBuilder = services.AddOpenTelemetry();
             
@@ -459,8 +455,7 @@ namespace Raven.Server
                 var configuration = Configuration.Monitoring.OpenTelemetry;
                 builder.SetResourceBuilder(
                     ResourceBuilder.CreateDefault()
-                        .AddService("server", "ravendb", serviceInstanceId: nodeTag));
-
+                        .AddService("server", "ravendb", serviceInstanceId: serviceInstanceId));
                 if (configuration.AspNetCoreInstrumentationMetersEnabled)
                     builder.AddAspNetCoreInstrumentation();
                 if (configuration.RuntimeInstrumentationMetersEnabled)
@@ -513,6 +508,39 @@ namespace Raven.Server
 
                 
                 _openTelemetryInitialized = true;
+            }
+            
+            bool TryReadServiceInstanceId(out string serviceId)
+            {
+                if (string.IsNullOrEmpty(Configuration.Monitoring.OpenTelemetry.ServiceInstanceId) == false)
+                {
+                    serviceId = Configuration.Monitoring.OpenTelemetry.ServiceInstanceId;
+                    return true;
+                }
+
+                if (Configuration.Core.PublicServerUrl.HasValue)
+                {
+                    try
+                    {
+                        var uri = new Uri(Configuration.Core.PublicServerUrl.Value.UriValue);
+                        if (string.IsNullOrEmpty(uri.Host) == false)
+                        {
+                            serviceId = uri.Host;
+                            return true;
+                        }
+                    }
+                    catch
+                    {
+                        //ignore
+                    }
+                }
+
+                if (ClusterStateMachine.TryReadNodeTag(ServerStore, out serviceId)) 
+                    return true;
+                
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("OpenTelemetry monitoring requires the service instance ID for initialization; however, it is still unavailable. Therefore, OpenTelemetry initialization is skipped.");
+                return false;
             }
         }
 
