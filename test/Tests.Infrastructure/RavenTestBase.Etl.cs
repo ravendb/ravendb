@@ -406,6 +406,28 @@ namespace FastTests
                 };
             }
 
+            public AzureSettings GetAzureSettings(string remoteFolderName, [CallerMemberName] string caller = null)
+            {
+                var settings = AzureRetryFactAttribute.AzureSettings;
+                if (settings == null)
+                    return null;
+
+                if (string.IsNullOrEmpty(caller) == false)
+                    remoteFolderName = $"{remoteFolderName}/{caller}";
+
+                if (string.IsNullOrEmpty(settings.RemoteFolderName) == false)
+                    remoteFolderName = $"{settings.RemoteFolderName}/{remoteFolderName}";
+
+                return new AzureSettings
+                {
+                    RemoteFolderName = remoteFolderName,
+                    AccountName = settings.AccountName,
+                    StorageContainer = settings.StorageContainer,
+                    AccountKey = settings.AccountKey,
+                    SasToken = settings.SasToken
+                };
+            }
+
         }
     }
 }

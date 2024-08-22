@@ -2081,7 +2081,7 @@ namespace Raven.Server.ServerWide
 
             var editRetireAttachmentsCommand = new EditRetireAttachmentsCommand(config, databaseName, raftRequestId);
 
-            return SendToLeaderAsync(editExpiration);
+            return SendToLeaderAsync(editRetireAttachmentsCommand);
         }
 
         public Task<(long Index, object Result)> ModifyDocumentsCompression(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)

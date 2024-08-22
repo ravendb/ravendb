@@ -28,10 +28,8 @@ public sealed class DirectBackupDownloader : BackupUploaderBase, IDisposable
                 _restoreSource = new DownloadFromS3(new RestoreFromS3Configuration() { Settings = _settings.S3Settings, }, database.Configuration.Backup, TaskCancelToken.Token);
                 return await _restoreSource.GetStream(CombinePathAndKey(_settings.S3Settings.RemoteFolderName, folderName, fileName));
             case BackupConfiguration.BackupDestination.Azure:
-            //return new AzureDirectDownloadStream(GetDirectUploadParameters(
-            //    progress => RavenAzureClient.Create(_settings.AzureSettings, database.Configuration.Backup, progress, TaskCancelToken.Token),
-            //    _settings.AzureSettings.RemoteFolderName, folderName, fileName));
-
+                _restoreSource =  new DownloadFromAzure(new RestoreFromAzureConfiguration() { Settings = _settings.AzureSettings, }, database.Configuration.Backup, TaskCancelToken.Token);
+                return await _restoreSource.GetStream(CombinePathAndKey(_settings.AzureSettings.RemoteFolderName, folderName, fileName));
             default:
                 throw new ArgumentOutOfRangeException($"Missing implementation for direct upload destination '{_destination}'");
         }
