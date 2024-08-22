@@ -17,11 +17,7 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import licenseModel from "models/auth/licenseModel";
 
-interface AboutPageProps {
-    initialChangeLogMode?: "whatsNew" | "changeLog" | "hidden";
-}
-
-export function AboutPage({ initialChangeLogMode = "hidden" }: AboutPageProps) {
+export function AboutPage() {
     const licenseRegistered = useAppSelector(licenseSelectors.licenseRegistered);
     const license = useAppSelector(licenseSelectors.status);
     const support = useAppSelector(licenseSelectors.support);
@@ -32,7 +28,7 @@ export function AboutPage({ initialChangeLogMode = "hidden" }: AboutPageProps) {
         useAboutPage();
 
     const [activeTab, setActiveTab] = useState<"license" | "support">("license");
-    const [changeLogMode, setChangeLogMode] = useState<"whatsNew" | "changeLog" | "hidden">(initialChangeLogMode);
+    const [changeLogMode, setChangeLogMode] = useState<"whatsNew" | "changeLog" | "hidden">("hidden");
 
     const refreshLatestVersion = async () => {
         await asyncFetchLatestVersion.execute(true);

@@ -83,7 +83,6 @@ interface computedAppUrls {
     conflictResolution: KnockoutComputed<string>;
 
     about: KnockoutComputed<string>;
-    whatsNew: KnockoutComputed<string>;
 
     ioStats: KnockoutComputed<string>;
 

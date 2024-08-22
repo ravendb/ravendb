@@ -83,7 +83,6 @@ class appUrl {
         indexCleanup: ko.pureComputed(() => appUrl.forIndexCleanup(appUrl.currentDatabase())),
 
         about: ko.pureComputed(() => appUrl.forAbout()),
-        whatsNew: ko.pureComputed(() => appUrl.forWhatsNew()),
 
         settings: ko.pureComputed(() => appUrl.forSettings(appUrl.currentDatabase())),
         indexErrors: ko.pureComputed(() => appUrl.forIndexErrors(appUrl.currentDatabase())),
@@ -241,10 +240,6 @@ class appUrl {
 
     static forAbout(): string {
         return "#about";
-    }
-
-    static forWhatsNew(): string {
-        return "#whatsNew";
     }
     
     static forClusterDashboard(): string {
