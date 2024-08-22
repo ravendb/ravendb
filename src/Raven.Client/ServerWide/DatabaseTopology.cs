@@ -442,29 +442,51 @@ namespace Raven.Client.ServerWide
         public string WhoseTaskIsIt(
             RachisState state,
             IDatabaseTask task,
-            Func<string> getLastResponsibleNode = null)
+            Func<string> getLastResponsibleNode = null,
+            List<string> explanations = null)
         {
             if (state == RachisState.Candidate || state == RachisState.Passive)
+            {
+                explanations?.Add($"Task doesn't belong to this node because the node is in '{state}' state");
                 return null;
+            }
+
+            explanations?.Add($"Node state is '{state}'");
 
             var mentorNode = task.GetMentorNode();
             if (mentorNode != null)
             {
                 if (Members.Contains(mentorNode))
+                {
+                    explanations?.Add($"Task belongs to mentor node ({mentorNode})");
                     return mentorNode;
-                
+                }
+
                 if (AllNodes.Contains(mentorNode) && task.IsPinnedToMentorNode())
+                {
+                    explanations?.Add($"Task is pinned to mentor node ({mentorNode})");
                     return mentorNode;
+                }
+
+                explanations?.Add($"Mentor node is {mentorNode}");
             }
 
             var lastResponsibleNode = getLastResponsibleNode?.Invoke();
             if (lastResponsibleNode != null)
+            {
+                explanations?.Add($"Task belongs to last responsible node ({lastResponsibleNode})");
                 return lastResponsibleNode;
+            }
 
-            return WhoseTaskIsIt(task);
+            var node = WhoseTaskIsIt(task, explanations);
+
+            if (node != null)
+                explanations?.Add($"Task belongs to node ({node})");
+
+            return node;
         }
 
-        internal string WhoseTaskIsIt(IDatabaseTask task)
+        internal string WhoseTaskIsIt(IDatabaseTask task, List<string> explanations = null)
         {
             var topology = new List<string>(Members);
             topology.AddRange(Promotables);
@@ -474,28 +496,34 @@ namespace Raven.Client.ServerWide
             if (task.IsResourceIntensive() && Members.Count > 1)
             {
                 // if resource intensive operation, we don't want to have it on the first node of the database topology
-                return FindNodeForIntensiveOperation(task.GetTaskKey(), topology);
+
+                explanations?.Add("Task is resource intensive");
+
+                return FindNodeForIntensiveOperation(task.GetTaskKey(), topology, explanations);
             }
 
-            return FindNode(task.GetTaskKey(), topology);
+            return FindNode(task.GetTaskKey(), topology, explanations);
         }
 
-        private string FindNodeForIntensiveOperation(ulong key, List<string> topology)
+        private string FindNodeForIntensiveOperation(ulong key, List<string> topology, List<string> explanations = null)
         {
             var firstNode = Members[0];
             topology.Remove(firstNode);
 
-            var node = FindNode(key, topology);
+            var node = FindNode(key, topology, explanations);
             if (node == null)
                 return firstNode;
 
             return node;
         }
 
-        private string FindNode(ulong key, List<string> topology)
+        private string FindNode(ulong key, List<string> topology, List<string> explanations = null)
         {
             if (topology.Count == 0)
+            {
+                explanations?.Add("Topology count is zero. Database is probably being deleted now");
                 return null; // this is probably being deleted now, no one is able to run tasks
+            }
 
             while (true)
             {
@@ -506,7 +534,10 @@ namespace Raven.Client.ServerWide
 
                 topology.RemoveAt(index);
                 if (topology.Count == 0)
+                {
+                    explanations?.Add("All nodes in the topology are probably in Rehab state");
                     return null; // all nodes in the topology are probably in rehab
+                }
 
                 // rehash so it will likely go to a different member in the cluster
                 key = Hashing.Mix(key);
