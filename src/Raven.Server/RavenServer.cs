@@ -1544,10 +1544,6 @@ namespace Raven.Server
                 if (AuthorizedDatabases.TryGetValue(database, out mode) == false)
                     return false;
 
-                // Technically speaking, since this is per connection, this is single threaded. But I'm
-                // worried about race conditions here if we move to HTTP 2.0 at some point. At that point,
-                // we'll probably want to handle this concurrently, and the cost of adding it in this manner
-                // is pretty small for most cases anyway
                 var authorizedDatabases = new Dictionary<string, DatabaseAccess>(_caseSensitiveAuthorizedDatabases);
                     authorizedDatabases.TryAdd(database, mode);
 
