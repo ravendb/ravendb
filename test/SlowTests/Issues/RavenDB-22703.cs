@@ -68,7 +68,55 @@ public class RavenDB_22703 : RavenTestBase
             }
         }
     }
-        
+
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded)]
+    public void TestOrderingOnShardedDatabase(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                var bar1 = new Bar() { Foo = new Foo() { BarBool = false, BarShort = 9 } };
+                var bar2 = new Bar() { Foo = new Foo() { BarBool = null } };
+                var bar3 = new Bar() { Foo = null };
+                var bar4 = new Bar() { Foo = new Foo() { BarBool = true, BarShort = 21 } };
+                var bar5 = new Bar() { Foo = null };
+                
+                session.Store(bar1);
+                session.Store(bar2);
+                session.Store(bar3);
+                session.Store(bar4);
+                session.Store(bar5);
+                
+                session.SaveChanges();
+                
+                var requestExecutor = store.GetRequestExecutor();
+                using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var reader = context.ReadObject(new DynamicJsonValue
+                    {
+                        ["@metadata"] = new DynamicJsonValue{
+                            ["@collection"] = "Bars",
+                            ["Raven-Clr-Type"] = "SlowTests.Issues.RavenDB_22703+Bar, SlowTests"
+                        }
+                    }, "bars/6");
+                    requestExecutor.Execute(new PutDocumentCommand(store.Conventions, "bars/6", null, reader), context);
+                }
+                
+                var res = session.Query<Bar>()
+                    .OrderByDescending(b => b.Foo.BarBool)
+                    .ThenByDescending(b => b.Foo.BarShort)
+                    .ToList();
+                
+                Assert.Equal(6, res.Count);
+                
+                Assert.Equal(true, res[0].Foo.BarBool);
+                Assert.Equal(false, res[1].Foo.BarBool);
+            }
+        }
+    }
+
     private class Bar
     {
         public Foo Foo { get; set; } = null!;

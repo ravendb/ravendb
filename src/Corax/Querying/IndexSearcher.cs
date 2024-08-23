@@ -331,9 +331,32 @@ public sealed unsafe partial class IndexSearcher : IDisposable
    
     public long GetTermAmountInField(in FieldMetadata field)
     {
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
+        long termAmount = 0;
+        
+        var fieldTree = _fieldsTree?.CompactTreeFor(field.FieldName);
 
-        return terms?.NumberOfEntries ?? 0;
+        termAmount += fieldTree?.NumberOfEntries ?? 0;
+
+        if (TryGetPostingListForNull(field, out var nullPostingListId))
+        {
+            var nullPostingList = GetPostingList(nullPostingListId);
+
+            termAmount += nullPostingList?.State.NumberOfEntries ?? 0;
+        }
+        
+        return termAmount;
+    }
+
+    public long GetTermAmountInFieldForNonExisting(in FieldMetadata field)
+    {
+        if (TryGetPostingListForNonExisting(field, out var nonExistingPostingListId))
+        {
+            var nonExistingPostingList = GetPostingList(nonExistingPostingListId);
+
+            return nonExistingPostingList?.State.NumberOfEntries ?? 0;
+        }
+
+        return 0;
     }
 
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
