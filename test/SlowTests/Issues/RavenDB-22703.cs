@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -126,5 +128,57 @@ public class RavenDB_22703 : RavenTestBase
     {
         public short BarShort { get; set; }
         public bool? BarBool { get; set; }
+    }
+    
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void TestOrderingOfDynamicFields(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                var p1 = new Product() { Attributes = new Dictionary<string, object>() { { "Color", "Red" }, {"Size", 42 } } };
+                var p2 = new Product() { Attributes = new Dictionary<string, object>() { { "Color", "Blue" } } };
+                var p3 = new Product() { Attributes = new Dictionary<string, object>() { { "Size", 37 } } };
+                
+                session.Store(p1);
+                session.Store(p2);
+                session.Store(p3);
+                
+                session.SaveChanges();
+                
+                var index = new Products_ByAttributeKey();
+                
+                index.Execute(store);
+                
+                Indexes.WaitForIndexing(store);
+                
+                var res = session
+                    .Advanced
+                    .DocumentQuery<Product, Products_ByAttributeKey>()
+                    .OrderBy("Size")
+                    .ToList();
+
+                Assert.Equal(3, res.Count);
+            }
+        }
+    }
+
+    private class Product
+    {
+        public Dictionary<string, object> Attributes { get; set; }
+    }
+    
+    private class Products_ByAttributeKey : AbstractIndexCreationTask<Product>
+    {
+        public Products_ByAttributeKey()
+        {
+            Map = products => from p in products
+                select new
+                {
+                    _ = p.Attributes.Select(item => CreateField(item.Key, item.Value))
+                };
+        }
     }
 }
