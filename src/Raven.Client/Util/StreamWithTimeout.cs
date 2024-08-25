@@ -24,6 +24,11 @@ namespace Raven.Client.Util
         private CancellationTokenSource _writeCts;
         private CancellationTokenSource _readCts;
 
+#if DEBUG
+        private CancellationToken _requestReadCts;
+        private CancellationToken _requestWriteCts;
+#endif
+
         private long _totalRead = 0;
         private long _totalWritten = 0;
 
@@ -164,11 +169,20 @@ namespace Raven.Client.Util
             {
                 _readCts = cancellationToken == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 _readSw = Stopwatch.StartNew();
+
+#if DEBUG
+                _requestReadCts = cancellationToken;
+#endif
             }
             else if (_readSw.ElapsedMilliseconds > MinimumWriteDelayTimeInMs)
             {
                 _readSw.Restart();
                 _readCts.CancelAfter(_readTimeout);
+
+#if DEBUG
+                if (_requestReadCts != cancellationToken)
+                    throw new InvalidOperationException("The cancellation token was changed during the request");
+#endif
             }
 
             var read = await _stream.ReadAsync(buffer, offset, count, _readCts.Token).ConfigureAwait(false);
@@ -212,11 +226,20 @@ namespace Raven.Client.Util
             {
                 _writeCts = cancellationToken == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 _writeSw = Stopwatch.StartNew();
+
+#if DEBUG
+                _requestWriteCts = cancellationToken;
+#endif
             }
             else if (_writeSw.ElapsedMilliseconds > MinimumReadDelayTimeInMs)
             {
                 _writeSw.Restart();
                 _writeCts.CancelAfter(_readTimeout);
+
+#if DEBUG
+                if (_requestWriteCts != cancellationToken)
+                    throw new InvalidOperationException("The cancellation token was changed during the request");
+#endif
             }
 
             return _stream.WriteAsync(buffer, offset, count, _writeCts.Token);
