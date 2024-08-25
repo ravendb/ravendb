@@ -28,19 +28,15 @@ namespace Raven.Server.ServerWide.Commands.Sharding
         {
         }
 
-        public StartBucketMigrationCommand(int bucket, int destShard, string database, string prefix, string raftId) : base(database, raftId)
+        public StartBucketMigrationCommand(int bucket, int? sourceShard, int destShard, string database, string prefix, string raftId) : base(database, raftId)
         {
             if (bucket >= ShardHelper.NumberOfBuckets && string.IsNullOrEmpty(prefix))
                 throw new InvalidOperationException($"Bucket {bucket} belongs to a prefixed range, but 'prefix' parameter wasn't provided");
 
+            SourceShard = sourceShard;
             Bucket = bucket;
             DestinationShard = destShard;
             Prefix = prefix;
-        }
-
-        public StartBucketMigrationCommand(int bucket, int sourceShard, int destShard, string database, string raftId) : this(bucket, destShard, database, prefix: null, raftId)
-        {
-            SourceShard = sourceShard;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
