@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,11 @@ namespace Raven.Client.Util
     {
         private static readonly TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
         internal static TimeSpan DefaultReadTimeout { get; } = TimeSpan.FromSeconds(120);
+
+        private static readonly long MinimumWriteDelayTimeInMs = (long)(DefaultWriteTimeout.TotalMilliseconds / 3);
+        private static readonly long MinimumReadDelayTimeInMs = (long)(DefaultReadTimeout.TotalMilliseconds / 3);
+        private Stopwatch _writeSw;
+        private Stopwatch _readSw;
 
         private readonly Stream _stream;
         private int _writeTimeout;
@@ -154,9 +160,16 @@ namespace Raven.Client.Util
 
         private async Task<int> ReadAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            _readCts?.Dispose();
-            _readCts = cancellationToken == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            _readCts.CancelAfter(_readTimeout);
+            if (_readCts == null)
+            {
+                _readCts = cancellationToken == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                _readSw = Stopwatch.StartNew();
+            }
+            else if (_readSw.ElapsedMilliseconds > MinimumWriteDelayTimeInMs)
+            {
+                _readSw.Restart();
+                _readCts.CancelAfter(_readTimeout);
+            }
 
             var read = await _stream.ReadAsync(buffer, offset, count, _readCts.Token).ConfigureAwait(false);
             _totalRead += read;
@@ -195,9 +208,16 @@ namespace Raven.Client.Util
 
         private Task WriteAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            _writeCts?.Dispose();
-            _writeCts = cancellationToken == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            _writeCts.CancelAfter(_writeTimeout);
+            if (_writeCts == null)
+            {
+                _writeCts = cancellationToken == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                _writeSw = Stopwatch.StartNew();
+            }
+            else if (_writeSw.ElapsedMilliseconds > MinimumReadDelayTimeInMs)
+            {
+                _writeSw.Restart();
+                _writeCts.CancelAfter(_readTimeout);
+            }
 
             return _stream.WriteAsync(buffer, offset, count, _writeCts.Token);
         }
