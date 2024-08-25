@@ -455,6 +455,8 @@ namespace SlowTests.Server.Documents.Attachments
 
                     await GetAndCompareRetiredAttachment(store, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", profileStream, 3);
 
+                    await Task.Delay(1000); // in Azure we have seconds resolution
+
                     var database2 = await Databases.GetDocumentDatabaseInstanceFor(server, store2);
                     database2.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                     var expiredDocumentsCleaner2 = database2.RetireAttachmentsSender;
