@@ -7,7 +7,7 @@ namespace Raven.TestDriver
     {
         public TestServerOptions()
         {
-            License.ThrowOnInvalidOrMissingLicense = true;
+            Licensing.ThrowOnInvalidOrMissingLicense = true;
         }
 
         public static TestServerOptions UseFiddler()
