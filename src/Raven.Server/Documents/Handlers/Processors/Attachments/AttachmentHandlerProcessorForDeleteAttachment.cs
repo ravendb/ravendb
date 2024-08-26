@@ -13,10 +13,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
-        protected override async ValueTask DeleteAttachmentAsync(DocumentsOperationContext _, string docId, string name, LazyStringValue changeVector)
+        protected override async ValueTask DeleteAttachmentAsync(DocumentsOperationContext context, string docId, string name, LazyStringValue changeVector)
         {
-            CheckAttachmentFlagAndThrowIfNeeded(docId, name);
+            CheckAttachmentFlagAndThrowIfNeeded(context, docId, name);
 
+            var cmd = CreateMergedDeleteAttachmentCommand(docId, name, changeVector);
+            await RequestHandler.Database.TxMerger.Enqueue(cmd);
+        }
+
+        protected virtual AttachmentHandler.MergedDeleteAttachmentCommand CreateMergedDeleteAttachmentCommand(string docId, string name, LazyStringValue changeVector)
+        {
             var cmd = new AttachmentHandler.MergedDeleteAttachmentCommand
             {
                 Database = RequestHandler.Database,
@@ -24,22 +30,30 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 DocumentId = docId,
                 Name = name
             };
-            await RequestHandler.Database.TxMerger.Enqueue(cmd);
+            return cmd;
         }
 
-        protected virtual void CheckAttachmentFlagAndThrowIfNeeded(string docId, string name)
+        protected virtual void CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, string docId, string name)
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var attachment = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, docId, name, AttachmentType.Document, changeVector: null);
-                if (attachment == null)
-                    return;
+                CheckAttachmentFlagAndThrowIfNeededInternal(context, RequestHandler, docId, name);
+            }
+        }
 
-                if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
-                {
-                    throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{docId}' because it is retired. Please use dedicated API.");
-                }
+        public static void CheckAttachmentFlagAndThrowIfNeededInternal(DocumentsOperationContext context, DatabaseRequestHandler requestHandler, string docId, string name)
+        {
+            //TODO: egor I have CV, do I need to pass it here? CHeck in future (if test pass when I add it)
+            //TODO: egor shouldn't Attachment be IDisposable? it has lsv & Stream that should be disposed
+            //TODO: egor sharding handler?
+            var attachment = requestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, docId, name, AttachmentType.Document, changeVector: null);
+            if (attachment == null)
+                return;
+            using var _ = attachment.Stream;
+
+            if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+            {
+                throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{docId}' because it is retired. Please use dedicated API.");
             }
         }
     }

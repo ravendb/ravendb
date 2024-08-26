@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -27,7 +28,7 @@ public class S3RetiredAttachmentsHolder : RetiredAttachmentsHolder<S3Settings>
 
     public override IAsyncDisposable CreateCloudSettings([CallerMemberName] string caller = null)
     {
-        Settings = Etl.GetS3Settings($"{caller}-{Guid.NewGuid()}", string.Empty);
+        Settings = Etl.GetS3Settings(nameof(RetiredAttachments), $"{caller}-{Guid.NewGuid()}");
         Assert.NotNull(Settings);
 
         return new AsyncDisposableAction(async () =>
@@ -51,6 +52,11 @@ public class S3RetiredAttachmentsHolder : RetiredAttachmentsHolder<S3Settings>
 
             RetireFrequencyInSec = 1000
         }));
+    }
+
+    protected override void AssertUploadRetiredAttachmentToCloudThenManuallyDeleteAndGetShouldThrowInternal(RavenException e)
+    {
+        Assert.Contains("The specified key does not exist", e.Message);
     }
 
     protected override async Task<List<FileInfoDetails>> GetBlobsFromCloudAndAssertForCount(S3Settings settings, int expected, int timeout = 120_000)

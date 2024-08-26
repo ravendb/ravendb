@@ -13,9 +13,9 @@ using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
-    internal class AttachmentHandlerProcessorForBulkAttachment : AbstractAttachmentHandlerProcessorForBulkAttachment<DatabaseRequestHandler, DocumentsOperationContext>
+    internal class AttachmentHandlerProcessorForBulkPostAttachment : AbstractAttachmentHandlerProcessorForBulkPostAttachment<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public AttachmentHandlerProcessorForBulkAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+        public AttachmentHandlerProcessorForBulkPostAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 

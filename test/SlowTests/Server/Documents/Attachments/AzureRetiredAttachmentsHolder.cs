@@ -17,17 +17,18 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Attachments;
 
-public class AzureRetiredAttachmentsHolder : RetiredAttachmentsHolder<AzureSettings>
+public abstract class AzureRetiredAttachmentsHolder : RetiredAttachmentsHolder<AzureSettings>
 {
     protected AzureRetiredAttachmentsHolder RetiredAttachments;
-    public AzureRetiredAttachmentsHolder(ITestOutputHelper output) : base(output)
+
+    protected AzureRetiredAttachmentsHolder(ITestOutputHelper output) : base(output)
     {
         RetiredAttachments = this;
     }
 
     public override IAsyncDisposable CreateCloudSettings([CallerMemberName] string caller = null)
     {
-        Settings = Etl.GetAzureSettings($"{caller}-{Guid.NewGuid()}", string.Empty);
+        Settings = Etl.GetAzureSettings(nameof(RetiredAttachments), $"{caller}-{Guid.NewGuid()}");
         Assert.NotNull(Settings);
 
         return new AsyncDisposableAction(async () =>
