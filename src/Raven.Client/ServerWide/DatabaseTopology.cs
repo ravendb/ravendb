@@ -499,8 +499,7 @@ namespace Raven.Client.ServerWide
 
             var node = WhoseTaskIsIt(task, explanations);
 
-            if (node != null)
-                explanations?.Add($"Task belongs to node ({node})");
+            explanations?.Add(node != null ? $"Task belongs to node {node}" : "No responsible node has been found");
 
             return node;
         }
