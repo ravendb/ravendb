@@ -19,6 +19,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks
 {
+    /// <summary>
+    /// Specifies ongoing task type.
+    /// </summary>
     public enum OngoingTaskType
     {
         Replication,
