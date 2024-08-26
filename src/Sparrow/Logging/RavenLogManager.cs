@@ -16,6 +16,11 @@ internal class RavenLogManager
         LogManager.ConfigurationChanged += (_, _) => IsAuditEnabled = innerLogger.IsInfoEnabled;
     }
 
+    public void Shutdown()
+    {
+        LogManager.Shutdown();
+    }
+
     public static RavenLogger CreateNullLogger()
     {
         return new RavenLogger(LogManager.CreateNullLogger());
