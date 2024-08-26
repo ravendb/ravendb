@@ -12,7 +12,7 @@ namespace Raven.Server.NotificationCenter
     public sealed class RequestTimeTracker : IDisposable
     {
         private readonly HttpContext _context;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private readonly AbstractDatabaseNotificationCenter _notificationCenter;
         private readonly RavenConfiguration _configuration;
         private readonly string _source;
@@ -20,7 +20,7 @@ namespace Raven.Server.NotificationCenter
         private readonly Stopwatch _sw;
         private bool _isDisposed;
 
-        public RequestTimeTracker(HttpContext context, Logger logger, AbstractDatabaseNotificationCenter notificationCenter, RavenConfiguration configuration, string source, bool doPerformanceHintIfTooLong = true)
+        public RequestTimeTracker(HttpContext context, RavenLogger logger, AbstractDatabaseNotificationCenter notificationCenter, RavenConfiguration configuration, string source, bool doPerformanceHintIfTooLong = true)
         {
             _context = context;
             _logger = logger;

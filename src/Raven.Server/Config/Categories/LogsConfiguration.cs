@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
@@ -9,58 +10,79 @@ namespace Raven.Server.Config.Categories
     [ConfigurationCategory(ConfigurationCategoryType.Logs)]
     public sealed class LogsConfiguration : ConfigurationCategory
     {
-        [Description("The path to the directory where the RavenDB server logs will be stored")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Logs.ConfigPath", ConfigurationEntryScope.ServerWideOnly)]
+        public PathSetting ConfigPath { get; set; }
+
         [DefaultValue("Logs")]
         [ConfigurationEntry("Logs.Path", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting Path { get; set; }
 
-        [Description("The level of logs that will be written to the log files (None, Operations or Information)")]
-        [DefaultValue(LogMode.Operations)]
-        [ConfigurationEntry("Logs.Mode", ConfigurationEntryScope.ServerWideOnly)]
-        public LogMode Mode { get; set; }
+        [DefaultValue(LogLevel.Info)]
+        [ConfigurationEntry("Logs.MinLevel", ConfigurationEntryScope.ServerWideOnly)]
+        public LogLevel MinLevel { get; set; }
 
-        [Description("Determine whether logs are timestamped in UTC or with server-local time")]
-        [DefaultValue(true)]
-        [ConfigurationEntry("Logs.UseUtcTime", ConfigurationEntryScope.ServerWideOnly)]
-        public bool UseUtcTime { get; set; }
+        [DefaultValue(null)]
+        [ConfigurationEntry("Logs.InternalPath", ConfigurationEntryScope.ServerWideOnly)]
+        public PathSetting NLogInternalPath { get; set; }
 
-        [Description("The maximum log file size in megabytes")]
+        [DefaultValue(LogLevel.Info)]
+        [ConfigurationEntry("Logs.Level", ConfigurationEntryScope.ServerWideOnly)]
+        public LogLevel NLogInternalLevel { get; set; }
+
+        [DefaultValue(false)]
+        [ConfigurationEntry("Logs.LogToConsole", ConfigurationEntryScope.ServerWideOnly)]
+        public bool NLogLogToConsole { get; set; }
+
+        [DefaultValue(false)]
+        [ConfigurationEntry("Logs.LogToConsoleError", ConfigurationEntryScope.ServerWideOnly)]
+        public bool NLogLogToConsoleError { get; set; }
+
         [DefaultValue(128)]
         [MinValue(16)]
         [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Logs.MaxFileSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
-        public Size MaxFileSize { get; set; }
+        [ConfigurationEntry("Logs.ArchiveAboveSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size ArchiveAboveSize { get; set; }
 
-        [Description("The number of hours logs are kept before they are deleted")]
-        [DefaultValue(3 * 24)]
-        [MinValue(24)]
-        [TimeUnit(TimeUnit.Hours)]
-        [ConfigurationEntry("Logs.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting? RetentionTime { get; set; }
+        [DefaultValue(3)]
+        [ConfigurationEntry("Logs.MaxArchiveDays", ConfigurationEntryScope.ServerWideOnly)]
+        public int? MaxArchiveDays { get; set; }
 
-        [Description("The maximum log size after which older files will be deleted. No log files will be deleted if this configuration is not set.")]
         [DefaultValue(null)]
-        [MinValue(256)]
-        [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Logs.RetentionSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
-        public Size? RetentionSize { get; set; }
+        [MinValue(0)]
+        [ConfigurationEntry("Logs.MaxArchiveFiles", ConfigurationEntryScope.ServerWideOnly)]
+        public int? MaxArchiveFiles { get; set; }
 
-        [Description("Determine whether to compress the log files")]
         [DefaultValue(false)]
+        [ConfigurationEntry("Logs.EnableArchiveFileCompression", ConfigurationEntryScope.ServerWideOnly)]
         [ConfigurationEntry("Logs.Compress", ConfigurationEntryScope.ServerWideOnly)]
-        public bool Compress { get; set; }
+        public bool EnableArchiveFileCompression { get; set; }
 
-        #region Microsoft Logs
-        [Description("Determine whether to disable Microsoft logs")]
-        [DefaultValue(true)]
-        [ConfigurationEntry("Logs.Microsoft.Disable", ConfigurationEntryScope.ServerWideOnly)]
-        public bool DisableMicrosoftLogs { get; set; }
-        
-        [Description("The path to the JSON configuration file for Microsoft logs")]
-        [ReadOnlyPath]
-        [DefaultValue("settings.logs.microsoft.json")]
-        [ConfigurationEntry("Logs.Microsoft.ConfigurationPath", ConfigurationEntryScope.ServerWideOnly)]
-        public PathSetting MicrosoftLogsConfigurationPath { get; set; }
-        #endregion
+        [DefaultValue(LogLevel.Error)]
+        [ConfigurationEntry("Logs.Microsoft.MinLevel", ConfigurationEntryScope.ServerWideOnly)]
+        public LogLevel MicrosoftMinLevel { get; set; }
+
+        [DefaultValue(false)]
+        [ConfigurationEntry("Logs.ThrowConfigExceptions", ConfigurationEntryScope.ServerWideOnly)]
+        public bool ThrowConfigExceptions { get; set; }
+
+        [Description("Location of NuGet packages cache")]
+        [DefaultValue("Packages/NuGet/Logging")]
+        [ConfigurationEntry("Logs.NuGetPackagesPath", ConfigurationEntryScope.ServerWideOnly)]
+        public PathSetting NuGetPackagesPath { get; set; }
+
+        [Description("Default NuGet source URL")]
+        [DefaultValue("https://api.nuget.org/v3/index.json")]
+        [ConfigurationEntry("Logs.NuGetPackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
+        public string NuGetPackageSourceUrl { get; set; }
+
+        [Description("Allow installation of NuGet prerelease packages")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Logs.NuGetAllowPreReleasePackages", ConfigurationEntryScope.ServerWideOnly)]
+        public bool NuGetAllowPreReleasePackages { get; set; }
+
+        [DefaultValue(null)]
+        [ConfigurationEntry("Logs.NuGetAdditionalPackages", ConfigurationEntryScope.ServerWideOnly)]
+        public Dictionary<string, string> NuGetAdditionalPackages { get; set; }
     }
 }

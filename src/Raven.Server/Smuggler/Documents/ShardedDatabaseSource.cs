@@ -9,7 +9,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly ShardedDocumentDatabase _database;
 
-        public ShardedDatabaseSource(ShardedDocumentDatabase database, long startDocumentEtag, long startRaftIndex, Logger logger) 
+        public ShardedDatabaseSource(ShardedDocumentDatabase database, long startDocumentEtag, long startRaftIndex, RavenLogger logger) 
             : base(database, startDocumentEtag, startRaftIndex, logger)
         {
             _database = database;

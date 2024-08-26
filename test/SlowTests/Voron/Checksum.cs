@@ -39,7 +39,7 @@ namespace SlowTests.Voron
             const int treeCount = 5;
             const int recordCount = 6;
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 env.Options.ManualFlushing = true;
 
@@ -64,7 +64,7 @@ namespace SlowTests.Voron
             }
 
             // Lets corrupt something
-            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            using (var options = StorageEnvironmentOptions.ForPathForTests(DataDir))
             using (var pager = LinuxTestUtils.GetNewPager(options, DataDir, "Raven.Voron"))
             using (var tempTX = new TempPagerTransaction())
             {
@@ -78,7 +78,7 @@ namespace SlowTests.Voron
             // Now lets try to read it all back and hope we get an exception
             try
             {
-                using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+                using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
                 {
                     using (var tx = env.ReadTransaction())
                     {

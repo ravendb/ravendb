@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Server.Logging;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
@@ -28,7 +29,7 @@ namespace Raven.Server.Utils
         private static readonly Lazy<PoolOfThreads> _globalRavenThreadPool = new(() => new PoolOfThreads());
 
         public static PoolOfThreads GlobalRavenThreadPool => _globalRavenThreadPool.Value;
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PoolOfThreads>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<PoolOfThreads>();
 
         public int TotalNumberOfThreads;
 
@@ -202,8 +203,8 @@ namespace Raven.Server.Utils
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Error during cleanup.", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error("Error during cleanup.", e);
             }
         }
 
@@ -302,9 +303,9 @@ namespace Raven.Server.Utils
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
+                    if (Logger.IsFatalEnabled)
                     {
-                        Logger.Operations($"An uncaught exception occurred in '{_threadInfo.FullName}' and killed the process", e);
+                        Logger.Fatal($"An uncaught exception occurred in '{_threadInfo.FullName}' and killed the process", e);
                     }
 
                     throw;

@@ -6,6 +6,7 @@ using System.Threading;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Util;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
@@ -23,7 +24,7 @@ namespace Raven.Server.NotificationCenter
         private bool _updateNotificationInStorageRequired;
         private readonly object _pagerCreationLock = new object();
         private readonly ConcurrentDictionary<string, SlowIoDetails.SlowWriteInfo> _slowWrites;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private bool _shouldUpdateStorageKeys = true;
 
         public SlowWriteNotifications([NotNull] AbstractDatabaseNotificationCenter notificationCenter)
@@ -31,7 +32,7 @@ namespace Raven.Server.NotificationCenter
             _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
 
             _slowWrites = new ConcurrentDictionary<string, SlowIoDetails.SlowWriteInfo>();
-            _logger = LoggingSource.Instance.GetLogger(notificationCenter.Database, GetType().FullName);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<SlowWriteNotifications>(_notificationCenter.Database);
         }
 
         public void Add(IoChange ioChange)

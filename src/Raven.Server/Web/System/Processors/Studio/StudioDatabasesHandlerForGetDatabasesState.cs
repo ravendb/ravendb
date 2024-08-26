@@ -13,6 +13,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System.Processors.Databases;
@@ -24,7 +25,7 @@ namespace Raven.Server.Web.System.Processors.Studio;
 
 internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHandlerProcessorForAllowedDatabases<StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState>
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<StudioDatabasesHandlerForGetDatabasesState>();
 
     public StudioDatabasesHandlerForGetDatabasesState([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {

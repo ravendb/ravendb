@@ -28,7 +28,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
         protected override ValueTask HandleCurrentNodeAsync()
         {
             var name = RequestHandler.GetStringQueryString("name", required: false);
-            var logger = LoggingSource.Instance.GetLogger(RequestHandler.Database.Name, GetType().FullName);
 
             using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
             {
@@ -63,8 +62,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                                 }
                                 catch (Exception e)
                                 {
-                                    if (logger.IsOperationsEnabled)
-                                        logger.Operations($"Failed to get stats of '{x.Name}' index", e);
+                                    if (Logger.IsErrorEnabled)
+                                        Logger.Error($"Failed to get stats of '{x.Name}' index", e);
 
                                     try
                                     {
@@ -75,9 +74,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                                     }
                                     catch (Exception addAlertException)
                                     {
-                                        if (logger.IsOperationsEnabled && addAlertException.IsOutOfMemory() == false &&
+                                        if (Logger.IsWarnEnabled && addAlertException.IsOutOfMemory() == false &&
                                             addAlertException.IsRavenDiskFullException() == false)
-                                            logger.Operations($"Failed to add alert when getting error on retrieving stats of '{x.Name}' index", addAlertException);
+                                            Logger.Warn($"Failed to add alert when getting error on retrieving stats of '{x.Name}' index", addAlertException);
                                     }
 
                                     var state = x.State;
@@ -92,8 +91,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                                         }
                                         catch (Exception ex)
                                         {
-                                            if (logger.IsOperationsEnabled)
-                                                logger.Operations(
+                                            if (Logger.IsWarnEnabled)
+                                                Logger.Warn(
                                                     $"Failed to change state of '{x.Name}' index to error after encountering exception when getting its stats.",
                                                     ex);
                                         }

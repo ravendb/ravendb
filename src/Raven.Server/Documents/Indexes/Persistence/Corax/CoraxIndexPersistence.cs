@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -22,11 +23,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 public sealed class CoraxIndexPersistence : IndexPersistenceBase
 {
     private const bool DisableDictionaryTraining = false; // [DEBUG ONLY]: disable training.
-    private readonly Logger _logger;
+    private readonly RavenLogger _logger;
     private readonly CoraxDocumentConverterBase _converter;
     public CoraxIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)
     {
-        _logger = LoggingSource.Instance.GetLogger<CoraxIndexPersistence>(index.DocumentDatabase.Name);
+        _logger = RavenLogManager.Instance.GetLoggerForIndex<CoraxIndexPersistence>(index);
         _converter = CreateConverter(index);
     }
 

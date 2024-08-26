@@ -19,12 +19,12 @@ namespace Raven.Server.Web
             return Task.CompletedTask;
         }
 
-        protected void AssertCanPersistConfiguration()
+        protected virtual void AssertCanPersistConfiguration()
         {
             var authenticateConnection = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             if (authenticateConnection != null && authenticateConnection.Status != RavenServer.AuthenticationStatus.ClusterAdmin)
             {
-                throw new UnauthorizedAccessException($"Configuration was modified but couldn't be persistent because the authentication level is {authenticateConnection.Status}, " +
+                throw new UnauthorizedAccessException($"Configuration was modified but couldn't be persisted because the authentication level is {authenticateConnection.Status}, " +
                                                       $"but can be only executed with authentication level of {nameof(RavenServer.AuthenticationStatus.ClusterAdmin)}");
             }
         }

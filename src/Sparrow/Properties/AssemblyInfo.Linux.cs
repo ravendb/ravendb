@@ -8,3 +8,4 @@
 [assembly: InternalsVisibleTo("Voron")]
 [assembly: InternalsVisibleTo("Corax")]
 [assembly: InternalsVisibleTo("Micro.Benchmark")]
+[assembly: InternalsVisibleTo("Voron.Recovery")]

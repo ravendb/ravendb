@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.ServerWide;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -27,7 +28,7 @@ public class QueueSinkLoader : IDisposable
     private readonly object _loadProcessedLock = new object();
     private readonly DocumentDatabase _database;
     private readonly ServerStore _serverStore;
-    protected Logger Logger;
+    protected RavenLogger Logger;
     public QueueSinkProcess[] Processes => _processes;
     
     public event Action<(string ConfigurationName, string ScriptName, QueueSinkProcessStatistics Statistics)> BatchCompleted;
@@ -54,7 +55,7 @@ public class QueueSinkLoader : IDisposable
     {
         _database = documentDatabase;
         _serverStore = serverStore;
-        Logger = LoggingSource.Instance.GetLogger(documentDatabase.Name, GetType().FullName);
+        Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), documentDatabase);
     }
 
     private void LoadProcesses(DatabaseRecord record, List<QueueSinkConfiguration> newQueueSinkDestinations,
@@ -341,8 +342,8 @@ public class QueueSinkLoader : IDisposable
                     }
                     catch (Exception e)
                     {
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations(
+                        if (Logger.IsErrorEnabled)
+                            Logger.Error(
                                 $"Failed to dispose queue sink process {process.Name} on the database record change", e);
                     }
                 }

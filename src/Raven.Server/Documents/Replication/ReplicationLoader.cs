@@ -661,8 +661,8 @@ namespace Raven.Server.Documents.Replication
 
                     lastEtagFromSrc = DocumentsStorage.GetLastReplicatedEtagFrom(
                         documentsContext, getLatestEtagMessage.SourceDatabaseId);
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"GetLastEtag response, last etag: {lastEtagFromSrc}");
                 }
 
                 var response = base.GetInitialRequestMessage(getLatestEtagMessage, replParams);
@@ -919,18 +919,18 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsOperationsEnabled)
+                        if (_logger.IsErrorEnabled)
                         {
-                            _logger.Operations($"Failed to start outgoing replication to {failure.Node}", e);
+                            _logger.Error($"Failed to start outgoing replication to {failure.Node}", e);
                         }
                     }
                 }
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
+                if (_logger.IsErrorEnabled)
                 {
-                    _logger.Operations("Unexpected exception during ForceTryReconnectAll", e);
+                    _logger.Error("Unexpected exception during ForceTryReconnectAll", e);
                 }
             }
             finally
@@ -1094,8 +1094,8 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Failed to start the outgoing connections to {newDestinations.Count} new destinations", e);
+                        if (_logger.IsErrorEnabled)
+                            _logger.Error($"Failed to start the outgoing connections to {newDestinations.Count} new destinations", e);
                     }
                 });
             }
@@ -1191,9 +1191,9 @@ namespace Raven.Server.Documents.Replication
                             }
                             catch (Exception e)
                             {
-                                if (_logger.IsOperationsEnabled)
+                                if (_logger.IsErrorEnabled)
                                 {
-                                    _logger.Operations("Unexpected error during database deletion from replication loader", e);
+                                    _logger.Error("Unexpected error during database deletion from replication loader", e);
                                 }
                             }
                         }
@@ -1239,8 +1239,8 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Failed to start the outgoing connections to {added.Count} new destinations", e);
+                        if (_logger.IsErrorEnabled)
+                            _logger.Error($"Failed to start the outgoing connections to {added.Count} new destinations", e);
                     }
                 });
             }
@@ -1258,21 +1258,21 @@ namespace Raven.Server.Documents.Replication
 
         private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd)
         {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Initializing {connectionsToAdd.Count:#,#} outgoing replications from {Database} on {_server.NodeTag}.");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Initializing {connectionsToAdd.Count:#,#} outgoing replications from {Database} on {_server.NodeTag}.");
 
             foreach (var destination in connectionsToAdd)
             {
                 if (destination.Disabled)
                     continue;
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Initialized outgoing replication for " + destination.FromString());
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug("Initialized outgoing replication for " + destination.FromString());
                 AddAndStartOutgoingReplication(destination);
             }
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info("Finished initialization of outgoing replications..");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug("Finished initialization of outgoing replications..");
         }
 
         protected void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove, List<IDisposable> instancesToDispose)
@@ -1353,16 +1353,16 @@ namespace Raven.Server.Documents.Replication
                     return null;
 
                 // will try to fetch it again later
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
                     if (e is DatabaseIdleException)
                     {
                         // this is expected, so we don't mark it as error
-                        _logger.Info($"The database is idle on the destination '{node.FromString()}', the connection will be retried later.");
+                        _logger.Debug($"The database is idle on the destination '{node.FromString()}', the connection will be retried later.");
                     }
                     else
                     {
-                        _logger.Info($"Failed to fetch tcp connection information for the destination '{node.FromString()}' , the connection will be retried later.", e);
+                        _logger.Debug($"Failed to fetch tcp connection information for the destination '{node.FromString()}' , the connection will be retried later.", e);
                     }
                 }
 
@@ -1600,8 +1600,8 @@ namespace Raven.Server.Documents.Replication
                 failureInfo.DestinationDbId = instance.DestinationDbId;
                 failureInfo.LastHeartbeatTicks = instance.LastHeartbeatTicks;
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Document replication connection ({instance.Node}) failed {failureInfo.RetriesCount} times, the connection will be retried on {failureInfo.RetryOn}.", e);
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug($"Document replication connection ({instance.Node}) failed {failureInfo.RetriesCount} times, the connection will be retried on {failureInfo.RetryOn}.", e);
 
                 _reconnectQueue.Add(failureInfo);
             }
@@ -1672,8 +1672,8 @@ namespace Raven.Server.Documents.Replication
 
                 ConflictResolver = null;
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Closing and disposing document replication connections.");
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug("Closing and disposing document replication connections.");
 
                 ForTestingPurposes?.BeforeDisposingIncomingReplicationHandlers?.Invoke();
                 foreach (var incoming in _incoming)

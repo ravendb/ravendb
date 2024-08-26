@@ -3,7 +3,9 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
+using Raven.Server.Logging;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Utils
 {
@@ -87,11 +89,11 @@ namespace Raven.Server.Utils
             private Task<DateTime> _task;
             private object _value;
             private long _observedFailureTicks;
-            private readonly Logger _logger;
+            private readonly RavenLogger _logger;
 
             public MetricValue(TimeSpan refreshRate, string key, Func<object> factory, bool asyncRefresh = true)
             {
-                _logger = LoggingSource.Instance.GetLogger<MetricValue>(key);
+                _logger = RavenLogManager.Instance.GetLoggerForServer<MetricValue>(LoggingComponent.Name(key));
                 _refreshRate = refreshRate;
                 _factory = factory;
                 _asyncRefresh = asyncRefresh;
@@ -103,9 +105,9 @@ namespace Raven.Server.Utils
                 catch (Exception e)
                 {
                     _value = default;
-                    if (_logger.IsOperationsEnabled)
+                    if (_logger.IsWarnEnabled)
                     {
-                        _logger.Operations("Got an error while refreshing value", e);
+                        _logger.Warn("Got an error while refreshing value", e);
                     }
                 }
             }
@@ -175,9 +177,9 @@ namespace Raven.Server.Utils
                         }
                         catch (Exception e)
                         {
-                            if (_logger.IsOperationsEnabled)
+                            if (_logger.IsWarnEnabled)
                             {
-                                _logger.Operations("Got an error while refreshing value", e);
+                                _logger.Warn("Got an error while refreshing value", e);
                             }
                             throw;
                         }
@@ -185,9 +187,9 @@ namespace Raven.Server.Utils
                         Interlocked.Exchange(ref _value, result);
                         if (currentTask.IsFaulted)
                         {
-                            if (_logger.IsOperationsEnabled)
+                            if (_logger.IsWarnEnabled)
                             {
-                                _logger.Operations("Recovered from error in refreshing value.");
+                                _logger.Warn("Recovered from error in refreshing value.");
                             }
                         }
                         return nextRefresh;

@@ -36,6 +36,8 @@ namespace Raven.Server.Config
 
         public bool IsArray { get; private set; }
 
+        public bool IsDictionary { get; private set; }
+
         public bool IsNullable { get; private set; }
 
         public bool IsSecured { get; private set; }
@@ -146,7 +148,12 @@ namespace Raven.Server.Config
         {
             var type = property.PropertyType;
 
-            if (CalculateIsArray(Keys[0], type, out var elementType))
+            if (CalculateIsDictionary(Keys[0], type, out var elementType))
+            {
+                type = elementType;
+                IsDictionary = true;
+            }
+            else if (CalculateIsArray(Keys[0], type, out elementType))
             {
                 type = elementType;
                 IsArray = true;
@@ -200,7 +207,23 @@ namespace Raven.Server.Config
                 return ConfigurationEntryType.Time;
             }
 
+            if (type == typeof(KeyValuePair<string, string>))
+                return ConfigurationEntryType.Dictionary;
+
             throw new NotSupportedException($"Key: {Keys[0]}. Type: {type.FullName}");
+
+            static bool CalculateIsDictionary(string key, Type typeToCheck, out Type elementType)
+            {
+                elementType = null;
+
+                if (typeToCheck == typeof(Dictionary<string, string>))
+                {
+                    elementType = typeof(KeyValuePair<string, string>);
+                    return true;
+                }
+
+                return false;
+            }
 
             static bool CalculateIsArray(string key, Type typeToCheck, out Type elementType)
             {
@@ -219,7 +242,7 @@ namespace Raven.Server.Config
                     {
                         var genericTypeArguments = typeToCheck.GetGenericArguments();
                         if (genericTypeArguments.Length != 1)
-                            throw new InvalidOperationException($"Following key '{key}' contains one than one generic argument.");
+                            throw new InvalidOperationException($"Following key '{key}' contains more than one generic argument.");
 
                         elementType = genericTypeArguments[0];
                         return true;
@@ -242,6 +265,7 @@ namespace Raven.Server.Config
         Size,
         Time,
         Integer,
-        Double
+        Double,
+        Dictionary
     }
 }

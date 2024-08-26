@@ -40,6 +40,8 @@ using Voron.Impl;
 using Sparrow.Threading;
 using Size = Sparrow.Size;
 using System.Diagnostics.CodeAnalysis;
+using Sparrow.Server.Logging;
+using Raven.Server.Logging;
 
 namespace Raven.Server.Rachis
 {
@@ -175,7 +177,7 @@ namespace Raven.Server.Rachis
         public ClusterTransactionOperationsMerger TxMerger { get; private set; }
 
         private StorageEnvironment _persistentState;
-        internal Logger Log;
+        internal RavenLogger Log;
 
         private readonly ConcurrentQueue<Elector> _electors = new ConcurrentQueue<Elector>();
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
@@ -315,7 +317,7 @@ namespace Raven.Server.Rachis
 
                     RequestSnapshot = GetSnapshotRequest(context);
 
-                    Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
+                    Log = RavenLogManager.Instance.GetLoggerForCluster(typeof(RachisConsensus), LoggingComponent.NodeTag(_tag));
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
 
                     CurrentTerm = ReadTerm(context);
@@ -410,9 +412,9 @@ namespace Raven.Server.Rachis
             var electionTerm = CurrentTerm + 1;
             CastVoteInTerm(context, electionTerm, Tag, "Switching to single leader");
 
-            if (Log.IsInfoEnabled)
+            if (Log.IsDebugEnabled)
             {
-                Log.Info("Switching to leader state");
+                Log.Debug("Switching to leader state");
             }
             var leader = new Leader(this, electionTerm);
             SetNewStateInTx(context, RachisState.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader", () => _currentLeader = leader);
@@ -814,9 +816,9 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
-                        if (Log.IsInfoEnabled)
+                        if (Log.IsDebugEnabled)
                         {
-                            Log.Info("Before state change invocation function failed.", e);
+                            Log.Debug("Before state change invocation function failed.", e);
                         }
                     }
 
@@ -826,9 +828,9 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
-                        if (Log.IsInfoEnabled)
+                        if (Log.IsDebugEnabled)
                         {
-                            Log.Info("State change invocation function failed.", e);
+                            Log.Debug("State change invocation function failed.", e);
                         }
                     }
 
@@ -836,9 +838,9 @@ namespace Raven.Server.Rachis
                     {
                         TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                         {
-                            if (Log.IsInfoEnabled)
+                            if (Log.IsDebugEnabled)
                             {
-                                Log.Info($"Initiate disposing the term _prior_ to {expectedTerm:#,#;;0} with {toDispose.Count} things to dispose.");
+                                Log.Debug($"Initiate disposing the term _prior_ to {expectedTerm:#,#;;0} with {toDispose.Count} things to dispose.");
                             }
 
                             ParallelDispose(toDispose);
@@ -853,9 +855,9 @@ namespace Raven.Server.Rachis
                     var elapsed = sp.Elapsed;
                     if (elapsed > ElectionTimeout / 2)
                     {
-                        if (Log.IsOperationsEnabled)
+                        if (Log.IsWarnEnabled)
                         {
-                            Log.Operations($"Took way too much time ({elapsed}) to change the state to {rachisState} in term {expectedTerm:#,#;;0}. (Election timeout:{ElectionTimeout})");
+                            Log.Warn($"Took way too much time ({elapsed}) to change the state to {rachisState} in term {expectedTerm:#,#;;0}. (Election timeout:{ElectionTimeout})");
                         }
                     }
                 }
@@ -879,9 +881,9 @@ namespace Raven.Server.Rachis
                 }
                 catch (Exception e)
                 {
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
-                        Log.Info("Failed to dispose during new rachis state transition", e);
+                        Log.Debug("Failed to dispose during new rachis state transition", e);
                     }
                 }
             });
@@ -936,9 +938,9 @@ namespace Raven.Server.Rachis
 
         public void SwitchToLeaderState(long electionTerm, int version, string reason, Dictionary<string, RemoteConnection> connections = null)
         {
-            if (Log.IsInfoEnabled)
+            if (Log.IsDebugEnabled)
             {
-                Log.Info("Switching to leader state");
+                Log.Debug("Switching to leader state");
             }
             var leader = new Leader(this, electionTerm);
             SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () =>
@@ -1010,8 +1012,8 @@ namespace Raven.Server.Rachis
                 }
                 catch (Exception ex)
                 {
-                    if (Log.IsInfoEnabled)
-                        Log.Info($"Tried to send message to leader (reached: {reachedLeader.Value}), retrying", ex);
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Tried to send message to leader (reached: {reachedLeader.Value}), retrying", ex);
 
                     if (reachedLeader.Value)
                         throw;
@@ -1090,9 +1092,9 @@ namespace Raven.Server.Rachis
                 if (clusterTopology.TopologyId == null ||
                     clusterTopology.AllNodes.ContainsKey(_tag) == false)
                 {
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
-                        Log.Info($"We are not a part of the cluster so moving to passive (candidate because: {reason})");
+                        Log.Debug($"We are not a part of the cluster so moving to passive (candidate because: {reason})");
                     }
 
                     var command = new SetNewStateCommand(this, RachisState.Passive, null, currentTerm, "We are not a part of the cluster so moving to passive");
@@ -1102,9 +1104,9 @@ namespace Raven.Server.Rachis
 
                 if (clusterTopology.Members.ContainsKey(_tag) == false)
                 {
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
-                        Log.Info($"Candidate because: {reason}, but while we are part of the cluster, we aren't a member, so we can't be a candidate.");
+                        Log.Debug($"Candidate because: {reason}, but while we are part of the cluster, we aren't a member, so we can't be a candidate.");
                     }
 
                     // we aren't a member, nothing that we can do here
@@ -1114,9 +1116,9 @@ namespace Raven.Server.Rachis
                 if (clusterTopology.AllNodes.Count == 1 &&
                     clusterTopology.Members.Count == 1)
                 {
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
-                        Log.Info("Trying to switch to candidate when I'm the only node in the cluster, turning into a leader, instead");
+                        Log.Debug("Trying to switch to candidate when I'm the only node in the cluster, turning into a leader, instead");
                     }
 
                     var command = new SwitchToSingleLeaderCommand(this);
@@ -1125,9 +1127,9 @@ namespace Raven.Server.Rachis
                 }
 
 
-                if (Log.IsInfoEnabled)
+                if (Log.IsDebugEnabled)
                 {
-                    Log.Info($"Switching to candidate state because {reason} forced: {forced}");
+                    Log.Debug($"Switching to candidate state because {reason} forced: {forced}");
                 }
 
                 var candidate = new Candidate(this) { IsForcedElection = forced };
@@ -1138,9 +1140,9 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
-                if (Log.IsInfoEnabled)
+                if (Log.IsDebugEnabled)
                 {
-                    Log.Info($"An error occurred during switching to candidate state in term {currentTerm:#,#;;0}.", e);
+                    Log.Debug($"An error occurred during switching to candidate state in term {currentTerm:#,#;;0}.", e);
                 }
 
                 Timeout.Start(SwitchToCandidateStateOnTimeout);
@@ -1356,9 +1358,9 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
-                if (Log.IsInfoEnabled)
+                if (Log.IsDebugEnabled)
                 {
-                    Log.Info("Failed to process incoming connection", e);
+                    Log.Debug("Failed to process incoming connection", e);
                 }
 
                 DisposeRemoteConnection(remoteConnection);
@@ -1607,9 +1609,9 @@ namespace Raven.Server.Rachis
                     {
                         //rewind entries with mismatched term
                         lastEntryIndex = Math.Min(entry.Index - 1, lastEntryIndex);
-                        if (Log.IsInfoEnabled)
+                        if (Log.IsDebugEnabled)
                         {
-                            Log.Info($"Got an entry with index={entry.Index:#,#;;0} and term={entry.Term:#,#;;0} while our term for that index is {entryTerm:#,#;;0}," +
+                            Log.Debug($"Got an entry with index={entry.Index:#,#;;0} and term={entry.Term:#,#;;0} while our term for that index is {entryTerm:#,#;;0}," +
                                      $"will rewind last entry index to {lastEntryIndex:#,#;;0}");
                         }
                         break;
@@ -1699,9 +1701,9 @@ namespace Raven.Server.Rachis
                 $"FATAL ERROR: got an append entries request with index={firstEntry.Index:#,#;;0} term={firstEntry.Term:#,#;;0} " +
                 $"while my term for this index is {myTermForTheIndex:#,#;;0}. " +
                 $"(last commit index={lastCommitIndex:#,#;;0} with term={lastCommitTerm:#,#;;0}), this means something went wrong badly.";
-            if (Log.IsOperationsEnabled)
+            if (Log.IsFatalEnabled)
             {
-                Log.Operations(message);
+                Log.Fatal(message);
             }
             RachisInvalidOperationException.Throw(message);
         }
@@ -1977,8 +1979,8 @@ namespace Raven.Server.Rachis
                 *(long*)ptr = term;
             }
 
-            if (Log.IsInfoEnabled)
-                Log.Info($"Casting vote for {votedFor ?? "<???>"} in {term:#,#;;0} because: {reason}");
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Casting vote for {votedFor ?? "<???>"} in {term:#,#;;0} because: {reason}");
 
             votedFor = votedFor ?? string.Empty;
 
@@ -2005,17 +2007,17 @@ namespace Raven.Server.Rachis
             {
                 try
                 {
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
-                        Log.Info($"Disposing the leader because we casted a vote for {votedFor} in {term:#,#;;0}");
+                        Log.Debug($"Disposing the leader because we casted a vote for {votedFor} in {term:#,#;;0}");
                     }
                     currentlyTheLeader.Dispose();
                 }
                 catch (Exception e)
                 {
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
-                        Log.Info($"Failed to shut down leader after voting in term {term:#,#;;0} for {votedFor}", e);
+                        Log.Debug($"Failed to shut down leader after voting in term {term:#,#;;0} for {votedFor}", e);
                     }
                 }
             }, null);

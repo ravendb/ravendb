@@ -9,7 +9,7 @@ namespace Raven.Server.Extensions
 {
     public static class MemoryExtensions
     {
-        public static void SetWorkingSet(Process process, double ramInGb, Logger logger)
+        public static void SetWorkingSet(Process process, double ramInGb, RavenLogger logger)
         {
 #if SET_WORKING_SET
             var memoryInfo = MemoryInformation.GetMemoryInfoInGb();
@@ -68,7 +68,7 @@ namespace Raven.Server.Extensions
 #endif
         }
 
-        private static unsafe bool WriteValue(string path, string str, Logger logger)
+        private static unsafe bool WriteValue(string path, string str, RavenLogger logger)
         {
             var fd = Syscall.open(path, OpenFlags.O_WRONLY, FilePermissions.S_IWUSR);
             if (fd == -1)
@@ -104,7 +104,7 @@ namespace Raven.Server.Extensions
             return true;
         }
 
-        public static void EmptyWorkingSet(Logger logger)
+        public static void EmptyWorkingSet(RavenLogger logger)
         {
             if (PlatformDetails.RunningOnPosix)
                 return;

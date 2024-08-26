@@ -14,6 +14,7 @@ using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
@@ -24,6 +25,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
+using Voron.Logging;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
@@ -44,6 +46,10 @@ namespace Voron
         private static bool _skipCatastrophicFailureAssertion;
         private readonly CatastrophicFailureNotification _catastrophicFailureNotification;
         private readonly ConcurrentSet<CryptoPager> _activeCryptoPagers = new ConcurrentSet<CryptoPager>();
+
+        public readonly LoggingResource LoggingResource;
+
+        public readonly LoggingComponent LoggingComponent;
 
         public VoronPathSetting TempPath { get; }
 
@@ -178,7 +184,7 @@ namespace Voron
         public int SchemaVersion { get; set; }
 
         public UpgraderDelegate SchemaUpgrader { get; set; }
-        
+
         public Action<Transaction> OnVersionReadingTransaction { get; set; }
 
         public Action<StorageEnvironment> BeforeSchemaUpgrade { get; set; }
@@ -238,12 +244,15 @@ namespace Voron
 
         public Func<string, bool> ShouldUseKeyPrefix { get; set; }
 
-        public Action<LogMode, string> AddToInitLog;
+        public Action<LogLevel, string> AddToInitLog;
 
         public event Action<StorageEnvironmentOptions> OnDirectoryInitialize;
 
-        protected StorageEnvironmentOptions(VoronPathSetting tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
+        private StorageEnvironmentOptions(VoronPathSetting tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource, LoggingComponent loggingComponent)
         {
+            LoggingResource = loggingResource;
+            LoggingComponent = loggingComponent;
+
             DisposeWaitTime = TimeSpan.FromSeconds(15);
 
             TempPath = tempPath;
@@ -256,7 +265,7 @@ namespace Voron
                 ForceUsing32BitsPager = result;
 
             bool shouldConfigPagersRunInLimitedMemoryEnvironment = PlatformDetails.Is32Bits || ForceUsing32BitsPager;
-            MaxLogFileSize = ((shouldConfigPagersRunInLimitedMemoryEnvironment ? 4 : 256) * Constants.Size.Megabyte);            
+            MaxLogFileSize = ((shouldConfigPagersRunInLimitedMemoryEnvironment ? 4 : 256) * Constants.Size.Megabyte);
 
             InitialLogFileSize = 64 * Constants.Size.Kilobyte;
 
@@ -271,20 +280,20 @@ namespace Voron
 
             IncrementalBackupEnabled = false;
 
-            IoMetrics = ioChangesNotifications?.DisableIoMetrics == true ? 
+            IoMetrics = ioChangesNotifications?.DisableIoMetrics == true ?
                 new IoMetrics(0, 0) : // disabled
                 new IoMetrics(256, 256, ioChangesNotifications);
 
-            _log = LoggingSource.Instance.GetLogger<StorageEnvironmentOptions>(tempPath.FullPath);
+            _log = RavenLogManager.Instance.GetLoggerForVoron<StorageEnvironmentOptions>(this, tempPath.FullPath);
 
             _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((id, path, e, stacktrace) =>
             {
-                if (_log.IsOperationsEnabled)
-                    _log.Operations($"Catastrophic failure in {this}, StackTrace:'{stacktrace}'", e);
+                if (_log.IsFatalEnabled)
+                    _log.Fatal($"Catastrophic failure in {this}, StackTrace:'{stacktrace}'", e);
             });
 
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
-            PrefetchResetThreshold = shouldConfigPagersRunInLimitedMemoryEnvironment?256*(long)Constants.Size.Megabyte: 8 * (long)Constants.Size.Gigabyte;
+            PrefetchResetThreshold = shouldConfigPagersRunInLimitedMemoryEnvironment ? 256 * (long)Constants.Size.Megabyte : 8 * (long)Constants.Size.Gigabyte;
             SyncJournalsCountThreshold = 2;
 
             ScratchSpaceUsage = new ScratchSpaceUsageMonitor();
@@ -307,8 +316,8 @@ namespace Voron
             }
             else
             {
-                if (_log.IsOperationsEnabled)
-                    _log.Operations($"Recoverable failure in {this}. Error: {failureMessage}.", e);
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Recoverable failure in {this}. Error: {failureMessage}.", e);
             }
         }
 
@@ -341,29 +350,30 @@ namespace Voron
             return new DisposableAction(() => { _skipCatastrophicFailureAssertion = false; });
         }
 
-        public static StorageEnvironmentOptions CreateMemoryOnly(string name, string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
+        public static StorageEnvironmentOptions CreateMemoryOnly(string name, string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource, LoggingComponent loggingComponent)
         {
             var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath());
-            return new PureMemoryStorageEnvironmentOptions(name, tempPathSetting, ioChangesNotifications, catastrophicFailureNotification);
+            return new PureMemoryStorageEnvironmentOptions(name, tempPathSetting, ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent);
         }
 
-        public static StorageEnvironmentOptions CreateMemoryOnly()
+        public static StorageEnvironmentOptions CreateMemoryOnlyForTests([CallerMemberName] string caller = null, LoggingResource loggingResource = null, LoggingComponent loggingComponent = null)
         {
-            return CreateMemoryOnly(null, null, null, null);
+            return CreateMemoryOnly(caller, null, null, null, loggingResource, loggingComponent);
         }
 
-        public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
+        public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource,
+            LoggingComponent loggingComponent)
         {
             var pathSetting = new VoronPathSetting(path);
             var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath(path));
             var journalPathSetting = journalPath != null ? new VoronPathSetting(journalPath) : pathSetting.Combine("Journals");
 
-            return new DirectoryStorageEnvironmentOptions(pathSetting, tempPathSetting, journalPathSetting, ioChangesNotifications, catastrophicFailureNotification);
+            return new DirectoryStorageEnvironmentOptions(pathSetting, tempPathSetting, journalPathSetting, ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent);
         }
 
-        public static StorageEnvironmentOptions ForPath(string path)
+        public static StorageEnvironmentOptions ForPathForTests(string path, LoggingResource loggingResource = null, LoggingComponent loggingComponent = null)
         {
-            return ForPath(path, null, null, null, null);
+            return ForPath(path, null, null, null, null, loggingResource, loggingComponent);
         }
 
         private static string GetTempPath(string basePath = null)
@@ -417,8 +427,9 @@ namespace Voron
                 new ConcurrentDictionary<string, LazyWithExceptionRetry<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
             public DirectoryStorageEnvironmentOptions(VoronPathSetting basePath, VoronPathSetting tempPath, VoronPathSetting journalPath,
-                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
-                : base(tempPath ?? basePath, ioChangesNotifications, catastrophicFailureNotification)
+                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource,
+                LoggingComponent loggingComponent)
+                : base(tempPath ?? basePath, ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent)
             {
                 Debug.Assert(basePath != null);
                 Debug.Assert(journalPath != null);
@@ -566,7 +577,7 @@ namespace Voron
                     var fileModifiedDate = new FileInfo(filename.FullPath).LastWriteTimeUtc;
                     var counter = Interlocked.Increment(ref _reuseCounter);
                     var newName = Path.Combine(Path.GetDirectoryName(filename.FullPath), RecyclableJournalName(counter));
-                    
+
                     File.Move(filename.FullPath, newName);
                     lock (_journalsForReuse)
                     {
@@ -585,7 +596,7 @@ namespace Voron
                             ticks++;
 
                         _journalsForReuse[ticks] = newName;
-                        
+
                     }
                 }
                 catch (Exception ex)
@@ -955,8 +966,9 @@ namespace Voron
 
 
             public PureMemoryStorageEnvironmentOptions(string name, VoronPathSetting tempPath,
-                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
-                : base(tempPath, ioChangesNotifications, catastrophicFailureNotification)
+                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource,
+                LoggingComponent loggingComponent)
+                : base(tempPath, ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent)
             {
                 _name = name;
                 _instanceId = Interlocked.Increment(ref _counter);
@@ -1259,8 +1271,8 @@ namespace Voron
 
         public int MaxNumberOfRecyclableJournals { get; set; } = 32;
         public bool DiscardVirtualMemory { get; set; } = true;
-        
-        private readonly Logger _log;
+
+        private readonly RavenLogger _log;
 
         private readonly SortedList<long, string> _journalsForReuse = new SortedList<long, string>();
 
@@ -1393,7 +1405,7 @@ namespace Voron
                 {
                     if (HasExternalJournalCompressionBufferHandlerRegistration == false)
                         throw new InvalidOperationException($"You have to {nameof(RegisterForJournalCompressionHandler)} before you try to access {nameof(JournalCompressionBufferHandler)}");
-                    
+
                     return _journalCompressionBufferHandler;
                 }
                 private set => _journalCompressionBufferHandler = value;

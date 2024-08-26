@@ -113,7 +113,7 @@ namespace Raven.Server.Storage.Schema
                 if (shouldAddToInitLog)
                 {
                     var msg = $"Started schema upgrade from version #{updater.From} to version #{updater.To}";
-                    _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(LogMode.Information, msg);
+                    _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(LogLevel.Debug, msg);
                 }
 
                 bool result =  updater.Update(new UpdateStep(transactions)
@@ -124,9 +124,8 @@ namespace Raven.Server.Storage.Schema
 
                 if (shouldAddToInitLog)
                 {
-
                     var msg = $"{(result ? "Finished" : "Failed to")} schema upgrade from version #{updater.From} to version #{updater.To}";
-                    var logMode = result ? LogMode.Information : LogMode.Operations;
+                    var logMode = result ? LogLevel.Debug : LogLevel.Info;
                     _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(logMode, msg);
                 }
 

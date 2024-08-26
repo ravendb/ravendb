@@ -410,7 +410,7 @@ namespace Raven.Server.Config.Categories
         public int? MaxNumberOfConcurrentlyRunningIndexes { get; set; }
 
         [Description("Location of NuGet packages cache")]
-        [DefaultValue("Packages/NuGet")]
+        [DefaultValue("Packages/NuGet/Indexing")]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetPackagesPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NuGetPackagesPath { get; set; }
@@ -426,7 +426,7 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetAllowPreReleasePackages", ConfigurationEntryScope.ServerWideOnly)]
         [ConfigurationEntry("Indexing.NuGetAllowPreleasePackages", ConfigurationEntryScope.ServerWideOnly)]
-        public bool NuGetAllowPreleasePackages { get; set; }
+        public bool NuGetAllowPreReleasePackages { get; set; }
         
         [Description("Number of index history revisions to keep per index")]
         [DefaultValue(10)]

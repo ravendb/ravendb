@@ -129,8 +129,8 @@ public sealed class KafkaEtl : QueueEtl<KafkaItem>
             }
             else
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to deliver message '{report.Key}', Kafka error code: '{report.Error.Code}', error reason: '{report.Error.Reason}'");
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"Failed to deliver message '{report.Key}', Kafka error code: '{report.Error.Code}', error reason: '{report.Error.Reason}'");
             }
         }
         if (itemsPerTopic.Count == 0)

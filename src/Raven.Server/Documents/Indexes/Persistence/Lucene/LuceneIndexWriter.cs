@@ -11,6 +11,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.Logging;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public sealed class LuceneIndexWriter : IDisposable
     {
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         private TimeTrackingIndexWriter _indexWriter;
 
@@ -49,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexReaderWarmer = indexReaderWarmer;
             _index = index;
 
-            _logger = LoggingSource.Instance.GetLogger<LuceneIndexWriter>(index.DocumentDatabase.Name);
+            _logger = RavenLogManager.Instance.GetLoggerForIndex<LuceneIndexWriter>(index);
             RecreateIndexWriter(state);
         }
 

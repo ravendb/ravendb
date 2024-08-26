@@ -101,7 +101,7 @@ namespace SlowTests.Voron
 
             BackupMethods.Full.Restore(voronDataDir.Combine("voron-test.backup"), voronDataDir.Combine("backup-test.data"));
 
-            var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "backup-test.data"));
+            var options = StorageEnvironmentOptions.ForPathForTests(Path.Combine(DataDir, "backup-test.data"));
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             using (var env = new StorageEnvironment(options))

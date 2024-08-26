@@ -24,7 +24,7 @@ namespace SlowTests.Voron
         [Fact]
         public unsafe void ShouldNotHappen()
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()))
             {
                 using (var tx = env.WriteTransaction())
                 {

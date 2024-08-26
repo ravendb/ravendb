@@ -32,7 +32,7 @@ namespace SlowTests.Voron.Bugs
         {
             const int DocumentCount = 10;
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()))
             {
                 var rand = new Random();
                 var testBuffer = new byte[168];
@@ -52,7 +52,7 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void SplitterIssue2()
         {
-            var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
+            var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnlyForTests();
             storageEnvironmentOptions.ManualFlushing = true;
             using (var env = new StorageEnvironment(storageEnvironmentOptions))
             {
@@ -132,7 +132,7 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void CanAddMultiValuesUnderTheSameKeyToBatch()
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()))
             {
                 var rand = new Random();
                 var testBuffer = new byte[168];

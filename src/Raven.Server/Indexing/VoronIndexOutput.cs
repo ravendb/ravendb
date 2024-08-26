@@ -1,17 +1,19 @@
 ﻿using System;
 using System.IO;
 using Lucene.Net.Store;
+using Raven.Server.Logging;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Voron.Impl;
 using Voron;
 using Microsoft.IO;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Indexing
 {
     public sealed class VoronIndexOutput : BufferedIndexOutput
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LuceneVoronDirectory>("VoronIndexOutput");
+        private readonly RavenLogger _logger;
 
         private readonly TempFileCache _fileCache;
         private readonly string _name;
@@ -24,6 +26,7 @@ namespace Raven.Server.Indexing
         private Stream StreamToUse => _ms ?? _file;
 
         public VoronIndexOutput(
+            Index index,
             TempFileCache fileCache,
             string name,
             Transaction tx,
@@ -35,6 +38,10 @@ namespace Raven.Server.Indexing
             _tree = tree;
             _tx = tx;
             _indexOutputFilesSummary = indexOutputFilesSummary;
+
+            _logger = index != null 
+                ? RavenLogManager.Instance.GetLoggerForIndex<VoronIndexOutput>(index) 
+                : RavenLogManager.CreateNullLogger();
 
             _ms = fileCache.RentMemoryStream();
             _tx.ReadTree(_tree).AddStream(name, Stream.Null); // ensure it's visible by LuceneVoronDirectory.FileExists, the actual write is inside Dispose
@@ -150,8 +157,8 @@ namespace Raven.Server.Indexing
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to copy the file: {_name}", e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error($"Failed to copy the file: {_name}", e);
 
                 _indexOutputFilesSummary.SetWriteError();
 

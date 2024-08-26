@@ -33,7 +33,7 @@ internal abstract class AbstractAdminSortersHandlerProcessorForPut<TRequestHandl
                 var sorterDefinition = JsonDeserializationServer.SorterDefinition((BlittableJsonReaderObject)sorterToAdd);
                 sorterDefinition.Name = sorterDefinition.Name?.Trim();
 
-                if (LoggingSource.AuditLog.IsInfoEnabled)
+                if (RavenLogManager.Instance.IsAuditEnabled)
                 {
                     RequestHandler.LogAuditFor(databaseName, "PUT", $"Sorter '{sorterDefinition.Name}' with definition: {sorterToAdd}");
                 }

@@ -25,7 +25,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static.NuGet;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
-using Raven.Server.EventListener;
+using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -132,7 +132,8 @@ namespace FastTests
 
             var packagesPath = new PathSetting(RavenTestHelper.NewDataPath("NuGetPackages", 0, forceCreateDir: true));
             GlobalPathsToDelete.Add(packagesPath.FullPath);
-            MultiSourceNuGetFetcher.Instance.Initialize(packagesPath, "https://api.nuget.org/v3/index.json", allowPreleasePackages: true);
+            MultiSourceNuGetFetcher.ForIndexes.Initialize(packagesPath, "https://api.nuget.org/v3/index.json", allowPreleasePackages: true);
+            MultiSourceNuGetFetcher.ForLogging.Initialize(packagesPath, "https://api.nuget.org/v3/index.json", allowPreleasePackages: true);
 
             IOExtensions.AfterGc += (s, x) =>
             {
@@ -170,15 +171,11 @@ namespace FastTests
 
             RequestExecutor.RemoteCertificateValidationCallback += (sender, cert, chain, errors) => true;
 
-            TrafficWatchToLog.Instance.UpdateConfiguration(RavenConfiguration.Default.TrafficWatch);
-            EventListenerToLog.Instance.UpdateConfiguration(new EventListenerToLog.EventListenerConfiguration
-            {
-                EventListenerMode = RavenConfiguration.Default.DebugConfiguration.EventListenerMode,
-                EventTypes = RavenConfiguration.Default.DebugConfiguration.EventTypes,
-                MinimumDurationInMs = RavenConfiguration.Default.DebugConfiguration.MinimumDuration.GetValue(TimeUnit.Milliseconds),
-                AllocationsLoggingIntervalInMs = RavenConfiguration.Default.DebugConfiguration.AllocationsLoggingInterval.GetValue(TimeUnit.Milliseconds),
-                AllocationsLoggingCount = RavenConfiguration.Default.DebugConfiguration.AllocationsLoggingCount
-            });
+            var configuration = RavenConfiguration.CreateForTesting("Tests", ResourceType.Server);
+            configuration.Initialize();
+            configuration.Logs.MinLevel = LogLevel.Off;
+
+            RavenLogManager.Instance.ConfigureLogging(configuration);
         }
 
         protected TestBase(ITestOutputHelper output) : base(output)
@@ -567,7 +564,7 @@ namespace FastTests
 
                 configuration.Initialize();
 
-                configuration.Logs.Mode = LogMode.None;
+                configuration.Logs.MinLevel = LogLevel.Off;
                 configuration.Server.Name = ServerName;
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
                 configuration.Licensing.EulaAccepted = true;

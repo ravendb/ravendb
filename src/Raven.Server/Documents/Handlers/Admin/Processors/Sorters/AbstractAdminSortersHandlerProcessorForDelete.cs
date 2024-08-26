@@ -22,7 +22,7 @@ internal abstract class AbstractAdminSortersHandlerProcessorForDelete<TRequestHa
 
         var databaseName = RequestHandler.DatabaseName;
 
-        if (LoggingSource.AuditLog.IsInfoEnabled)
+        if (RavenLogManager.Instance.IsAuditEnabled)
         {
            RequestHandler.LogAuditFor(databaseName, "DELETE", $"Sorter '{name}'");
         }

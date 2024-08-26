@@ -179,7 +179,7 @@ namespace FastTests.Server.Documents.Indexing
 
         private class TestOperation : IndexOperationBase
         {
-            public TestOperation(Index index, Logger logger) : base(index, logger)
+            public TestOperation(Index index, RavenLogger logger) : base(index, logger)
             {
             }
 

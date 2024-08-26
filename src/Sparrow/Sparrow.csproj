@@ -29,6 +29,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" />
     <PackageReference Include="Nito.AsyncEx.Coordination" />
+    <PackageReference Include="NLog" />
     <PackageReference Include="Raven.CodeAnalysis" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netstandard2.1'">

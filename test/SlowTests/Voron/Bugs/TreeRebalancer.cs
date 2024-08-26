@@ -18,7 +18,7 @@ namespace SlowTests.Voron.Bugs
         {
             var addedIds = new Dictionary<string, string>();
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()))
             {
                 var multiTrees = CreateTrees(env, 1, "multiTree");
                 using (var tx = env.WriteTransaction())

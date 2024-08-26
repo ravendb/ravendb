@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Sharding;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Sparrow.Logging;
 using Sparrow.Utils;
@@ -20,9 +21,9 @@ public partial class ShardedDatabaseContext
 
     public sealed class ShardedIndexesContext
     {
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
-        private readonly ShardedDatabaseContext _context;
+        public readonly ShardedDatabaseContext DatabaseContext;
 
         private Dictionary<string, IndexInformationHolder> _indexes;
 
@@ -42,8 +43,8 @@ public partial class ShardedDatabaseContext
 
         public ShardedIndexesContext([NotNull] ShardedDatabaseContext context, ServerStore serverStore)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _logger = LoggingSource.Instance.GetLogger<ShardedIndexesContext>(context.DatabaseName);
+            DatabaseContext = context ?? throw new ArgumentNullException(nameof(context));
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<ShardedIndexesContext>(context.DatabaseName);
 
             LockMode = new ShardedIndexLockModeController(context, serverStore);
             Priority = new ShardedIndexPriorityController(context, serverStore);
@@ -60,7 +61,7 @@ public partial class ShardedDatabaseContext
         public void Update(RawDatabaseRecord record, long index)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19087 Add a test for updated configuration (for projections)");
-            ScriptRunnerCache.UpdateConfiguration(_context.Configuration);
+            ScriptRunnerCache.UpdateConfiguration(DatabaseContext.Configuration);
 
             UpdateAnalyzers(record, index);
 
@@ -82,7 +83,7 @@ public partial class ShardedDatabaseContext
 
                 if (_indexes != null && _indexes.TryGetValue(indexName, out var existingIndex))
                 {
-                    var creationOptions = IndexStore.GetIndexCreationOptions(definition, existingIndex, _context.Configuration, out _);
+                    var creationOptions = IndexStore.GetIndexCreationOptions(definition, existingIndex, DatabaseContext.Configuration, out _);
                     if (creationOptions == IndexCreationOptions.Noop)
                         indexInformationHolder = existingIndex;
                 }
@@ -99,11 +100,11 @@ public partial class ShardedDatabaseContext
                 {
                     case IndexType.Map:
                     case IndexType.JavaScriptMap:
-                        indexInformationHolder = MapIndex.CreateIndexInformationHolder(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
+                        indexInformationHolder = MapIndex.CreateIndexInformationHolder(definition, DatabaseContext.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
                         break;
                     case IndexType.MapReduce:
                     case IndexType.JavaScriptMapReduce:
-                        indexInformationHolder = MapReduceIndex.CreateIndexInformationHolder(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
+                        indexInformationHolder = MapReduceIndex.CreateIndexInformationHolder(definition, DatabaseContext.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(definition.Type), definition.Type, "Unknown index type");
@@ -117,18 +118,18 @@ public partial class ShardedDatabaseContext
         {
             foreach ((string indexName, AutoIndexDefinition definition) in indexDefinitions)
             {
-                var indexDefinition = IndexStore.CreateAutoDefinition(definition, _context.Configuration.Indexing.AutoIndexDeploymentMode);
+                var indexDefinition = IndexStore.CreateAutoDefinition(definition, DatabaseContext.Configuration.Indexing.AutoIndexDeploymentMode);
 
                 IndexInformationHolder indexInformationHolder = null;
 
                 if (_indexes != null && _indexes.TryGetValue(indexName, out var existingIndex))
                 {
-                    var creationOptions = IndexStore.GetIndexCreationOptions(indexDefinition, existingIndex, _context.Configuration, out _);
+                    var creationOptions = IndexStore.GetIndexCreationOptions(indexDefinition, existingIndex, DatabaseContext.Configuration, out _);
                     if (creationOptions == IndexCreationOptions.Noop)
                         indexInformationHolder = existingIndex;
                 }
 
-                indexInformationHolder ??= IndexInformationHolder.CreateFor(indexDefinition, _context.Configuration.Indexing);
+                indexInformationHolder ??= IndexInformationHolder.CreateFor(indexDefinition, DatabaseContext.Configuration.Indexing);
 
                 indexes[indexName] = indexInformationHolder;
             }
@@ -152,7 +153,7 @@ public partial class ShardedDatabaseContext
             }
             catch (Exception e)
             {
-                _context.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                DatabaseContext.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Could not update analyzers", e);
             }

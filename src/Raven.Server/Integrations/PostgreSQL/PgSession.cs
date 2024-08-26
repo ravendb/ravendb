@@ -11,6 +11,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
+using Raven.Server.Logging;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 
@@ -18,7 +19,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 {
     public sealed class PgSession
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres Server");
+        private static RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<PgSession>();
         internal ConcurrentDictionary<string, PgQuery> NamedStatements { get; private set; }
         private readonly TcpClient _client;
         private readonly CertificateUtils.CertificateHolder _serverCertificateHolder;

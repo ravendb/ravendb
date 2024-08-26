@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Enumerators;
 using Sparrow.Logging;
@@ -9,11 +12,11 @@ namespace Raven.Server.Documents.Subscriptions
 {
     public abstract class SubscriptionFetcher<T> : SubscriptionFetcher
     {
-        protected Logger Logger;
+        protected RavenLogger Logger;
 
         protected SubscriptionFetcher(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) : base(database, subscriptionConnectionsState, collection)
         {
-            Logger = LoggingSource.Instance.GetLogger<SubscriptionFetcher<T>>(Database.Name);
+            Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), database);
         }
 
         protected abstract IEnumerator<T> FetchByEtag();
@@ -22,7 +25,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<T> GetEnumerator()
         {
-            FetchingFrom = FetchingOrigin.Resend;
+            FetchingFrom = SubscriptionFetcher.FetchingOrigin.Resend;
             foreach (var item in FetchFromResend())
             {
                 yield return item;
@@ -35,7 +38,7 @@ namespace Raven.Server.Documents.Subscriptions
                 yield break;
             }
 
-            FetchingFrom = FetchingOrigin.Storage;
+            FetchingFrom = SubscriptionFetcher.FetchingOrigin.Storage;
             foreach (var item in FetchByEtag())
             {
                 yield return item;

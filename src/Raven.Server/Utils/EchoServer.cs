@@ -4,13 +4,14 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Logging;
 using Sparrow.Logging;
 
 namespace Raven.Server.Utils;
 
 internal static class EchoServer
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Server");
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer(typeof(EchoServer));
 
     public static void StartEchoSockets(int? echoSocketPort)
     {

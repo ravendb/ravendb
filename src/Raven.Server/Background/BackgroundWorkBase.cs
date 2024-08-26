@@ -13,12 +13,12 @@ namespace Raven.Server.Background
         private readonly CancellationToken _shutdown;
         protected CancellationTokenSource Cts;
         private Task _currentTask;
-        protected readonly Logger Logger;
+        protected readonly RavenLogger Logger;
 
-        protected BackgroundWorkBase(string resourceName, CancellationToken shutdown)
+        protected BackgroundWorkBase(string resourceName, RavenLogger logger, CancellationToken shutdown)
         {
             _shutdown = shutdown;
-            Logger = LoggingSource.Instance.GetLogger(resourceName ?? "Server", GetType().FullName);
+            Logger = logger;
             Cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
         }
 
@@ -112,8 +112,8 @@ namespace Raven.Server.Background
             {
                 // can happen if there is an invalid timespan
 
-                if (Logger.IsOperationsEnabled && e is ObjectDisposedException == false)
-                    Logger.Operations($"Error in the background worker when {nameof(WaitOrThrowOperationCanceled)} was called", e);
+                if (Logger.IsErrorEnabled && e is ObjectDisposedException == false)
+                    Logger.Error($"Error in the background worker when {nameof(WaitOrThrowOperationCanceled)} was called", e);
 
                 throw new OperationCanceledException(); // throw OperationCanceled so we stop the work
             }

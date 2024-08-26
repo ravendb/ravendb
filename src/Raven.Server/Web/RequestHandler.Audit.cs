@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Text;
+using Raven.Server.Logging;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -12,7 +13,7 @@ namespace Raven.Server.Web
     {
         public void LogTaskToAudit(string description, long id, BlittableJsonReaderObject configuration)
         {
-            if (LoggingSource.AuditLog.IsInfoEnabled)
+            if (RavenLogManager.Instance.IsAuditEnabled)
             {
                 DynamicJsonValue conf = GetCustomConfigurationAuditJson(description, configuration);
                 var line = $"'{description}' with taskId: '{id}'";
@@ -53,8 +54,9 @@ namespace Raven.Server.Web
 
         public void LogAuditFor(string logger, string action, string target, Exception e = null)
         {
-            var auditLog = LoggingSource.AuditLog.GetLogger(logger, "Audit");
-            Debug.Assert(auditLog.IsInfoEnabled, $"auditlog info is disabled");
+            var auditLogger = RavenLogManager.Instance.GetAuditLoggerForServer();
+
+            Debug.Assert(auditLogger.IsAuditEnabled, $"auditlog info is disabled");
 
             var clientCert = GetCurrentCertificate();
 
@@ -71,7 +73,7 @@ namespace Raven.Server.Web
             if (e != null)
                 sb.Append($", Exception: {e}");
 
-            auditLog.Info(sb.ToString());
+            auditLogger.Audit(sb.ToString());
         }
     }
 }

@@ -176,9 +176,9 @@ namespace Raven.Server.Rachis
                 //This only means we are been disposed so we can quit now
                 if (lockTaken == false)
                 {
-                    if (_engine.Log.IsInfoEnabled)
+                    if (_engine.Log.IsDebugEnabled)
                     {
-                        _engine.Log.Info($"{ToString()}: Skipping refreshing ambassadors because we are been disposed of");
+                        _engine.Log.Debug($"{ToString()}: Skipping refreshing ambassadors because we are been disposed of");
                     }
 
                     throw new ObjectDisposedException($"{ToString()} is being disposed.");
@@ -186,9 +186,9 @@ namespace Raven.Server.Rachis
 
                 _engine.ValidateTerm(Term);
 
-                if (_engine.Log.IsInfoEnabled)
+                if (_engine.Log.IsDebugEnabled)
                 {
-                    _engine.Log.Info($"{ToString()}: Refreshing ambassadors");
+                    _engine.Log.Debug($"{ToString()}: Refreshing ambassadors");
                 }
                 var old = new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
                 foreach (var peers in new[] { _voters, _promotables, _nonVoters })
@@ -408,9 +408,9 @@ namespace Raven.Server.Rachis
                 }
                 catch (Exception e2)
                 {
-                    if (_engine.Log.IsOperationsEnabled)
+                    if (_engine.Log.IsWarnEnabled)
                     {
-                        _engine.Log.Operations("After leadership failure, could not setup switch to candidate state", e2);
+                        _engine.Log.Warn("After leadership failure, could not setup switch to candidate state", e2);
                     }
                 }
             }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Raven.Client.Util;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -21,7 +22,7 @@ namespace Raven.Server.NotificationCenter
     {
         private readonly string _tableName;
 
-        private readonly Logger Logger;
+        private readonly RavenLogger Logger;
 
         private StorageEnvironment _environment;
 
@@ -31,7 +32,9 @@ namespace Raven.Server.NotificationCenter
         {
             _tableName = GetTableName(resourceName);
 
-            Logger = LoggingSource.Instance.GetLogger<NotificationsStorage>(resourceName);
+            Logger = resourceName == null
+                ? RavenLogManager.Instance.GetLoggerForServer(GetType())
+                : RavenLogManager.Instance.GetLoggerForDatabase(GetType(), resourceName);
         }
 
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
@@ -73,8 +76,8 @@ namespace Raven.Server.NotificationCenter
                     }
                 }
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Saving notification '{notification.Id}'.");
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Saving notification '{notification.Id}'.");
 
                 using (var json = context.ReadObject(notification.ToJson(), "notification", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 using (var tx = context.OpenWriteTransaction())

@@ -31,7 +31,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
     private readonly ByteStringContext _allocator;
     private readonly Dictionary<string, Slice> _fieldNameCache;
 
-    public CoraxIndexFacetedReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
+    public CoraxIndexFacetedReadOperation(Index index, RavenLogger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
         IndexFieldsMapping fieldsMapping) : base(index, queryBuilderFactories, logger)
     {
         _fieldMappings = fieldsMapping;

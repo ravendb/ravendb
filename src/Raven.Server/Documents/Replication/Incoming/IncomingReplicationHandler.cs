@@ -21,6 +21,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Exceptions;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -276,9 +277,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                 databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
                 currentLastEtagMatchingChangeVector = _database.DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction);
             }
-            if (Logger.IsInfoEnabled)
+            if (Logger.IsDebugEnabled)
             {
-                Logger.Info($"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, " +
+                Logger.Debug($"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, " +
                             $"last document change vector: {databaseChangeVector}");
             }
 
@@ -873,7 +874,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 ReplicatedItems = replicationItems,
                 ReplicatedAttachmentStreams = replicatedAttachmentStreams,
                 SupportedFeatures = SupportedFeatures,
-                Logger = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(database.Name)
+                Logger = RavenLogManager.Instance.GetLoggerForDatabase<MergedDocumentReplicationCommandDto>(database)
             };
 
             return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag);

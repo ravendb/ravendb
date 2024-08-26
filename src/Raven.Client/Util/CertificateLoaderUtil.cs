@@ -3,14 +3,15 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography.X509Certificates;
+using Raven.Client.Logging;
 using Sparrow.Logging;
 
 namespace Raven.Client.Util;
 
 internal static class CertificateLoaderUtil
 {
-    private static readonly Logger Log = LoggingSource.Instance.GetLogger("Server", nameof(CertificateLoaderUtil));
-    
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient(typeof(CertificateLoaderUtil));
+
     private static bool FirstTime = true;
     public static X509KeyStorageFlags FlagsForExport => X509KeyStorageFlags.Exportable;
 
@@ -98,13 +99,13 @@ internal static class CertificateLoaderUtil
         if (FirstTime)
         {
             FirstTime = false;
-            if (Log.IsOperationsEnabled)
-                Log.Operations(CreateMsg(), exception);
+            if (Logger.IsWarnEnabled)
+                Logger.Warn(CreateMsg(), exception);
         }
         else
         {
-            if (Log.IsInfoEnabled)
-                Log.Info(CreateMsg(), exception);
+            if (Logger.IsDebugEnabled)
+                Logger.Debug(CreateMsg(), exception);
         }
 
         string CreateMsg()

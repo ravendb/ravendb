@@ -19,6 +19,7 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
@@ -57,7 +58,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected StreamsTempFile _attachmentStreamsTempFile;
         protected long _lastDocumentEtag;
         protected readonly AsyncManualResetEvent _replicationFromAnotherSource;
-        protected Logger Logger;
+        protected RavenLogger Logger;
 
         public long LastDocumentEtag => _lastDocumentEtag;
 
@@ -85,7 +86,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             _databaseName = _parent.DatabaseName;
             _contextPool = _parent.ContextPool;
 
-            Logger = LoggingSource.Instance.GetLogger(_databaseName, GetType().FullName);
+            Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), _databaseName);
 
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(tcpConnectionOptions.Operation, tcpConnectionOptions.ProtocolVersion);
@@ -111,8 +112,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                     _databaseName, ConnectionInfo.SourceDatabaseName));
             }
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Incoming replication thread started ({FromToString})");
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"Incoming replication thread started ({FromToString})");
         }
 
         public void DoIncomingReplication()
@@ -435,9 +436,9 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected void ReceiveSingleDocumentsBatch(TOperationContext context, int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats)
         {
-            if (Logger.IsInfoEnabled)
+            if (Logger.IsDebugEnabled)
             {
-                Logger.Info($"Receiving replication batch with {replicatedItemsCount} documents starting with {lastEtag} from {ConnectionInfo}");
+                Logger.Debug($"Receiving replication batch with {replicatedItemsCount} documents starting with {lastEtag} from {ConnectionInfo}");
             }
 
             var sw = Stopwatch.StartNew();
@@ -472,9 +473,9 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                     AfterItemsReadFromStream?.Invoke(dataForReplicationCommand);
 
-                    if (Logger.IsInfoEnabled)
+                    if (Logger.IsDebugEnabled)
                     {
-                        Logger.Info(
+                        Logger.Debug(
                             $"Replication connection {FromToString}: " +
                             $"received {replicatedItemsCount:#,#;;0} items, " +
                             $"{attachmentStreamCount:#,#;;0} attachment streams, " +
@@ -631,8 +632,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             var releaser = _copiedBuffer.ReleaseBuffer;
             try
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Disposing IncomingReplicationHandler ({FromToString})");
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Disposing IncomingReplicationHandler ({FromToString})");
                 _cts.Cancel();
 
                 try
@@ -696,7 +697,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
-            public Logger Logger { get; set; }
+            public RavenLogger Logger { get; set; }
 
             public void Dispose()
             {

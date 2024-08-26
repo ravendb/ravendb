@@ -10,7 +10,7 @@ public sealed class OutputReduceCoraxIndexWriteOperation : CoraxIndexWriteOperat
 {
     private readonly OutputReduceIndexWriteOperationScope<OutputReduceCoraxIndexWriteOperation> _outputScope;
 
-    public OutputReduceCoraxIndexWriteOperation(MapReduceIndex index, Transaction writeTransaction, CoraxDocumentConverterBase converter, Logger logger,
+    public OutputReduceCoraxIndexWriteOperation(MapReduceIndex index, Transaction writeTransaction, CoraxDocumentConverterBase converter, RavenLogger logger,
         JsonOperationContext indexContext) : base(index, writeTransaction, converter, logger)
     {
         Debug.Assert(index.OutputReduceToCollection != null);

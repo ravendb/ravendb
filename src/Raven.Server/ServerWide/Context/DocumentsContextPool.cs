@@ -5,7 +5,9 @@
 // -----------------------------------------------------------------------
 
 using Raven.Server.Documents;
+using Raven.Server.Logging;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -14,7 +16,7 @@ namespace Raven.Server.ServerWide.Context
         private DocumentDatabase _database;
 
         public DocumentsContextPool(DocumentDatabase database)
-            : base(database.Configuration.Memory.MaxContextSizeToKeep)
+            : base(database.Configuration.Memory.MaxContextSizeToKeep, RavenLogManager.Instance.GetLoggerForDatabase<DocumentsContextPool>(database))
         {
             _database = database;
         }

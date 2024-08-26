@@ -20,7 +20,7 @@ namespace SlowTests.Issues
             // to data file due to CopyOnWriteMode usage
             // in Voron.Recovery we catch this error and set the file size until we have the right size and don't need to change it during the recovery on db load
 
-            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            using (var options = StorageEnvironmentOptions.ForPathForTests(DataDir))
             {
                 options.ManualFlushing = true;
 
@@ -42,7 +42,7 @@ namespace SlowTests.Issues
 
             Assert.Throws<IncreasingDataFileInCopyOnWriteModeException>(() =>
             {
-                using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+                using (var options = StorageEnvironmentOptions.ForPathForTests(DataDir))
                 {
                     options.ManualFlushing = true;
                     options.CopyOnWriteMode = true;

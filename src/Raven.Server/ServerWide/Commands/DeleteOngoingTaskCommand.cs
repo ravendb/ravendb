@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -33,7 +34,7 @@ namespace Raven.Server.ServerWide.Commands
         private long? _backupTaskIdToDelete;
         private string _hubNameToDelete;
 
-        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
+        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, RavenAuditLogger clusterAuditLog)
         {
             switch (TaskType)
             {
@@ -61,8 +62,8 @@ namespace Raven.Server.ServerWide.Commands
                     if (_hubNameToDelete == null)
                         return;
                     
-                    if (clusterAuditLog.IsInfoEnabled)
-                        clusterAuditLog.Info($"Removed hub replication {_hubNameToDelete} in {DatabaseName} and all its certificates.");
+                    if (clusterAuditLog.IsAuditEnabled)
+                        clusterAuditLog.Audit($"Removed hub replication {_hubNameToDelete} in {DatabaseName} and all its certificates.");
                     
                     var certs = ctx.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.ReplicationCertificatesSchema, ClusterStateMachine.ReplicationCertificatesSlice);
 

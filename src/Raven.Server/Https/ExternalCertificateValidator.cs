@@ -15,11 +15,11 @@ namespace Raven.Server.Https
     public sealed class ExternalCertificateValidator
     {
         private readonly RavenServer _server;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         private ConcurrentDictionary<Key, Task<CachedValue>> _externalCertificateValidationCallbackCache;
 
-        public ExternalCertificateValidator(RavenServer server, Logger logger)
+        public ExternalCertificateValidator(RavenServer server, RavenLogger logger)
         {
             _server = server;
             _logger = logger;
@@ -39,7 +39,7 @@ namespace Raven.Server.Https
         {
             _externalCertificateValidationCallbackCache?.Clear();
         }
-        private CachedValue CheckExternalCertificateValidation(string senderHostname, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors, Logger log)
+        private CachedValue CheckExternalCertificateValidation(string senderHostname, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors, RavenLogger log)
         {
             var base64Cert = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
 
@@ -118,8 +118,8 @@ namespace Raven.Server.Https
             string errors = GetStdError();
 
             // Can have exit code 0 (success) but still get errors. We log the errors anyway.
-            if (log.IsOperationsEnabled)
-                log.Operations($"Executing '{_server.Configuration.Security.CertificateValidationExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms. Exit code: {process.ExitCode}{Environment.NewLine}Output: {output}{Environment.NewLine}Errors: {errors}{Environment.NewLine}");
+            if (log.IsInfoEnabled)
+                log.Info($"Executing '{_server.Configuration.Security.CertificateValidationExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms. Exit code: {process.ExitCode}{Environment.NewLine}Output: {output}{Environment.NewLine}Errors: {errors}{Environment.NewLine}");
 
             if (process.ExitCode != 0)
             {
@@ -136,7 +136,7 @@ namespace Raven.Server.Https
             return new CachedValue { Valid = result, Until = result ? DateTime.UtcNow.AddMinutes(15) : DateTime.UtcNow.AddSeconds(30) };
         }
 
-        public bool ExternalCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors, Logger log)
+        public bool ExternalCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors, RavenLogger log)
         {
             var senderHostname = RequestExecutor.ConvertSenderObjectToHostname(sender);
 

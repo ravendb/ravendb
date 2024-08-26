@@ -169,6 +169,7 @@
     <PackageReference Include="Microsoft.Win32.Registry" />
     <PackageReference Include="MySqlConnector" />
     <PackageReference Include="NCrontab.Advanced" />
+    <PackageReference Include="NLog.Web.AspNetCore" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="NuGet.Commands" Alias="NGC" />
     <PackageReference Include="NuGet.ProjectModel" />

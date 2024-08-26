@@ -16,7 +16,7 @@ public sealed class DatabaseIndexReadOperationFactory : IIndexReadOperationFacto
         return new LuceneIndexReadOperation(index, directory, searcherHolder, queryBuilderFactories, readTransaction, query);
     }
 
-    public CoraxIndexReadOperation CreateCoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
+    public CoraxIndexReadOperation CreateCoraxIndexReadOperation(Index index, RavenLogger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
         IndexFieldsMapping fieldsMapping, IndexQueryServerSide query)
     {
         return new CoraxIndexReadOperation(index, logger, readTransaction, queryBuilderFactories, fieldsMapping, query);

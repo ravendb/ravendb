@@ -14,6 +14,7 @@ using Sparrow.Utils;
 using Voron.Data.Fixed;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Logging;
 
 namespace Voron.Data.Tables
 {
@@ -34,7 +35,7 @@ namespace Voron.Data.Tables
         public ByteStringContext<ByteStringMemoryCache>.InternalScope RawScope;
         public bool CompressionTried;
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<TableValueCompressor>("Compression");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForGlobalVoron<TableValueCompressor>();
 
         public TableValueCompressor(TableValueBuilder builder)
         {
@@ -221,8 +222,8 @@ namespace Voron.Data.Tables
                         if (ShouldReplaceDictionary(tx, compressionDictionary) == false)
                             return;
 
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Compression dictionary '{newId}' was replaced in '{table.Name}' table.");
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug($"Compression dictionary '{newId}' was replaced in '{table.Name}' table.");
 
                         table.CurrentCompressionDictionaryId = newId;
                         compressionDictionary.ExpectedCompressionRatio = GetCompressionRatio(CompressedBuffer.Length, RawBuffer.Length);
@@ -249,10 +250,10 @@ namespace Voron.Data.Tables
                             // ****************************************
                             bool removed = llt.Environment.CompressionDictionariesHolder.Remove(newId);
 
-                            if (Logger.IsInfoEnabled == false)
+                            if (Logger.IsDebugEnabled == false)
                                 return;
 
-                            Logger.Info(
+                            Logger.Debug(
                                 removed
                                     ? $"Compression dictionary '{newId}' was removed during rollback in '{table.Name}' table."
                                     : $"Fail to remove compression dictionary '{newId}' during rollback in '{table.Name}' table.");
@@ -326,8 +327,8 @@ namespace Voron.Data.Tables
                     }
                     catch (Exception innerEx)
                     {
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations(msg: $"An unexpected error occurred while attempting to read the archive '{path}'. " +
+                        if (Logger.IsErrorEnabled)
+                            Logger.Error($"An unexpected error occurred while attempting to read the archive '{path}'. " +
                                                    $"The file will be recreated from scratch.", innerEx);
                         try
                         {
@@ -340,8 +341,8 @@ namespace Voron.Data.Tables
                         {
                             var aggregateException = new AggregateException(e, innerEx);
 
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"An unexpected error occurred while attempting to recreate recovery dictionaries to file '{path}'.",
+                            if (Logger.IsErrorEnabled)
+                                Logger.Error($"An unexpected error occurred while attempting to recreate recovery dictionaries to file '{path}'.",
                                     aggregateException);
 
                             throw aggregateException;

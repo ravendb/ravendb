@@ -7,13 +7,14 @@ using System.Threading;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Logging;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
     public abstract class RetentionPolicyRunnerBase
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RetentionPolicyRunnerBase>("BackupTask");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<RetentionPolicyRunnerBase>();
 
         private readonly RetentionPolicy _retentionPolicy;
         private readonly string _databaseName;

@@ -50,7 +50,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public static async Task ConnectToClientNodeAsync(RavenServer server, TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log, string database,
+        public static async Task ConnectToClientNodeAsync(RavenServer server, TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, RavenLogger log, string database,
             NodeConnectionTestResult result, CancellationToken token = default)
         {
             List<string> negLogs = new();

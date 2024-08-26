@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
@@ -34,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private static readonly TimeSpan MinReduceDurationToCalculateProcessMemoryUsage = TimeSpan.FromSeconds(3);
         internal static readonly Slice PageNumberSlice;
         internal static readonly string PageNumberToReduceResultTableName = "PageNumberToReduceResult";
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private readonly AggregationBatch _aggregationBatch = new AggregationBatch();
         private readonly Index _index;
         protected readonly T _indexDefinition;
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _indexStorage = indexStorage;
             _metrics = metrics;
             _mapReduceContext = mapReduceContext;
-            _logger = LoggingSource.Instance.GetLogger<ReduceMapResultsBase<T>>(indexStorage.DocumentDatabase.Name);
+            _logger = RavenLogManager.Instance.GetLoggerForIndex(GetType(), index);
         }
 
         static ReduceMapResultsBase()

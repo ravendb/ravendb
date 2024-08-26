@@ -52,6 +52,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.Monitoring;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
@@ -80,6 +81,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
@@ -102,9 +104,7 @@ namespace Raven.Server.ServerWide
     /// </summary>
     public partial class ServerStore : IDisposable, ILowMemoryHandler
     {
-        private const string ResourceName = nameof(ServerStore);
-
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ServerStore>(ResourceName);
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<ServerStore>();
 
         public const string LicenseStorageKey = "License/Key";
 
@@ -226,11 +226,13 @@ namespace Raven.Server.ServerWide
             {
                 var message = $"Catastrophic failure in server storage located at '{path}', StackTrace: '{stacktrace}'";
 
-                if (Logger.IsOperationsEnabled)
+                if (Logger.IsFatalEnabled)
                 {
                     ExecuteSafely(() =>
                     {
-                        Logger.OperationsWithWait(message, exception).Wait(TimeSpan.FromSeconds(1));
+                        Logger.Fatal(message, exception);
+
+                        Thread.Sleep(3000);
                     });
                 }
 
@@ -438,9 +440,9 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
+                if (Logger.IsErrorEnabled)
                 {
-                    Logger.Operations($"Failed to execute {nameof(UpdateTopologyChangeNotification)} task", e);
+                    Logger.Error($"Failed to execute {nameof(UpdateTopologyChangeNotification)} task", e);
                 }
             }
         }
@@ -631,8 +633,8 @@ namespace Raven.Server.ServerWide
                 Configuration.Memory.MaxFreeCommittedMemoryToKeep,
                 Configuration.Memory.LowMemoryCommitLimit);
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
+            if (Logger.IsDebugEnabled)
+                Logger.Debug("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
 
             var path = Configuration.Core.DataDirectory.Combine("System");
             var storeAlertForLateRaise = new List<AlertRaised>();
@@ -645,7 +647,7 @@ namespace Raven.Server.ServerWide
             StorageEnvironmentOptions options;
             if (Configuration.Core.RunInMemory)
             {
-                options = StorageEnvironmentOptions.CreateMemoryOnly(null, null, null, CatastrophicFailureNotification);
+                options = StorageEnvironmentOptions.CreateMemoryOnly(null, null, null, CatastrophicFailureNotification, LoggingResource.Server, LoggingComponent.ServerStore);
             }
             else
             {
@@ -657,7 +659,7 @@ namespace Raven.Server.ServerWide
                 if (Configuration.Storage.TempPath != null)
                     tempPath = Configuration.Storage.TempPath.Combine("System").FullPath;
 
-                options = StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, IoChanges, CatastrophicFailureNotification);
+                options = StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, IoChanges, CatastrophicFailureNotification, LoggingResource.Server, LoggingComponent.ServerStore);
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
                 if (File.Exists(secretKey))
                 {
@@ -690,8 +692,8 @@ namespace Raven.Server.ServerWide
             {
                 var title = "Non Durable File System - System Storage";
 
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"{title}. {e.Message}", e.Exception);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"{title}. {e.Message}", e.Exception);
 
                 var alert = AlertRaised.Create(
                     null,
@@ -715,8 +717,8 @@ namespace Raven.Server.ServerWide
             {
                 string title = "Recovery Error - System Storage";
 
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"{title}. {e.Message}", e.Exception);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"{title}. {e.Message}", e.Exception);
 
                 var alert = AlertRaised.Create(
                     null,
@@ -740,8 +742,8 @@ namespace Raven.Server.ServerWide
             {
                 string title = "Integrity error of already synced data - System Storage";
 
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"{title}. {e.Message}", e.Exception);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"{title}. {e.Message}", e.Exception);
 
                 var alert = AlertRaised.Create(
                     null,
@@ -824,8 +826,8 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations(
+                if (Logger.IsFatalEnabled)
+                    Logger.Fatal(
                         "Could not open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath), e);
                 options.Dispose();
                 throw;
@@ -834,7 +836,7 @@ namespace Raven.Server.ServerWide
             if (Configuration.Queries.MaxClauseCount != null)
                 BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount.Value;
 
-            ContextPool = new TransactionContextPool(_env, Configuration.Memory.MaxContextSizeToKeep);
+            ContextPool = new TransactionContextPool(Logger, _env, Configuration.Memory.MaxContextSizeToKeep);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
@@ -863,7 +865,7 @@ namespace Raven.Server.ServerWide
             _sharding = new ShardingStore(this);
             _engine = new RachisConsensus<ClusterStateMachine>(this);
             var clusterChanges = new ClusterChanges();
-            
+
             var myUrl = GetNodeHttpServerUrl();
             _engine.Initialize(_env, Configuration, clusterChanges, myUrl, Server.Time, out _lastClusterTopologyIndex, ServerShutdown);
 
@@ -885,7 +887,7 @@ namespace Raven.Server.ServerWide
 
             ConcurrentBackupsCounter = new ConcurrentBackupsCounter(Configuration.Backup, LicenseManager);
 
-            ConfigureAuditLog();
+            RavenLogManager.Instance.ConfigureAuditLog(Server, Logger);
 
             Initialized = true;
             InitializationCompleted.Set();
@@ -941,8 +943,8 @@ namespace Raven.Server.ServerWide
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Failed to update my private url to {privateUrl ?? "N/A"}", e);
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn($"Failed to update my private url to {privateUrl ?? "N/A"}", e);
 
                     await Task.Delay(TimeSpan.FromSeconds(1), ServerShutdown);
                 }
@@ -986,59 +988,6 @@ namespace Raven.Server.ServerWide
                         NotificationSeverity.Warning));
             }
         }
-
-        private void ConfigureAuditLog()
-        {
-            if (Configuration.Security.AuditLogPath == null)
-                return;
-
-            if (Configuration.Security.AuthenticationEnabled == false)
-            {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("The audit log configuration 'Security.AuditLog.FolderPath' was specified, but the server is not running in a secured mode. Audit log disabled!");
-                return;
-            }
-
-            // we have to do this manually because LoggingSource will ignore errors
-            AssertCanWriteToAuditLogDirectory();
-
-            LoggingSource.AuditLog.MaxFileSizeInBytes = Configuration.Logs.MaxFileSize.GetValue(SizeUnit.Bytes);
-            LoggingSource.AuditLog.SetupLogMode(
-                LogMode.Information,
-                Configuration.Security.AuditLogPath.FullPath,
-                Configuration.Security.AuditLogRetentionTime.AsTimeSpan,
-                Configuration.Security.AuditLogRetentionSize?.GetValue(SizeUnit.Bytes),
-                Configuration.Security.AuditLogCompress);
-
-            var auditLog = LoggingSource.AuditLog.GetLogger("ServerStartup", "Audit");
-            auditLog.Operations($"Server started up, listening to {string.Join(", ", Configuration.Core.ServerUrls)} with certificate {_server.Certificate?.Certificate?.Subject} ({_server.Certificate?.Certificate?.Thumbprint}), public url: {Configuration.Core.PublicServerUrl}");
-        }
-
-        private void AssertCanWriteToAuditLogDirectory()
-        {
-            if (Directory.Exists(Configuration.Security.AuditLogPath.FullPath) == false)
-            {
-                try
-                {
-                    Directory.CreateDirectory(Configuration.Security.AuditLogPath.FullPath);
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException($"Cannot create audit log directory: {Configuration.Security.AuditLogPath.FullPath}, treating this as a fatal error", e);
-                }
-            }
-            try
-            {
-                var testFile = Configuration.Security.AuditLogPath.Combine("write.test").FullPath;
-                File.WriteAllText(testFile, "test we can write");
-                File.Delete(testFile);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Cannot create new file in audit log directory: {Configuration.Security.AuditLogPath.FullPath}, treating this as a fatal error", e);
-            }
-        }
-
 
         public void TriggerDatabases()
         {
@@ -1093,9 +1042,9 @@ namespace Raven.Server.ServerWide
         {
             var msg = $"{DateTime.UtcNow}, State changed: {state.From} -> {state.To} in term {state.CurrentTerm}, because {state.Reason}";
 
-            if (Engine.Log.IsInfoEnabled)
+            if (Engine.Log.IsDebugEnabled)
             {
-                Engine.Log.Info(msg);
+                Engine.Log.Debug(msg);
             }
             Engine.InMemoryDebug.StateChangeTracking.LimitedSizeEnqueue(msg, 10);
 
@@ -1415,8 +1364,8 @@ namespace Raven.Server.ServerWide
             var tag = BackupUtils.GetResponsibleNodeTag(Server.ServerStore, db, backupConfig.TaskId);
             if (Engine.Tag != tag)
             {
-                if (Logger.IsOperationsEnabled && tag != null)
-                    Logger.Operations($"Could not reschedule the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' belongs to node '{tag}' current node is '{Engine.Tag}'.");
+                if (Logger.IsErrorEnabled && tag != null)
+                    Logger.Error($"Could not reschedule the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' belongs to node '{tag}' current node is '{Engine.Tag}'.");
                 return;
             }
 
@@ -1443,8 +1392,8 @@ namespace Raven.Server.ServerWide
             var nextIdleDatabaseActivity = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup);
             DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, nextIdleDatabaseActivity);
 
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{nextIdleDatabaseActivity.DateTime}', with dueTime: {nextIdleDatabaseActivity.DueTime} ms.");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{nextIdleDatabaseActivity.DateTime}', with dueTime: {nextIdleDatabaseActivity.DueTime} ms.");
 
         }
 
@@ -1499,8 +1448,8 @@ namespace Raven.Server.ServerWide
                         if (nodesInCluster > replaced)
                         {
                             // I already replaced it, but not all nodes did
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"The server certificate was successfully replaced in {replaced} nodes out of {nodesInCluster}.");
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"The server certificate was successfully replaced in {replaced} nodes out of {nodesInCluster}.");
 
                             return;
                         }
@@ -1518,8 +1467,8 @@ namespace Raven.Server.ServerWide
                             tx.Commit();
                         }
 
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations("The server certificate was successfully replaced in the entire cluster.");
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("The server certificate was successfully replaced in the entire cluster.");
 
                         NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplaceSuccess, null));
                         NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplaceError, null));
@@ -1536,8 +1485,8 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to process {type}.", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"Failed to process {type}.", e);
 
                 NotificationCenter.Add(AlertRaised.Create(
                     null,
@@ -1574,8 +1523,8 @@ namespace Raven.Server.ServerWide
                         var msg = "Unable to confirm certificate replacement because the NotBefore property is set " +
                                   $"to {certificate.NotBefore.ToUniversalTime():O} and now it is {now:O}. Will try again later";
 
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations(msg);
+                        if (Logger.IsErrorEnabled)
+                            Logger.Error(msg);
 
                         NotificationCenter.Add(AlertRaised.Create(
                             null,
@@ -1592,8 +1541,8 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to process {type}.", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"Failed to process {type}.", e);
 
                 NotificationCenter.Add(AlertRaised.Create(
                     null,
@@ -1637,8 +1586,8 @@ namespace Raven.Server.ServerWide
                                           "The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration." +
                                           $"If you wish to force replacing the certificate just for the nodes that are up, please set '{nameof(CertificateReplacement.ReplaceImmediately)}' to true.";
 
-                                if (Logger.IsOperationsEnabled)
-                                    Logger.Operations(msg);
+                                if (Logger.IsWarnEnabled)
+                                    Logger.Warn(msg);
 
                                 NotificationCenter.Add(AlertRaised.Create(
                                     null,
@@ -1675,8 +1624,8 @@ namespace Raven.Server.ServerWide
                         }
 
                         var certPath = Path.Combine(AppContext.BaseDirectory, Configuration.Security.CertificatePath);
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Writing the new certificate to {certPath}");
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Writing the new certificate to {certPath}");
 
                         try
                         {
@@ -1699,15 +1648,15 @@ namespace Raven.Server.ServerWide
                         }
                         catch (Exception e)
                         {
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"Unable to notify executable about the cluster certificate change '{Server.Certificate.Certificate.Thumbprint}'.", e);
+                            if (Logger.IsErrorEnabled)
+                                Logger.Error($"Unable to notify executable about the cluster certificate change '{Server.Certificate.Certificate.Thumbprint}'.", e);
                         }
                     }
                     else
                     {
                         var msg = "Cluster wanted to install updated server certificate, but no path or executable has been configured in settings.json";
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations(msg);
+                        if (Logger.IsErrorEnabled)
+                            Logger.Error(msg);
 
                         NotificationCenter.Add(AlertRaised.Create(
                             null,
@@ -1720,8 +1669,8 @@ namespace Raven.Server.ServerWide
 
                     // and now we have to replace the cert in the running server...
 
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Replacing the certificate used by the server to: {newClusterCertificate.Thumbprint} ({newClusterCertificate.SubjectName.Name})");
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Replacing the certificate used by the server to: {newClusterCertificate.Thumbprint} ({newClusterCertificate.SubjectName.Name})");
 
                     Server.SetCertificate(newClusterCertificate, bytesToSave, Configuration.Security.CertificatePassword);
 
@@ -1735,8 +1684,8 @@ namespace Raven.Server.ServerWide
                         AlertType.Certificates_ReplaceSuccess,
                         NotificationSeverity.Success));
 
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"The server certificate was successfully replaced on node {NodeTag}.");
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"The server certificate was successfully replaced on node {NodeTag}.");
 
                     if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(nameof(ConfirmServerCertificateReplacedCommand), out var commandVersion) == false)
                         throw new InvalidOperationException($"Failed to get the command version of '{nameof(ConfirmServerCertificateReplacedCommand)}'.");
@@ -1759,8 +1708,8 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to process {type}.", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"Failed to process {type}.", e);
 
                 NotificationCenter.Add(AlertRaised.Create(
                     null,
@@ -2796,14 +2745,14 @@ namespace Raven.Server.ServerWide
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Error during idle operations for the server", e);
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error("Error during idle operations for the server", e);
                 }
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Unexpected error during idle operations for the server", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error("Unexpected error during idle operations for the server", e);
             }
             finally
             {
@@ -3582,7 +3531,7 @@ namespace Raven.Server.ServerWide
             try
             {
                 await TestConnectionHandler.ConnectToClientNodeAsync(_server, connectionInfo.Result, Engine.TcpConnectionTimeout,
-                    LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"), database, result, ServerShutdown);
+                    RavenLogManager.Instance.GetLoggerForCluster<TestConnectionHandler>(LoggingComponent.Tcp), database, result, ServerShutdown);
             }
             catch (Exception e)
             {

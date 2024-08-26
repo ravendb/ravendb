@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             var connectionStringName = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
             var type = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
-            if (LoggingSource.AuditLog.IsInfoEnabled)
+            if (RavenLogManager.Instance.IsAuditEnabled)
             {
                 RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"Connection string '{connectionStringName}'");
             }

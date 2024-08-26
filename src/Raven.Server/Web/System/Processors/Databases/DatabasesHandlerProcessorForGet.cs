@@ -17,6 +17,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -27,7 +28,7 @@ namespace Raven.Server.Web.System.Processors.Databases;
 
 internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandlerProcessorForAllowedDatabases<DatabasesInfo>
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<DatabasesHandlerProcessorForGet>();
 
     public DatabasesHandlerProcessorForGet([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {

@@ -249,8 +249,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             _timer?.Dispose();
 
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations($"OLAP ETL '{Name}' : Next run is in {nextRun.TimeSpan.TotalMinutes} minutes.");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"OLAP ETL '{Name}' : Next run is in {nextRun.TimeSpan.TotalMinutes} minutes.");
 
             var timer = new Timer(_ => _waitForChanges.Set(), state: nextRun, dueTime: nextRun.TimeSpan, period: Timeout.InfiniteTimeSpan);
 
@@ -279,8 +279,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                               $"ETL name: {Name} , error: {e.Message}";
 
 
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations(message);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error(message);
 
                 Database.NotificationCenter.Add(AlertRaised.Create(
                     Database.Name,

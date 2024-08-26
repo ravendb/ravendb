@@ -3,6 +3,7 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Logging;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -13,7 +14,7 @@ public sealed class TestIndexWriteOperation : IndexWriteOperationBase
     private readonly IndexWriteOperationBase _inner;
     private readonly TestIndexRun _testIndexRun;
 
-    public TestIndexWriteOperation(IndexWriteOperationBase writerRetriever, Index index) : base(index, LoggingSource.Instance.GetLogger<LuceneIndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
+    public TestIndexWriteOperation(IndexWriteOperationBase writerRetriever, Index index) : base(index, RavenLogManager.Instance.GetLoggerForIndex<TestIndexWriteOperation>(index))
     {
         if (index.IsTestRun == false) 
             throw new InvalidOperationException($"{nameof(TestIndexWriteOperation)} should only be used for test indexes.");

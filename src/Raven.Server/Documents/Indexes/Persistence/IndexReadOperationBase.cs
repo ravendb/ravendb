@@ -21,11 +21,11 @@ namespace Raven.Server.Documents.Indexes.Persistence
         private readonly MemoryInfo _memoryInfo;
         private static readonly long ThresholdForMemoryUsageLoggingInBytes = new Size(512, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
 
-        protected IndexReadOperationBase(Index index, Logger logger, QueryBuilderFactories queryBuilderFactories, IndexQueryServerSide query) : base(index, logger)
+        protected IndexReadOperationBase(Index index, RavenLogger logger, QueryBuilderFactories queryBuilderFactories, IndexQueryServerSide query) : base(index, logger)
         {
             QueryBuilderFactories = queryBuilderFactories;
 
-            if (query != null && (logger.IsInfoEnabled || logger.IsOperationsEnabled))
+            if (query != null && logger.IsInfoEnabled)
             {
                 _memoryInfo = new MemoryInfo
                 {
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public override void Dispose()
         {
-            if ((_logger.IsInfoEnabled || (_logger.IsOperationsEnabled && _index.IsLowMemory)) &&
+            if ((_logger.IsInfoEnabled || (_logger.IsWarnEnabled && _index.IsLowMemory)) &&
                 _memoryInfo != null && _memoryInfo.ManagedThreadId == NativeMemory.CurrentThreadStats.ManagedThreadId)
             {
                 // information logs are enabled or we're in a low memory state and operations logs are enabled
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 var mangedDiff = GC.GetAllocatedBytesForCurrentThread() - _memoryInfo.AllocatedManagedBefore;
                 var unmanagedDiff = Math.Max(0, NativeMemory.ThreadAllocations.Value.TotalAllocated - _memoryInfo.AllocatedUnmanagedBefore);
 
-                if (_logger.IsOperationsEnabled && mangedDiff < ThresholdForMemoryUsageLoggingInBytes && unmanagedDiff < ThresholdForMemoryUsageLoggingInBytes)
+                if (_logger.IsWarnEnabled && mangedDiff < ThresholdForMemoryUsageLoggingInBytes && unmanagedDiff < ThresholdForMemoryUsageLoggingInBytes)
                 {
                     // we don't want to spam the logs when we are in a low memory state and operations logs are enabled
                     return;
@@ -87,9 +87,9 @@ namespace Raven.Server.Documents.Indexes.Persistence
                           $"allocated unmanaged: {new Size(unmanagedDiff, SizeUnit.Bytes)}, " +
                           $"managed thread id: {_memoryInfo.ManagedThreadId}";
 
-                if (_logger.IsOperationsEnabled)
+                if (_logger.IsWarnEnabled)
                 {
-                    _logger.Operations(msg);
+                    _logger.Warn(msg);
                 }
                 else
                 {

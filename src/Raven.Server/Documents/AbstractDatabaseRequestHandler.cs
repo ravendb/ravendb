@@ -12,7 +12,7 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
 {
     public abstract string DatabaseName { get; }
 
-    public Logger Logger;
+    public RavenLogger Logger;
 
     public abstract char IdentityPartsSeparator { get; }
 

@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
                 var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "admin/revisions/delete");
                 parameters = JsonDeserializationServer.Parameters.DeleteRevisionsParameters(json);
 
-                if (LoggingSource.AuditLog.IsInfoEnabled)
+                if (RavenLogManager.Instance.IsAuditEnabled)
                 {
                     RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", $"Delete Revisions ,parameters: {json}");
                 }

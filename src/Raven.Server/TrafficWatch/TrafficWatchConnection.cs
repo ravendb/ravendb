@@ -5,6 +5,7 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
+using Raven.Server.Logging;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -15,7 +16,7 @@ namespace Raven.Server.TrafficWatch
 
     internal sealed class TrafficWatchConnection
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<TrafficWatchConnection>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<TrafficWatchConnection>();
 
         private readonly WebSocket _webSocket;
         private readonly JsonOperationContext _context;

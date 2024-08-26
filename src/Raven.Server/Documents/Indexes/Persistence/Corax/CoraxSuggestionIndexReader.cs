@@ -25,7 +25,7 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
     private readonly IndexSearcher _indexSearcher;
     private readonly IndexFieldBinding _binding;
 
-    public CoraxSuggestionReader(Index index, Logger logger, IndexFieldBinding binding, Transaction readTransaction, IndexFieldsMapping fieldsMapping) : base(index, logger)
+    public CoraxSuggestionReader(Index index, RavenLogger logger, IndexFieldBinding binding, Transaction readTransaction, IndexFieldsMapping fieldsMapping) : base(index, logger)
     {
         _fieldMappings = fieldsMapping;
         _binding = binding;

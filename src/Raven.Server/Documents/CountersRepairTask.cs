@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -22,7 +23,7 @@ public class CountersRepairTask
 {
     private readonly DocumentDatabase _database;
     private readonly CancellationToken _cancellationToken;
-    private readonly Logger _logger;
+    private readonly RavenLogger _logger;
 
     public static string Completed = string.Empty;
 
@@ -30,7 +31,7 @@ public class CountersRepairTask
     {
         _database = database;
         _cancellationToken = databaseShutdown;
-        _logger = LoggingSource.Instance.GetLogger<CountersRepairTask>(_database.Name);
+        _logger = RavenLogManager.Instance.GetLoggerForDatabase<CountersRepairTask>(_database);
     }
 
     public async Task Start(string lastProcessedKey)
@@ -122,9 +123,9 @@ public class CountersRepairTask
         }
         catch (Exception e)
         {
-            if (_logger.IsInfoEnabled)
+            if (_logger.IsWarnEnabled)
             {
-                _logger.Info($"An Error occured while executing FixCorruptedCountersTask. Last DocId : '{lastDocId}'", e);
+                _logger.Warn($"An Error occured while executing FixCorruptedCountersTask. Last DocId : '{lastDocId}'", e);
             }
 
         }

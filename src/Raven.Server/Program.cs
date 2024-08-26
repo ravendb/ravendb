@@ -15,6 +15,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Static.NuGet;
 using Raven.Server.EventListener;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.TrafficWatch;
@@ -35,7 +36,7 @@ namespace Raven.Server
 {
     public sealed class Program
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<Program>();
 
         public static unsafe int Main(string[] args)
         {
@@ -123,15 +124,10 @@ namespace Raven.Server
 
             EncryptionBuffersPool.Instance.Disabled = configuration.Storage.DisableEncryptionBuffersPooling;
 
-            LoggingSource.UseUtcTime = configuration.Logs.UseUtcTime;
-            LoggingSource.Instance.MaxFileSizeInBytes = configuration.Logs.MaxFileSize.GetValue(SizeUnit.Bytes);
-            LoggingSource.Instance.SetupLogMode(
-                configuration.Logs.Mode,
-                configuration.Logs.Path.FullPath,
-                configuration.Logs.RetentionTime?.AsTimeSpan,
-                configuration.Logs.RetentionSize?.GetValue(SizeUnit.Bytes),
-                configuration.Logs.Compress
-                );
+            MultiSourceNuGetFetcher.ForIndexes.Initialize(configuration.Indexing.NuGetPackagesPath, configuration.Indexing.NuGetPackageSourceUrl, configuration.Indexing.NuGetAllowPreReleasePackages);
+            MultiSourceNuGetFetcher.ForLogging.Initialize(configuration.Logs.NuGetPackagesPath, configuration.Logs.NuGetPackageSourceUrl, configuration.Logs.NuGetAllowPreReleasePackages);
+
+            RavenLogManager.Instance.ConfigureLogging(configuration);
 
             TrafficWatchToLog.Instance.UpdateConfiguration(configuration.TrafficWatch);
             EventListenerToLog.Instance.UpdateConfiguration(new EventListenerToLog.EventListenerConfiguration
@@ -143,17 +139,12 @@ namespace Raven.Server
                 AllocationsLoggingCount = configuration.DebugConfiguration.AllocationsLoggingCount
             });
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
-
             InitializeThreadPoolThreads(configuration);
-
-            MultiSourceNuGetFetcher.Instance.Initialize(configuration.Indexing.NuGetPackagesPath, configuration.Indexing.NuGetPackageSourceUrl, configuration.Indexing.NuGetAllowPreleasePackages);
 
             LatestVersionCheck.Instance.Initialize(configuration.Updates);
 
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations(RavenCli.GetInfoText());
+            if (Logger.IsInfoEnabled)
+                Logger.Info(RavenCli.GetInfoText());
 
             if (WindowsServiceRunner.ShouldRunAsWindowsService())
             {
@@ -262,8 +253,8 @@ namespace Raven.Server
                                     "are mandatory to properly load the storage. " +
                                     "This switch is meant to be use only for recovery purposes. Please make sure that you won't use it on regular basis. ";
 
-                                if (Logger.IsOperationsEnabled)
-                                    Logger.Operations(message);
+                                if (Logger.IsWarnEnabled)
+                                    Logger.Warn(message);
 
                                 prevColor = Console.ForegroundColor;
                                 Console.ForegroundColor = ConsoleColor.Red;
@@ -318,10 +309,10 @@ namespace Raven.Server
                                 message = e.InnerException.Message;
                             }
 
-                            if (Logger.IsOperationsEnabled)
+                            if (Logger.IsFatalEnabled)
                             {
-                                Logger.Operations("Failed to initialize the server", e);
-                                Logger.Operations(message);
+                                Logger.Fatal("Failed to initialize the server", e);
+                                Logger.Fatal(message);
                             }
 
                             Console.WriteLine(message);
@@ -344,8 +335,12 @@ namespace Raven.Server
                 }
                 finally
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.OperationsWithWait("Server has shut down").Wait(TimeSpan.FromSeconds(15));
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info("Server has shut down");
+                        Thread.Sleep(3000);
+                    }
+
                     ShutdownCompleteMre.Set();
                 }
             } while (rerun);
@@ -370,7 +365,8 @@ namespace Raven.Server
             catch (Exception exception)
             {
                 var msg = $"Error setting current directory: {AppContext.BaseDirectory}.";
-                Logger.Operations(msg, exception);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error(msg, exception);
                 Console.WriteLine($"{msg} Exception: {exception}");
             }
         }
@@ -420,11 +416,11 @@ namespace Raven.Server
             Console.WriteLine("Running non-interactive.");
 
             if (CommandLineSwitches.LogToConsole)
-                LoggingSource.Instance.EnableConsoleLogging();
+                RavenConsoleTarget.Enable();
 
             AssemblyLoadContext.Default.Unloading += s =>
             {
-                LoggingSource.Instance.DisableConsoleLogging();
+                RavenConsoleTarget.Disable();
                 if (ShutdownServerMre.WaitOne(0))
                     return; // already done
                 Console.WriteLine("Received graceful exit request...");
@@ -445,14 +441,14 @@ namespace Raven.Server
         private static bool RunInteractive(RavenServer server)
         {
             //stop dumping logs
-            LoggingSource.Instance.DisableConsoleLogging();
+            RavenConsoleTarget.Disable();
 
             AssemblyLoadContext.Default.Unloading += s =>
             {
                 if (IsRunningNonInteractive)
                     return;
 
-                LoggingSource.Instance.DisableConsoleLogging();
+                RavenConsoleTarget.Disable();
                 if (ShutdownServerMre.WaitOne(0))
                     return; // already done
                 Console.WriteLine();
@@ -461,8 +457,12 @@ namespace Raven.Server
                 // We are about to force dispose here RavenServer, although running inside 'using' statement
                 try
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.OperationsWithWait("Server is about to shut down (interactive mode)").Wait(TimeSpan.FromSeconds(15));
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info("Server is about to shut down (interactive mode)");
+                        Thread.Sleep(3000);
+                    }
+
                     server.Dispose();
                     Console.WriteLine("Shutdown completed (interactive mode)");
                 }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
@@ -25,7 +26,7 @@ public class DataArchivist : BackgroundWorkBase
 
     public DataArchivalConfiguration DataArchivalConfiguration { get; }
 
-    private DataArchivist(DocumentDatabase database, DataArchivalConfiguration dataArchivalConfiguration) : base(database.Name, database.DatabaseShutdown)
+    private DataArchivist(DocumentDatabase database, DataArchivalConfiguration dataArchivalConfiguration) : base(database.Name, RavenLogManager.Instance.GetLoggerForDatabase<DataArchivist>(database), database.DatabaseShutdown)
     {
         DataArchivalConfiguration = dataArchivalConfiguration;
         _database = database;
@@ -68,9 +69,9 @@ public class DataArchivist : BackgroundWorkBase
                 $"Data archival load configuration error in '{database.Name}' database", msg,
                 AlertType.ArchivalConfigurationNotValid, NotificationSeverity.Error, database.Name));
 
-            var logger = LoggingSource.Instance.GetLogger<DataArchivist>(database.Name);
-            if (logger.IsOperationsEnabled)
-                logger.Operations(msg, e);
+            var logger = RavenLogManager.Instance.GetLoggerForDatabase<DataArchivist>(database);
+            if (logger.IsErrorEnabled)
+                logger.Error(msg, e);
 
             return null;
         }
@@ -152,8 +153,8 @@ public class DataArchivist : BackgroundWorkBase
         }
         catch (Exception e)
         {
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Failed to archive documents on {_database.Name} which are older than {currentTime}", e);
+            if (Logger.IsErrorEnabled)
+                Logger.Error($"Failed to archive documents on {_database.Name} which are older than {currentTime}", e);
         }
     }
 }

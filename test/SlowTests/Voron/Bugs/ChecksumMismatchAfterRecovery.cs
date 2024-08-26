@@ -30,7 +30,7 @@ namespace SlowTests.Voron.Bugs
                 buffer[i] = 13;
             }
 
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
 
             using (var env = new StorageEnvironment(options))
             {
@@ -57,7 +57,7 @@ namespace SlowTests.Voron.Bugs
                 }
             }
 
-            options = StorageEnvironmentOptions.ForPath(DataDir);
+            options = StorageEnvironmentOptions.ForPathForTests(DataDir);
 
             using (var env = new StorageEnvironment(options))
             {

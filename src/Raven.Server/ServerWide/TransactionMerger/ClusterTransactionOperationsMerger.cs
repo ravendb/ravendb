@@ -5,14 +5,16 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide.TransactionMerger;
 
 public sealed class ClusterTransactionOperationsMerger : AbstractTransactionOperationsMerger<ClusterOperationContext, ClusterTransaction>
 {
     public ClusterTransactionOperationsMerger(RavenConfiguration configuration, SystemTime time, CancellationToken shutdown)
-        : base("Cluster", configuration, time, shutdown)
+        : base("Cluster", configuration, time, RavenLogManager.Instance.GetLoggerForServer<ClusterTransactionOperationsMerger>(), shutdown)
     {
     }
 

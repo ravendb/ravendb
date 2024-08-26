@@ -18,7 +18,7 @@ namespace SlowTests.Issues
             using (var tx = Env.WriteTransaction())
             using (var cache = new TempFileCache(Env.Options))
             {
-                var dir = new LuceneVoronDirectory(tx, Env, cache, LuceneIndexInputType.Standard);
+                var dir = new LuceneVoronDirectory(null, tx, Env, cache, LuceneIndexInputType.Standard);
 
                 var state = new VoronState(tx);
 

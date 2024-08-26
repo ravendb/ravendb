@@ -12,6 +12,7 @@ using Lucene.Net.Store;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.Logging;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Server.Utils;
@@ -33,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private IndexWriter _indexWriter;
         private IndexSearcher _indexSearcher;
 
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         public Analyzer Analyzer => _indexWriter?.Analyzer;
 
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _maxFieldLength = maxFieldLength;
             _index = index;
             _field = field;
-            _logger = LoggingSource.Instance.GetLogger<LuceneSuggestionIndexWriter>(_index.DocumentDatabase.Name);
+            _logger = RavenLogManager.Instance.GetLoggerForIndex<LuceneSuggestionIndexWriter>(index);
 
             RecreateIndexWriter(state);
         }

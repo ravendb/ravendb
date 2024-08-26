@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly bool _backupToLocalFolder;
         private readonly long _operationId;
         private readonly PathSetting _tempBackupPath;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         public readonly OperationCancelToken TaskCancelToken;
         private readonly bool _isServerWide;
         private readonly bool _isBackupEncrypted;
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly DateTime _startTimeUtc;
         protected Action OnBackupException;
 
-        public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+        public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
             Database = database;
             _taskName = backupParameters.Name;
@@ -235,8 +235,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     At = DateTime.UtcNow
                 };
 
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations(message, e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error(message, e);
 
                 Database.NotificationCenter.Add(AlertRaised.Create(
                     Database.Name,

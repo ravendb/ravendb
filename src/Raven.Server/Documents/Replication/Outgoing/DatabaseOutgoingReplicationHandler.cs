@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         public long NextReplicateTicks;
 
-        public abstract ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger);
+        public abstract ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, RavenLogger logger);
 
         protected override void Replicate()
         {

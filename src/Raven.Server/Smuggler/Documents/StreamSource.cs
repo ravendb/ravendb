@@ -29,6 +29,8 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
+using Raven.Server.Logging;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
@@ -50,7 +52,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly PeepingTomStream _peepingTomStream;
         private readonly JsonOperationContext _context;
-        private readonly Logger _log;
+        private readonly RavenLogger _log;
 
         private JsonOperationContext.MemoryBuffer _buffer;
         private JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
@@ -72,7 +74,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             _peepingTomStream = new PeepingTomStream(stream, context);
             _context = context;
-            _log = LoggingSource.Instance.GetLogger<StreamSource>(databaseName);
+            _log = RavenLogManager.Instance.GetLoggerForDatabase<StreamSource>(databaseName);
             _options = options;
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         }
@@ -119,8 +121,8 @@ namespace Raven.Server.Smuggler.Documents
             while (dbItemType == DatabaseItemType.Unknown)
             {
                 var msg = $"You are trying to import items of type '{type}' which is unknown or not supported in {RavenVersionAttribute.Instance.Version}. Ignoring items.";
-                if (_log.IsOperationsEnabled)
-                    _log.Operations(msg);
+                if (_log.IsWarnEnabled)
+                    _log.Warn(msg);
                 _result.AddWarning(msg);
 
                 await SkipArrayAsync(onSkipped: null, MaySkipBlobAsync, CancellationToken.None);
@@ -448,7 +450,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
                 }
-                
+
                 if (reader.TryGet(nameof(databaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings) &&
                     ravenConnectionStrings != null)
                 {
@@ -1633,8 +1635,8 @@ namespace Raven.Server.Smuggler.Documents
                             if (type != DocumentItem.ExportDocumentType.Attachment)
                             {
                                 var msg = $"Ignoring an item of type `{type}`. " + data;
-                                if (_log.IsOperationsEnabled)
-                                    _log.Operations(msg);
+                                if (_log.IsWarnEnabled)
+                                    _log.Warn(msg);
                                 _result.AddWarning(msg);
                                 continue;
                             }
@@ -1757,8 +1759,8 @@ namespace Raven.Server.Smuggler.Documents
                         if (Enum.TryParse<Tombstone.TombstoneType>(type, out var tombstoneType) == false)
                         {
                             var msg = $"Ignoring a tombstone of type `{type}` which is not supported in 4.0. ";
-                            if (_log.IsOperationsEnabled)
-                                _log.Operations(msg);
+                            if (_log.IsWarnEnabled)
+                                _log.Warn(msg);
 
                             _result.Tombstones.ErroredCount++;
                             _result.AddWarning(msg);
@@ -1772,8 +1774,8 @@ namespace Raven.Server.Smuggler.Documents
                             if (Enum.TryParse<DocumentFlags>(flags, out var tombstoneFlags) == false)
                             {
                                 var msg = $"Ignoring a tombstone because it couldn't parse its flags: {flags}";
-                                if (_log.IsOperationsEnabled)
-                                    _log.Operations(msg);
+                                if (_log.IsWarnEnabled)
+                                    _log.Warn(msg);
 
                                 _result.Tombstones.ErroredCount++;
                                 _result.AddWarning(msg);
@@ -1800,8 +1802,8 @@ namespace Raven.Server.Smuggler.Documents
             void SkipEntry(BlittableJsonReaderObject data)
             {
                 var msg = "Ignoring an invalid tombstone which you try to import. " + data;
-                if (_log.IsOperationsEnabled)
-                    _log.Operations(msg);
+                if (_log.IsWarnEnabled)
+                    _log.Warn(msg);
 
                 _result.Tombstones.ErroredCount++;
                 _result.AddWarning(msg);
@@ -1887,8 +1889,8 @@ namespace Raven.Server.Smuggler.Documents
             void SkipEntry(BlittableJsonReaderObject data)
             {
                 var msg = "Ignoring an invalid conflict which you try to import. " + data;
-                if (_log.IsOperationsEnabled)
-                    _log.Operations(msg);
+                if (_log.IsWarnEnabled)
+                    _log.Warn(msg);
 
                 _result.Conflicts.ErroredCount++;
                 _result.AddWarning(msg);

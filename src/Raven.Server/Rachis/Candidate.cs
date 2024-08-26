@@ -75,9 +75,9 @@ namespace Raven.Server.Rachis
                     if (_engine.RequestSnapshot)
                     {
                         // we aren't allowed to be elected for leadership if we requested a snapshot 
-                        if (_engine.Log.IsOperationsEnabled)
+                        if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Operations("we aren't allowed to be elected for leadership if we requested a snapshot");
+                            _engine.Log.Info("we aren't allowed to be elected for leadership if we requested a snapshot");
                         }
                         return;
                     }
@@ -256,9 +256,9 @@ namespace Raven.Server.Rachis
             var command = new CandidateCastVoteInTermCommand(this, _engine, electionTerm, reason);
             _engine.TxMerger.EnqueueSync(command);
 
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"Candidate {_engine.Tag}: casting vote for self ElectionTerm={electionTerm} RunRealElectionAtTerm={RunRealElectionAtTerm}");
+                _engine.Log.Debug($"Candidate {_engine.Tag}: casting vote for self ElectionTerm={electionTerm} RunRealElectionAtTerm={RunRealElectionAtTerm}");
             }
 
             if (setStateChange)

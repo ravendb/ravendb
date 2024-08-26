@@ -17,6 +17,7 @@ using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -37,7 +38,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public sealed class PeriodicBackupRunner : ITombstoneAware, IDisposable
     {
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         private readonly DocumentDatabase _database;
         private readonly ServerStore _serverStore;
@@ -63,7 +64,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             _database = database;
             _serverStore = serverStore;
-            _logger = LoggingSource.Instance.GetLogger<PeriodicBackupRunner>(_database.Name);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<PeriodicBackupRunner>(database);
             _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             _tempBackupPath = BackupUtils.GetBackupTempPath(_database.Configuration, "PeriodicBackupTemp", out _);
             _originalDatabaseName = database is ShardedDocumentDatabase sdd ? sdd.ShardedDatabaseName : database.Name;
@@ -118,10 +119,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_cancellationToken.IsCancellationRequested)
                 {
-                    if (_logger.IsOperationsEnabled)
+                    if (_logger.IsInfoEnabled)
                     {
                         var type = backupDetails.IsFull ? "full" : "incremental";
-                        _logger.Operations($"Canceling the {type} backup task '{backupDetails.TaskId}' after the {nameof(TimerCallback)}.");
+                        _logger.Info($"Canceling the {type} backup task '{backupDetails.TaskId}' after the {nameof(TimerCallback)}.");
                     }
 
                     return;
@@ -134,7 +135,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (Exception e)
             {
-                _logger.Operations("Error during timer callback", e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error("Error during timer callback", e);
             }
         }
 
@@ -146,10 +148,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_cancellationToken.IsCancellationRequested)
                 {
-                    if (_logger.IsOperationsEnabled)
+                    if (_logger.IsInfoEnabled)
                     {
                         var type = backupDetails.IsFull ? "full" : "incremental";
-                        _logger.Operations($"Canceling the {type} backup task '{backupDetails.TaskId}' after the {nameof(LongPeriodTimerCallback)}.");
+                        _logger.Info($"Canceling the {type} backup task '{backupDetails.TaskId}' after the {nameof(LongPeriodTimerCallback)}.");
                     }
                     return;
                 }
@@ -168,7 +170,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (Exception e)
             {
-                _logger.Operations("Error during long timer callback", e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error("Error during long timer callback", e);
             }
         }
 
@@ -180,8 +183,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (BackupDelayException e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Backup task will be retried in {(int)e.DelayPeriod.TotalSeconds} seconds, Reason: {e.Message}");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Backup task will be retried in {(int)e.DelayPeriod.TotalSeconds} seconds, Reason: {e.Message}");
 
                 // we'll retry in one minute
                 var backupTaskDetails = new NextBackup
@@ -258,12 +261,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsOperationsEnabled)
+                    if (_logger.IsWarnEnabled)
                     {
                         var msg =
                             $"Fail to delay backup task with task id '{taskId}' cluster-wide, the task was delayed until '{delayUntil}' UTC only on the current node.";
                         
-                        _logger.Operations(msg, e);
+                        _logger.Warn(msg, e);
                     }
                 }
 
@@ -328,8 +331,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var runningTask = periodicBackup.RunningTask;
                 if (runningTask != null)
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Could not start backup task '{periodicBackup.Configuration.TaskId}' because there is already a running backup '{runningTask.Id}'");
+                    if (_logger.IsWarnEnabled)
+                        _logger.Warn($"Could not start backup task '{periodicBackup.Configuration.TaskId}' because there is already a running backup '{runningTask.Id}'");
 
                     throw new BackupAlreadyRunningException(
                         $"Could not start backup task '{periodicBackup.Configuration.TaskId}' because there is already a running backup under operation id '{runningTask.Id}'")
@@ -419,8 +422,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     BackupUtils.SaveBackupStatus(periodicBackup.BackupStatus, _database.Name, _database.ServerStore, _logger, operationCancelToken: periodicBackup.CancelToken);
 
                     var message = $"Failed to start the backup task: '{periodicBackup.Configuration.Name}'";
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations(message, e);
+                    if (_logger.IsErrorEnabled)
+                        _logger.Error(message, e);
 
                     ScheduleNextBackup(periodicBackup, elapsed: null, lockTaken: true);
 
@@ -490,8 +493,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     runningBackupStatus.OriginalBackupTime = inMemoryBackupStatus.BackupStatus.OriginalBackupTime;
                 }
 
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Canceled the backup thread: '{periodicBackup.Configuration.Name}'", oce);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Canceled the backup thread: '{periodicBackup.Configuration.Name}'", oce);
 
                 periodicBackup.BackupStatus = runningBackupStatus;
                 ScheduleNextBackup(periodicBackup, backupResult?.Elapsed, lockTaken: false);
@@ -500,8 +503,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Failed to run the backup thread: '{periodicBackup.Configuration.Name}'", e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error($"Failed to run the backup thread: '{periodicBackup.Configuration.Name}'", e);
 
                 periodicBackup.BackupStatus = runningBackupStatus;
                 ScheduleNextBackup(periodicBackup, backupResult?.Elapsed, lockTaken: false);
@@ -529,8 +532,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             catch (Exception e)
             {
                 var message = $"Failed to schedule next backup for task: '{periodicBackup.Configuration.Name}'";
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations(message, e);
+                if (_logger.IsWarnEnabled)
+                    _logger.Warn(message, e);
 
                 _database.NotificationCenter.Add(AlertRaised.Create(
                     _database.Name,
@@ -556,8 +559,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             if (_periodicBackups.TryGetValue(backupInfo.TaskId, out periodicBackup) == false)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Backup {backupInfo.TaskId}, doesn't exist anymore");
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug($"Backup {backupInfo.TaskId}, doesn't exist anymore");
 
                 // periodic backup doesn't exist anymore
                 return false;
@@ -569,8 +572,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 if (rawRecord == null)
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Couldn't run backup task '{backupInfo.TaskId}' because database '{_database.Name}' record is null.");
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Couldn't run backup task '{backupInfo.TaskId}' because database '{_database.Name}' record is null.");
 
                     return false;
                 }
@@ -602,8 +605,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     break;
             }
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations(msg);
+            if (_logger.IsInfoEnabled)
+                _logger.Info(msg);
 
             return taskStatus == TaskStatus.ActiveByCurrentNode;
         }
@@ -762,14 +765,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 case TaskStatus.Disabled:
                     existingBackupState.DisableFutureBackups();
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will cancel the backup for it.");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Backup task '{taskId}' state is '{taskState}', will cancel the backup for it.");
 
                     return;
                 case TaskStatus.ActiveByOtherNode:
                     // the task is disabled or this node isn't responsible for the backup task
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will keep the timer for it.");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Backup task '{taskId}' state is '{taskState}', will keep the timer for it.");
 
                     return;
 
@@ -796,8 +799,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         return;
                     }
 
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Backup task '{taskId}' state is '{taskState}', the task has frequency changes or doesn't have scheduled backup, the timer will be rearranged and the task will be executed by current node '{_database.ServerStore.NodeTag}'.");
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Backup task '{taskId}' state is '{taskState}', the task has frequency changes or doesn't have scheduled backup, the timer will be rearranged and the task will be executed by current node '{_database.ServerStore.NodeTag}'.");
 
                     var backupStatus = GetBackupStatus(taskId, inMemoryBackupStatus: null);
                     existingBackupState.UpdateTimer(GetNextBackupDetails(newConfiguration, backupStatus, _serverStore.NodeTag), lockTaken: false);
@@ -876,8 +879,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations("Error when disposing periodic backup runner task", e);
+                if (_logger.IsWarnEnabled)
+                    _logger.Warn("Error when disposing periodic backup runner task", e);
             }
         }
 
@@ -969,8 +972,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             message += $", error: {parameters.Exception.Message}";
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations(message);
+            if (_logger.IsErrorEnabled)
+                _logger.Error(message);
 
             _database.NotificationCenter.Add(AlertRaised.Create(
                 _database.Name,

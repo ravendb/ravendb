@@ -22,6 +22,7 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
@@ -31,6 +32,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data;
@@ -83,9 +85,9 @@ namespace Raven.Server.Documents
         private static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
-        private readonly Action<LogMode, string> _addToInitLog;
+        private readonly Action<LogLevel, string> _addToInitLog;
 
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private readonly string _name;
 
         private static readonly Slice FixCountersLastKeySlice;
@@ -115,12 +117,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public DocumentsStorage(DocumentDatabase documentDatabase, Action<LogMode, string> addToInitLog)
+        public DocumentsStorage(DocumentDatabase documentDatabase, Action<LogLevel, string> addToInitLog)
         {
             DocumentDatabase = documentDatabase;
             SetDocumentsStorageSchemas();
             _name = DocumentDatabase.Name;
-            _logger = LoggingSource.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), DocumentDatabase);
             _addToInitLog = addToInitLog;
         }
 
@@ -161,9 +163,9 @@ namespace Raven.Server.Documents
 
         public void Initialize(bool generateNewDatabaseId = false)
         {
-            if (_logger.IsInfoEnabled)
+            if (_logger.IsDebugEnabled)
             {
-                _logger.Info
+                _logger.Debug
                 ("Starting to open document storage for " + (DocumentDatabase.Configuration.Core.RunInMemory
                      ? "<memory>"
                      : DocumentDatabase.Configuration.Core.DataDirectory.FullPath));
@@ -180,7 +182,7 @@ namespace Raven.Server.Documents
 
             }
 
-            var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification);
+            var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification, LoggingResource.Database(_name));
 
             options.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoveryError += DocumentDatabase.HandleOnDatabaseRecoveryError;
@@ -219,22 +221,25 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges, CatastrophicFailureNotification catastrophicFailureNotification)
+        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource)
         {
             if (config.Core.RunInMemory)
                 return StorageEnvironmentOptions.CreateMemoryOnly(
                     config.Core.DataDirectory.FullPath,
                     config.Storage.TempPath?.FullPath,
                     ioChanges,
-                    catastrophicFailureNotification);
+                    catastrophicFailureNotification,
+                    loggingResource,
+                    loggingComponent: null);
 
             return StorageEnvironmentOptions.ForPath(
                 config.Core.DataDirectory.FullPath,
                 config.Storage.TempPath?.FullPath,
                 null,
                 ioChanges,
-                catastrophicFailureNotification
-            );
+                catastrophicFailureNotification,
+                loggingResource,
+                loggingComponent: null);
         }
 
         private void Initialize(StorageEnvironmentOptions options)
@@ -296,8 +301,8 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Could not open documents store for '{_name}' ({options}).", e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error($"Could not open documents store for '{_name}' ({options}).", e);
 
                 Dispose();
                 options.Dispose();

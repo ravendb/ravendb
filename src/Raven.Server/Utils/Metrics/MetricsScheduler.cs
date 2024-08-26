@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
+using Raven.Server.Logging;
 using Sparrow.Collections;
 using Sparrow.Logging;
 
@@ -22,13 +23,12 @@ namespace Raven.Server.Utils.Metrics
 
         private readonly ConcurrentSet<WeakReference<Ewma>> _scheduledEwmaActions = new ConcurrentSet<WeakReference<Ewma>>();
 
-        private readonly Logger _logger;
+        private static readonly RavenLogger _logger = RavenLogManager.Instance.GetLoggerForServer<MetricsScheduler>();
 
         public static readonly MetricsScheduler Instance = new MetricsScheduler();
 
         private MetricsScheduler()
         {
-            _logger = LoggingSource.Instance.GetLogger<MetricsScheduler>("Server");
             _tickIntervalInNanoseconds = Clock.NanosecondsInSecond;
             _schedulerThread = new Thread(SchedulerTicking)
             {

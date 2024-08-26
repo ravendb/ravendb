@@ -9,6 +9,7 @@ using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Voron.Global;
 using Voron.Impl.Paging;
+using Voron.Logging;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util.Settings;
@@ -23,7 +24,7 @@ namespace Voron.Impl.Journal
         private readonly StorageEnvironmentOptions _options;
 
         private readonly SafeJournalHandle _writeHandle;
-        private readonly Logger _log;
+        private readonly RavenLogger _log;
         private SafeJournalHandle _readHandle = new SafeJournalHandle();
         private int _refs;
         private bool _workingSetQuotaLogged = false;
@@ -37,7 +38,7 @@ namespace Voron.Impl.Journal
         {
             _options = options;
             FileName = filename;
-            _log = LoggingSource.Instance.GetLogger<JournalWriter>(options.BasePath.FullPath);
+            _log = RavenLogManager.Instance.GetLoggerForVoron<JournalWriter>(options, options.BasePath.FullPath);
 
             var result = Pal.rvn_open_journal_for_writes(filename.FullPath, mode, size, options.SupportDurabilityFlags, out _writeHandle, out var actualSize, out var error);
             if (result != PalFlags.FailCodes.Success)
@@ -56,9 +57,9 @@ namespace Voron.Impl.Journal
                 if (result != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {numberOf4Kb * 4L * Constants.Size.Kilobyte}, numberOf4Kb={numberOf4Kb}");
 
-                if (error == ERROR_WORKING_SET_QUOTA && _log.IsOperationsEnabled && _workingSetQuotaLogged == false)
+                if (error == ERROR_WORKING_SET_QUOTA && _log.IsInfoEnabled && _workingSetQuotaLogged == false)
                 {
-                    _log.Operations(
+                    _log.Info(
                         $"We managed to accomplish journal write although we got {nameof(ERROR_WORKING_SET_QUOTA)} under the covers and wrote data in 4KB chunks");
 
                     _workingSetQuotaLogged = true;

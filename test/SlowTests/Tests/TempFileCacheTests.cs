@@ -18,7 +18,7 @@ namespace SlowTests.Tests
         public void Can_reuse_files_for_cache()
         {
             var path = new VoronPathSetting(NewDataPath());
-            var environment = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(path, path, path, null, null);
+            var environment = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(path, path, path, null, null, null, null);
 
             using (File.Create(TempFileCache.GetTempFileName(environment)))
             {
@@ -34,7 +34,7 @@ namespace SlowTests.Tests
         public void Skip_files_that_are_in_use()
         {
             var path = new VoronPathSetting(NewDataPath());
-            var environment = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(path, path, path, null, null);
+            var environment = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(path, path, path, null, null, null, null);
 
             for (var i = 0; i < TempFileCache.MaxFilesToKeepInCache; i++)
             {

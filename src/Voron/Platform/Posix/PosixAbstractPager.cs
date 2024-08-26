@@ -15,8 +15,6 @@ namespace Voron.Platform.Posix
 
         private readonly bool _supportsUnmapping;
 
-        private readonly Logger _log = LoggingSource.Instance.GetLogger<PosixAbstractPager>("PosixAbstractPager");
-
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
         {
             return CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
@@ -39,8 +37,8 @@ namespace Voron.Platform.Posix
             return base.AcquirePagePointer(tx, pageNumber, state);
         }
 
-        protected PosixAbstractPager(StorageEnvironmentOptions options, bool canPrefetchAhead, bool usePageProtection = false, bool supportsUnmapping = true)
-            : base(options, canPrefetchAhead, usePageProtection: usePageProtection)
+        protected PosixAbstractPager(StorageEnvironmentOptions options, RavenLogger logger, bool canPrefetchAhead, bool usePageProtection = false, bool supportsUnmapping = true)
+            : base(options, logger, canPrefetchAhead, usePageProtection: usePageProtection)
         {
             _supportsUnmapping = supportsUnmapping;
         }
@@ -58,8 +56,8 @@ namespace Voron.Platform.Posix
             {
                 if (Syscall.madvise(ptr, new UIntPtr((ulong)size), MAdvFlags.MADV_DONTNEED) != 0)
                 {
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Failed to madvise MDV_DONTNEED for {FileName?.FullPath}");
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Failed to madvise MDV_DONTNEED for {FileName?.FullPath}");
                 }
             }
 

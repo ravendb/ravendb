@@ -31,7 +31,7 @@ namespace SlowTests.Issues
             CreateAndPopulateTree(startWithBigTx: false);
 
             // restart
-            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath(DataDir), manualFlushing: true)))
+            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPathForTests(DataDir), manualFlushing: true)))
             {
                 var journalPath = env.Options.JournalPath.FullPath;
                 var journalsCount = new DirectoryInfo(journalPath).GetFiles().Length;
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
             CreateAndPopulateTree(startWithBigTx: true);
 
             // restart
-            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath(DataDir), manualFlushing: false)))
+            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPathForTests(DataDir), manualFlushing: false)))
             {
                 var journalPath = env.Options.JournalPath.FullPath;
                 var journalsCount = new DirectoryInfo(journalPath).GetFiles().Length;
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
             CreateAndPopulateTree(startWithBigTx: true);
 
             // restart
-            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath(DataDir), manualFlushing: false)))
+            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPathForTests(DataDir), manualFlushing: false)))
             {
                 var journalPath = env.Options.JournalPath.FullPath;
                 var journalsCount = new DirectoryInfo(journalPath).GetFiles().Length;
@@ -116,7 +116,7 @@ namespace SlowTests.Issues
 
         private void CreateAndPopulateTree(bool startWithBigTx)
         {
-            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPath(DataDir), manualFlushing: true)))
+            using (var env = new StorageEnvironment(ModifyOptions(StorageEnvironmentOptions.ForPathForTests(DataDir), manualFlushing: true)))
             {
                 using (var tx = env.WriteTransaction())
                 {

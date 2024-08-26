@@ -12,9 +12,11 @@ using Raven.Server.Documents.Indexes.MapReduce.Static.Sharding;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Sharding;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding.Queries;
 
@@ -28,6 +30,7 @@ public class ShardedMapReduceQueryResultsMerger
     private readonly bool _isAutoMapReduceQuery;
     protected readonly TransactionOperationContext Context;
     protected readonly CancellationToken Token;
+    private readonly RavenLogger _logger;
 
     public ShardedMapReduceQueryResultsMerger(List<BlittableJsonReaderObject> currentResults, ShardedDatabaseContext.ShardedIndexesContext indexesContext, string indexName, bool isAutoMapReduceQuery, TransactionOperationContext context, CancellationToken token)
     {
@@ -37,6 +40,7 @@ public class ShardedMapReduceQueryResultsMerger
         _isAutoMapReduceQuery = isAutoMapReduceQuery;
         Context = context;
         Token = token;
+        _logger = RavenLogManager.Instance.GetLoggerForDatabase<ShardedMapReduceQueryResultsMerger>(indexesContext.DatabaseContext);
     }
 
     public List<BlittableJsonReaderObject> Merge()
@@ -63,7 +67,7 @@ public class ShardedMapReduceQueryResultsMerger
 
     protected virtual List<BlittableJsonReaderObject> AggregateForStaticMapReduce(IndexInformationHolder index)
     {
-        using (var unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Sharded//Indexes//{index.Name}"))
+        using (var unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling(_logger, $"Sharded//Indexes//{index.Name}"))
         using (CurrentIndexingScope.Current = new OrchestratorIndexingScope(Context, unmanagedBuffersPool))
         {
             var compiled = ((StaticIndexInformationHolder)index).Compiled;

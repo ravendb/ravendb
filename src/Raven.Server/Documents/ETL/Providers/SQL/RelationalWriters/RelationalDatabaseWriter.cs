@@ -14,6 +14,7 @@ using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Extensions.Streams;
 using Raven.Client.Util;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
     public sealed class RelationalDatabaseWriter : RelationalDatabaseWriterBase, IDisposable
     {
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         private readonly SqlEtl _etl;
         private readonly DocumentDatabase _database;
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
         {
             _etl = etl;
             _database = database;
-            _logger = LoggingSource.Instance.GetLogger<RelationalDatabaseWriter>(_database.Name);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<RelationalDatabaseWriter>(database);
             _providerFactory = GetDbProviderFactory(etl.Configuration);
             _providerType = SqlProviderParser.GetSupportedProvider(_etl.Configuration.Connection.FactoryName);
             _commandBuilder = _providerFactory.InitializeCommandBuilder();

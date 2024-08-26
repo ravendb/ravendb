@@ -31,7 +31,7 @@ namespace SlowTests.Voron.Compaction
         public void ShouldOccupyLessSpace(int seed)
         {
             var r = new Random(seed);
-            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
+            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPathForTests(DataDir);
             storageEnvironmentOptions.ManualFlushing = true;
             using (var env = new StorageEnvironment(storageEnvironmentOptions))
             {
@@ -65,11 +65,11 @@ namespace SlowTests.Voron.Compaction
             }
 
             var oldSize = GetDirSize(new DirectoryInfo(DataDir));
-            storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(DataDir);
+            storageEnvironmentOptions = StorageEnvironmentOptions.ForPathForTests(DataDir);
             storageEnvironmentOptions.ManualFlushing = true;
             var compactedData = Path.Combine(DataDir, "Compacted");
             StorageCompaction.Execute(storageEnvironmentOptions,
-                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
+                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPathForTests(compactedData));
 
             var newSize = GetDirSize(new DirectoryInfo(compactedData));
 
@@ -97,7 +97,7 @@ namespace SlowTests.Voron.Compaction
             const int multiValueRecordsCount = 4;
             const int multiValuesCount = 3;
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 for (int i = 0; i < treeCount; i++)
                 {
@@ -140,10 +140,10 @@ namespace SlowTests.Voron.Compaction
             }
 
             var compactedData = Path.Combine(DataDir, "Compacted");
-            StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir),
-                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
+            StorageCompaction.Execute(StorageEnvironmentOptions.ForPathForTests(DataDir),
+                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPathForTests(compactedData));
 
-            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData)))
+            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(compactedData)))
             {
                 using (var tx = compacted.ReadTransaction())
                 {
@@ -211,7 +211,7 @@ namespace SlowTests.Voron.Compaction
             r.NextBytes(fooBytes);
             r.NextBytes(barBytes);
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -225,10 +225,10 @@ namespace SlowTests.Voron.Compaction
             }
 
             var compactedData = Path.Combine(DataDir, "Compacted");
-            StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir),
-                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
+            StorageCompaction.Execute(StorageEnvironmentOptions.ForPathForTests(DataDir),
+                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPathForTests(compactedData));
 
-            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData)))
+            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(compactedData)))
             {
                 using (var tx = compacted.WriteTransaction())
                 {
@@ -257,7 +257,7 @@ namespace SlowTests.Voron.Compaction
             var bytes = new byte[size];
             r.NextBytes(bytes);
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -280,10 +280,10 @@ namespace SlowTests.Voron.Compaction
             }
 
             var compactedData = Path.Combine(DataDir, "Compacted");
-            StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir),
-                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
+            StorageCompaction.Execute(StorageEnvironmentOptions.ForPathForTests(DataDir),
+                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPathForTests(compactedData));
 
-            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData)))
+            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(compactedData)))
             {
                 using (var tx = compacted.WriteTransaction())
                 {

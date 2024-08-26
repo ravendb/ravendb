@@ -16,6 +16,7 @@ using Sparrow.Collections;
 using Sparrow.Server;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
+using Voron.Logging;
 
 namespace Voron.Impl.Journal
 {
@@ -33,7 +34,7 @@ namespace Voron.Impl.Journal
 
         private readonly FastList<PagePosition> _unusedPages;
         private readonly ContentionLoggingLocker _locker2;
-        private Logger _logger;
+        private RavenLogger _logger;
 
         public JournalFile(StorageEnvironment env, IJournalWriter journalWriter, long journalNumber)
         {
@@ -43,7 +44,7 @@ namespace Voron.Impl.Journal
             _journalWriter = journalWriter;
             _writePosIn4Kb = 0;
             _unusedPages = new FastList<PagePosition>();
-            _logger = LoggingSource.Instance.GetLogger<JournalFile>(JournalWriter.FileName.FullPath);
+            _logger = RavenLogManager.Instance.GetLoggerForVoron<JournalFile>(env.Options, JournalWriter.FileName.FullPath);
             _locker2 = new ContentionLoggingLocker(_logger, JournalWriter.FileName.FullPath);
         }
 
@@ -59,8 +60,8 @@ namespace Voron.Impl.Journal
 
         public long Available4Kbs => _journalWriter?.NumberOfAllocated4Kb - _writePosIn4Kb ?? 0;
 
-        public Size JournalSize => new Size(_journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes); 
-        
+        public Size JournalSize => new Size(_journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes);
+
         internal IJournalWriter JournalWriter => _journalWriter;
 
         public PageTable PageTranslationTable => _pageTranslationTable;
@@ -331,9 +332,9 @@ namespace Voron.Impl.Journal
                 totalFreed++;
             }
 
-            if (_logger.IsInfoEnabled)
+            if (_logger.IsDebugEnabled)
             {
-                _logger.Info($"Freed {totalFreed} scratch pages used by journal that will be available after transaction {availableForAllocationAfterTx}. There were {unusedPages.Count} unused pages and {unusedAndFree.Count} unused and free.");
+                _logger.Debug($"Freed {totalFreed} scratch pages used by journal that will be available after transaction {availableForAllocationAfterTx}. There were {unusedPages.Count} unused pages and {unusedAndFree.Count} unused and free.");
             }
 
             _scratchPagesPositionsPool.Free(unusedPages);

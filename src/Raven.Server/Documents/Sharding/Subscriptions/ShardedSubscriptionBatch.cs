@@ -37,7 +37,7 @@ public sealed class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJs
         ConfirmFromShardSubscriptionConnectionTcs?.TrySetException(e);
     }
 
-    public ShardedSubscriptionBatch(RequestExecutor requestExecutor, string dbName, Logger logger, ShardedDatabaseContext databaseContext) : base(requestExecutor, dbName, logger)
+    public ShardedSubscriptionBatch(RequestExecutor requestExecutor, string dbName, RavenLogger logger, ShardedDatabaseContext databaseContext) : base(requestExecutor, dbName, logger)
     {
         ShardName = dbName;
         _databaseContext = databaseContext;

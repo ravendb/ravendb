@@ -17,7 +17,7 @@ namespace SlowTests.Voron.Issues
         {
             var dataDir = DataDir;
 
-            using (var options = StorageEnvironmentOptions.ForPath(dataDir))
+            using (var options = StorageEnvironmentOptions.ForPathForTests(dataDir))
             {
                 options.SimulateFailureOnDbCreation = true;
 
@@ -30,7 +30,7 @@ namespace SlowTests.Voron.Issues
                 });
             }
 
-            using (var options = StorageEnvironmentOptions.ForPath(dataDir))
+            using (var options = StorageEnvironmentOptions.ForPathForTests(dataDir))
             {
                 using (var s = new StorageEnvironment(options))
                 {

@@ -15,6 +15,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -48,7 +49,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected readonly JsonOperationContext Context;
 
         protected string DatabaseName => RestoreConfiguration.DatabaseName;
-        protected static readonly Logger Logger = LoggingSource.Instance.GetLogger<AbstractRestoreBackupTask>("Server");
+        protected static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<AbstractRestoreBackupTask>();
         protected bool DatabaseValidation = true;
         protected bool DeleteDatabaseOnFailure = true;
         protected InitializeOptions Options = InitializeOptions.SkipLoadingDatabaseRecord;
@@ -228,17 +229,29 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected void CreateDocumentDatabase()
         {
             var configuration = CreateDatabaseConfiguration();
-            var addToInitLog = new Action<LogMode, string>((logMode, txt) => // init log is not save in mem during RestoreBackup
+            var addToInitLog = new Action<LogLevel, string>((logMode, txt) => // init log is not save in mem during RestoreBackup
             {
                 var msg = $"[RestoreBackup] {DateTime.UtcNow} :: Database '{DatabaseName}' : {txt}";
 
                 switch (logMode)
                 {
-                    case LogMode.Operations when Logger.IsOperationsEnabled:
-                        Logger.Operations(msg);
+                    case LogLevel.Trace when Logger.IsTraceEnabled:
+                        Logger.Trace(msg);
                         break;
-                    case LogMode.Information when Logger.IsInfoEnabled:
+                    case LogLevel.Debug when Logger.IsDebugEnabled:
+                        Logger.Debug(msg);
+                        break;
+                    case LogLevel.Info when Logger.IsInfoEnabled:
                         Logger.Info(msg);
+                        break;
+                    case LogLevel.Warn when Logger.IsWarnEnabled:
+                        Logger.Warn(msg);
+                        break;
+                    case LogLevel.Error when Logger.IsErrorEnabled:
+                        Logger.Error(msg);
+                        break;
+                    case LogLevel.Fatal when Logger.IsFatalEnabled:
+                        Logger.Fatal(msg);
                         break;
                 }
             });
@@ -592,8 +605,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         private async Task OnErrorAsync(Action<IOperationProgress> onProgress, Exception e)
         {
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations("Failed to restore database", e);
+            if (Logger.IsErrorEnabled)
+                Logger.Error("Failed to restore database", e);
 
             var alert = AlertRaised.Create(
                 RestoreConfiguration.DatabaseName,

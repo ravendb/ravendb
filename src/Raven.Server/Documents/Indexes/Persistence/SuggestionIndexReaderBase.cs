@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 {
     public abstract class SuggestionIndexReaderBase : IndexOperationBase
     {
-        protected SuggestionIndexReaderBase(Index index, Logger logger) : base(index, logger)
+        protected SuggestionIndexReaderBase(Index index, RavenLogger logger) : base(index, logger)
         {
         }
 

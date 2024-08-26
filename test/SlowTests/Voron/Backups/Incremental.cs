@@ -56,7 +56,7 @@ namespace SlowTests.Voron.Backups
 
             BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
-            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPathForTests(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[] { _incrementalBackupTestUtils.IncrementalBackupFile(0) });
@@ -130,7 +130,7 @@ namespace SlowTests.Voron.Backups
 
             BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(2));
 
-            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPathForTests(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
@@ -201,7 +201,7 @@ namespace SlowTests.Voron.Backups
 
             Assert.Equal(usedByLastTransaction, backedUpPages);
 
-            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPathForTests(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
@@ -265,7 +265,7 @@ namespace SlowTests.Voron.Backups
 
             Assert.Equal(usedByLastTransaction, backedUpPages);
 
-            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPathForTests(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
@@ -328,7 +328,7 @@ namespace SlowTests.Voron.Backups
 
             BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
-            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPathForTests(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
@@ -396,7 +396,7 @@ namespace SlowTests.Voron.Backups
 
             BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
-            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPathForTests(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
@@ -461,7 +461,7 @@ namespace SlowTests.Voron.Backups
 
             BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
-            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPathForTests(_incrementalBackupTestUtils.RestoredStoragePath);
             options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
             BackupMethods.Incremental.Restore(options, new[]
@@ -491,7 +491,7 @@ namespace SlowTests.Voron.Backups
         {
             IOExtensions.DeleteDirectory(DataDir);
 
-            Options = StorageEnvironmentOptions.ForPath(DataDir);
+            Options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             Options.MaxLogFileSize = Constants.Storage.PageSize;
             Options.IncrementalBackupEnabled = true;
             Options.ManualFlushing = true;
@@ -519,7 +519,7 @@ namespace SlowTests.Voron.Backups
 
             // Verify that data is restored
 
-            var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
+            var options = StorageEnvironmentOptions.ForPathForTests(_incrementalBackupTestUtils.RestoredStoragePath);
             var backupFiles = Enumerable.Range(0, 10).Select(n => _incrementalBackupTestUtils.IncrementalBackupFile(n));
 
             BackupMethods.Incremental.Restore(options, backupFiles);

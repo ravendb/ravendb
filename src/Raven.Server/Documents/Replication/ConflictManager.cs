@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -16,14 +17,14 @@ namespace Raven.Server.Documents.Replication
     {
         private readonly DocumentDatabase _database;
 
-        private readonly Logger _log;
+        private readonly RavenLogger _log;
         private readonly ResolveConflictOnReplicationConfigurationChange _conflictResolver;
 
         public ConflictManager(DocumentDatabase database, ResolveConflictOnReplicationConfigurationChange conflictResolver)
         {
             _conflictResolver = conflictResolver;
             _database = database;
-            _log = LoggingSource.Instance.GetLogger<ConflictManager>(_database.Name);
+            _log = RavenLogManager.Instance.GetLoggerForDatabase<ConflictManager>(_database.Name);
         }
 
         public unsafe void HandleConflictForDocument(

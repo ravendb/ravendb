@@ -8,10 +8,12 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
@@ -73,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.Workers
     {
         private readonly ReferencesState _referencesState = new ReferencesState();
 
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         private readonly Index _index;
 
@@ -90,8 +92,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             _configuration = configuration;
             _indexStorage = indexStorage;
             _referencesStorage = referencesStorage;
-            _logger = LoggingSource.Instance
-                .GetLogger<HandleReferences>(_indexStorage.DocumentDatabase.Name);
+            _logger = RavenLogManager.Instance.GetLoggerForIndex(GetType(), index);
         }
 
         public string Name => "References";

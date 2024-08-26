@@ -47,16 +47,16 @@ public sealed class KafkaQueueSink : QueueSinkProcess
         var consumer = new ConsumerBuilder<string, byte[]>(consumerConfig)
             .SetErrorHandler((consumer, error) =>
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations(
+                if (Logger.IsErrorEnabled)
+                    Logger.Error(
                         $"Kafka Sink process '{Name}' got the following Kafka consumer " +
                         $"{(error.IsFatal ? "fatal" : "non fatal")}{(error.IsBrokerError ? " broker" : string.Empty)} error: {error.Reason} " +
                         $"(code: {error.Code}, is local: {error.IsLocalError})");
             })
             .SetLogHandler((consumer, logMessage) =>
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Kafka Sink process: {Name}. {logMessage.Message} (level: {logMessage.Level}, facility: {logMessage.Facility}");
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"Kafka Sink process: {Name}. {logMessage.Message} (level: {logMessage.Level}, facility: {logMessage.Facility}");
             })
             .Build();
         consumer.Subscribe(Script.Queues);

@@ -16,16 +16,16 @@ public sealed class BatchQueueSinkScriptCommand : DocumentMergedTransactionComma
     private readonly string _script;
     private readonly QueueSinkStatsScope _scriptProcessingScope;
     private readonly QueueSinkProcessStatistics _statistics;
-    private readonly Logger _logger;
+    private readonly RavenLogger _logger;
 
     public BatchQueueSinkScriptCommand(string script, List<BlittableJsonReaderObject> messages, QueueSinkStatsScope scriptProcessingScope,
-        QueueSinkProcessStatistics statistics, Logger logger)
+        QueueSinkProcessStatistics statistics, RavenLogger logger)
     {
         _script = script ?? throw new ArgumentException("Script cannot be null", nameof(script));
         _messages = messages ?? throw new ArgumentException("Messages cannot be null", nameof(messages));
         _scriptProcessingScope = scriptProcessingScope ?? throw new ArgumentException($"{nameof(QueueSinkStatsScope)} cannot be null", nameof(scriptProcessingScope));
         _statistics = statistics ?? throw new ArgumentException($"{nameof(QueueSinkProcessStatistics)} cannot be null", nameof(statistics));
-        _logger = logger ?? throw new ArgumentException($"{nameof(Logger)} cannot be null", nameof(logger));
+        _logger = logger ?? throw new ArgumentException($"{nameof(RavenLogger)} cannot be null", nameof(logger));
     }
 
     private BatchQueueSinkScriptCommand(string script, List<BlittableJsonReaderObject> messages)
@@ -63,8 +63,8 @@ public sealed class BatchQueueSinkScriptCommand : DocumentMergedTransactionComma
                 }
                 catch (Exception e)
                 {
-                    if (_logger?.IsOperationsEnabled == true)
-                        _logger.Operations("Failed to process consumed message by the script.", e);
+                    if (_logger?.IsErrorEnabled == true)
+                        _logger.Error("Failed to process consumed message by the script.", e);
 
                     _scriptProcessingScope?.RecordScriptProcessingError();
                     _statistics?.RecordScriptExecutionError(e);

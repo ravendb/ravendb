@@ -8,7 +8,9 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
 {
     public sealed class MultiSourceNuGetFetcher
     {
-        public static MultiSourceNuGetFetcher Instance = new MultiSourceNuGetFetcher();
+        public static MultiSourceNuGetFetcher ForIndexes = new MultiSourceNuGetFetcher();
+
+        public static MultiSourceNuGetFetcher ForLogging = new MultiSourceNuGetFetcher();
 
         private bool _initialized;
         private PathSetting _rootPath;

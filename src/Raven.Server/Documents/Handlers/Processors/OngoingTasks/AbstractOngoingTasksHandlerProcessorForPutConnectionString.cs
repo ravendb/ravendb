@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             if (connectionString.Validate(ref errors) == false)
                 throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join($"{Environment.NewLine}", errors)}");
 
-            if (LoggingSource.AuditLog.IsInfoEnabled)
+            if (RavenLogManager.Instance.IsAuditEnabled)
             {
                 RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "PUT", $"Connection string '{connectionString.Name}'");
             }

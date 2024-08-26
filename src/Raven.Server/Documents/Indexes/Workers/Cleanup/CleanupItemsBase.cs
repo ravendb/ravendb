@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
@@ -15,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
 {
     public abstract class CleanupItemsBase : IIndexingWork
     {
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         private readonly Index _index;
         private readonly IndexingConfiguration _configuration;
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
         {
             _index = index;
             _configuration = configuration;
-            _logger = LoggingSource.Instance.GetLogger(indexStorage.DocumentDatabase.Name, GetType().FullName);
+            _logger = RavenLogManager.Instance.GetLoggerForIndex<CleanupDocuments>(index);
 
             IndexStorage = indexStorage;
         }
@@ -68,8 +69,8 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
                     var lastMappedEtag = IndexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
                     var lastTombstoneEtag = ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Collection: {collection}. LastMappedEtag: {lastMappedEtag:#,#;;0}. LastTombstoneEtag: {lastTombstoneEtag:#,#;;0}.");
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Executing cleanup for '{_index} ({_index.Name})'. Collection: {collection}. LastMappedEtag: {lastMappedEtag:#,#;;0}. LastTombstoneEtag: {lastTombstoneEtag:#,#;;0}.");
 
                     var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastTombstoneEtag;
@@ -105,8 +106,8 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
                                 lastEtag = tombstone.Etag;
                                 UpdateStats(inMemoryStats, lastEtag);
 
-                                if (_logger.IsInfoEnabled && totalProcessedCount % 2048 == 0)
-                                    _logger.Info($"Executing cleanup for '{_index.Name}'. Processed count: {totalProcessedCount:#,#;;0} etag: {lastEtag}.");
+                                if (_logger.IsDebugEnabled && totalProcessedCount % 2048 == 0)
+                                    _logger.Debug($"Executing cleanup for '{_index.Name}'. Processed count: {totalProcessedCount:#,#;;0} etag: {lastEtag}.");
 
                                 if (IsValidTombstoneType(tombstone) == false)
                                     continue; // this can happen when we have '@all_docs'
@@ -135,8 +136,8 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
                     if (count == 0)
                         continue;
 
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Processed {count} tombstones in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Executing cleanup for '{_index} ({_index.Name})'. Processed {count} tombstones in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
                     WriteLastProcessedTombstoneEtag(indexContext.Transaction, collection, lastEtag);
 

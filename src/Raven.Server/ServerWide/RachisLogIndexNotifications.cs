@@ -10,7 +10,7 @@ namespace Raven.Server.ServerWide;
 
 public class RachisLogIndexNotifications : AbstractRaftIndexNotifications<RecentLogIndexNotification>
 {
-    public Logger Log;
+    public RavenLogger Log;
 
     private readonly ConcurrentDictionary<long, TaskCompletionSource<object>> _tasksDictionary =
         new ConcurrentDictionary<long, TaskCompletionSource<object>>();
