@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -55,9 +57,9 @@ public class RavenDB_22703 : RavenTestBase
 
                 Assert.Equal(4, res.Count);
                 
-                var deleteByQueryOp = new DeleteByQueryOperation("from 'Bars'");
+                var deleteByQueryOp = store.Operations.Send(new DeleteByQueryOperation("from 'Bars'"));
                 
-                store.Operations.Send(deleteByQueryOp);
+                deleteByQueryOp.WaitForCompletion(TimeSpan.FromMinutes(1));
                 
                 Indexes.WaitForIndexing(store);
                 
@@ -118,6 +120,80 @@ public class RavenDB_22703 : RavenTestBase
             }
         }
     }
+    
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void TestStaticIndex(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                var subDto1 = new SubDto() { Name = "FirstName" };
+                var subDto2 = new SubDto() { Name = "SecondName" };
+                
+                var dto1 = new Dto() { SubDtoFirst = subDto1, SubDtoSecond = subDto2 };
+                
+                session.Store(dto1);
+
+                session.SaveChanges();
+                
+                var requestExecutor = store.GetRequestExecutor();
+                using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var reader = context.ReadObject(new DynamicJsonValue
+                    {
+                        ["SubDtoFirst"] = new DynamicJsonValue()
+                        {
+                            ["Name"] = "FirstName"
+                        },
+                        ["@metadata"] = new DynamicJsonValue{
+                            ["@collection"] = "Dtos",
+                            ["Raven-Clr-Type"] = "SlowTests.Issues.RavenDB_22703+Dto, SlowTests"
+                        }
+                    }, "dtos/2");
+                    requestExecutor.Execute(new PutDocumentCommand(store.Conventions, "dtos/2", null, reader), context);
+                    
+                    reader = context.ReadObject(new DynamicJsonValue
+                    {
+                        ["@metadata"] = new DynamicJsonValue{
+                            ["@collection"] = "Dtos",
+                            ["Raven-Clr-Type"] = "SlowTests.Issues.RavenDB_22703+Dto, SlowTests"
+                        }
+                    }, "dtos/3");
+                    requestExecutor.Execute(new PutDocumentCommand(store.Conventions, "dtos/3", null, reader), context);
+                }
+                
+                var index = new Dto_BySubDtos();
+                
+                index.Execute(store);
+                
+                Indexes.WaitForIndexing(store);
+                
+                var res = session.Query<Dto_BySubDtos.IndexEntry, Dto_BySubDtos>()
+                    .OrderByDescending(x => x.FirstName)
+                    .ThenByDescending(x => x.SecondName)
+                    .ProjectInto<Dto>()
+                    .ToList();
+                
+                Assert.Equal(2, res.Count);
+
+                index.Configuration["Indexing.IndexEmptyEntries"] = "true";
+                
+                index.Execute(store);
+                
+                Indexes.WaitForIndexing(store);
+                
+                res = session.Query<Dto_BySubDtos.IndexEntry, Dto_BySubDtos>()
+                    .OrderByDescending(x => x.FirstName)
+                    .ThenByDescending(x => x.SecondName)
+                    .ProjectInto<Dto>()
+                    .ToList();
+                
+                Assert.Equal(3, res.Count);
+            }
+        }
+    }
 
     private class Bar
     {
@@ -128,6 +204,31 @@ public class RavenDB_22703 : RavenTestBase
     {
         public short BarShort { get; set; }
         public bool? BarBool { get; set; }
+    }
+
+    private class Dto
+    {
+        public SubDto SubDtoFirst { get; set; }
+        public SubDto SubDtoSecond { get; set; }
+    }
+
+    private class SubDto
+    {
+        public string Name { get; set; }
+    }
+
+    private class Dto_BySubDtos : AbstractIndexCreationTask<Dto>
+    {
+        public class IndexEntry
+        {
+            public string FirstName { get; set; }
+            public string SecondName { get; set; }
+        }
+        public Dto_BySubDtos()
+        {
+            Map = dtos => from dto in dtos
+                select new IndexEntry() { FirstName = dto.SubDtoFirst.Name, SecondName = dto.SubDtoSecond.Name };
+        }
     }
     
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
