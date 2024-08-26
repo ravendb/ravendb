@@ -388,7 +388,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-                        await NotifyFeaturesAboutStateChangeAsync(record, index);
+                        await NotifyFeaturesAboutStateChangeAsync(record, index, nameof(Initialize));
                         RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
                     }
                     catch (Exception e)
@@ -1392,7 +1392,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async ValueTask StateChangedAsync(long index)
+        public async ValueTask StateChangedAsync(long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType)
         {
             try
             {
@@ -1415,7 +1415,7 @@ namespace Raven.Server.Documents
                     : Constants.Identities.DefaultSeparator;
                 StudioConfiguration = record.Studio;
 
-                await NotifyFeaturesAboutStateChangeAsync(record, index);
+                await NotifyFeaturesAboutStateChangeAsync(record, index, type, changeType);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
@@ -1438,7 +1438,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        private async ValueTask NotifyFeaturesAboutStateChangeAsync(DatabaseRecord record, long index)
+        private async ValueTask NotifyFeaturesAboutStateChangeAsync(DatabaseRecord record, long index, string type,
+            DatabasesLandlord.ClusterDatabaseChangeType? changeType = null)
         {
             if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
                 return;
@@ -1468,7 +1469,14 @@ namespace Raven.Server.Documents
                         $"{Name} != {record.DatabaseName}");
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordChangeIndex}) for {record.DatabaseName}.");
+                    {
+                        string msg = $"Starting to process record {index} (current {LastDatabaseRecordChangeIndex}) for {record.DatabaseName}. Type: {type}. ";
+
+                        if (changeType != null)
+                            msg += $"Cluster database change type: {changeType}";
+
+                        _logger.Info(msg);
+                    }
 
                     try
                     {
@@ -1651,7 +1659,7 @@ namespace Raven.Server.Documents
                 record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
 
-            return NotifyFeaturesAboutStateChangeAsync(record, index);
+            return NotifyFeaturesAboutStateChangeAsync(record, index, nameof(RefreshFeaturesAsync));
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)
