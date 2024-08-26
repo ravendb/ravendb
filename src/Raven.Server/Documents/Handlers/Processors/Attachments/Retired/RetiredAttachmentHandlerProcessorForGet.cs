@@ -7,9 +7,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
 {
-    internal class RetiredAttachmentHandlerProcessorForGetRetiredAttachment : AttachmentHandlerProcessorForGetAttachment
+    internal class RetiredAttachmentHandlerProcessorForGet : AttachmentHandlerProcessorForGetAttachment
     {
-        public RetiredAttachmentHandlerProcessorForGetRetiredAttachment([NotNull] DatabaseRequestHandler requestHandler, bool isDocument) : base(requestHandler, isDocument)
+        public RetiredAttachmentHandlerProcessorForGet([NotNull] DatabaseRequestHandler requestHandler, bool isDocument) : base(requestHandler, isDocument)
         {
 
         }

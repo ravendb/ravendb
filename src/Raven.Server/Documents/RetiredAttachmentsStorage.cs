@@ -199,6 +199,21 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             tree.MultiAdd(ticksSlice, key);
     }
 
+    public unsafe void RemoveRetirePutValue(DocumentsOperationContext context, Slice lowerId, long ticks)
+    {
+        var ticksBigEndian = Bits.SwapBytes(ticks);
+
+        var msg = $"Removing retired attachment put with key: '{lowerId}' from '{_treeName}' tree.";
+        if (_logger.IsOperationsEnabled)
+            _logger.Operations(msg);
+
+        var tree = context.Transaction.InnerTransaction.ReadTree(_treeName);
+        using (CreateRetiredAttachmentsKeyWithType(context, lowerId, AttachmentRetireType.PutRetire, out Slice key))
+        using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
+            tree.MultiDelete(ticksSlice, key);
+    }
+
+
     private unsafe ByteStringContext.InternalScope CreateRetiredAttachmentsKeyWithType(DocumentsOperationContext context, Slice lowerId, AttachmentRetireType retireType, out Slice outSlice)
     {
         var size = 1 + 1 + lowerId.Content.Length; // retireType + record separator + lowerId 
@@ -337,7 +352,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         if (config.Disabled)
             throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetireAttachmentsConfiguration)} is disabled.");
 
-        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(RetiredAttachmentHandlerProcessorForGetRetiredAttachment), config.S3Settings, config.AzureSettings, config.GlacierSettings, config.GoogleCloudSettings, config.FtpSettings);
+        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(RetiredAttachmentHandlerProcessorForGet), config.S3Settings, config.AzureSettings, config.GlacierSettings, config.GoogleCloudSettings, config.FtpSettings);
         return new DirectBackupDownloader(settings, retentionPolicyParameters: null, _logger, BackupUploaderBase.GenerateUploadResult(), progress => { }, tcs);
     }
 

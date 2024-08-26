@@ -8,12 +8,12 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
-    internal abstract class AbstractAttachmentHandlerProcessorForBulkAttachment<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractAttachmentHandlerProcessorForBulkPostAttachment<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext 
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
 
-        protected AbstractAttachmentHandlerProcessorForBulkAttachment([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+        protected AbstractAttachmentHandlerProcessorForBulkPostAttachment([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             using (var operationCancelToken = RequestHandler.CreateHttpRequestBoundOperationToken())
             {
-                var request = await context.ReadForDiskAsync(RequestHandler.RequestBodyStream(), "GetAttachments");
+                using var request = await context.ReadForDiskAsync(RequestHandler.RequestBodyStream(), "GetAttachments");
 
                 if (request.TryGet(nameof(AttachmentType), out string typeString) == false || Enum.TryParse(typeString, out AttachmentType type) == false)
                     throw new ArgumentException($"The '{nameof(AttachmentType)}' field in the body request is mandatory");

@@ -7,15 +7,15 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
 {
-    internal class RetiredAttachmentHandlerProcessorForBulkRetiredAttachment : AttachmentHandlerProcessorForBulkAttachment
+    internal class RetiredAttachmentHandlerProcessorForBulkPost : AttachmentHandlerProcessorForBulkPostAttachment
     {
-        public RetiredAttachmentHandlerProcessorForBulkRetiredAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+        public RetiredAttachmentHandlerProcessorForBulkPost([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
         public override string CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
         {
-            return RetiredAttachmentHandlerProcessorForGetRetiredAttachment.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, "bulk");
+            return RetiredAttachmentHandlerProcessorForGet.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, "bulk");
         }
 
         public override async Task<Stream> GetAttachmentStream(DirectBackupDownloader downloader, Attachment attachment, string collection)

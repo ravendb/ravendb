@@ -367,8 +367,10 @@ namespace Raven.Server.Documents
                                         {
                                             var existingEtag = TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
                                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                                            var attachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref partialTvr);
-                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, attachmentFlags);
+                                            //TODO: egor if we update retired attachment (can this even happen?) we might delete the old one from cloud storage...
+                                            var existingAttachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref partialTvr);
+                                            var existingRetireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref partialTvr);
+                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingAttachmentFlags, existingRetireAtTicks);
                                         }
                                     }
                                 }
@@ -1342,7 +1344,7 @@ namespace Raven.Server.Documents
         }
 
         public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, out CollectionName collectionName, bool updateDocument = true,
-            string hash = null, string contentType = null, bool usePartialKey = true, bool extractCollectionName = false)
+            string hash = null, string contentType = null, bool usePartialKey = true, bool extractCollectionName = false, bool storageOnly = false)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Argument is null or whitespace", nameof(documentId));
@@ -1395,7 +1397,7 @@ namespace Raven.Server.Documents
                     using (scope)
                     {
                         var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                        DeleteAttachmentDirect(context, keySlice, usePartialKey, name, expectedChangeVector, changeVector, lastModifiedTicks);
+                        DeleteAttachmentDirect(context, keySlice, usePartialKey, name, expectedChangeVector, changeVector, lastModifiedTicks, storageOnly);
                     }
                 }
 
@@ -1490,7 +1492,7 @@ namespace Raven.Server.Documents
         }
 
         public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name,
-            string expectedChangeVector, string changeVector, long lastModifiedTicks)
+            string expectedChangeVector, string changeVector, long lastModifiedTicks, bool storageOnly = false)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -1542,7 +1544,8 @@ namespace Raven.Server.Documents
                 }
 
                 var attachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref tvr);
-                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, attachmentFlags);
+                var retireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref tvr);
+                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, attachmentFlags, retireAtTicks, storageOnly);
             }
 
             table.Delete(tvr.Id);
@@ -1550,17 +1553,23 @@ namespace Raven.Server.Documents
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash,
-            string changeVector, long lastModifiedTicks, DocumentFlags flags, AttachmentFlags attachmentFlags)
+            string changeVector, long lastModifiedTicks, DocumentFlags flags, AttachmentFlags attachmentFlags, long retireAtTicks, bool storageOnly = false)
         {
             CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, flags);
             if (attachmentFlags.HasFlag(AttachmentFlags.Retired))
             {
-                // populate retired tree
-                TryDeleteRetiredAttachment(context, key);
-
+                if (storageOnly == false)
+                {
+                    // populate retired tree
+                    TryDeleteRetiredAttachment(context, key);
+                }
             }
             else
             {
+                if (retireAtTicks != -1)
+                {
+                    RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
+                }
 
                 // We may have another operation in the same transaction that would cause us to re-create
                 // the missing references, let's move the actual stream delete to the end of the transaction
@@ -1611,8 +1620,11 @@ namespace Raven.Server.Documents
                     using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref before.Reader, out Slice hash))
                     {
                         var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref before.Reader);
+
+                        //TODO: egor this will delete the attachments from cloud, do we want that ???? Maybe this should be part of the config ? I mean now we delete doc with retired attachemnt, it will delete the retire attachment from cloud!
                         var attachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref before.Reader);
-                        DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags, attachmentFlags);
+                        var retireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref before.Reader);
+                        DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags, attachmentFlags, retireAtTicks);
                     }
                 });
             }

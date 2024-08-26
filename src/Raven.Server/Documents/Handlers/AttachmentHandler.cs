@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments;
+using Raven.Server.Documents.Handlers.Processors.Attachments.Retired;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -39,13 +40,19 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/attachments/bulk", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/attachments/bulk", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetAttachments()
         {
-            using (var processor = new AttachmentHandlerProcessorForBulkAttachment(this))
+            using (var processor = new AttachmentHandlerProcessorForBulkPostAttachment(this))
                 await processor.ExecuteAsync();
         }
 
+        [RavenAction("/databases/*/attachments/bulk", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
+        public async Task DeleteAttachments()
+        {
+            using (var processor = new AttachmentHandlerProcessorForBulkDeleteAttachment(this))
+                await processor.ExecuteAsync();
+        }
         [RavenAction("/databases/*/debug/attachments/hash", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetHashCount()
         {
@@ -113,10 +120,11 @@ namespace Raven.Server.Documents.Handlers
             public string Name;
             public LazyStringValue ExpectedChangeVector;
             public DocumentDatabase Database;
+            public bool StorageOnly;
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedChangeVector, collectionName: out _);
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedChangeVector, collectionName: out _, storageOnly: StorageOnly);
                 return 1;
             }
 
