@@ -68,7 +68,7 @@ namespace Voron.Recovery
                 var ignoreDataIntegrityErrorsOfAlreadySyncedTransactionsArg = cmd.Option("--IgnoreInvalidDataErrorsOfAlreadySyncedTransactions", "Default is false.", CommandOptionType.SingleValue);
                 var ignoreInvalidPagesInARowArg = cmd.Option("--IgnoreInvalidPagesInARow", "Default is false.", CommandOptionType.SingleValue);
 
-                var loggingModeArg = cmd.Option("--LoggingMode", "Logging mode: Operations or Information.", CommandOptionType.SingleValue);
+                var loggingModeArg = cmd.Option("--LoggingLevel", "Logging mode: Operations or Information.", CommandOptionType.SingleValue);
 
                 var masterKey = cmd.Option("--MasterKey", "Encryption key: base64 string of the encryption master key", CommandOptionType.SingleValue);
 
@@ -177,9 +177,9 @@ namespace Voron.Recovery
                     if (loggingModeArg.HasValue())
                     {
                         var value = loggingModeArg.Value();
-                        if (Enum.TryParse(value, out LogMode mode) == false)
-                            return ExitWithError($"{nameof(config.LoggingMode)} argument value ({value}) is invalid", cmd);
-                        config.LoggingMode = mode;
+                        if (Enum.TryParse(value, out LogLevel mode) == false)
+                            return ExitWithError($"{nameof(config.LoggingLevel)} argument value ({value}) is invalid", cmd);
+                        config.LoggingLevel = mode;
                     }
 
                     if (masterKey.HasValue())
