@@ -275,11 +275,20 @@ public static class CoraxQueryBuilder
                      _ => throw new ArgumentOutOfRangeException("Already checked the FieldType, but was: " + sortBy.FieldType)
                 };
 
-                // TODO Michal: Add index version check 
                 var queryWithNullMatches = indexSearcher.IncludeNullMatch(in sortBy.Field, betweenQuery, sortBy.Ascending);
-                var queryWithNullAndNonExistingMatches = indexSearcher.IncludeNonExistingMatch(in sortBy.Field, queryWithNullMatches, sortBy.Ascending);
-                coraxQuery = queryWithNullAndNonExistingMatches;
-                streamingOptimization.SkipOrderByClause = true; //manually turn off the order by
+
+                var indexVersion = builderParameters.Index.Definition.Version;
+
+                if (indexVersion >= IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
+                {
+                    var queryWithNullAndNonExistingMatches = indexSearcher.IncludeNonExistingMatch(in sortBy.Field, queryWithNullMatches, sortBy.Ascending);
+                    coraxQuery = queryWithNullAndNonExistingMatches;
+                }
+
+                else
+                    coraxQuery = queryWithNullMatches;
+                
+                streamingOptimization.SkipOrderByClause = true; // manually turn off the order by
             }
             else 
             {

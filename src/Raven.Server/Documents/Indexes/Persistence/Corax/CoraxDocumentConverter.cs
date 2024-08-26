@@ -63,8 +63,7 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
             {
                 InsertRegularField(indexField, value, indexContext, builder, sourceDocument, out innerShouldSkip);
             }
-            // TODO Michal: Add index version check 
-            else
+            else if (_index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
             {
                 InsertNonExistingField(indexField, builder);
             }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using Amazon.SimpleNotificationService.Model;
@@ -58,6 +59,8 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             HandleCompoundFields();
 
         bool hasFields = false;
+        var nonExistingFieldsToInsert = new List<IndexField>(); 
+        
         foreach (var property in accessor.GetProperties(documentToProcess))
         {
             var value = property.Value;
@@ -65,8 +68,11 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             if (_fields.TryGetValue(property.Key, out var field) == false)
                 throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
 
-                
             InsertRegularField(field, value, indexContext, builder, sourceDocument, out var innerShouldSkip);
+            
+            if (innerShouldSkip)
+                nonExistingFieldsToInsert.Add(field);
+            
             hasFields |= innerShouldSkip == false;
                 
             if (storedValue is not null && innerShouldSkip == false)
@@ -93,6 +99,9 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             builder.Write(documentSourceField.FieldId, string.Empty, sourceDocumentId.AsSpan());
 
         builder.Write(0, string.Empty, id.AsSpan());
+
+        foreach (var indexField in nonExistingFieldsToInsert)
+            InsertNonExistingField(indexField, builder);
         
         return true;
         
