@@ -83,10 +83,11 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
 
         public override DynamicJsonValue ToAuditJson()
         {
-            DynamicJsonValue json = base.ToAuditJson();
+            DynamicJsonValue json = base.ToJson();
+            
             json[nameof(Nodes)] = new DynamicJsonArray(Nodes);
             json[nameof(EnableCompatibilityMode)] = EnableCompatibilityMode;
-
+            
             return json;
         }
     }

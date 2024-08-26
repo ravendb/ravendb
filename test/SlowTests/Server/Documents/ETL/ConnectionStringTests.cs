@@ -1,13 +1,16 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
@@ -303,6 +306,78 @@ namespace SlowTests.Server.Documents.ETL
                     }))); 
                 Assert.Contains("Raven.Client.Exceptions.BadRequestException: Invalid connection string configuration. Errors: Factory 'System.Data.OleDb' is not implemented yet.", e.Message);
             }
+        }
+
+        [Fact]
+        public void ConnectionStringsAuditJsonDoesntIncludeCredentials()
+        {
+            var sqlConnectionString = new SqlConnectionString
+            {
+                Name = "SqlConnectionString",
+                ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + ";Initial Catalog=0x901507",
+                FactoryName = "Npgsql"
+            };
+
+            var elasticSearchConnectionString = new ElasticSearchConnectionString
+            {
+                Name = "ElasticSearchConnectionString",
+                Nodes = ["http://127.0.0.1:8080"],
+            };
+
+            var queueConnectionString = new QueueConnectionString
+            {
+                Name = "QueueEtlConnectionString-Kafka",
+                BrokerType = QueueBrokerType.Kafka,
+                KafkaConnectionSettings = new KafkaConnectionSettings {BootstrapServers = "localhost:9092" },
+                RabbitMqConnectionSettings = new RabbitMqConnectionSettings {ConnectionString = "rabbitmq:here"}
+            };
+
+            var olapConnectionString = new OlapConnectionString
+            {
+                AzureSettings = new AzureSettings { AccountKey = "q", AccountName = "w", RemoteFolderName = string.Empty, StorageContainer = "322" },
+                FtpSettings = new FtpSettings { Url = string.Empty, },
+                GlacierSettings = new GlacierSettings { RemoteFolderName = string.Empty, AwsAccessKey = "q", AwsSecretKey = "w" },
+                GoogleCloudSettings = new GoogleCloudSettings { RemoteFolderName = string.Empty, BucketName = "b", GoogleCredentialsJson = "{}" },
+                S3Settings = new S3Settings { RemoteFolderName = string.Empty, AwsAccessKey = "q", AwsSecretKey = "w" },
+                Name = "lmao"
+            };
+
+            var sqlConnectionStringAuditJson = sqlConnectionString.ToAuditJson();
+            var elasticSearchConnectionStringAuditJson = elasticSearchConnectionString.ToAuditJson();
+            var queueConnectionStringAuditJson = queueConnectionString.ToAuditJson();
+            var olapConnectionStringAuditJson = olapConnectionString.ToAuditJson();
+
+            var kafkaConnectionSettingsAuditJson = (DynamicJsonValue)queueConnectionStringAuditJson[nameof(KafkaConnectionSettings)];
+            var rabbitmqConnectionSettingsAuditJson= (DynamicJsonValue)queueConnectionStringAuditJson[nameof(RabbitMqConnectionSettings)];
+
+            var azureSettingsAuditJson = (DynamicJsonValue)olapConnectionStringAuditJson[nameof(AzureSettings)];
+            var ftpSettingsAuditJson = (DynamicJsonValue)olapConnectionStringAuditJson[nameof(FtpSettings)];
+            var glacierSettingsAuditJson = (DynamicJsonValue)olapConnectionStringAuditJson[nameof(GlacierSettings)];
+            var googleCloudSettingsAuditJson = (DynamicJsonValue)olapConnectionStringAuditJson[nameof(GoogleCloudSettings)];
+            var s3SettingsAuditJson = (DynamicJsonValue)olapConnectionStringAuditJson[nameof(S3Settings)];
+            
+            Assert.False(sqlConnectionStringAuditJson.Properties.Select(x => x.Name).Contains("ConnectionString"));
+            Assert.False(elasticSearchConnectionStringAuditJson.Properties.Select(x => x.Name).Contains("Authentication"));
+            
+            Assert.False(kafkaConnectionSettingsAuditJson.Properties.Select(x => x.Name).Contains("ConnectionOptions"));
+            
+            Assert.False(rabbitmqConnectionSettingsAuditJson.Properties.Select(x => x.Name).Contains("ConnectionString"));
+                       
+            Assert.False(azureSettingsAuditJson.Properties.Select(x => x.Name).Contains("SasToken"));
+            Assert.False(azureSettingsAuditJson.Properties.Select(x => x.Name).Contains("AccountKey"));
+            
+            Assert.False(ftpSettingsAuditJson.Properties.Select(x => x.Name).Contains("Password"));
+            Assert.False(ftpSettingsAuditJson.Properties.Select(x => x.Name).Contains("CertificateAsBase64"));
+            
+            Assert.False(glacierSettingsAuditJson.Properties.Select(x => x.Name).Contains("AwsSessionToken"));
+            Assert.False(glacierSettingsAuditJson.Properties.Select(x => x.Name).Contains("AwsSecretKey"));
+            Assert.False(glacierSettingsAuditJson.Properties.Select(x => x.Name).Contains("AwsAccessKey"));
+            
+            Assert.False(googleCloudSettingsAuditJson.Properties.Select(x => x.Name).Contains("GoogleCredentialsJson"));
+            
+            Assert.False(s3SettingsAuditJson.Properties.Select(x => x.Name).Contains("AwsSessionToken"));
+            Assert.False(s3SettingsAuditJson.Properties.Select(x => x.Name).Contains("AwsSecretKey"));
+            Assert.False(s3SettingsAuditJson.Properties.Select(x => x.Name).Contains("AwsAccessKey"));
         }
     }
 }
