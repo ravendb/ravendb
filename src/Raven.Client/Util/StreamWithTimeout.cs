@@ -168,6 +168,7 @@ namespace Raven.Client.Util
             if (_readCts == null)
             {
                 _readCts = cancellationToken == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                _readCts.CancelAfter(_readTimeout);
                 _readSw = Stopwatch.StartNew();
 
 #if DEBUG
@@ -225,6 +226,7 @@ namespace Raven.Client.Util
             if (_writeCts == null)
             {
                 _writeCts = cancellationToken == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                _writeCts.CancelAfter(_writeTimeout);
                 _writeSw = Stopwatch.StartNew();
 
 #if DEBUG
@@ -234,7 +236,7 @@ namespace Raven.Client.Util
             else if (_writeSw.ElapsedMilliseconds > MinimumReadDelayTimeInMs)
             {
                 _writeSw.Restart();
-                _writeCts.CancelAfter(_readTimeout);
+                _writeCts.CancelAfter(_writeTimeout);
 
 #if DEBUG
                 if (_requestWriteCts != cancellationToken)
