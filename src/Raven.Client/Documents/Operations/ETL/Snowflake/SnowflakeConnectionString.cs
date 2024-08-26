@@ -50,6 +50,8 @@ public sealed class SnowflakeConnectionString : ConnectionString
 
     public override DynamicJsonValue ToAuditJson()
     {
-        return ToJson();
+        var jsonValue = ToJson();
+        jsonValue.Properties.Remove((nameof(ConnectionString), jsonValue[nameof(ConnectionString)]));
+        return jsonValue;
     }
 }

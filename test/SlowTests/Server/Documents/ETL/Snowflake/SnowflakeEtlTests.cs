@@ -1324,6 +1324,14 @@ loadToOrders(orderData);
         }
     }
 
+    [RequiresSnowflakeFact]
+    public async Task SnowflakeConnectionStringAuditJsonShouldnNotContainCredentials()
+    {
+        SnowflakeConnectionString cs = new() { ConnectionString = "secret", Name = "Test" };
+        var auditJson = cs.ToAuditJson();
+        Assert.False(auditJson.Properties.Select(x => x.Name).Contains("ConnectionString"));
+    }
+
     internal static long GetOrdersCount(string connectionString)
     {
         using (var con = new SnowflakeDbConnection())
