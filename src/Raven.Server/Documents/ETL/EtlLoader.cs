@@ -850,7 +850,7 @@ namespace Raven.Server.Documents.ETL
             }
             else
             {
-                reason = "Task shouldn't be started on this node ";
+                reason = "Initialize";
             }
 
             return reason;
