@@ -12,8 +12,8 @@ namespace Sparrow.Server.Platform.Posix;
 
 public abstract class CGroup
 {
-    protected static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", nameof(CGroup));
-    
+    protected static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrow(typeof(CGroup));
+
     public const string PROC_SELF_CGROUP_FILENAME = "/proc/self/cgroup";
     public const string PROC_MOUNTINFO_FILENAME = "/proc/self/mountinfo";
     public const string PROC_CGROUPS_FILENAME = "/proc/cgroups";
@@ -113,8 +113,8 @@ public abstract class CGroup
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to get CGroup path for memory", e);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn("Failed to get CGroup path for memory", e);
             }
 
             return new CachedPath(path, DateTime.UtcNow + TimeSpan.FromMinutes(1));
@@ -361,8 +361,8 @@ public sealed class UnidentifiedCGroup : CGroup
         if (_lastLog + TimeSpan.FromMinutes(10) < DateTime.UtcNow)
         {
             _lastLog = DateTime.UtcNow;
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations(_errorMessage);
+            if (Logger.IsInfoEnabled)
+                Logger.Info(_errorMessage);
         }
 
         return null;

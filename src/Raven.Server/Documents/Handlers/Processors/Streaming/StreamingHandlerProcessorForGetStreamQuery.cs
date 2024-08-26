@@ -104,9 +104,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                         }
                         catch (Exception ie)
                         {
-                            if (Logger.IsOperationsEnabled)
+                            if (Logger.IsErrorEnabled)
                             {
-                                Logger.Operations($"Failed to write error. Error: {e}", ie);
+                                Logger.Error($"Failed to write error. Error: {e}", ie);
                             }
                         }
                     }

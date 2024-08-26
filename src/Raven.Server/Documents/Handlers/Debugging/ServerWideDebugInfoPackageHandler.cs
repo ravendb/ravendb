@@ -16,6 +16,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -65,7 +66,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             nameof(DatabaseRecord.Sharding)
         };
 
-        private readonly Logger _logger = LoggingSource.Instance.GetLogger<ServerWideDebugInfoPackageHandler>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<ServerWideDebugInfoPackageHandler>();
 
         [RavenAction("/admin/debug/remote-cluster-info-package", "GET", AuthorizationStatus.Operator)]
         public async Task GetClusterWideInfoPackageForRemote()
@@ -254,17 +255,17 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 try
                 {
-                    LoggingSource.Instance.AttachPipeSink(entryStream);
-
-                    await Task.Delay(15000, token);
+                    using (StreamTarget.Register(entryStream))
+                    {
+                        await Task.Delay(15000, token);
+                    }
                 }
                 catch (Exception e)
                 {
-                    await sw.WriteAsync($"{DateTime.UtcNow.Add(new TimeSpan(LoggingSource.LocalToUtcOffsetInTicks)):yyyy-MM-ddTHH:mm:ss.fffffffZ}, {e.Message}");
+                    await sw.WriteAsync($"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffffffZ}, {e.Message}");
                 }
                 finally
                 {
-                    LoggingSource.Instance.DetachPipeSink();
                     await entryStream.FlushAsync();
                 }
             }
@@ -401,8 +402,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var routes = DebugInfoPackageUtils.GetAuthorizedRoutes(Server, HttpContext, databaseName).Where(x => x.TypeOfRoute == routeType);
 
             var id = Guid.NewGuid();
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Creating Debug Package '{id}' for '{databaseName ?? "Server"}'.");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Creating Debug Package '{id}' for '{databaseName ?? "Server"}'.");
 
             foreach (var route in routes)
             {
@@ -412,8 +413,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 Exception ex = null;
                 var sw = Stopwatch.StartNew();
 
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Started gathering debug info from '{route.Path}' for Debug Package '{id}'.");
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Started gathering debug info from '{route.Path}' for Debug Package '{id}'.");
 
                 try
                 {
@@ -427,8 +428,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
                 finally
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Finished gathering debug info from '{route.Path}' for Debug Package '{id}'. Took: {(int)sw.Elapsed.TotalMilliseconds} ms",
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Finished gathering debug info from '{route.Path}' for Debug Package '{id}'. Took: {(int)sw.Elapsed.TotalMilliseconds} ms",
                             ex);
                 }
             }

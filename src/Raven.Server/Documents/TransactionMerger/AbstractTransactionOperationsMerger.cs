@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.TransactionMerger
         private readonly ConcurrentQueue<List<MergedTransactionCommand<TOperationContext, TTransaction>>> _opsBuffers = new();
         private readonly ManualResetEventSlim _waitHandle = new(false);
         private ExceptionDispatchInfo _edi;
-        private readonly Logger _log;
+        private readonly RavenLogger _log;
         private PoolOfThreads.LongRunningWork _txLongRunningOperation;
 
         private readonly double _maxTimeToWaitForPreviousTxInMs;
@@ -65,10 +65,11 @@ namespace Raven.Server.Documents.TransactionMerger
             [NotNull] string resourceName,
             [NotNull] RavenConfiguration configuration,
             [NotNull] SystemTime time,
+            [NotNull] RavenLogger logger,
             CancellationToken shutdown)
         {
             _resourceName = resourceName ?? throw new ArgumentNullException(nameof(resourceName));
-            _log = LoggingSource.Instance.GetLogger(_resourceName, GetType().FullName);
+            _log = logger ?? throw new ArgumentNullException(nameof(logger));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _time = time ?? throw new ArgumentNullException(nameof(time));
             _shutdown = shutdown;
@@ -201,11 +202,11 @@ namespace Raven.Server.Documents.TransactionMerger
                     // in particular, an OOM error is something that we want to recover
                     // we'll handle this by throwing out all the pending transactions,
                     // waiting for 3 seconds and then resuming normal operations
-                    if (_log.IsOperationsEnabled)
+                    if (_log.IsWarnEnabled)
                     {
                         try
                         {
-                            _log.Operations(
+                            _log.Warn(
                                 "OutOfMemoryException happened in the transaction merger, will abort all transactions for the next 3 seconds and then resume operations",
                                 e);
                         }
@@ -239,9 +240,9 @@ namespace Raven.Server.Documents.TransactionMerger
                 }
                 catch (Exception e)
                 {
-                    if (_log.IsOperationsEnabled)
+                    if (_log.IsFatalEnabled)
                     {
-                        _log.Operations(
+                        _log.Fatal(
                             "Serious failure in transaction merging thread, the database must be restarted!",
                             e);
                     }

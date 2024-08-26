@@ -20,6 +20,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Actions;
 using Raven.Server.Smuggler.Documents.Data;
@@ -43,7 +44,7 @@ namespace Raven.Server.Smuggler.Documents
         protected readonly CancellationToken _token;
         internal DuplicateDocsHandler _duplicateDocsHandler;
 
-        private readonly Logger _log;
+        private readonly RavenLogger _log;
         private BuildVersionType _buildType;
         private DatabaseSmugglerOptionsServerSide _options;
         protected SmugglerResult _result;
@@ -53,7 +54,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             _database = database;
             _token = token;
-            _log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+            _log = RavenLogManager.Instance.GetLoggerForDatabase<DatabaseDestination>(database);
             _duplicateDocsHandler = new DuplicateDocsHandler(_database);
         }
 
@@ -218,7 +219,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly BuildVersionType _buildType;
             private readonly DatabaseSmugglerOptionsServerSide _options;
             private readonly bool _isRevision;
-            private readonly Logger _log;
+            private readonly RavenLogger _log;
             private MergedBatchPutCommand _command;
             private MergedBatchPutCommand _prevCommand;
             private Task _prevCommandTask = Task.CompletedTask;
@@ -237,7 +238,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DuplicateDocsHandler _duplicateDocsHandler;
             private readonly bool _throwOnCollectionMismatchError;
 
-            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, DatabaseSmugglerOptionsServerSide options, bool isRevision, Logger log, DuplicateDocsHandler duplicateDocsHandler, bool throwOnCollectionMismatchError)
+            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, DatabaseSmugglerOptionsServerSide options, bool isRevision, RavenLogger log, DuplicateDocsHandler duplicateDocsHandler, bool throwOnCollectionMismatchError)
             {
                 _database = database;
                 _buildType = buildType;
@@ -554,7 +555,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private readonly DocumentDatabase _database;
             private readonly BuildVersionType _buildType;
-            private readonly Logger _log;
+            private readonly RavenLogger _log;
 
             public readonly List<DocumentItem> Documents = new List<DocumentItem>();
             public StreamsTempFile AttachmentStreamsTempFile;
@@ -572,7 +573,7 @@ namespace Raven.Server.Smuggler.Documents
             private BlittableMetadataModifier _metadataModifier;
 
             public MergedBatchPutCommand(DocumentDatabase database, BuildVersionType buildType,
-                Logger log,
+                RavenLogger log,
                 ConcurrentDictionary<string, CollectionName> missingDocumentsForRevisions = null,
                 HashSet<string> documentIdsOfMissingAttachments = null)
             {
@@ -969,7 +970,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public MergedBatchPutCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+                var log = RavenLogManager.Instance.GetLoggerForDatabase<MergedBatchPutCommandDto>(database);
                 var command = new MergedBatchPutCommand(database, BuildType, log)
                 {
                     IsRevision = IsRevision
@@ -985,7 +986,7 @@ namespace Raven.Server.Smuggler.Documents
 
         internal sealed class MergedBatchFixDocumentMetadataCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
         {
-            private readonly Logger _log;
+            private readonly RavenLogger _log;
             public HashSet<string> Ids = new HashSet<string>();
             private readonly DocumentDatabase _database;
             private readonly DocumentsOperationContext _context;
@@ -994,7 +995,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly IDisposable _returnContext;
             public bool IsDisposed => _isDisposed;
 
-            public MergedBatchFixDocumentMetadataCommand(DocumentDatabase database, Logger log)
+            public MergedBatchFixDocumentMetadataCommand(DocumentDatabase database, RavenLogger log)
             {
                 _database = database;
                 _log = log;
@@ -1121,7 +1122,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 public MergedBatchFixDocumentMetadataCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
                 {
-                    var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+                    var log = RavenLogManager.Instance.GetLoggerForDatabase<MergedBatchFixDocumentMetadataCommandDto>(database);
                     var command = new MergedBatchFixDocumentMetadataCommand(database, log);
 
                     foreach (var id in Ids)
@@ -1136,7 +1137,7 @@ namespace Raven.Server.Smuggler.Documents
 
         internal sealed class MergedBatchDeleteRevisionCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
         {
-            private readonly Logger _log;
+            private readonly RavenLogger _log;
             public readonly List<KeyValuePair<string, CollectionName>> Ids = new List<KeyValuePair<string, CollectionName>>();
             private readonly DocumentDatabase _database;
             private readonly DocumentsOperationContext _context;
@@ -1145,7 +1146,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly IDisposable _returnContext;
             public bool IsDisposed => _isDisposed;
 
-            public MergedBatchDeleteRevisionCommand(DocumentDatabase database, Logger log)
+            public MergedBatchDeleteRevisionCommand(DocumentDatabase database, RavenLogger log)
             {
                 _database = database;
                 _log = log;
@@ -1204,7 +1205,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public MergedBatchDeleteRevisionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+                var log = RavenLogManager.Instance.GetLoggerForDatabase<MergedBatchDeleteRevisionCommandDto>(database);
                 var command = new MergedBatchDeleteRevisionCommand(database, log);
 
                 foreach (var id in Ids)

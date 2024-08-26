@@ -74,8 +74,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
                     var message = $"Failed to run backup: '{backupName}'";
 
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations(message, e);
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error(message, e);
 
                     GetNotificationCenter().Add(AlertRaised.Create(
                         RequestHandler.DatabaseName,

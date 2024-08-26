@@ -1739,7 +1739,7 @@ namespace Voron.Recovery
         private int _dummyAttachmentNumber;
         private bool _lastWriteIsDocument;
         private (string hash, long size, string tag)? _lastAttachmentInfo;
-        private Logger _logger;
+        private RavenLogger _logger;
         private readonly byte[] _masterKey;
         private int _InvalidChecksumWithNoneZeroMac;
         private bool _shouldIgnoreInvalidPagesInARaw;

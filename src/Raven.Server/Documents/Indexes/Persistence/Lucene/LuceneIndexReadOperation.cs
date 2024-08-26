@@ -32,6 +32,7 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -68,7 +69,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
         public LuceneIndexReadOperation(Index index, LuceneVoronDirectory directory,  QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)
-            : base(index, LoggingSource.Instance.GetLogger<LuceneIndexReadOperation>(index._indexStorage.DocumentDatabase.Name), queryBuilderFactories, query)
+            : base(index, RavenLogManager.Instance.GetLoggerForIndex<LuceneIndexReadOperation>(index), queryBuilderFactories, query)
         {
             try
             {

@@ -51,7 +51,7 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
                     ? $"{RequestHandler.RequestIp} | {clientCert.Subject} [{clientCert.Thumbprint}]"
                     : $"{RequestHandler.RequestIp}";
 
-                if (LoggingSource.AuditLog.IsInfoEnabled)
+                if (RavenLogManager.Instance.IsAuditEnabled)
                 {
                     RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "PUT", $"Index '{indexDefinition.Name}' with definition: {indexToAdd}");
                 }

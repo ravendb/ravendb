@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
         }
 
-        public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger)
+        public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, RavenLogger logger)
         {
             return new InternalReplicationDocumentSender(stream, this, logger);
         }

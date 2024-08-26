@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow;
@@ -18,7 +19,7 @@ namespace Raven.Server.Storage
     {
         private static readonly TimeSpan CheckFrequency = TimeSpan.FromMinutes(10);
 
-        private readonly Logger _logger = LoggingSource.Instance.GetLogger<StorageSpaceMonitor>(nameof(StorageSpaceMonitor));
+        private readonly RavenLogger _logger = RavenLogManager.Instance.GetLoggerForServer<StorageSpaceMonitor>();
         private readonly LinkedList<DocumentDatabase> _databases = new LinkedList<DocumentDatabase>();
 
         private readonly object _runLock = new object();
@@ -85,8 +86,8 @@ namespace Raven.Server.Storage
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Failed to cleanup storage environment after detecting low disk space. Environment: {storageEnvironment}", e);
+                        if (_logger.IsErrorEnabled)
+                            _logger.Error($"Failed to cleanup storage environment after detecting low disk space. Environment: {storageEnvironment}", e);
                     }
                 }
 
@@ -101,13 +102,13 @@ namespace Raven.Server.Storage
                 _notificationCenter.Add(AlertRaised.Create(null, "Low free disk space", message, AlertType.LowDiskSpace, NotificationSeverity.Warning,
                     "low-disk-space"));
 
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations(message);
+                if (_logger.IsWarnEnabled)
+                    _logger.Warn(message);
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations("Failed to run storage space monitor", e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error("Failed to run storage space monitor", e);
             }
             finally
             {
@@ -173,8 +174,8 @@ namespace Raven.Server.Storage
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Failed to check disk usage for '{database.Name}' database", e);
+                    if (_logger.IsErrorEnabled)
+                        _logger.Error($"Failed to check disk usage for '{database.Name}' database", e);
                 }
 
                 current = current.Next;

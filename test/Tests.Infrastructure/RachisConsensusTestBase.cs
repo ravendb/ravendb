@@ -19,6 +19,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
@@ -59,11 +60,12 @@ namespace Tests.Infrastructure
 
         public RachisConsensusTestBase(ITestOutputHelper output, [CallerFilePath] string sourceFile = "") : base(output, sourceFile)
         {
+            Log = RavenLogManager.Instance.GetLoggerForCluster(GetType());
         }
 
         protected bool PredictableSeeds;
 
-        protected readonly Logger Log = LoggingSource.Instance.GetLogger<RachisConsensusTestBase>("RachisConsensusTest");
+        protected readonly RavenLogger Log;
 
         protected int LongWaitTime = 15000; //under stress the thread pool may take time to schedule the task to complete the set of the TCS
 
@@ -233,11 +235,11 @@ namespace Tests.Infrastructure
             configuration.Core.RunInMemory = shouldRunInMemory;
             StorageEnvironmentOptions server = null;
             if (shouldRunInMemory)
-                server = StorageEnvironmentOptions.CreateMemoryOnly();
+                server = StorageEnvironmentOptions.CreateMemoryOnlyForTests();
             else
             {
                 string dataDirectory = NewDataPath(prefix: $"GetNewServer-{nodeTag ?? "A"}", forceCreateDir: true);
-                server = StorageEnvironmentOptions.ForPath(dataDirectory);
+                server = StorageEnvironmentOptions.ForPathForTests(dataDirectory);
                 configuration.Core.DataDirectory = new PathSetting(dataDirectory);
             }
 

@@ -61,7 +61,7 @@ namespace Raven.Server.Web.System
                     clusterTopology = ServerStore.GetClusterTopology(context);
                 }
 
-                if (LoggingSource.AuditLog.IsInfoEnabled)
+                if (RavenLogManager.Instance.IsAuditEnabled)
                 {
                     LogAuditFor("DbMgmt", "CHANGE", $"Database '{dbName}' topology. " +
                                                     $"Old topology: {databaseRecord.Topology} " +

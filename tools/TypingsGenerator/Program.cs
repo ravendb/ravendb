@@ -579,7 +579,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(CertificateDefinition));
 
             // admin logs
-            scripter.AddType(typeof(LogMode));
+            scripter.AddType(typeof(LogLevel));
             scripter.AddType(typeof(SetLogsConfigurationOperation.Parameters));
             scripter.AddType(typeof(PutTrafficWatchConfigurationOperation.Parameters));
             scripter.AddType(typeof(EventListenerToLog.EventListenerConfiguration));

@@ -14,6 +14,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Extensions;
+using Raven.Client.Logging;
 using Raven.Client.Util;
 using Sparrow.Logging;
 
@@ -24,7 +25,7 @@ namespace Raven.Client.Documents.Indexes
     /// </summary>
     public static class IndexCreation
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Client", typeof(IndexCreation).FullName);
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient(typeof(IndexCreation));
 
         /// <summary>
         /// Creates the indexes found in the specified assembly.

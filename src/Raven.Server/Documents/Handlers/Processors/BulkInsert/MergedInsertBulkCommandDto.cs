@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 
@@ -18,7 +19,7 @@ public sealed class MergedInsertBulkCommandDto : IReplayableCommandDto<Documents
             TotalSize = Commands.Sum(c => c.Document.Size),
             Commands = Commands,
             Database = database,
-            Logger = LoggingSource.Instance.GetLogger<MergedInsertBulkCommandDto>(database.Name)
+            Logger = RavenLogManager.Instance.GetLoggerForDatabase<MergedInsertBulkCommandDto>(database)
         };
     }
 }

@@ -29,11 +29,11 @@ namespace Raven.Server.Smuggler.Documents.Actions;
 public sealed class DatabaseRecordActions : IDatabaseRecordActions
 {
     private readonly ServerStore _server;
-    private readonly Logger _log;
+    private readonly RavenLogger _log;
     private readonly string _name;
     private readonly DatabaseRecord _currentDatabaseRecord;
 
-    public DatabaseRecordActions(DocumentDatabase database, Logger log)
+    public DatabaseRecordActions(DocumentDatabase database, RavenLogger log)
     {
         _server = database.ServerStore;
         _name = database.Name;
@@ -41,7 +41,7 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
         _log = log;
     }
 
-    public DatabaseRecordActions(ServerStore server, DatabaseRecord currentDatabaseRecord, string name, Logger log)
+    public DatabaseRecordActions(ServerStore server, DatabaseRecord currentDatabaseRecord, string name, RavenLogger log)
     {
         _server = server;
         _currentDatabaseRecord = currentDatabaseRecord;

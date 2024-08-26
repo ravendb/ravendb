@@ -48,8 +48,8 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
                 }
                 catch (TimeoutException e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Timeout in changes handler", e);
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn("Timeout in changes handler", e);
                 }
                 catch (Exception ex)
                 {

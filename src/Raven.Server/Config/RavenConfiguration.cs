@@ -21,6 +21,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -33,7 +34,7 @@ namespace Raven.Server.Config
 #if !RVN
         internal static readonly RavenConfiguration Default = new RavenConfiguration("__default", ResourceType.Server);
 
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         private readonly string _customConfigPath;
 
@@ -46,6 +47,8 @@ namespace Raven.Server.Config
         public CoreConfiguration Core { get; }
 
         public SecurityConfiguration Security { get; }
+
+        public LogsConfiguration Logs { get; set; }
 
 #if !RVN
         public HttpConfiguration Http { get; }
@@ -116,7 +119,17 @@ namespace Raven.Server.Config
 
         private RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null, bool skipEnvironmentVariables = false, LicenseType licenseType = LicenseType.None)
         {
-            _logger = LoggingSource.Instance.GetLogger<RavenConfiguration>(resourceName);
+            switch (resourceType)
+            {
+                case ResourceType.Server:
+                    _logger = RavenLogManager.Instance.GetLoggerForServer<RavenConfiguration>();
+                    break;
+                case ResourceType.Database:
+                    _logger = RavenLogManager.Instance.GetLoggerForDatabase<RavenConfiguration>(resourceName);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(resourceType), resourceType, null);
+            }
 
             ResourceName = resourceName;
             ResourceType = resourceType;
@@ -185,8 +198,6 @@ namespace Raven.Server.Config
             _configBuilder.Add(new EnvironmentVariablesConfigurationSource());
         }
 
-        public LogsConfiguration Logs { get; set; }
-
         public string ResourceName { get; }
 
         public ResourceType ResourceType { get; }
@@ -249,9 +260,10 @@ namespace Raven.Server.Config
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.OperationsWithWait("Invalid security configuration. Stopping RavenDB server startup", e)
-                        .Wait(UnhandledExceptions.TimeToWaitForLog); // using async version to wait and ensure that we'll wait for the log to be written to disk since we're gonna break the service startup
+                if (_logger.IsFatalEnabled)
+                    _logger.Fatal("Invalid security configuration. Stopping RavenDB server startup", e);
+
+                Thread.Sleep(3000); // using async version to wait and ensure that we'll wait for the log to be written to disk since we're gonna break the service startup
 
                 throw;
             }

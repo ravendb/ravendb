@@ -18,7 +18,7 @@ public abstract class AbstractDatabaseSmugglerFactory
 
     public abstract DatabaseDestination CreateDestinationForSnapshotRestore(Dictionary<string, SubscriptionState> subscriptions, CancellationToken token = default);
 
-    public abstract DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, Logger logger);
+    public abstract DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, RavenLogger logger);
 
     public abstract SmugglerBase CreateForRestore(
         DatabaseRecord databaseRecord,

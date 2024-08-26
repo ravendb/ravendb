@@ -14,7 +14,7 @@ namespace Raven.Server.ServerWide.Memory
             Size currentlyInUse,
             bool isRunningOn32Bits,
             ServerMetricCacher metricCacher,
-            Logger logger,
+            RavenLogger logger,
             out ProcessMemoryUsage currentUsage)
         {
             if (isRunningOn32Bits)

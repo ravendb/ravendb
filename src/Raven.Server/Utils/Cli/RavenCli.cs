@@ -8,6 +8,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.ServerWide.Operations.Logs;
+using Raven.Server.Logging;
 
 #if !RVN
 using Jint;
@@ -18,8 +20,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 #endif
-
-using Raven.Server.Config.Categories;
 
 #if !RVN
 using Raven.Server.Documents;
@@ -350,19 +350,22 @@ namespace Raven.Server.Utils.Cli
 
             Console.ResetColor();
 
-            LoggingSource.Instance.DisableConsoleLogging();
+            RavenConsoleTarget.Disable();
+
             Program.WriteServerStatsAndWaitForEsc(cli._server);
             return true;
         }
 
-        private static void SetupLogMode(LogMode logMode, LogsConfiguration configuration)
+        private static void SetupLogMode(LogLevel logMode)
         {
-            LoggingSource.Instance.SetupLogMode(
-                logMode,
-                configuration.Path.FullPath,
-                configuration.RetentionTime?.AsTimeSpan,
-                configuration.RetentionSize?.GetValue(SizeUnit.Bytes),
-                configuration.Compress);
+            RavenLogManager.Instance.ConfigureLogging(new SetLogsConfigurationOperation.Parameters
+            {
+                Logs = new SetLogsConfigurationOperation.LogsConfiguration
+                {
+                    MinLevel = logMode,
+                    MaxLevel = LogLevel.Fatal
+                }
+            });
         }
 
         private static bool CommandTopThreads(List<string> args, RavenCli cli)
@@ -412,7 +415,8 @@ namespace Raven.Server.Utils.Cli
 
             Console.ResetColor();
 
-            LoggingSource.Instance.DisableConsoleLogging();
+            RavenConsoleTarget.Disable();
+
             Program.WriteThreadsInfoAndWaitForEsc(cli._server, maxTopThreads, updateIntervalInMs, cpuUsageThreshold);
             return true;
         }
@@ -526,22 +530,22 @@ namespace Raven.Server.Utils.Cli
                 case "on":
                 case "information":
                     if (withConsole)
-                        LoggingSource.Instance.EnableConsoleLogging();
-                    SetupLogMode(LogMode.Information, cli._server.Configuration.Logs);
+                        RavenConsoleTarget.Enable();
+                    SetupLogMode(LogLevel.Info);
                     WriteText("Logging set to ON (information)", ConsoleColor.Green, cli);
                     break;
 
                 case "off":
                 case "none":
-                    LoggingSource.Instance.DisableConsoleLogging();
-                    SetupLogMode(LogMode.None, cli._server.Configuration.Logs);
+                    RavenConsoleTarget.Disable();
+                    SetupLogMode(LogLevel.Off);
                     WriteText("Logging set to OFF (none)", ConsoleColor.DarkGreen, cli);
                     break;
 
                 case "operations":
                     if (withConsole)
-                        LoggingSource.Instance.EnableConsoleLogging();
-                    SetupLogMode(LogMode.None, cli._server.Configuration.Logs);
+                        RavenConsoleTarget.Enable();
+                    SetupLogMode(LogLevel.Off);
                     WriteText("Logging set to ON (operations)", ConsoleColor.DarkGreen, cli);
                     break;
 
@@ -1016,10 +1020,10 @@ namespace Raven.Server.Utils.Cli
             using (cli._server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var adminJsScript = new AdminJsScript(jsCli.Script);
-                if (LoggingSource.AuditLog.IsInfoEnabled)
+                if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    var auditLog = LoggingSource.AuditLog.GetLogger("Server", "Audit");
-                    auditLog.Info($"RavenCli, no certificate, Execute AdminJSConsole Script: \"{adminJsScript.Script}\"");
+                    var auditLog = RavenLogManager.Instance.GetAuditLoggerForServer();
+                    auditLog.Audit($"RavenCli, no certificate, Execute AdminJSConsole Script: \"{adminJsScript.Script}\"");
                 }
 
                 var result = jsCli.AdminConsole.ApplyScript(adminJsScript);
@@ -1331,13 +1335,13 @@ namespace Raven.Server.Utils.Cli
                             return true;
 
                         case "log":
-                            LoggingSource.Instance.EnableConsoleLogging();
-                            SetupLogMode(LogMode.Information, _server.Configuration.Logs);
+                            RavenConsoleTarget.Enable();
+                            SetupLogMode(LogLevel.Info);
                             break;
 
                         case "logoff":
-                            LoggingSource.Instance.DisableConsoleLogging();
-                            SetupLogMode(LogMode.None, _server.Configuration.Logs);
+                            RavenConsoleTarget.Disable();
+                            SetupLogMode(LogLevel.Off);
                             break;
 
                         case "h":

@@ -20,6 +20,7 @@ using Raven.Client.Exceptions.Routing;
 using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Extensions;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -102,24 +103,24 @@ namespace Raven.Server.Routing
 
             if (feature.WrittenToAuditLog == 0) // intentionally racy, we'll check it again later
             {
-                var auditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit") : null;
-
-                if (auditLog != null)
+                if (RavenLogManager.Instance.IsAuditEnabled)
                 {
+                    var auditLog = RavenLogManager.Instance.GetAuditLoggerForServer();
+
                     // only one thread will win it, technically, there can't really be threading
                     // here, because there is a single connection, but better to be safe
                     if (Interlocked.CompareExchange(ref feature.WrittenToAuditLog, 1, 0) == 0)
                     {
                         if (feature.WrongProtocolMessage != null)
                         {
-                            auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
-                                $"used the wrong protocol and will be rejected. {feature.WrongProtocolMessage}");
+                            auditLog.Audit($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
+                                           $"used the wrong protocol and will be rejected. {feature.WrongProtocolMessage}");
                         }
                         else
                         {
-                            auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
-                                $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
-                                $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]");
+                            auditLog.Audit($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
+                                           $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
+                                           $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]");
 
                             var conLifetime = context.Features.Get<IConnectionLifetimeFeature>();
                             if (conLifetime != null)
@@ -132,7 +133,7 @@ namespace Raven.Server.Routing
 
                                 cancellationTokenRegistration = conLifetime.ConnectionClosed.Register(() =>
                                 {
-                                    auditLog.Info(msg);
+                                    auditLog.Audit(msg);
                                     cancellationTokenRegistration.Dispose();
                                 });
                             }
@@ -162,10 +163,10 @@ namespace Raven.Server.Routing
 
             if (feature.RequiresTwoFactor && _ravenServer.TwoFactor.ValidateTwoFactorRequestLimits(route, context, feature.TwoFactorAuthRegistration, out var twoFactorMsg) == false)
             {
-                if (LoggingSource.AuditLog.IsInfoEnabled)
+                if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    var auditLog = LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit");
-                    auditLog.Info($"Rejected request {context.Request.Method} {context.Request.GetFullUrl()} because: {twoFactorMsg}");
+                    var auditLog = RavenLogManager.Instance.GetAuditLoggerForServer();
+                    auditLog.Audit($"Rejected request {context.Request.Method} {context.Request.GetFullUrl()} because: {twoFactorMsg}");
                 }
 
                 feature.WaitingForTwoFactorAuthentication();
@@ -287,11 +288,11 @@ namespace Raven.Server.Routing
             {
                 if (handler == null)
                 {
-                    var auditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit") : null;
-
-                    if (auditLog != null)
+                    if (RavenLogManager.Instance.IsAuditEnabled)
                     {
-                        auditLog.Info($"Invalid request {context.Request.Method} {context.Request.Path} by " +
+                        var auditLog = RavenLogManager.Instance.GetAuditLoggerForServer();
+
+                        auditLog.Audit($"Invalid request {context.Request.Method} {context.Request.Path} by " +
                             $"(Cert: {context.Connection.ClientCertificate?.Subject} ({context.Connection.ClientCertificate?.Thumbprint}) {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort})");
                     }
 

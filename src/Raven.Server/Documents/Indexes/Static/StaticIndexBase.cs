@@ -12,6 +12,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -183,9 +184,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public readonly HashSet<string> CollectionsWithCompareExchangeReferences = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected static Logger Log = LoggingSource.Instance.GetLogger<AbstractStaticIndexBase>("Server");
+        protected static RavenLogger Log = RavenLogManager.Instance.GetLoggerForServer<AbstractStaticIndexBase>();
 
-        
+
         public int StackSizeInSelectClause { get; set; }
         
         public bool HasDynamicFields { get; set; }
@@ -253,8 +254,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     NotificationSeverity.Info,
                     nameof(IndexCompiler)));
                 
-                if (Log.IsOperationsEnabled)
-                    Log.Operations($"Index '{indexMetadata.Name}' contains a lot of `let` clauses. Stack size is {StackSizeInSelectClause}.");
+                if (Log.IsWarnEnabled)
+                    Log.Warn($"Index '{indexMetadata.Name}' contains a lot of `let` clauses. Stack size is {StackSizeInSelectClause}.");
             }
         }
         

@@ -43,13 +43,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         private readonly string _serverUrlForAccountName;
         private const string AzureStorageVersion = "2019-02-02";
         private const long TotalBlocksSizeLimitInBytes = 475L * 1024 * 1024 * 1024 * 1024L / 100; // 4.75TB
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         public string RemoteFolderName { get; }
         public Sparrow.Size MaxUploadPutBlob { get; set; } = new Sparrow.Size(256, SizeUnit.Megabytes);
         public Sparrow.Size MaxSingleBlockSize { get; set; } = new Sparrow.Size(100, SizeUnit.Megabytes);
 
-        public LegacyRavenAzureClient(AzureSettings azureSettings, Progress progress = null, Logger logger = null, CancellationToken? cancellationToken = null)
+        public LegacyRavenAzureClient(AzureSettings azureSettings, Progress progress = null, RavenLogger logger = null, CancellationToken? cancellationToken = null)
             : base(progress, cancellationToken)
         {
             var hasAccountKey = string.IsNullOrWhiteSpace(azureSettings.AccountKey) == false;

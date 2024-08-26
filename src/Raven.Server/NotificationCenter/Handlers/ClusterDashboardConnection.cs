@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Dashboard.Cluster.Notifications;
+using Raven.Server.Logging;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -17,8 +18,8 @@ namespace Raven.Server.NotificationCenter.Handlers
         where TOperationContext : JsonOperationContext
     {
         private const int WelcomeMessageId = -1;
-        
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("ClusterDashboardConnection", typeof(ClusterDashboardConnection<>).FullName);
+
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<ClusterDashboardConnection<TOperationContext>>();
 
         private readonly CanAccessDatabase _canAccessDatabase;
         private readonly ClusterDashboardNotifications _clusterDashboardNotifications;

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Serialization;
+using Raven.Client.Logging;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -13,7 +14,7 @@ namespace Raven.Client.Http
 {
     internal static class DatabaseTopologyLocalCache
     {
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger("Client", typeof(DatabaseTopologyLocalCache).FullName);
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient(typeof(DatabaseTopologyLocalCache));
 
         private static void Clear(string path)
         {
@@ -26,8 +27,8 @@ namespace Raven.Client.Http
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not clear the persisted database topology", e);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn("Could not clear the persisted database topology", e);
             }
         }
 
@@ -60,8 +61,8 @@ namespace Raven.Client.Http
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not understand the persisted database topology", e);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn("Could not understand the persisted database topology", e);
                 return null;
             }
         }
@@ -83,8 +84,8 @@ namespace Raven.Client.Http
                 var existingTopology = await TryLoadAsync(path, context).ConfigureAwait(false);
                 if (existingTopology?.Etag >= topology.Etag)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Skipping save topology with etag {topology.Etag} to cache " +
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Skipping save topology with etag {topology.Etag} to cache " +
                                      $"as the cache already have a topology with etag: {existingTopology.Etag}");
                     return;
                 }
@@ -104,7 +105,7 @@ namespace Raven.Client.Http
                         WriteNode(writer, node, context);
                     }
                     writer.WriteEndArray();
-                    
+
                     writer.WriteComma();
                     writer.WritePropertyName(context.GetLazyString(nameof(topology.Promotables)));
                     writer.WriteStartArray();
@@ -130,8 +131,8 @@ namespace Raven.Client.Http
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not persist the database topology", e);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn("Could not persist the database topology", e);
             }
         }
 

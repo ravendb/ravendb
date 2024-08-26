@@ -10,6 +10,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Extensions;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -19,7 +20,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 {
     public sealed class ProxyWebSocketConnection : IDisposable
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ProxyWebSocketConnection>(nameof(ProxyWebSocketConnection));
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer(typeof(ProxyWebSocketConnection));
 
         private readonly CancellationTokenSource _cts;
         private readonly Uri _remoteWebSocketUri;

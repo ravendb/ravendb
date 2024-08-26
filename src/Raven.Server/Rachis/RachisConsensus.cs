@@ -40,6 +40,8 @@ using Voron.Impl;
 using Sparrow.Threading;
 using Size = Sparrow.Size;
 using System.Diagnostics.CodeAnalysis;
+using Raven.Server.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Rachis
 {
@@ -146,7 +148,7 @@ namespace Raven.Server.Rachis
         {
             return ctx.Transaction.InnerTransaction.LowLevelTransaction.TryGetClientState(out ClusterStateRecord csr) ? csr.State : RachisState.Passive;
         }
-        
+
         public RachisState CurrentPublishedState()
         {
             return _persistentState.TryGetClientState(out ClusterStateRecord csr) ? csr.State : RachisState.Passive;
@@ -204,7 +206,7 @@ namespace Raven.Server.Rachis
         public ClusterTransactionOperationsMerger TxMerger { get; private set; }
 
         private StorageEnvironment _persistentState;
-        internal Logger Log;
+        internal RavenLogger Log;
 
         private readonly ConcurrentQueue<Elector> _electors = new ConcurrentQueue<Elector>();
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
@@ -358,7 +360,7 @@ namespace Raven.Server.Rachis
 
                     RequestSnapshot = GetSnapshotRequest(context);
 
-                    Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
+                    Log = RavenLogManager.Instance.GetLoggerForCluster(typeof(RachisConsensus), LoggingComponent.NodeTag(_tag));
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
 
 
@@ -379,7 +381,7 @@ namespace Raven.Server.Rachis
 
                     InitializeState(context, changes);
 
-                    LogHistory.Initialize(tx, configuration, Log); 
+                    LogHistory.Initialize(tx, configuration, Log);
                     // if we don't have a topology id, then we are passive
                     // an admin needs to let us know that it is fine, either
                     // by explicit bootstrapping or by connecting us to a cluster
@@ -399,7 +401,7 @@ namespace Raven.Server.Rachis
                 RandomizeTimeout();
 
                 if (CurrentCommittedState.State != RachisState.Passive)
-                    Timeout.Start(SwitchToCandidateStateOnTimeout);
+                Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
             catch (Exception)
             {
@@ -468,8 +470,8 @@ namespace Raven.Server.Rachis
                 if (tx.Committed == false) 
                     return;
                 
-                CommandsVersionManager.SetClusterVersion(ClusterCommandsVersionManager.MyCommandsVersion);
-                leader.Start();
+                    CommandsVersionManager.SetClusterVersion(ClusterCommandsVersionManager.MyCommandsVersion);
+                    leader.Start();
             };
         }
 
@@ -782,7 +784,7 @@ namespace Raven.Server.Rachis
             bool disposeAsync = true)
         {
             Debug.Assert(context.Transaction.InnerTransaction.IsWriteTransaction);
-            
+
             long currentTerm = CurrentTermIn(context);
             if (expectedTerm != currentTerm && expectedTerm != -1)
                 RachisConcurrencyException.Throw($"Attempted to switch state to {rachisState} on expected term {expectedTerm:#,#;;0} but the real term is {currentTerm:#,#;;0}");
@@ -844,60 +846,60 @@ namespace Raven.Server.Rachis
             PrevStates.LimitedSizeEnqueue(transition, 5);
             UpdateStateIn(context, rachisState);
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += llt =>
-            {
+                {
                 if (!llt.Committed) 
                     return;
-                
-                try
-                {
-                    beforeStateChangedEvent?.Invoke();
-                }
-                catch (Exception e)
-                {
-                    if (Log.IsInfoEnabled)
-                    {
-                        Log.Info("Before state change invocation function failed.", e);
-                    }
-                }
 
-                try
-                {
-                    StateChanged?.Invoke(this, transition);
-                }
-                catch (Exception e)
-                {
-                    if (Log.IsInfoEnabled)
+                    try
                     {
-                        Log.Info("State change invocation function failed.", e);
+                        beforeStateChangedEvent?.Invoke();
                     }
-                }
-
-                if (disposeAsync)
-                {
-                    TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
+                    catch (Exception e)
                     {
                         if (Log.IsInfoEnabled)
                         {
-                            Log.Info($"Initiate disposing the term _prior_ to {expectedTerm:#,#;;0} with {toDispose.Count} things to dispose.");
+                            Log.Info("Before state change invocation function failed.", e);
                         }
-
-                        ParallelDispose(toDispose);
-                    });
-                }
-                else
-                {
-                    ParallelDispose(toDispose);
-                    TaskExecutor.CompleteAndReplace(ref _stateChanged);
-                }
-
-                var elapsed = sp.Elapsed;
-                if (elapsed > ElectionTimeout / 2)
-                {
-                    if (Log.IsOperationsEnabled)
-                    {
-                        Log.Operations($"Took way too much time ({elapsed}) to change the state to {rachisState} in term {expectedTerm:#,#;;0}. (Election timeout:{ElectionTimeout})");
                     }
-                }
+
+                    try
+                    {
+                        StateChanged?.Invoke(this, transition);
+                    }
+                    catch (Exception e)
+                    {
+                        if (Log.IsInfoEnabled)
+                        {
+                            Log.Info("State change invocation function failed.", e);
+                        }
+                    }
+
+                    if (disposeAsync)
+                    {
+                        TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
+                        {
+                            if (Log.IsInfoEnabled)
+                            {
+                                Log.Info($"Initiate disposing the term _prior_ to {expectedTerm:#,#;;0} with {toDispose.Count} things to dispose.");
+                            }
+
+                            ParallelDispose(toDispose);
+                        });
+                    }
+                    else
+                    {
+                        ParallelDispose(toDispose);
+                        TaskExecutor.CompleteAndReplace(ref _stateChanged);
+                    }
+
+                    var elapsed = sp.Elapsed;
+                    if (elapsed > ElectionTimeout / 2)
+                    {
+                        if (Log.IsWarnEnabled)
+                        {
+                            Log.Warn($"Took way too much time ({elapsed}) to change the state to {rachisState} in term {expectedTerm:#,#;;0}. (Election timeout:{ElectionTimeout})");
+                        }
+                    }
             };
         }
 
@@ -931,7 +933,7 @@ namespace Raven.Server.Rachis
         public void TakeOffice(ClusterOperationContext context)
         {
             Debug.Assert(context.Transaction.InnerTransaction.IsWriteTransaction);
-            
+
             if (CurrentStateIn(context) != RachisState.LeaderElect)
                 return ;
 
@@ -939,7 +941,7 @@ namespace Raven.Server.Rachis
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx.Committed)
-                    TaskExecutor.CompleteAndReplace(ref _stateChanged);
+            TaskExecutor.CompleteAndReplace(ref _stateChanged);
             };
         }
 
@@ -1742,9 +1744,9 @@ namespace Raven.Server.Rachis
                 $"FATAL ERROR: got an append entries request with index={firstEntry.Index:#,#;;0} term={firstEntry.Term:#,#;;0} " +
                 $"while my term for this index is {myTermForTheIndex:#,#;;0}. " +
                 $"(last commit index={lastCommitIndex:#,#;;0} with term={lastCommitTerm:#,#;;0}), this means something went wrong badly.";
-            if (Log.IsOperationsEnabled)
+            if (Log.IsFatalEnabled)
             {
-                Log.Operations(message);
+                Log.Fatal(message);
             }
             RachisInvalidOperationException.Throw(message);
         }

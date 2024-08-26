@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Replication.Senders
 {
     public abstract class ReplicationDocumentSenderBase : IDisposable
     {
-        protected readonly Logger Log;
+        protected readonly RavenLogger Log;
         private long _lastEtag;
 
         private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Replication.Senders
         private readonly int _numberOfAttachmentsTrackedForDeduplication;
         private readonly ByteStringContext _allocator; // required to clone the hashes 
 
-        protected ReplicationDocumentSenderBase(Stream stream, DatabaseOutgoingReplicationHandler parent, Logger log)
+        protected ReplicationDocumentSenderBase(Stream stream, DatabaseOutgoingReplicationHandler parent, RavenLogger log)
         {
             Log = log;
             _stream = stream;

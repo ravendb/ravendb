@@ -23,6 +23,7 @@ using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -67,7 +68,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         protected readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
         protected InterruptibleRead<TContextPool, TOperationContext> _interruptibleRead;
         protected OutgoingReplicationStatsAggregator _lastStats;
-        protected Logger Logger;
+        protected RavenLogger Logger;
 
         public ServerStore Server => _server;
         public long LastSentDocumentEtag => _lastSentDocumentEtag;
@@ -105,7 +106,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             _connectionDisposed = new AsyncManualResetEvent(token);
 
-            Logger = LoggingSource.Instance.GetLogger(_databaseName, GetType().FullName);
+            Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), _databaseName);
             Destination = node;
         }
 

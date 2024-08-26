@@ -13,7 +13,7 @@ namespace Raven.Server.NotificationCenter;
 
 public abstract class AbstractNotificationCenter : NotificationsBase
 {
-    private readonly Logger _logger;
+    private readonly RavenLogger _logger;
 
     public readonly NotificationsStorage Storage;
 
@@ -23,7 +23,7 @@ public abstract class AbstractNotificationCenter : NotificationsBase
     protected AbstractNotificationCenter(
         [NotNull] NotificationsStorage storage,
         [NotNull] RavenConfiguration configuration,
-        [NotNull] Logger logger)
+        [NotNull] RavenLogger logger)
     {
         Storage = storage ?? throw new ArgumentNullException(nameof(storage));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));

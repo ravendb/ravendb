@@ -36,17 +36,17 @@ namespace FastTests.Sparrow
 
             Pager.PagerTransactionState txState = new(){IsWriteTransaction = true};
             try
-            {
+                {
                 pager.EnsureContinuous(ref state, 17, 1); // We're gonna try to read and write to page 17
                 var pagePointer = pager.AcquirePagePointerForNewPage(state, ref txState, 17, 1);
 
-                var header = (PageHeader*)pagePointer;
-                header->PageNumber = 17;
-                header->Flags = PageFlags.Single | PageFlags.FixedSizeTreePage;
+                            var header = (PageHeader*)pagePointer;
+                            header->PageNumber = 17;
+                            header->Flags = PageFlags.Single | PageFlags.FixedSizeTreePage;
 
-                Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', Constants.Storage.PageSize - PageHeader.SizeOf);
+                            Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', Constants.Storage.PageSize - PageHeader.SizeOf);
                 txState.InvokeBeforeCommitFinalization(Env, ref state, ref txState);
-            }
+                        }
             finally
             {
                 txState.InvokeDispose(Env, ref state, ref txState);
@@ -54,26 +54,26 @@ namespace FastTests.Sparrow
 
             txState = default;
             try
-                {
+                        {
                     var pagePointer = pager.AcquirePagePointerWithOverflowHandling(state, ref txState, 17);
 
-                    // Making sure that the data was decrypted and still holds those 'X' chars
-                    Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
-                    Assert.True(pagePointer[666] == 'X');
-                    Assert.True(pagePointer[1039] == 'X');
+                            // Making sure that the data was decrypted and still holds those 'X' chars
+                            Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
+                            Assert.True(pagePointer[666] == 'X');
+                            Assert.True(pagePointer[1039] == 'X');
                     txState.InvokeBeforeCommitFinalization(Env, ref state, ref txState);
-                }
+                        }
                 finally
                 {
                     txState.InvokeDispose(Env, ref state, ref txState);
+                    }
                 }
-        }
 
         [Theory]
         [InlineDataWithRandomSeed]
         public unsafe void WriteSeekAndReadInTempCryptoStream(int seed)
         {
-            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            using (var options = StorageEnvironmentOptions.ForPathForTests(DataDir))
             using (var file = SafeFileStream.Create(Path.Combine(DataDir, "EncryptedTempFile"), FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096,
                        FileOptions.DeleteOnClose))
             using (var stream = new TempCryptoStream(file))
@@ -121,7 +121,7 @@ namespace FastTests.Sparrow
         [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public unsafe void StreamsTempFile_With_Encryption_ShouldNotThrow_When_NotAllStreamsWereRead()
         {
-            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            using (var options = StorageEnvironmentOptions.ForPathForTests(DataDir))
             {
                 options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
                 using (var environment = new StorageEnvironment(options))
@@ -162,7 +162,7 @@ namespace FastTests.Sparrow
         [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
         public unsafe void StreamsTempFile_With_Encryption_ShouldThrow_When_SeekAndWrite_AreMixed_Without_ExecutingReset()
         {
-            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            using (var options = StorageEnvironmentOptions.ForPathForTests(DataDir))
             {
                 options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
                 using (var environment = new StorageEnvironment(options))
@@ -207,20 +207,20 @@ namespace FastTests.Sparrow
 
             Pager.PagerTransactionState txState = new(){IsWriteTransaction = true};
             try
-            {
-                var overflowSize = 4 * Constants.Storage.PageSize + 100;
+                {
+                            var overflowSize = 4 * Constants.Storage.PageSize + 100;
 
                 pager.EnsureContinuous(ref state, 26, 5);
                 var pagePointer = pager.AcquirePagePointerForNewPage(state, ref txState, 26, 5);
 
-                var header = (PageHeader*)pagePointer;
-                header->PageNumber = 26;
-                header->Flags = PageFlags.Overflow;
-                header->OverflowSize = overflowSize;
+                            var header = (PageHeader*)pagePointer;
+                            header->PageNumber = 26;
+                            header->Flags = PageFlags.Overflow;
+                            header->OverflowSize = overflowSize;
 
-                Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', overflowSize);
+                            Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', overflowSize);
                 txState.InvokeBeforeCommitFinalization(Env, ref state, ref txState);
-            }
+                        }
             finally
             {
                 txState.InvokeDispose(Env, ref state, ref txState);
@@ -228,20 +228,20 @@ namespace FastTests.Sparrow
 
             txState = default;
             try
-                {
+                        {
                     var pagePointer = pager.AcquirePagePointerWithOverflowHandling(state, ref txState, 26);
 
-                    // Making sure that the data was decrypted and still holds those 'X' chars
-                    Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
-                    Assert.True(pagePointer[666] == 'X');
-                    Assert.True(pagePointer[1039] == 'X');
+                            // Making sure that the data was decrypted and still holds those 'X' chars
+                            Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
+                            Assert.True(pagePointer[666] == 'X');
+                            Assert.True(pagePointer[1039] == 'X');
                     txState.InvokeBeforeCommitFinalization(Env, ref state, ref txState);
-                }
+                        }
                 finally
                 {
                     txState.InvokeDispose(Env, ref state, ref txState);
+                    }
                 }
-        }
 
         [RavenMultiplatformFact(RavenTestCategory.Encryption | RavenTestCategory.Voron, RavenPlatform.Windows | RavenPlatform.Linux)]
         public unsafe void RavenDB_159751()
@@ -253,33 +253,33 @@ namespace FastTests.Sparrow
 
             Pager.PagerTransactionState txState = new(){IsWriteTransaction = true};
             try
-            {
-                var overflowSize = 4 * Constants.Storage.PageSize + 100;
+                {
+                            var overflowSize = 4 * Constants.Storage.PageSize + 100;
 
                 pager.EnsureContinuous(ref state, 26, 5);
                 var pagePointer = pager.AcquirePagePointerForNewPage(state, ref txState, 26, 5);
 
-                var header = (PageHeader*)pagePointer;
-                header->PageNumber = 26;
-                header->Flags = PageFlags.Overflow;
-                header->OverflowSize = overflowSize;
+                            var header = (PageHeader*)pagePointer;
+                            header->PageNumber = 26;
+                            header->Flags = PageFlags.Overflow;
+                            header->OverflowSize = overflowSize;
 
-                Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', overflowSize);
+                            Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', overflowSize);
 
                 Assert.True(PageExistsInCache(txState, pager, 26, out var usages));
-                Assert.Equal(1, usages);
+                            Assert.Equal(1, usages);
 
                 pager.TryReleasePage(ref txState, 26);
 
                 Assert.True(PageExistsInCache(txState, pager, 26, out usages));
-                Assert.Equal(1, usages);
+                            Assert.Equal(1, usages);
 
                 pager.AcquirePagePointer(state, ref txState, 26);
 
                 Assert.True(PageExistsInCache(txState, pager, 26, out usages));
-                Assert.Equal(2, usages);
+                            Assert.Equal(2, usages);
                 txState.InvokeBeforeCommitFinalization(Env, ref state, ref txState);
-            }
+                        }
             finally
             {
                 txState.InvokeDispose(Env, ref state, ref txState);
@@ -287,55 +287,55 @@ namespace FastTests.Sparrow
 
             txState = default;
             try
-            {
+                        {
                 var pagePointer = pager.AcquirePagePointerWithOverflowHandling(state, ref txState, 26);
 
-                // Making sure that the data was decrypted and still holds those 'X' chars
-                Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
-                Assert.True(pagePointer[666] == 'X');
-                Assert.True(pagePointer[1039] == 'X');
+                            // Making sure that the data was decrypted and still holds those 'X' chars
+                            Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
+                            Assert.True(pagePointer[666] == 'X');
+                            Assert.True(pagePointer[1039] == 'X');
 
                 Assert.True(PageExistsInCache(txState, pager, 26, out var usages));
-                Assert.Equal(1, usages);
+                            Assert.Equal(1, usages);
 
                 pager.AcquirePagePointerWithOverflowHandling(state, ref txState, 26);
 
                 Assert.True(PageExistsInCache(txState, pager, 26, out usages));
-                Assert.Equal(2, usages);
+                            Assert.Equal(2, usages);
 
                 pager.TryReleasePage(ref txState, 26);
 
                 Assert.True(PageExistsInCache(txState, pager, 26, out usages));
-                Assert.Equal(1, usages);
+                            Assert.Equal(1, usages);
 
                 pager.TryReleasePage(ref txState, 26);
 
                 Assert.False(PageExistsInCache(txState, pager, 26, out usages));
-                Assert.Equal(0, usages);
+                            Assert.Equal(0, usages);
                 txState.InvokeBeforeCommitFinalization(Env, ref state, ref txState);
-            }
+                        }
             finally
             {
                 txState.InvokeDispose(Env, ref state, ref txState);
             }
 
             bool PageExistsInCache(Pager.PagerTransactionState txState, Pager pager, long page, out int usages)
-                {
+                        {
                     if (txState.ForCrypto.TryGetValue(pager, out var s) == false)
-                    {
-                        usages = 0;
-                        return false;
-                    }
+                            {
+                                usages = 0;
+                                return false;
+                            }
 
                     if (s.TryGetValue(page, out var buffer) == false)
-                    {
-                        usages = 0;
-                        return false;
-                    }
+                            {
+                                usages = 0;
+                                return false;
+                            }
 
-                    usages = buffer.Usages;
-                    return true;
+                            usages = buffer.Usages;
+                            return true;
+                        }
+                    }
                 }
-        }
-    }
-}
+            }

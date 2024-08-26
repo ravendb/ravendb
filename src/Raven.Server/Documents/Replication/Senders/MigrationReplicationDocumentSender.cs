@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Replication.Senders
         public readonly ShardedDocumentDatabase Database;
         public OutgoingMigrationReplicationHandler Parent;
 
-        public MigrationReplicationDocumentSender(Stream stream, OutgoingMigrationReplicationHandler parent, Logger log) : base(stream, parent, log)
+        public MigrationReplicationDocumentSender(Stream stream, OutgoingMigrationReplicationHandler parent, RavenLogger log) : base(stream, parent, log)
         {
             Destination = parent.BucketMigrationNode;
             Database = (ShardedDocumentDatabase)parent._parent.Database;

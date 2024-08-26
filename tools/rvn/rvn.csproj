@@ -31,6 +31,7 @@
     <Compile Include="..\..\src\Raven.Server\Config\Categories\ConfigurationCategoryAttribute.cs" Link="Server\Config\Categories\ConfigurationCategoryAttribute.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Categories\ConfigurationCategoryType.cs" Link="Server\Config\Categories\ConfigurationCategoryType.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Categories\CoreConfiguration.cs" Link="Server\Config\Categories\CoreConfiguration.cs" />
+    <Compile Include="..\..\src\Raven.Server\Config\Categories\LogsConfiguration.cs" Link="Server\Config\Categories\LogsConfiguration.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Categories\SecurityConfiguration.cs" Link="Server\Config\Categories\SecurityConfiguration.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\ConfigurationEnumValueException.cs" Link="Server\Config\ConfigurationEnumValueException.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Categories\LicenseConfiguration.cs" Link="Server\Config\Categories\LicenseConfiguration.cs" />
@@ -38,6 +39,7 @@
     <Compile Include="..\..\src\Raven.Server\Config\Settings\PathSetting.cs" Link="Server\Config\Settings\PathSetting.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Settings\TimeSetting.cs" Link="Server\Config\Settings\TimeSetting.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Settings\UriSetting.cs" Link="Server\Config\Settings\UriSetting.cs" />
+    <Compile Include="..\..\src\Raven.Server\Logging\RavenLogManagerServerExtensions.cs" Link="Server\Logging\RavenLogManagerServerExtensions.cs" />
     <Compile Include="..\..\src\Raven.Server\ServerWide\ResourceType.cs" Link="Server\ServerWide\ResourceType.cs" />
     <Compile Include="..\..\src\Raven.Server\ServerWide\SecretProtection.cs" Link="Server\ServerWide\SecretProtection.cs" />
     <Compile Include="..\..\src\Raven.Server\ServerWide\SodiumSubKeyId.cs" Link="Server\ServerWide\SodiumSubKeyId.cs" />

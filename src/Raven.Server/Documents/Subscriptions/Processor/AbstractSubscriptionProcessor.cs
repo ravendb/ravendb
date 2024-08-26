@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Subscriptions.Stats;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -25,13 +26,13 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand, TItem> : I
 
     protected int BatchSize => Options.MaxDocsPerBatch;
 
-    protected Logger Logger;
+    protected RavenLogger Logger;
 
     protected AbstractSubscriptionProcessor(ServerStore server, ISubscriptionConnection connection, string databaseName)
     {
         Server = server;
         Connection = connection;
-        Logger = LoggingSource.Instance.GetLogger(databaseName, connection == null ? $"{nameof(TestDocumentsDatabaseSubscriptionProcessor)}" : $"{GetType().Name}<{connection.Options.SubscriptionName}>");
+        Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), databaseName);
     }
 
     public virtual void InitializeProcessor()

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -15,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 {
     public abstract class MapItems : IIndexingWork
     {
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private readonly Index _index;
         private readonly MapReduceIndexingContext _mapReduceContext;
         private readonly IndexingConfiguration _configuration;
@@ -27,8 +28,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             _mapReduceContext = mapReduceContext;
             _configuration = configuration;
             _indexStorage = indexStorage;
-            _logger = LoggingSource.Instance
-                .GetLogger<MapDocuments>(indexStorage.DocumentDatabase.Name);
+            _logger = RavenLogManager.Instance.GetLoggerForIndex(GetType(), index);
         }
 
         public string Name => "Map";

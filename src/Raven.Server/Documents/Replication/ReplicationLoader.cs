@@ -919,18 +919,18 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsOperationsEnabled)
+                        if (_logger.IsErrorEnabled)
                         {
-                            _logger.Operations($"Failed to start outgoing replication to {failure.Node}", e);
+                            _logger.Error($"Failed to start outgoing replication to {failure.Node}", e);
                         }
                     }
                 }
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
+                if (_logger.IsErrorEnabled)
                 {
-                    _logger.Operations("Unexpected exception during ForceTryReconnectAll", e);
+                    _logger.Error("Unexpected exception during ForceTryReconnectAll", e);
                 }
             }
             finally
@@ -1094,8 +1094,8 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Failed to start the outgoing connections to {newDestinations.Count} new destinations", e);
+                        if (_logger.IsErrorEnabled)
+                            _logger.Error($"Failed to start the outgoing connections to {newDestinations.Count} new destinations", e);
                     }
                 });
             }
@@ -1191,9 +1191,9 @@ namespace Raven.Server.Documents.Replication
                             }
                             catch (Exception e)
                             {
-                                if (_logger.IsOperationsEnabled)
+                                if (_logger.IsErrorEnabled)
                                 {
-                                    _logger.Operations("Unexpected error during database deletion from replication loader", e);
+                                    _logger.Error("Unexpected error during database deletion from replication loader", e);
                                 }
                             }
                         }
@@ -1239,8 +1239,8 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Failed to start the outgoing connections to {added.Count} new destinations", e);
+                        if (_logger.IsErrorEnabled)
+                            _logger.Error($"Failed to start the outgoing connections to {added.Count} new destinations", e);
                     }
                 });
             }

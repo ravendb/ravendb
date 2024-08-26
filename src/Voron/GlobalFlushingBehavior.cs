@@ -6,6 +6,7 @@ using System.Threading;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Impl.Journal;
+using Voron.Logging;
 
 namespace Voron
 {
@@ -45,7 +46,7 @@ namespace Voron
 
         private readonly ConcurrentQueue<EnvSyncReq> _storageEnvironments = new ConcurrentQueue<EnvSyncReq>();
 
-        private readonly Logger _log = LoggingSource.Instance.GetLogger<GlobalFlushingBehavior>("Global Flusher");
+        private static readonly RavenLogger _log = RavenLogManager.Instance.GetLoggerForGlobalVoron<GlobalFlushingBehavior>();
 
         public bool HasLowNumberOfFlushingResources => _concurrentFlushesAvailable.CurrentCount <= _lowNumberOfFlushingResources;
 
@@ -86,9 +87,9 @@ namespace Voron
             }
             catch (Exception e)
             {
-                if (_log.IsOperationsEnabled)
+                if (_log.IsFatalEnabled)
                 {
-                    _log.Operations("Catastrophic failure in Voron environment flushing", e);
+                    _log.Fatal("Catastrophic failure in Voron environment flushing", e);
                 }
 
                 // wait for the message to be flushed to the logs
@@ -160,8 +161,8 @@ namespace Voron
             }
             catch (Exception e)
             {
-                if (_log.IsOperationsEnabled)
-                    _log.Operations($"Failed to sync data file for {storageEnvironment.Options.BasePath}", e);
+                if (_log.IsFatalEnabled)
+                    _log.Fatal($"Failed to sync data file for {storageEnvironment.Options.BasePath}", e);
                 storageEnvironment.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
             }
         }
@@ -228,8 +229,8 @@ namespace Voron
                     }
                     catch (Exception e)
                     {
-                        if (_log.IsOperationsEnabled)
-                            _log.Operations($"Failed to flush {storageEnvironment.Options.BasePath}", e);
+                        if (_log.IsFatalEnabled)
+                            _log.Fatal($"Failed to flush {storageEnvironment.Options.BasePath}", e);
 
                         storageEnvironment.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                     }

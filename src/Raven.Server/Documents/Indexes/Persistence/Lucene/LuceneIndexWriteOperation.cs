@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.Logging;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
 
         public LuceneIndexWriteOperation(Index index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
-            : base(index, LoggingSource.Instance.GetLogger<LuceneIndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
+            : base(index, RavenLogManager.Instance.GetLoggerForIndex<LuceneIndexWriteOperation>(index))
         {
             _converter = converter;
 

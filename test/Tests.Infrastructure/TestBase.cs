@@ -129,7 +129,8 @@ namespace FastTests
 
             var packagesPath = new PathSetting(RavenTestHelper.NewDataPath("NuGetPackages", 0, forceCreateDir: true));
             GlobalPathsToDelete.Add(packagesPath.FullPath);
-            MultiSourceNuGetFetcher.Instance.Initialize(packagesPath, "https://api.nuget.org/v3/index.json", allowPreleasePackages: true);
+            MultiSourceNuGetFetcher.ForIndexes.Initialize(packagesPath, "https://api.nuget.org/v3/index.json", allowPreleasePackages: true);
+            MultiSourceNuGetFetcher.ForLogging.Initialize(packagesPath, "https://api.nuget.org/v3/index.json", allowPreleasePackages: true);
 
             IOExtensions.AfterGc += (s, x) =>
             {
@@ -554,7 +555,8 @@ namespace FastTests
 
                 configuration.Initialize();
 
-                configuration.Logs.Mode = LogMode.None;
+                configuration.Logs.MinLevel = LogLevel.Off;
+                configuration.Logs.MaxLevel = LogLevel.Off;
                 configuration.Server.Name = ServerName;
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
                 configuration.Licensing.EulaAccepted = true;

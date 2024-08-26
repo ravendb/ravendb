@@ -37,7 +37,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly long _startDocumentEtag;
         private readonly long _startRaftIndex;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private IDisposable _returnContext;
         private IDisposable _returnServerContext;
         private DocumentsTransaction _disposeTransaction;
@@ -74,7 +74,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public EventHandler<InvalidOperationException> OnCorruptedDataHandler;
 
-        public DatabaseSource(DocumentDatabase database, long startDocumentEtag, long startRaftIndex, Logger logger)
+        public DatabaseSource(DocumentDatabase database, long startDocumentEtag, long startRaftIndex, RavenLogger logger)
         {
             _database = database;
             _startDocumentEtag = startDocumentEtag;

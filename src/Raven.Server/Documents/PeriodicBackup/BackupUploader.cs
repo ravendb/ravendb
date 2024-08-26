@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public readonly OperationCancelToken TaskCancelToken;
 
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private readonly BackupResult _backupResult;
         private readonly Action<IOperationProgress> _onProgress;
 
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private const string GoogleCloudName = "Google Cloud";
         private const string FtpName = "FTP";
 
-        public BackupUploader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
+        public BackupUploader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, RavenLogger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _threads = new List<PoolOfThreads.LongRunningWork>();

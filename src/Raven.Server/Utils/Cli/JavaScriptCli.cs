@@ -31,10 +31,10 @@ namespace Raven.Server.Utils.Cli
                 Console.ResetColor();
 
             AdminConsole = new AdminJsConsole(server, database);
-            if (AdminConsole.Log.IsOperationsEnabled)
+            if (AdminConsole.Log.IsWarnEnabled)
             {
                 var from = consoleColoring ? "the console CLI" : "a named pipe connection";
-                AdminConsole.Log.Operations($"This operation was initiated through {from}");
+                AdminConsole.Log.Warn($"This operation was initiated through {from}");
             }
             while (true)
             {

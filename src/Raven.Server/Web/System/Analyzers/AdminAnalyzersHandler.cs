@@ -29,7 +29,7 @@ namespace Raven.Server.Web.System.Analyzers
                     var analyzerDefinition = JsonDeserializationServer.AnalyzerDefinition((BlittableJsonReaderObject)analyzerToAdd);
                     analyzerDefinition.Name = analyzerDefinition.Name?.Trim();
 
-                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                    if (RavenLogManager.Instance.IsAuditEnabled)
                     {
                         LogAuditFor("Server", "PUT", $"Analyzer '{analyzerDefinition.Name}' with definition: {analyzerToAdd}");
                     }
@@ -59,7 +59,7 @@ namespace Raven.Server.Web.System.Analyzers
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            if (LoggingSource.AuditLog.IsInfoEnabled)
+            if (RavenLogManager.Instance.IsAuditEnabled)
             {
                 LogAuditFor("Server", "DELETE", $"Analyzer '{name}'");
             }

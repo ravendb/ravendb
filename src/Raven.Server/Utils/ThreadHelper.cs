@@ -6,7 +6,7 @@ namespace Raven.Server.Utils;
 
 public static class ThreadHelper
 {
-    public static bool TrySetThreadPriority(ThreadPriority priority, string threadName, Logger logger)
+    public static bool TrySetThreadPriority(ThreadPriority priority, string threadName, RavenLogger logger)
     {
         try
         {
