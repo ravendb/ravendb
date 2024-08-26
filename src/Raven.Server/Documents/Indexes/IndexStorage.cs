@@ -735,13 +735,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public long ReadLastProcessedTombstoneEtag(IndexItemType itemType, RavenTransaction tx, string collection)
-        {
-            return itemType == IndexItemType.TimeSeries ? 
-                ReadLastProcessedTimeSeriesDeletedRangeEtag(tx, collection) : 
-                ReadLastProcessedTombstoneEtag(tx, collection);
-        }
-
         public long ReadLastProcessedTombstoneEtag(RavenTransaction tx, string collection)
         {
             var txi = tx.InnerTransaction;
