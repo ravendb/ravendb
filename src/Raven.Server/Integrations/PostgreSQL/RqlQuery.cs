@@ -13,6 +13,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Integrations.PostgreSQL.Types;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -29,12 +30,12 @@ namespace Raven.Server.Integrations.PostgreSQL
         private List<Document> _result;
         private readonly int? _limit;
         private bool _queryWasRun;
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres RqlQuery");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<RqlQuery>();
 
         ~RqlQuery()
         {
-            if(Logger.IsOperationsEnabled)
-                Logger.Operations($"Query '{QueryString}' wasn't disposed properly.{Environment.NewLine}" +
+            if(Logger.IsWarnEnabled)
+                Logger.Warn($"Query '{QueryString}' wasn't disposed properly.{Environment.NewLine}" +
                                 $"Query was run: {_queryWasRun}{Environment.NewLine}" +
                                 $"Are transactions still opened: {_queryOperationContext.AreTransactionsOpened()}{Environment.NewLine}");
             Dispose();

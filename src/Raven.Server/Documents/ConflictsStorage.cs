@@ -11,6 +11,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -34,7 +35,7 @@ namespace Raven.Server.Documents
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         public ConflictsStorage([NotNull] DocumentDatabase documentDatabase, [NotNull] Transaction tx, [NotNull] TableSchema schema)
         {
@@ -46,7 +47,7 @@ namespace Raven.Server.Documents
 
             ConflictsSchema = schema ?? throw new ArgumentNullException(nameof(schema));
 
-            _logger = LoggingSource.Instance.GetLogger<ConflictsStorage>(documentDatabase.Name);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<ConflictsStorage>(documentDatabase);
 
             ConflictsSchema.Create(tx, ConflictsSlice, 32);
         }

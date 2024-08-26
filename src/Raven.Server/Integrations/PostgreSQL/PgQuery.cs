@@ -9,13 +9,14 @@ using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Integrations.PostgreSQL.PowerBI;
 using Raven.Server.Integrations.PostgreSQL.Types;
+using Raven.Server.Logging;
 using Sparrow.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {
     public abstract class PgQuery : IDisposable
     {
-        private static Logger _log = LoggingSource.Instance.GetLogger<PgQuery>("Postgres Server");
+        private static RavenLogger _log = RavenLogManager.Instance.GetLoggerForServer<PgQuery>();
 
         protected readonly string QueryString;
         public readonly int[] ParametersDataTypes;

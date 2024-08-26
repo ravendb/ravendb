@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -11,8 +12,7 @@ namespace Raven.Server.Documents
 {
     public sealed class DatabaseInfoCache
     {
-
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabaseInfoCache>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<DatabaseInfoCache>();
 
         private StorageEnvironment _environment;
 

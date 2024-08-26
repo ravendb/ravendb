@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -13,30 +13,66 @@ namespace Raven.Client.ServerWide.Operations.Logs
     {
         private readonly Parameters _parameters;
 
-        public sealed class Parameters
+        public sealed class LogsConfiguration
         {
-            public LogMode Mode { get; set; }
-            public TimeSpan? RetentionTime { get; set; }
-            public Size? RetentionSize { get; set; }
-            public bool Compress { get; set; }
-            public bool Persist { get; set; }
+            public LogLevel MinLevel { get; set; }
 
-            public Parameters()
-            {
-            }
+            public LogLevel MaxLevel { get; set; }
 
-            public Parameters(GetLogsConfigurationResult currentLogsConfiguration)
-            {
-                Mode = currentLogsConfiguration.Mode;
-                RetentionTime = currentLogsConfiguration.RetentionTime;
-                RetentionSize = currentLogsConfiguration.RetentionSize;
-                Compress = currentLogsConfiguration.Compress;
-            }
+            public List<LogFilter> Filters { get; set; }
+
+            public LogFilterAction LogFilterDefaultAction { get; set; }
         }
 
-        public SetLogsConfigurationOperation(Parameters parameters)
+        public sealed class MicrosoftLogsConfiguration
         {
-            _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
+            public LogLevel MinLevel { get; set; }
+        }
+
+        public sealed class AdminLogsConfiguration
+        {
+            public LogLevel MinLevel { get; set; }
+
+            public LogLevel MaxLevel { get; set; }
+
+            public List<LogFilter> Filters { get; set; }
+
+            public LogFilterAction LogFilterDefaultAction { get; set; }
+        }
+
+        internal sealed class Parameters
+        {
+            public LogsConfiguration Logs { get; set; }
+
+            public MicrosoftLogsConfiguration MicrosoftLogs { get; set; }
+
+            public AdminLogsConfiguration AdminLogs { get; set; }
+
+            public bool Persist { get; set; }
+        }
+
+        public SetLogsConfigurationOperation(LogsConfiguration configuration)
+        {
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
+            _parameters = new Parameters { Logs = configuration };
+        }
+
+        public SetLogsConfigurationOperation(MicrosoftLogsConfiguration configuration)
+        {
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
+            _parameters = new Parameters { MicrosoftLogs = configuration };
+        }
+
+        public SetLogsConfigurationOperation(AdminLogsConfiguration configuration)
+        {
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
+            _parameters = new Parameters { AdminLogs = configuration };
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -44,7 +80,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
             return new SetLogsConfigurationCommand(conventions, _parameters);
         }
 
-        private sealed class SetLogsConfigurationCommand : RavenCommand
+        private class SetLogsConfigurationCommand : RavenCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly Parameters _parameters;

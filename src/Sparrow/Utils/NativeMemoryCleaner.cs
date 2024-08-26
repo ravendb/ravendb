@@ -9,7 +9,7 @@ namespace Sparrow.Utils
 {
     public sealed class NativeMemoryCleaner<TStack, TPooledItem> : IDisposable where TPooledItem : PooledItem where TStack : StackHeader<TPooledItem>
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<NativeMemoryCleaner<TStack, TPooledItem>>("Memory");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrow(typeof(NativeMemoryCleaner<TStack, TPooledItem>));
 
         private readonly object _lock = new object();
         private readonly Func<object, ICollection<TStack>> _getContextsFromCleanupTarget;
@@ -101,8 +101,8 @@ namespace Sparrow.Utils
             catch (Exception e)
             {
                 Debug.Assert(e is OutOfMemoryException, $"Expecting OutOfMemoryException but got: {e}");
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Error during cleanup.", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error("Error during cleanup.", e);
             }
             finally
             {

@@ -2,6 +2,7 @@
 using System.Threading;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
@@ -13,7 +14,7 @@ namespace Raven.Server.NotificationCenter
     {
         private static readonly string QueryRequestLatenciesId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.RequestLatency}/Query";
         private readonly object _locker = new();
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private readonly AbstractDatabaseNotificationCenter _notificationCenter;
 
         private volatile bool _needsSync;
@@ -26,7 +27,7 @@ namespace Raven.Server.NotificationCenter
         {
             _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
 
-            _logger = LoggingSource.Instance.GetLogger(notificationCenter.Database, GetType().FullName);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<RequestLatency>(notificationCenter.Database);
         }
 
         public void AddHint(long duration, string action, string query)

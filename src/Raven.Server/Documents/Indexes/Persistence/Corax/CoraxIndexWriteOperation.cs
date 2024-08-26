@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly CurrentIndexingScope _indexingScope;
         private readonly ByteStringContext _allocator;
 
-        public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverterBase converter, Logger logger) : base(index, logger)
+        public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverterBase converter, RavenLogger logger) : base(index, logger)
         {
             _converter = converter;
             var knownFields = _converter.GetKnownFieldsForWriter();

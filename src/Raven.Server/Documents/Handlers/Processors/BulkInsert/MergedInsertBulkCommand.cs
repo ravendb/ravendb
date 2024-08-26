@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers.Processors.BulkInsert;
 
 public sealed class MergedInsertBulkCommand : DocumentMergedTransactionCommand
 {
-    public Logger Logger;
+    public RavenLogger Logger;
     public DocumentDatabase Database;
     public BatchRequestParser.CommandData[] Commands;
     public int NumberOfCommands;

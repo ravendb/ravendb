@@ -27,6 +27,7 @@ using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Exceptions;
+using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -47,7 +48,7 @@ namespace Raven.Server
         private RequestRouter _router;
         private RavenServer _server;
         private long _requestId;
-        private readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("Server");
+        private readonly RavenLogger _logger = RavenLogManager.Instance.GetLoggerForServer<RavenServerStartup>();
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
         {
@@ -237,9 +238,9 @@ namespace Raven.Server
                 }
                 catch (Exception internalException)
                 {
-                    if (_logger.IsOperationsEnabled)
+                    if (_logger.IsErrorEnabled)
                     {
-                        _logger.Operations($"Error during error handling of a failed request. Original error: {e}", internalException);
+                        _logger.Error($"Error during error handling of a failed request. Original error: {e}", internalException);
                     }
 
                     throw;

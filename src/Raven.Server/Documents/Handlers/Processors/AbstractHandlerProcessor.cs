@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Processors
     {
         protected readonly JsonContextPoolBase<TOperationContext> ContextPool;
 
-        protected readonly Logger Logger;
+        protected readonly RavenLogger Logger;
 
         protected AbstractDatabaseHandlerProcessor([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {

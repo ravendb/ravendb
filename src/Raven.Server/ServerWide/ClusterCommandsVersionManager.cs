@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using Raven.Server.Integrations.PostgreSQL.Commands;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -36,7 +37,7 @@ namespace Raven.Server.ServerWide
         public event EventHandler<ClusterVersionChangeEventArgs> OnClusterVersionChange;
 
 
-        private static readonly Logger Log = LoggingSource.Instance.GetLogger(typeof(ClusterCommandsVersionManager).FullName, typeof(ClusterCommandsVersionManager).FullName);
+        private static readonly RavenLogger Log = RavenLogManager.Instance.GetLoggerForServer<ClusterCommandsVersionManager>();
 
         public static readonly IReadOnlyDictionary<string, int> ClusterCommandsVersions = new Dictionary<string, int>
         {

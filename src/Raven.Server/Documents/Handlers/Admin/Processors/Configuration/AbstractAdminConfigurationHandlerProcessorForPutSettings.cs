@@ -38,7 +38,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
                 settingsToUpdate.Add(prop.Name, prop.Value?.ToString());
             }
             
-            if (LoggingSource.AuditLog.IsInfoEnabled)
+            if (RavenLogManager.Instance.IsAuditEnabled)
             {
                 using (context.OpenReadTransaction())
                 {

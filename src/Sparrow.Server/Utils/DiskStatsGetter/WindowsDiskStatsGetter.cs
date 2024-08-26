@@ -9,7 +9,7 @@ namespace Sparrow.Server.Utils.DiskStatsGetter;
 [SupportedOSPlatform("windows")]
 internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResult>
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<WindowsDiskStatsGetter>("Server");
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrow(typeof(WindowsDiskStatsGetter));
 
     private const string DiskCategory = "LogicalDisk";
 
@@ -63,8 +63,8 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
         }
         catch (Exception e)
         {
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Could not get GetDiskInfo for {path}", e);
+            if (Logger.IsWarnEnabled)
+                Logger.Warn($"Could not get GetDiskInfo for {path}", e);
             return null;
         }
     }
@@ -114,8 +114,8 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
                     if (drive.StartsWith(name, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"{nameof(DiskCounters)} was created for \"{drive}\" (requested for path \"{path}\").");
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"{nameof(DiskCounters)} was created for \"{drive}\" (requested for path \"{path}\").");
 
                     counter = _countersPerDisk[path] = new DiskCounters(name);
                     break;
@@ -123,8 +123,8 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
 
                 if (counter == null)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Couldn't find instance in {DiskCategory} for \"{drive}\" (requested for path \"{path}\").");
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn($"Couldn't find instance in {DiskCategory} for \"{drive}\" (requested for path \"{path}\").");
 
                     _countersPerDisk[path] = null;
                 }

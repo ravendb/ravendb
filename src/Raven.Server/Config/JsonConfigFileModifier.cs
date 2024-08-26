@@ -9,6 +9,8 @@ using Newtonsoft.Json;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+using Raven.Server.Commercial;
+using Raven.Server.Logging;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -20,8 +22,8 @@ namespace Raven.Server.Config;
 
 public class JsonConfigFileModifier : IDisposable
 {
-    private static readonly Logger Logger = LoggingSource.Instance.GetLogger<JsonConfigFileModifier>("Server");
-    
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<JsonConfigFileModifier>();
+
     private readonly JsonOperationContext _context;
     private readonly string _path;
     private readonly bool _overwriteWholeFile;

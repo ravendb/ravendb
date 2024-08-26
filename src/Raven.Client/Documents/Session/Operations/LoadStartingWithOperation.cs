@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Logging;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -8,7 +9,7 @@ namespace Raven.Client.Documents.Session.Operations
 {
     internal sealed class LoadStartingWithOperation
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LoadStartingWithOperation>("Client");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient<LoadStartingWithOperation>();
         private readonly InMemoryDocumentSessionOperations _session;
 
         private string _startWith;
@@ -31,8 +32,8 @@ namespace Raven.Client.Documents.Session.Operations
         public GetDocumentsCommand CreateRequest()
         {
             _session.IncrementRequestCount();
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Requesting documents with ids starting with '{_startWith}' from {_session.StoreIdentifier}");
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"Requesting documents with ids starting with '{_startWith}' from {_session.StoreIdentifier}");
 
             return new GetDocumentsCommand(_session.Conventions, _startWith, _startAfter, _matches, _exclude, _start, _pageSize, metadataOnly: false);
         }

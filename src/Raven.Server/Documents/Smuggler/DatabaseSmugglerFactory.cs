@@ -33,7 +33,7 @@ public sealed class DatabaseSmugglerFactory : AbstractDatabaseSmugglerFactory
         return new SnapshotDatabaseDestination(_database, subscriptions, token);
     }
 
-    public override DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, Logger logger)
+    public override DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, RavenLogger logger)
     {
         return new DatabaseSource(_database, startDocumentEtag, startRaftIndex, logger);
     }

@@ -10,8 +10,10 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Logging;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions
 {
@@ -24,7 +26,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         private readonly ShardedDatabaseContext _databaseContext;
         public Task SubscriptionTask => _subscriptionTask;
 
-        public ShardedSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RequestExecutor re, SubscriptionConnectionsStateOrchestrator state) : base(options, dbName)
+        public ShardedSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RequestExecutor re, SubscriptionConnectionsStateOrchestrator state) : base(options, dbName, RavenLogManager.Instance.GetLoggerForDatabase<ShardedSubscriptionWorker>(dbName))
         {
             _shardNumber = ShardHelper.GetShardNumberFromDatabaseName(dbName);
             _shardRequestExecutor = re;

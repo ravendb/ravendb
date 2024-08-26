@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Replication.Senders
 {
     public class ExternalReplicationDocumentSender : ReplicationDocumentSenderBase
     {
-        public ExternalReplicationDocumentSender(Stream stream, DatabaseOutgoingReplicationHandler parent, Logger log) : base(stream, parent, log)
+        public ExternalReplicationDocumentSender(Stream stream, DatabaseOutgoingReplicationHandler parent, RavenLogger log) : base(stream, parent, log)
         {
         }
 

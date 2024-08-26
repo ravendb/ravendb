@@ -75,9 +75,9 @@ namespace Raven.Server.Rachis
                     if (_engine.RequestSnapshot)
                     {
                         // we aren't allowed to be elected for leadership if we requested a snapshot 
-                        if (_engine.Log.IsOperationsEnabled)
+                        if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Operations("we aren't allowed to be elected for leadership if we requested a snapshot");
+                            _engine.Log.Info("we aren't allowed to be elected for leadership if we requested a snapshot");
                         }
                         return;
                     }

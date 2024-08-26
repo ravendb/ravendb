@@ -23,6 +23,7 @@ using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
 using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
@@ -48,7 +49,7 @@ namespace Raven.Server.Documents.ETL
         private bool _isSubscribedToCounterChanges;
         private bool _isSubscribedToTimeSeriesChanges;
 
-        private Logger Logger;
+        private RavenLogger Logger;
 
         public event Action<(string ConfigurationName, string TransformationName, EtlProcessStatistics Statistics)> BatchCompleted;
 
@@ -59,7 +60,7 @@ namespace Raven.Server.Documents.ETL
 
         public EtlLoader(DocumentDatabase database, ServerStore serverStore)
         {
-            Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
+            Logger = RavenLogManager.Instance.GetLoggerForDatabase<EtlLoader>(database);
 
             _database = database;
             _serverStore = serverStore;
@@ -731,8 +732,8 @@ namespace Raven.Server.Documents.ETL
                         }
                         catch (Exception e)
                         {
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"Failed to dispose ETL process {process.Name} on the database record change", e);
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Failed to dispose ETL process {process.Name} on the database record change", e);
                         }
                         finally
                         {
@@ -747,7 +748,7 @@ namespace Raven.Server.Documents.ETL
         {
             try
             {
-                if (sp == null || Logger.IsOperationsEnabled == false)
+                if (sp == null || Logger.IsWarnEnabled == false)
                     return;
 
                 sp.Stop();
@@ -756,7 +757,7 @@ namespace Raven.Server.Documents.ETL
                     return;
 
                 var msg = $"Dispose of ETL process {processName} on the database record change was running for a very long time {sp.Elapsed}";
-                Logger.Operations(msg);
+                Logger.Warn(msg);
 
 #if !RELEASE
                 Console.WriteLine(msg);

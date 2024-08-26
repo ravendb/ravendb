@@ -18,7 +18,7 @@ namespace Sparrow.Server.LowMemory
 {
     public static class MemoryInformation
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrow(typeof(MemoryInformation));
 
         private static readonly byte[] VmRss = Encoding.UTF8.GetBytes("VmRSS:");
         private static readonly byte[] VmSwap = Encoding.UTF8.GetBytes("VmSwap:");

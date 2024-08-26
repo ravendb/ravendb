@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         [Fact]
         public unsafe void TempCryptoStream_CanWorkWithFilesGreaterThan2GB()
         {
-            using (StorageEnvironmentOptions.ForPath(DataDir))
+            using (StorageEnvironmentOptions.ForPathForTests(DataDir))
             using (var file = SafeFileStream.Create(Path.Combine(DataDir, "EncryptedTempFile_RavenDB_10836"), FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
             {
                 long length = int.MaxValue;

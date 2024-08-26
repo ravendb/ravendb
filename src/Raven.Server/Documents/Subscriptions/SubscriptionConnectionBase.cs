@@ -21,6 +21,7 @@ using Raven.Server.Documents.Subscriptions.Processor;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -51,7 +52,7 @@ namespace Raven.Server.Documents.Subscriptions
         internal readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
 
         internal SubscriptionWorkerOptions _options;
-        internal readonly Logger _logger;
+        internal readonly RavenLogger _logger;
 
         public string LastSentChangeVectorInThisConnection { get; set; }
         public readonly ConcurrentQueue<string> RecentSubscriptionStatuses = new();
@@ -108,7 +109,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             DatabaseName = database;
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
-            _logger = LoggingSource.Instance.GetLogger(ExtractDatabaseNameForLogging(tcpConnection), GetType().FullName);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), ExtractDatabaseNameForLogging(tcpConnection));
 
             ClientUri = tcpConnection.TcpClient.Client.RemoteEndPoint.ToString();
 
@@ -1049,7 +1050,7 @@ namespace Raven.Server.Documents.Subscriptions
         }
 
         internal static async Task FlushDocsToClientAsync(long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer,
-            TcpConnectionOptions tcpConnection, SubscriptionConnectionMetrics metrics, Logger logger, int flushedDocs, bool endOfBatch = false,
+            TcpConnectionOptions tcpConnection, SubscriptionConnectionMetrics metrics, RavenLogger logger, int flushedDocs, bool endOfBatch = false,
             CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();

@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly SemaphoreSlim _updateBackupTaskSemaphore = new SemaphoreSlim(1);
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
         private readonly PeriodicBackupRunner _periodicBackupRunner;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private BackupTimer _backupTimer;
 
         public RunningBackupTask RunningTask { get; set; }
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public bool Disposed => _disposeOnce.Disposed;
 
-        public PeriodicBackup(PeriodicBackupRunner periodicBackupRunner, ConcurrentSet<Task> inactiveRunningPeriodicBackupsTasks, Logger logger)
+        public PeriodicBackup(PeriodicBackupRunner periodicBackupRunner, ConcurrentSet<Task> inactiveRunningPeriodicBackupsTasks, RavenLogger logger)
         {
             _periodicBackupRunner = periodicBackupRunner;
             _logger = logger;
@@ -114,8 +114,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             _backupTimer?.Dispose();
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Next {(nextBackup.IsFull ? "full" : "incremental")} backup is in {nextBackup.TimeSpan.TotalMinutes} minutes.");
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Next {(nextBackup.IsFull ? "full" : "incremental")} backup is in {nextBackup.TimeSpan.TotalMinutes} minutes.");
 
             var timer = nextBackup.TimeSpan < _periodicBackupRunner.MaxTimerTimeout
                 ? new Timer(_periodicBackupRunner.TimerCallback, nextBackup, nextBackup.TimeSpan, Timeout.InfiniteTimeSpan)

@@ -1,8 +1,10 @@
 using System;
 using System.Threading;
 using Raven.Client.Exceptions;
+using Raven.Server.Logging;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Logging;
 using Sparrow.Threading;
 
 namespace Raven.Server.Rachis
@@ -23,7 +25,7 @@ namespace Raven.Server.Rachis
             _singleShot = singleShot;
             _lastDeferredTicks = DateTime.UtcNow.Ticks;
             _timer = new Timer(Callback, null, Timeout.Infinite, Timeout.Infinite);
-            _logger = LoggingSource.Instance.GetLogger<TimeoutEvent>(name);
+            _logger = RavenLogManager.Instance.GetLoggerForCluster<TimeoutEvent>(LoggingComponent.Name(name));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
 
@@ -34,7 +36,7 @@ namespace Raven.Server.Rachis
 
         public int TimeoutPeriod;
         private readonly bool _singleShot;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         public void Start(Action onTimeout)
         {

@@ -19,6 +19,7 @@ using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Logging;
 using Raven.Server.Monitoring.Snmp.Objects.Cluster;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
@@ -39,7 +40,7 @@ namespace Raven.Server.Monitoring.Snmp
 
         private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<SnmpWatcher>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<SnmpWatcher>();
 
         private readonly RavenServer _server;
 
@@ -169,8 +170,8 @@ namespace Raven.Server.Monitoring.Snmp
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Failed to update the SNMP mapping for database: {databaseName}", e);
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error($"Failed to update the SNMP mapping for database: {databaseName}", e);
                 }
                 finally
                 {
@@ -246,8 +247,8 @@ namespace Raven.Server.Monitoring.Snmp
             engine.Listener.ExceptionRaised += (sender, e) =>
             {
                 // MessageFactoryException hides inner exception
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"SNMP error: {e.Exception.Message}. Inner: {e.Exception.InnerException}", e.Exception);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"SNMP error: {e.Exception.Message}. Inner: {e.Exception.InnerException}", e.Exception);
             };
 
             return engine;
@@ -602,8 +603,8 @@ namespace Raven.Server.Monitoring.Snmp
                 if (missingDatabases?.Count > 0)
                     msg += $" missing databases: {string.Join(", ", missingDatabases)}";
 
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations(msg, e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error(msg, e);
             }
             finally
             {
@@ -658,9 +659,9 @@ namespace Raven.Server.Monitoring.Snmp
 
         private sealed class SnmpLogger : ILogger
         {
-            private readonly Logger _logger;
+            private readonly RavenLogger _logger;
 
-            public SnmpLogger(Logger logger)
+            public SnmpLogger(RavenLogger logger)
             {
                 _logger = logger;
             }

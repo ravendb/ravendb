@@ -15,6 +15,7 @@ using Raven.Server.Documents.Sharding.Background;
 using Raven.Server.Documents.Sharding.Smuggler;
 using Raven.Server.Documents.Subscriptions.Sharding;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.Sharding;
 
 public sealed class ShardedDocumentDatabase : DocumentDatabase
 {
-    private readonly Logger _logger;
+    private readonly RavenLogger _logger;
 
     public readonly int ShardNumber;
     
@@ -42,14 +43,14 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
 
     public ShardedDocumentsMigrator DocumentsMigrator { get; private set; }
 
-    public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<LogMode, string> addToInitLog)
+    public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<LogLevel, string> addToInitLog)
         : base(name, configuration, serverStore, addToInitLog)
     {
         ShardNumber = ShardHelper.GetShardNumberFromDatabaseName(name);
         ShardedDatabaseName = ShardHelper.ToDatabaseName(name);
         Smuggler = new ShardedDatabaseSmugglerFactory(this);
 
-        _logger = LoggingSource.Instance.GetLogger<ShardedDocumentDatabase>(Name);
+        _logger = RavenLogManager.Instance.GetLoggerForDatabase<ShardedDocumentDatabase>(Name);
     }
 
     protected override byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, ShardedDatabaseName);
@@ -65,7 +66,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         _ = DocumentsMigrator.ExecuteMoveDocumentsAsync();
     }
 
-    protected override DocumentsStorage CreateDocumentsStorage(Action<LogMode, string> addToInitLog)
+    protected override DocumentsStorage CreateDocumentsStorage(Action<LogLevel, string> addToInitLog)
     {
         return ShardedDocumentsStorage = new ShardedDocumentsStorage(this, addToInitLog);
     }

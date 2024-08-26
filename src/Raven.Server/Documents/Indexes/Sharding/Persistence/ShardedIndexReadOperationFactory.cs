@@ -20,7 +20,7 @@ public sealed class ShardedIndexReadOperationFactory : IIndexReadOperationFactor
         return new ShardedLuceneIndexReadOperation(index, directory,  queryBuilderFactories, readTransaction, query);
     }
 
-    public CoraxIndexReadOperation CreateCoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
+    public CoraxIndexReadOperation CreateCoraxIndexReadOperation(Index index, RavenLogger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
         IndexFieldsMapping fieldsMapping, IndexQueryServerSide query)
     {
         return new ShardedCoraxIndexReadOperation(index, logger, readTransaction, queryBuilderFactories, fieldsMapping, query);

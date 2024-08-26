@@ -1,6 +1,8 @@
 ﻿using System;
 using JetBrains.Annotations;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.TransactionMerger;
 
@@ -9,7 +11,7 @@ public sealed class DocumentsTransactionOperationsMerger : AbstractTransactionOp
     private readonly DocumentDatabase _database;
 
     public DocumentsTransactionOperationsMerger([NotNull] DocumentDatabase database)
-        : base(database.Name, database.Configuration, database.Time, database.DatabaseShutdown)
+        : base(database.Name, database.Configuration, database.Time, RavenLogManager.Instance.GetLoggerForDatabase<DocumentsTransactionOperationsMerger>(database), database.DatabaseShutdown)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }

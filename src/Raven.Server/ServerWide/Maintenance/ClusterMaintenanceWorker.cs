@@ -9,6 +9,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
@@ -18,6 +19,7 @@ using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Sparrow.LowMemory;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
@@ -28,7 +30,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly ServerStore _server;
         private CancellationToken _token;
         private readonly CancellationTokenSource _cts;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         private readonly string _name;
         public readonly long CurrentTerm;
@@ -46,8 +48,8 @@ namespace Raven.Server.ServerWide.Maintenance
             _cts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
             _token = _cts.Token;
             _server = serverStore;
-            _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceWorker>(serverStore.NodeTag);
             _name = $"Heartbeats worker connection to leader {leader} in term {term}";
+            _logger = RavenLogManager.Instance.GetLoggerForCluster<ClusterMaintenanceWorker>(LoggingComponent.Name(_name));
             _temporaryDirtyMemoryAllowedPercentage = _server.Server.ServerStore.Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage;
             _leader = leader;
             _term = term;

@@ -11,6 +11,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
@@ -46,7 +47,7 @@ namespace Raven.Server.Documents.Indexes
             public const string CompareExchangeReferenceCollectionPrefix = "@";
         }
 
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         private readonly Index _index;
 
@@ -79,7 +80,7 @@ namespace Raven.Server.Documents.Indexes
             _index = index;
             _contextPool = contextPool;
             DocumentDatabase = database;
-            _logger = LoggingSource.Instance.GetLogger<IndexStorage>(DocumentDatabase.Name);
+            _logger = RavenLogManager.Instance.GetLoggerForIndex<IndexStorage>(index);
 
             var referencedCollections = index.GetReferencedCollections();
             if (referencedCollections != null)

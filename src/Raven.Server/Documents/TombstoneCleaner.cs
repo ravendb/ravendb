@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents
         private readonly HashSet<ITombstoneAware> _subscriptions = new HashSet<ITombstoneAware>();
         private long? _maxTombstoneEtagToDelete;
 
-        public TombstoneCleaner(DocumentDatabase documentDatabase) : base(documentDatabase.Name, documentDatabase.DatabaseShutdown)
+        public TombstoneCleaner(DocumentDatabase documentDatabase) : base(documentDatabase.Name, RavenLogManager.Instance.GetLoggerForDatabase<TombstoneCleaner>(documentDatabase), documentDatabase.DatabaseShutdown)
         {
             _documentDatabase = documentDatabase;
             _numberOfTombstonesToDeleteInBatch = _documentDatabase.Is32Bits
@@ -263,8 +264,8 @@ namespace Raven.Server.Documents
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Failed to notify of blockage in tombstone deletion detected in database '{_documentDatabase.Name}'", e);
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn($"Failed to notify of blockage in tombstone deletion detected in database '{_documentDatabase.Name}'", e);
                 }
             }
             finally
@@ -382,11 +383,11 @@ namespace Raven.Server.Documents
             private readonly long _minAllCountersEtag;
             private readonly long _numberOfTombstonesToDeleteInBatch;
             private readonly DocumentDatabase _database;
-            private readonly Logger _logger;
+            private readonly RavenLogger _logger;
 
             public long NumberOfTombstonesDeleted { get; private set; }
 
-            public DeleteTombstonesCommand(Dictionary<string, StateHolder> tombstones, long minAllDocsEtag, long minAllTimeSeriesEtag, long minAllCountersEtag, long numberOfTombstonesToDeleteInBatch, DocumentDatabase database, Logger logger)
+            public DeleteTombstonesCommand(Dictionary<string, StateHolder> tombstones, long minAllDocsEtag, long minAllTimeSeriesEtag, long minAllCountersEtag, long numberOfTombstonesToDeleteInBatch, DocumentDatabase database, RavenLogger logger)
             {
                 _tombstones = tombstones ?? throw new ArgumentNullException(nameof(tombstones));
                 _minAllDocsEtag = minAllDocsEtag;
@@ -502,7 +503,7 @@ namespace Raven.Server.Documents
 
         public TombstoneCleaner.DeleteTombstonesCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var log = LoggingSource.Instance.GetLogger<TombstoneCleaner.DeleteTombstonesCommand>(database.Name);
+            var log = RavenLogManager.Instance.GetLoggerForDatabase<DeleteTombstonesCommandDto>(database);
             var command = new TombstoneCleaner.DeleteTombstonesCommand(Tombstones, MinAllDocsEtag, MinAllTimeSeriesEtag, MinAllCountersEtag, NumberOfTombstonesToDeleteInBatch ?? long.MaxValue, database, log);
             return command;
         }

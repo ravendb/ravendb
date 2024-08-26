@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Server.Logging;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
@@ -10,7 +12,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public sealed class MapReduceIndexingContext : IDisposable
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MapReduceResultsStore>("MapReduceIndexingContext");
+        private readonly Index _index;
+        private RavenLogger _logger;
+
+        private RavenLogger Logger
+        {
+            get => _logger ??= RavenLogManager.Instance.GetLoggerForIndex<MapReduceIndexingContext>(_index);
+        }
 
         internal static Slice LastMapResultIdKey;
 
@@ -34,6 +42,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 Slice.From(ctx, "__raven/map-reduce/#next-map-result-id", ByteStringType.Immutable, out LastMapResultIdKey);
             }
+        }
+
+        public MapReduceIndexingContext(Index index)
+        {
+            _index = index ?? throw new ArgumentNullException(nameof(index));
         }
 
         public void Dispose()

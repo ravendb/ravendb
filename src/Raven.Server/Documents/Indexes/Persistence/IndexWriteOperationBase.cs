@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected IndexingStatsScope _statsInstance;
         protected readonly IndexWriteOperationStats Stats = new IndexWriteOperationStats();
 
-        protected IndexWriteOperationBase(Index index, Logger logger) : base(index, logger)
+        protected IndexWriteOperationBase(Index index, RavenLogger logger) : base(index, logger)
         {
         }
 

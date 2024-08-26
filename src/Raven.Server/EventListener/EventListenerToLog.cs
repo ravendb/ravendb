@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Raven.Server.Logging;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
@@ -8,7 +9,7 @@ namespace Raven.Server.EventListener;
 
 public class EventListenerToLog : IDynamicJson
 {
-    public static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("EventListener");
+    public static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<EventListenerToLog>();
     private readonly SemaphoreSlim _sm = new(1, 1);
 
     private EventsListener _listener;
@@ -45,7 +46,7 @@ public class EventListenerToLog : IDynamicJson
 
     public static EventListenerToLog Instance = new();
 
-    public bool LogToFile => _configuration.EventListenerMode == EventListenerMode.ToLogFile && Logger.IsOperationsEnabled;
+    public bool LogToFile => _configuration.EventListenerMode == EventListenerMode.ToLogFile && Logger.IsInfoEnabled;
 
     public void UpdateConfiguration(EventListenerConfiguration configuration)
     {
@@ -71,7 +72,7 @@ public class EventListenerToLog : IDynamicJson
                     onEvent: e =>
                     {
                         if (LogToFile)
-                            Logger.Operations(e.ToString());
+                            Logger.Info(e.ToString());
                     });
                 _listener.Update(effectiveEventTypes, _configuration.MinimumDurationInMs, _configuration.AllocationsLoggingIntervalInMs, _configuration.AllocationsLoggingCount);
             }

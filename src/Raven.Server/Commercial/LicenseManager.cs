@@ -32,6 +32,7 @@ using Raven.Client.Util;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
@@ -53,7 +54,7 @@ namespace Raven.Server.Commercial
 {
     public sealed class LicenseManager : IDisposable
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<LicenseManager>();
         private static readonly RSAParameters _rsaParameters;
         private readonly LicenseStorage _licenseStorage = new LicenseStorage();
         private Timer _leaseLicenseTimer;
@@ -144,8 +145,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to initialize license manager", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error("Failed to initialize license manager", e);
             }
             finally
             {
@@ -181,8 +182,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled && _serverStore.IsPassive() == false)
-                    Logger.Operations("Failed to put my node info, will try again later", e);
+                if (Logger.IsDebugEnabled && _serverStore.IsPassive() == false)
+                    Logger.Debug("Failed to put my node info, will try again later", e);
             }
             finally
             {
@@ -258,8 +259,8 @@ namespace Raven.Server.Commercial
             catch (Exception e)
             {
                 // nothing we do can here, we'll try to remove it on next restart or when reloading the license
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to remove the AGPL alert", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failed to remove the AGPL alert", e);
             }
         }
 
@@ -1973,8 +1974,8 @@ namespace Raven.Server.Commercial
             {
                 if (e.IsOutOfMemory() == false)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Failed to get number of utilized cores. Defaulting to {defaultNumberOfCores} cores", e);
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn($"Failed to get number of utilized cores. Defaulting to {defaultNumberOfCores} cores", e);
                 }
 
                 return defaultNumberOfCores;

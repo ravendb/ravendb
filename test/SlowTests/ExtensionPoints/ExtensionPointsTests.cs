@@ -67,7 +67,7 @@ exit 0";
             UseNewLocalServer(customSettings: customSettings);
 
             // Creating dummy storage env options, so we can tell all the different paths
-            using (var options = StorageEnvironmentOptions.CreateMemoryOnly())
+            using (var options = StorageEnvironmentOptions.CreateMemoryOnlyForTests())
             {
                 using (var store = GetDocumentStore())
                 {

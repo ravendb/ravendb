@@ -21,10 +21,10 @@ public abstract class IndexOperationBase : IDisposable
     private const int DefaultBufferSizeForCorax = 4 * 1024;
     private const int MaxBufferSizeForCorax = 64 * 1024;
 
-    protected readonly Logger _logger;
+    protected readonly RavenLogger _logger;
     internal Index _index;
 
-    protected IndexOperationBase(Index index, Logger logger)
+    protected IndexOperationBase(Index index, RavenLogger logger)
     {
         _index = index;
         _indexName = index.Name;

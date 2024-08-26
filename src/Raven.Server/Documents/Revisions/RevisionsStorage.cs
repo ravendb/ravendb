@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -53,7 +54,7 @@ namespace Raven.Server.Documents.Revisions
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
         private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
         private static readonly TimeSpan MaxEnforceConfigurationSingleBatchTime = TimeSpan.FromSeconds(30);
         private readonly RevisionsCollectionConfiguration _emptyConfiguration = new RevisionsCollectionConfiguration { Disabled = true };
 
@@ -68,7 +69,7 @@ namespace Raven.Server.Documents.Revisions
             RevisionsSchema = revisionsSchema ?? throw new ArgumentNullException(nameof(revisionsSchema));
             CompressedRevisionsSchema = compressedRevisionsSchema ?? throw new ArgumentNullException(nameof(compressedRevisionsSchema));
 
-            _logger = LoggingSource.Instance.GetLogger<RevisionsStorage>(database.Name);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<RevisionsStorage>(database);
             Operations = new RevisionsOperations(_database);
             ConflictConfiguration = new RevisionsConfiguration
             {
@@ -153,8 +154,8 @@ namespace Raven.Server.Documents.Revisions
                     _database.Name,
                     details: new ExceptionDetails(e)));
 
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations(message, e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error(message, e);
             }
         }
 

@@ -24,7 +24,7 @@ public abstract class AbstractSubscriptionStorage
     protected readonly ServerStore _serverStore;
     protected string _databaseName;
     protected readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
-    protected Logger _logger;
+    protected RavenLogger _logger;
 
     protected abstract string GetNodeFromState(SubscriptionState taskStatus);
     protected abstract DatabaseTopology GetTopology(ClusterOperationContext context);

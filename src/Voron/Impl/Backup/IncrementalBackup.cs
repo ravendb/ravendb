@@ -276,30 +276,6 @@ namespace Voron.Impl.Backup
             }
         }
 
-        public void Restore(string outPath, IEnumerable<string> backupPaths, Action<StorageEnvironmentOptions> configure = null)
-        {
-            foreach (var backupPath in backupPaths)
-            {
-                using (var package = ZipFile.Open(backupPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
-                {
-                    if (package.Entries.Count == 0)
-                        return;
-                    foreach (var dir in package.Entries.GroupBy(entry => Path.GetDirectoryName(entry.FullName)))
-                    {
-                        using (var options = StorageEnvironmentOptions.ForPath(Path.Combine(outPath, dir.Key)))
-                        {
-                            options.ManualFlushing = true;
-                            configure?.Invoke(options);
-                            using (var env = new StorageEnvironment(options))
-                            {
-                                Restore(env, dir);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         private void Restore(StorageEnvironment env, string singleBackupFile)
         {
             using (env.Journal.Applicator.TakeFlushingLock())

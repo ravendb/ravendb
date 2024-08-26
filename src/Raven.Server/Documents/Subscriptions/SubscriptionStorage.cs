@@ -16,6 +16,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -36,7 +37,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             _db = db;
             _databaseName = name; // this is full name for sharded db 
-            _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(name);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), db);
         }
 
         protected override void DropSubscriptionConnections(SubscriptionConnectionsState state, SubscriptionException ex)
@@ -92,7 +93,7 @@ namespace Raven.Server.Documents.Subscriptions
             return GetSubscriptionResponsibleNode(context, subscription);
         }
 
-        public static async Task DeleteSubscriptionInternal(ServerStore serverStore, string databaseName, string name, string raftRequestId, Logger logger)
+        public static async Task DeleteSubscriptionInternal(ServerStore serverStore, string databaseName, string name, string raftRequestId, RavenLogger logger)
         {
             var command = new DeleteSubscriptionCommand(databaseName, name, raftRequestId);
             var (etag, _) = await serverStore.SendToLeaderAsync(command);

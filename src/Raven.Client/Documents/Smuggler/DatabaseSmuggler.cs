@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Logging;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -20,7 +21,7 @@ namespace Raven.Client.Documents.Smuggler
 {
     public sealed class DatabaseSmuggler
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Client", typeof(DatabaseSmuggler).FullName);
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient<DatabaseSmuggler>();
 
         private readonly Func<string, string, ISingleNodeDatabaseChanges> _getChanges;
         private readonly Func<string, RequestExecutor> _getRequestExecutor;
@@ -90,8 +91,8 @@ namespace Raven.Client.Documents.Smuggler
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Could not save export file.", e);
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error("Could not save export file.", e);
 
                     tcs.TrySetException(e);
 
@@ -134,8 +135,8 @@ namespace Raven.Client.Documents.Smuggler
                         {
                             tcs.TrySetException(t.Exception);
 
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations("Could not execute export", t.Exception);
+                            if (Logger.IsErrorEnabled)
+                                Logger.Error("Could not execute export", t.Exception);
                         }
                     }, token);
 
@@ -285,8 +286,8 @@ namespace Raven.Client.Documents.Smuggler
                                 {
                                     tcs.TrySetException(t.Exception);
 
-                                    if (Logger.IsOperationsEnabled)
-                                        Logger.Operations("Could not execute import", t.Exception);
+                                    if (Logger.IsErrorEnabled)
+                                        Logger.Error("Could not execute import", t.Exception);
                                 }
                             }
                         }, token);

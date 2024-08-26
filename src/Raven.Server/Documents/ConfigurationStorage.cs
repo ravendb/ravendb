@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Linq;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron;
 
 namespace Raven.Server.Documents
@@ -14,9 +16,8 @@ namespace Raven.Server.Documents
     public sealed class ConfigurationStorage : IDisposable
     {
         private readonly DocumentDatabase _db;
-        private const string ResourceName = nameof(ConfigurationStorage);
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ConfigurationStorage>(ResourceName);
+        private readonly RavenLogger _logger;
 
         public TransactionContextPool ContextPool { get; private set; }
 
@@ -29,6 +30,8 @@ namespace Raven.Server.Documents
             _db = db;
 
             OperationsStorage = new OperationsStorage();
+
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<ConfigurationStorage>(db);
         }
 
         public void Initialize()
@@ -41,8 +44,8 @@ namespace Raven.Server.Documents
             }
 
             var options = _db.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, tempPath, _db.IoChanges, _db.CatastrophicFailureNotification)
-                : StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, _db.IoChanges, _db.CatastrophicFailureNotification);
+                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, tempPath, _db.IoChanges, _db.CatastrophicFailureNotification, LoggingResource.Database(_db.Name), LoggingComponent.Configuration)
+                : StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, _db.IoChanges, _db.CatastrophicFailureNotification, LoggingResource.Database(_db.Name), LoggingComponent.Configuration);
 
             options.OnNonDurableFileSystemError += _db.HandleNonDurableFileSystemError;
             options.OnRecoverableFailure += _db.HandleRecoverableFailure;
@@ -70,7 +73,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, _db.Configuration.Storage, _db.Name, DirectoryExecUtils.EnvironmentType.Configuration, Logger);
+                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, _db.Configuration.Storage, _db.Name, DirectoryExecUtils.EnvironmentType.Configuration, _logger);
 
                 Environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Configuration);
             }
@@ -80,7 +83,7 @@ namespace Raven.Server.Documents
                 throw;
             }
 
-            ContextPool = new TransactionContextPool(Environment, _db.Configuration.Memory.MaxContextSizeToKeep);
+            ContextPool = new TransactionContextPool(_logger, Environment, _db.Configuration.Memory.MaxContextSizeToKeep);
 
             OperationsStorage.Initialize(Environment, ContextPool);
         }

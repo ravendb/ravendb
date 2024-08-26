@@ -237,7 +237,7 @@ public sealed class RavenDnsRecordHelper
         return expectedIps.SetEquals(actualIps);
     }
 
-    public static async Task UpdateDnsRecordsForCertificateRefreshTask(string challenge, SetupInfo setupInfo, Logger logger, CancellationToken token)
+    public static async Task UpdateDnsRecordsForCertificateRefreshTask(string challenge, SetupInfo setupInfo, RavenLogger logger, CancellationToken token)
     {
         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(TimeSpan.FromMinutes(15)).Token))
         {
@@ -259,8 +259,8 @@ public sealed class RavenDnsRecordHelper
 
             var serializeObject = JsonConvert.SerializeObject(registrationInfo);
 
-            if (logger is { IsOperationsEnabled: true })
-                logger.Operations($"Start update process for certificate. License Id: {registrationInfo.License.Id}, " +
+            if (logger is { IsInfoEnabled: true })
+                logger.Info($"Start update process for certificate. License Id: {registrationInfo.License.Id}, " +
                                       $"License Name: {registrationInfo.License.Name}, " +
                                       $"Domain: {registrationInfo.Domain}, " +
                                       $"RootDomain: {registrationInfo.RootDomain}");

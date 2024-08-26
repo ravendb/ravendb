@@ -18,6 +18,7 @@ using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -42,7 +43,7 @@ namespace Raven.Server.Documents.Replication
 
         internal readonly ServerStore _server;
 
-        protected readonly Logger _logger;
+        protected readonly RavenLogger _logger;
         protected readonly ConcurrentDictionary<string, IAbstractIncomingReplicationHandler> _incoming = new ConcurrentDictionary<string, IAbstractIncomingReplicationHandler>();
 
         // PERF: _incoming locks if you do _incoming.Values. Using .Select
@@ -61,7 +62,7 @@ namespace Raven.Server.Documents.Replication
             ContextPool = contextPool;
             Token = token;
             _server = serverStore;
-            _logger = LoggingSource.Instance.GetLogger(GetType().FullName, databaseName);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), databaseName);
         }
         
         internal TestingStuff ForTestingPurposes;

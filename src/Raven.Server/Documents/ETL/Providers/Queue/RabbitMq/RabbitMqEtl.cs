@@ -109,8 +109,8 @@ public sealed class RabbitMqEtl : QueueEtl<RabbitMqItem>
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($" ETL process: {Name}. Aborting RabbitMQ transaction failed.", e);
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error($" ETL process: {Name}. Aborting RabbitMQ transaction failed.", e);
                 }
                 throw new QueueLoadException(ex.Message, ex);
             }

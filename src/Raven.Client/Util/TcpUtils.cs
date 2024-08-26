@@ -41,7 +41,7 @@ namespace Raven.Client.Util
 #endif
             NegotiationCallback negotiationCallback,
             TimeSpan timeout,
-            Logger log
+            RavenLogger log
 #if !NETSTANDARD
             ,
             CancellationToken token = default
@@ -69,16 +69,16 @@ namespace Raven.Client.Util
             }
             catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
-                if (log.IsInfoEnabled)
-                    log.Info(
+                if (log.IsDebugEnabled)
+                    log.Debug(
                         $"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {((SocketException)ae.InnerException).SocketErrorCode}",
                         ae.InnerException);
                 throw;
             }
             catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
             {
-                if (log.IsInfoEnabled)
-                    log.Info(
+                if (log.IsDebugEnabled)
+                    log.Debug(
                         $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted.
                             This is not necessarily an issue, it might be that replication destination document has changed at
                             the same time we tried to connect. We will try to reconnect later.",
@@ -87,8 +87,8 @@ namespace Raven.Client.Util
             }
             catch (OperationCanceledException e)
             {
-                if (log.IsInfoEnabled)
-                    log.Info(
+                if (log.IsDebugEnabled)
+                    log.Debug(
                         $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted.
                             This is not necessarily an issue, it might be that replication destination document has changed at
                             the same time we tried to connect. We will try to reconnect later.",
@@ -97,8 +97,8 @@ namespace Raven.Client.Util
             }
             catch (Exception e)
             {
-                if (log.IsInfoEnabled)
-                    log.Info($"Failed to connect to remote replication destination {connection.Url}", e);
+                if (log.IsWarnEnabled)
+                    log.Warn($"Failed to connect to remote replication destination {connection.Url}", e);
                 throw;
             }
         }

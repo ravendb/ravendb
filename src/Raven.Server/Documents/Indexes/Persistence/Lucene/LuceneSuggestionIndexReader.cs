@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Indexing;
+using Raven.Server.Logging;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
@@ -25,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IState _state;
 
         public LuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, Transaction readTransaction, IndexSearcher indexSearcher)
-            : base(index, LoggingSource.Instance.GetLogger<LuceneSuggestionIndexReader>(index._indexStorage.DocumentDatabase.Name))
+            : base(index, RavenLogManager.Instance.GetLoggerForIndex<LuceneSuggestionIndexReader>(index))
         {
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
             _searcher = indexSearcher;

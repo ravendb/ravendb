@@ -16,7 +16,6 @@ namespace Raven.Server.Documents.Handlers.Processors.BulkInsert;
 internal sealed class BulkInsertHandlerProcessor: AbstractBulkInsertHandlerProcessor<BatchRequestParser.CommandData, BulkInsertHandler, DocumentsOperationContext>
 {
     private readonly DocumentDatabase _database;
-    private readonly Logger _logger;
     private int _databaseChangeVectorSize;
 
     public BulkInsertHandlerProcessor([NotNull] BulkInsertHandler requestHandler,
@@ -24,7 +23,6 @@ internal sealed class BulkInsertHandlerProcessor: AbstractBulkInsertHandlerProce
         : base(requestHandler, onProgress, skipOverwriteIfUnchanged, token)
     {
         _database = database;
-        _logger = LoggingSource.Instance.GetLogger<MergedInsertBulkCommand>(database.Name);
         _databaseChangeVectorSize = GetDatabaseChangeVectorSize();
     }
 
@@ -42,7 +40,7 @@ internal sealed class BulkInsertHandlerProcessor: AbstractBulkInsertHandlerProce
                 Commands = array,
                 NumberOfCommands = numberOfCommands,
                 Database = _database,
-                Logger = _logger,
+                Logger = Logger,
                 TotalSize = totalSize,
                 SkipOverwriteIfUnchanged = SkipOverwriteIfUnchanged
             });

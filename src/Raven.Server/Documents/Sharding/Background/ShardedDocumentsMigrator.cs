@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -15,13 +16,13 @@ namespace Raven.Server.Documents.Sharding.Background
     {
         private readonly ShardedDocumentDatabase _database;
         private readonly CancellationToken _token;
-        private readonly Logger _logger;
+        private readonly RavenLogger _logger;
 
         public ShardedDocumentsMigrator(ShardedDocumentDatabase database)
         {
             _database = database;
             _token = database.ShardedDocumentsStorage.DocumentDatabase.DatabaseShutdown;
-            _logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), database);
         }
 
         internal async Task ExecuteMoveDocumentsAsync()
@@ -68,8 +69,8 @@ namespace Raven.Server.Documents.Sharding.Background
                 if (_token.IsCancellationRequested)
                     return;
 
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Failed to execute documents migration for '{_database.Name}'", e);
+                if (_logger.IsErrorEnabled)
+                    _logger.Error($"Failed to execute documents migration for '{_database.Name}'", e);
 
                 throw;
             }

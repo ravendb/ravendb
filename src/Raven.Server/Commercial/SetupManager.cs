@@ -21,6 +21,7 @@ using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Config;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -37,7 +38,7 @@ namespace Raven.Server.Commercial
 {
     public static class SetupManager
     {
-        internal static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+        internal static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer(typeof(SetupManager));
 
         private static string BuildHostName(string nodeTag, string userDomain, string rootDomain)
         {
@@ -221,8 +222,8 @@ namespace Raven.Server.Commercial
 
         public static async Task<X509Certificate2> RefreshLetsEncryptTask(SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
         {
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
 
             var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
             await acmeClient.Init(setupInfo.Email, token);
@@ -233,8 +234,8 @@ namespace Raven.Server.Commercial
 
             var challengeResult = await LetsEncryptSetupUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
 
             try
             {
@@ -247,16 +248,16 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}", e);
             }
 
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
 
             var cert = await CertificateUtils.CompleteAuthorizationAndGetCertificate(
                 new CompleteAuthorizationAndGetCertificateParameters
                 {
                     OnValidationSuccessful = () =>
                     {
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations("Let's encrypt validation successful, acquiring certificate now...");
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Let's encrypt validation successful, acquiring certificate now...");
                     },
                     SetupInfo = setupInfo,
                     Client = acmeClient,
@@ -265,8 +266,8 @@ namespace Raven.Server.Commercial
                     Token = token
                 });
 
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations("Successfully acquired certificate from Let's Encrypt.");
+            if (Logger.IsInfoEnabled)
+                Logger.Info("Successfully acquired certificate from Let's Encrypt.");
 
             return cert;
         }
@@ -884,7 +885,7 @@ namespace Raven.Server.Commercial
                 if (PlatformDetails.RunningOnPosix)
                 {
                     PosixHelper.EnsureRWPermissionsForOwnerAndGroup(certPath);
-                }
+            }
             }
             catch (Exception e)
             {

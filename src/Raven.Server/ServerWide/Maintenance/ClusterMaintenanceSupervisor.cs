@@ -11,12 +11,14 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
@@ -24,6 +26,8 @@ namespace Raven.Server.ServerWide.Maintenance
 {
     public sealed class ClusterMaintenanceSupervisor : IDisposable
     {
+        private readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForCluster<ClusterMaintenanceSupervisor>();
+
         private readonly string _leaderClusterTag;
 
         //maintenance handler is valid for specific term, otherwise it's requests will be rejected by nodes
@@ -105,7 +109,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _leaderClusterTag = leaderClusterTag;
             _term = term;
             _server = server;
-            _contextPool = new JsonContextPool(server.Configuration.Memory.MaxContextSizeToKeep);
+            _contextPool = new JsonContextPool(server.Configuration.Memory.MaxContextSizeToKeep, Logger);
             Config = server.Configuration.Cluster;
         }
 
@@ -171,7 +175,7 @@ namespace Raven.Server.ServerWide.Maintenance
             private readonly CancellationToken _token;
             private readonly CancellationTokenSource _cts;
 
-            private readonly Logger _log;
+            private readonly RavenLogger _log;
 
             public string ClusterTag { get; }
             public string Url { get; }
@@ -206,7 +210,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 _token = _cts.Token;
                 _readStatusUpdateDebugString = $"ClusterMaintenanceServer/{ClusterTag}/UpdateState/Read-Response in term {term}";
                 _name = $"Heartbeats supervisor from {_parent._server.NodeTag} to {ClusterTag} in term {term}";
-                _log = LoggingSource.Instance.GetLogger<ClusterNode>(_name);
+                _log = RavenLogManager.Instance.GetLoggerForCluster<ClusterNode>(LoggingComponent.Name(_name));
                 _term = term;
             }
 

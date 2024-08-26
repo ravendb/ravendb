@@ -90,7 +90,7 @@ namespace FastTests.Sparrow
         {
             var files = new List<string>(new[] { "file1.txt", "file2.txt", "file3.txt" });
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()))
             {
                 var envWithType = new StorageEnvironmentWithType("test", StorageEnvironmentWithType.StorageEnvironmentType.Documents, env);
 

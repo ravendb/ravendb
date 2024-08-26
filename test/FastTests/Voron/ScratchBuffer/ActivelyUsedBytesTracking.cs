@@ -29,8 +29,8 @@ namespace FastTests.Voron.ScratchBuffer
                 using (var file = new ScratchBufferFile(pager, state, 0))
                 using(var tx = env.WriteTransaction())
                 {
-                    Assert.False(file.HasActivelyUsedBytes(2));
-                    
+                Assert.False(file.HasActivelyUsedBytes(2));
+
                     var p0 = file.Allocate(tx.LowLevelTransaction, 1, 1, 8, default);
                     var p1 = file.Allocate(tx.LowLevelTransaction, 1, 1, 9, default);
                     var p2 = file.Allocate(tx.LowLevelTransaction, 1, 1, 10, default);
@@ -43,16 +43,16 @@ namespace FastTests.Voron.ScratchBuffer
                     file.Free(tx.LowLevelTransaction, 7, p3.PositionInScratchBuffer);
                     file.Free(tx.LowLevelTransaction, 9, p4.PositionInScratchBuffer);
 
-                    for (int i = 0; i <= 9; i++)
-                    {
+                for (int i = 0; i <= 9; i++)
+                {
                         bool hasActivelyUsedBytes = file.HasActivelyUsedBytes(i);
                         Assert.True(hasActivelyUsedBytes, "hasActivelyUsedBytes on " + i);
-                    }
-
-                    Assert.False(file.HasActivelyUsedBytes(10));
-                    Assert.False(file.HasActivelyUsedBytes(20));
                 }
+
+                Assert.False(file.HasActivelyUsedBytes(10));
+                Assert.False(file.HasActivelyUsedBytes(20));
             }
         }
     }
+}
 }

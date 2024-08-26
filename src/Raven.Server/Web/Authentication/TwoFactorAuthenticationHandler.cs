@@ -92,7 +92,7 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
         {
             var period = TimeSpan.FromMinutes(sessionDuration);
             
-            if (LoggingSource.AuditLog.IsInfoEnabled)
+            if (RavenLogManager.Instance.IsAuditEnabled)
             {
                 LogAuditFor(nameof(TwoFactorAuthenticationHandler), "AUTH", $"2FA session open for {period} (until: {DateTime.UtcNow.Add(period)}). Has limits: {hasLimits}");
             }
@@ -137,7 +137,7 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
 
     private async Task ReplyWith(TransactionOperationContext ctx, string err, HttpStatusCode httpStatusCode)
     {
-        if (LoggingSource.AuditLog.IsInfoEnabled)
+        if (RavenLogManager.Instance.IsAuditEnabled)
         {
             LogAuditFor(nameof(TwoFactorAuthenticationHandler), "AUTH", $"2FA failure: {err}");
         }

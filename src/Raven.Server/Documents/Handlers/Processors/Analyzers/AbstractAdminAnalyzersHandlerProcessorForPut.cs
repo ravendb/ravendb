@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Analyzers
                     var analyzerDefinition = JsonDeserializationServer.AnalyzerDefinition((BlittableJsonReaderObject)analyzerToAdd);
                     analyzerDefinition.Name = analyzerDefinition.Name?.Trim();
 
-                    if (LoggingSource.AuditLog.IsInfoEnabled)
+                    if (RavenLogManager.Instance.IsAuditEnabled)
                     {
                         RequestHandler.LogAuditFor(databaseName, "PUT", $"Analyzer '{analyzerDefinition.Name}' with definition: {analyzerToAdd}");
                     }

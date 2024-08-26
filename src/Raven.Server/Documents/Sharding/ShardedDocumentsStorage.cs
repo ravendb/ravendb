@@ -43,7 +43,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         }
     }
 
-    public ShardedDocumentsStorage(ShardedDocumentDatabase documentDatabase, Action<LogMode, string> addToInitLog)
+    public ShardedDocumentsStorage(ShardedDocumentDatabase documentDatabase, Action<LogLevel, string> addToInitLog)
         : base(documentDatabase, addToInitLog)
     {
         _documentDatabase = documentDatabase;

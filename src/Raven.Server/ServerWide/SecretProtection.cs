@@ -21,6 +21,7 @@ using Org.BouncyCastle.X509;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
+using Raven.Server.Logging;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -32,7 +33,7 @@ namespace Raven.Server.ServerWide
     {
         public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("Secrets!");
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<SecretProtection>("Server");
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<SecretProtection>();
         private readonly Lazy<byte[]> _serverMasterKey;
         private readonly SecurityConfiguration _config;
         private const int MaxDeveloperCertificateValidityDurationInMonths = 4;
@@ -334,8 +335,8 @@ namespace Raven.Server.ServerWide
             if (loadedCertificate.NotAfter < DateTime.UtcNow)
             {
                 string msg = $"The provided certificate '{loadedCertificate.FriendlyName}' from {source} is expired! Thumbprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}";
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations(msg);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error(msg);
 
                 progress?.AddError(msg);
                 if (throwOnExpired)
@@ -353,8 +354,8 @@ namespace Raven.Server.ServerWide
                                        "Developer license is not allowed for production use. " +
                                        "Either switch the license or use a short term certificate.";
 
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations(msg);
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error(msg);
 
                     progress?.AddError(msg);
                     throw new InvalidOperationException(msg);
@@ -426,8 +427,8 @@ namespace Raven.Server.ServerWide
 
             var msg = sb.ToString();
 
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations(msg);
+            if (Logger.IsErrorEnabled)
+                Logger.Error(msg);
             progress?.AddInfo(msg);
 
             throw new EncryptionException(msg);
@@ -493,12 +494,12 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}", e);
             }
 
-            if (Logger.IsOperationsEnabled)
+            if (Logger.IsErrorEnabled)
             {
                 var errors = GetStdError();
-                Logger.Operations($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms");
+                Logger.Error($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms");
                 if (!string.IsNullOrWhiteSpace(errors))
-                    Logger.Operations($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}");
+                    Logger.Error($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}");
             }
 
             if (process.ExitCode != 0)
@@ -582,12 +583,12 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException($"Unable to execute {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}", e);
             }
 
-            if (Logger.IsOperationsEnabled)
+            if (Logger.IsErrorEnabled)
             {
                 var errors = GetStdError();
-                Logger.Operations($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms");
+                Logger.Error($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms");
                 if (!string.IsNullOrWhiteSpace(errors))
-                    Logger.Operations($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}");
+                    Logger.Error($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}");
             }
 
             if (process.ExitCode != 0)
@@ -656,10 +657,10 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException($"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, waited for {_config.MasterKeyExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}", e);
             }
 
-            if (Logger.IsOperationsEnabled)
+            if (Logger.IsErrorEnabled)
             {
                 var errors = GetStdError();
-                Logger.Operations($"Executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments} took {sw.ElapsedMilliseconds:#,#;;0} ms. Stderr: {errors}");
+                Logger.Error($"Executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments} took {sw.ElapsedMilliseconds:#,#;;0} ms. Stderr: {errors}");
             }
 
             if (process.ExitCode != 0)
@@ -788,8 +789,8 @@ namespace Raven.Server.ServerWide
             {
                 var msg = "Unable to find the private key in the provided certificate from " + source;
 
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations(msg);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error(msg);
                 progress?.AddInfo(msg);
 
                 throw new EncryptionException(msg);

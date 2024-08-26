@@ -15,6 +15,7 @@ using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server.Config;
 using Raven.Server.Https;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -24,7 +25,7 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 
 public sealed class LetsEncryptSimulationHelper
 {
-    internal static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+    internal static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<LetsEncryptSimulationHelper>();
 
     internal sealed class UniqueResponseResponder : IStartup
     {

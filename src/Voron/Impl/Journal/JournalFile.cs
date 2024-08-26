@@ -16,6 +16,7 @@ using Sparrow.Collections;
 using Sparrow.Server;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
+using Voron.Logging;
 
 namespace Voron.Impl.Journal
 {
@@ -151,7 +152,7 @@ namespace Voron.Impl.Journal
         {
             storageEnvironment.UpdateJournal(this, journalReader.Next4Kb);
             _transactionHeaders = [..transactionHeaders];
-        }
+            }
 
         public bool DeleteOnClose
         {
@@ -163,5 +164,5 @@ namespace Voron.Impl.Journal
                     writer.DeleteOnClose = value;
             }
         }
-    }
-}
+                    }
+                }
