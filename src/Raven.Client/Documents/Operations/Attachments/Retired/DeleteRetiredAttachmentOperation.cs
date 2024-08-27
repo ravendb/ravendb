@@ -18,8 +18,6 @@ namespace Raven.Client.Documents.Operations.Attachments.Retired
             _name = name;
             _changeVector = changeVector;
             _storageOnly = storageOnly;
-
-            // TODO: egor maybe add some flag to not delete attachment from cloud, just delete its entry from attachments table? or use separate operation for that?
         }
 
         public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)

@@ -645,8 +645,12 @@ namespace Raven.Server.Smuggler.Documents
                                         throw new InvalidOperationException("Cannot find a document ID inside the attachment key");
                                     var attachmentId = key.Content.Substring(idEnd);
                                     idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(attachmentId);
-
-                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks);
+                                    string collection;
+                                    using (var doc1 = context.DocumentDatabase.DocumentsStorage.Get(context, attachmentId, DocumentFields.Default, throwOnConflict: false))
+                                    {
+                                        doc1.TryGetCollection(out collection);
+                                    }
+                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks, collection);
                                     break;
 
                                 case Tombstone.TombstoneType.Revision:

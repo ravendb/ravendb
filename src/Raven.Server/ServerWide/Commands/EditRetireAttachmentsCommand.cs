@@ -8,20 +8,20 @@ namespace Raven.Server.ServerWide.Commands
     public sealed class EditRetireAttachmentsCommand : UpdateDatabaseCommand
     {
         public const int CommandVersion = 60_002;
-        public RetireAttachmentsConfiguration Configuration;
+        public RetiredAttachmentsConfiguration Configuration;
 
         public EditRetireAttachmentsCommand()
         {
         }
 
-        public EditRetireAttachmentsCommand(RetireAttachmentsConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
+        public EditRetireAttachmentsCommand(RetiredAttachmentsConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             Configuration = configuration;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.RetireAttachments = Configuration;
+            record.RetiredAttachments = Configuration;
         }
 
         public override void FillJson(DynamicJsonValue json)

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -43,15 +44,13 @@ public class S3RetiredAttachmentsHolder : RetiredAttachmentsHolder<S3Settings>
             collections = new List<string> { "Orders" };
         if (string.IsNullOrEmpty(database))
             database = store.Database;
-        await store.Maintenance.ForDatabase(database).SendAsync(new ConfigureRetireAttachmentsOperation(new RetireAttachmentsConfiguration()
+
+        var config = new RetiredAttachmentsConfiguration()
         {
-            S3Settings = settings,
-            Disabled = false,
-
-            RetirePeriods = collections.ToDictionary(x => x, x => TimeSpan.FromMinutes(3)),
-
-            RetireFrequencyInSec = 1000
-        }));
+            S3Settings = settings, Disabled = false, RetirePeriods = collections.ToDictionary(x => x, x => TimeSpan.FromMinutes(3)), RetireFrequencyInSec = 1000
+        };
+        ModifyRetiredAttachmentsConfig?.Invoke(config);
+        await store.Maintenance.ForDatabase(database).SendAsync(new ConfigureRetiredAttachmentsOperation(config));
     }
 
     protected override void AssertUploadRetiredAttachmentToCloudThenManuallyDeleteAndGetShouldThrowInternal(RavenException e)

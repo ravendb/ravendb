@@ -75,7 +75,7 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, StudioConfiguration> StudioConfiguration = GenerateJsonDeserializationRoutine<StudioConfiguration>();
         
-        public static readonly Func<BlittableJsonReaderObject, RetireAttachmentsConfiguration> RetireAttachmentsConfiguration = GenerateJsonDeserializationRoutine<RetireAttachmentsConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, RetiredAttachmentsConfiguration> RetiredAttachmentsConfiguration = GenerateJsonDeserializationRoutine<RetiredAttachmentsConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
 

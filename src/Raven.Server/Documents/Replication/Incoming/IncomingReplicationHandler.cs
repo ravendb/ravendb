@@ -430,9 +430,24 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     _ => throw new ArgumentOutOfRangeException()
                                 };
                                 //TODO: egor add delete from retired tree as well! write test for that
-                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    newChangeVector,
-                                    attachmentTombstone.LastModifiedTicks);
+
+                                try
+                                {
+                                    string collection;
+                                    using (var doc1 = context.DocumentDatabase.DocumentsStorage.Get(context, documentId, DocumentFields.Data, throwOnConflict: false))
+                                    {
+                                        doc1.TryGetCollection(out collection);
+                                    }
+
+                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                        newChangeVector,
+                                        attachmentTombstone.LastModifiedTicks, collection);
+                                }
+                                catch (Exception e)
+                                {
+                                    Console.WriteLine(e);
+                                    throw;
+                                }
                                 break;
 
                             case RevisionTombstoneReplicationItem revisionTombstone:

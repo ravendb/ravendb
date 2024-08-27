@@ -578,7 +578,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.DataArchival = smugglerDatabaseRecord.DataArchival;
                     databaseRecord.QueueSinks = smugglerDatabaseRecord.QueueSinks;
                     databaseRecord.SupportedFeatures = smugglerDatabaseRecord.SupportedFeatures;
-                    databaseRecord.RetireAttachments = smugglerDatabaseRecord.RetireAttachments;
+                    databaseRecord.RetiredAttachments = smugglerDatabaseRecord.RetiredAttachments;
 
                 };
             }

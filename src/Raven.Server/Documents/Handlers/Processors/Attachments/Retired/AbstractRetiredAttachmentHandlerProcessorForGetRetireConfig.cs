@@ -16,7 +16,7 @@ internal abstract class AbstractRetiredAttachmentHandlerProcessorForGetRetireCon
     {
     }
 
-    protected abstract ValueTask<RetireAttachmentsConfiguration> GetAttachmentRetireConfiguration();
+    protected abstract ValueTask<RetiredAttachmentsConfiguration> GetAttachmentRetireConfiguration();
 
     public override async ValueTask ExecuteAsync()
     {

@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using Orders;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
@@ -23,6 +27,66 @@ namespace SlowTests.Server.Documents.Attachments
         //TODO: egor test for "now we delete doc with retired attachemnt, it will delete the retire attachment from cloud!"
         public S3RetiredAttachmentsSlowTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [RavenTheory(RavenTestCategory.Attachments)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task DeletingDocumentWithRetiredAttachmentShouldKeepRetiredAttachmentByDefault(bool purgeOnDelete)
+        {
+            var attachmentsCount = 1;
+            var size = 3;
+            await using (var holder = CreateCloudSettings())
+            {
+                using (var store = GetDocumentStore())
+                {
+                    int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+
+                    RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
+                    {
+                        config.PurgeOnDelete = purgeOnDelete;
+                    };
+
+                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, null);
+
+                    foreach (var docId in Attachments.Select(x => x.DocumentId).ToList().Distinct().ToList())
+                    {
+                        PatchOperation operation = new PatchOperation(id: docId, changeVector: null, patch: new PatchRequest
+                        {
+                            Script = @$"
+                                    del('{docId}');
+                                 "
+                        }, patchIfMissing: null);
+                        var res = await store.Operations.SendAsync(operation);
+
+
+                        Console.WriteLine();
+                    }
+
+                    using (var s = store.OpenAsyncSession())
+                    {
+                        var q = await s.Query<Order>().ToListAsync();
+
+                        Assert.Equal(0, q.Count);
+
+                    }
+
+                    if (purgeOnDelete)
+                    {
+                        var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                        database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                        await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                        await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
+                    }
+                    else
+                    {
+                        var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                        GetToRetireAttachmentsCount(database, 0);
+                        await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+                    }
+                }
+            }
         }
 
         [RavenFact(RavenTestCategory.Attachments)]
@@ -87,7 +151,6 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-
         [AmazonS3RetryTheory]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
@@ -108,7 +171,7 @@ namespace SlowTests.Server.Documents.Attachments
         {
             var collections = new List<string> { "Orders", "Products" };
             Assert.True(attachmentsCount > 32, "this test meant to have more than 32 attachments so we will have more than one document");
-            await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, collections);
+            await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, collections: collections);
         }
 
         [AmazonS3RetryTheory]

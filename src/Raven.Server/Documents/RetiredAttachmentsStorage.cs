@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
@@ -25,6 +27,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Attachments;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents;
 
@@ -57,7 +60,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
     protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
     {
         var type = GetRetireType(lowerId);
-        using var scope = RemoveTypeFromRetiredAttachmentsKey(context, lowerId, out var keySlice);
+        using var scope = CleanRetiredAttachmentsKey(context, lowerId, out var keySlice);
         switch (type)
         {
             case AttachmentRetireType.PutRetire:
@@ -131,7 +134,24 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
     protected override DocumentExpirationInfo GetDocumentAndIdOrCollection(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
     {
-        using var scope = RemoveTypeFromRetiredAttachmentsKey(options.Context, clonedId, out var keySlice);
+        var type = GetRetireType(clonedId);
+
+        switch (type)
+        {
+            case AttachmentRetireType.PutRetire:
+                return DocumentAndIdOrCollectionForPutRetire(options, clonedId, ticksSlice);
+
+            case AttachmentRetireType.DeleteRetire:
+                return DocumentAndIdOrCollectionForDeleteRetire(options, clonedId, ticksSlice);
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(type), type, null);
+        }
+    }
+
+    private DocumentExpirationInfo DocumentAndIdOrCollectionForPutRetire(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
+    {
+        using var scope = CleanRetiredAttachmentsKey(options.Context, clonedId, out var keySlice);
         using (var id = _documentInfoHelper.GetDocumentId(keySlice))
         {
             if (id == null)
@@ -143,12 +163,14 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             // doc was deleted
             if (document == null)
             {
+                // TODO: egor I ahve a case when the doc is deleted, and it also deletes the retired attachment,
+                // now here its null I need to decide what to do ? maybe save the Collection in the storage, or dynamic idnex???
                 return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
             }
 
             if (document.TryGetCollection(out string collectionStr))
             {
-                if (options.DatabaseRecord.RetireAttachments.RetirePeriods.ContainsKey(collectionStr) == false)
+                if (options.DatabaseRecord.RetiredAttachments.RetirePeriods.ContainsKey(collectionStr) == false)
                 {
                     // we don't care about this collection, it was removed from the configuration
                     return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
@@ -162,6 +184,40 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         }
     }
 
+    private DocumentExpirationInfo DocumentAndIdOrCollectionForDeleteRetire(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
+    {
+        using var scope = GetAttachmentsKeyAndCollectionSliceFromRetiredAttachmentsKey(options.Context, clonedId, out var keySlice, out var collectionSlice);
+        using (var id = _documentInfoHelper.GetDocumentId(keySlice))
+        {
+            if (id == null)
+            {
+                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+            }
+            // document is disposed in caller method
+            var document = Database.DocumentsStorage.Get(options.Context, id, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
+            // doc was deleted
+            if (document == null)
+            {
+                // TODO: egor I ahve a case when the doc is deleted, and it also deletes the retired attachment,
+                // now here its null I need to decide what to do ? maybe save the Collection in the storage, or dynamic idnex???
+                return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionSlice.ToString());
+            }
+
+            if (document.TryGetCollection(out string collectionStr))
+            {
+                if (options.DatabaseRecord.RetiredAttachments.RetirePeriods.ContainsKey(collectionStr) == false)
+                {
+                    // we don't care about this collection, it was removed from the configuration
+                    return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+                }
+            }
+
+            return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionStr)
+            {
+                Document = document
+            };
+        }
+    }
     [StorageIndexEntryKeyGenerator]
     internal static unsafe ByteStringContext.Scope GenerateHashAndFlagForAttachments(Transaction tx, ref TableValueReader tvr, out Slice slice)
     {
@@ -185,16 +241,17 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             base.Put(context, key, processDateString);
     }
 
-    public unsafe void PutDelete(DocumentsOperationContext context, Slice lowerId, long ticks)
+    public unsafe void PutDelete(DocumentsOperationContext context, Slice lowerId, long ticks, string collection)
     {
         var ticksBigEndian = Bits.SwapBytes(ticks);
 
-        var msg = $"Adding retired attachment delete with key: '{lowerId}' to '{_treeName}' tree.";
+        var msg = $"Adding retired attachment delete with key: '{lowerId}', collection: {collection}, ticks: {ticks} to '{_treeName}' tree.";
         if (_logger.IsOperationsEnabled)
             _logger.Operations(msg);
 
+        Debug.Assert(string.IsNullOrEmpty(collection) == false, "string.IsNullOrEmpty(collection) == false");
         var tree = context.Transaction.InnerTransaction.ReadTree(_treeName);
-        using(CreateRetiredAttachmentsKeyWithType(context, lowerId,AttachmentRetireType.DeleteRetire, out Slice key))
+        using(CreateRetiredAttachmentsKeyWithTypeAndCollection(context, lowerId,AttachmentRetireType.DeleteRetire, collection, out Slice key))
         using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
             tree.MultiAdd(ticksSlice, key);
     }
@@ -213,6 +270,47 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             tree.MultiDelete(ticksSlice, key);
     }
 
+    private unsafe ByteStringContext.InternalScope CreateRetiredAttachmentsKeyWithTypeAndCollection(DocumentsOperationContext context, Slice lowerId, AttachmentRetireType retireType, string collection, out Slice outSlice)
+    {
+        var size = 1 + 1 + Encoding.UTF8.GetMaxByteCount(collection.Length) + 1 + lowerId.Content.Length; // retireType + record separator + collection size + record separator + lowerId 
+        var scope = context.Allocator.Allocate(size, out ByteString keyMem);
+        var pos = 0;
+        switch (retireType)
+        {
+            case AttachmentRetireType.PutRetire:
+                keyMem.Ptr[pos++] = (byte)'p';
+                keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
+                break;
+            case AttachmentRetireType.DeleteRetire:
+                keyMem.Ptr[pos++] = (byte)'d';
+                keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
+
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(retireType), retireType, null);
+        }
+
+        var outputBuffer = keyMem.ToSpan();
+        fixed (char* pCollection = collection)
+        {
+            //var span = new ReadOnlySpan<byte>(pCollection, collection.Length * sizeof(char));
+            //span.CopyTo(outputBuffer.Slice(pos));
+
+            var buff = (byte*)(keyMem.Ptr + pos);
+
+            var dbLen = Encoding.UTF8.GetBytes(pCollection, collection.Length, buff, size - pos);
+
+            pos += dbLen;
+        }
+
+        keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
+        keyMem.Truncate(pos + lowerId.Content.Length);
+
+        Memory.Copy(keyMem.Ptr + pos, lowerId.Content.Ptr, lowerId.Content.Length);
+        outSlice = new Slice(SliceOptions.Key, keyMem);
+        return scope;
+    }
 
     private unsafe ByteStringContext.InternalScope CreateRetiredAttachmentsKeyWithType(DocumentsOperationContext context, Slice lowerId, AttachmentRetireType retireType, out Slice outSlice)
     {
@@ -239,17 +337,65 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         outSlice=new Slice(SliceOptions.Key, keyMem);
         return scope;
     }
+    public unsafe ByteStringContext.InternalScope RemoveTypeAndCollectionFromRetiredAttachmentsKey(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
+    {
+        var pos = 2;
+        var keyPos = lowerId.Content.IndexOf(SpecialChars.RecordSeparator, pos) + 1;
+        var size = lowerId.Content.Length - keyPos; // retireType - record separator - collection - record separator - lowerId 
+     //   var scope = context.Allocator.Allocate(size, out ByteString keyMem);
 
-    public unsafe ByteStringContext.InternalScope RemoveTypeFromRetiredAttachmentsKey(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
+       // Memory.Copy(keyMem.Ptr, lowerId.Content.Ptr + keyPos, size);
+
+      //  outSlice = new Slice(SliceOptions.Key, keyMem);
+
+        Slice.External(context.Allocator, lowerId.Content, keyPos, size, out outSlice);
+        return default;
+    }
+
+    public unsafe ByteStringContext.InternalScope GetAttachmentsKeyAndCollectionSliceFromRetiredAttachmentsKey(DocumentsOperationContext context, Slice lowerId, out Slice outSlice, out Slice collectionSlice)
+    {
+        var colPos = 2;
+
+        var sepPos = lowerId.Content.IndexOf(SpecialChars.RecordSeparator, colPos);
+        var keyPos = sepPos + 1;
+        var size = lowerId.Content.Length - keyPos; // retireType - record separator - collection - record separator - lowerId 
+     //   var scope = context.Allocator.Allocate(size, out ByteString keyMem);
+
+     //   Memory.Copy(keyMem.Ptr, lowerId.Content.Ptr + colPos, size);
+
+        Slice.External(context.Allocator, lowerId.Content, colPos, sepPos - colPos, out collectionSlice);
+        Slice.External(context.Allocator, lowerId.Content, keyPos, size, out outSlice);
+        return default;
+    }
+
+    public ByteStringContext.InternalScope CleanRetiredAttachmentsKey(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
+    {
+        var type = GetRetireType(lowerId);
+
+        switch (type)
+        {
+            case AttachmentRetireType.PutRetire:
+                return RemoveTypeFromRetiredAttachmentsKey2(context, lowerId, out  outSlice);
+
+            case AttachmentRetireType.DeleteRetire:
+                return RemoveTypeAndCollectionFromRetiredAttachmentsKey(context, lowerId, out outSlice);
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(type), type, null);
+        }
+    }
+
+    public unsafe ByteStringContext.InternalScope RemoveTypeFromRetiredAttachmentsKey2(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
     {
         var pos = 2;
         var size = lowerId.Content.Length - pos; // retireType - record separator - lowerId 
-        var scope = context.Allocator.Allocate(size, out ByteString keyMem);
+      //  var scope = context.Allocator.Allocate(size, out ByteString keyMem);
 
-        Memory.Copy(keyMem.Ptr, lowerId.Content.Ptr + pos, size);
+      //  Memory.Copy(keyMem.Ptr, lowerId.Content.Ptr + pos, size);
 
-        outSlice = new Slice(SliceOptions.Key, keyMem);
-        return scope;
+        Slice.External(context.Allocator, lowerId.Content, pos, size, out outSlice);
+   //     outSlice = new Slice(SliceOptions.Key, keyMem);
+        return default;
     }
 
     protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
@@ -258,7 +404,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
             return;
 
-        using var scope = RemoveTypeFromRetiredAttachmentsKey(options.Context, clonedId, out Slice attachmentKey);
+        using var scope = CleanRetiredAttachmentsKey(options.Context, clonedId, out Slice attachmentKey);
         using (var docId = _documentInfoHelper.GetDocumentId(attachmentKey))
         {
             (bool allExpired, string id) = GetConflictedRetiredAttachment(options.Context, options.CurrentTime, docId, attachmentKey);
@@ -348,11 +494,11 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         // TODO: egor maybe instead of allocating it each time, I can make it a field in the class? but then I need to handle config changes :(
         var config = Database.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(Database.Name);
         if (config == null)
-            throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetireAttachmentsConfiguration)} is not configured on {Database.Name}.");
+            throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetiredAttachmentsConfiguration)} is not configured on {Database.Name}.");
         if (config.Disabled)
-            throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetireAttachmentsConfiguration)} is disabled.");
+            throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetiredAttachmentsConfiguration)} is disabled.");
 
-        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(RetiredAttachmentHandlerProcessorForGet), config.S3Settings, config.AzureSettings, config.GlacierSettings, config.GoogleCloudSettings, config.FtpSettings);
+        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(RetiredAttachmentHandlerProcessorForGet), config.S3Settings, config.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null);
         return new DirectBackupDownloader(settings, retentionPolicyParameters: null, _logger, BackupUploaderBase.GenerateUploadResult(), progress => { }, tcs);
     }
 

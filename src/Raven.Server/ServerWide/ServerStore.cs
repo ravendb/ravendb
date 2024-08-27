@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Lucene.Net.Search;
 using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -2070,16 +2071,9 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editDataArchival);
         }
 
-        public Task<(long Index, object Result)> ModifyDatabaseAttachmentsRetire(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        public Task<(long Index, object Result)> ModifyDatabaseAttachmentsRetire(TransactionOperationContext context, string databaseName, RetiredAttachmentsConfiguration configuration, string raftRequestId)
         {
-            var config = JsonDeserializationCluster.RetireAttachmentsConfiguration(configurationJson);
-            if (config.RetireFrequencyInSec <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Retire attachments frequency for database '{databaseName}' must be greater than 0.");
-            }
-
-            var editRetireAttachmentsCommand = new EditRetireAttachmentsCommand(config, databaseName, raftRequestId);
+            var editRetireAttachmentsCommand = new EditRetireAttachmentsCommand(configuration, databaseName, raftRequestId);
 
             return SendToLeaderAsync(editRetireAttachmentsCommand);
         }

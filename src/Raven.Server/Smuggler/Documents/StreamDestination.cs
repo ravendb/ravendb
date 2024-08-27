@@ -322,8 +322,8 @@ namespace Raven.Server.Smuggler.Documents
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.RetireAttachments))
                 {
                     _writer.WriteComma();
-                    _writer.WritePropertyName(nameof(databaseRecord.RetireAttachments));
-                    WriteTaskConfiguration(databaseRecord.RetireAttachments);
+                    _writer.WritePropertyName(nameof(databaseRecord.RetiredAttachments));
+                    WriteTaskConfiguration(databaseRecord.RetiredAttachments);
                 }
                 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Refresh))

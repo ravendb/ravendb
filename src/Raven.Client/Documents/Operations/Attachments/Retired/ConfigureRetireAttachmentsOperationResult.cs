@@ -1,4 +1,4 @@
-namespace Raven.Client.Documents.Operations.Attachments
+namespace Raven.Client.Documents.Operations.Attachments.Retired
 {
     public sealed class ConfigureRetireAttachmentsOperationResult
     {
