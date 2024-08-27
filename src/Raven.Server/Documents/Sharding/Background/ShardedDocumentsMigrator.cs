@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents.Sharding.Background
                 }
 
                 if (bucket != -1)
-                    await MoveDocumentsToShardAsync(bucket, moveToShard);
+                    await MoveDocumentsToShardAsync(bucket, moveToShard, configuration);
             }
             catch (Exception e)
             {
@@ -112,10 +113,36 @@ namespace Raven.Server.Documents.Sharding.Background
             return false;
         }
 
-        private async Task MoveDocumentsToShardAsync(int bucket, int moveToShard)
+        private async Task MoveDocumentsToShardAsync(int bucket, int moveToShard, ShardingConfiguration configuration)
         {
-            var cmd = new StartBucketMigrationCommand(bucket, _database.ShardNumber, moveToShard, _database.ShardedDatabaseName,
-                $"{Guid.NewGuid()}/{bucket}");
+            string prefix = null;
+            if (bucket >= ShardHelper.NumberOfBuckets)
+            {
+                // bucket belongs to a prefixed range
+                // need to find the corresponding prefix setting in order to validate the destination shard
+
+                foreach (var setting in configuration.Prefixed)
+                {
+                    var bucketRangeStart = setting.BucketRangeStart;
+                    var nextRangeStart = bucketRangeStart + ShardHelper.NumberOfBuckets;
+
+                    if (bucket < bucketRangeStart || bucket >= nextRangeStart)
+                        continue;
+
+                    prefix = setting.Prefix;
+                    break;
+                }
+
+                if (string.IsNullOrEmpty(prefix))
+                    throw new InvalidOperationException($"Bucket {bucket} should belong to a prefixed range, but a corresponding {nameof(PrefixedShardingSetting)} wasn't found in database record");
+            }
+
+            var cmd = new StartBucketMigrationCommand(bucket, 
+                sourceShard: _database.ShardNumber, 
+                destShard: moveToShard, 
+                _database.ShardedDatabaseName, 
+                prefix,
+                raftId: $"{Guid.NewGuid()}/{bucket}");
 
             await _database.ServerStore.SendToLeaderAsync(cmd);
         }

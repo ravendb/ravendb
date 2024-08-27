@@ -166,10 +166,17 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 if (match == false)
                 {
                     reason = $"{item.Current.Id} filtered by criteria";
+                    transformResult.Dispose();
                     result.Document.Data?.Dispose();
                     result.Document.Data = null;
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
+                }
+
+                if (transformResult.Location != result.Document.Data.Location)
+                {
+                    // was modified by patch
+                    transformResult.Dispose();
                 }
 
                 result.Status = SubscriptionBatchItemStatus.Send;

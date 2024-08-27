@@ -282,7 +282,8 @@ namespace Raven.Server.Documents.Indexes
         
         private HashSet<string> _fieldsReportedAsComplex = new();
         private bool _newComplexFieldsToReport = false;
-        
+        public HashSet<IndexField> ComplexFieldsNotIndexedByCorax { get; private set; }
+
         protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBaseServerSide definition)
         {
             Type = type;
@@ -959,6 +960,7 @@ namespace Raven.Server.Documents.Indexes
                 LastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
                 MaxNumberOfOutputsPerDocument = _indexStorage.ReadMaxNumberOfOutputsPerDocument(tx);
                 ArchivedDataProcessingBehavior = _indexStorage.ReadArchivedDataProcessingBehavior(tx);
+                CoraxComplexFieldIndexingBehavior = _indexStorage.ReadCoraxComplexFieldIndexingBehavior(tx);
             }
         }
 
@@ -2546,7 +2548,14 @@ namespace Raven.Server.Documents.Indexes
             _fieldsReportedAsComplex.Add(fieldName);
             _newComplexFieldsToReport = true;
         }
-        
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetComplexFieldNotIndexedByCoraxStaticIndex(IndexField field)
+        {
+            ComplexFieldsNotIndexedByCorax ??= new();
+            ComplexFieldsNotIndexedByCorax.Add(field);
+        }
+
         private void HandleComplexFieldsAlert()
         {
             if (_newComplexFieldsToReport)
@@ -4482,7 +4491,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        
+        public IndexingConfiguration.CoraxComplexFieldIndexingBehavior CoraxComplexFieldIndexingBehavior { get; private set; }
         
         public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; private set; }
 

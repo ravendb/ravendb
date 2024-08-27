@@ -23,6 +23,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;
+using static Raven.Server.Documents.DatabasesLandlord;
 using DictionaryExtensions = Raven.Server.Extensions.DictionaryExtensions;
 
 namespace Raven.Server.Documents.Sharding
@@ -100,11 +101,11 @@ namespace Raven.Server.Documents.Sharding
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context) => ServerStore.ContextPool.AllocateOperationContext(out context);
 
-        public async ValueTask UpdateDatabaseRecordAsync(DatabaseRecord record, long index)
+        public async ValueTask UpdateDatabaseRecordAsync(DatabaseRecord record, long index, string type, ClusterDatabaseChangeType changeType)
         {
             try
             {
-                await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _orchestratorStateChange);
+                await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _orchestratorStateChange, type, changeType);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
             catch (Exception e)
@@ -188,7 +189,7 @@ namespace Raven.Server.Documents.Sharding
             return Task.CompletedTask;
         }
 
-        public async ValueTask UpdateUrlsAsync(long index) => await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(_record, index, _urlUpdateStateChange);
+        public async ValueTask UpdateUrlsAsync(long index) => await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(_record, index, _urlUpdateStateChange, nameof(UpdateUrlsAsync));
 
         public string DatabaseName => _record.DatabaseName;
 

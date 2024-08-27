@@ -35,7 +35,7 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Index, object Result)> StartBucketMigration(string database, int bucket, int toShard, string prefix, string raftId)
         {
-            var cmd = new StartBucketMigrationCommand(bucket, toShard, database, prefix, raftId ?? RaftIdGenerator.NewId());
+            var cmd = new StartBucketMigrationCommand(bucket, sourceShard: null, toShard, database, prefix, raftId ?? RaftIdGenerator.NewId());
             return _serverStore.SendToLeaderAsync(cmd);
         }
 

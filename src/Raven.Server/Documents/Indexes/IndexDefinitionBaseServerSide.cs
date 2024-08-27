@@ -178,11 +178,12 @@ namespace Raven.Server.Documents.Indexes
             public const long StoreOnlySupportInCoraxIndexes = 60_003; // RavenDB-22369
             public const long JavaScriptProperlyHandleDynamicFieldsIndexFields = 60_004; // RavenDB-22363
             public const long LoadDocumentWithDynamicCollectionNameShouldThrow = 61_000; // RavenDB-22359
+            public const long CoraxComplexFieldIndexingBehavior = 61_001;
 
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = LoadDocumentWithDynamicCollectionNameShouldThrow;
+            public const long CurrentVersion = CoraxComplexFieldIndexingBehavior;
 
             public static bool IsTimeTicksInJavaScriptIndexesSupported(long indexVersion)
             {

@@ -68,18 +68,22 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
         height: 26px;
         padding: 4px;
         float: right;
-        color: $brand-ravendb;
+        color: $text-muted-var;
         text-transform: uppercase;
         line-height: 18px;
         font-weight: 700;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: $gutter-xxs;
+        transition: $transition-base;
 
-        &:before {
-            content: "\f117";
+        i {
             font-size: 18px;
         }
 
         &:hover {
-            background-color: $base-panel-bg-2;
+            transition: none;
         }
     }
     li + li.separator h3 {

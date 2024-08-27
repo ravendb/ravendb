@@ -33,6 +33,7 @@ namespace Raven.Client.Documents.Operations.Replication
         public override ulong GetTaskKey()
         {
             var hashCode = base.GetTaskKey();
+            hashCode = (hashCode * 397) ^ CalculateStringHash(Url);
             return (hashCode * 397) ^ (ulong)Mode;
         }
 
@@ -50,9 +51,16 @@ namespace Raven.Client.Documents.Operations.Replication
             return djv;
         }
 
+        public override string ToString()
+        {
+            return $"Replication Hub to {FromString()}. " +
+                   $"Hub Task Name: '{Name}', " +
+                   $"Mode: '{Mode}'";
+        }
+
         public override string GetDefaultTaskName()
         {
-            return $"Replication Hub for {Database}";
+            return ToString();
         }
     }
 }

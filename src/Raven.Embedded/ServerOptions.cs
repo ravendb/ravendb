@@ -21,7 +21,13 @@ namespace Raven.Embedded
 
         public string DotNetPath { get; set; } = "dotnet";
 
-        public bool AcceptEula { get; set; } = true;
+        [Obsolete(
+            $"This property is no longer used and will be removed in the next version, please use '{nameof(Licensing)}.{nameof(LicensingOptions.EulaAccepted)}' instead.")]
+        public bool AcceptEula
+        {
+            get => Licensing.EulaAccepted;
+            set => Licensing.EulaAccepted = value;
+        }
 
         public string ServerUrl { get; set; }
 
@@ -34,6 +40,8 @@ namespace Raven.Embedded
         internal static ServerOptions Default = new ServerOptions();
 
         public SecurityOptions Security { get; private set; }
+
+        public LicensingOptions Licensing { get; set; } = new();
 
         public ServerOptions Secured(string certificate, string certPassword = null)
         {
@@ -80,7 +88,6 @@ namespace Raven.Embedded
             return this;
         }
 
-
         public sealed class SecurityOptions
         {
             internal SecurityOptions() { }
@@ -92,7 +99,16 @@ namespace Raven.Embedded
             public string CertificateLoadExecArguments { get; internal set; }
             public string ServerCertificateThumbprint { get; internal set; }
         }
+
+        public sealed class LicensingOptions
+        {
+            public string License { get; set; }
+            public string LicensePath { get; set; }
+            public bool EulaAccepted { get; set; }
+            public bool DisableAutoUpdate { get; set; }
+            public bool DisableAutoUpdateFromApi { get; set; }
+            public bool DisableLicenseSupportCheck { get; set; } = true;
+            public bool ThrowOnInvalidOrMissingLicense { get; set; }
+        }
     }
-
-
 }

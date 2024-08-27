@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
@@ -15,7 +16,8 @@ internal static class OngoingTasksUtils
         DatabaseTopology databaseTopology,
         IDatabaseTask configuration,
         IDatabaseTaskStatus taskStatus,
-        AbstractNotificationCenter notificationCenter)
+        AbstractNotificationCenter notificationCenter,
+        List<string> explanations = null)
     {
         Debug.Assert(taskStatus is not PeriodicBackupStatus);
 
@@ -28,6 +30,7 @@ internal static class OngoingTasksUtils
                 if (lastResponsibleNode == null)
                 {
                     // first time this task is assigned
+                    explanations?.Add("There is no last responsible node. It's first time this task is assigned");
                     return null;
                 }
 
@@ -35,18 +38,25 @@ internal static class OngoingTasksUtils
                 {
                     // the topology doesn't include the last responsible node anymore
                     // we'll choose a different one
+                    explanations?.Add($"The topology ({string.Join(',', databaseTopology.AllNodes)}) doesn't include the last responsible node anymore. We'll choose a different one");
                     return null;
                 }
 
                 if (serverStore.LicenseManager.HasHighlyAvailableTasks() == false)
                 {
                     // can't redistribute, keep it on the original node
+
                     RaiseAlertIfNecessary(databaseTopology, configuration, lastResponsibleNode, serverStore, notificationCenter);
+
+                    explanations?.Add($"Keeping the task on last responsible node ({lastResponsibleNode}). Highly available tasks aren't available");
+
                     return lastResponsibleNode;
                 }
 
+                explanations?.Add($"Last responsible node is {lastResponsibleNode}. Redistributing task work since highly available tasks are supported");
+
                 return null;
-            });
+            }, explanations);
 
         return whoseTaskIsIt;
     }

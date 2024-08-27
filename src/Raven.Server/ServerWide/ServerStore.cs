@@ -792,6 +792,7 @@ namespace Raven.Server.ServerWide
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null, this);
             options.BeforeSchemaUpgrade = _server.BeforeSchemaUpgrade;
+            options.AfterDatabaseCreation = _server.AfterDatabaseCreation;
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
             options.DiscardVirtualMemory = Configuration.Storage.DiscardVirtualMemory;
@@ -854,6 +855,9 @@ namespace Raven.Server.ServerWide
             }
 
             CheckSwapOrPageFileAndRaiseNotification();
+
+            LicenseManager.Initialize(_env, ContextPool);
+            LatestVersionCheck.Instance.Check(this);
         }
 
         public void Initialize()

@@ -174,12 +174,13 @@ namespace Raven.Server.Config.Categories
 
                         if (minValue == null)
                         {
-                            if (property.Info.PropertyType.IsEnum)
+                            if (property.Info.PropertyType.IsEnum || (Nullable.GetUnderlyingType(property.Info.PropertyType)?.IsEnum ?? false))
                             {
+                                var propertyType = Nullable.GetUnderlyingType(property.Info.PropertyType) ?? property.Info.PropertyType;
                                 object parsedValue;
                                 try
                                 {
-                                    parsedValue = Enum.Parse(property.Info.PropertyType, value, true);
+                                    parsedValue = Enum.Parse(propertyType, value, true);
                                 }
                                 catch (ArgumentException)
                                 {

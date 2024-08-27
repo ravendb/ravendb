@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<Index_TestGrouping4.Result, Index_TestGrouping4>()
-                        .OrderBy(x=>x.d)
+                        .OrderBy(x => x.d)
                         .ProjectInto<Index_TestGrouping4.Result>().ToList();
                     Assert.Equal(3, results.Count);
                     Assert.NotNull(results[0].ac);
@@ -151,7 +151,8 @@ namespace SlowTests.Issues
                 {
                     {
                         Constants.Documents.Indexing.Fields.AllFields, new IndexFieldOptions { Storage = FieldStorage.Yes }
-                    }
+                    },
+                    { "a", new IndexFieldOptions() { Indexing = FieldIndexing.No }}
                 };
             }
         }

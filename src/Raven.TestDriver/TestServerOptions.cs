@@ -5,6 +5,11 @@ namespace Raven.TestDriver
 {
     public sealed class TestServerOptions : ServerOptions
     {
+        public TestServerOptions()
+        {
+            Licensing.ThrowOnInvalidOrMissingLicense = true;
+        }
+
         public static TestServerOptions UseFiddler()
         {
             return new TestServerOptions

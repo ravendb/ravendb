@@ -15,26 +15,33 @@ import rootItems = require("common/shell/menu/items/rootItems");
 
 export = generateMenuItems;
 
-function generateMenuItems(db: database | string) {
-    if (!db) {
-        return generateNoActiveDatabaseMenuItems();
-    } 
-
-    return generateActiveDatabaseMenuItems();
+interface GenerateMenuItemsOptions {
+    db: database | string;
+    isNewVersionAvailable: boolean;
+    isWhatsNewVisible: boolean;
 }
 
-function generateNoActiveDatabaseMenuItems() {
+function generateMenuItems(options: GenerateMenuItemsOptions) {
+    if (!options.db) {
+        return generateNoActiveDatabaseMenuItems(options);
+    } 
+
+    return generateActiveDatabaseMenuItems(options);
+}
+
+function generateNoActiveDatabaseMenuItems(options: GenerateMenuItemsOptions) {
     const appUrls = appUrl.forCurrentDatabase();
     return [
         new separatorMenuItem('Server'),
         getDatabasesMenuItem(appUrls),
         rootItems.clusterDashboard(),
         getManageServerMenuItem(),
-        rootItems.about()
+        rootItems.about(),
+        rootItems.whatsNew(options),
     ];
 }
 
-function generateActiveDatabaseMenuItems() {
+function generateActiveDatabaseMenuItems(options: GenerateMenuItemsOptions) {
     const appUrls = appUrl.forCurrentDatabase();
     return [
         getDocumentsMenuItem(appUrls),
@@ -47,7 +54,8 @@ function generateActiveDatabaseMenuItems() {
         getDatabasesMenuItem(appUrls),
         rootItems.clusterDashboard(),
         getManageServerMenuItem(),
-        rootItems.about()
+        rootItems.about(),
+        rootItems.whatsNew(options),
     ];
 }
 

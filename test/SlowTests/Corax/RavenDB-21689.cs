@@ -28,11 +28,10 @@ public class RavenDB_21689 : StorageTest
             .CreateForWriter(false)
             .AddBinding(0, "id")
             .AddBinding(1, "boolean")
-            .AddBinding(2, "text", LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30)))
+            .AddBinding(2, "text", LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30), forQuerying: false))
             .Build();
     }
-
-
+    
     [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     public void NotAcceleratedAndWithInsideSetTermMatchWillNotHaveInfinityLoop()
     {
@@ -46,7 +45,7 @@ public class RavenDB_21689 : StorageTest
                 builder.Write(0, Encodings.Utf8.GetBytes($"doc/{docIdx}"));
                 builder.Write(1, Encodings.Utf8.GetBytes("false"));
                 builder.Write(2, Encodings.Utf8.GetBytes($"abc{docIdx}"));
-                
+                builder.EndWriting();
             }
 
             indexWriter.Commit();
