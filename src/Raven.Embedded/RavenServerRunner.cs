@@ -32,22 +32,22 @@ namespace Raven.Embedded
                 commandLineArgs.Add($"--Embedded.ParentProcessId={currentProcess.Id}");
             }
 
-            if (options.LicenseConfiguration != null)
+            if (options.Licensing != null)
             {
-                if (string.IsNullOrWhiteSpace(options.LicenseConfiguration.License) == false &&
-                    string.IsNullOrWhiteSpace(options.LicenseConfiguration.LicensePath) == false)
-                    throw new ArgumentException($"Only one of Licence options '{nameof(options.LicenseConfiguration.License)}' or '{nameof(options.LicenseConfiguration.LicensePath)}' should be specified");
+                if (string.IsNullOrWhiteSpace(options.Licensing.License) == false &&
+                    string.IsNullOrWhiteSpace(options.Licensing.LicensePath) == false)
+                    throw new ArgumentException($"Only one of Licence options '{nameof(options.Licensing.License)}' or '{nameof(options.Licensing.LicensePath)}' should be specified");
 
-                if (string.IsNullOrWhiteSpace(options.LicenseConfiguration.License) == false)
-                    commandLineArgs.Add($"--License={CommandLineArgumentEscaper.EscapeSingleArg(options.LicenseConfiguration.License)}");
-                else if (string.IsNullOrWhiteSpace(options.LicenseConfiguration.LicensePath) == false)
-                    commandLineArgs.Add($"--License.Path={CommandLineArgumentEscaper.EscapeSingleArg(options.LicenseConfiguration.LicensePath)}");
+                if (string.IsNullOrWhiteSpace(options.Licensing.License) == false)
+                    commandLineArgs.Add($"--License={CommandLineArgumentEscaper.EscapeSingleArg(options.Licensing.License)}");
+                else if (string.IsNullOrWhiteSpace(options.Licensing.LicensePath) == false)
+                    commandLineArgs.Add($"--License.Path={CommandLineArgumentEscaper.EscapeSingleArg(options.Licensing.LicensePath)}");
 
-                commandLineArgs.Add($"--License.Eula.Accepted={options.LicenseConfiguration.EulaAccepted}");
-                commandLineArgs.Add($"--License.DisableAutoUpdate={options.LicenseConfiguration.DisableAutoUpdate}");
-                commandLineArgs.Add($"--License.DisableAutoUpdateFromApi={options.LicenseConfiguration.DisableAutoUpdateFromApi}");
-                commandLineArgs.Add($"--License.DisableLicenseSupportCheck={options.LicenseConfiguration.DisableLicenseSupportCheck}");
-                commandLineArgs.Add($"--License.ThrowOnInvalidOrMissingLicense={options.LicenseConfiguration.ThrowOnInvalidOrMissingLicense}");
+                commandLineArgs.Add($"--License.Eula.Accepted={options.Licensing.EulaAccepted}");
+                commandLineArgs.Add($"--License.DisableAutoUpdate={options.Licensing.DisableAutoUpdate}");
+                commandLineArgs.Add($"--License.DisableAutoUpdateFromApi={options.Licensing.DisableAutoUpdateFromApi}");
+                commandLineArgs.Add($"--License.DisableLicenseSupportCheck={options.Licensing.DisableLicenseSupportCheck}");
+                commandLineArgs.Add($"--License.ThrowOnInvalidOrMissingLicense={options.Licensing.ThrowOnInvalidOrMissingLicense}");
             }
 
             commandLineArgs.Add("--Setup.Mode=None");

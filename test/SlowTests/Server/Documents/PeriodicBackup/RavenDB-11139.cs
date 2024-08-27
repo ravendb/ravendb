@@ -1269,7 +1269,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (context.OpenReadTransaction())
                     {
                         // clean tombstones
-                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
+                    var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
                         Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
                     }
 
@@ -1370,7 +1370,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (context.OpenReadTransaction())
                     {
                         // clean tombstones
-                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
+                    var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
                         Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
                     }
 
