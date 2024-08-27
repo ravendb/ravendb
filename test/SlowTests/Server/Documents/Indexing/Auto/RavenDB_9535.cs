@@ -2,6 +2,7 @@
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.ServerWide;
+using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
@@ -18,7 +19,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         [Fact]
         public void Invalid_hash_calculation_on_null()
         {
-            using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("RavenDB_9535"))
+            using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling(RavenLogManager.CreateNullLogger(), "RavenDB_9535"))
             using (var bsc = new ByteStringContext(SharedMultipleUseFlag.None))
             {
                 var sut = new ReduceKeyProcessor(1, bufferPool, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
