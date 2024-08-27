@@ -9,12 +9,13 @@ using Sparrow.Logging;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron.Global;
+using Voron.Logging;
 
 namespace Voron.Impl.Paging;
 
 public unsafe partial class Pager
 {
-    public class State: IDisposable
+    public class State : IDisposable
     {
         public readonly Pager Pager;
 
@@ -27,7 +28,7 @@ public unsafe partial class Pager
             TotalAllocatedSize = totalAllocatedSize;
             NumberOfAllocatedPages = totalAllocatedSize / Constants.Storage.PageSize;
             Handle = handle;
-       
+
             Pager = pager;
             WeakSelf = new WeakReference<State>(this);
         }
@@ -54,20 +55,20 @@ public unsafe partial class Pager
             {
                 if (Disposed)
                     return;
-            
+
                 Disposed = true;
-                
+
                 Pager._states.TryRemove(WeakSelf);
 
                 var rc = Pal.rvn_close_pager(Handle, out var errorCode);
                 NativeMemory.UnregisterFileMapping(Pager.FileName, (nint)ReadAddress, TotalAllocatedSize);
-                
+
                 if (rc != PalFlags.FailCodes.Success)
                 {
                     PalHelper.ThrowLastError(rc, errorCode, $"Failed to close data pager for: {Pager.FileName}");
                 }
             }
-            
+
             GC.SuppressFinalize(this);
 
         }
@@ -83,18 +84,11 @@ public unsafe partial class Pager
                 try
                 {
                     // cannot throw an exception from here, just log it
-                    var entry = new LogEntry
+                    var logger = RavenLogManager.Instance.GetLoggerForGlobalVoron<State>();
+
+                    if (logger.IsErrorEnabled)
                     {
-                        At = DateTime.UtcNow,
-                        Logger = nameof(State),
-                        Exception = e,
-                        Message = "Failed to dispose the pager state from the finalizer",
-                        Source = "PagerState Finalizer",
-                        Type = LogMode.Operations
-                    };
-                    if (LoggingSource.Instance.IsOperationsEnabled)
-                    {
-                        LoggingSource.Instance.Log(ref entry);
+                        logger.Error("Failed to dispose the pager state from the finalizer", e);
                     }
                 }
                 catch
