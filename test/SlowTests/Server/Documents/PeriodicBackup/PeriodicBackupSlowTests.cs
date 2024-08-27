@@ -3209,9 +3209,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     NextBackup nextBackup = default;
                     WaitForValue(() =>
                     {
-                        periodicBackup = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.Single(x => x.BackupStatus.TaskId == taskId);
+                        periodicBackup = responsibleDatabase.PeriodicBackupRunner?.PeriodicBackups.Single(x => x.BackupStatus.TaskId == taskId);
 
-                        nextBackup = periodicBackup.GetNextBackup();
+                        nextBackup = periodicBackup?.GetNextBackup();
 
                         if(nextBackup == null)
                             return false;
@@ -3224,6 +3224,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     Assert.NotNull(nextBackup);
                     Assert.NotNull(periodicBackup);
+                    Assert.NotNull(nextBackup);
                     Assert.Null(periodicBackup.RunningTask);
                     Assert.Null(periodicBackup.RunningBackupStatus);
                     Assert.True(nextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) && nextBackup.TimeSpan <= delayDuration,

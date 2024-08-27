@@ -16,7 +16,7 @@ export default function StudioSearchServerResults(props: {
     }
 
     return (
-        <div className="col-md-4 col-sm-12 studio-search__server-col p-0" ref={serverColumnRef}>
+        <div className="col-md-5 col-sm-12 studio-search__server-col p-0" ref={serverColumnRef}>
             <DropdownItem header className="studio-search__server-col__header--sticky">
                 <span className="small-label">Server</span>
             </DropdownItem>

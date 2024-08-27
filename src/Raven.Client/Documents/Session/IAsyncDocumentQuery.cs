@@ -86,7 +86,6 @@ namespace Raven.Client.Documents.Session
 
         /// <summary>
         ///     Registers the lazy query and returns its lazy instance that will be evaluated on request.
-        ///     Allows to add a method that will be executed on query evaluation.
         /// </summary>
         /// <param name="onEval">Action wrapping a method that will be executed on query evaluation. Default: null.</param>
         Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval = null);

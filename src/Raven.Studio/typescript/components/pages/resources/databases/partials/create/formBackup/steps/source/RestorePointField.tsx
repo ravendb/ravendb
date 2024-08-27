@@ -15,6 +15,10 @@ import { FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useAppSelector } from "components/store";
 import classNames from "classnames";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import AuthenticationOffMessage from "components/pages/resources/databases/partials/create/shared/AuthenticationOffMessage";
+import EncryptionUnavailableMessage from "components/pages/resources/databases/partials/create/shared/EncryptionUnavailableMessage";
+import { RestorePointOption } from "components/pages/resources/databases/partials/create/formBackup/steps/source/useRestorePointUtils";
 
 interface GroupedOption {
     label: string;
@@ -156,35 +160,51 @@ const RestorePointGroupHeading = (props: GroupHeadingProps<SelectOption<RestoreP
     );
 };
 
-function RestorePointOption(props: OptionProps<SelectOption<RestorePoint>>) {
-    const { data } = props;
+function RestorePointOption(props: OptionProps<RestorePointOption>) {
+    const {
+        data: { value, disabledReason },
+    } = props;
 
     return (
-        <components.Option {...props}>
-            <Row className="gx-xs">
-                <Col xs="12" sm="12" className="">
-                    <div className="px-3">
-                        <Icon icon="clock" />
-                        <strong>{data.value.dateTime}</strong>
-                    </div>
-                </Col>
-                <Col lg="3" className="text-center">
-                    <small className={data.value.backupType == "Full" ? "text-success" : "text-emphasis"}>
-                        {data.value.backupType}
-                    </small>
-                </Col>
-                <Col lg="3" className="text-center">
-                    <small>
-                        {data.value.isEncrypted ? <Icon icon="lock" color="success" /> : <Icon icon="unsecure" />}
-                    </small>
-                </Col>
-                <Col lg="3" className="text-center">
-                    <small>{data.value.nodeTag}</small>
-                </Col>
-                <Col lg="3" className="text-center">
-                    <small>{data.value.filesToRestore}</small>
-                </Col>
-            </Row>
-        </components.Option>
+        <ConditionalPopover
+            conditions={[
+                {
+                    isActive: disabledReason === "Has no encryption in license",
+                    message: <EncryptionUnavailableMessage />,
+                },
+                {
+                    isActive: disabledReason === "Server is not secure",
+                    message: <AuthenticationOffMessage />,
+                },
+            ]}
+            popoverPlacement="left"
+        >
+            <components.Option {...props}>
+                <Row className="gx-xs">
+                    <Col xs="12" sm="12" className="">
+                        <div className="px-3">
+                            <Icon icon="clock" />
+                            <strong>{value.dateTime}</strong>
+                        </div>
+                    </Col>
+                    <Col lg="3" className="text-center">
+                        <small className={value.backupType == "Full" ? "text-success" : "text-emphasis"}>
+                            {value.backupType}
+                        </small>
+                    </Col>
+                    <Col lg="3" className="text-center">
+                        <small>
+                            {value.isEncrypted ? <Icon icon="lock" color="success" /> : <Icon icon="unsecure" />}
+                        </small>
+                    </Col>
+                    <Col lg="3" className="text-center">
+                        <small>{value.nodeTag}</small>
+                    </Col>
+                    <Col lg="3" className="text-center">
+                        <small>{value.filesToRestore}</small>
+                    </Col>
+                </Row>
+            </components.Option>
+        </ConditionalPopover>
     );
 }

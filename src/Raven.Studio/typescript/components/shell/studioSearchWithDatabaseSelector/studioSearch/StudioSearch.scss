@@ -26,6 +26,7 @@
             font-size: 0.875rem;
         }
     }
+
     &__toggle {
         display: flex !important;
         flex-grow: 1;
@@ -45,28 +46,33 @@
             pointer-events: none;
         }
     }
+
     &__dropdown-item {
         padding: sizes.$gutter-xxs sizes.$gutter-xs !important;
         color: colors.$text-emphasis-var !important;
         border-radius: sizes.$border-radius-sm !important;
         transition: none;
         border: 1px solid transparent !important;
+
         &:hover,
         &:focus,
         &:active {
             background-color: colors.$panel-header-bg-var !important;
             transition: bs5variables.$transition-base;
         }
+
         &.active {
             background-color: colors.$panel-header-bg-var !important;
             border: 1px solid colors.$border-color-light-var !important;
         }
     }
+
     &__route {
         text-transform: capitalize;
-        font-size: 0.625rem;
+        font-size: 0.688rem;
         color: colors.$text-muted-var;
     }
+
     &__switch-database {
         .dropdown-item {
             position: relative;
@@ -85,14 +91,17 @@
             }
         }
     }
+
     &__input {
         border-radius: 0 sizes.$border-radius-pill sizes.$border-radius-pill 0 !important;
         padding: 0 0 0 sizes.$gutter !important;
         min-height: 35px !important;
     }
+
     &__database-col {
         max-height: 540px;
         overflow-y: auto;
+
         &__header {
             &--sticky {
                 position: sticky;
@@ -106,10 +115,12 @@
                 }
             }
         }
+
         &__group {
             margin: sizes.$gutter-xs sizes.$gutter-sm;
             padding-bottom: sizes.$gutter-xs;
             border-bottom: 1px solid colors.$border-color-light-var;
+
             &__header {
                 padding: 0 0 sizes.$gutter-xs 0 !important;
                 color: colors.$text-emphasis-var !important;
@@ -120,6 +131,7 @@
                 @include make-icon-color(tasks, colors.$color-5-3, colors.$color-5-3);
                 @include make-icon-color(settings, colors.$color-2-1, colors.$color-2-1);
                 @include make-icon-color(stats, colors.$color-3, colors.$color-3);
+
                 &--sticky {
                     position: sticky;
                     top: 0;
@@ -133,6 +145,7 @@
                     }
                 }
             }
+
             &:last-of-type {
                 border-bottom: none;
                 padding-bottom: sizes.$gutter-xxs;
@@ -142,16 +155,20 @@
     &__server-col {
         max-height: 540px;
         overflow-y: auto;
+
         @media (min-width: sizes.$screen-sm-max) {
             border-left: 1px solid colors.$border-color-light-var;
         }
+
         &__group {
             margin: 0 sizes.$gutter-xxs sizes.$gutter-xs sizes.$gutter-xxs;
             padding-bottom: sizes.$gutter-xs;
         }
+
         &__header {
             color: colors.$text-emphasis-var !important;
             font-weight: bs5variables.$font-weight-bold !important;
+
             &--sticky {
                 position: sticky;
                 top: 0;
@@ -164,6 +181,7 @@
                 }
             }
         }
+
         @include make-icon-color(cluster, colors.$color-5-1, colors.$color-5-1);
         @include make-icon-color(client-configuration, colors.$color-5-2, colors.$color-5-2);
         @include make-icon-color(studio-configuration, colors.$color-5-3, colors.$color-5-3);
@@ -185,11 +203,14 @@
         @include make-icon-color(cluster-dashboard, colors.$color-4-2, colors.$color-4-2);
         @include make-icon-color(manage-server, colors.$color-4-3, colors.$color-4-3);
         @include make-icon-color(info, colors.$color-5, colors.$color-5);
+        @include make-icon-color(sparkles, colors.$color-2, colors.$color-2);
     }
+
     &__legend-col {
         position: sticky;
         bottom: 0;
         z-index: 2;
+
         &__group {
             &__header {
                 background-color: colors.$panel-header-bg-var;
@@ -208,6 +229,7 @@
             }
         }
     }
+
     &__ellipsis-overflow {
         flex: 1 !important;
         line-height: 1.07;

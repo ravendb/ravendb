@@ -65,7 +65,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 process.BeforeActualLoad = null;
 
-                process.Start();
+                process.Start(null);
 
                 Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 

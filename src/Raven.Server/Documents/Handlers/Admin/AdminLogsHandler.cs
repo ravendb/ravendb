@@ -53,6 +53,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "logs/configuration");
 
                 var configuration = JsonDeserializationServer.Parameters.SetLogsConfigurationParameters(json);
+                if (configuration.Persist)
+                    AssertCanPersistConfiguration();
 
                 if (configuration.RetentionTime == null)
                     configuration.RetentionTime = ServerStore.Configuration.Logs.RetentionTime?.AsTimeSpan;
@@ -333,6 +335,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "event-listener/configuration");
 
                 var configuration = JsonDeserializationServer.EventListenerConfiguration(json);
+                if (configuration.Persist)
+                    AssertCanPersistConfiguration();
 
                 EventListenerToLog.Instance.UpdateConfiguration(configuration);
 

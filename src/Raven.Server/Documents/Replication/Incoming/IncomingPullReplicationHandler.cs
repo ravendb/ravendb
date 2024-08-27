@@ -37,6 +37,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 AllowedPaths = pullReplicationParams?.AllowedPaths,
                 Mode = pullReplicationParams?.Mode ?? PullReplicationMode.None,
                 Name = pullReplicationParams?.Name,
+                SourceDatabaseName = replicatedLastEtag.SourceDatabaseName,
                 PreventDeletionsMode = pullReplicationParams?.PreventDeletionsMode,
                 Type = ReplicationLoader.PullReplicationParams.ConnectionType.Incoming
             };

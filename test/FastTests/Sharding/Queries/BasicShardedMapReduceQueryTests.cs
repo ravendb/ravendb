@@ -1079,6 +1079,8 @@ select project(o)")
                         Freight = g.Key,
                         Lines = g.SelectMany(x => x.Lines).ToList()
                     };
+
+                Index(x => x.Lines, FieldIndexing.No);
             }
         }
 

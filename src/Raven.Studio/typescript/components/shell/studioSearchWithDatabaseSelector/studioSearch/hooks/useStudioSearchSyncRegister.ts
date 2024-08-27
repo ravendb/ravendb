@@ -154,6 +154,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
                     icon: item.css.replace("icon-", "") as IconName,
                     onSelected: (e) => goToMenuItem(item, e),
                     innerActions,
+                    isCapitalizedDisabled: item.search?.isCapitalizedDisabled,
                 });
             });
 

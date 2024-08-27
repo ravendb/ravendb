@@ -5,6 +5,8 @@ using System.Linq.Expressions;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -186,6 +188,10 @@ namespace SlowTests.MailingList
                                  { e=>e.Attributes, FieldStorage.Yes},
                                  { e=>e.StationId, FieldStorage.Yes}
                              };
+
+                Configuration[RavenConfiguration.GetKey(x => x.Indexing.CoraxStaticIndexComplexFieldIndexingBehavior)] =
+                    IndexingConfiguration.CoraxComplexFieldIndexingBehavior.Skip.ToString();
+
             }
         }
 

@@ -16,10 +16,10 @@ public sealed class IndexFieldBinding
     private Analyzer _analyzer;
     public readonly bool HasSuggestions;
     public readonly bool HasSpatial;
-    public FieldIndexingMode FieldIndexingMode => _silentlyChangedIndexingMode ?? _fieldIndexingMode;
+    public FieldIndexingMode FieldIndexingMode => _silentlyChangedIndexingModeLegacy ?? _fieldIndexingMode;
     private readonly FieldIndexingMode _fieldIndexingMode;
     public readonly bool ShouldStore;
-    private FieldIndexingMode? _silentlyChangedIndexingMode;
+    private FieldIndexingMode? _silentlyChangedIndexingModeLegacy;
     private string _fieldName;
 
     private readonly bool _isFieldBindingForWriter;
@@ -75,7 +75,7 @@ public sealed class IndexFieldBinding
     {
         AssertBindingIsMadeForIndexing();
         
-        _silentlyChangedIndexingMode = mode;
+        _silentlyChangedIndexingModeLegacy = mode;
     }
 
     public void SetAnalyzer(Analyzer analyzer)

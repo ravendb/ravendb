@@ -26,7 +26,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using Corax.Indexing;
+using Raven.Server.Config;
 using Sparrow.Binary;
+using static Raven.Server.Config.Categories.IndexingConfiguration;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -35,6 +37,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     protected byte[] _compoundFieldsBuffer;
 
     private readonly bool _canContainSourceDocumentId;
+    private readonly bool _legacyHandlingOfComplexFields;
     private static ReadOnlySpan<byte> TrueLiteral => "true"u8;
     private static ReadOnlySpan<byte> FalseLiteral => "false"u8;
 
@@ -50,7 +53,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public List<long> LongsListForEnumerableScope;
     public List<double> DoublesListForEnumerableScope;
     public List<BlittableJsonReaderObject> BlittableJsonReaderObjectsListForEnumerableScope;
-    private HashSet<IndexField> _complexFields;
     public bool IgnoreComplexObjectsDuringIndex;
     public List<string[]> CompoundFields;
 
@@ -79,6 +81,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         keyFieldName, storeValueFieldName, fields)
     {
         _canContainSourceDocumentId = canContainSourceDocumentId;
+        _legacyHandlingOfComplexFields = _index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldIndexingBehavior;
+
         Allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         
         Scope = new();
@@ -137,7 +141,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         out bool shouldSkip)
         where TBuilder : IIndexEntryBuilder
     {
-        if (_index.Type.IsMapReduce() == false && field.Indexing == FieldIndexing.No && field.Storage == FieldStorage.No && (_complexFields is null || _complexFields.Contains(field) == false))
+        if (_index.Type.IsMapReduce() == false && field.Indexing == FieldIndexing.No && field.Storage == FieldStorage.No && (_index.ComplexFieldsNotIndexedByCorax is null || _index.ComplexFieldsNotIndexedByCorax.Contains(field) == false))
             ThrowFieldIsNoIndexedAndStored(field);
         
         shouldSkip = false;
@@ -326,17 +330,26 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
                     return;
                 }
-                
-                if (field.Indexing is not FieldIndexing.No) 
-                    AssertOrAdjustIndexingOptionForComplexObject(field);
+
+                if (field.Indexing is not FieldIndexing.No)
+                {
+                    if (_legacyHandlingOfComplexFields)
+                        ComplexObjectInStaticIndexLegacyHandling(field);
+                    else
+                        AssertIndexingBehaviorForComplexObjectInStaticIndex(field);
+                }
                 
                 if (_index.SourceDocumentIncludedInOutput == false && sourceDocument == value)
                 {
                     _index.SourceDocumentIncludedInOutput = true;
                 }
-                
-                var dynamicJson = (DynamicBlittableJson)value;
-                builder.Store(fieldId, path,  dynamicJson.BlittableJson);
+
+                if (field.Storage is FieldStorage.Yes || _legacyHandlingOfComplexFields)
+                {
+                    var dynamicJson = (DynamicBlittableJson)value;
+                    builder.Store(fieldId, path, dynamicJson.BlittableJson);
+                }
+
                 break;
 
             case ValueType.Dictionary:
@@ -358,11 +371,15 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 
                 if (field.Indexing is not FieldIndexing.No)
                 {
-                    AssertOrAdjustIndexingOptionForComplexObject(field);
-                    break;
+                    if (_legacyHandlingOfComplexFields)
+                        ComplexObjectInStaticIndexLegacyHandling(field);
+                    else
+                        AssertIndexingBehaviorForComplexObjectInStaticIndex(field);
                 }
 
-                builder.Store(fieldId, path,  jsonScope);
+                if (field.Storage is FieldStorage.Yes || _legacyHandlingOfComplexFields) 
+                    builder.Store(fieldId, path, jsonScope);
+
                 break;
 
             case ValueType.BlittableJsonObject:
@@ -409,24 +426,51 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         throw new InvalidOperationException($"A field `{field.Name}` that is neither indexed nor stored is useless because it cannot be searched or retrieved.");
     }
 
-    private void AssertOrAdjustIndexingOptionForComplexObject(IndexField field)
+    private void AssertIndexingBehaviorForComplexObjectInStaticIndex(IndexField field)
     {
+        Debug.Assert(_index.Type.IsStatic(), $"It is is supposed to be called for static indexes only while we got {_index.Type} index");
+
         if (IgnoreComplexObjectsDuringIndex)
             return;
-        
+
+        switch (_index.CoraxComplexFieldIndexingBehavior)
+        {
+            case CoraxComplexFieldIndexingBehavior.Throw:
+                ThrowIndexingComplexObjectNotSupportedInStaticIndex(field, _index.Definition.Version);
+                break;
+            case CoraxComplexFieldIndexingBehavior.Skip:
+                // static Corax indexes don't support indexing of complex objects, so we're not going to index it anyway
+                break;
+            default:
+                throw new NotSupportedException(
+                    $"Unknown {nameof(CoraxComplexFieldIndexingBehavior)} option: {_index.CoraxComplexFieldIndexingBehavior}");
+        }
+    }
+
+    private void ComplexObjectInStaticIndexLegacyHandling(IndexField field)
+    {
+        // Backward compatibility for older indexes
+        // Previously, we silently changed the definition not to throw when encountering a complex field without any particular configuration.
+
+        if (IgnoreComplexObjectsDuringIndex) 
+            return;
+
+        Debug.Assert(_index.Type.IsStatic(), "Legacy complex field handling is supposed to be called for static indexes");
         Debug.Assert(field.Indexing != FieldIndexing.No, "field.Indexing != FieldIndexing.No");
+        Debug.Assert(_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldIndexingBehavior, "Legacy complex field handling is supposed to be called only for old indexes");
+
+        // Skip indexing of this complex field for current and next entries by overwriting field.Indexing option by FieldIndexing.No
+
+        DisableIndexingForComplexObjectLegacyHandling(field);
 
         if (_index.GetIndexDefinition().Fields.TryGetValue(field.Name, out var fieldFromDefinition) &&
-            fieldFromDefinition.Indexing != null && 
-            fieldFromDefinition.Indexing != FieldIndexing.No)
+            fieldFromDefinition.Indexing is { } and not FieldIndexing.No)
         {
-            // We need to disable the complex object handling after we check and then throw. 
-            DisableIndexingForComplexObject(field);
-            ThrowIndexingComplexObjectNotSupported(field, _index.Type);
+            // Indexing option was set explicitly in the definition. We'll throw in that case but only for the first encountered entry. 
+            // The next ones will not index this field at all because we just disabled indexing for that field
+            
+            ThrowIndexingComplexObjectNotSupportedInStaticIndex(field, _index.Definition.Version);
         }
-
-        DisableIndexingForComplexObject(field);
-
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -446,30 +490,38 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             InsertRegularField(field, CoraxConstants.JsonValue, indexContext, builder, sourceDocument, out shouldSkip);
             return;
         }
+
+        if (field.Indexing is not FieldIndexing.No)
+        {
+            if (_legacyHandlingOfComplexFields)
+                ComplexObjectInStaticIndexLegacyHandling(field);
+            else
+                AssertIndexingBehaviorForComplexObjectInStaticIndex(field);
+        }
         
-        if (field.Indexing is not FieldIndexing.No) 
-            AssertOrAdjustIndexingOptionForComplexObject(field);
         if (GetKnownFieldsForWriter().TryGetByFieldId(field.Id, out var binding))
             binding.SetAnalyzer(null);
 
-        if (val.HasParent)
+        if (field.Storage is FieldStorage.Yes || _legacyHandlingOfComplexFields)
         {
-            using var clonedBlittable = val.CloneOnTheSameContext();
-            builder.Store(field.Id, field.Name,clonedBlittable);
-        }
-        else
-        {
-            builder.Store(field.Id, field.Name,val);
+            if (val.HasParent)
+            {
+                using var clonedBlittable = val.CloneOnTheSameContext();
+                builder.Store(field.Id, field.Name, clonedBlittable);
+            }
+            else
+            {
+                builder.Store(field.Id, field.Name, val);
+            }
         }
 
         shouldSkip = false;
     }
 
-    private void DisableIndexingForComplexObject(IndexField field)
+    private void DisableIndexingForComplexObjectLegacyHandling(IndexField field)
     {
         field.Indexing = FieldIndexing.No;
-        _complexFields ??= new();
-        _complexFields.Add(field);
+       _index.SetComplexFieldNotIndexedByCoraxStaticIndex(field);
         
         if (GetKnownFieldsForWriter().TryGetByFieldId(field.Id, out var binding))
         {
@@ -478,25 +530,28 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     }
 
     [DoesNotReturn]
-    internal static void ThrowIndexingComplexObjectNotSupported(IndexField field, IndexType indexType)
+    internal static void ThrowIndexingComplexObjectNotSupportedInStaticIndex(IndexField field, long indexVersion)
     {
         var fieldName = field.OriginalName ?? field.Name;
 
-        string exceptionMessage;
+        StringBuilder exceptionMessage = new();
 
-        if (indexType.IsStatic())
+        exceptionMessage.AppendLine(
+            $"The value of '{fieldName}' field is a complex object. Typically a complex field is not intended to be indexed as as whole hence indexing it as a text isn't supported in Corax. " +
+            $"The field is supposed to have 'Indexing' option set to 'No' (note that you can still store it and use it in projections). ");
+
+        if (indexVersion >= IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldIndexingBehavior)
         {
-            exceptionMessage =
-                $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported and it's supposed to have \\\"Indexing\\\" option set to \\\"No\\\". " +
-                $"Note that you can still store it and use it in projections.{Environment.NewLine}" +
-                "If you need to use it for searching purposes, you have to call ToString() on the field value in the index definition.";
+            exceptionMessage.AppendLine(
+                $"Alternatively you can switch '{RavenConfiguration.GetKey(x => x.Indexing.CoraxStaticIndexComplexFieldIndexingBehavior)}' configuration option from " +
+                $"'{CoraxComplexFieldIndexingBehavior.Throw}' to '{CoraxComplexFieldIndexingBehavior.Skip}' to disable the indexing of all complex fields in the index or globally for all indexes (index reset is required). ");
         }
-        else
-        {
-            exceptionMessage =
-                $"The value of '{fieldName}' field is a complex object. Indexing it as a text isn't supported. You should consider querying on individual fields of that object.";
-        }
-        throw new NotSupportedInCoraxException(exceptionMessage);
+
+        exceptionMessage.Append(
+            "If you really need to use this field for searching purposes, you have to call ToString() on the field value in the index definition. Although it's recommended to index individual fields of this complex object. " +
+            "Read more at: https://ravendb.net/l/OB9XW4/6.1");
+
+        throw new NotSupportedInCoraxException(exceptionMessage.ToString());
     }
     
     protected int AppendFieldValue<TBuilder>(string field, object v, int index, TBuilder builder)         

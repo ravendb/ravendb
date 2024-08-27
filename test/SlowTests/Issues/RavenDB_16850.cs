@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Orders;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Sparrow.Extensions;
 using Tests.Infrastructure;
@@ -75,6 +76,9 @@ namespace SlowTests.Issues
                     {
                         Hours = hours
                     });
+
+                Index("Hours", FieldIndexing.No);
+                Store("Hours", FieldStorage.Yes);
             }
         }
     }

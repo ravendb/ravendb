@@ -22,11 +22,12 @@ class leafMenuItem implements menuItem {
     alias: boolean;
     requiredAccess: accessLevel;
     
+    badgeHtml: string;
     badgeData: KnockoutObservable<number>;
     countPrefix: KnockoutComputed<string>;
     sizeClass: KnockoutComputed<string>;
 
-    constructor({ title, search, tooltip, route, moduleId, nav, hash, css, dynamicHash, disableWithReason, openAsDialog, itemRouteToHighlight, shardingMode, badgeData, alias, requiredAccess }: {
+    constructor({ title, search, tooltip, route, moduleId, nav, hash, css, dynamicHash, disableWithReason, openAsDialog, itemRouteToHighlight, shardingMode, badgeData, badgeHtml, alias, requiredAccess }: {
         title: string,
         search?: menuSearchConfig,
         route: string | Array<string>,
@@ -41,6 +42,7 @@ class leafMenuItem implements menuItem {
         shardingMode?: shardingMode;
         itemRouteToHighlight?: string;
         badgeData?: KnockoutObservable<number>;
+        badgeHtml?: string;
         alias?: boolean;
         requiredAccess?: accessLevel
     }) {
@@ -48,6 +50,7 @@ class leafMenuItem implements menuItem {
             console.error("Invalid route configuration:" + title);
         }
 
+        this.badgeHtml = badgeHtml;
         this.badgeData = badgeData || ko.observable<number>();
         this.itemRouteToHighlight = itemRouteToHighlight;
         this.title = title;

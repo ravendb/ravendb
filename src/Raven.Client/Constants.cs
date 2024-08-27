@@ -305,6 +305,11 @@ namespace Raven.Client
 
                         internal const string ResultDataHash = "@data-hash";
                     }
+
+                    internal sealed class Subscription
+                    {
+                        internal const string NonPersistentFlags = "@non-persistent-flags";
+                    }
                 }
             }
 

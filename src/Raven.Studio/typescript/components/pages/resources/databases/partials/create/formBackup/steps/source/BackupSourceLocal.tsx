@@ -5,7 +5,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { Col, Row } from "reactstrap";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
-import { restorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/restorePointUtils";
+import { useRestorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/useRestorePointUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
 import RestorePointsFields, {
@@ -47,6 +47,7 @@ export default function BackupSourceLocal() {
 function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
     const { resourcesService } = useServices();
     const { control } = useFormContext<FormData>();
+    const { mapToSelectOptions } = useRestorePointUtils();
 
     const {
         basicInfoStep: { isSharded },
@@ -71,7 +72,7 @@ function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
                 true,
                 isSharded ? index : undefined
             );
-            return restorePointUtils.mapToSelectOptions(dto);
+            return mapToSelectOptions(dto);
         },
         [directory, isSharded]
     );

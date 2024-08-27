@@ -37,7 +37,7 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                         <div
                             className={classNames(
                                 "col-sm-12 studio-search__database-col p-0",
-                                `col-md-${matchStatus.hasServerMatch ? 8 : 12}`
+                                `col-md-${matchStatus.hasServerMatch ? 7 : 12}`
                             )}
                             ref={refs.databaseColumnRef}
                         >

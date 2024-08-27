@@ -37,7 +37,7 @@ public class RawCoraxFlag : StorageTest
         _bsc = new ByteStringContext(SharedMultipleUseFlag.None);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public unsafe void CanStoreBlittableWithWriterScopeDynamicField()
     {
         using var ctx = JsonOperationContext.ShortTermSingleUse();
@@ -188,7 +188,7 @@ public class RawCoraxFlag : StorageTest
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public unsafe void CanStoreBlittableWithWriterScope()
     {
         using var ctx = JsonOperationContext.ShortTermSingleUse();
@@ -260,7 +260,7 @@ public class RawCoraxFlag : StorageTest
         using var builder = (analyzers
             ? IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IndexId, idSlice, Analyzer.CreateDefaultAnalyzer(ctx))
-                .AddBinding(ContentId, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30)), shouldStore: shouldStore, fieldIndexingMode: FieldIndexingMode.Search)
+                .AddBinding(ContentId, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30), forQuerying: false), shouldStore: shouldStore, fieldIndexingMode: FieldIndexingMode.Search)
             : IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IndexId, idSlice)
                 .AddBinding(ContentId, contentSlice, fieldIndexingMode: FieldIndexingMode.No,shouldStore:shouldStore));

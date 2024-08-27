@@ -753,18 +753,18 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         QueryResult<List<T>, List<TIncludes>> result, bool metadataOnly, CancellationToken token)
     {
         var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(context, databaseContext, missingIncludes);
-        await HandleMissingDocumentIncludesInternalAsync(context, request, databaseContext, result, metadataOnly, missingIncludeIdsByShard, token);
+        await HandleMissingDocumentIncludesInternalAsync(context, request, databaseContext, result, missingIds: null, metadataOnly, missingIncludeIdsByShard, token);
     }
 
     public static async ValueTask HandleMissingDocumentIncludesAsync<T, TIncludes>(JsonOperationContext context, HttpRequest request, ShardedDatabaseContext databaseContext, HashSet<string> missingIncludes,
-        QueryResult<List<T>, List<TIncludes>> result, bool metadataOnly, CancellationToken token)
+        QueryResult<List<T>, List<TIncludes>> result, HashSet<string> missingIds, bool metadataOnly, CancellationToken token)
     {
         var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(databaseContext, missingIncludes);
-        await HandleMissingDocumentIncludesInternalAsync(context, request, databaseContext, result, metadataOnly, missingIncludeIdsByShard, token);
+        await HandleMissingDocumentIncludesInternalAsync(context, request, databaseContext, result, missingIds, metadataOnly, missingIncludeIdsByShard, token);
     }
 
     private static async Task HandleMissingDocumentIncludesInternalAsync<T, TIncludes>(JsonOperationContext context, HttpRequest request, ShardedDatabaseContext databaseContext,
-        QueryResult<List<T>, List<TIncludes>> result, bool metadataOnly, Dictionary<int, ShardLocator.IdsByShard<string>> missingIncludeIdsByShard,
+        QueryResult<List<T>, List<TIncludes>> result, HashSet<string> missingIds, bool metadataOnly, Dictionary<int, ShardLocator.IdsByShard<string>> missingIncludeIdsByShard,
         CancellationToken token)
     {
         var missingIncludesOp = new FetchDocumentsFromShardsOperation(context, request, databaseContext, missingIncludeIdsByShard, includePaths: null,
@@ -775,10 +775,14 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         var blittableIncludes = result.Includes as List<BlittableJsonReaderObject>;
         var documentIncludes = result.Includes as List<Document>;
 
-        foreach (var (_, missing) in missingResult.Result.Documents)
+        foreach (var (docId, missing) in missingResult.Result.Documents)
         {
             if (missing == null)
+            {
                 continue;
+            }
+
+            missingIds?.Add(docId);
 
             if (blittableIncludes != null)
                 blittableIncludes.Add(missing);

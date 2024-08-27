@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
@@ -159,6 +160,7 @@ namespace Raven.Server.Documents.Indexes
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultExactAnalyzer), _index.Configuration.DefaultExactAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultExact);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer), _index.Configuration.DefaultSearchAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultSearch);
                     PersistArchivedDataProcessingBehavior(configurationTree, _index.GetDefaultArchivedDataProcessingBehavior());
+                    PersistCoraxComplexFieldIndexingBehavior(configurationTree);
                 }
 
                 void AssertAndPersistAnalyzer(Tree configurationTree, string configurationKey, string expectedAnalyzer, string defaultAnalyzer)
@@ -201,10 +203,14 @@ namespace Raven.Server.Documents.Indexes
                     }
                     else
                     {
+                        SearchEngineType type;
+
                         if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.EngineTypeStored)
-                            configurationTree.Add(configurationKey, SearchEngineType.Lucene.ToString());
+                            type = SearchEngineType.Lucene;
                         else
-                            configurationTree.Add(configurationKey, defaultEngineType.ToString());
+                            type = defaultEngineType;
+
+                        configurationTree.Add(configurationKey, type.ToString());
                     }
                 }
 
@@ -220,6 +226,31 @@ namespace Raven.Server.Documents.Indexes
                             return; // do not overwrite default value if it exists already
                         
                         configurationTree.Add(configurationKey, defaultBehavior.ToString());
+                    }
+                }
+
+                void PersistCoraxComplexFieldIndexingBehavior(Tree configurationTree)
+                {
+                    const string configurationKey = nameof(IndexingConfiguration.CoraxComplexFieldIndexingBehavior);
+
+                    var configuredBehavior = IndexingConfiguration.CoraxComplexFieldIndexingBehavior.None;
+
+                    if (_index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldIndexingBehavior)
+                        configuredBehavior = _index.Configuration.CoraxStaticIndexComplexFieldIndexingBehavior;
+
+                    var result = configurationTree.Read(configurationKey);
+                    if (result != null)
+                    {
+                        var behaviorStringValue = result.Reader.ToStringValue();
+
+                        if (Enum.TryParse(behaviorStringValue, out IndexingConfiguration.CoraxComplexFieldIndexingBehavior _) == false)
+                        {
+                            throw new InvalidDataException($"Invalid indexing complex field behavior in '{_index.Name}' Corax index. Got value: '{behaviorStringValue}'");
+                        }
+                    }
+                    else
+                    {
+                        configurationTree.Add(configurationKey, configuredBehavior.ToString());
                     }
                 }
             }
@@ -505,6 +536,28 @@ namespace Raven.Server.Documents.Indexes
             }
             
             return persistedArchivedDataProcessingBehavior;
+        }
+
+        public IndexingConfiguration.CoraxComplexFieldIndexingBehavior ReadCoraxComplexFieldIndexingBehavior(RavenTransaction tx)
+        {
+            var configurationTree = tx.InnerTransaction.ReadTree(IndexSchema.ConfigurationTree);
+            if (configurationTree == null)
+            {
+                throw new InvalidOperationException($"Index does not contain {nameof(IndexSchema.ConfigurationTree)}' tree.");
+            }
+
+            var result = configurationTree.Read(IndexSchema.CoraxComplexFieldIndexingBehavior);
+            if (result == null)
+            {
+                throw new InvalidOperationException($"Index does not contain {nameof(IndexSchema.CoraxComplexFieldIndexingBehavior)}' key.");
+            }
+
+            if (Enum.TryParse(result.Reader.ToStringValue(), out IndexingConfiguration.CoraxComplexFieldIndexingBehavior persistedCoraxStaticIndexComplexFieldIndexingBehavior) == false)
+            {
+                throw new InvalidDataException($"Invalid indexing complex field behavior in '{_index.Name}' Corax index. It has: {result.Reader.ToStringValue()} defined.");
+            }
+
+            return persistedCoraxStaticIndexComplexFieldIndexingBehavior;
         }
 
         public sealed class DocumentReferences : ReferencesBase
@@ -1179,6 +1232,8 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice SearchEngineType;
 
+            public static readonly Slice CoraxComplexFieldIndexingBehavior;
+
             static IndexSchema()
             {
                 using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -1205,6 +1260,7 @@ namespace Raven.Server.Documents.Indexes
                     Slice.From(ctx, "Time", ByteStringType.Immutable, out TimeSlice);
                     Slice.From(ctx, nameof(Client.Documents.Indexes.SearchEngineType), ByteStringType.Immutable, out SearchEngineType);
                     Slice.From(ctx, nameof(ArchivedDataProcessingBehavior), ByteStringType.Immutable, out ArchivedDataProcessingBehaviorSlice);
+                    Slice.From(ctx, nameof(CoraxComplexFieldIndexingBehavior), ByteStringType.Immutable, out CoraxComplexFieldIndexingBehavior);
                 }
             }
         }
