@@ -8,6 +8,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
+using Sparrow.Logging;
 using Voron.Recovery;
 using Xunit.Abstractions;
 
@@ -48,7 +49,7 @@ namespace SlowTests.RecoveryTests
             var recoveryExportPath = options.RecoveryDirectory;
             using (var recovery = new Recovery(new VoronRecoveryConfiguration
             {
-                LoggingMode = Sparrow.Logging.LogMode.None,
+                LoggingLevel = LogLevel.Off,
                 DataFileDirectory = options.PathToDataFile,
                 PathToDataFile = Path.Combine(options.PathToDataFile, "Raven.voron"),
                 OutputFileName = Path.Combine(recoveryExportPath, "recovery.ravendbdump"),
@@ -59,14 +60,14 @@ namespace SlowTests.RecoveryTests
                 recovery.Execute(Console.Out, CancellationToken.None);
             }
 
-            var store = GetDocumentStore(new Options {AdminCertificate = options.AdminCertificate, ClientCertificate = options.ClientCertificate});
+            var store = GetDocumentStore(new Options { AdminCertificate = options.AdminCertificate, ClientCertificate = options.ClientCertificate });
 
             if (options.RecoveryTypes.HasFlag(RecoveryTypes.Documents))
                 await ImportFile(store, recoveryExportPath, "recovery-2-Documents.ravendbdump");
 
             if (options.RecoveryTypes.HasFlag(RecoveryTypes.Revisions))
             {
-                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration {Default = new RevisionsCollectionConfiguration { }}));
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { } }));
                 await ImportFile(store, recoveryExportPath, "recovery-3-Revisions.ravendbdump");
             }
 
@@ -85,7 +86,7 @@ namespace SlowTests.RecoveryTests
         private static async Task ImportFile(DocumentStore store, string rootPath, string file)
         {
             var path = Path.Combine(rootPath, file);
-            if(File.Exists(path) == false)
+            if (File.Exists(path) == false)
                 return;
 
             var op = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), path);

@@ -18,6 +18,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Utils;
 using Xunit;
 using Xunit.Abstractions;
@@ -30,16 +31,16 @@ namespace SlowTests.Server.Documents.Indexing.Static
         public CollisionsOfReduceKeyHashes(ITestOutputHelper output) : base(output)
         {
         }
-        
-        private static IEnumerable<object[]> Data() => new []
+
+        private static IEnumerable<object[]> Data() => new[]
         {
             new[] { new TestData(){NumberOfUsers = 5,Locations = new[] { "Israel", "Poland" }, SearchEngineType = SearchEngineType.Lucene }},
             new[] { new TestData(){NumberOfUsers = 5,Locations = new[] { "Israel", "Poland" }, SearchEngineType = SearchEngineType.Corax }},
             new[] { new TestData(){NumberOfUsers = 100,Locations = new[] { "Israel", "Poland", "USA" }, SearchEngineType = SearchEngineType.Lucene }},
             new[] { new TestData(){NumberOfUsers = 100,Locations = new[] { "Israel", "Poland", "USA" }, SearchEngineType = SearchEngineType.Corax }}
         };
-        
-        [Theory] 
+
+        [Theory]
         [MemberData(nameof(Data))]
         public async Task Auto_index_should_produce_multiple_outputs(TestData data)
         {
@@ -49,7 +50,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                    {
                        record[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = data.SearchEngineType.ToString();
                        record[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = data.SearchEngineType.ToString();
-                   })) 
+                   }))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -71,8 +72,8 @@ namespace SlowTests.Server.Documents.Indexing.Static
             {
                 index._threadAllocations = NativeMemory.CurrentThreadStats;
 
-                var mapReduceContext = new MapReduceIndexingContext();
-                using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
+                var mapReduceContext = new MapReduceIndexingContext(index);
+                using (var contextPool = new TransactionContextPool(RavenLogManager.CreateNullLogger(), database.DocumentsStorage.Environment))
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
 
@@ -84,7 +85,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory] 
+        [Theory]
         [MemberData(nameof(Data))]
         public async Task Static_index_should_produce_multiple_outputs(TestData data)
         {
@@ -94,7 +95,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                    {
                        record[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = data.SearchEngineType.ToString();
                        record[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = data.SearchEngineType.ToString();
-                   })) 
+                   }))
             using (var index = MapReduceIndex.CreateNew<MapReduceIndex>(new IndexDefinition()
             {
                 Name = "Users_ByCount_GroupByLocation",
@@ -111,8 +112,8 @@ namespace SlowTests.Server.Documents.Indexing.Static
             {
                 index._threadAllocations = NativeMemory.CurrentThreadStats;
 
-                var mapReduceContext = new MapReduceIndexingContext();
-                using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
+                var mapReduceContext = new MapReduceIndexingContext(index);
+                using (var contextPool = new TransactionContextPool(RavenLogManager.CreateNullLogger(), database.DocumentsStorage.Environment))
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
                     var reducer = new ReduceMapResultsOfStaticIndex(index, index._compiled.Reduce, index.Definition, indexStorage, new MetricCounters(), mapReduceContext);
@@ -235,7 +236,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     }
                     finally
                     {
-                        if(writeOperation.IsValueCreated)
+                        if (writeOperation.IsValueCreated)
                             writeOperation.Value.Dispose();
                     }
 
@@ -298,7 +299,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     }
                     finally
                     {
-                        if(writeOperation.IsValueCreated)
+                        if (writeOperation.IsValueCreated)
                             writeOperation.Value.Dispose();
                     }
                 }
@@ -324,7 +325,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                 }
             }
         }
-        
+
         public class TestData
         {
             public int NumberOfUsers { get; set; }

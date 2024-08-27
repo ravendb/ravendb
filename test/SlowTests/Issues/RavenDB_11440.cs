@@ -28,91 +28,58 @@ namespace SlowTests.Issues
                 {
                     var configuration1 = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation(), cts.Token);
 
-                    LogMode newLogMode;
-                    switch (configuration1.CurrentMode)
+                    LogLevel newMinLevel = configuration1.Logs.CurrentMinLevel switch
                     {
-                        case LogMode.None:
-                            newLogMode = LogMode.Information;
-                            break;
-                        case LogMode.Operations:
-                            newLogMode = LogMode.Information;
-                            break;
-                        case LogMode.Information:
-                            newLogMode = LogMode.None;
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
+                        LogLevel.Trace => LogLevel.Debug,
+                        LogLevel.Debug => LogLevel.Trace,
+                        LogLevel.Info => LogLevel.Debug,
+                        LogLevel.Warn => LogLevel.Debug,
+                        LogLevel.Error => LogLevel.Debug,
+                        LogLevel.Fatal => LogLevel.Debug,
+                        LogLevel.Off => LogLevel.Debug,
+                        _ => throw new ArgumentOutOfRangeException()
+                    };
+
+                    LogLevel newMaxLevel = configuration1.Logs.CurrentMaxLevel switch
+                    {
+                        LogLevel.Trace => LogLevel.Debug,
+                        LogLevel.Debug => LogLevel.Trace,
+                        LogLevel.Info => LogLevel.Debug,
+                        LogLevel.Warn => LogLevel.Debug,
+                        LogLevel.Error => LogLevel.Debug,
+                        LogLevel.Fatal => LogLevel.Debug,
+                        LogLevel.Off => LogLevel.Debug,
+                        _ => throw new ArgumentOutOfRangeException()
+                    };
 
                     try
                     {
-                        var newParams = new SetLogsConfigurationOperation.Parameters(configuration1)
+                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.LogsConfiguration
                         {
-                            Mode = newLogMode
-                        };
-
-                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(newParams), cts.Token);
+                            MinLevel = newMinLevel,
+                            MaxLevel = newMaxLevel
+                        }), cts.Token);
 
                         var configuration2 = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation(), cts.Token);
 
-                        Assert.Equal(newLogMode, configuration2.CurrentMode);
+                        Assert.Equal(newMinLevel, configuration2.Logs.CurrentMinLevel);
+                        Assert.Equal(newMaxLevel, configuration2.Logs.CurrentMaxLevel);
 
-                        Assert.Equal(configuration1.Mode, configuration2.Mode);
-                        Assert.Equal(configuration1.Path, configuration2.Path);
-                        Assert.Equal(configuration1.UseUtcTime, configuration2.UseUtcTime);
-                        Assert.Equal(configuration1.Compress, configuration2.Compress);
-                        Assert.Equal(configuration1.RetentionTime, configuration2.RetentionTime);
-                        Assert.Equal(configuration1.RetentionSize, configuration2.RetentionSize);
+                        Assert.Equal(configuration1.Logs.MinLevel, configuration2.Logs.MinLevel);
+                        Assert.Equal(configuration1.Logs.MaxLevel, configuration2.Logs.MaxLevel);
+                        Assert.Equal(configuration1.Logs.ArchiveAboveSizeInMb, configuration2.Logs.ArchiveAboveSizeInMb);
+                        Assert.Equal(configuration1.Logs.EnableArchiveFileCompression, configuration2.Logs.EnableArchiveFileCompression);
+                        Assert.Equal(configuration1.Logs.MaxArchiveDays, configuration2.Logs.MaxArchiveDays);
+                        Assert.Equal(configuration1.Logs.MaxArchiveFiles, configuration2.Logs.MaxArchiveFiles);
+                        Assert.Equal(configuration1.Logs.Path, configuration2.Logs.Path);
                     }
                     finally
                     {
-                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.Parameters(configuration1)), cts.Token);
-                    }
-                }
-            }
-        }
-
-        [Fact]
-        public async Task CanGetLogsConfigurationAndChangeRetentionTimeAndCompress()
-        {
-            UseNewLocalServer();
-
-            using (var store = GetDocumentStore())
-            {
-                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(Debugger.IsAttached ? 1000 : 15)))
-                {
-                    var configuration1 = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation(), cts.Token);
-
-                    var newCompress = !configuration1.Compress;
-                    var newTime = configuration1.RetentionTime == TimeSpan.MaxValue ? new TimeSpan(9, 9, 9) : TimeSpan.MaxValue;
-                    var newSize = new Size(50, SizeUnit.Megabytes);
-
-                    try
-                    {
-                        var newParams = new SetLogsConfigurationOperation.Parameters(configuration1)
+                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.LogsConfiguration
                         {
-                            Mode = LogMode.Information,
-                            Compress = newCompress,
-                            RetentionTime = newTime,
-                            RetentionSize = newSize
-                        };
-
-                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(newParams), cts.Token);
-
-                        var configuration2 = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation(), cts.Token);
-
-                        Assert.Equal(newCompress, configuration2.Compress);
-                        Assert.Equal(newTime, configuration2.RetentionTime);
-                        Assert.Equal(LogMode.Information, configuration2.CurrentMode);
-                        Assert.Equal(newSize, configuration2.RetentionSize);
-
-                        Assert.Equal(configuration1.Mode, configuration2.Mode);
-                        Assert.Equal(configuration1.Path, configuration2.Path);
-                        Assert.Equal(configuration1.UseUtcTime, configuration2.UseUtcTime);
-                    }
-                    finally
-                    {
-                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.Parameters(configuration1)), cts.Token);
+                            MinLevel = configuration1.Logs.CurrentMinLevel,
+                            MaxLevel = configuration1.Logs.CurrentMaxLevel
+                        }), cts.Token);
                     }
                 }
             }
