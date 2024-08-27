@@ -251,7 +251,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
         var originalLicensePath = Environment.GetEnvironmentVariable("RAVEN_License.Path");
 
         options = CopyServerAndCreateOptions();
-        options.LicenseConfiguration.ThrowOnInvalidOrMissingLicense = throwOnInvalidOrMissingLicense;
+        options.Licensing.ThrowOnInvalidOrMissingLicense = throwOnInvalidOrMissingLicense;
 
         try
         {
@@ -282,8 +282,8 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
         switch (licenseSource)
         {
             case LicenseSource.EnvironmentVariable:
-                Assert.Null(options.LicenseConfiguration.License);
-                Assert.Null(options.LicenseConfiguration.LicensePath);
+                Assert.Null(options.Licensing.License);
+                Assert.Null(options.Licensing.LicensePath);
 
                 Environment.SetEnvironmentVariable("RAVEN_License", license);
                 Environment.SetEnvironmentVariable("RAVEN_License.Path", null);
@@ -293,8 +293,8 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
                 break;
 
             case LicenseSource.ServerOption:
-                options.LicenseConfiguration.License = license;
-                Assert.Null(options.LicenseConfiguration.LicensePath);
+                options.Licensing.License = license;
+                Assert.Null(options.Licensing.LicensePath);
 
                 Environment.SetEnvironmentVariable("RAVEN_License", null);
                 Environment.SetEnvironmentVariable("RAVEN_License.Path", null);
@@ -315,8 +315,8 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
         switch (licenseSource)
         {
             case LicenseSource.EnvironmentVariable:
-                Assert.Null(options.LicenseConfiguration.License);
-                Assert.Null(options.LicenseConfiguration.LicensePath);
+                Assert.Null(options.Licensing.License);
+                Assert.Null(options.Licensing.LicensePath);
 
                 Environment.SetEnvironmentVariable("RAVEN_License", null);
                 Environment.SetEnvironmentVariable("RAVEN_License.Path", licensePath);
@@ -326,8 +326,8 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
                 break;
 
             case LicenseSource.ServerOption:
-                options.LicenseConfiguration.LicensePath = licensePath;
-                Assert.Null(options.LicenseConfiguration.License);
+                options.Licensing.LicensePath = licensePath;
+                Assert.Null(options.Licensing.License);
 
                 Environment.SetEnvironmentVariable("RAVEN_License", null);
                 Environment.SetEnvironmentVariable("RAVEN_License.Path", null);
