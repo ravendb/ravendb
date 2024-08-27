@@ -65,10 +65,10 @@ namespace SlowTests.Issues
             Env.Dispose();
 
             var compactedData = Path.Combine(DataDir, "Compacted");
-            StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir),
-                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
+            StorageCompaction.Execute(StorageEnvironmentOptions.ForPathForTests(DataDir),
+                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPathForTests(compactedData));
 
-            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData)))
+            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(compactedData)))
             {
                 using (var tx = compacted.ReadTransaction())
                 {

@@ -43,7 +43,7 @@ namespace SlowTests.Issues
 
             StopDatabase(shouldDisposeOptions: true);
 
-            Options = StorageEnvironmentOptions.ForPath(DataDir);
+            Options = StorageEnvironmentOptions.ForPathForTests(DataDir);
 
             StartDatabase();
 
