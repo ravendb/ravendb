@@ -716,11 +716,11 @@ namespace Raven.Server.Monitoring.Snmp
             public const string NumberOfFaultyIndexes = "5.2.{0}.5.7";
 
             [SnmpDataType(SnmpType.Gauge32)]
-            [Description("Number of writes (documents, attachments, counters)")]
+            [Description("Number of writes (documents, attachments, counters, timeseries)")]
             public const string WritesPerSecond = "5.2.{0}.6.1";
 
             [SnmpDataType(SnmpType.Gauge32)]
-            [Description("Number of bytes written (documents, attachments, counters)")]
+            [Description("Number of bytes written (documents, attachments, counters, timeseries)")]
             public const string DataWrittenPerSecond = "5.2.{0}.6.2";
 
             public sealed class Indexes
@@ -876,11 +876,11 @@ namespace Raven.Server.Monitoring.Snmp
                 public const string TotalMapReduceIndexReducedPerSecond = "5.1.8.3";
 
                 [SnmpDataType(SnmpType.Gauge32)]
-                [Description("Number of writes (documents, attachments, counters) in all loaded databases")]
+                [Description("Number of writes (documents, attachments, counters, timeseries) in all loaded databases")]
                 public const string TotalWritesPerSecond = "5.1.9.1";
 
                 [SnmpDataType(SnmpType.Gauge32)]
-                [Description("Number of bytes written (documents, attachments, counters) in all loaded databases")]
+                [Description("Number of bytes written (documents, attachments, counters, timeseries) in all loaded databases")]
                 public const string TotalDataWrittenPerSecond = "5.1.9.2";
 
                 [SnmpDataType(SnmpType.Integer32)]

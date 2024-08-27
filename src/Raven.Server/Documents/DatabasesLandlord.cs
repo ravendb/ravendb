@@ -158,7 +158,7 @@ namespace Raven.Server.Documents
                                 // we need to update this upon any shard topology change
                                 // and upon migration completion
                                 var databaseContext = GetOrAddShardedDatabaseContext(databaseName, rawRecord);
-                                await databaseContext.UpdateDatabaseRecordAsync(rawRecord, index);
+                                await databaseContext.UpdateDatabaseRecordAsync(rawRecord, index, type, changeType);
                             }
                             else
                             {
@@ -274,7 +274,7 @@ namespace Raven.Server.Documents
                     switch (changeType)
                     {
                         case ClusterDatabaseChangeType.RecordChanged:
-                            await database.StateChangedAsync(index);
+                            await database.StateChangedAsync(index, type, changeType);
                             if (type == ClusterStateMachine.SnapshotInstalled)
                             {
                                 database.NotifyOnPendingClusterTransaction();
@@ -1525,7 +1525,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static async ValueTask NotifyFeaturesAboutStateChangeAsync(DatabaseRecord record, long index, StateChange state)
+        public static async ValueTask NotifyFeaturesAboutStateChangeAsync(DatabaseRecord record, long index, StateChange state, string type,
+            DatabasesLandlord.ClusterDatabaseChangeType? changeType = null)
         {
             if (CanSkipDatabaseRecordChange())
                 return;
@@ -1553,7 +1554,14 @@ namespace Raven.Server.Documents
                         $"{state.Name} != {record.DatabaseName}");
 
                     if (state.Logger.IsInfoEnabled)
-                        state.Logger.Info($"Starting to process record {index} (current {state.LastIndexChange}) for {record.DatabaseName}.");
+                    {
+                        string msg = $"Starting to process record {index} (current {state.LastIndexChange}) for {record.DatabaseName}. Type: {type}. ";
+
+                        if (changeType != null)
+                            msg += $"Cluster database change type: {changeType}";
+
+                        state.Logger.Info(msg);
+                    }
 
                     try
                     {

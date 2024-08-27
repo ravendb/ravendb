@@ -1,9 +1,20 @@
 function CreateNugetPackage ( $srcDir, $targetFilename, $versionSuffix ) {
-    dotnet pack /p:GenerateDocumentationFile=true --output $targetFilename `
-        --configuration "Release" `
-        --version-suffix $versionSuffix `
-        $srcDir
+    $command = "dotnet" 
+    $commandArgs = @( "pack" )
 
+    $commandArgs += "/p:GenerateDocumentationFile=true"
+    $commandArgs += @( "--output", $targetFilename )
+    $commandArgs += @( "--configuration", "Release" )
+    $commandArgs += @( "--version-suffix", $versionSuffix )
+
+    if ($env:RAVEN_IS_RUNNING_ON_CI){
+        $commandArgs += '/p:ContinuousIntegrationBuild=true'
+    }
+    
+    $commandArgs += "$srcDir"
+
+    write-host -ForegroundColor Cyan "Creating NuGet Package from ${srcDir}: $command $commandArgs"
+    Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
 }
 
@@ -81,7 +92,17 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
     
     try {
         Push-Location $EMBEDDED_OUT_DIR
-        & ../../scripts/assets/bin/nuget.exe pack .\RavenDB.Embedded.nuspec
+        $command = "../../scripts/assets/bin/nuget.exe"
+        $commandArgs = @( "pack" )
+
+        if ($env:RAVEN_IS_RUNNING_ON_CI){
+            $commandArgs += @( "-p", 'ContinuousIntegrationBuild=true' )
+        }
+
+        $commandArgs += ".\RavenDB.Embedded.nuspec"
+
+        write-host -ForegroundColor Cyan "Creating NuGet Package for Embedded: $command $commandArgs"
+        Invoke-Expression -Command "$command $commandArgs"
         CheckLastExitCode
     } finally {
         Pop-Location

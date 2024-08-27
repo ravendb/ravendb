@@ -468,7 +468,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-                        await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange);
+                        await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange, nameof(Initialize));
                         RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
                     }
                     catch (Exception e)
@@ -1544,7 +1544,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async ValueTask StateChangedAsync(long index)
+        public async ValueTask StateChangedAsync(long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType)
         {
             try
             {
@@ -1590,7 +1590,7 @@ namespace Raven.Server.Documents
 
                 ServerStore.DatabasesLandlord.ForTestingPurposes?.DelayNotifyFeaturesAboutStateChange?.Invoke();
 
-                await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange);
+                await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange, type, changeType);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
@@ -1728,7 +1728,7 @@ namespace Raven.Server.Documents
                 record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
 
-            return DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange);
+            return DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange, nameof(RefreshFeaturesAsync));
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)
