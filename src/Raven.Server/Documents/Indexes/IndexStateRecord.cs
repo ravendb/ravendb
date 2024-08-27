@@ -5,6 +5,7 @@ using Corax;
 using Lucene.Net.Search;
 using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Logging;
 using Sparrow.Logging;
 using Voron.Data.BTrees;
 
@@ -28,7 +29,7 @@ public record IndexStateRecord(
         ImmutableDictionary<string, ImmutableDictionary<string, Tree.ChunkDetails[]>>.Empty,
         new LuceneIndexState(),
         ImmutableDictionary<string, LuceneIndexState>.Empty);
-    
+
     public sealed class ReferenceCollectionEtags
     {
         public long LastEtag;
@@ -58,24 +59,24 @@ public class LuceneIndexState
 
     ~LuceneIndexState()
     {
-        if (!IndexSearcher.IsValueCreated) 
+        if (!IndexSearcher.IsValueCreated)
             return;
         try
         {
-            using(IndexSearcher.Value)
+            using (IndexSearcher.Value)
             using (IndexSearcher.Value.IndexReader)
             {
-                
+
             }
         }
         catch (Exception e)
         {
             try
             {
-                Logger logger = LoggingSource.Instance.GetLogger<IndexStateRecord>("Finalizer");
-                if (logger.IsOperationsEnabled)
+                RavenLogger logger = RavenLogManager.Instance.GetLoggerForServer<IndexStateRecord>();
+                if (logger.IsErrorEnabled)
                 {
-                    logger.Operations("Failed to finalize index searcher", e);
+                    logger.Error("Failed to finalize index searcher", e);
                 }
             }
             catch { }

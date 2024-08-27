@@ -71,6 +71,7 @@ using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
 using Raven.Server.Logging;
+using Raven.Server.Rachis;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents

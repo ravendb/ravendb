@@ -576,8 +576,8 @@ namespace Voron.Recovery
                 tempTx.InvokeDispose(se, ref _dataPagerState, ref tempTx);
                 se?.Dispose();
                 
-                if (_config.LoggingMode != LogMode.None)
-                    LoggingSource.Instance.EndLogging();
+                if (_config.LoggingLevel != LogLevel.Off)
+                    RavenLogManager.Instance.Shutdown();
             }
         }
 
