@@ -23,7 +23,7 @@ namespace SlowTests.Voron
 
             var enumerator = sequentialLargeIds.GetEnumerator();
 
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             options.ManualFlushing = true;
 
             using (var env = new StorageEnvironment(options))
@@ -50,7 +50,7 @@ namespace SlowTests.Voron
                 ValidateRecords(env, new List<string> { "foo" }, sequentialLargeIds.Select(x => x.Key.ToString("0000000000000000")).ToList());
             }
 
-            options = StorageEnvironmentOptions.ForPath(DataDir);
+            options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             options.ManualFlushing = true;
 
             using (var env = new StorageEnvironment(options))

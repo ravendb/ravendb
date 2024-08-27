@@ -34,7 +34,7 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void SurviveRestart()
         {
-            using (var options = StorageEnvironmentOptions.CreateMemoryOnly())
+            using (var options = StorageEnvironmentOptions.CreateMemoryOnlyForTests())
             {
                 options.OwnsPagers = false;
                 using (var env = new StorageEnvironment(options))

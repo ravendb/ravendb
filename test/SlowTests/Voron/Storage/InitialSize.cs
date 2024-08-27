@@ -28,7 +28,7 @@ namespace SlowTests.Voron.Storage
         {
             DeleteDataDir();
 
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             options.InitialFileSize = null;
 
             using (new StorageEnvironment(options))
@@ -46,7 +46,7 @@ namespace SlowTests.Voron.Storage
         {
             DeleteDataDir();
 
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             options.InitialFileSize = GetExpectedInitialSize() * 2;
 
             using (new StorageEnvironment(options))
@@ -64,7 +64,7 @@ namespace SlowTests.Voron.Storage
         {
             DeleteDataDir();
 
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             options.InitialFileSize = GetExpectedInitialSize() * 2 + 1;
 
             using (new StorageEnvironment(options))

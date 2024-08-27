@@ -19,11 +19,11 @@ namespace SlowTests.Voron
         [Fact]
         public void StorageRecoveryShouldWorkWhenThereAreNoTransactionsToRecoverFromLog()
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
             }
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
             }
         }
@@ -32,7 +32,7 @@ namespace SlowTests.Voron
         public void StorageRecoveryShouldWorkWhenThereSingleTransactionToRecoverFromLog()
         {
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -47,7 +47,7 @@ namespace SlowTests.Voron
                 }
             }
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -73,7 +73,7 @@ namespace SlowTests.Voron
         public void StorageRecoveryShouldWorkWhenThereAreCommitedAndUncommitedTransactions()
         {
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -91,7 +91,7 @@ namespace SlowTests.Voron
                 }
             }
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
             }
         }
@@ -100,7 +100,7 @@ namespace SlowTests.Voron
         public void StorageRecoveryShouldWorkWhenThereAreCommitedAndUncommitedTransactions2()
         {
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -120,7 +120,7 @@ namespace SlowTests.Voron
                 }
             }
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
             }
         }
@@ -129,7 +129,7 @@ namespace SlowTests.Voron
         public void StorageRecoveryShouldWorkWhenThereAreMultipleCommitedTransactions()
         {
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -156,7 +156,7 @@ namespace SlowTests.Voron
                 }
             }
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -189,7 +189,7 @@ namespace SlowTests.Voron
         public void StorageRecoveryShouldWorkWhenThereAreMultipleCommitedTransactions2()
         {
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -216,7 +216,7 @@ namespace SlowTests.Voron
                 }
             }
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
                 {
@@ -253,7 +253,7 @@ namespace SlowTests.Voron
             random.NextBytes(buffer);
             var count = 1000;
 
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
 
             using (var env = new StorageEnvironment(options))
@@ -283,7 +283,7 @@ namespace SlowTests.Voron
 
             var expectedString = Encoding.UTF8.GetString(buffer);
 
-            options = StorageEnvironmentOptions.ForPath(DataDir);
+            options = StorageEnvironmentOptions.ForPathForTests(DataDir);
             options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
 
             using (var env = new StorageEnvironment(options))
