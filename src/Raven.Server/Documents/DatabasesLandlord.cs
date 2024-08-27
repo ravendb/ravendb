@@ -164,7 +164,7 @@ namespace Raven.Server.Documents
                     switch (changeType)
                     {
                         case ClusterDatabaseChangeType.RecordChanged:
-                            await database.StateChangedAsync(index, type, changeType);
+                            await database.StateChangedAsync(index);
                             if (type == ClusterStateMachine.SnapshotInstalled)
                             {
                                 database.NotifyOnPendingClusterTransaction();
