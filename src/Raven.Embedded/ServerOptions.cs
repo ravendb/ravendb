@@ -21,7 +21,8 @@ namespace Raven.Embedded
 
         public string DotNetPath { get; set; } = "dotnet";
 
-        [Obsolete($"This property is no longer used and will be removed in the next version, please use '{nameof(Licensing)}.{nameof(LicensingOptions.EulaAccepted)}' instead.")]
+        [Obsolete(
+            $"This property is no longer used and will be removed in the next version, please use '{nameof(Licensing)}.{nameof(LicensingOptions.EulaAccepted)}' instead.")]
         public bool AcceptEula
         {
             get => Licensing.EulaAccepted;
