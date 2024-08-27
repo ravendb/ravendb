@@ -38,32 +38,90 @@ function BuildServer ( $srcDir, $outDir, $target) {
     #    $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
     #}
 
+    if ($env:RAVEN_IS_RUNNING_ON_CI){
+        $commandArgs += '/p:ContinuousIntegrationBuild=true'
+    }
+
     write-host -ForegroundColor Cyan "Publish server: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
 }
 
 function BuildClient ( $srcDir ) {
-    write-host "Building Client"
-    & dotnet build /p:SourceLinkCreate=true /p:GenerateDocumentationFile=true --no-incremental `
-        --configuration "Release" $srcDir;
+    $command = "dotnet" 
+    $commandArgs = @( "build" )
+
+    $commandArgs += "/p:SourceLinkCreate=true"
+    $commandArgs += "/p:GenerateDocumentationFile=true"
+    $commandArgs += "--no-incremental"
+    $commandArgs += @( "--configuration", "Release" )
+
+    if ($env:RAVEN_IS_RUNNING_ON_CI){
+        $commandArgs += '/p:ContinuousIntegrationBuild=true'
+    }
+    
+    $commandArgs += "$srcDir"
+
+    write-host -ForegroundColor Cyan "Building Client: $command $commandArgs"
+    Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
 }
 
 function BuildTestDriver ( $srcDir ) {
-    write-host "Building TestDriver"
-    & dotnet build /p:SourceLinkCreate=true /p:GenerateDocumentationFile=true --no-incremental `
-        --configuration "Release" $srcDir;
+    $command = "dotnet" 
+    $commandArgs = @( "build" )
+
+    $commandArgs += "/p:SourceLinkCreate=true"
+    $commandArgs += "/p:GenerateDocumentationFile=true"
+    $commandArgs += "--no-incremental"
+    $commandArgs += @( "--configuration", "Release" )
+
+    if ($env:RAVEN_IS_RUNNING_ON_CI){
+        $commandArgs += '/p:ContinuousIntegrationBuild=true'
+    }
+    
+    $commandArgs += "$srcDir"
+
+    write-host -ForegroundColor Cyan "Building TestDriver: $command $commandArgs"
+    Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
 }
 
 function BuildTypingsGenerator ( $srcDir ) {
-    & dotnet build --no-incremental --configuration "Release" $srcDir;
+    $command = "dotnet" 
+    $commandArgs = @( "build" )
+    $commandArgs += "--no-incremental"
+
+    $commandArgs += @( "--configuration", "Release" )
+
+    if ($env:RAVEN_IS_RUNNING_ON_CI){
+        $commandArgs += '/p:ContinuousIntegrationBuild=true'
+    }
+    
+    $commandArgs += "$srcDir"
+
+    write-host -ForegroundColor Cyan "Building TypingsGenerator: $command $commandArgs"
+    Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
 }
 
 function BuildSparrow ( $srcDir ) {
-    & dotnet build /p:SourceLinkCreate=true /p:GenerateDocumentationFile=true --configuration "Release" $srcDir;
+    $command = "dotnet" 
+    $commandArgs = @( "build" )
+
+    $commandArgs += "/p:SourceLinkCreate=true"
+    $commandArgs += "/p:GenerateDocumentationFile=true"
+    $commandArgs += "--no-incremental"
+    $commandArgs += @( "--configuration", "Release" )
+
+    if ($env:RAVEN_IS_RUNNING_ON_CI){
+        $commandArgs += '/p:ContinuousIntegrationBuild=true'
+    }
+    
+    $commandArgs += "$srcDir"
+
+    write-host -ForegroundColor Cyan "Building Sparrow: $command $commandArgs"
+    Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
 }
 
@@ -145,16 +203,32 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
     #    $commandArgs += "/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=$trim"
     #}
 
+    if ($env:RAVEN_IS_RUNNING_ON_CI){
+        $commandArgs += '/p:ContinuousIntegrationBuild=true'
+    }
+
     write-host -ForegroundColor Cyan "Publish ${toolName}: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
 }
 
 function BuildEmbedded ( $srcDir, $outDir, $framework) {
-    write-host "Building Embedded..."
-    & dotnet build /p:GenerateDocumentationFile=true --no-incremental `
-        --output $outDir `
-        --framework $framework `
-        --configuration "Release" $srcDir;
+    $command = "dotnet" 
+    $commandArgs = @( "build" )
+
+    $commandArgs += "/p:GenerateDocumentationFile=true"
+    $commandArgs += "--no-incremental"
+    $commandArgs += @( "--output", $outDir )
+    $commandArgs += @( "--framework", $framework )
+    $commandArgs += @( "--configuration", "Release" )
+
+    if ($env:RAVEN_IS_RUNNING_ON_CI){
+        $commandArgs += '/p:ContinuousIntegrationBuild=true'
+    }
+    
+    $commandArgs += "$srcDir"
+
+    write-host -ForegroundColor Cyan "Building Embedded: $command $commandArgs"
+    Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
 }
