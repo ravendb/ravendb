@@ -22,7 +22,7 @@ namespace SlowTests.Voron.Storage
         private const string TestTreeName = "tree";
         private const long PagerInitialSize = 64 * 1024;
         public MemoryMapWithoutBackingPagerTest(ITestOutputHelper output)
-            : base(StorageEnvironmentOptions.CreateMemoryOnly(), output)
+            : base(StorageEnvironmentOptions.CreateMemoryOnlyForTests(), output)
         {
             dummyData = GenerateLoremIpsum(1024);
         }

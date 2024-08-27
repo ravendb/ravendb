@@ -25,7 +25,7 @@ namespace SlowTests.Voron
             Assert.Equal(true, schemaDir.Exists);
             CopyAll(schemaDir, new DirectoryInfo(Path.GetFullPath(dataDir)));
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(dataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(dataDir)))
             {
                 unsafe
                 {

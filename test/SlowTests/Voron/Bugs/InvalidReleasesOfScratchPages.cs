@@ -14,7 +14,7 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void ReadTransactionCanReadJustCommittedValue()
         {
-            var options = StorageEnvironmentOptions.CreateMemoryOnly();
+            var options = StorageEnvironmentOptions.CreateMemoryOnlyForTests();
             options.ManualFlushing = true;
             using (var env = new StorageEnvironment(options))
             {
@@ -41,7 +41,7 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void AllScratchPagesShouldBeReleased()
         {
-            var options = StorageEnvironmentOptions.CreateMemoryOnly();
+            var options = StorageEnvironmentOptions.CreateMemoryOnlyForTests();
             options.ManualFlushing = true;
             using (var env = new StorageEnvironment(options))
             {

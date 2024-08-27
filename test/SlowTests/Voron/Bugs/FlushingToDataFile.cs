@@ -151,7 +151,7 @@ namespace SlowTests.Voron.Bugs
         [Fact]
         public void OldestActiveTransactionShouldBeCalculatedProperly()
         {
-            using (var options = StorageEnvironmentOptions.CreateMemoryOnly())
+            using (var options = StorageEnvironmentOptions.CreateMemoryOnlyForTests())
             {
                 options.ManualFlushing = true;
                 using (var env = new StorageEnvironment(options))

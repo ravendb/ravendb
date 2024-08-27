@@ -56,20 +56,20 @@ public class ModifyConfigurationTests : RavenTestBase
         var settingJsonPath = NewDataPath();
         var content = @"
 {
-    ""Logs.Mode"":""Operation""
+    ""Logs.MinLevel"":""Error""
 }";
         await File.WriteAllTextAsync(settingJsonPath, content);
 
         using (var context = JsonOperationContext.ShortTermSingleUse())
         using (var settingJsonModifier = SettingsJsonModifier.Create(context, settingJsonPath))
         {
-            settingJsonModifier.SetOrRemoveIfDefault(LogMode.Information, x => x.Logs.Mode);
+            settingJsonModifier.SetOrRemoveIfDefault(LogLevel.Info, x => x.Logs.MinLevel);
             await settingJsonModifier.ExecuteAsync();
         }
 
         var configuration = RavenConfiguration.CreateForTesting(null, ResourceType.Server, settingJsonPath);
         configuration.Initialize();
-        Assert.Equal(LogMode.Information, configuration.Logs.Mode);
+        Assert.Equal(LogLevel.Info, configuration.Logs.MinLevel);
     }
 
     [RavenFact(RavenTestCategory.Logging)]

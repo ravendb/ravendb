@@ -41,7 +41,7 @@ namespace SlowTests.Voron
             const int treeCount = 5;
             const int recordCount = 6;
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 env.Options.ManualFlushing = true;
 
@@ -71,12 +71,12 @@ namespace SlowTests.Voron
                 // just some random place on page #2
                 f.Seek(2 * Constants.Storage.PageSize + PageHeader.SizeOf + 43, SeekOrigin.Begin);
                 f.Write([0,1,2,3,4,5,6,7]);
-            }
+                }
 
             // Now lets try to read it all back and hope we get an exception
             try
             {
-                using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+                using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
                 {
                     using (var tx = env.ReadTransaction())
                     {

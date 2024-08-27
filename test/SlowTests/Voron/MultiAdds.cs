@@ -36,7 +36,7 @@ namespace SlowTests.Voron
         [InlineData(5000)]
         public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail(int size)
         {
-            using (var Env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
+            using (var Env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()))
             {
                 var inputData = new List<byte[]>();
                 for (int i = 0; i < size; i++)
