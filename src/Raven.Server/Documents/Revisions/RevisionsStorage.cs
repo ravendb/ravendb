@@ -934,7 +934,7 @@ namespace Raven.Server.Documents.Revisions
 
                 if (revision.Flags.Contain(DocumentFlags.HasAttachments))
                 {
-                    _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks, flags);
+                    _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks, collectionName.Name, flags);
                 }
 
                 Table writeTable = null;

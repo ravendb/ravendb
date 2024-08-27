@@ -12,8 +12,8 @@ internal sealed class ShardedAttachmentHandlerProcessorForGetRetireConfig : Abst
     {
     }
 
-    protected override ValueTask<RetireAttachmentsConfiguration> GetAttachmentRetireConfiguration()
+    protected override ValueTask<RetiredAttachmentsConfiguration> GetAttachmentRetireConfiguration()
     {
-        return ValueTask.FromResult(RequestHandler.DatabaseContext.DatabaseRecord.RetireAttachments);
+        return ValueTask.FromResult(RequestHandler.DatabaseContext.DatabaseRecord.RetiredAttachments);
     }
 }

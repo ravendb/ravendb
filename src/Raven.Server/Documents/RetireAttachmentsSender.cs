@@ -37,11 +37,11 @@ namespace Raven.Server.Documents
         private readonly OperationCancelToken _token;
         private RetireAttachmentsStatsScope _uploadScope;
 
-        public RetireAttachmentsConfiguration Configuration { get; }
+        public RetiredAttachmentsConfiguration Configuration { get; }
 
-        private RetireAttachmentsSender(DocumentDatabase database, RetireAttachmentsConfiguration retireAttachmentsConfiguration) : base(database.Name, database.DatabaseShutdown)
+        private RetireAttachmentsSender(DocumentDatabase database, RetiredAttachmentsConfiguration retiredAttachmentsConfiguration) : base(database.Name, database.DatabaseShutdown)
         {
-            Configuration = retireAttachmentsConfiguration;
+            Configuration = retiredAttachmentsConfiguration;
             _database = database;
             _retirePeriod = TimeSpan.FromSeconds(Configuration?.RetireFrequencyInSec ?? DefaultRetireFrequencyInSec);
             _token = new OperationCancelToken(Cts.Token);
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents
                 return Task.CompletedTask;
 
             _uploaderSettings = UploaderSettings.GenerateDirectUploaderSetting(_database, nameof(RetireAttachmentsSender),
-                Configuration.S3Settings, Configuration.AzureSettings, Configuration.GlacierSettings, Configuration.GoogleCloudSettings, Configuration.FtpSettings);
+                Configuration.S3Settings, Configuration.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null);
 
             var t = Task.Run(async () =>
             {
@@ -137,12 +137,13 @@ namespace Raven.Server.Documents
                                         case RetiredAttachmentsStorage.AttachmentRetireType.PutRetire:
                                             if (string.IsNullOrEmpty(collection))
                                             {
+                                                //TODO: egor do I have a test for that?
                                                 // document was deleted, need to remove it from retired tree
                                                 retired.Enqueue(doc);
                                                 continue;
                                             }
 
-                                            using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.RemoveTypeFromRetiredAttachmentsKey(options.Context, key, out var keySlice))
+                                            using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.CleanRetiredAttachmentsKey(options.Context, key, out var keySlice))
                                             await using (var attachmentStream = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamByKey(context, keySlice))
                                             {
                                                 if (attachmentStream == null)
@@ -177,9 +178,17 @@ namespace Raven.Server.Documents
 
                                             break;
                                         case RetiredAttachmentsStorage.AttachmentRetireType.DeleteRetire:
+                                            if (string.IsNullOrEmpty(collection))
+                                            {
+                                                // configuration was changed, need to remove it from retired tree
+                                                retired.Enqueue(doc);
+                                                continue;
+                                            }
+
+
                                             if (directUpload.TryCleanFinishedThreads(duration, _token))
                                             {
-                                                using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.RemoveTypeFromRetiredAttachmentsKey(options.Context, key, out var keySlice))
+                                                using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.CleanRetiredAttachmentsKey(options.Context, key, out var keySlice))
                                                 {
                                                     string objKeyName = GetBlobDestination(keySlice, collection, out string folderName);
                                                     directUpload.AddDelete(folderName, objKeyName);
@@ -271,7 +280,12 @@ namespace Raven.Server.Documents
             var keyStr = keySlice.ToString();
             var objKeyName = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(keyStr));
 
-          //  folderName = $"{_database.Name}/{collection}";
+            if (string.IsNullOrEmpty(collection))
+            {
+               throw new ArgumentException($"Collection is empty for key: {keyStr}");
+            }
+
+            //  folderName = $"{_database.Name}/{collection}";
             folderName = $"{collection}";
             return objKeyName;
         }
@@ -316,7 +330,7 @@ namespace Raven.Server.Documents
         {
             try
             {
-                if (dbRecord.RetireAttachments == null)
+                if (dbRecord.RetiredAttachments == null)
                 {
                     retireAttachmentsSender?.Dispose();
                     return null;
@@ -325,17 +339,17 @@ namespace Raven.Server.Documents
                 if (retireAttachmentsSender != null)
                 {
                     // no changes
-                    if (Equals(retireAttachmentsSender.Configuration, dbRecord.RetireAttachments))
+                    if (Equals(retireAttachmentsSender.Configuration, dbRecord.RetiredAttachments))
                         return retireAttachmentsSender;
                 }
 
                 retireAttachmentsSender?.Dispose();
 
 
-                if (dbRecord.RetireAttachments.Disabled)
+                if (dbRecord.RetiredAttachments.Disabled)
                     return null;
 
-                var cleaner = new RetireAttachmentsSender(database, dbRecord.RetireAttachments);
+                var cleaner = new RetireAttachmentsSender(database, dbRecord.RetiredAttachments);
                 cleaner.Start();
                 return cleaner;
             }

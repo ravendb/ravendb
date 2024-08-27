@@ -546,19 +546,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private RetireAttachmentsConfiguration _retireAttachmentsConfiguration;
+        private RetiredAttachmentsConfiguration _retiredAttachmentsConfiguration;
 
-        public RetireAttachmentsConfiguration RetireAttachmentsConfiguration
+        public RetiredAttachmentsConfiguration RetiredAttachmentsConfiguration
         {
             get
             {
                 if (_materializedRecord != null)
-                    return _materializedRecord.RetireAttachments;
+                    return _materializedRecord.RetiredAttachments;
 
-                if (_retireAttachmentsConfiguration == null && _record.TryGet(nameof(DatabaseRecord.RetireAttachments), out BlittableJsonReaderObject config) && config != null)
-                    _retireAttachmentsConfiguration = JsonDeserializationCluster.RetireAttachmentsConfiguration(config);
+                if (_retiredAttachmentsConfiguration == null && _record.TryGet(nameof(DatabaseRecord.RetiredAttachments), out BlittableJsonReaderObject config) && config != null)
+                    _retiredAttachmentsConfiguration = JsonDeserializationCluster.RetiredAttachmentsConfiguration(config);
 
-                return _retireAttachmentsConfiguration;
+                return _retiredAttachmentsConfiguration;
             }
         }
 

@@ -44,19 +44,19 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
 
             var dbRecord = requestHandler.Database.ReadDatabaseRecord();
 
-            if (dbRecord.RetireAttachments == null)
+            if (dbRecord.RetiredAttachments == null)
             {
-                throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{docId}' because {nameof(RetireAttachmentsConfiguration)} is not configured.");
+                throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{docId}' because {nameof(RetiredAttachmentsConfiguration)} is not configured.");
             }
 
-            if (dbRecord.RetireAttachments.Disabled)
+            if (dbRecord.RetiredAttachments.Disabled)
             {
-                throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{docId}' because {nameof(RetireAttachmentsConfiguration)} is disabled.");
+                throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{docId}' because {nameof(RetiredAttachmentsConfiguration)} is disabled.");
             }
 
-            if (dbRecord.RetireAttachments.HasUploader() == false)
+            if (dbRecord.RetiredAttachments.HasUploader() == false)
             {
-                throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{docId}' because {nameof(RetireAttachmentsConfiguration)} does not have any uploader configured.");
+                throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{docId}' because {nameof(RetiredAttachmentsConfiguration)} does not have any uploader configured.");
             }
         }
     }

@@ -38,18 +38,18 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
             if (config == null)
             {
                 throw new InvalidOperationException(
-                    $"Cannot {method} retired attachment '{name}' on document '{documentId}' because it is doesn't have a {nameof(RetireAttachmentsConfiguration)}.");
+                    $"Cannot {method} retired attachment '{name}' on document '{documentId}' because it is doesn't have a {nameof(RetiredAttachmentsConfiguration)}.");
             }
 
             if (config.Disabled)
             {
                 throw new InvalidOperationException(
-                    $"Cannot {method} retired attachment '{name}' on document '{documentId}' because {nameof(RetireAttachmentsConfiguration)} is disabled.");
+                    $"Cannot {method} retired attachment '{name}' on document '{documentId}' because {nameof(RetiredAttachmentsConfiguration)} is disabled.");
             }
 
             if (config.RetirePeriods.ContainsKey(collectionStr) == false)
             {
-                throw new InvalidOperationException($"Cannot {method} retired attachment '{name}' on document '{documentId}' because doesn't have {nameof(RetireAttachmentsConfiguration)} for collection: '{collectionStr}'.");
+                throw new InvalidOperationException($"Cannot {method} retired attachment '{name}' on document '{documentId}' because doesn't have {nameof(RetiredAttachmentsConfiguration)} for collection: '{collectionStr}'.");
             }
 
             return collectionStr;

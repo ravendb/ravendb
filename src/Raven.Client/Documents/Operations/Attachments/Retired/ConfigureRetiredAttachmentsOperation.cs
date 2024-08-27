@@ -2,36 +2,21 @@
 using System.Net.Http;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations.Attachments
+namespace Raven.Client.Documents.Operations.Attachments.Retired
 {
-    public sealed class ConfigureRetireAttachmentsOperation : IMaintenanceOperation<ConfigureRetireAttachmentsOperationResult>
+    public sealed class ConfigureRetiredAttachmentsOperation : IMaintenanceOperation<ConfigureRetireAttachmentsOperationResult>
     {
-        private readonly RetireAttachmentsConfiguration _configuration;
+        private readonly RetiredAttachmentsConfiguration _configuration;
 
-        public ConfigureRetireAttachmentsOperation(RetireAttachmentsConfiguration configuration)
-        {   
-            if(configuration.RetirePeriods == null)
-                throw new ArgumentNullException(nameof(configuration.RetirePeriods));
-            if (configuration.RetirePeriods.Count == 0)
-                throw new ArgumentException("RetirePeriods must contain at least one period", nameof(configuration.RetirePeriods));
-
-            if (BackupConfiguration.CanBackupUsing(configuration.S3Settings) == false &&
-                BackupConfiguration.CanBackupUsing(configuration.AzureSettings) == false &&
-                BackupConfiguration.CanBackupUsing(configuration.GoogleCloudSettings) == false &&
-                BackupConfiguration.CanBackupUsing(configuration.FtpSettings) == false &&
-                BackupConfiguration.CanBackupUsing(configuration.GlacierSettings)
-               )
-            {
-                throw new ArgumentException("At least one destination must be configured", nameof(configuration));
-            }
-
+        public ConfigureRetiredAttachmentsOperation(RetiredAttachmentsConfiguration configuration)
+        {
+            configuration.AssertConfiguration();
             _configuration = configuration;
         }
 
@@ -43,9 +28,9 @@ namespace Raven.Client.Documents.Operations.Attachments
         private sealed class ConfigureAttachmentsRetireCommand : RavenCommand<ConfigureRetireAttachmentsOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
-            private readonly RetireAttachmentsConfiguration _configuration;
+            private readonly RetiredAttachmentsConfiguration _configuration;
 
-            public ConfigureAttachmentsRetireCommand(DocumentConventions conventions, RetireAttachmentsConfiguration configuration)
+            public ConfigureAttachmentsRetireCommand(DocumentConventions conventions, RetiredAttachmentsConfiguration configuration)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));

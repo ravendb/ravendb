@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
@@ -370,7 +369,7 @@ namespace Raven.Server.Documents
                                             //TODO: egor if we update retired attachment (can this even happen?) we might delete the old one from cloud storage...
                                             var existingAttachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref partialTvr);
                                             var existingRetireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref partialTvr);
-                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingAttachmentFlags, existingRetireAtTicks);
+                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingAttachmentFlags, existingRetireAtTicks, collectionName.Name);
                                         }
                                     }
                                 }
@@ -460,9 +459,9 @@ namespace Raven.Server.Documents
 
         private void TryPutRetiredAttachment(DocumentsOperationContext context, DatabaseRecord dbRecord, CollectionName collectionName, Slice keySlice, out long retireAt)
         {
-            if (dbRecord.RetireAttachments is { Disabled: false })
+            if (dbRecord.RetiredAttachments is { Disabled: false })
             {
-                if (dbRecord.RetireAttachments.RetirePeriods.TryGetValue(collectionName.Name, out var timeSpan))
+                if (dbRecord.RetiredAttachments.RetirePeriods.TryGetValue(collectionName.Name, out var timeSpan))
                 {
                     var retire = DateTime.UtcNow + timeSpan;
                     retireAt = retire.Ticks;
@@ -479,24 +478,20 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void TryDeleteRetiredAttachment(DocumentsOperationContext context, Slice keySlice)
+        private void TryDeleteRetiredAttachment(DocumentsOperationContext context, Slice keySlice, string collection)
         {
             var dbRecord = _documentDatabase.ReadDatabaseRecord();
-            if (dbRecord.RetireAttachments is { Disabled: false })
+            if (dbRecord.RetiredAttachments is { Disabled: false })
             {
-                if (dbRecord.RetireAttachments.HasUploader() == false)
+                if (dbRecord.RetiredAttachments.HasUploader() == false)
                 {
-                    var msg = $"Cannot delete attachment '{keySlice}' because {nameof(RetireAttachmentsConfiguration)} does not have any uploader configured.";
+                    var msg = $"Cannot delete attachment '{keySlice}' because {nameof(RetiredAttachmentsConfiguration)} does not have any uploader configured.";
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations(msg);
                     throw new InvalidOperationException(msg);
                 }
 
-                var x = keySlice.ToString();
-
-
-
-                RetiredAttachmentsStorage.PutDelete(context, keySlice, DateTime.UtcNow.Ticks);
+                RetiredAttachmentsStorage.PutDelete(context, keySlice, DateTime.UtcNow.Ticks, collection);
 
                 // I think it should be user responsibility to make sure he has same config as when he retired the attachment
                 //TODO: egor how can I know where it was uploaded ? 
@@ -507,7 +502,7 @@ namespace Raven.Server.Documents
             }
             else
             {
-                var msg = $"Tried to delete retired attachment with key: '{keySlice}' but {nameof(RetireAttachmentsConfiguration)} is disabled.";
+                var msg = $"Tried to delete retired attachment with key: '{keySlice}' but {nameof(RetiredAttachmentsConfiguration)} is disabled.";
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations(msg);
                 throw new InvalidOperationException(msg);
@@ -1397,7 +1392,8 @@ namespace Raven.Server.Documents
                     using (scope)
                     {
                         var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                        DeleteAttachmentDirect(context, keySlice, usePartialKey, name, expectedChangeVector, changeVector, lastModifiedTicks, storageOnly);
+                        var collection = GetDocumentCollectionName(context, docTvr);
+                        DeleteAttachmentDirect(context, keySlice, usePartialKey, name, expectedChangeVector, changeVector, lastModifiedTicks, collection.Name, storageOnly);
                     }
                 }
 
@@ -1420,7 +1416,7 @@ namespace Raven.Server.Documents
             {
                 attachments = null;
             }
-
+            var collection = _documentsStorage.ExtractCollectionName(context, document);
             foreach (BlittableJsonReaderObject conflictAttachment in conflictAttachments)
             {
                 if (conflictAttachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue conflictName) == false ||
@@ -1455,12 +1451,12 @@ namespace Raven.Server.Documents
                 }
 
                 if (attachmentFoundInResolveDocument == false)
-                    DeleteAttachmentDirect(context, lowerId, conflictName, conflictContentType, conflictHash, changeVector);
+                    DeleteAttachmentDirect(context, lowerId, conflictName, conflictContentType, conflictHash, changeVector, collection.Name);
             }
         }
 
         private void DeleteAttachmentDirect(DocumentsOperationContext context, Slice lowerId, LazyStringValue conflictName,
-            LazyStringValue conflictContentType, LazyStringValue conflictHash, string changeVector)
+            LazyStringValue conflictContentType, LazyStringValue conflictHash, string changeVector, string collection)
         {
             using (DocumentIdWorker.GetSliceFromId(context, conflictName, out Slice lowerName))
             using (DocumentIdWorker.GetSliceFromId(context, conflictContentType, out Slice lowerContentType))
@@ -1470,7 +1466,7 @@ namespace Raven.Server.Documents
                 base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
             {
                 var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
+                DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks, collection);
             }
         }
 
@@ -1492,7 +1488,7 @@ namespace Raven.Server.Documents
         }
 
         public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name,
-            string expectedChangeVector, string changeVector, long lastModifiedTicks, bool storageOnly = false)
+            string expectedChangeVector, string changeVector, long lastModifiedTicks, string collection, bool storageOnly = false)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -1545,7 +1541,9 @@ namespace Raven.Server.Documents
 
                 var attachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref tvr);
                 var retireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref tvr);
-                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, attachmentFlags, retireAtTicks, storageOnly);
+
+
+                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, attachmentFlags, retireAtTicks, collection, storageOnly);
             }
 
             table.Delete(tvr.Id);
@@ -1553,7 +1551,7 @@ namespace Raven.Server.Documents
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash,
-            string changeVector, long lastModifiedTicks, DocumentFlags flags, AttachmentFlags attachmentFlags, long retireAtTicks, bool storageOnly = false)
+            string changeVector, long lastModifiedTicks, DocumentFlags flags, AttachmentFlags attachmentFlags, long retireAtTicks, string collection, bool storageOnly = false)
         {
             CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, flags);
             if (attachmentFlags.HasFlag(AttachmentFlags.Retired))
@@ -1561,7 +1559,7 @@ namespace Raven.Server.Documents
                 if (storageOnly == false)
                 {
                     // populate retired tree
-                    TryDeleteRetiredAttachment(context, key);
+                    TryDeleteRetiredAttachment(context, key, collection);
                 }
             }
             else
@@ -1610,7 +1608,7 @@ namespace Raven.Server.Documents
         }
 
         private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice, string changeVector,
-            long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
+            long lastModifiedTicks, string collection, DocumentFlags flags = DocumentFlags.None, bool storageOnly = false)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             {
@@ -1624,27 +1622,52 @@ namespace Raven.Server.Documents
                         //TODO: egor this will delete the attachments from cloud, do we want that ???? Maybe this should be part of the config ? I mean now we delete doc with retired attachemnt, it will delete the retire attachment from cloud!
                         var attachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref before.Reader);
                         var retireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref before.Reader);
-                        DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags, attachmentFlags, retireAtTicks);
+
+                        // TODO: egor organize this (its checked 2nd time inside DeleteInternal)
+                        if (storageOnly == false)
+                        {
+                            var dbRecord = _documentDatabase.ReadDatabaseRecord();
+                            if (dbRecord.RetiredAttachments is { Disabled: false })
+                            {
+                                if (dbRecord.RetiredAttachments.PurgeOnDelete == false)
+                                {
+                                    // we cannot delete from cloud since PurgeOnDelete is false
+                                    storageOnly = true;
+                                }
+                            }
+                            else
+                            {
+                                // we cannot delete from retired since there is no configuration
+                                storageOnly = true;
+                            }
+                        }
+                        else
+                        {
+                            // this is revision
+                        }
+
+                        //storageOnly = false;
+                        DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags, attachmentFlags, retireAtTicks, collection, storageOnly);
                     }
                 });
             }
         }
 
-        public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision, ChangeVector changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
+        public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision, ChangeVector changeVector, long lastModifiedTicks, string collection, DocumentFlags flags = DocumentFlags.None)
         {
             using (Slice.From(context.Allocator, revision.ChangeVector, out Slice changeVectorSlice))
             using (GetAttachmentPrefix(context, revision.LowerId.Buffer, revision.LowerId.Size, AttachmentType.Revision, changeVectorSlice, out Slice prefixSlice))
             {
-                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector.Version, lastModifiedTicks, flags);
+                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector.Version, lastModifiedTicks, collection, flags, storageOnly: true);
             }
         }
 
         public void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice lowerId, string changeVector,
-            long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
+            long lastModifiedTicks, string collection, DocumentFlags flags = DocumentFlags.None)
         {
             using (GetAttachmentPrefix(context, lowerId.Content.Ptr, lowerId.Size, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
             {
-                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks, flags);
+                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks, collection, flags);
             }
         }
 

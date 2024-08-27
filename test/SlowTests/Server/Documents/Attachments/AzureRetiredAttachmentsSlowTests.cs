@@ -48,7 +48,7 @@ namespace SlowTests.Server.Documents.Attachments
         {
             var collections = new List<string> { "Orders", "Products" };
             Assert.True(attachmentsCount > 32, "this test meant to have more than 32 attachments so we will have more than one document");
-            await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, collections);
+            await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, collections: collections);
         }
 
 

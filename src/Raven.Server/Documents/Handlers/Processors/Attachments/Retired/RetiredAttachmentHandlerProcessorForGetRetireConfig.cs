@@ -12,15 +12,15 @@ internal sealed class RetiredAttachmentHandlerProcessorForGetRetireConfig : Abst
     {
     }
 
-    protected override ValueTask<RetireAttachmentsConfiguration> GetAttachmentRetireConfiguration()
+    protected override ValueTask<RetiredAttachmentsConfiguration> GetAttachmentRetireConfiguration()
     {
         using (RequestHandler.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
         {
-            RetireAttachmentsConfiguration configuration;
+            RetiredAttachmentsConfiguration configuration;
             using (RawDatabaseRecord rawRecord = RequestHandler.Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.Database.Name))
             {
-                configuration = rawRecord?.RetireAttachmentsConfiguration;
+                configuration = rawRecord?.RetiredAttachmentsConfiguration;
             }
             return ValueTask.FromResult(configuration);
         }

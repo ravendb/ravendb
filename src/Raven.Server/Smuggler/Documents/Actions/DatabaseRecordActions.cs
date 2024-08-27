@@ -395,12 +395,12 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
             result.DatabaseRecord.DataArchivalConfigurationUpdated = true;
         }
 
-        if (databaseRecord.RetireAttachments != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RetireAttachments))
+        if (databaseRecord.RetiredAttachments != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RetireAttachments))
         {
             if (_log.IsInfoEnabled)
                 _log.Info($"Configuring {nameof(DatabaseRecordItemType.RetireAttachments)} from smuggler");
 
-            tasks.Add(_server.SendToLeaderAsync(new EditRetireAttachmentsCommand(databaseRecord.RetireAttachments, _name, RaftIdGenerator.DontCareId)));
+            tasks.Add(_server.SendToLeaderAsync(new EditRetireAttachmentsCommand(databaseRecord.RetiredAttachments, _name, RaftIdGenerator.DontCareId)));
             result.DatabaseRecord.RetireAttachmentsConfigurationUpdated = true;
         }
 

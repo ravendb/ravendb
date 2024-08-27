@@ -45,6 +45,9 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
     public abstract Task DeleteObjects(TSettings s3Settings);
     public abstract Task PutRetireAttachmentsConfiguration(DocumentStore store, TSettings settings, List<string> collections = null, string database = null);
 
+    public Action<RetiredAttachmentsConfiguration> ModifyRetiredAttachmentsConfig = null;
+
+
     //TODO: egor this should be generic method (and class :) )
     //public static async Task PutRetireAttachmentsConfiguration2(DocumentStore store, AzureSettings settings, List<string> collections = null, string database = null)
     //{
@@ -182,7 +185,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
         // move in time & start retire
         database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-        var sp = Stopwatch.StartNew();
+      //  var sp = Stopwatch.StartNew();
         //Console.WriteLine("Start Retire Attachments");
         await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
         //Console.WriteLine($"Elapsed: {sp.ElapsedMilliseconds}ms");
@@ -775,7 +778,6 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         var srcDb = GetDatabaseName();
         var srcRaft = await CreateRaftCluster(3);
         var leader = srcRaft.Leader;
-        //Console.WriteLine(leader.WebUrl);
         var srcNodes = await CreateDatabaseInCluster(srcDb, 3, leader.WebUrl);
         var mentorNode = srcNodes.Servers.First(s => s != leader);
         var mentorTag = mentorNode.ServerStore.NodeTag;
@@ -808,7 +810,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                             {
                                 Members = [node.ServerStore.NodeTag]
                             },
-                            RetireAttachments = database.ReadDatabaseRecord().RetireAttachments
+                            RetiredAttachments = database.ReadDatabaseRecord().RetiredAttachments
                         }, database.ServerStore.NodeTag, int.MaxValue), ref totalCount, out var _, default);
                         Assert.Equal(attachmentsCount, toRetire.Count);
                     }
@@ -1046,7 +1048,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 var destinationRecord = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
-                Assert.False(destinationRecord.RetireAttachments.Disabled);
+                Assert.False(destinationRecord.RetiredAttachments.Disabled);
 
                 var stats = await GetDatabaseStatisticsAsync(store2, store2.Database);
                 Assert.Equal(docsCount, stats.CountOfDocuments); // the marker
