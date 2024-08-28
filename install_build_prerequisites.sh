@@ -9,7 +9,7 @@ DOTNET_VERSION_CMD=`dotnet --version 2> /dev/null`
 UBUNTU_CODENAME=$(lsb_release -c | cut -d ":" -f2 | sed 's/\t//g')
 UBUNTU_VERSION=$(lsb_release -r | cut -d ":" -f2 | sed 's/\t//g')
 
-if [[ ! "$UBUNTU_VERSION" =~ ^1[468]\.04$ ]] ; then
+if [[ ! "$UBUNTU_VERSION" =~ ^(1[468]\.04)|(2[24]\.04)$ ]] ; then
     echo "Unsupported Ubuntu version: $UBUNTU_VERSION $UBUNTU_CODENAME. Must be 20.04, 18.04, 16.04 or 14.04."
     exit -1
 fi
@@ -81,7 +81,7 @@ if [ -z "$NODE_CMD" ] ; then
         sudo apt-get install -y curl 
     fi
 
-    curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+    curl -sL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs build-essential
 else
     NODE_VERSION="$($NODE_CMD --version)"
