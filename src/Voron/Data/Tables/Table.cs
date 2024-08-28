@@ -2443,8 +2443,8 @@ namespace Voron.Data.Tables
 
             report.AddData(ActiveDataSmallSection, includeDetails);
 
-            var allocator = new NewPageAllocator(_tx.LowLevelTransaction, _tableTree);
-            report.AddPreAllocatedBuffers(allocator, includeDetails);
+            EnsureTablePageAllocator();
+            report.AddPreAllocatedBuffers(TablePageAllocator, includeDetails);
 
             return report;
         }
@@ -2476,7 +2476,7 @@ namespace Voron.Data.Tables
             return builderToCache;
         }
 
-        public struct ReturnTableValueBuilderToCache : IDisposable
+        public readonly struct ReturnTableValueBuilderToCache : IDisposable
         {
 #if DEBUG
             private readonly Transaction _tx;
@@ -2517,20 +2517,13 @@ namespace Voron.Data.Tables
             return _forTestingPurposes = new TestingStuff(this);
         }
 
-        internal class TestingStuff
+        internal class TestingStuff(Table table)
         {
-            private readonly Table _table;
-
             internal bool DisableDebugAssertionForThrowNotOwned;
-
-            public TestingStuff(Table table)
-            {
-                _table = table;
-            }
 
             public bool? IsTableValueCompressed(Slice key, out bool? isLargeValue)
             {
-                if (_table.TryFindIdFromPrimaryKey(key, out long id) == false)
+                if (table.TryFindIdFromPrimaryKey(key, out long id) == false)
                 {
                     isLargeValue = default;
                     return default;
@@ -2540,11 +2533,11 @@ namespace Voron.Data.Tables
 
                 if (isLargeValue.Value)
                 {
-                    var page = _table._tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
+                    var page = table._tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
                     return page.Flags.HasFlag(PageFlags.Compressed);
                 }
 
-                var sizes = RawDataSection.GetRawDataEntrySizeFor(_table._tx.LowLevelTransaction, id);
+                var sizes = RawDataSection.GetRawDataEntrySizeFor(table._tx.LowLevelTransaction, id);
                 return sizes->IsCompressed;
             }
         }
