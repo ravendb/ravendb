@@ -87,8 +87,8 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 do
                 {
                     ProcessObject(iterator.Current, propertyAsString, ref field, out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
-                    if (shouldSaveAsBlittable)
-{                        ProcessAsJson(actualValue, field, documentToProcess, out innerShouldSkip);}
+                    if (shouldSaveAsBlittable) 
+                        ProcessAsJson(actualValue, field, documentToProcess, out innerShouldSkip);
                     hasFields |= innerShouldSkip == false;
                     var disposable = value as IDisposable;
                     disposable?.Dispose();

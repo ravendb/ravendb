@@ -26,10 +26,12 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 {
     private readonly bool _isMultiMap;
     private IPropertyAccessor _propertyAccessor;
+    private Dictionary<string, bool> _nonExistingFieldsOfDocument;
 
     public AnonymousCoraxDocumentConverterBase(Index index, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, bool canContainSourceDocumentId = false) : base(index, storeValue, indexImplicitNull: index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, 1, keyFieldName, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, canContainSourceDocumentId)
     {
         _isMultiMap = index.IsMultiMap;
+        _nonExistingFieldsOfDocument = new Dictionary<string, bool>();
     }
 
     protected override bool SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
@@ -59,7 +61,6 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             HandleCompoundFields();
 
         bool hasFields = false;
-        var nonExistingFieldsToInsert = new List<IndexField>(); 
         
         foreach (var property in accessor.GetProperties(documentToProcess))
         {
@@ -71,7 +72,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             InsertRegularField(field, value, indexContext, builder, sourceDocument, out var innerShouldSkip);
             
             if (innerShouldSkip)
-                nonExistingFieldsToInsert.Add(field);
+                _nonExistingFieldsOfDocument[field.Name] = true;
             
             hasFields |= innerShouldSkip == false;
                 
@@ -100,9 +101,12 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 
         builder.Write(0, string.Empty, id.AsSpan());
 
-        foreach (var indexField in nonExistingFieldsToInsert)
-            InsertNonExistingField(indexField, builder);
-        
+        foreach (var kvp in _nonExistingFieldsOfDocument)
+        {
+            if (kvp.Value)
+                InsertNonExistingField(_fields[kvp.Key], builder);
+        }
+
         return true;
         
         void HandleCompoundFields()
