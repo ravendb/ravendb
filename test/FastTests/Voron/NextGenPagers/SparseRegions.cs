@@ -81,8 +81,8 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         // storing sectors using 512 bytes. So if we aren't aligned on 4KB on the disk, hole punching may not actually
         // clear all the blocks. We give ourselves a maximum of 8KB spare for this reason
         Assert.Equal(allocatedSize, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
-        long expectedSize = allocatedSize - (32 * 1024 * 1024) + (4096 * 2);
-        Assert.True(Math.Abs(expectedSize - physicalSize) <= ,
+        long expectedSize = allocatedSize - (32 * 1024 * 1024);
+        Assert.True(Math.Abs(expectedSize - physicalSize) <= 4096 * 2,
             $"Expected size: {new Size(expectedSize, SizeUnit.Bytes)}, actual size: {new Size(physicalSize, SizeUnit.Bytes)}");
     }
 
