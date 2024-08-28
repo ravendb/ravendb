@@ -12,7 +12,7 @@ namespace FastTests.Voron.NextGenPagers;
 public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
 {
     [RavenFact(RavenTestCategory.Voron)]
-    public void CanReleaseDiskSpaceBackToTheOperatingSystem()
+    public unsafe void CanReleaseDiskSpaceBackToTheOperatingSystem()
     {
         Options.ManualFlushing = true;
         var pages = new List<long>();
@@ -24,6 +24,9 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
                 Page allocatePage = wtx.LowLevelTransaction.AllocatePage(256);
                 allocatePage.Flags = PageFlags.Overflow | PageFlags.Single;
                 allocatePage.OverflowSize = (256 * Constants.Storage.PageSize) - PageHeader.SizeOf;
+                // must force an allocation of the data, beacuse Mac will not allocate the space until it is actually used
+                // and non zero data is written to it
+                Memory.Set(allocatePage.Pointer, 1, allocatePage.OverflowSize);
                 pages.Add(allocatePage.PageNumber);
             }
             wtx.Commit();
@@ -78,8 +81,8 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         // storing sectors using 512 bytes. So if we aren't aligned on 4KB on the disk, hole punching may not actually
         // clear all the blocks. We give ourselves a maximum of 8KB spare for this reason
         Assert.Equal(allocatedSize, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
-        long expectedSize = allocatedSize - (32 * 1024 * 1024);
-        Assert.True(Math.Abs(expectedSize - physicalSize) <= 4096 * 2,
+        long expectedSize = allocatedSize - (32 * 1024 * 1024) + (4096 * 2);
+        Assert.True(Math.Abs(expectedSize - physicalSize) <= ,
             $"Expected size: {new Size(expectedSize, SizeUnit.Bytes)}, actual size: {new Size(physicalSize, SizeUnit.Bytes)}");
     }
 
