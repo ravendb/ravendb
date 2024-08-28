@@ -1994,8 +1994,8 @@ namespace Voron.Impl.Journal
             try
             {
                 var compressionBufferSize = _compressionPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize;
-                _compressionPager.EnsureMapped(_compressionPagerState, ref txState, 0, checked((int)_compressionPagerState.NumberOfAllocatedPages));
-               	var pagePointer = _compressionPager.MakeWritable(_compressionPagerState,
+                _compressionPager.EnsureMapped(_compressionPagerState, ref txState, 0, checked((int)_compressionPagerState.NumberOfAllocatedPages)); 
+                var pagePointer = _compressionPager.MakeWritable(_compressionPagerState,
                     _compressionPager.AcquirePagePointer(_compressionPagerState, ref txState, 0)
                 );
                 Sodium.sodium_memzero(pagePointer, (UIntPtr)compressionBufferSize);
