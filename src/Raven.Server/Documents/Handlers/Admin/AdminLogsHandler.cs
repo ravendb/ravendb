@@ -83,10 +83,16 @@ namespace Raven.Server.Documents.Handlers.Admin
                     {
                         using var jsonFileModifier = SettingsJsonModifier.Create(context, ServerStore.Configuration.ConfigPath);
 
-                        jsonFileModifier.SetOrRemoveIfDefault(configuration.Logs.MinLevel, c => c.Logs.MinLevel);
-                        jsonFileModifier.SetOrRemoveIfDefault(configuration.Logs.MaxLevel, c => c.Logs.MaxLevel);
+                        if (configuration.Logs != null)
+                        {
+                            jsonFileModifier.SetOrRemoveIfDefault(configuration.Logs.MinLevel, c => c.Logs.MinLevel);
+                            jsonFileModifier.SetOrRemoveIfDefault(configuration.Logs.MaxLevel, c => c.Logs.MaxLevel);
+                        }
 
-                        jsonFileModifier.SetOrRemoveIfDefault(configuration.MicrosoftLogs.MinLevel, c => c.Logs.MicrosoftMinLevel);
+                        if (configuration.MicrosoftLogs != null)
+                        {
+                            jsonFileModifier.SetOrRemoveIfDefault(configuration.MicrosoftLogs.MinLevel, c => c.Logs.MicrosoftMinLevel);
+                        }
 
                         await jsonFileModifier.ExecuteAsync();
                     }

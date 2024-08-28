@@ -38,7 +38,9 @@ namespace Raven.Server.Indexing
             _tx = tx;
             _indexOutputFilesSummary = indexOutputFilesSummary;
 
-            _logger = RavenLogManager.Instance.GetLoggerForIndex<VoronIndexOutput>(index);
+            _logger = index != null 
+                ? RavenLogManager.Instance.GetLoggerForIndex<VoronIndexOutput>(index) 
+                : RavenLogManager.CreateNullLogger();
 
             _ms = fileCache.RentMemoryStream();
             _tx.ReadTree(_tree).AddStream(name, Stream.Null); // ensure it's visible by LuceneVoronDirectory.FileExists, the actual write is inside Dispose

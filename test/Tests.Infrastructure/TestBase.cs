@@ -25,6 +25,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static.NuGet;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -167,6 +168,13 @@ namespace FastTests
             }
 
             RequestExecutor.RemoteCertificateValidationCallback += (sender, cert, chain, errors) => true;
+
+            var configuration = RavenConfiguration.CreateForTesting("Tests", ResourceType.Server);
+            configuration.Initialize();
+            configuration.Logs.MinLevel = LogLevel.Off;
+            configuration.Logs.MaxLevel = LogLevel.Off;
+
+            RavenLogManager.Instance.ConfigureLogging(configuration);
         }
 
         protected TestBase(ITestOutputHelper output) : base(output)
