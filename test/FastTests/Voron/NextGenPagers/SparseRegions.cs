@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
@@ -72,8 +73,12 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
 
         (long allocatedSize, long physicalSize) = Env.DataPager.GetFileSize(Env.CurrentStateRecord.DataPagerState);
         
+        // On Linux, we have to deal with hole punching being done on 4KB boundaries, but the file system is 
+        // storing sectors using 512 bytes. So if we aren't aligned on 4KB on the disk, hole punching may not actually
+        // clear all the blocks. We give ourselves a maximum of 8KB spare for this reason
         Assert.Equal(allocatedSize, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
-        Assert.Equal(allocatedSize - (32 * 1024 * 1024), physicalSize);
+        long expectedSize = allocatedSize - (32 * 1024 * 1024);
+        Assert.True(Math.Abs(expectedSize - physicalSize) <= 4096 * 2);
     }
     
     [RavenFact(RavenTestCategory.Voron)]
