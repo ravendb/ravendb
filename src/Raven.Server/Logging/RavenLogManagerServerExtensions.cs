@@ -12,10 +12,10 @@ using NLog.Config;
 using NLog.Targets;
 using NLog.Targets.Wrappers;
 using Raven.Client.ServerWide.Operations.Logs;
-using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 #if !RVN
+using System.Diagnostics;
 using System.Runtime.Loader;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
@@ -26,8 +26,8 @@ using Sparrow;
 using Sparrow.Global;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
-using LogLevel = NLog.LogLevel;
 using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
+using LogLevel = NLog.LogLevel;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Logging;
@@ -353,38 +353,12 @@ internal static class RavenLogManagerServerExtensions
         LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
 
 #if !RVN
-        static bool TryGetLegacyMaxArchiveDays(RavenConfiguration configuration, out int? legacyMaxArchiveDays)
-        {
-            var retentionTimeInHrs = configuration.GetServerWideSetting("Logs.RetentionTimeInHrs");
-            if (retentionTimeInHrs != null)
-            {
-                var setting = new TimeSetting(long.Parse(retentionTimeInHrs), TimeUnit.Hours);
-                legacyMaxArchiveDays = (int)setting.GetValue(TimeUnit.Days);
-                return true;
-            }
-
-            legacyMaxArchiveDays = null;
-            return false;
-        }
-
-        static bool TryGetLegacyArchiveAboveSize(RavenConfiguration configuration, out Size legacyArchiveAboveSize)
-        {
-            var maxFileSizeInMb = configuration.GetServerWideSetting("Logs.MaxFileSizeInMb");
-            if (maxFileSizeInMb != null)
-            {
-                legacyArchiveAboveSize = new Size(int.Parse(maxFileSizeInMb), SizeUnit.Megabytes);
-                return true;
-            }
-
-            legacyArchiveAboveSize = default;
-            return false;
-        }
-
         static bool TryGetLegacyLogLevel(RavenConfiguration configuration, out Sparrow.Logging.LogLevel legacyMinLevel, out Sparrow.Logging.LogLevel legacyMaxLevel)
         {
-            var logsMode = configuration.GetServerWideSetting("Logs.Mode");
+            var logsMode = configuration.GetSetting("Logs.Mode");
             switch (logsMode)
             {
+
                 case "None":
                     legacyMinLevel = Sparrow.Logging.LogLevel.Off;
                     legacyMaxLevel = Sparrow.Logging.LogLevel.Off;
@@ -425,7 +399,7 @@ internal static class RavenLogManagerServerExtensions
 
         void ConfigureInternalLogging()
         {
-            if (configuration.Logs.NLogInternalPath == null) 
+            if (configuration.Logs.NLogInternalPath == null)
                 return;
 
             InternalLogger.LogFile = configuration.Logs.NLogInternalPath.FullPath;
@@ -527,14 +501,22 @@ internal static class RavenLogManagerServerExtensions
         var currentMinLevel = defaultRule.Levels.FirstOrDefault() ?? LogLevel.Off;
         var currentMaxLevel = defaultRule.Levels.LastOrDefault() ?? LogLevel.Off;
 
+        var maxArchiveDays = server.Configuration.Logs.MaxArchiveDays;
+        var archiveAboveSize = server.Configuration.Logs.ArchiveAboveSize;
+
+        if (TryGetLegacyMaxArchiveDays(server.Configuration, out var legacyMaxArchiveDays))
+            maxArchiveDays = legacyMaxArchiveDays;
+        if (TryGetLegacyArchiveAboveSize(server.Configuration, out var legacyArchiveAboveSize))
+            archiveAboveSize = legacyArchiveAboveSize;
+
         return new LogsConfiguration
         {
             MinLevel = server.Configuration.Logs.MinLevel,
             MaxLevel = server.Configuration.Logs.MaxLevel,
             MaxArchiveFiles = server.Configuration.Logs.MaxArchiveFiles,
             EnableArchiveFileCompression = server.Configuration.Logs.EnableArchiveFileCompression,
-            MaxArchiveDays = server.Configuration.Logs.MaxArchiveDays,
-            ArchiveAboveSizeInMb = server.Configuration.Logs.ArchiveAboveSize.GetValue(SizeUnit.Megabytes),
+            MaxArchiveDays = maxArchiveDays,
+            ArchiveAboveSizeInMb = archiveAboveSize.GetValue(SizeUnit.Megabytes),
             Path = server.Configuration.Logs.Path.FullPath,
             CurrentMinLevel = currentMinLevel.FromNLogLogLevel(),
             CurrentMaxLevel = currentMaxLevel.FromNLogLogLevel()
@@ -691,6 +673,33 @@ internal static class RavenLogManagerServerExtensions
     {
         if (DefaultRule == null)
             throw new InvalidOperationException($"Cannot perform given action, because Logging was configured via NLog.config file.");
+    }
+
+    private static bool TryGetLegacyMaxArchiveDays(RavenConfiguration configuration, out int? legacyMaxArchiveDays)
+    {
+        var retentionTimeInHrs = configuration.GetSetting("Logs.RetentionTimeInHrs");
+        if (retentionTimeInHrs != null)
+        {
+            var setting = new TimeSetting(long.Parse(retentionTimeInHrs), TimeUnit.Hours);
+            legacyMaxArchiveDays = (int)setting.GetValue(TimeUnit.Days);
+            return true;
+        }
+
+        legacyMaxArchiveDays = null;
+        return false;
+    }
+
+    private static bool TryGetLegacyArchiveAboveSize(RavenConfiguration configuration, out Size legacyArchiveAboveSize)
+    {
+        var maxFileSizeInMb = configuration.GetSetting("Logs.MaxFileSizeInMb");
+        if (maxFileSizeInMb != null)
+        {
+            legacyArchiveAboveSize = new Size(int.Parse(maxFileSizeInMb), SizeUnit.Megabytes);
+            return true;
+        }
+
+        legacyArchiveAboveSize = default;
+        return false;
     }
 #endif
 }
