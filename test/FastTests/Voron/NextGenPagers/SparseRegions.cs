@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sparrow;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
@@ -30,13 +31,13 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
 
         using (Env.ReadTransaction())
         {
-            
+
         }
         // Before flushing
-        Assert.Equal(64*1024, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
+        Assert.Equal(64 * 1024, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
         Env.FlushLogToDataFile();
         // We allocated 64 MB + 2 pages early on, so we expand to 128MB
-        Assert.Equal(128*1024*1024, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
+        Assert.Equal(128 * 1024 * 1024, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
         using (var wtx = Env.WriteTransaction())
         {
             // delete range of ~14MB - 40MB, expect to free: 16MB - 32MB
@@ -44,14 +45,14 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
             {
                 for (int j = 0; j < 256; j++)
                 {
-                    wtx.LowLevelTransaction.FreePage(pages[i] + j);    
+                    wtx.LowLevelTransaction.FreePage(pages[i] + j);
                 }
             }
-            
+
             wtx.Commit();
         }
         Assert.Equal([2048], Env.CurrentStateRecord.SparsePageRanges);
-        
+
         using (var wtx = Env.WriteTransaction())
         {
             // delete range of ~40MB - 50MB, expect to free: 32MB - 48MB
@@ -59,28 +60,29 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
             {
                 for (int j = 0; j < 256; j++)
                 {
-                    wtx.LowLevelTransaction.FreePage(pages[i] + j);    
+                    wtx.LowLevelTransaction.FreePage(pages[i] + j);
                 }
             }
-            
+
             wtx.Commit();
         }
         // proof that we can release regions released across multiple transactions
         Assert.Equal([4096], Env.CurrentStateRecord.SparsePageRanges);
-        
+
         Env.FlushLogToDataFile();
-        Assert.Equal(128*1024*1024, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
+        Assert.Equal(128 * 1024 * 1024, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
 
         (long allocatedSize, long physicalSize) = Env.DataPager.GetFileSize(Env.CurrentStateRecord.DataPagerState);
-        
+
         // On Linux, we have to deal with hole punching being done on 4KB boundaries, but the file system is 
         // storing sectors using 512 bytes. So if we aren't aligned on 4KB on the disk, hole punching may not actually
         // clear all the blocks. We give ourselves a maximum of 8KB spare for this reason
         Assert.Equal(allocatedSize, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
         long expectedSize = allocatedSize - (32 * 1024 * 1024);
-        Assert.True(Math.Abs(expectedSize - physicalSize) <= 4096 * 2);
+        Assert.True(Math.Abs(expectedSize - physicalSize) <= 4096 * 2,
+            $"Expected size: {new Size(expectedSize, SizeUnit.Bytes)}, actual size: {new Size(physicalSize, SizeUnit.Bytes)}");
     }
-    
+
     [RavenFact(RavenTestCategory.Voron)]
     public void WillReleaseFreeSpaceAfterRestart()
     {
@@ -101,14 +103,14 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
             {
                 for (int j = 0; j < 256; j++)
                 {
-                    wtx.LowLevelTransaction.FreePage(pages[i] + j);    
+                    wtx.LowLevelTransaction.FreePage(pages[i] + j);
                 }
             }
             wtx.Commit();
         }
 
         RestartDatabase();
-        
+
         Assert.Equal([2048, 4096, 6144], Env.CurrentStateRecord.SparsePageRanges);
     }
 }
