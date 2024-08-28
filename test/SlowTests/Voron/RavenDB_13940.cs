@@ -521,7 +521,7 @@ namespace SlowTests.Voron
 
             ExtractFile(DataDir, fileName);
 
-            var options = StorageEnvironmentOptions.ForPath(DataDir);
+            var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
 
             options.OnIntegrityErrorOfAlreadySyncedData += (sender, args) =>
             {
