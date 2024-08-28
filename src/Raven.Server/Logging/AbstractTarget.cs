@@ -27,21 +27,19 @@ public class AbstractTarget : TargetWithLayout
             lock (Locker)
             {
                 var defaultRule = RavenLogManagerServerExtensions.DefaultRule;
-                if (defaultRule.Levels.Count > 0)
-                {
-                    var minLevel = defaultRule.Levels.FirstOrDefault();
-                    var maxLevel = defaultRule.Levels.LastOrDefault();
-                    loggingRule.SetLoggingLevels(minLevel, maxLevel);
+                var minLevel = defaultRule.Levels.FirstOrDefault() ?? LogLevel.Trace;
+                var maxLevel = defaultRule.Levels.LastOrDefault() ?? LogLevel.Fatal;
 
-                    var configuration = LogManager.Configuration;
+                loggingRule.SetLoggingLevels(minLevel, maxLevel);
 
-                    Debug.Assert(configuration != null, "configuration != null");
-                    Debug.Assert(configuration.FindRuleByName(loggingRule.RuleName) == null, $"configuration.FindRuleByName({loggingRule.RuleName}) == null");
+                var configuration = LogManager.Configuration;
 
-                    LogManager.Configuration.AddRule(loggingRule);
+                Debug.Assert(configuration != null, "configuration != null");
+                Debug.Assert(configuration.FindRuleByName(loggingRule.RuleName) == null, $"configuration.FindRuleByName({loggingRule.RuleName}) == null");
 
-                    LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
-                }
+                LogManager.Configuration.AddRule(loggingRule);
+
+                LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
             }
         }
 
