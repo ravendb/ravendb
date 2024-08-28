@@ -68,7 +68,7 @@ namespace SlowTests.Issues
                 Assert.Equal("Companies", tsIndexTombstoneInfo.Collection);
                 Assert.Equal(0, tsIndexTombstoneInfo.NumberOfTombstoneLeft);
 
-                await  Server.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index1Name, IndexState.Disabled, database.Name, Guid.NewGuid().ToString()));
+                await  Server.ServerStore.Engine.PutToLeaderAsync(new SetIndexStateCommand(index1Name, IndexState.Disabled, database.Name, Guid.NewGuid().ToString()));
                 await WaitForValueAsync(async () =>
                 {
                     database = await Databases.GetDocumentDatabaseInstanceFor(store);
@@ -98,7 +98,7 @@ namespace SlowTests.Issues
                 Assert.Equal("Companies", tsIndexTombstoneInfo.Collection);
                 Assert.Equal(0, tsIndexTombstoneInfo.NumberOfTombstoneLeft);
 
-                await Server.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index2Name, IndexState.Disabled, database.Name, Guid.NewGuid().ToString()));
+                await Server.ServerStore.Engine.PutToLeaderAsync(new SetIndexStateCommand(index2Name, IndexState.Disabled, database.Name, Guid.NewGuid().ToString()));
                 await WaitForValueAsync(async () =>
                 {
                     database = await Databases.GetDocumentDatabaseInstanceFor(store);
