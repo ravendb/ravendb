@@ -173,6 +173,9 @@ namespace Raven.Server.Documents.Patch
                     Context.ReadObject(modifiedMetadata, boi.DocumentId) : 
                     Context.ReadObject(metadata, boi.DocumentId);
                 
+
+                _disposables.Add(metadata);
+
                 JsValue metadataJs = TranslateToJs(_scriptEngine, Context, metadata);
                 boi.Set(Constants.Documents.Metadata.Key, metadataJs);
 
