@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
@@ -118,6 +120,55 @@ public class RavenDB_22703 : RavenTestBase
                 Assert.Equal(true, res[0].Foo.BarBool);
                 Assert.Equal(false, res[1].Foo.BarBool);
             }
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single)]
+    public void TestIndexVersionCheck(Options options)
+    {
+        var backupPath = NewDataPath(forceCreateDir: true);
+        var file = Path.Combine(backupPath, "RavenDB_22703.ravendb-snapshot");
+        
+        using (var fileStream = File.Create(file))
+        using (var stream = typeof(RavenDB_10404).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_22703.RavenDB_22703.ravendb-snapshot"))
+        {
+            stream.CopyTo(fileStream);
+        }
+
+        using (var store = GetDocumentStore(options))
+        {
+            var databaseName = GetDatabaseName();
+            using (var _ = Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = backupPath, DatabaseName = databaseName }))
+            {
+                using (var session = store.OpenSession(databaseName))
+                {
+                    var res = session.Query<Bars_ByBarBoolAndBarShort.IndexEntry, Bars_ByBarBoolAndBarShort>()
+                        .OrderByDescending(x => x.BarBool)
+                        .ThenByDescending(x => x.BarShort)
+                        .ProjectInto<Bar>()
+                        .ToList();
+
+                    Assert.Equal(3, res.Count);
+                    Assert.Equal(true, res[0].Foo.BarBool);
+                    Assert.Equal(false, res[1].Foo.BarBool);
+                    Assert.Equal(null, res[2].Foo.BarBool);
+                }
+            }
+        }
+    }
+
+    private class Bars_ByBarBoolAndBarShort : AbstractIndexCreationTask<Bar>
+    {
+        public class IndexEntry
+        {
+            public bool? BarBool { get; set; }
+            public short BarShort { get; set; }
+        }
+        public Bars_ByBarBoolAndBarShort()
+        {
+            Map = bars => from bar in bars
+                select new IndexEntry() { BarBool = bar.Foo.BarBool, BarShort = bar.Foo.BarShort };
         }
     }
     
