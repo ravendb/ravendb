@@ -26,12 +26,10 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 {
     private readonly bool _isMultiMap;
     private IPropertyAccessor _propertyAccessor;
-    private Dictionary<string, bool> _nonExistingFieldsOfDocument;
 
     public AnonymousCoraxDocumentConverterBase(Index index, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, bool canContainSourceDocumentId = false) : base(index, storeValue, indexImplicitNull: index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, 1, keyFieldName, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, canContainSourceDocumentId)
     {
         _isMultiMap = index.IsMultiMap;
-        _nonExistingFieldsOfDocument = new Dictionary<string, bool>();
     }
 
     protected override bool SetDocumentFields<TBuilder>(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, TBuilder builder,
@@ -70,9 +68,9 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                 throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
 
             InsertRegularField(field, value, indexContext, builder, sourceDocument, out var innerShouldSkip);
-            
+
             if (innerShouldSkip)
-                _nonExistingFieldsOfDocument[field.Name] = true;
+                _nonExistingFieldsOfDocument.Add(field.Name);
             
             hasFields |= innerShouldSkip == false;
                 
@@ -101,11 +99,13 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
 
         builder.Write(0, string.Empty, id.AsSpan());
 
-        foreach (var kvp in _nonExistingFieldsOfDocument)
+        if (_index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
         {
-            if (kvp.Value)
-                InsertNonExistingField(_fields[kvp.Key], builder);
+            foreach (var fieldName in _nonExistingFieldsOfDocument)
+                InsertNonExistingField(_fields[fieldName], builder);
         }
+
+        _nonExistingFieldsOfDocument.Clear();
 
         return true;
         

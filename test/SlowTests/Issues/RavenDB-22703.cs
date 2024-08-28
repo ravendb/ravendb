@@ -333,4 +333,78 @@ public class RavenDB_22703 : RavenTestBase
                 };
         }
     }
+    
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void TestJavaScriptIndex(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                var bar1 = new Bar() { Foo = new Foo() { BarBool = false, BarShort = 9 } };
+                var bar2 = new Bar() { Foo = new Foo() { BarBool = null } };
+                var bar3 = new Bar() { Foo = null };
+                var bar4 = new Bar() { Foo = new Foo() { BarBool = true, BarShort = 21 } };
+                var bar5 = new Bar() { Foo = null };
+                
+                session.Store(bar1);
+                session.Store(bar2);
+                session.Store(bar3);
+                session.Store(bar4);
+                session.Store(bar5);
+                
+                session.SaveChanges();
+                
+                var requestExecutor = store.GetRequestExecutor();
+                using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var reader = context.ReadObject(new DynamicJsonValue
+                    {
+                        ["@metadata"] = new DynamicJsonValue{
+                            ["@collection"] = "Bars",
+                            ["Raven-Clr-Type"] = "SlowTests.Issues.RavenDB_22703+Bar, SlowTests"
+                        }
+                    }, "bars/6");
+                    requestExecutor.Execute(new PutDocumentCommand(store.Conventions, "bars/6", null, reader), context);
+                }
+                
+                var index = new JavaScriptIndex();
+                
+                index.Execute(store);
+                
+                Indexes.WaitForIndexing(store);
+                
+                var res = session.Query<JavaScriptIndex.IndexEntry, JavaScriptIndex>()
+                    .OrderByDescending(x => x.BarBool)
+                    .ThenByDescending(x => x.BarShort)
+                    .ProjectInto<Bar>()
+                    .ToList();
+                
+                // We don't always distinguish null and non-existing value in Jint converter correctly
+                Assert.Equal(4, res.Count);
+            }
+        }
+    }
+
+    private class JavaScriptIndex : AbstractJavaScriptIndexCreationTask
+    {
+        public class IndexEntry
+        {
+            public short BarShort { get; set; }
+            public bool BarBool { get; set; }
+        }
+        public JavaScriptIndex()
+        {
+            Maps = new HashSet<string>
+            {
+                @"map('Bars', function (bar){ 
+                    return { 
+                        BarShort : bar.Foo.BarShort, 
+                        BarBool : bar.Foo.BarBool
+                    };
+                })",
+            };
+        }
+    }
 }

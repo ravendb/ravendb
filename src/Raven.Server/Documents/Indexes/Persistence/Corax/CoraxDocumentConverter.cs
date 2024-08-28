@@ -59,20 +59,26 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
 
                 InsertRegularField(indexField, value, indexContext, builder, sourceDocument, out innerShouldSkip);
             }
-            else if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value))
-            {
+
+            var successfulRead = BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value);
+            
+            if (successfulRead)
                 InsertRegularField(indexField, value, indexContext, builder, sourceDocument, out innerShouldSkip);
-            }
-            else if (_index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
-            {
-                InsertNonExistingField(indexField, builder);
-            }
+
+            if (successfulRead == false || innerShouldSkip)
+                _nonExistingFieldsOfDocument.Add(indexField.Name);
             
             hasFields |= innerShouldSkip == false;
         }
         
         if (hasFields is false && _indexEmptyEntries is false)
             return false;
+        
+        if (_index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
+        {
+            foreach (var fieldName in _nonExistingFieldsOfDocument)
+                InsertNonExistingField(_fields[fieldName], builder);
+        }
 
         if (key != null)
         {
