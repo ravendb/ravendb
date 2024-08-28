@@ -95,7 +95,7 @@ public class ModifyConfigurationTests : RavenTestBase
         configuration.Initialize();
         Assert.Equal(LogLevel.Info, configuration.Logs.MinLevel);
         Assert.Equal(200, configuration.Logs.MaxArchiveFiles.Value);
-        Assert.Equal(500, configuration.Logs.MaxArchiveDays);
+        Assert.Equal(600, configuration.Logs.MaxArchiveDays);
         Assert.Equal(true, configuration.Logs.EnableArchiveFileCompression);
     }
 
@@ -152,7 +152,7 @@ public class ModifyConfigurationTests : RavenTestBase
         configuration.Initialize();
         Assert.Equal(LogLevel.Info, configuration.Logs.MinLevel);
         Assert.Equal(200, configuration.Logs.MaxArchiveFiles.Value);
-        Assert.Equal(500, configuration.Logs.MaxArchiveDays);
+        Assert.Equal(600, configuration.Logs.MaxArchiveDays);
         Assert.Equal(true, configuration.Logs.EnableArchiveFileCompression);
     }
 
@@ -161,7 +161,7 @@ public class ModifyConfigurationTests : RavenTestBase
     {
         var newParams = new SetLogsConfigurationOperation.LogsConfiguration
         {
-            MinLevel = LogLevel.Info,
+            MinLevel = LogLevel.Debug,
             MaxLevel = LogLevel.Error
         };
 
