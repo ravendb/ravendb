@@ -51,28 +51,28 @@ namespace Raven.Client.ServerWide.Operations.Logs
             public bool Persist { get; set; }
         }
 
-        public SetLogsConfigurationOperation(LogsConfiguration configuration)
+        public SetLogsConfigurationOperation(LogsConfiguration configuration, bool persist = false)
         {
             if (configuration == null)
                 throw new ArgumentNullException(nameof(configuration));
 
-            _parameters = new Parameters { Logs = configuration };
+            _parameters = new Parameters { Logs = configuration, Persist = persist };
         }
 
-        public SetLogsConfigurationOperation(MicrosoftLogsConfiguration configuration)
+        public SetLogsConfigurationOperation(MicrosoftLogsConfiguration configuration, bool persist = false)
         {
             if (configuration == null)
                 throw new ArgumentNullException(nameof(configuration));
 
-            _parameters = new Parameters { MicrosoftLogs = configuration };
+            _parameters = new Parameters { MicrosoftLogs = configuration, Persist = persist };
         }
 
-        public SetLogsConfigurationOperation(AdminLogsConfiguration configuration)
+        public SetLogsConfigurationOperation(AdminLogsConfiguration configuration, bool persist = false)
         {
             if (configuration == null)
                 throw new ArgumentNullException(nameof(configuration));
 
-            _parameters = new Parameters { AdminLogs = configuration };
+            _parameters = new Parameters { AdminLogs = configuration, Persist = persist };
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)

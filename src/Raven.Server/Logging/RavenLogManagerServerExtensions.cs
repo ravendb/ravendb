@@ -385,6 +385,10 @@ internal static class RavenLogManagerServerExtensions
             var logsMode = configuration.GetServerWideSetting("Logs.Mode");
             switch (logsMode)
             {
+                case "None":
+                    legacyMinLevel = Sparrow.Logging.LogLevel.Off;
+                    legacyMaxLevel = Sparrow.Logging.LogLevel.Off;
+                    return true;
                 case "Information":
                     legacyMinLevel = Sparrow.Logging.LogLevel.Debug;
                     legacyMaxLevel = Sparrow.Logging.LogLevel.Fatal;

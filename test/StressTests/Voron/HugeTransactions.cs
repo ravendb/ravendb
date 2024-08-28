@@ -49,7 +49,7 @@ namespace StressTests.Voron
 
             try
             {
-                var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(tmpFile);
+                var storageEnvironmentOptions = StorageEnvironmentOptions.ForPathForTests(tmpFile);
                 storageEnvironmentOptions.ManualFlushing = true;
                 using (var env = new StorageEnvironment(storageEnvironmentOptions))
                 {
@@ -144,7 +144,7 @@ namespace StressTests.Voron
         {
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10)))
             {
-                var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, $"bigLz4-test-{divider}.data"));
+                var options = StorageEnvironmentOptions.ForPathForTests(Path.Combine(DataDir, $"bigLz4-test-{divider}.data"));
                 using (var env = new StorageEnvironment(options))
                 {
                     long gb = 1024 * 1024 * 1024;
