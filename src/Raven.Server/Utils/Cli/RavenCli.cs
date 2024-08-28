@@ -528,11 +528,11 @@ namespace Raven.Server.Utils.Cli
             switch (args.First())
             {
                 case "on":
-                case "information":
+                case "info":
                     if (withConsole)
                         RavenConsoleTarget.Enable();
                     SetupLogMode(LogLevel.Info);
-                    WriteText("Logging set to ON (information)", ConsoleColor.Green, cli);
+                    WriteText("Logging set to ON (info+)", ConsoleColor.Green, cli);
                     break;
 
                 case "off":
@@ -542,11 +542,11 @@ namespace Raven.Server.Utils.Cli
                     WriteText("Logging set to OFF (none)", ConsoleColor.DarkGreen, cli);
                     break;
 
-                case "operations":
+                case "debug":
                     if (withConsole)
                         RavenConsoleTarget.Enable();
-                    SetupLogMode(LogLevel.Off);
-                    WriteText("Logging set to ON (operations)", ConsoleColor.DarkGreen, cli);
+                    SetupLogMode(LogLevel.Debug);
+                    WriteText("Logging set to ON (debug+)", ConsoleColor.DarkGreen, cli);
                     break;
 
                 case "http-off":
@@ -1190,7 +1190,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"clear", "Clear screen"},
                 new[] {"stats", "Online server's memory consumption stats, request ratio and documents count"},
                 new[] {"topThreads, threadsInfo", "Online server's threads info (CPU, priority, state"},
-                new[] {"log [http-]<on|off|information/operations> [no-console]", "set log on/off or to specific mode. filter requests using http-on/off log. no-console to avoid printing in CLI"},
+                new[] {"log [http-]<on|off|info|debug> [no-console]", "set log on/off or to specific mode. filter requests using http-on/off log. no-console to avoid printing in CLI"},
                 new[] {"info", "Print system info and current stats"},
                 new[] {"logo [no-clear]", "Clear screen and print initial logo"},
                 new[] {"gc [gen]", "Collect garbage of specified gen : 0, 1 or default 2"},

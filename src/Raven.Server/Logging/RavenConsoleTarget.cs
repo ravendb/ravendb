@@ -10,21 +10,19 @@ public static class RavenConsoleTarget
     public static void Enable()
     {
         var defaultRule = RavenLogManagerServerExtensions.DefaultRule;
-        if (defaultRule.Levels.Count > 0)
-        {
-            var minLevel = defaultRule.Levels.FirstOrDefault();
-            var maxLevel = defaultRule.Levels.LastOrDefault();
-            RavenLogManagerServerExtensions.ConsoleRule.SetLoggingLevels(minLevel, maxLevel);
 
-            var configuration = LogManager.Configuration;
+        var minLevel = defaultRule.Levels.FirstOrDefault() ?? LogLevel.Trace;
+        var maxLevel = defaultRule.Levels.LastOrDefault() ?? LogLevel.Fatal;
+        RavenLogManagerServerExtensions.ConsoleRule.SetLoggingLevels(minLevel, maxLevel);
 
-            Debug.Assert(configuration != null, "configuration != null");
-            Debug.Assert(configuration.FindRuleByName(RavenLogManagerServerExtensions.ConsoleRule.RuleName) == null, $"configuration.FindRuleByName({RavenLogManagerServerExtensions.ConsoleRule.RuleName}) == null");
+        var configuration = LogManager.Configuration;
 
-            LogManager.Configuration.AddRule(RavenLogManagerServerExtensions.ConsoleRule);
+        Debug.Assert(configuration != null, "configuration != null");
+        Debug.Assert(configuration.FindRuleByName(RavenLogManagerServerExtensions.ConsoleRule.RuleName) == null, $"configuration.FindRuleByName({RavenLogManagerServerExtensions.ConsoleRule.RuleName}) == null");
 
-            LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
-        }
+        LogManager.Configuration.AddRule(RavenLogManagerServerExtensions.ConsoleRule);
+
+        LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
     }
 
     public static void Disable()
@@ -34,7 +32,7 @@ public static class RavenConsoleTarget
         var configuration = LogManager.Configuration;
 
         Debug.Assert(configuration != null, "configuration != null");
-        
+
         if (configuration.RemoveRuleByName(RavenLogManagerServerExtensions.ConsoleRule.RuleName))
             LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
     }
