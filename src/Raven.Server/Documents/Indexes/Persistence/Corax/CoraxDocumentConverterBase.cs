@@ -53,6 +53,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     private HashSet<IndexField> _complexFields;
     public bool IgnoreComplexObjectsDuringIndex;
     public List<string[]> CompoundFields;
+    protected HashSet<string> _nonExistingFieldsOfDocument;
 
     protected abstract bool SetDocumentFields<TBuilder>(
         LazyStringValue key, LazyStringValue sourceDocumentId,
@@ -105,6 +106,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 }
             }
         }
+
+        _nonExistingFieldsOfDocument = new HashSet<string>();
     }
     
     public IndexFieldsMapping GetKnownFieldsForQuerying() => _knownFieldsForReaders.Value;
