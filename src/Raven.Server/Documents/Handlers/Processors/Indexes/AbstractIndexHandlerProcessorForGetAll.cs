@@ -42,8 +42,8 @@ internal abstract class AbstractIndexHandlerProcessorForGetAll<TRequestHandler, 
     protected override RavenCommand<IndexDefinition[]> CreateCommandForNode(string nodeTag)
     {
         var names = GetNames();
-        if (!names.IsNullOrEmpty())
-            return new GetIndexesOperation.GetIndexesCommand(names, nodeTag);
+        if (names.Count > 0)
+            return new GetIndexesOperation.GetIndexesCommand(names.ToArray(), nodeTag);
 
         return new GetIndexesOperation.GetIndexesCommand(RequestHandler.GetStart(), RequestHandler.GetPageSize(), nodeTag);
     }
