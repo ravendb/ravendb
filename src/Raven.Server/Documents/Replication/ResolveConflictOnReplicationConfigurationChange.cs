@@ -509,7 +509,8 @@ namespace Raven.Server.Documents.Replication
                             x.ContentType == attachment.ContentType &&
                             x.Flags == attachment.Flags &&
                             x.Size == attachment.Size &&
-                            x.RetireAt == attachment.RetireAt))
+                            x.RetireAt == attachment.RetireAt &&
+                            x.Collection == attachment.Collection))
                     {
                         found = true;
                        // we have to generate a _new_ change vector for the attachment, since it is resolved, to ensure

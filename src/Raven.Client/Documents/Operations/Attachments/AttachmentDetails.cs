@@ -71,6 +71,8 @@ namespace Raven.Client.Documents.Operations.Attachments
         public long Size;
         public AttachmentFlags Flags;
         public DateTime? RetireAt;
+        public string Collection;
+
         internal virtual DynamicJsonValue ToJson()
         {
             var json = new DynamicJsonValue
@@ -82,7 +84,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             };
             json[nameof(Flags)] = Flags.ToString();
             json[nameof(RetireAt)] = RetireAt;
-
+            json[nameof(Collection)] = Collection;
             return json;
         }
     }

@@ -33,7 +33,8 @@ namespace Raven.Server.Documents.Schemas
             ChangeVector = 6,
             Size = 7,
             Flags = 8,
-            RetireAt = 9
+            RetireAt = 9,
+            Collection = 10
         }
 
         static Attachments()
