@@ -59,32 +59,30 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
 
                 InsertRegularField(indexField, value, indexContext, builder, sourceDocument, out innerShouldSkip);
             }
-
-            var successfulRead = BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value);
+            else
+            {
+                var successfulRead = BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value);
             
-            if (successfulRead)
-                InsertRegularField(indexField, value, indexContext, builder, sourceDocument, out innerShouldSkip);
+                if (successfulRead)
+                    InsertRegularField(indexField, value, indexContext, builder, sourceDocument, out innerShouldSkip);
 
-            if (successfulRead == false || innerShouldSkip)
-                _nonExistingFieldsOfDocument.Add(indexField.Name);
+                if (successfulRead == false || innerShouldSkip)
+                    RegisterMissingFieldFor(indexField);
+            }
             
             hasFields |= innerShouldSkip == false;
         }
         
         if (hasFields is false && _indexEmptyEntries is false)
             return false;
-        
-        if (_index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
-        {
-            foreach (var fieldName in _nonExistingFieldsOfDocument)
-                InsertNonExistingField(_fields[fieldName], builder);
-        }
 
         if (key != null)
         {
             Debug.Assert(document.LowerId == null || (key == document.LowerId));
-            builder.Write( 0, string.Empty, id.AsSpan());
+            builder.Write(0, string.Empty, id.AsSpan());
         }
+        
+        WriteNonExistingMarkerForMissingFields(builder);
             
         if (_storeValue)
         {

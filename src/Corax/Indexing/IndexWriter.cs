@@ -478,19 +478,19 @@ namespace Corax.Indexing
 
                 if (reader.IsNull)
                 {
-                    RemoveSpecialTerm(field, reader, Constants.NullValueSlice, entryToDelete, termsPerEntryIndex);
+                    RemoveMarkerTerm(field, reader, Constants.NullValueSlice, entryToDelete, termsPerEntryIndex);
                     continue;
                 }
 
                 if (reader.IsNonExisting)
                 {
-                    RemoveSpecialTerm(field, reader, Constants.NonExistingValueSlice, entryToDelete, termsPerEntryIndex);
+                    RemoveMarkerTerm(field, reader, Constants.NonExistingValueSlice, entryToDelete, termsPerEntryIndex);
                     continue;
                 }
                 
                 var decodedKey = reader.Current.Decoded();
                 var scope = Slice.From(_entriesAllocator, decodedKey, out Slice termSlice);
-                if(field.HasSuggestions)
+                if (field.HasSuggestions)
                     RemoveSuggestions(field, decodedKey);
                 
                 ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
@@ -505,7 +505,7 @@ namespace Corax.Indexing
                 term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency);
                 scope.Dispose();
                 
-                if(reader.HasNumeric == false)
+                if (reader.HasNumeric == false)
                     continue;
 
                 termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, reader.CurrentLong, out exists);
@@ -530,7 +530,7 @@ namespace Corax.Indexing
             }
         }
 
-        private void RemoveSpecialTerm(IndexedField field, EntryTermsReader reader, Slice termSlice, long entryToDelete, int termsPerEntryIndex)
+        private void RemoveMarkerTerm(IndexedField field, EntryTermsReader reader, Slice termSlice, long entryToDelete, int termsPerEntryIndex)
         {
             ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
             if (exists == false)

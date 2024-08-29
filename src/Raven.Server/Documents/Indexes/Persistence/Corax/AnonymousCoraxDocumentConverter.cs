@@ -70,7 +70,7 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             InsertRegularField(field, value, indexContext, builder, sourceDocument, out var innerShouldSkip);
 
             if (innerShouldSkip)
-                _nonExistingFieldsOfDocument.Add(field.Name);
+                RegisterMissingFieldFor(field);
             
             hasFields |= innerShouldSkip == false;
                 
@@ -98,14 +98,8 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
             builder.Write(documentSourceField.FieldId, string.Empty, sourceDocumentId.AsSpan());
 
         builder.Write(0, string.Empty, id.AsSpan());
-
-        if (_index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
-        {
-            foreach (var fieldName in _nonExistingFieldsOfDocument)
-                InsertNonExistingField(_fields[fieldName], builder);
-        }
-
-        _nonExistingFieldsOfDocument.Clear();
+        
+        WriteNonExistingMarkerForMissingFields(builder);
 
         return true;
         
