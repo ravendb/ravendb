@@ -63,7 +63,7 @@ namespace SlowTests.Server.Replication
 
                 Assert.Equal(1, WaitUntilHasTombstones(store2).Count);
 
-                EnsureReplicating(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
 
                 await storage1.TombstoneCleaner.ExecuteCleanup();
 
