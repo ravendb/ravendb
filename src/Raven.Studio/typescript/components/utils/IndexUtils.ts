@@ -16,8 +16,11 @@ export default class IndexUtils {
 
     static readonly FieldsToHideOnUi = ["_", "__"];
 
-    static isAutoIndex(index: IndexSharedInfo) {
-        switch (index.type) {
+    static isAutoIndex(index: IndexSharedInfo | Raven.Client.Documents.Indexes.IndexDefinition) {
+        const type = "Type" in index ? index.Type : index.type;
+        const name = "Name" in index ? index.Name : index.name;
+
+        switch (type) {
             case "Map":
             case "MapReduce":
                 return false;
@@ -25,7 +28,7 @@ export default class IndexUtils {
             case "AutoMapReduce":
                 return true;
             default:
-                return this.name.startsWith(IndexUtils.AutoIndexPrefix);
+                return name.startsWith(IndexUtils.AutoIndexPrefix);
         }
     }
 

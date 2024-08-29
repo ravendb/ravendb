@@ -41,6 +41,8 @@ import DeleteIndexesConfirmBody, { DeleteIndexesConfirmBodyProps } from "../shar
 import assertUnreachable from "components/utils/assertUnreachable";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import useBoolean from "components/hooks/useBoolean";
+import router from "plugins/router";
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
@@ -63,7 +65,7 @@ export interface SwapSideBySideData {
     inProgress: (indexName: string) => boolean;
 }
 
-export function useIndexesPage(stale: boolean) {
+export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
     const autoDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerDatabase"));
     const staticDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerDatabase"));
 
@@ -92,6 +94,17 @@ export function useIndexesPage(stale: boolean) {
 
     const closeResetIndexConfirm = () => {
         setResetIndexesConfirmData(null);
+    };
+
+    const { value: isImportIndexModalOpen, setValue: setIsImportIndexModalOpen } = useBoolean(isImportOpen);
+
+    const toggleIsImportIndexModalOpen = () => {
+        if (isImportIndexModalOpen) {
+            const urlWithoutImport = window.location.hash.replace("&isImportOpen=true", "");
+            router.navigate(urlWithoutImport);
+        }
+
+        setIsImportIndexModalOpen(!isImportIndexModalOpen);
     };
 
     const confirm = useConfirm();
@@ -757,6 +770,8 @@ export function useIndexesPage(stale: boolean) {
         openFaulty,
         confirmDeleteIndexes,
         globalIndexingStatus,
+        isImportIndexModalOpen,
+        toggleIsImportIndexModalOpen,
     };
 }
 

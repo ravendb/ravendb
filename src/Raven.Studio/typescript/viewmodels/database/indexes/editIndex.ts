@@ -93,7 +93,7 @@ class editIndex extends shardViewModelBase {
     private indexesNames = ko.observableArray<string>();
     queryUrl = ko.observable<string>();
     termsUrl = ko.observable<string>();
-    indexesUrl = ko.pureComputed(() => this.appUrls.indexes());
+    indexesUrl = ko.pureComputed(() => this.appUrls.indexes(null, null, false)());
     
     selectedSourcePreview = ko.observable<additionalSource>();
     additionalSourcePreviewHtml: KnockoutComputed<string>;
@@ -1099,7 +1099,7 @@ class editIndex extends shardViewModelBase {
     }
     
     private confirmAfterMergeDeletion(db: database, mergedIndexName: string, toDelete: string[]) {
-        return new getIndexesDefinitionsCommand(db, 0, 1024 * 1024)
+        return new getIndexesDefinitionsCommand(db, { skip: 0, take: 1024 * 1024 })
             .execute()
             .done((indexDefinitions) => {
                 const matchedIndexes = indexDefinitions.filter(x => toDelete.includes(x.Name)).map(x => new indexDefinition(x));

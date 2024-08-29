@@ -6,12 +6,13 @@ import { Checkbox } from "components/common/Checkbox";
 import { SelectionActions } from "components/common/SelectionActions";
 import genUtils = require("common/generalUtils");
 import ResetIndexesButton from "components/pages/database/indexes/list/partials/ResetIndexesButton";
-import { IndexSharedInfo } from "components/models/indexes";
-import { ExportIndexes } from "components/pages/database/indexes/list/ExportIndexes";
-import { todo } from "common/developmentHelper";
+import { IndexGroup, IndexSharedInfo } from "components/models/indexes";
+import { ExportIndexes } from "components/pages/database/indexes/list/migration/ExportIndexes";
+import useBoolean from "components/hooks/useBoolean";
 
 interface IndexSelectActionProps {
     indexNames: string[];
+    groups: IndexGroup[];
     selectedIndexes: string[];
     replacements: IndexSharedInfo[];
     deleteSelectedIndexes: () => Promise<void>;
@@ -24,11 +25,10 @@ interface IndexSelectActionProps {
     onCancel: () => void;
 }
 
-todo("Feature", "Damian", "Add logic for Export indexes");
-
 export default function IndexSelectAction(props: IndexSelectActionProps) {
     const {
         indexNames,
+        groups,
         selectedIndexes,
         replacements,
         deleteSelectedIndexes,
@@ -44,14 +44,11 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
     const [globalLockChanges] = useState(false);
     // TODO: IDK I just wanted it to compile
 
+    const { value: isExportIndexModalOpen, toggle: toggleIsExportIndexModalOpen } = useBoolean(false);
+
     const selectionState = genUtils.getSelectionState(indexNames, selectedIndexes);
 
     const isResetDropdownVisible = !replacements.some((x) => selectedIndexes.includes(x.name));
-
-    const [isExportIndexModalOpen, setExportIndexModalOpen] = useState(false);
-    const toggleExportIndexModal = () => {
-        setExportIndexModalOpen(!isExportIndexModalOpen);
-    };
 
     return (
         <div className="position-relative">
@@ -76,12 +73,19 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                         <Button
                             color="primary"
                             disabled={selectedIndexes.length === 0}
-                            onClick={toggleExportIndexModal}
+                            onClick={toggleIsExportIndexModalOpen}
                             className="rounded-pill flex-grow-0"
                         >
                             <Icon icon="index-export" />
                             <span>Export {selectedIndexes.length > 1 ? "indexes" : "index"}</span>
                         </Button>
+                        {isExportIndexModalOpen && (
+                            <ExportIndexes
+                                toggle={toggleIsExportIndexModalOpen}
+                                groups={groups}
+                                selectedNames={selectedIndexes}
+                            />
+                        )}
 
                         <UncontrolledDropdown>
                             <DropdownToggle
@@ -163,7 +167,6 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                     <Button onClick={onCancel} color="link">
                         Cancel
                     </Button>
-                    {isExportIndexModalOpen && <ExportIndexes toggle={toggleExportIndexModal} />}
                 </div>
             </SelectionActions>
         </div>

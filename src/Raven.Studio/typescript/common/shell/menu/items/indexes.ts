@@ -24,7 +24,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             route: "databases/indexes",
             moduleId: bridgeToReact(IndexesPage, "shardedView"),
             css: 'icon-list-of-indexes',
-            dynamicHash: appUrls.indexes
+            dynamicHash: appUrls.indexes(null, false, false)
         }),
         new leafMenuItem({
             route: 'databases/indexes/performance',
@@ -84,6 +84,6 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
     ];
 
     return new intermediateMenuItem("Indexes", indexesItems, 'icon-indexing', {
-        dynamicHash: appUrls.indexes
+        dynamicHash: appUrls.indexes(null, false, false)
     });
 }
