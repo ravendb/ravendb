@@ -55,11 +55,10 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/indexes";
+                url = $"{node.Url}/databases/{node.Database}/indexes?";
 
                 if (_indexNames is { Length: > 0 })
                 {
-                    url += "?";
                     for (int i = 0; i < _indexNames.Length; i++)
                     {
                         string indexName = _indexNames[i];
@@ -70,7 +69,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                     }
                 }
                 else
-                    url += $"?start={_start}&pageSize={_pageSize}";
+                    url += $"start={_start}&pageSize={_pageSize}";
 
                 return new HttpRequestMessage
                 {
