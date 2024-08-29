@@ -108,6 +108,14 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
                 }
 
                 return true;
+
+            case EventListener.Constants.EventNames.GC.GCJoin:
+                if (EventTypes.Contains(EventType.GCJoin))
+                {
+                    OnEvent.Invoke(new GCJoinEvent(EventType.GCJoin, eventData));
+                }
+
+                return true;
         }
 
         return false;
@@ -263,6 +271,70 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
                     return "Suspend for GC Prep";
                 case 0x7:
                     return "Suspend for debugger sweep";
+
+                default:
+                    return null;
+            }
+        }
+    }
+
+    public class GCJoinEvent : GCEventBase
+    {
+        public string JoinTime { get; set; }
+
+        public string JoinType { get; set; }
+
+        public GCJoinEvent(EventType type, EventWrittenEventArgs eventData) : base(type, eventData.TimeStamp, eventData)
+        {
+            var joinTime = (uint)eventData.Payload[1];
+            var joinType = (uint)eventData.Payload[2];
+
+            JoinTime = GetJoinTime(joinTime);
+            JoinType = GetJoinType(joinType);
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(JoinTime)] = JoinTime;
+            json[nameof(JoinType)] = JoinType;
+            return json;
+        }
+
+        public override string ToString()
+        {
+            var str = base.ToString();
+            return $"{str}, join time: {JoinTime}, join type: {JoinType}";
+        }
+
+        private static string GetJoinTime(uint joinType)
+        {
+            switch (joinType)
+            {
+                case 0x0:
+                    return "Join Start";
+                case 0x1:
+                    return "Join End";
+
+                default:
+                    return null;
+            }
+        }
+
+        private static string GetJoinType(uint joinType)
+        {
+            switch (joinType)
+            {
+                case 0x0:
+                    return "Last Join";
+                case 0x1:
+                    return "Join";
+                case 0x2:
+                    return "Restart";
+                case 0x3:
+                    return "First Reverse Join";
+                case 0x4:
+                    return "Reverse Join";
 
                 default:
                     return null;
