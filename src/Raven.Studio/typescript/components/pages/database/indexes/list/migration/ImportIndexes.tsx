@@ -14,7 +14,6 @@ import useBoolean from "components/hooks/useBoolean";
 import { useCheckboxes } from "components/hooks/useCheckboxes";
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
-import assertUnreachable from "components/utils/assertUnreachable";
 import { tryHandleSubmit } from "components/utils/common";
 import IndexUtils from "components/utils/IndexUtils";
 import React, { useCallback, useEffect, useState } from "react";
@@ -160,17 +159,6 @@ export function ImportIndexes(props: ImportIndexesProps) {
         });
     };
 
-    const getFormattedImportMode = () => {
-        switch (importMode) {
-            case "database":
-                return "database";
-            case "file":
-                return "a file";
-            default:
-                assertUnreachable(importMode);
-        }
-    };
-
     return (
         <Modal
             isOpen
@@ -264,7 +252,7 @@ export function ImportIndexes(props: ImportIndexesProps) {
                         )}
                         <Alert color="info" className="text-left">
                             <Icon icon="info" />
-                            All the conflicting indexes will be overwritten after the import is done
+                            All conflicting indexes will be overwritten after the import is completed
                         </Alert>
                     </div>
 
@@ -284,7 +272,7 @@ export function ImportIndexes(props: ImportIndexesProps) {
                         icon="import"
                         isSpinning={formState.isSubmitting}
                     >
-                        Import indexes from {getFormattedImportMode()}
+                        Import indexes from a {importMode}
                     </ButtonWithSpinner>
                 </ModalFooter>
             </Form>
@@ -293,7 +281,7 @@ export function ImportIndexes(props: ImportIndexesProps) {
 }
 
 const databaseRadioToggleItem: RadioToggleWithIconInputItem<ImportMode> = {
-    label: "From database",
+    label: "From a database",
     value: "database",
     iconName: "database",
 };
