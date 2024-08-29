@@ -14,7 +14,13 @@ public class EventListenerToLog : IDynamicJson
     private EventsListener _listener;
     private EventListenerConfiguration _configuration;
 
-    public static readonly HashSet<EventType> GcEvents = [EventType.GC, EventType.GCSuspend, EventType.GCRestart, EventType.GCFinalizers];
+    public static readonly HashSet<EventType> GcEvents = [
+        EventType.GC,
+        EventType.GCSuspend,
+        EventType.GCRestart,
+        EventType.GCFinalizers,
+        EventType.GCJoin
+    ];
     public static readonly HashSet<EventType> AllocationEvents = [EventType.Allocations];
     public static readonly HashSet<EventType> ContentionEvents = [EventType.Contention];
     public static readonly HashSet<EventType> ThreadEvents = [
