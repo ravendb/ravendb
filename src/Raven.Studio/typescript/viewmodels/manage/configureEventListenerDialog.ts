@@ -31,6 +31,8 @@ class configureEventListenerDialog extends dialogViewModelBase {
         "GCFinalizers",
         "GCRestart",
         "GCSuspend",
+        "GCJoin",
+        "GCHeapStats",
         "ThreadCreated",
         "ThreadCreating",
         "ThreadPoolMinMaxThreads",
