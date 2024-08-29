@@ -87,12 +87,12 @@ public class AbstractTarget : TargetWithLayout
         private readonly ConcurrentSet<T> _items;
         private readonly TargetCountGuardian _registeredItems;
 
-        public ReleaseItem([NotNull] LoggingRule loggingRule, [NotNull] T item, [NotNull] ConcurrentSet<T> items, TargetCountGuardian registeredItems)
+        public ReleaseItem([NotNull] LoggingRule loggingRule, [NotNull] T item, [NotNull] ConcurrentSet<T> items, [NotNull] TargetCountGuardian registeredItems)
         {
             _loggingRule = loggingRule ?? throw new ArgumentNullException(nameof(loggingRule));
             _item = item ?? throw new ArgumentNullException(nameof(item));
             _items = items ?? throw new ArgumentNullException(nameof(items));
-            _registeredItems = registeredItems;
+            _registeredItems = registeredItems ?? throw new ArgumentNullException(nameof(registeredItems));
         }
 
         public void Dispose()
