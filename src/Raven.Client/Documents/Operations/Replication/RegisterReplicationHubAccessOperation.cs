@@ -11,11 +11,18 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
+    /// <summary>
+    /// Defines a Hub Access using the RegisterReplicationHubAccessOperation, 
+    /// and configures it with the provided ReplicationHubAccess class.
+    /// </summary>
     public sealed class RegisterReplicationHubAccessOperation : IMaintenanceOperation
     {
         private readonly string _hubName;
         private readonly ReplicationHubAccess _access;
 
+        /// <inheritdoc cref="RegisterReplicationHubAccessOperation" />
+        /// <param name="hubName">The name of the replication hub for which access is being defined.</param>
+        /// <param name="access">The ReplicationHubAccess object that contains the configuration for the hub access.</param>
         public RegisterReplicationHubAccessOperation(string hubName, ReplicationHubAccess access)
         {
             if (string.IsNullOrWhiteSpace(hubName))

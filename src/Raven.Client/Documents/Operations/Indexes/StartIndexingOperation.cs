@@ -6,6 +6,10 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Resumes indexing for the entire database using the StartIndexingOperation.
+    /// This operation is typically used after indexing has been paused or disabled.
+    /// </summary>
     public sealed class StartIndexingOperation : IMaintenanceOperation
     {
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)

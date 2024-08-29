@@ -7,10 +7,16 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Sorters
 {
+    /// <summary>
+    /// Deletes a custom sorter from the RavenDB server using the DeleteSorterOperation.
+    /// Once removed, the sorter will no longer be available for ordering query results in the associated database.
+    /// </summary>
     public sealed class DeleteSorterOperation : IMaintenanceOperation
     {
         private readonly string _sorterName;
 
+        /// <inheritdoc cref="DeleteSorterOperation" />
+        /// <param name="sorterName">The name of the custom sorter to be deleted from the server.</param>
         public DeleteSorterOperation(string sorterName)
         {
             _sorterName = sorterName ?? throw new ArgumentNullException(nameof(sorterName));
