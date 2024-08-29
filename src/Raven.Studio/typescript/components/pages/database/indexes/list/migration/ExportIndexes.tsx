@@ -92,17 +92,6 @@ export function ExportIndexes(props: ExportIndexesProps) {
         });
     };
 
-    const getFormattedExportMode = () => {
-        switch (exportMode) {
-            case "database":
-                return "database";
-            case "file":
-                return "a file";
-            default:
-                assertUnreachable(exportMode);
-        }
-    };
-
     return (
         <Modal
             isOpen
@@ -170,9 +159,8 @@ export function ExportIndexes(props: ExportIndexesProps) {
                         )}
                         {exportMode === "database" && (
                             <Alert color="info" className="text-left">
-                                <Icon icon="info" />
-                                All the conflicting indexes in destination database will be overwritten after the export
-                                is done
+                                All conflicting indexes in the destination database will be overwritten after the export
+                                is completed
                             </Alert>
                         )}
                     </div>
@@ -189,7 +177,7 @@ export function ExportIndexes(props: ExportIndexesProps) {
                         isSpinning={formState.isSubmitting}
                         icon="export"
                     >
-                        Export indexes to {getFormattedExportMode()}
+                        Export indexes to a {exportMode}
                     </ButtonWithSpinner>
                 </ModalFooter>
             </Form>
@@ -198,7 +186,7 @@ export function ExportIndexes(props: ExportIndexesProps) {
 }
 
 const databaseRadioToggleItem: RadioToggleWithIconInputItem<ExportMode> = {
-    label: "To database",
+    label: "To a database",
     value: "database",
     iconName: "database",
 };
