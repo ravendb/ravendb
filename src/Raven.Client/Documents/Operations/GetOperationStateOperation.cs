@@ -6,16 +6,23 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
+    /// <summary>
+    /// Retrieves the state of a specific operation by its ID, providing information such as the current status and progress.
+    /// </summary>
     public sealed class GetOperationStateOperation : IMaintenanceOperation<OperationState>
     {
         private readonly long _id;
         private readonly string _nodeTag;
 
+        /// <inheritdoc cref="GetOperationStateOperation"/>
+        /// <param name="id">The ID of the requested operation.</param>
         public GetOperationStateOperation(long id)
         {
             _id = id;
         }
 
+        /// <inheritdoc cref="GetOperationStateOperation(long)"/>
+        /// <param name="nodeTag">The node tag specifying which node should be queried for the operation's state.</param>
         public GetOperationStateOperation(long id, string nodeTag)
         {
             _id = id;
