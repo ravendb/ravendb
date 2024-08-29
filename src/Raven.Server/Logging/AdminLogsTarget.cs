@@ -20,7 +20,7 @@ public sealed class AdminLogsTarget : AbstractTarget
 
     public static readonly AdminLogsTarget Instance;
 
-    private static int RegisteredSockets;
+    private static readonly TargetCountGuardian RegisteredSockets = new();
 
     static AdminLogsTarget()
     {
@@ -40,7 +40,7 @@ public sealed class AdminLogsTarget : AbstractTarget
 
     public static async Task RegisterAsync(WebSocket source, CancellationToken token)
     {
-        using (RegisterInternal(RavenLogManagerServerExtensions.AdminLogsRule, source, Listeners, ref RegisteredSockets))
+        using (RegisterInternal(RavenLogManagerServerExtensions.AdminLogsRule, source, Listeners, RegisteredSockets))
         {
             var arraySegment = new ArraySegment<byte>(new byte[512]);
             var buffer = new StringBuilder();
