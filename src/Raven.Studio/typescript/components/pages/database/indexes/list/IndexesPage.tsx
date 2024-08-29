@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+﻿import React from "react";
 import IndexFilter from "./IndexFilter";
 import IndexSelectActions from "./IndexSelectActions";
 import IndexUtils from "../../../../utils/IndexUtils";
@@ -34,19 +34,16 @@ import IndexesPageAboutView from "./IndexesPageAboutView";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import DatabaseUtils from "components/utils/DatabaseUtils";
-import { ImportIndexes } from "components/pages/database/indexes/list/ImportIndexes";
-import { ExportIndexes } from "components/pages/database/indexes/list/ExportIndexes";
-import { todo } from "common/developmentHelper";
+import { ImportIndexes } from "components/pages/database/indexes/list/migration/ImportIndexes";
 
 interface IndexesPageProps {
     stale?: boolean;
     indexName?: string;
+    isImportOpen?: boolean;
 }
 
-todo("Feature", "Damian", "Add logic for Import indexes");
-
 export function IndexesPage(props: IndexesPageProps) {
-    const { stale, indexName: indexToHighlight } = props;
+    const { stale, indexName: indexToHighlight, isImportOpen = false } = props;
 
     const db = useAppSelector(databaseSelectors.activeDatabase);
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
@@ -54,12 +51,6 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const { forCurrentDatabase: urls } = useAppUrls();
     const newIndexUrl = urls.newIndex();
-
-    const [isImportIndexModalOpen, setImportIndexModalOpen] = useState(false);
-
-    const toggleImportIndexModal = () => {
-        setImportIndexModalOpen(!isImportIndexModalOpen);
-    };
 
     const {
         loading,
@@ -91,7 +82,9 @@ export function IndexesPage(props: IndexesPageProps) {
         getSelectedIndexes,
         confirmDeleteIndexes,
         globalIndexingStatus,
-    } = useIndexesPage(stale);
+        isImportIndexModalOpen,
+        toggleIsImportIndexModalOpen,
+    } = useIndexesPage(stale, isImportOpen);
 
     const deleteSelectedIndexes = () => {
         reportEvent("indexes", "delete-selected");
@@ -136,7 +129,12 @@ export function IndexesPage(props: IndexesPageProps) {
     }
 
     if (stats.indexes.length === 0) {
-        return <NoIndexes />;
+        return (
+            <>
+                <NoIndexes />
+                {isImportIndexModalOpen && <ImportIndexes toggle={toggleIsImportIndexModalOpen} />}
+            </>
+        );
     }
 
     const indexesPageListCommonProps: Omit<IndexesPageListProps, "indexes"> = {
@@ -196,7 +194,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                     />
                                     <DropdownMenu>
                                         <DropdownItem
-                                            onClick={toggleImportIndexModal}
+                                            onClick={toggleIsImportIndexModalOpen}
                                             title="Import indexes from a file"
                                         >
                                             <Icon icon="index-import" />
@@ -254,6 +252,7 @@ export function IndexesPage(props: IndexesPageProps) {
                     {hasDatabaseWriteAccess && (
                         <IndexSelectActions
                             indexNames={indexNames}
+                            groups={groups}
                             selectedIndexes={selectedIndexes}
                             replacements={replacements}
                             deleteSelectedIndexes={deleteSelectedIndexes}
@@ -306,7 +305,7 @@ export function IndexesPage(props: IndexesPageProps) {
                     allActionContexts={allActionContexts}
                 />
             )}
-            {isImportIndexModalOpen && <ImportIndexes toggle={toggleImportIndexModal} />}
+            {isImportIndexModalOpen && <ImportIndexes toggle={toggleIsImportIndexModalOpen} />}
         </div>
     );
 }

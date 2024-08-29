@@ -34,7 +34,7 @@ import {
     UncontrolledDropdown,
     UncontrolledTooltip,
 } from "reactstrap";
-import assertUnreachable from "../../../../utils/assertUnreachable";
+import assertUnreachable from "components/utils/assertUnreachable";
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
 import { Icon } from "components/common/Icon";
@@ -42,6 +42,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import ResetIndexesButton from "components/pages/database/indexes/list/partials/ResetIndexesButton";
+import { ExportIndexes } from "components/pages/database/indexes/list/migration/ExportIndexes";
 
 export interface IndexPanelProps {
     index: IndexSharedInfo;
@@ -104,6 +105,8 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
     const [updatingLocalPriority, setUpdatingLocalPriority] = useState(false);
     const [updatingLockMode, setUpdatingLockMode] = useState(false);
     const [updatingState, setUpdatingState] = useState(false);
+
+    const { value: isExportIndexModalOpen, toggle: toggleIsExportIndexModalOpen } = useBoolean(false);
 
     const setPriority = async (e: MouseEvent, priority: IndexPriority) => {
         e.preventDefault();
@@ -363,6 +366,20 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
                         {isFaulty && (
                             <Button onClick={() => openFaulty(index.nodesInfo[0].location)}>Open faulty index</Button>
+                        )}
+                        {!IndexUtils.isAutoIndex(index) && (
+                            <>
+                                <Button title="Export index" onClick={toggleIsExportIndexModalOpen}>
+                                    <Icon icon="export" margin="m-0" />
+                                </Button>
+                                {isExportIndexModalOpen && (
+                                    <ExportIndexes
+                                        groups={[{ name: "", indexes: [index] }]}
+                                        selectedNames={[index.name]}
+                                        toggle={toggleIsExportIndexModalOpen}
+                                    />
+                                )}
+                            </>
                         )}
                         {hasDatabaseWriteAccess && (
                             <>
