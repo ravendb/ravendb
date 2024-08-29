@@ -19,7 +19,7 @@ public class StreamTarget : AbstractTarget
         Layout = Constants.Logging.DefaultLayout
     };
 
-    private static int RegisteredSockets;
+    private static readonly TargetCountGuardian RegisteredSockets = new();
 
     private StreamTarget()
     {
@@ -35,7 +35,7 @@ public class StreamTarget : AbstractTarget
     {
         stream.Write(HeaderBytes.Span);
 
-        return RegisterInternal(RavenLogManagerServerExtensions.PipeRule, stream, Streams, ref RegisteredSockets);
+        return RegisterInternal(RavenLogManagerServerExtensions.PipeRule, stream, Streams, RegisteredSockets);
     }
 
     protected override void Write(LogEventInfo logEvent)

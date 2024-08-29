@@ -16,12 +16,27 @@ public class AbstractTarget : TargetWithLayout
 {
     private static readonly object Locker = new();
 
-    protected static IDisposable RegisterInternal<T>(LoggingRule loggingRule, T item, ConcurrentSet<T> items, ref int registeredItems)
+    protected class TargetCountGuardian
+    {
+        private int _registeredSockets;
+
+        public int Increment()
+        {
+            return Interlocked.Increment(ref _registeredSockets);
+        }
+
+        public int Decrement()
+        {
+            return Interlocked.Decrement(ref _registeredSockets);
+        }
+    }
+
+    protected static IDisposable RegisterInternal<T>(LoggingRule loggingRule, T item, ConcurrentSet<T> items, TargetCountGuardian registeredItems)
     {
         if (items.TryAdd(item) == false)
             throw new InvalidOperationException("Item was already added?");
 
-        var registeredSockets = Interlocked.Increment(ref registeredItems);
+        var registeredSockets = registeredItems.Increment();
         if (registeredSockets == 1)
         {
             lock (Locker)
@@ -43,7 +58,7 @@ public class AbstractTarget : TargetWithLayout
             }
         }
 
-        return new ReleaseItem<T>(loggingRule, item, items, ref registeredItems);
+        return new ReleaseItem<T>(loggingRule, item, items, registeredItems);
     }
 
     protected static void CopyToStream(StringBuilder builder, MemoryStream ms, Encoding encoding, char[] transformBuffer)
@@ -70,9 +85,9 @@ public class AbstractTarget : TargetWithLayout
         private readonly LoggingRule _loggingRule;
         private readonly T _item;
         private readonly ConcurrentSet<T> _items;
-        private int _registeredItems;
+        private readonly TargetCountGuardian _registeredItems;
 
-        public ReleaseItem([NotNull] LoggingRule loggingRule, [NotNull] T item, [NotNull] ConcurrentSet<T> items, ref int registeredItems)
+        public ReleaseItem([NotNull] LoggingRule loggingRule, [NotNull] T item, [NotNull] ConcurrentSet<T> items, TargetCountGuardian registeredItems)
         {
             _loggingRule = loggingRule ?? throw new ArgumentNullException(nameof(loggingRule));
             _item = item ?? throw new ArgumentNullException(nameof(item));
@@ -84,7 +99,7 @@ public class AbstractTarget : TargetWithLayout
         {
             _items.TryRemove(_item);
 
-            var counter = Interlocked.Decrement(ref _registeredItems);
+            var counter = _registeredItems.Decrement();
             if (counter != 0)
                 return;
 
