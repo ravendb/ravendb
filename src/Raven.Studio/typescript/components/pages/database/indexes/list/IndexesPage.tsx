@@ -177,32 +177,34 @@ export function IndexesPage(props: IndexesPageProps) {
                 <StickyHeader>
                     <Row>
                         <Col className="hstack">
-                            <div id="NewIndexButton">
-                                <UncontrolledDropdown group className="button-dropdown-pill">
-                                    <Button
-                                        color="primary"
-                                        href={newIndexUrl}
-                                        disabled={isNewIndexDisabled}
-                                        className="button-dropdown-btn"
-                                    >
-                                        <Icon icon="index" addon="plus" />
-                                        <span>New index</span>
-                                    </Button>
-                                    <DropdownToggle
-                                        className="dropdown-toggle button-dropdown-toggle"
-                                        color="primary"
-                                    />
-                                    <DropdownMenu>
-                                        <DropdownItem
-                                            onClick={toggleIsImportIndexModalOpen}
-                                            title="Import indexes from a file"
+                            {hasDatabaseWriteAccess && (
+                                <div id="NewIndexButton">
+                                    <UncontrolledDropdown group className="button-dropdown-pill">
+                                        <Button
+                                            color="primary"
+                                            href={newIndexUrl}
+                                            disabled={isNewIndexDisabled}
+                                            className="button-dropdown-btn"
                                         >
-                                            <Icon icon="index-import" />
-                                            <span>Import indexes</span>
-                                        </DropdownItem>
-                                    </DropdownMenu>
-                                </UncontrolledDropdown>
-                            </div>
+                                            <Icon icon="index" addon="plus" />
+                                            <span>New index</span>
+                                        </Button>
+                                        <DropdownToggle
+                                            className="dropdown-toggle button-dropdown-toggle"
+                                            color="primary"
+                                        />
+                                        <DropdownMenu>
+                                            <DropdownItem
+                                                onClick={toggleIsImportIndexModalOpen}
+                                                title="Import indexes from a file"
+                                            >
+                                                <Icon icon="index-import" />
+                                                <span>Import indexes</span>
+                                            </DropdownItem>
+                                        </DropdownMenu>
+                                    </UncontrolledDropdown>
+                                </div>
+                            )}
 
                             {isNewIndexDisabled && (
                                 <UncontrolledPopover

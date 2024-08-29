@@ -6,6 +6,7 @@ import { FormRadioToggleWithIcon, FormSelect } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
 import { SelectOption } from "components/common/select/Select";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useServices } from "components/hooks/useServices";
 import { IndexGroup } from "components/models/indexes";
@@ -45,12 +46,13 @@ export function ExportIndexes(props: ExportIndexesProps) {
 
     const selectedIndexes = getAllIndexes(groups, []).filter((x) => selectedNames.includes(x.name));
     const selectedStaticIndexNames = selectedIndexes.filter((x) => !IndexUtils.isAutoIndex(x)).map((x) => x.name);
-
     const isAnyAutoIndexSelected = selectedIndexes.some((x) => IndexUtils.isAutoIndex(x));
+
+    const getHasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess);
 
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const availableDatabaseNames = useAppSelector(databaseSelectors.allDatabases)
-        .filter((x) => x.name !== activeDatabaseName && !x.isDisabled)
+        .filter((x) => x.name !== activeDatabaseName && !x.isDisabled && getHasDatabaseWriteAccess(x.name))
         .map((x) => x.name)
         .sort();
 
