@@ -128,7 +128,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                 int flags = 0;
                 if (response.Headers.TryGetValues(Constants.Headers.AttachmentFlags, out IEnumerable<string> flagsVal))
                     int.TryParse(flagsVal.First(), out flags);
-
+         //       var collection = response.Headers.TryGetValues(Constants.Headers.AttachmentCollection, out IEnumerable<string> collectionVal) ? collectionVal.First() : null;
                 var attachmentDetails = new AttachmentDetails
                 {
                     ContentType = contentType,
@@ -138,7 +138,8 @@ namespace Raven.Client.Documents.Operations.Attachments
                     ChangeVector = changeVector,
                     DocumentId = documentId,
                     RetireAt = attachmentRetireAt,
-                    Flags = (AttachmentFlags)flags
+                    Flags = (AttachmentFlags)flags,
+            //        Collection = collection
                 };
 
                 var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);

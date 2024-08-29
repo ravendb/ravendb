@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
                 HttpContext.Response.Headers[Constants.Headers.AttachmentRetireAt] = attachment.RetiredAt?.GetDefaultRavenFormat();
                 HttpContext.Response.Headers[Constants.Headers.AttachmentFlags] = ((int)attachment.Flags).ToString();
-
+         //       HttpContext.Response.Headers[Constants.Headers.AttachmentCollection] = attachment.Collection.ToString();
                 DisposeReadTransactionIfNeeded(tx);
 
                 await WriteResponseStream(context, attachment, collection, token);

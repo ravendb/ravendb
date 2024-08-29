@@ -20,5 +20,6 @@ namespace Raven.Server.Documents
         public long Size;
         public AttachmentFlags Flags;
         public DateTime? RetiredAt;
+        public LazyStringValue Collection;
     }
 }

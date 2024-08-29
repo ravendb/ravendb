@@ -645,12 +645,7 @@ namespace Raven.Server.Smuggler.Documents
                                         throw new InvalidOperationException("Cannot find a document ID inside the attachment key");
                                     var attachmentId = key.Content.Substring(idEnd);
                                     idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(attachmentId);
-                                    string collection;
-                                    using (var doc1 = context.DocumentDatabase.DocumentsStorage.Get(context, attachmentId, DocumentFields.Default, throwOnConflict: false))
-                                    {
-                                        doc1.TryGetCollection(out collection);
-                                    }
-                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks, collection);
+                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks);
                                     break;
 
                                 case Tombstone.TombstoneType.Revision:
@@ -845,7 +840,8 @@ namespace Raven.Server.Smuggler.Documents
                         attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
                         attachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false ||
                         attachment.TryGet(nameof(AttachmentName.Size), out long size) == false ||
-                        attachment.TryGet(nameof(AttachmentName.RetireAt), out DateTime? retireAt) == false)
+                        attachment.TryGet(nameof(AttachmentName.RetireAt), out DateTime? retireAt) == false ||
+                        attachment.TryGet(nameof(AttachmentName.Collection), out LazyStringValue collection) == false) 
 
                         throw new ArgumentException($"The attachment info is missing a mandatory value: {attachment}");
 
@@ -862,11 +858,12 @@ namespace Raven.Server.Smuggler.Documents
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                     using (Slice.External(_context.Allocator, hash, out Slice base64Hash))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, collection, out Slice _, out Slice collectionSlice))
                     using (Slice.From(_context.Allocator, document.ChangeVector, out Slice cv))
                     using (attachmentsStorage.GetAttachmentKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                                base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
                     {
-                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, retireAt, flags, size, isRevision: true);
+                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, retireAt, collectionSlice, flags, size, isRevision: true);
                     }
                 }
             }

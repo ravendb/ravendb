@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -1567,7 +1568,8 @@ namespace Raven.Server.Smuggler.Documents
                 ["ContentType"] = string.Empty,
                 ["Size"] = details.Size,
                 [nameof(AttachmentName.Flags)] = AttachmentFlags.None,
-                [nameof(AttachmentName.RetireAt)] = null
+                [nameof(AttachmentName.RetireAt)] = null,
+                [nameof(AttachmentName.Collection)] = "@files"
             };
             var attachments = new DynamicJsonArray();
             attachments.Add(attachment);
@@ -1633,10 +1635,10 @@ namespace Raven.Server.Smuggler.Documents
 
                     var data = builder.CreateReader();
                     builder.Reset();
-
+                    string collectionName = null;
                     if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                     {
-                        if (metadata.TryGet(Constants.Documents.Metadata.Collection, out string collectionName))
+                        if (metadata.TryGet(Constants.Documents.Metadata.Collection, out  collectionName))
                         {
                             if (collectionsHashSet.Count > 0 && collectionsHashSet.Contains(collectionName) == false)
                             {
@@ -1757,6 +1759,24 @@ namespace Raven.Server.Smuggler.Documents
                                 }
                             }
 
+                            if (attachmentInMetadata.TryGet(nameof(AttachmentName.Collection), out string _) == false)
+                            {
+                                if (attachmentInMetadata.Modifications == null)
+                                {
+
+                                    Debug.Assert(collectionName != null);
+                                    attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
+                                    {
+                                        [nameof(AttachmentName.Collection)] = collectionName
+                                    };
+                                }
+                                else
+                                {
+                                    attachmentInMetadata.Modifications[nameof(AttachmentName.Collection)] = collectionName;
+                                }
+                            }
+
+                      
                             if (attachmentInMetadata.Modifications != null)
                             {
                                 didWork = true;
