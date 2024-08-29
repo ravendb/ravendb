@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.EventListener;
@@ -113,6 +114,14 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
                 if (EventTypes.Contains(EventType.GCJoin))
                 {
                     OnEvent.Invoke(new GCJoinEvent(EventType.GCJoin, eventData));
+                }
+
+                return true;
+            
+            case EventListener.Constants.EventNames.GC.GCHeapStats:
+                if (EventTypes.Contains(EventType.GCHeapStats))
+                {
+                    OnEvent.Invoke(new GCHeapStatsEvent(EventType.GCHeapStats, eventData));
                 }
 
                 return true;
@@ -339,6 +348,78 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
                 default:
                     return null;
             }
+        }
+    }
+
+    public class GCHeapStatsEvent : GCEventBase
+    {
+        public Size Generation0 { get; set; } // The size, in bytes, of generation 0 memory.
+        public Size TotalPromotedGen0 { get; set; } // The number of bytes that are promoted from generation 0 to generation 1.
+        public Size Generation1 { get; set; } // The size, in bytes, of generation 1 memory.
+        public Size TotalPromotedGen1 { get; set; } // The number of bytes that are promoted from generation 1 to generation 2.
+        public Size Generation2 { get; set; } // The size, in bytes, of generation 2 memory.
+        public Size TotalPromotedGen2 { get; set; } // The number of bytes that survived in generation 2 after the last collection.
+        public Size LargeObjectHeap { get; set; } // The size, in bytes, of the large object heap.
+        public Size TotalPromotedLargeObjectHeap { get; set; } // The number of bytes that survived in the large object heap after the last collection.
+        public Size Finalization { get; set; } // The total size, in bytes, of the objects that are ready for finalization.
+        public ulong FinalizationPromotedCount { get; set; } // The number of objects that are ready for finalization.
+        public uint PinnedObjectCount { get; set; } // The number of pinned (unmovable) objects.
+        public uint SinkBlockCount { get; set; } // The number of synchronization blocks in use.
+        public uint GCHandleCount { get; set; } // The number of garbage collection handles in use.
+        public Size PinnedObjectHeap { get; set; } // The size, in bytes, of the pinned object heap.
+        public Size TotalPromotedPinnedObjectHeap { get; set; } // The number of bytes that survived in the pinned object heap after the last collection.
+
+        public GCHeapStatsEvent(EventType type, EventWrittenEventArgs eventData) : base(type, eventData.TimeStamp, eventData)
+        {
+            Generation0 = new Size((long)(ulong)eventData.Payload[0], SizeUnit.Bytes);
+            TotalPromotedGen0 = new Size((long)(ulong)eventData.Payload[1], SizeUnit.Bytes);
+            Generation1 = new Size((long)(ulong)eventData.Payload[2], SizeUnit.Bytes);
+            TotalPromotedGen1 = new Size((long)(ulong)eventData.Payload[3], SizeUnit.Bytes);
+            Generation2 = new Size((long)(ulong)eventData.Payload[4], SizeUnit.Bytes);
+            TotalPromotedGen2 = new Size((long)(ulong)eventData.Payload[5], SizeUnit.Bytes);
+            LargeObjectHeap = new Size((long)(ulong)eventData.Payload[6], SizeUnit.Bytes);
+            TotalPromotedLargeObjectHeap = new Size((long)(ulong)eventData.Payload[7], SizeUnit.Bytes);
+            Finalization = new Size((long)(ulong)eventData.Payload[8], SizeUnit.Bytes);
+            FinalizationPromotedCount = (ulong)eventData.Payload[9];
+            PinnedObjectCount = (uint)eventData.Payload[10];
+            SinkBlockCount = (uint)eventData.Payload[11];
+            GCHandleCount = (uint)eventData.Payload[12];
+            PinnedObjectHeap = new Size((long)(ulong)eventData.Payload[14], SizeUnit.Bytes);
+            TotalPromotedPinnedObjectHeap = new Size((long)(ulong)eventData.Payload[15], SizeUnit.Bytes);
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(Generation0)] = Generation0.ToString();
+            json[nameof(TotalPromotedGen0)] = TotalPromotedGen0.ToString();
+            json[nameof(Generation1)] = Generation1.ToString();
+            json[nameof(TotalPromotedGen1)] = TotalPromotedGen1.ToString();
+            json[nameof(Generation2)] = Generation2.ToString();
+            json[nameof(TotalPromotedGen2)] = TotalPromotedGen2.ToString();
+            json[nameof(LargeObjectHeap)] = LargeObjectHeap.ToString();
+            json[nameof(TotalPromotedLargeObjectHeap)] = TotalPromotedLargeObjectHeap.ToString();
+            json[nameof(PinnedObjectHeap)] = PinnedObjectHeap.ToString();
+            json[nameof(TotalPromotedPinnedObjectHeap)] = TotalPromotedPinnedObjectHeap.ToString();
+            json[nameof(Finalization)] = Finalization.ToString();
+            json[nameof(FinalizationPromotedCount)] = FinalizationPromotedCount;
+            json[nameof(PinnedObjectCount)] = PinnedObjectCount;
+            json[nameof(SinkBlockCount)] = SinkBlockCount;
+            json[nameof(GCHandleCount)] = GCHandleCount;
+            return json;
+        }
+
+        public override string ToString()
+        {
+            var str = base.ToString();
+            return $"{str}," + Environment.NewLine +
+                   $"gen 0: {Generation0}, promoted gen 0: {TotalPromotedGen0}," + Environment.NewLine +
+                   $"gen 1: {Generation1}, promoted gen 1: {TotalPromotedGen1}," + Environment.NewLine +
+                   $"gen 2: {Generation2}, promoted gen 2: {TotalPromotedGen2}," + Environment.NewLine +
+                   $"loh: {LargeObjectHeap}, loh promoted: {TotalPromotedLargeObjectHeap}, poh: {PinnedObjectHeap}, poh promoted: {TotalPromotedPinnedObjectHeap}, " +
+                   $"finalization: {Finalization}, finalization count: {FinalizationPromotedCount}, " +
+                   $"pinned objects: {PinnedObjectCount}, synchronization blocks: {SinkBlockCount}, gc handles: {GCHandleCount}";
+
         }
     }
 }
