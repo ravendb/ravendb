@@ -137,6 +137,9 @@
     <PackageReference Include="ZstdSharp.Port" Version="0.8.1" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="NLog.default.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Properties\Settings\settings_posix.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>

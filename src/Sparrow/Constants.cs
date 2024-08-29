@@ -46,6 +46,27 @@ namespace Sparrow.Global
 
                 internal const string Other = "Other";
             }
+
+            internal class Names
+            {
+                private Names()
+                {
+                }
+
+                internal const string ConsoleRuleName = "Raven_Console";
+
+                internal const string PipeRuleName = "Raven_Pipe";
+
+                internal const string AdminLogsRuleName = "Raven_WebSocket";
+
+                internal const string MicrosoftRuleName = "Raven_Microsoft";
+
+                internal const string SystemRuleName = "Raven_System";
+
+                internal const string DefaultRuleName = "Raven_Default";
+
+                internal const string DefaultAuditRuleName = "Raven_Default_Audit";
+            }
         }
     }
 }

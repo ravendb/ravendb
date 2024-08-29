@@ -42,17 +42,17 @@ internal static class RavenLogManagerServerExtensions
 
     private static LoggingRule DefaultAuditRule;
 
-    private static readonly LoggingRule SystemRule = new()
+    private static LoggingRule SystemRule = new()
     {
-        RuleName = "Raven_System",
+        RuleName = Constants.Logging.Names.SystemRuleName,
         FinalMinLevel = LogLevel.Warn,
         LoggerNamePattern = "System.*",
         Targets = { NullTarget }
     };
 
-    private static readonly LoggingRule MicrosoftRule = new()
+    private static LoggingRule MicrosoftRule = new()
     {
-        RuleName = "Raven_Microsoft",
+        RuleName = Constants.Logging.Names.MicrosoftRuleName,
         FinalMinLevel = LogLevel.Warn,
         LoggerNamePattern = "Microsoft.*",
         Targets = { NullTarget }
@@ -61,14 +61,14 @@ internal static class RavenLogManagerServerExtensions
 #if !RVN
     internal static readonly LoggingRule AdminLogsRule = new()
     {
-        RuleName = "Raven_WebSocket",
+        RuleName = Constants.Logging.Names.AdminLogsRuleName,
         LoggerNamePattern = "*",
         Targets = { new AsyncTargetWrapper(AdminLogsTarget.Instance) { QueueLimit = 128, OverflowAction = AsyncTargetWrapperOverflowAction.Discard } }
     };
 
     internal static readonly LoggingRule PipeRule = new()
     {
-        RuleName = "Raven_Pipe",
+        RuleName = Constants.Logging.Names.PipeRuleName,
         LoggerNamePattern = "*",
         Targets = { StreamTarget.Instance }
     };
@@ -76,7 +76,7 @@ internal static class RavenLogManagerServerExtensions
 
     internal static readonly LoggingRule ConsoleRule = new()
     {
-        RuleName = "Raven_Console",
+        RuleName = Constants.Logging.Names.ConsoleRuleName,
         LoggerNamePattern = "*",
         Targets = {
             new ConsoleTarget
@@ -276,8 +276,14 @@ internal static class RavenLogManagerServerExtensions
     {
         LogManager.ThrowExceptions = configuration.Logs.ThrowExceptions;
 
+        ConsoleRule.DisableLoggingForLevels(LogLevel.Trace, LogLevel.Fatal);
+#if !RVN
+        PipeRule.DisableLoggingForLevels(LogLevel.Trace, LogLevel.Fatal);
+#endif
         if (TryConfigureLoggingFromFile(configuration))
             return;
+
+        SystemRule.FinalMinLevel = MicrosoftRule.FinalMinLevel = configuration.Logs.MicrosoftMinLevel.ToNLogFinalMinLogLevel();
 
         var minLevel = configuration.Logs.MinLevel;
         var maxLevel = configuration.Logs.MaxLevel;
@@ -301,12 +307,6 @@ internal static class RavenLogManagerServerExtensions
 #endif
 
         ConfigureInternalLogging();
-
-        SystemRule.FinalMinLevel = MicrosoftRule.FinalMinLevel = configuration.Logs.MicrosoftMinLevel.ToNLogFinalMinLogLevel();
-        ConsoleRule.DisableLoggingForLevels(LogLevel.Trace, LogLevel.Fatal);
-#if !RVN
-        PipeRule.DisableLoggingForLevels(LogLevel.Trace, LogLevel.Fatal);
-#endif
 
         var fileTarget = new FileTarget
         {
@@ -333,12 +333,12 @@ internal static class RavenLogManagerServerExtensions
 
         DefaultRule = new LoggingRule("*", minLevel.ToNLogLogLevel(), maxLevel.ToNLogLogLevel(), fileTargetAsyncWrapper)
         {
-            RuleName = "Raven_Default"
+            RuleName = Constants.Logging.Names.DefaultRuleName
         };
 
         DefaultAuditRule = new LoggingRule("Audit", LogLevel.Info, LogLevel.Info, NullTarget)
         {
-            RuleName = "Raven_Default_Audit",
+            RuleName = Constants.Logging.Names.DefaultAuditRuleName,
             Final = true
         };
 
@@ -391,6 +391,22 @@ internal static class RavenLogManagerServerExtensions
 #if !RVN
             c.AddRule(AdminLogsRule);
 #endif
+            DefaultRule = c.FindRuleByName(Constants.Logging.Names.DefaultRuleName);
+            if (DefaultRule == null)
+                throw new InvalidOperationException($"Could not find '{Constants.Logging.Names.DefaultRuleName}' rule in the configuration file.");
+
+            DefaultAuditRule = c.FindRuleByName(Constants.Logging.Names.DefaultAuditRuleName);
+            if (DefaultAuditRule == null)
+                throw new InvalidOperationException($"Could not find '{Constants.Logging.Names.DefaultAuditRuleName}' rule in the configuration file.");
+
+            SystemRule = c.FindRuleByName(Constants.Logging.Names.SystemRuleName);
+            if (SystemRule == null)
+                throw new InvalidOperationException($"Could not find '{Constants.Logging.Names.SystemRuleName}' rule in the configuration file.");
+
+            MicrosoftRule = c.FindRuleByName(Constants.Logging.Names.MicrosoftRuleName);
+            if (MicrosoftRule == null)
+                throw new InvalidOperationException($"Could not find '{Constants.Logging.Names.MicrosoftRuleName}' rule in the configuration file.");
+
             LogManager.Setup(x => x.LoadConfiguration(c));
             LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
 
