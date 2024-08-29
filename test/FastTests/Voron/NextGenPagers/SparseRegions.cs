@@ -26,7 +26,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
                 allocatePage.OverflowSize = (256 * Constants.Storage.PageSize) - PageHeader.SizeOf;
                 // must force an allocation of the data, beacuse Mac will not allocate the space until it is actually used
                 // and non zero data is written to it
-                Memory.Set(allocatePage.Pointer, 1, allocatePage.OverflowSize);
+                Memory.Set(allocatePage.DataPointer, 1, allocatePage.OverflowSize);
                 pages.Add(allocatePage.PageNumber);
             }
             wtx.Commit();
