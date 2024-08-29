@@ -347,18 +347,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return termAmount;
     }
 
-    public long GetTermAmountInFieldForNonExisting(in FieldMetadata field)
-    {
-        if (TryGetPostingListForNonExisting(field, out var nonExistingPostingListId))
-        {
-            var nonExistingPostingList = GetPostingList(nonExistingPostingListId);
-
-            return nonExistingPostingList?.State.NumberOfEntries ?? 0;
-        }
-
-        return 0;
-    }
-
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
     {
         return TryGetTermsOfField<Lookup<CompactKeyLookup>.ForwardIterator>(field, out existsTermProvider);

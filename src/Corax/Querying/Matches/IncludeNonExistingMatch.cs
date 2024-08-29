@@ -8,7 +8,8 @@ using Voron.Data.PostingLists;
 
 namespace Corax.Querying.Matches;
 
-public class IncludeNonExistingMatch<TInner> : IQueryMatch where TInner : IQueryMatch
+public struct IncludeNonExistingMatch<TInner> : IQueryMatch 
+    where TInner : IQueryMatch
 {
     private readonly bool _forward;
     private bool _hasLeftNonExisting;

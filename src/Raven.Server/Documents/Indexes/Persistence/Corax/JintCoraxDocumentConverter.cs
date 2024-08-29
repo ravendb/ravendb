@@ -106,7 +106,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
             }
 
             if (innerShouldSkip)
-                _nonExistingFieldsOfDocument.Add(field.Name);
+                RegisterMissingFieldFor(field);
         }
         
         if (hasFields is false && _indexEmptyEntries is false)
@@ -118,13 +118,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
         if (sourceDocumentId != null && fieldMapping.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var keyBinding))
             builder.Write(keyBinding.FieldId, sourceDocumentId.AsSpan());
 
-        if (_index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
-        {
-            foreach (var fieldName in _nonExistingFieldsOfDocument)
-                InsertNonExistingField(_fields[fieldName], builder);
-        }
-
-        _nonExistingFieldsOfDocument.Clear();
+        WriteNonExistingMarkerForMissingFields(builder);
 
         if (_storeValue)
         {

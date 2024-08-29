@@ -405,12 +405,28 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         }
     }
 
-    protected void InsertNonExistingField<TBuilder>(IndexField field, TBuilder builder) where TBuilder : IIndexEntryBuilder
+    protected void RegisterMissingFieldFor(IndexField field)
     {
-        var path = field.Name;
-        var fieldId= field.Id;
+        if (field.Id == CoraxConstants.IndexWriter.DynamicField || _index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
+            return;
         
-        builder.WriteNonExistingField(fieldId, path);
+        _nonExistingFieldsOfDocument.Add(field.Name);
+    }
+
+    protected void WriteNonExistingMarkerForMissingFields<TBuilder>(TBuilder builder) where TBuilder : IIndexEntryBuilder
+    {
+        if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList) 
+            return;
+
+        foreach (var fieldName in _nonExistingFieldsOfDocument)
+        {
+            var path = _fields[fieldName].Name;
+            var fieldId= _fields[fieldName].Id;
+        
+            builder.WriteNonExistingMarker(fieldId, path);
+        }
+            
+        _nonExistingFieldsOfDocument.Clear();
     }
 
     [DoesNotReturn]

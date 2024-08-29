@@ -89,7 +89,7 @@ public partial class IndexWriter
                 ExactInsert(field, Constants.NullValueSlice);
         }
 
-        public void WriteNonExistingField(int fieldId, string path)
+        public void WriteNonExistingMarker(int fieldId, string path)
         {
             var field = GetField(fieldId, path);
 

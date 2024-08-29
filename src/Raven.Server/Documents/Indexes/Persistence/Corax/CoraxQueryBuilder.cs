@@ -1340,8 +1340,7 @@ public static class CoraxQueryBuilder
             var fieldMetadata = QueryBuilderHelper.GetFieldIdForOrderBy(allocator, field.Name, index, builderParameters.HasDynamics,
                 builderParameters.DynamicFields, indexMapping, queryMapping, false);
             
-            if (builderParameters.IndexSearcher.GetTermAmountInField(fieldMetadata) == 0 && 
-                builderParameters.IndexSearcher.GetTermAmountInFieldForNonExisting(fieldMetadata) == 0)
+            if (builderParameters.IndexSearcher.GetTermAmountInField(fieldMetadata) == 0)
                 continue;
             
             if (field.OrderingType == OrderByFieldType.Distance)

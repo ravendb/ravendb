@@ -64,7 +64,7 @@ internal class CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
             // nothing to do here
         }
 
-        public void WriteNonExistingField(int fieldId, string path)
+        public void WriteNonExistingMarker(int fieldId, string path)
         {
             // nothing to do
         }
