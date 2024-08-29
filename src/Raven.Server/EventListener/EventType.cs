@@ -7,6 +7,7 @@ public enum EventType
     GCRestart,
     GCFinalizers,
     GCJoin,
+    GCHeapStats,
     Allocations,
     Contention,
     ThreadPoolWorkerThreadStart,
