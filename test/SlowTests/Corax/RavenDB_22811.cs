@@ -3,6 +3,8 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -102,6 +104,9 @@ public class RavenDB_22811 : RavenTestBase
                 };
 
             SearchEngineType = engine;
+
+            Configuration[RavenConfiguration.GetKey(x => x.Indexing.CoraxStaticIndexComplexFieldIndexingBehavior)] =
+                IndexingConfiguration.CoraxComplexFieldIndexingBehavior.Skip.ToString();
         }
     }
 }
