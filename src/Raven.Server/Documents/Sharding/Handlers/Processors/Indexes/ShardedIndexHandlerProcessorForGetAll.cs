@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.ServerWide;
@@ -15,27 +16,25 @@ internal sealed class ShardedIndexHandlerProcessorForGetAll : AbstractIndexHandl
     {
     }
 
-    protected override IndexDefinition[] GetIndexDefinitions(string indexName, int start, int pageSize)
+    protected override IndexDefinition[] GetIndexDefinitions(StringValues indexNames, int start, int pageSize)
     {
-        IndexDefinition[] indexDefinitions;
-        if (string.IsNullOrEmpty(indexName))
-            indexDefinitions = RequestHandler.DatabaseContext.Indexes
+        if (!string.IsNullOrEmpty(indexNames))
+        {
+            return RequestHandler.DatabaseContext.Indexes
+                .GetIndexes()
+                .Where(x => indexNames.Contains(x.Name))
+                .OrderBy(x => x.Name)
+                .Select(x => x.Definition.GetOrCreateIndexDefinitionInternal())
+                .ToArray();
+        }
+
+        return RequestHandler.DatabaseContext.Indexes
                 .GetIndexes()
                 .OrderBy(x => x.Name)
                 .Skip(start)
                 .Take(pageSize)
                 .Select(x => x.Definition.GetOrCreateIndexDefinitionInternal())
                 .ToArray();
-        else
-        {
-            var index = RequestHandler.DatabaseContext.Indexes.GetIndex(indexName);
-            if (index == null)
-                return null;
-
-            indexDefinitions = new[] { index.Definition.GetOrCreateIndexDefinitionInternal() };
-        }
-
-        return indexDefinitions;
     }
 
     protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexDefinition[]> command, OperationCancelToken token)
