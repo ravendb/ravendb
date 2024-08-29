@@ -21,22 +21,37 @@ internal sealed class IndexHandlerProcessorForGetAll : AbstractIndexHandlerProce
 
     internal static IndexDefinition[] GetIndexDefinitions(DatabaseRequestHandler requestHandler, StringValues indexNames, int start, int pageSize)
     {
-        if (!string.IsNullOrEmpty(indexNames))
+        IndexDefinition[] indexDefinitions;
+        switch (indexNames.Count)
         {
-            return requestHandler.Database.IndexStore
-                .GetIndexes()
-                .Where(x => indexNames.Contains(x.Name))
-                .OrderBy(x => x.Name)
-                .Select(x => x.GetIndexDefinition())
-                .ToArray();
+            case 0:
+                indexDefinitions = requestHandler.Database.IndexStore
+                    .GetIndexes()
+                    .OrderBy(x => x.Name)
+                    .Skip(start)
+                    .Take(pageSize)
+                    .Select(x => x.GetIndexDefinition())
+                    .ToArray();
+                break;
+            case 1:
+                {
+                    var index = requestHandler.Database.IndexStore.GetIndex(indexNames);
+                    if (index == null)
+                        return null;
+
+                    indexDefinitions = new[] { index.GetIndexDefinition() };
+                    break;
+                }
+            default:
+                indexDefinitions = requestHandler.Database.IndexStore
+                    .GetIndexes()
+                    .Where(x => indexNames.Contains(x.Name))
+                    .OrderBy(x => x.Name)
+                    .Select(x => x.GetIndexDefinition())
+                    .ToArray();
+                break;
         }
 
-        return requestHandler.Database.IndexStore
-                .GetIndexes()
-                .OrderBy(x => x.Name)
-                .Skip(start)
-                .Take(pageSize)
-                .Select(x => x.GetIndexDefinition())
-                .ToArray();
+        return indexDefinitions;
     }
 }

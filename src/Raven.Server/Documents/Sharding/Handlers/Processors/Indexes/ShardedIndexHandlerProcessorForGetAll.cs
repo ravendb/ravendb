@@ -18,23 +18,38 @@ internal sealed class ShardedIndexHandlerProcessorForGetAll : AbstractIndexHandl
 
     protected override IndexDefinition[] GetIndexDefinitions(StringValues indexNames, int start, int pageSize)
     {
-        if (!string.IsNullOrEmpty(indexNames))
+        IndexDefinition[] indexDefinitions;
+        switch (indexNames.Count)
         {
-            return RequestHandler.DatabaseContext.Indexes
-                .GetIndexes()
-                .Where(x => indexNames.Contains(x.Name))
-                .OrderBy(x => x.Name)
-                .Select(x => x.Definition.GetOrCreateIndexDefinitionInternal())
-                .ToArray();
+            case 0:
+                indexDefinitions = RequestHandler.DatabaseContext.Indexes
+                    .GetIndexes()
+                    .OrderBy(x => x.Name)
+                    .Skip(start)
+                    .Take(pageSize)
+                    .Select(x => x.Definition.GetOrCreateIndexDefinitionInternal())
+                    .ToArray();
+                break;
+            case 1:
+                {
+                    var index = RequestHandler.DatabaseContext.Indexes.GetIndex(indexNames);
+                    if (index == null)
+                        return null;
+
+                    indexDefinitions = new[] { index.Definition.GetOrCreateIndexDefinitionInternal() };
+                    break;
+                }
+            default:
+                indexDefinitions = RequestHandler.DatabaseContext.Indexes
+                    .GetIndexes()
+                    .Where(x => indexNames.Contains(x.Name))
+                    .OrderBy(x => x.Name)
+                    .Select(x => x.Definition.GetOrCreateIndexDefinitionInternal())
+                    .ToArray();
+                break;
         }
 
-        return RequestHandler.DatabaseContext.Indexes
-                .GetIndexes()
-                .OrderBy(x => x.Name)
-                .Skip(start)
-                .Take(pageSize)
-                .Select(x => x.Definition.GetOrCreateIndexDefinitionInternal())
-                .ToArray();
+        return indexDefinitions;
     }
 
     protected override Task HandleRemoteNodeAsync(ProxyCommand<IndexDefinition[]> command, OperationCancelToken token)
