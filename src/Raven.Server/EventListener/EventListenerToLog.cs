@@ -19,7 +19,8 @@ public class EventListenerToLog : IDynamicJson
         EventType.GCSuspend,
         EventType.GCRestart,
         EventType.GCFinalizers,
-        EventType.GCJoin
+        EventType.GCJoin,
+        EventType.GCHeapStats
     ];
     public static readonly HashSet<EventType> AllocationEvents = [EventType.Allocations];
     public static readonly HashSet<EventType> ContentionEvents = [EventType.Contention];

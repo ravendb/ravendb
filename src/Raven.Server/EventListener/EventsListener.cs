@@ -161,6 +161,7 @@ public class EventsListener : AbstractEventListener
                 case EventType.GCRestart:
                 case EventType.GCFinalizers:
                 case EventType.GCJoin:
+                case EventType.GCHeapStats:
                 case EventType.Allocations:
                     dotNetEventType = (dotNetEventType ?? DotNetEventType.GC) | DotNetEventType.GC;
                     break;
