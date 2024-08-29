@@ -92,7 +92,7 @@ export default function CreateDatabaseFromBackupRestorePoint({
                         options={restorePointsOptions}
                         components={{
                             GroupHeading: RestorePointGroupHeading,
-                            Option: RestorePointOption,
+                            Option: RestorePointOptionComponent,
                         }}
                         isLoading={isLoading}
                         isDisabled={isLoading || flatOptionsCount === 0 || formState.isSubmitting}
@@ -160,7 +160,7 @@ const RestorePointGroupHeading = (props: GroupHeadingProps<SelectOption<RestoreP
     );
 };
 
-function RestorePointOption(props: OptionProps<RestorePointOption>) {
+function RestorePointOptionComponent(props: OptionProps<RestorePointOption>) {
     const {
         data: { value, disabledReason },
     } = props;
