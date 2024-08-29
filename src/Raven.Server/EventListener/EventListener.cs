@@ -16,6 +16,7 @@ public class EventListener
                 public const string GCRestartEnd = "GCRestartEEEnd_V1";
                 public const string GCFinalizersBegin = "GCFinalizersBegin_V1";
                 public const string GCFinalizersEnd = "GCFinalizersEnd_V1";
+                public const string GCJoin = "GCJoin_V2";
             }
 
             public class Allocations
