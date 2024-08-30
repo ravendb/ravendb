@@ -177,14 +177,18 @@ namespace Raven.Server.Documents.Indexes
             public const long PhraseQuerySupportInCoraxIndexes = 60_002;
             public const long StoreOnlySupportInCoraxIndexes = 60_003; // RavenDB-22369
             public const long JavaScriptProperlyHandleDynamicFieldsIndexFields = 60_004; // RavenDB-22363
-            public const long UseNonExistingPostingList = 60_005; // RavenDB-22703
-            public const long LoadDocumentWithDynamicCollectionNameShouldThrow = 61_000; // RavenDB-22359
+            public const long UseNonExistingPostingList_60 = 60_005; // RavenDB-22703
+
+            public const long Base61Version = 61_000;
+            
+            public const long LoadDocumentWithDynamicCollectionNameShouldThrow = Base61Version; // RavenDB-22359
             public const long CoraxComplexFieldIndexingBehavior = 61_001;
+            public const long UseNonExistingPostingList_61 = 61_002; // RavenDB-22703
 
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = CoraxComplexFieldIndexingBehavior;
+            public const long CurrentVersion = UseNonExistingPostingList_61;
 
             public static bool IsTimeTicksInJavaScriptIndexesSupported(long indexVersion)
             {
@@ -194,6 +198,14 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 return indexVersion >= TimeTicksSupportInJavaScriptIndexes_54;
+            }
+
+            public static bool IsNonExistingPostingListSupported(long indexVersion)
+            {
+                if (indexVersion >= Base61Version)
+                    return indexVersion >= UseNonExistingPostingList_61;
+
+                return indexVersion >= UseNonExistingPostingList_60;
             }
         }
     }

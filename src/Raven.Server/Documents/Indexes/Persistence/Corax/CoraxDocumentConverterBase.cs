@@ -425,7 +425,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     protected void RegisterMissingFieldFor(IndexField field)
     {
-        if (field.Id == CoraxConstants.IndexWriter.DynamicField || _index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
+        if (field.Id == CoraxConstants.IndexWriter.DynamicField || 
+            IndexDefinitionBaseServerSide.IndexVersion.IsNonExistingPostingListSupported(_index.Definition.Version) == false)
             return;
         
         _nonExistingFieldsOfDocument.Add(field.Name);
@@ -433,7 +434,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     protected void WriteNonExistingMarkerForMissingFields<TBuilder>(TBuilder builder) where TBuilder : IIndexEntryBuilder
     {
-        if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList) 
+        if (IndexDefinitionBaseServerSide.IndexVersion.IsNonExistingPostingListSupported(_index.Definition.Version) == false) 
             return;
 
         foreach (var fieldName in _nonExistingFieldsOfDocument)
