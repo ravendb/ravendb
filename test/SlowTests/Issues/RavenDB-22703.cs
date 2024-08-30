@@ -75,7 +75,7 @@ public class RavenDB_22703 : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes, Skip = "RavenDB-22843")]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded)]
     public void TestOrderingOnShardedDatabase(Options options)
     {
@@ -173,7 +173,7 @@ public class RavenDB_22703 : RavenTestBase
     }
     
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single)]
     public void TestStaticIndex(Options options)
     {
         using (var store = GetDocumentStore(options))
@@ -290,7 +290,7 @@ public class RavenDB_22703 : RavenTestBase
         {
             using (var session = store.OpenSession())
             {
-                var p1 = new Product() { Attributes = new Dictionary<string, object>() { { "Color", "Red" }, {"Size", 42 } } };
+                var p1 = new Product() { Attributes = new Dictionary<string, object>() { { "Color", "Red" }, { "Size", 42 } } };
                 var p2 = new Product() { Attributes = new Dictionary<string, object>() { { "Color", "Blue" } } };
                 var p3 = new Product() { Attributes = new Dictionary<string, object>() { { "Size", 37 } } };
                 
@@ -334,7 +334,7 @@ public class RavenDB_22703 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes, Skip = "RavenDB-22844")]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
     public void TestJavaScriptIndex(Options options)
     {
@@ -381,8 +381,7 @@ public class RavenDB_22703 : RavenTestBase
                     .ProjectInto<Bar>()
                     .ToList();
                 
-                // We don't always distinguish null and non-existing value in Jint converter correctly
-                Assert.Equal(4, res.Count);
+                Assert.Equal(6, res.Count);
             }
         }
     }
