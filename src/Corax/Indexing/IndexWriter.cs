@@ -136,7 +136,8 @@ namespace Corax.Indexing
             _lastEntryId =  _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
 
             _documentBoost = _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
-            _nullEntriesPostingLists = _transaction.CreateTree(Constants.IndexWriter.NullPostingLists);
+            _nullEntriesPostingListsTree = _transaction.CreateTree(Constants.IndexWriter.NullPostingLists);
+            _nonExistingEntriesPostingListsTree = _transaction.CreateTree(Constants.IndexWriter.NonExistingPostingLists);
             _entriesAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
 
             _tempListBuffer = new ContextBoundNativeList<long>(_entriesAllocator);
@@ -328,7 +329,8 @@ namespace Corax.Indexing
         private NativeList<NativeList<RecordedTerm>> _termsPerEntryId;
         private ByteStringContext _entriesAllocator;
         private Tree _fieldsTree;
-        private Tree _nullEntriesPostingLists;
+        private Tree _nullEntriesPostingListsTree;
+        private Tree _nonExistingEntriesPostingListsTree;
         
         public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
 
@@ -428,8 +430,12 @@ namespace Corax.Indexing
             Page lastVisitedPage = default;
 
             var fieldsByRootPage = GetIndexedFieldByRootPage(_fieldsTree);
+            
             var nullTermsMarkers = new HashSet<long>();
-            Querying.IndexSearcher.LoadNullTermMarkers(_nullEntriesPostingLists, nullTermsMarkers);
+            Querying.IndexSearcher.LoadSpecialTermMarkers(_nullEntriesPostingListsTree, nullTermsMarkers);
+
+            var nonExistingTermsMarkers = new HashSet<long>();
+            Querying.IndexSearcher.LoadSpecialTermMarkers(_nonExistingEntriesPostingListsTree, nonExistingTermsMarkers);
             
             long dicId = CompactTree.GetDictionaryId(llt);
 
@@ -445,21 +451,20 @@ namespace Corax.Indexing
 
                 var termsPerEntryIndex = InsertTermsPerEntry(entryToDelete);
                 
-                RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, nullTermsMarkers, dicId, entryToDelete, termsPerEntryIndex);
+                RecordTermDeletionsForEntry(entryTerms, llt, fieldsByRootPage, nullTermsMarkers, nonExistingTermsMarkers, dicId, entryToDelete, termsPerEntryIndex);
                 Container.Delete(llt, _entriesTermsContainerId, entryTermsId);
             }
         }
         
-        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, HashSet<long> nullTermMarkers, long dicId, long entryToDelete, int termsPerEntryIndex)
+        private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, HashSet<long> nullTermMarkers, HashSet<long> nonExistingTermMarkers, long dicId, long entryToDelete, int termsPerEntryIndex)
         {
-            var reader = new EntryTermsReader(llt, nullTermMarkers, entryTerms.Address, entryTerms.Length, dicId);
+            var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId);
             reader.Reset();
             while (reader.MoveNextStoredField())
             {
-                //Null/empty is not stored in container, just exists as marker.
+                // Null/empty is not stored in container, just exists as marker.
                 if (reader.TermId == -1)
                     continue;
-                
                 
                 Container.Delete(llt, _storedFieldsContainerId, reader.TermId);
             }
@@ -473,21 +478,19 @@ namespace Corax.Indexing
 
                 if (reader.IsNull)
                 {
-                    ref var nullTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, Constants.NullValueSlice, out var nullExists);
-                    if (nullExists == false)
-                    {
-                        nullTermLocation = field.Storage.Count;
-                        field.Storage.AddByRef(new EntriesModifications(1));
-                          // We dont want to reclaim the term name
-                    }
-                    ref var nullTerm = ref field.Storage.GetAsRef(nullTermLocation);
-                    nullTerm.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency);
+                    RemoveMarkerTerm(field, reader, Constants.NullValueSlice, entryToDelete, termsPerEntryIndex);
+                    continue;
+                }
+
+                if (reader.IsNonExisting)
+                {
+                    RemoveMarkerTerm(field, reader, Constants.NonExistingValueSlice, entryToDelete, termsPerEntryIndex);
                     continue;
                 }
                 
                 var decodedKey = reader.Current.Decoded();
                 var scope = Slice.From(_entriesAllocator, decodedKey, out Slice termSlice);
-                if(field.HasSuggestions)
+                if (field.HasSuggestions)
                     RemoveSuggestions(field, decodedKey);
                 
                 ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
@@ -502,7 +505,7 @@ namespace Corax.Indexing
                 term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency);
                 scope.Dispose();
                 
-                if(reader.HasNumeric == false)
+                if (reader.HasNumeric == false)
                     continue;
 
                 termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, reader.CurrentLong, out exists);
@@ -525,6 +528,19 @@ namespace Corax.Indexing
                 term = ref field.Storage.GetAsRef(termLocation);
                 term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1);
             }
+        }
+
+        private void RemoveMarkerTerm(IndexedField field, EntryTermsReader reader, Slice termSlice, long entryToDelete, int termsPerEntryIndex)
+        {
+            ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
+            if (exists == false)
+            {
+                termLocation = field.Storage.Count;
+                field.Storage.AddByRef(new EntriesModifications(1));
+                // We dont want to reclaim the term name
+            }
+            ref var term = ref field.Storage.GetAsRef(termLocation);
+            term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency);
         }
         
         public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
@@ -1131,19 +1147,23 @@ namespace Corax.Indexing
                 _buffers.PrepareTerms(_indexedField, out var sortedTerms, out var termsOffsets);
                 Debug.Assert(sortedTerms.Length > 0, "sortedTerms.Length > 0 (checked by the caller)");
 
-                var firstTerm = sortedTerms[0]; // if we have null, it will always sort first
-                if (firstTerm.AsReadOnlySpan().SequenceEqual(Constants.NullValueSlice.AsReadOnlySpan()))
+                // Because of sorting first we have null, then not existing value (if any document has such), then the rest of values
+                var termsToIgnore = 0;
+                
+                if (sortedTerms[termsToIgnore].AsReadOnlySpan().SequenceEqual(Constants.NullValueSlice.AsReadOnlySpan()))
                 {
-                    (long postingListId, long termContainerId)  = GetOrCreateNullTermPostingList();
-                    ref var entries = ref _indexedField.Storage.GetAsRef(termsOffsets[0]);
-                    var nullLookup = new CompactTree.CompactKeyLookup(CompactKey.NullInstance);
-                    totalLengthOfTerm += ProcessSingleEntry(ref entries, ref nullLookup, isNullTerm: true,
-                        sortedTerms[0], postingListId, termContainerId, -1, termsOffsets[0]);
-                    
-                    // now skip it the null so we don't have the special case it
-                    sortedTerms = sortedTerms[1..]; 
-                    termsOffsets = termsOffsets[1..];
+                    HandleSpecialTerm(termsOffsets, sortedTerms, termsToIgnore, _writer._nullEntriesPostingListsTree, ref totalLengthOfTerm);
+                    termsToIgnore++;
                 }
+                
+                if (sortedTerms.Length > termsToIgnore && sortedTerms[termsToIgnore].AsReadOnlySpan().SequenceEqual(Constants.NonExistingValueSlice.AsReadOnlySpan()))
+                {
+                    HandleSpecialTerm(termsOffsets, sortedTerms, termsToIgnore, _writer._nonExistingEntriesPostingListsTree, ref totalLengthOfTerm);
+                    termsToIgnore++;
+                }
+                
+                sortedTerms = sortedTerms[termsToIgnore..]; 
+                termsOffsets = termsOffsets[termsToIgnore..];
                 
                 while (true)
                 {
@@ -1212,6 +1232,15 @@ namespace Corax.Indexing
                 ProcessTermsVector();
             }
 
+            private void HandleSpecialTerm(Span<int> termsOffsets, Span<Slice> sortedTerms, int termIndex, Tree tree, ref long totalLengthOfTerm)
+            {
+                (long postingListId, long termContainerId) = GetOrCreateSpecialPostingList(tree);
+                ref var entries = ref _indexedField.Storage.GetAsRef(termsOffsets[termIndex]);
+                var nullLookup = new CompactTree.CompactKeyLookup(CompactKey.NullInstance);
+                totalLengthOfTerm += ProcessSingleEntry(ref entries, ref nullLookup, isNullTerm: true,
+                    sortedTerms[termIndex], postingListId, termContainerId, -1, termsOffsets[termIndex]);
+            }
+            
             private long ProcessSingleEntry(ref EntriesModifications entries, ref CompactTree.CompactKeyLookup key,
                 bool isNullTerm, Slice term, long postListId, long termContainerId, int pageOffset, int storageLocation)
             {
@@ -1502,11 +1531,11 @@ namespace Corax.Indexing
                 pageOffsets = new Span<int>(buffers.PageOffsets, 0, max);
             }
 
-            private (long NullListId, long NullTermId) GetOrCreateNullTermPostingList()
+            private (long NonExistingTermListId, long NonExistingTermId) GetOrCreateSpecialPostingList(Tree tree)
             {
                 // In the case where the field does not have any null values, we will create a *large* posting list (an empty one)
                 // then we'll insert data to it as if it was any other term
-                var entry = _writer._nullEntriesPostingLists.Read(_indexedField.Name);
+                var entry = tree.Read(_indexedField.Name);
 
                 if (entry != null)
                 {
@@ -1532,15 +1561,13 @@ namespace Corax.Indexing
                 PostingList.Create(_writer._transaction.LowLevelTransaction, ref postingListState);
                 var encodedPostingListId = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
 
-                using (_writer._nullEntriesPostingLists.DirectAdd(_indexedField.Name, sizeof((long, long)), out var p))
+                using (tree.DirectAdd(_indexedField.Name, sizeof((long, long)), out var p))
                 {
                     *((long, long)*)p = (encodedPostingListId, nullMarkerId);
                 }
 
                 return (encodedPostingListId, nullMarkerId);
             }
-            
-            
 
             private void PrefetchContainerPages(ref ContextBoundNativeList<long> pagesToPrefetch, Span<long> postListIds)
             {

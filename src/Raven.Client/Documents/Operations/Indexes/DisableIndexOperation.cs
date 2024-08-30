@@ -7,12 +7,20 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Disables indexing for a specific index using the DisableIndexOperation. 
+    /// Querying a disabled index is still allowed, but results may be stale.
+    /// 
+    /// <para><strong>Note:</strong> Unlike StopIndex or StopIndexing operations, disabling an index is a persistent operation, meaning the index remains disabled even after a server restart.</para>
+    /// </summary>
     public sealed class DisableIndexOperation : IMaintenanceOperation
     {
         private readonly string _indexName;
 
         private readonly bool _clusterWide;
 
+        /// <inheritdoc cref="DisableIndexOperation" />
+        /// <param name="indexName">The name of the index to be disabled.</param>
         public DisableIndexOperation(string indexName)
         {
             if (indexName == null)
@@ -22,6 +30,9 @@ namespace Raven.Client.Documents.Operations.Indexes
             _clusterWide = false;
         }
 
+        /// <inheritdoc cref="DisableIndexOperation" />
+        /// <param name="indexName">The name of the index to be disabled.</param>
+        /// <param name="clusterWide">A boolean value indicating whether the index should be disabled cluster-wide across all database-group nodes.</param>
         public DisableIndexOperation(string indexName, bool clusterWide)
         {
             if (indexName == null)

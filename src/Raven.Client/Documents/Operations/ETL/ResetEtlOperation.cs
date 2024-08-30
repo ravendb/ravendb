@@ -8,11 +8,19 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
+    /// <summary>
+    /// <para>Resets an ETL process using the ResetEtlOperation. </para>
+    /// <para>ETL (Extract, Transform, Load) typically processes documents from the point where the last batch finished.
+    /// By resetting the ETL, processing will start again from the very beginning.</para>
+    /// </summary>
     public sealed class ResetEtlOperation : IMaintenanceOperation
     {
         private readonly string _configurationName;
         private readonly string _transformationName;
 
+        /// <inheritdoc cref="ResetEtlOperation" />
+        /// <param name="configurationName">The name of the ETL configuration to reset.</param>
+        /// <param name="transformationName">The name of the specific transformation within the ETL configuration to reset.</param>
         public ResetEtlOperation(string configurationName, string transformationName)
         {
             _configurationName = configurationName ?? throw new ArgumentNullException(nameof(configurationName));

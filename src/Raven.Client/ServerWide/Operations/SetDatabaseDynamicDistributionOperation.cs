@@ -7,11 +7,20 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
+    /// <summary>
+    /// In dynamic database distribution mode, if a database node is down, another cluster node is added to the database group to compensate.
+    /// Use this operation to toggle dynamic distribution for a particular database group.
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Operations.ServerOperations.SetDatabaseDynamicDistributionOperation"/>
     public sealed class SetDatabaseDynamicDistributionOperation : IServerOperation
     {
         private readonly bool _allowDynamicDistribution;
         private readonly string _databaseName;
-
+        
+        /// <inheritdoc cref="SetDatabaseDynamicDistributionOperation"/>
+        /// <param name="databaseName">Name of database group</param>
+        /// <param name="allowDynamicDistribution">Set to true to activate dynamic distribution mode.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="databaseName"/> is null or empty.</exception>
         public SetDatabaseDynamicDistributionOperation(string databaseName, bool allowDynamicDistribution)
         {
             if (string.IsNullOrEmpty(databaseName))

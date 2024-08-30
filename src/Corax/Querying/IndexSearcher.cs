@@ -38,9 +38,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private readonly IndexFieldsMapping _fieldMapping;
     private HashSet<long> _nullTermsMarkers;
+    private HashSet<long> _nonExistingTermsMarkers;
     private Tree _persistedDynamicTreeAnalyzer;
     private long? _numberOfEntries;
     public bool _nullTermsMarkersLoaded;
+    private bool _nonExistingTermsMarkersLoaded;
 
     /// <summary>
     /// When true no SIMD instruction will be used. Useful for checking that optimized algorithms behave in the same
@@ -64,11 +66,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private Tree _fieldsTree;
     private Tree _entriesToTermsTree;
     private Tree _entriesToSpatialTree;
-    private Tree _nullPostingList;
+    private Tree _nullPostingListsTree;
+    private Tree _nonExistingPostingListsTree;
     private long _dictionaryId;
     private Lookup<Int64LookupKey> _entryIdToLocation;
     public FieldsCache FieldCache;
-    private bool _nullPostingListLoaded;
+    private bool _nullPostingListsTreeLoaded;
+    private bool _nonExistingPostingListsTreeLoaded;
 
     public long MaxMemoizationSizeInBytes = 128 * 1024 * 1024;
 
@@ -122,14 +126,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
 
-        if (_nullTermsMarkersLoaded == false)
-        {
-            _nullTermsMarkersLoaded = true;
-            InitializeNullTermsMarkers();
-        }
+        InitializeSpecialTermsMarkers();
         
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, item.Address, item.Length, _dictionaryId);
+        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId);
     }
     
     internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref ContextBoundNativeList<Slice> terms)
@@ -331,9 +331,20 @@ public sealed unsafe partial class IndexSearcher : IDisposable
    
     public long GetTermAmountInField(in FieldMetadata field)
     {
-        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
+        long termAmount = 0;
+        
+        var fieldTree = _fieldsTree?.CompactTreeFor(field.FieldName);
 
-        return terms?.NumberOfEntries ?? 0;
+        termAmount += fieldTree?.NumberOfEntries ?? 0;
+
+        if (TryGetPostingListForNull(field, out var nullPostingListId))
+        {
+            var nullPostingList = GetPostingList(nullPostingListId);
+
+            termAmount += nullPostingList?.State.NumberOfEntries ?? 0;
+        }
+        
+        return termAmount;
     }
 
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
@@ -517,6 +528,31 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         
         return exists;
     }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool TryGetPostingListForNonExisting(in FieldMetadata field, out long postingListId) => TryGetPostingListForNonExisting(field.FieldName, out postingListId);
+    
+    private bool TryGetPostingListForNonExisting(Slice name, out long postingListId)
+    {
+        InitNonExistingPostingList();
+        var result = _nonExistingPostingListsTree?.ReadStructure<(long PostingListId, long TermContainerId)>(name);
+        if (result == null)
+        {
+            postingListId = -1;
+            return false;
+        }
+        postingListId = result.Value.PostingListId;
+        return true;
+    }
+    
+    private void InitNonExistingPostingList()
+    {
+        if (_nonExistingPostingListsTreeLoaded == false)
+        {
+            _nonExistingPostingListsTreeLoaded = true;
+            _nonExistingPostingListsTree = _transaction.ReadTree(Constants.IndexWriter.NonExistingPostingLists);
+        }
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId) => TryGetPostingListForNull(field.FieldName, out postingListId);
@@ -524,7 +560,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private bool TryGetPostingListForNull(Slice name, out long postingListId)
     {
         InitNullPostingList();
-        var result = _nullPostingList?.ReadStructure<(long PostingListId,long TermContainerId)>(name);
+        var result = _nullPostingListsTree?.ReadStructure<(long PostingListId, long TermContainerId)>(name);
         if (result == null)
         {
             postingListId = -1;
@@ -536,10 +572,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private void InitNullPostingList()
     {
-        if (_nullPostingListLoaded == false)
+        if (_nullPostingListsTreeLoaded == false)
         {
-            _nullPostingListLoaded = true;
-            _nullPostingList = _transaction.ReadTree(Constants.IndexWriter.NullPostingLists);
+            _nullPostingListsTreeLoaded = true;
+            _nullPostingListsTree = _transaction.ReadTree(Constants.IndexWriter.NullPostingLists);
         }
     }
 
@@ -550,26 +586,48 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new IncludeNullMatch<TInner>(this, inner, field, forward);
     }
     
-    private void InitializeNullTermsMarkers()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public IncludeNonExistingMatch<TInner> IncludeNonExistingMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward)
+        where TInner : IQueryMatch
     {
-        _nullTermsMarkers = new HashSet<long>();
-        InitNullPostingList();
-        if (_nullPostingList == null)
-            return;
+        return new IncludeNonExistingMatch<TInner>(this, inner, field, forward);
+    }
+    
+    private void InitializeSpecialTermsMarkers()
+    {
+        if (_nullTermsMarkersLoaded == false)
+        {
+            _nullTermsMarkersLoaded = true;
+            _nullTermsMarkers = new HashSet<long>();
+            
+            InitNullPostingList();
+            
+            if (_nullPostingListsTree != null)
+                LoadSpecialTermMarkers(_nullPostingListsTree, _nullTermsMarkers);
+        }
 
-        LoadNullTermMarkers(_nullPostingList, _nullTermsMarkers);
+        if (_nonExistingTermsMarkersLoaded == false)
+        {
+            _nonExistingTermsMarkersLoaded = true;
+            _nonExistingTermsMarkers = new HashSet<long>();
+            
+            InitNonExistingPostingList();
+            
+            if (_nonExistingPostingListsTree != null)
+                LoadSpecialTermMarkers(_nonExistingPostingListsTree, _nonExistingTermsMarkers);
+        }
     }
 
-    public static void LoadNullTermMarkers(Tree nullPostingList, HashSet<long> nullTermsMarkers)
+    public static void LoadSpecialTermMarkers(Tree postingList, HashSet<long> termsMarkers)
     {
-        using (var it = nullPostingList.Iterate(prefetch: false))
+        using (var it = postingList.Iterate(prefetch: false))
         {
             if (it.Seek(Slices.BeforeAllKeys))
             {
                 do
                 {
-                    (_, long nullTermId) = it.CreateReaderForCurrent().ReadStructure<(long, long)>();
-                    nullTermsMarkers.Add(nullTermId);
+                    (_, long termId) = it.CreateReaderForCurrent().ReadStructure<(long, long)>();
+                    termsMarkers.Add(termId);
                 } while (it.MoveNext());
             }
         }

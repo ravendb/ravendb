@@ -606,6 +606,21 @@ namespace Raven.Client.Documents.Indexes
         Rolling
     }
 
+    /// <summary>
+    /// Defines the modes for resetting an index.
+    /// </summary>
+    /// <value>
+    /// <list type="bullet">
+    /// <item>
+    /// <term>InPlace</term>
+    /// <description>Resets the index in place, replacing the existing index with the newly rebuilt one.</description>
+    /// </item>
+    /// <item>
+    /// <term>SideBySide</term>
+    /// <description>Resets the index in a side-by-side manner, allowing the new index to be built alongside the existing one.</description>
+    /// </item>
+    /// </list>
+    /// </value>
     public enum IndexResetMode
     {
         InPlace,

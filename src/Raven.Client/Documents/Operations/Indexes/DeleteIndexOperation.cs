@@ -7,10 +7,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Removes an index from the database using the DeleteIndexOperation.
+    /// 
+    /// <para><strong>Note:</strong> The index will be deleted from all database-group nodes.</para>
+    /// </summary>
     public sealed class DeleteIndexOperation : IMaintenanceOperation
     {
         private readonly string _indexName;
 
+        /// <inheritdoc cref="DeleteIndexOperation" />
+        /// <param name="indexName">The name of the index to be deleted.</param>
         public DeleteIndexOperation(string indexName)
         {
             _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));

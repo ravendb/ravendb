@@ -87,8 +87,8 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 do
                 {
                     ProcessObject(iterator.Current, propertyAsString, ref field, out shouldSaveAsBlittable, out value, out actualValue, out innerShouldSkip);
-                    if (shouldSaveAsBlittable)
-{                        ProcessAsJson(actualValue, field, documentToProcess, out innerShouldSkip);}
+                    if (shouldSaveAsBlittable) 
+                        ProcessAsJson(actualValue, field, documentToProcess, out innerShouldSkip);
                     hasFields |= innerShouldSkip == false;
                     var disposable = value as IDisposable;
                     disposable?.Dispose();
@@ -104,6 +104,9 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 var disposable = value as IDisposable;
                 disposable?.Dispose();
             }
+
+            if (innerShouldSkip)
+                RegisterMissingFieldFor(field);
         }
         
         if (hasFields is false && _indexEmptyEntries is false)
@@ -114,6 +117,8 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
 
         if (sourceDocumentId != null && fieldMapping.TryGetByFieldName(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, out var keyBinding))
             builder.Write(keyBinding.FieldId, sourceDocumentId.AsSpan());
+
+        WriteNonExistingMarkerForMissingFields(builder);
 
         if (_storeValue)
         {

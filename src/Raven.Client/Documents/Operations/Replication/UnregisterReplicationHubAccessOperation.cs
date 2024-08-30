@@ -7,11 +7,18 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
+    /// <summary>
+    /// Removes a previously defined hub access configuration using the UnregisterReplicationHubAccessOperation.
+    /// This operation disables the specified access by removing the associated certificate and permissions from the replication hub.
+    /// </summary>
     public sealed class UnregisterReplicationHubAccessOperation : IMaintenanceOperation
     {
         private readonly string _hubName;
         private readonly string _thumbprint;
 
+        /// <inheritdoc cref="UnregisterReplicationHubAccessOperation" />
+        /// <param name="hubName">The name of the replication hub from which the access configuration is being removed.</param>
+        /// <param name="thumbprint">The thumbprint of the certificate associated with the access configuration to be unregistered.</param>
         public UnregisterReplicationHubAccessOperation(string hubName, string thumbprint)
         {
             if (string.IsNullOrWhiteSpace(hubName))

@@ -10,11 +10,26 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
+    /// <summary>
+    /// Modifies the default database configuration using the PutDatabaseSettingsOperation.
+    /// <para><strong>Notes:</strong> </para>
+    /// <list type="bullet">
+    /// <item>
+    /// <description>Only database-level settings can be customized with this operation.</description>
+    /// </item>
+    /// <item>
+    /// <description>For changes to take effect, the database must be reloaded. Reloading can be done by disabling and enabling the database using the ToggleDatabasesStateOperation.</description>
+    /// </item>
+    /// </list>
+    /// </summary>
     public sealed class PutDatabaseSettingsOperation : IMaintenanceOperation
     {
         private readonly string _databaseName;
         private readonly Dictionary<string, string> _configurationSettings;
 
+        /// <inheritdoc cref="PutDatabaseSettingsOperation" />
+        /// <param name="databaseName">The name of the database for which the settings are being modified.</param>
+        /// <param name="configurationSettings">A dictionary of configuration settings to be applied to the database.</param>
         public PutDatabaseSettingsOperation(string databaseName, Dictionary<string, string> configurationSettings)
         {
             _databaseName = databaseName ?? throw new ArgumentNullException(nameof(configurationSettings));
