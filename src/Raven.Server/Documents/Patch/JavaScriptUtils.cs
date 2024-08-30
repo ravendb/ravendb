@@ -173,7 +173,9 @@ namespace Raven.Server.Documents.Patch
                 metadata = metadata == null ? // may be null if we are working on map/redeuce index
                     Context.ReadObject(modifiedMetadata, boi.DocumentId) : 
                     Context.ReadObject(metadata, boi.DocumentId);
-                
+
+                _disposables.Add(metadata);
+
                 var metadataJs = (BlittableObjectInstance)TranslateToJs(_scriptEngine, Context, metadata);
                 boi.Set(Constants.Documents.Metadata.Key, metadataJs);
                 boi.Metadata = metadataJs;
