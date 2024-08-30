@@ -50,12 +50,15 @@ public class RavenDB_21050 : RavenTestBase
             await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             var path = Directory.GetDirectories(backupPath).First();
+            int? shardNumber = null;
             if (options.DatabaseMode == RavenDatabaseMode.Sharded)
             {
-                int shardNumber = await Sharding.GetShardNumberForAsync(source, id);
+                shardNumber = await Sharding.GetShardNumberForAsync(source, id);
                 path = Directory.GetDirectories(backupPath).First(p => p.Contains($"${shardNumber}"));
             }
 
+            await Backup.GetBackupFilesAndAssertCountAsync(backupPath, 2, backupStatus2.Id, source.Database, shardNumber);
+            
             var restoreConfig = new RestoreBackupConfiguration { BackupLocation = path, DatabaseName = destination.Database };
             using (Backup.RestoreDatabase(destination, restoreConfig))
             {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
@@ -11,6 +12,7 @@ using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Analyzers;
+using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.QueueSink;
@@ -28,25 +30,34 @@ namespace Raven.Server.ServerWide;
 public sealed partial class ClusterStateMachine
 {
     private const int MinBuildVersion60000 = 60_000;
-    private const int MinBuildVersion60102 = 60_102;
+    private const int MinBuildVersion60102 = 60_026;
+    private const int MinBuildVersion60105 = 60_039;
 
     private static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new()
     {
         nameof(PutIndexesCommand),
         nameof(PutAutoIndexCommand),
         nameof(PutSortersCommand),
-        nameof(PutSortersCommand),
         nameof(PutAnalyzersCommand),
         nameof(PutIndexCommand),
-        nameof(PutAutoIndexCommand),
         nameof(EditRevisionsConfigurationCommand),
         nameof(EditExpirationCommand),
         nameof(EditRefreshCommand),
-        nameof(PutSortersCommand),
-        nameof(PutAnalyzersCommand),
         nameof(PutDatabaseClientConfigurationCommand),
         nameof(EditDatabaseClientConfigurationCommand),
         nameof(PutDatabaseStudioConfigurationCommand),
+        nameof(UpdatePeriodicBackupCommand),
+        nameof(UpdatePullReplicationAsSinkCommand),
+        nameof(UpdatePullReplicationAsHubCommand),
+        nameof(UpdateExternalReplicationCommand),
+        nameof(AddRavenEtlCommand),
+        nameof(AddSqlEtlCommand),
+        nameof(AddOlapEtlCommand),
+        nameof(AddQueueEtlCommand),
+        nameof(EditTimeSeriesConfigurationCommand),
+        nameof(EditDocumentsCompressionCommand),
+        nameof(AddElasticSearchEtlCommand),
+        nameof(PutServerWideExternalReplicationCommand),
     };
 
     private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context)
@@ -58,6 +69,7 @@ public sealed partial class ClusterStateMachine
                 AssertMultiNodeSharding(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
             case nameof(PutIndexCommand):
+                AssertAdditionalAssembliesFromNuGetLicenseLimits(serverStore, databaseRecord, context);
                 AssertStaticIndexesCount(databaseRecord, serverStore.LicenseManager.LicenseStatus, context, items, type);
                 break;
 
@@ -66,6 +78,7 @@ public sealed partial class ClusterStateMachine
                 break;
 
             case nameof(PutIndexesCommand):
+                AssertAdditionalAssembliesFromNuGetLicenseLimits(serverStore, databaseRecord, context);
                 AssertStaticIndexesCount(databaseRecord, serverStore.LicenseManager.LicenseStatus, context, items, type);
                 AssertAutoIndexesCount(databaseRecord, serverStore.LicenseManager.LicenseStatus, context, items, type);
                 break;
@@ -91,8 +104,7 @@ public sealed partial class ClusterStateMachine
                 break;
 
             case nameof(UpdatePeriodicBackupCommand):
-                if (AssertPeriodicBackup(serverStore.LicenseManager.LicenseStatus, context) == false)
-                    throw new LicenseLimitException(LimitType.PeriodicBackup, "Your license doesn't support adding periodic backups.");
+                AssertPeriodicBackupLicenseLimits(serverStore, databaseRecord, context);
                 break;
 
             case nameof(PutDatabaseClientConfigurationCommand):
@@ -121,8 +133,39 @@ public sealed partial class ClusterStateMachine
                 break;
 
             case nameof(EditDataArchivalCommand):
-                if (AssertDataArchival(serverStore.LicenseManager.LicenseStatus, context) == false )
+                if (AssertDataArchival(serverStore.LicenseManager.LicenseStatus, context) == false)
                     throw new LicenseLimitException(LimitType.DataArchival, "Your license doesn't support using the data archival feature.");
+                break;
+
+            case nameof(UpdatePullReplicationAsSinkCommand):
+                AssertPullReplicationAsSinkLicenseLimits(serverStore, databaseRecord, context);
+                break;
+            case nameof(UpdatePullReplicationAsHubCommand):
+                AssertPullReplicationAsHubLicenseLimits(serverStore, databaseRecord, context);
+                break;
+            case nameof(UpdateExternalReplicationCommand):
+                AssertExternalReplicationLicenseLimits(serverStore, databaseRecord, context);
+                break;
+            case nameof(AddRavenEtlCommand):
+                AssertRavenEtlLicenseLimits(serverStore, databaseRecord, context);
+                break;
+            case nameof(AddSqlEtlCommand):
+                AssertSqlEtlLicenseLimits(serverStore, databaseRecord, context);
+                break;
+            case nameof(AddOlapEtlCommand):
+                AssertOlapEtlLicenseLimits(serverStore, databaseRecord, context);
+                break;
+            case nameof(AddQueueEtlCommand):
+                AssertQueueEtlLicenseLimits(serverStore, databaseRecord, context);
+                break;
+            case nameof(AddElasticSearchEtlCommand):
+                AssertElasticSearchEtlLicenseLimits(serverStore, databaseRecord, context);
+                break;
+            case nameof(EditTimeSeriesConfigurationCommand):
+                AssertTimeSeriesConfigurationLicenseLimits(serverStore, databaseRecord, context);
+                break;
+            case nameof(EditDocumentsCompressionCommand):
+                AssertDocumentsCompressionLicenseLimits(serverStore, databaseRecord, context);
                 break;
         }
     }
@@ -170,7 +213,7 @@ public sealed partial class ClusterStateMachine
                 throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
             if (AssertQueueSink(newLicenseLimits, context) == false && databaseRecord.QueueSinks.Count > 0)
                 throw new LicenseLimitException(LimitType.QueueSink, "Your license doesn't support using the queue sink feature.");
-            if (AssertDataArchival(newLicenseLimits, context) == false && databaseRecord.DataArchival is { Disabled: false})
+            if (AssertDataArchival(newLicenseLimits, context) == false && databaseRecord.DataArchival is { Disabled: false })
                 throw new LicenseLimitException(LimitType.DataArchival, "Your license doesn't support using the data archival feature.");
         }
     }
@@ -406,8 +449,7 @@ public sealed partial class ClusterStateMachine
     {
         if (licenseStatus.HasPeriodicBackup)
             return true;
-
-        return CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false;
+        return false;
     }
 
     private void AssertDatabaseClientConfiguration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
@@ -709,6 +751,205 @@ public sealed partial class ClusterStateMachine
 
                 break;
         }
+    }
+    private void AssertPeriodicBackupLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+        {
+            if (AssertPeriodicBackup(serverStore.LicenseManager.LicenseStatus, context) == false)
+                throw new LicenseLimitException(LimitType.PeriodicBackup, "Your license doesn't support adding periodic backups.");
+        }
+
+        foreach (var configuration in databaseRecord.PeriodicBackups)
+        {
+            if (configuration != null)
+            {
+                if (configuration.BackupType == BackupType.Backup &&
+                    configuration.HasCloudBackup() == false &&
+                    configuration.BackupEncryptionSettings?.Key == null)
+                    return;
+            }
+        }
+
+        var backupTypes = LicenseManager.GetBackupTypes(databaseRecord.PeriodicBackups);
+
+        if (backupTypes.HasSnapshotBackup)
+            if (serverStore.LicenseManager.LicenseStatus.HasSnapshotBackups == false)
+                throw new LicenseLimitException(LimitType.SnapshotBackup, "Your license doesn't support adding Snapshot backups feature.");
+
+        if (backupTypes.HasCloudBackup)
+            if (serverStore.LicenseManager.LicenseStatus.HasCloudBackups == false)
+                throw new LicenseLimitException(LimitType.CloudBackup, "Your license doesn't support adding Cloud backups feature.");
+
+        if (backupTypes.HasEncryptedBackup)
+            if (serverStore.LicenseManager.LicenseStatus.HasEncryptedBackups == false)
+                throw new LicenseLimitException(LimitType.EncryptedBackup, "Your license doesn't support adding Encrypted backups feature.");
+    }
+
+    private void AssertPullReplicationAsSinkLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+
+        if (serverStore.LicenseManager.LicenseStatus.HasPullReplicationAsSink)
+            return;
+
+        if (databaseRecord.SinkPullReplications.Count == 0)
+            return;
+
+        throw new LicenseLimitException(LimitType.PullReplicationAsSink, "Your license doesn't support adding Sink Replication feature.");
+    }
+
+    private void AssertPullReplicationAsHubLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+
+        if (serverStore.LicenseManager.LicenseStatus.HasPullReplicationAsHub)
+            return;
+
+        if (databaseRecord.HubPullReplications.Count == 0)
+            return;
+
+        throw new LicenseLimitException(LimitType.PullReplicationAsHub, "Your license doesn't support adding Hub Replication feature.");
+    }
+
+    private void AssertExternalReplicationLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+
+        if (serverStore.LicenseManager.LicenseStatus.HasDelayedExternalReplication)
+            return;
+
+        if (serverStore.LicenseManager.LicenseStatus.HasExternalReplication == false && databaseRecord.ExternalReplications.Count > 0)
+            throw new LicenseLimitException(LimitType.ExternalReplication, "Your license doesn't support adding External Replication.");
+
+        if (databaseRecord.ExternalReplications.All(exRep => exRep.DelayReplicationFor == TimeSpan.Zero))
+            return;
+
+        throw new LicenseLimitException(LimitType.DelayedExternalReplication, "Your license doesn't support adding Delayed External Replication.");
+    }
+
+    private void AssertRavenEtlLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+
+        if (serverStore.LicenseManager.LicenseStatus.HasRavenEtl)
+            return;
+
+        if (databaseRecord.RavenEtls.Count == 0)
+            return;
+
+        throw new LicenseLimitException(LimitType.RavenEtl, "Your license doesn't support adding Raven ETL feature.");
+    }
+
+    private void AssertSqlEtlLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+
+        if (serverStore.LicenseManager.LicenseStatus.HasSqlEtl)
+            return;
+
+        if (databaseRecord.SqlEtls.Count == 0)
+            return;
+
+        throw new LicenseLimitException(LimitType.SqlEtl, "Your license doesn't support adding SQL ETL feature.");
+    }
+
+    private void AssertOlapEtlLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+
+        if (serverStore.LicenseManager.LicenseStatus.HasOlapEtl)
+            return;
+
+        if (databaseRecord.OlapEtls.Count == 0)
+            return;
+
+        throw new LicenseLimitException(LimitType.OlapEtl, "Your license doesn't support adding Olap ETL feature.");
+    }
+
+    private void AssertQueueEtlLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+
+        if (serverStore.LicenseManager.LicenseStatus.HasQueueEtl)
+            return;
+
+        if (databaseRecord.QueueEtls.Count == 0)
+            return;
+
+        throw new LicenseLimitException(LimitType.QueueEtl, "Your license doesn't support adding Queue ETL feature.");
+    }
+
+    private void AssertElasticSearchEtlLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+
+        if (serverStore.LicenseManager.LicenseStatus.HasElasticSearchEtl)
+            return;
+
+        if (databaseRecord.ElasticSearchEtls.Count == 0)
+            return;
+
+        throw new LicenseLimitException(LimitType.QueueEtl, "Your license doesn't support adding Elastic Search ETL feature.");
+    }
+
+    private void AssertTimeSeriesConfigurationLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+
+        if (serverStore.LicenseManager.LicenseStatus.HasTimeSeriesRollupsAndRetention)
+            return;
+
+        if (databaseRecord.TimeSeries == null)
+            return;
+
+        if (databaseRecord.TimeSeries.Collections.Count == 0 || databaseRecord.TimeSeries.Collections.All(x => x.Value.Disabled))
+            return;
+
+        throw new LicenseLimitException(LimitType.TimeSeriesRollupsAndRetention, "Your license doesn't support adding Time Series Rollups And Retention feature.");
+    }
+
+    private void AssertDocumentsCompressionLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+
+        if (serverStore.LicenseManager.LicenseStatus.HasDocumentsCompression)
+            return;
+
+        if (databaseRecord.DocumentsCompression == null)
+            return;
+
+        if (databaseRecord.DocumentsCompression.CompressAllCollections == false && databaseRecord.DocumentsCompression.CompressRevisions == false)
+            return;
+
+        throw new LicenseLimitException(LimitType.DocumentsCompression, "Your license doesn't support adding Documents Compression feature.");
+    }
+
+    private void AssertAdditionalAssembliesFromNuGetLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+
+        if (serverStore.LicenseManager.LicenseStatus.HasAdditionalAssembliesFromNuGet)
+            return;
+
+        if (LicenseManager.HasAdditionalAssembliesFromNuGet(databaseRecord.Indexes) == false)
+            return;
+
+        throw new LicenseLimitException(LimitType.AdditionalAssembliesFromNuGet, "Your license doesn't support Additional Assemblies From NuGet feature.");
     }
 
     private enum DatabaseRecordElementType

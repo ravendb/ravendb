@@ -84,7 +84,9 @@ namespace Raven.Server.Rachis
 
         public override long Apply(ClusterOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration)
         {
-            return StateMachine.Apply(context, uptoInclusive, leader, _serverStore, duration);
+            var committedIndex = StateMachine.Apply(context, uptoInclusive, leader, _serverStore, duration);
+            LastCommitted = DateTime.UtcNow;
+            return committedIndex;
         }
 
         public void EnsureNodeRemovalOnDeletion(ClusterOperationContext context, long term, string nodeTag)
@@ -129,167 +131,15 @@ namespace Raven.Server.Rachis
             {
             }
         }
-
-        public unsafe List<BlittableJsonReaderObject> GetLogEntries<TTransaction>(long first, TransactionOperationContext<TTransaction> context, int max)
-            where TTransaction : RavenTransaction
-        {
-            var entries = new List<BlittableJsonReaderObject>();
-            var reveredNextIndex = Bits.SwapBytes(first);
-            var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
-            using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out Slice key))
-            {
-                foreach (var value in table.SeekByPrimaryKey(key, 0))
-                {
-                    var entry = FollowerAmbassador.BuildRachisEntryToSend(context, value);
-                    Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, entry);
-                    entries.Add(entry);
-                    if (entries.Count >= max)
-                        break;
-                }
-            }
-            return entries;
-        }
     }
 
-    public sealed class RachisLogEntry : IDynamicJsonValueConvertible
-    {
-        public DateTime At = DateTime.UtcNow;
-        public string Message;
-        public long Ticks;
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Message)] = Message,
-                [nameof(Ticks)] = Ticks
-            };
-        }
-    }
-
-    public sealed class RachisTimings
-    {
-        public readonly ConcurrentBag<RachisLogEntry> Timings = new ConcurrentBag<RachisLogEntry>();
-    }
-
-    public sealed class RachisLogRecorder
-    {
-        private readonly ConcurrentQueue<RachisTimings> _queue;
-        private readonly Stopwatch _sp = Stopwatch.StartNew();
-        private RachisTimings _current;
-        private ConcurrentBag<RachisLogEntry> Timings => _current.Timings;
-
-        public RachisLogRecorder(ConcurrentQueue<RachisTimings> queue)
-        {
-            _queue = queue;
-        }
-
-        public void Start()
-        {
-            _current = new RachisTimings();
-            _queue.LimitedSizeEnqueue(_current, 10);
-            Timings.Add(new RachisLogEntry
-            {
-                Message = "Start",
-                Ticks = 0
-            });
-            _sp.Restart();
-        }
-
-        public void Record(string message)
-        {
-            if (_current == null)
-                return; // ignore - shutting down
-
-            Timings.Add(new RachisLogEntry
-            {
-                Message = message,
-                Ticks = _sp.ElapsedMilliseconds
-            });
-        }
-    }
-
-    public sealed class RachisDebug
-    {
-        public readonly ConcurrentDictionary<string, RachisTimingsHolder> TimingTracking = new ConcurrentDictionary<string, RachisTimingsHolder>();
-        public readonly ConcurrentQueue<string> StateChangeTracking = new ConcurrentQueue<string>();
-
-        public sealed class RachisTimingsHolder
-        {
-            public ConcurrentQueue<RachisTimings> TimingTracking;
-            public DateTime Since = DateTime.UtcNow;
-        }
-
-        public bool IsInterVersionTest;
-
-        public RachisLogRecorder GetNewRecorder(string name)
-        {
-            var holder = new RachisTimingsHolder
-            {
-                TimingTracking = new ConcurrentQueue<RachisTimings>()
-            };
-
-            if (TimingTracking.TryAdd(name, holder) == false)
-            {
-                throw new ArgumentException($"Recorder with the name '{name}' already exists");
-            }
-            return new RachisLogRecorder(holder.TimingTracking);
-        }
-
-        public void RemoveRecorderOlderThan(DateTime after)
-        {
-            if (TimingTracking.IsEmpty)
-                return;
-
-            foreach (var item in TimingTracking)
-            {
-                if (item.Value.Since > after)
-                    continue;
-                TimingTracking.TryRemove(item.Key, out _);
-            }
-        }
-
-        public void RemoveRecorder(string name)
-        {
-            if (TimingTracking.Remove(name, out var q))
-            {
-                q.TimingTracking.Clear();
-            }
-        }
-
-        public DynamicJsonValue ToJson()
-        {
-            var timingTracking = new DynamicJsonValue();
-            foreach (var tuple in TimingTracking.ForceEnumerateInThreadSafeManner().OrderBy(x => x.Key))
-            {
-                var key = tuple.Key;
-                DynamicJsonArray inner;
-                timingTracking[key] = inner = new DynamicJsonArray();
-                foreach (var queue in tuple.Value.TimingTracking)
-                {
-                    inner.Add(new DynamicJsonArray(queue.Timings.OrderBy(x => x.At)));
-                }
-            }
-
-            var stateTracking = new DynamicJsonArray(StateChangeTracking);
-
-            return new DynamicJsonValue
-            {
-                [nameof(TimingTracking)] = timingTracking,
-                [nameof(StateChangeTracking)] = stateTracking
-            };
-        }
-    }
-
-    public abstract class RachisConsensus : IDisposable
+    public abstract partial class RachisConsensus : IDisposable
     {
         internal abstract RachisStateMachine GetStateMachine();
 
         internal abstract RachisVersionValidation Validator { get; }
 
         public const string InitialTag = "?";
-
-        public readonly RachisDebug InMemoryDebug = new RachisDebug();
 
         public RachisState CurrentState
         {
@@ -412,7 +262,8 @@ namespace Raven.Server.Rachis
         private readonly ManualResetEventSlim _disposeEvent = new ManualResetEventSlim();
         private readonly Random _rand;
         private string _lastStateChangeReason;
-        public Candidate Candidate { get; internal set; }
+        public Candidate Candidate { get; set; }
+        public Follower Follower { get; set; }
 
         protected RachisConsensus(CipherSuitesPolicy cipherSuitesPolicy, int? seed = null)
         {
@@ -569,6 +420,7 @@ namespace Raven.Server.Rachis
             SwitchToSingleLeaderAction?.Invoke(context);
 
             Candidate = null;
+            Follower = null;
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
@@ -606,19 +458,22 @@ namespace Raven.Server.Rachis
             return false;
         }
 
-        public async Task WaitForLeaderChange(CancellationToken cts)
+        public async Task WaitForLeaderChange(CancellationToken token) => await WaitForLeaderChange(LeaderTag, token);
+
+        public async Task<string> WaitForLeaderChange(string leader, CancellationToken token)
         {
-            var currentLeader = LeaderTag;
-            while (cts.IsCancellationRequested == false)
+            while (token.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
-                var task = _stateChanged.Task.WithCancellation(cts);
-
-                if (currentLeader != GetLeaderTag(safe: true))
-                    return;
+                var task = _stateChanged.Task.WithCancellation(token);
+                var current = GetLeaderTag(safe: true);
+                if (leader != current)
+                    return current;
 
                 await task;
             }
+
+            return null;
         }
 
         public async Task<bool> WaitForLeaveState(RachisState rachisState, CancellationToken cts)
@@ -800,35 +655,47 @@ namespace Raven.Server.Rachis
 
             internal LeaderLockDebug LeaderLock;
 
-            internal ManualResetEventSlim HoldOnLeaderElect;
-
             internal List<string> NodeTagsToDisconnect;
 
-            public void OnLeaderElect()
+            internal Func<CommandBase, long, long> ModifyTermBeforeRachisMergedCommandInsertToLeaderLog;  // gets: command and term, returns: new term
+            public sealed class HoldOnLeaderElectDebug
             {
-                if (HoldOnLeaderElect == null)
-                    return;
+                public ManualResetEventSlim _mre;
 
-                HoldOnLeaderElect.Reset();
-                if (HoldOnLeaderElect.Wait(TimeSpan.FromSeconds(15)) == false)
+                public HoldOnLeaderElectDebug(ManualResetEventSlim mre)
                 {
-                    throw new TimeoutException("Something is wrong, throwing to avoid hanging");
+                    _mre = mre;
                 }
-                HoldOnLeaderElect.Reset();
-            }
 
-            public void ReleaseOnLeaderElect()
-            {
-                HoldOnLeaderElect?.Set();
-            }
-
-            public void BeforeNegotiatingWithFollower()
-            {
-                if (HoldOnLeaderElect?.Wait(TimeSpan.FromSeconds(15)) == false)
+                public void OnLeaderElect()
                 {
-                    throw new TimeoutException("Something is wrong, throwing to avoid hanging");
+                    _mre.Reset();
+                    if (_mre.Wait(TimeSpan.FromSeconds(15)) == false)
+                    {
+                        throw new TimeoutException("Something is wrong, throwing to avoid hanging");
+                    }
+                    _mre.Reset();
+                }
+
+                public void ReleaseOnLeaderElect()
+                {
+                    _mre.Set();
+                }
+
+                public void BeforeNegotiatingWithFollower()
+                {
+                    if (_mre.Wait(TimeSpan.FromSeconds(15)) == false)
+                    {
+                        throw new TimeoutException("Something is wrong, throwing to avoid hanging");
+                    }
                 }
             }
+
+            internal void CreateHoldOnLeaderElect(ManualResetEventSlim mre) => HoldOnLeaderElect = new HoldOnLeaderElectDebug(mre);
+
+            internal HoldOnLeaderElectDebug HoldOnLeaderElect;
+
+            internal Action BeforeExecuteAddDatabaseCommand;
 
             public static unsafe void InsertToLogDirectlyForDebug(ClusterOperationContext context, RachisConsensus node, long term, long index, CommandBase cmd, RachisEntryFlags flags)
             {
@@ -890,13 +757,14 @@ namespace Raven.Server.Rachis
                     [nameof(CommandBase.UniqueRequestId)] = Guid.NewGuid().ToString()
                 };
 
-                ForTestingPurposes?.OnLeaderElect();
+                ForTestingPurposes?.HoldOnLeaderElect?.OnLeaderElect();
                 InsertToLeaderLog(context, expectedTerm, context.ReadObject(noopCmd, "noop-cmd"), RachisEntryFlags.Noop);
             }
 
             var sp = Stopwatch.StartNew();
 
             _currentLeader = null;
+
             LastStateChangeReason = stateChangedReason;
             var toDispose = new List<IDisposable>(_disposables);
             _disposables.Clear();
@@ -1082,14 +950,121 @@ namespace Raven.Server.Rachis
             leader.Start(connections);
         }
 
-        public Task<(long Index, object Result)> PutAsync(CommandBase cmd)
+        public Task<(long Index, object Result)> PutToLeaderAsync(CommandBase cmd)
         {
             var leader = _currentLeader;
-            if (leader == null)
-                throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
+            if (leader == null || CurrentState != RachisState.Leader)
+                throw new NotLeadingException("Not a valid leader, cannot accept commands. " + _lastStateChangeReason);
 
             Validator.AssertPutCommandToLeader(cmd);
             return leader.PutAsync(cmd, cmd.Timeout ?? OperationTimeout);
+        }
+        public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd, CancellationToken token = default)
+        {
+            //I think it is reasonable to expect timeout twice of error retry
+            var timeoutTask = TimeoutManager.WaitFor(OperationTimeout, token);
+            Exception requestException = null;
+            while (true)
+            {
+                token.ThrowIfCancellationRequested();
+
+                if (CurrentState == RachisState.Leader && CurrentLeader?.Running == true)
+                {
+                    try
+                    {
+                        return await PutToLeaderAsync(cmd);
+                    }
+                    catch (Exception e) when (e is ConcurrencyException || e is NotLeadingException)
+                    {
+                        // if the leader was changed during the PutAsync, we will retry.
+                        continue;
+                    }
+                }
+                if (CurrentState == RachisState.Passive)
+                {
+                    ThrowInvalidEngineState(cmd);
+                }
+
+                var logChange = WaitForHeartbeat();
+
+                var reachedLeader = new Reference<bool>();
+                var cachedLeaderTag = LeaderTag; // not actually working
+                try
+                {
+                    if (cachedLeaderTag == null || cachedLeaderTag == Tag)
+                    {
+                        await Task.WhenAny(logChange, timeoutTask);
+                        token.ThrowIfCancellationRequested();
+
+                        if (timeoutTask.IsCompleted)
+                            ThrowTimeoutException(cmd, requestException);
+
+                        continue;
+                    }
+
+                    using var _ = ContextPool.AllocateOperationContext(out ClusterOperationContext context);
+                    var response = await SendToNodeAsync(context, cachedLeaderTag, cmd, reachedLeader, token);
+                    return (response.Index, cmd.FromRemote(response.Result));
+                }
+                catch (Exception ex)
+                {
+                    if (Log.IsInfoEnabled)
+                        Log.Info($"Tried to send message to leader (reached: {reachedLeader.Value}), retrying", ex);
+
+                    if (reachedLeader.Value)
+                        throw;
+
+                    requestException = ex;
+                }
+
+                await Task.WhenAny(logChange, timeoutTask);
+                token.ThrowIfCancellationRequested();
+
+                if (timeoutTask.IsCompleted)
+                {
+                    ThrowTimeoutException(cmd, requestException);
+                }
+            }
+        }
+
+        private static void ThrowInvalidEngineState(CommandBase cmd)
+        {
+            throw new NotSupportedException("Cannot send command " + cmd.GetType().FullName + " to the cluster because this node is passive." + Environment.NewLine +
+                                            "Passive nodes aren't members of a cluster and require admin action (such as creating a db) " +
+                                            "to indicate that this node should create its own cluster");
+        }
+
+        private void ThrowTimeoutException(CommandBase cmd, Exception requestException)
+        {
+            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {Tag} to leader because there is no leader, " +
+                                       $"and we timed out waiting for one after {OperationTimeout}", requestException);
+        }
+
+        private async Task<(long Index, object Result)> SendToNodeAsync(JsonOperationContext context, string engineLeaderTag, CommandBase cmd,
+            Reference<bool> reachedLeader, CancellationToken token)
+        {
+            var requestExecutor = ServerStore.GetLeaderRequestExecutor(engineLeaderTag);
+
+            var djv = cmd.ToJson(context);
+            var cmdJson = context.ReadObject(djv, "raft/command");
+
+            cmdJson.TryGet("Type", out string commandType);
+            var command = new PutRaftCommand(requestExecutor.Conventions, cmdJson, Url, commandType)
+            {
+                Timeout = cmd.Timeout
+            };
+
+            try
+            {
+                await requestExecutor.ExecuteAsync(command, context, token: token);
+            }
+            catch
+            {
+                reachedLeader.Value = command.HasReachLeader();
+                throw;
+            }
+
+            return (command.Result.RaftCommandIndex, command.Result.Data);
         }
 
         public void SwitchToCandidateStateOnTimeout()
@@ -1246,11 +1221,12 @@ namespace Raven.Server.Rachis
                 topologyJson.CopyTo(ptr);
             }
 
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 clusterTopology.AllNodes.TryGetValue(engine.Tag, out var key);
                 engine.Url = key;
                 TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
+
                 engine.TopologyChanged?.Invoke(engine, clusterTopology);
             };
 
@@ -1709,7 +1685,7 @@ namespace Raven.Server.Rachis
                     LogHistory.InsertHistoryLog(context, entry.Index, entry.Term, entry.Entry);
                 }
             }
-
+            LastAppended = DateTime.UtcNow;
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, lastTopology);
             return (lastTopology, lastTopologyIndex);
         }
@@ -1983,7 +1959,7 @@ namespace Raven.Server.Rachis
         {
             if (term != CurrentTerm)
             {
-                throw new RachisConcurrencyException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
+                throw new TermValidationException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
             }
         }
 

@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -588,6 +589,7 @@ namespace SlowTests.Sharding.Cluster
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard0User, shardToCX[0].Index));
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard1User, shardToCX[1].Index));
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard2User, shardToCX[2].Index));
+                await TriggerAClusterTransactionToForceCheckTombstonesAsync(store);
 
                 await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 3, nodes);
 
@@ -616,18 +618,49 @@ namespace SlowTests.Sharding.Cluster
 
                 await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 3, nodes);
 
+                await TriggerAClusterTransactionToForceCheckTombstonesAsync(store);
                 //unsuspend and wait for the tombstone cleaner
                 leader.ServerStore.Observer.Suspended = false;
 
                 //wait for the servers to execute the cleanup command waiting in the state machine
                 //(_lastTombstonesCleanupTimeInTicks only represents last time LOOKED for something to delete)
-                await WaitAndAssertForValueAsync(() =>
-                {
-                    return leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks > timeBeforeCxDeletion.Ticks;
-                }, true);
+                await WaitAndAssertForGreaterThanAsync(() => Task.FromResult(leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks), timeBeforeCxDeletion.Ticks);
 
                 //ensure no compare exchange tombstones were deleted after the tombstone cleanup
                 await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 0, nodes);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task CmpxchgTombstoneCleaner_WhenClusterTransactionMadeOnOneShard_ShouldUpdateRaftIndexOnAllShards()
+        {
+            const string id = "TestObjs/0";
+            const string id2 = "TestObjs/2";
+            
+            var database = GetDatabaseName();
+            var settings = new Dictionary<string, string>
+            {
+                { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "0" },
+            };
+
+            using var store = GetDocumentStore(Sharding.GetOptionsForCluster(Server, 2, 1, 1));
+            Assert.NotEqual(await Sharding.GetShardNumberForAsync(store, id), await Sharding.GetShardNumberForAsync(store, id2));
+            
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new TestOjb(), id);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true}))
+            {
+                await session.StoreAsync(new TestOjb(), id2);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                _ = await session.LoadAsync<TestOjb>(id);
             }
         }
 
@@ -684,7 +717,8 @@ namespace SlowTests.Sharding.Cluster
                 //delete cx to create tombstones
                 cx1 = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard0User, cx1.Index));
                 cx2 = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard1User, cx2.Index));
-
+                await TriggerAClusterTransactionToForceCheckTombstonesAsync(store);
+                
                 //run periodic backup on all shards
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 * *");
                 var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(leader, store, config, isFullBackup: false);
@@ -738,6 +772,8 @@ namespace SlowTests.Sharding.Cluster
 
                 //delete the last compare exchanges
                 lastDeletedCx = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(shard2User, lastDeletedCx.Index));
+                await TriggerAClusterTransactionToForceCheckTombstonesAsync(store);
+
                 
                 //trigger periodic backup again on leader
                 var documentDatabase = await Cluster.GetAnyDocumentDatabaseInstanceFor(store, new List<RavenServer>() {leader}, ShardHelper.ToShardName(database, shardOnLeader));
@@ -773,6 +809,19 @@ namespace SlowTests.Sharding.Cluster
 
                 //ensure last compare exchange tombstone wasn't deleted after the tombstone cleanup
                 await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 1, nodes);
+            }
+        }
+
+        private class TestOjb
+        {
+            public string Id { get; set; }
+        }
+        private static async Task TriggerAClusterTransactionToForceCheckTombstonesAsync(IDocumentStore store)
+        {
+            using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true}))
+            {
+                await session.StoreAsync(new TestOjb());
+                await session.SaveChangesAsync();
             }
         }
 

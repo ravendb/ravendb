@@ -5,6 +5,10 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TransactionsRecording
 {
+    /// <summary>
+    /// Stops the recording of database transactions that was initiated with the StartTransactionsRecordingOperation.
+    /// This operation finalizes the recording and closes the file where transactions were being saved.
+    /// </summary>
     public sealed class StopTransactionsRecordingOperation : IMaintenanceOperation
     {
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)

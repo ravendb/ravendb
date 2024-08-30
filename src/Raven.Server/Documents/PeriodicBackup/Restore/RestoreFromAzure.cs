@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.ServerWide;
@@ -15,12 +17,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     public sealed class RestoreFromAzure : IRestoreSource
     {
         private readonly ServerStore _serverStore;
+        private readonly CancellationToken _cancellationToken;
         private readonly IRavenAzureClient _client;
         private readonly string _remoteFolderName;
 
-        public RestoreFromAzure([NotNull] ServerStore serverStore, RestoreFromAzureConfiguration restoreFromConfiguration)
+        public RestoreFromAzure([NotNull] ServerStore serverStore, RestoreFromAzureConfiguration restoreFromConfiguration, CancellationToken cancellationToken)
         {
             _serverStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
+            _cancellationToken = cancellationToken;
             _client = RavenAzureClient.Create(restoreFromConfiguration.Settings, serverStore.Configuration.Backup);
             _remoteFolderName = restoreFromConfiguration.Settings.RemoteFolderName;
         }
@@ -31,10 +35,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return blob.Data;
         }
 
-        public async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
+        public async Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress)
         {
             var blob = await _client.GetBlobAsync(path);
-            var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(blob.Data, _serverStore.Configuration);
+            var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(blob.Data, blob.Size, _serverStore.Configuration, onProgress, _cancellationToken);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 

@@ -8,10 +8,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
+    /// <summary>
+    /// Operation modifies the lock mode for a database
+    /// </summary>
     public sealed class SetDatabasesLockOperation : IServerOperation
     {
         private readonly Parameters _parameters;
 
+        /// <inheritdoc cref="SetDatabasesLockOperation"/>
+        /// <param name="databaseName">The name of the database</param>
+        /// <param name="mode">Specify the database lock mode. See more at <see cref="DatabaseLockMode"/></param>
+        /// <exception cref="ArgumentNullException">Thrown when database is null</exception>
         public SetDatabasesLockOperation(string databaseName, DatabaseLockMode mode)
         {
             if (databaseName == null)

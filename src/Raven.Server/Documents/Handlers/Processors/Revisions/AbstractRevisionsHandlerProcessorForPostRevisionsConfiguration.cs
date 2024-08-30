@@ -44,4 +44,10 @@ internal abstract class AbstractRevisionsHandlerProcessorForPostRevisionsConfigu
             }
         }
     }
+
+    protected override ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
+    {
+        RequestHandler.LogTaskToAudit(RevisionsHandler.ReadRevisionsConfigTag, Index, configuration);
+        return ValueTask.CompletedTask;
+    }
 }

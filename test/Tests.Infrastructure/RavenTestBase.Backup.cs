@@ -17,6 +17,8 @@ using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -123,6 +125,16 @@ namespace FastTests
                 }, true);
 
                 Assert.True(value);
+
+                // wait for the command to be applied all the way so timer will be updated if needed
+                AsyncHelpers.RunSync(async () =>
+                {
+                    long index = 0;
+                    var res = WaitForValue(() => _parent.Cluster.TryGetLastRaftIndexForCommand(serverStore.Server, nameof(UpdateResponsibleNodeForTasksCommand), out index), true);
+                    Assert.True(res);
+                    Assert.True(index > 0);
+                    await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(index, new() { serverStore.Server });
+                });
             }
 
             /// <summary>
@@ -647,6 +659,33 @@ namespace FastTests
                 {
                     tcs.TrySetResult(null);
                 }
+            }
+            
+            public async Task<string[]> GetBackupFilesAndAssertCountAsync(string backupPath, int expectedCount, long backupOpId, string databaseName, int? shardNumber = null)
+            {
+                var directory = Directory.GetDirectories(backupPath)
+                    .FirstOrDefault(x => shardNumber == null || x.EndsWith($"${shardNumber}"));
+
+                string[] files = null;
+                if (directory != null)
+                {
+                    var filesEnumerable = Directory.GetFiles(directory)
+                        .Where(Raven.Client.Documents.Smuggler.BackupUtils.IsBackupFile);
+                    files = Raven.Client.Documents.Smuggler.BackupUtils.OrderBackups(filesEnumerable).ToArray();
+                }
+                
+                if (files != null && files.Length != expectedCount)
+                {
+                    if (shardNumber != null)
+                        databaseName += $"${shardNumber}";
+                    using var context = JsonOperationContext.ShortTermSingleUse();
+                    var database = await _parent.GetDatabase(databaseName);
+                    var operation = database.Operations.GetOperation(backupOpId);
+                    var jsonOperation = context.ReadObject(operation.ToJson(), "backup operation"); 
+                    Assert.Fail($"Expected {expectedCount} backup files but found {files.Length}.\n{string.Join("\n", files)}\n{jsonOperation}");
+                }
+
+                return files;
             }
 
             public async Task<long> RunBackupForDatabaseModeAsync(RavenServer server, PeriodicBackupConfiguration config, IDocumentStore store, RavenDatabaseMode databaseMode, bool isFullBackup = true, long? taskId = null)

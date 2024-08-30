@@ -79,24 +79,27 @@ namespace Raven.Server.NotificationCenter
             //Read() is transactional, so this is thread-safe
             using (_notificationCenter.Storage.Read(QueryRequestLatenciesId, out var ntv))
             {
-                if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                using (ntv)
                 {
-                    details = new RequestLatencyDetail();
-                }
-                else
-                {
-                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<RequestLatencyDetail>(detailsJson, QueryRequestLatenciesId);
-                }
+                    if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                    {
+                        details = new RequestLatencyDetail();
+                    }
+                    else
+                    {
+                        details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<RequestLatencyDetail>(detailsJson, QueryRequestLatenciesId);
+                    }
 
-                return PerformanceHint.Create(
-                    _notificationCenter.Database,
-                    "Request latency is too high",
-                    "We have detected that some query duration has surpassed the configured threshold",
-                    PerformanceHintType.RequestLatency,
-                    NotificationSeverity.Warning,
-                    "Query",
-                    details
-                );
+                    return PerformanceHint.Create(
+                        _notificationCenter.Database,
+                        "Request latency is too high",
+                        "We have detected that some query duration has surpassed the configured threshold",
+                        PerformanceHintType.RequestLatency,
+                        NotificationSeverity.Warning,
+                        "Query",
+                        details
+                    );
+                }
             }
         }
 

@@ -35,6 +35,7 @@ namespace Raven.Server.Rachis
     {
         private TaskCompletionSource<object> _topologyModification;
         private readonly RachisConsensus _engine;
+        public RachisConsensus Engine => _engine;
         private readonly string _threadName;
 
         public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
@@ -92,6 +93,7 @@ namespace Raven.Server.Rachis
         private MultipleUseFlag _running = new MultipleUseFlag();
         public bool Running => _running.IsRaised();
 
+        public RaftDebugView ToDebugView => new LeaderDebugView(this);
         public void Start(Dictionary<string, RemoteConnection> connections = null)
         {
             _running.Raise();
@@ -515,13 +517,12 @@ namespace Raven.Server.Rachis
 
                 if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < Term)
                     return;// can't commit until at least one entry from our term has been published
-
-                changedFromLeaderElectToLeader = _engine.TakeOffice();
             }
 
             var command = new LeaderApplyCommand(this, _engine, _lastCommit, maxIndexOnQuorum);
             _engine.TxMerger.EnqueueSync(command);
 
+            changedFromLeaderElectToLeader = _engine.TakeOffice();
             _lastCommit = command.LastAppliedCommit;
 
             foreach (var kvp in _entries)
@@ -769,7 +770,7 @@ namespace Raven.Server.Rachis
                     if (_leaderLongRunningWork != null && _leaderLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                         _leaderLongRunningWork.Join(int.MaxValue);
 
-                    _engine.ForTestingPurposes?.ReleaseOnLeaderElect();
+                    _engine.ForTestingPurposes?.HoldOnLeaderElect?.ReleaseOnLeaderElect();
 
                     var ae = new ExceptionAggregator("Could not properly dispose Leader");
                     foreach (var ambassador in _nonVoters)
@@ -798,6 +799,8 @@ namespace Raven.Server.Rachis
                     {
                         existing?.TrySetException(te);
                     }
+
+                    faulted.Task.IgnoreUnobservedExceptions();
 
                     _newEntry.Dispose();
                     _voterResponded.Dispose();

@@ -321,7 +321,7 @@ public partial class RavenTestBase
             return
                 $"{Environment.NewLine}Log for server '{server.ServerStore.NodeTag}':" +
                 $"{Environment.NewLine}Last notified Index '{server.ServerStore.Cluster.LastNotifiedIndex}':" +
-                $"{Environment.NewLine}{context.ReadObject(server.ServerStore.GetLogDetails(context, max: int.MaxValue), "LogSummary/" + server.ServerStore.NodeTag)}" +
+                $"{Environment.NewLine}{context.ReadObject(server.ServerStore.Engine.GetLogDetails(context, start: 0, take: int.MaxValue, detailed: true).ToJson(), "LogSummary/" + server.ServerStore.NodeTag)}" +
                 $"{Environment.NewLine}{server.ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
         }
 
@@ -346,7 +346,7 @@ public partial class RavenTestBase
             server.ServerStore.Observer.Suspended = true;
         }
 
-        public async Task AssertNumberOfCommandsPerNode(long expectedNumberOfCommands, List<RavenServer> servers, string commandType, int timeout = 30_000, int interval = 1_000)
+        internal async Task<(bool, Dictionary<string, long>)> GetNumberOfCommandsPerNode(long expectedNumberOfCommands, List<RavenServer> servers, string commandType, int timeout = 30_000, int interval = 1_000)
         {
             var numberOfCommandsPerNode = new Dictionary<string, long>();
             var isExpectedNumberOfCommandsPerNode = await WaitForValueAsync(() =>
@@ -366,29 +366,31 @@ public partial class RavenTestBase
                 expectedVal: true,
                 timeout, interval);
 
-            Assert.True(isExpectedNumberOfCommandsPerNode, BuildErrorMessage());
-            
-            return;
-            string BuildErrorMessage()
+            bool allNodesHaveSameNumberOfCommands = numberOfCommandsPerNode.Values.Distinct().Count() == 1;
+            Assert.True(allNodesHaveSameNumberOfCommands, BuildErrorMessage(expectedNumberOfCommands, numberOfCommandsPerNode, servers));
+
+            return (isExpectedNumberOfCommandsPerNode, numberOfCommandsPerNode);
+        }
+
+        internal string BuildErrorMessage(long expectedNumberOfCommands, Dictionary<string, long> numberOfCommandsPerNode, List<RavenServer> servers)
+        {
+            var stringBuilder = new StringBuilder();
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var stringBuilder = new StringBuilder();
-
-                using (var context = JsonOperationContext.ShortTermSingleUse())
+                stringBuilder.AppendLine($"Expected number of commands per node: '{expectedNumberOfCommands}'. Actual number of commands per node: ");
+                foreach ((string nodeTag, long numberOfCommands) in numberOfCommandsPerNode)
                 {
-                    stringBuilder.AppendLine($"Expected number of commands per node: {expectedNumberOfCommands}. Actual number of commands per node: ");
-                    foreach ((string nodeTag, long numberOfCommands) in numberOfCommandsPerNode)
-                    {
-                        stringBuilder.AppendLine($"Node tag: '{nodeTag}' with actual number of commands: '{numberOfCommands}'. Commands:");
+                    stringBuilder.AppendLine($"Node tag: '{nodeTag}' with actual number of commands: '{numberOfCommands}'. Commands:");
 
-                        var server = servers.Find(x => x.ServerStore.NodeTag == nodeTag);
-                        var raftCommands = GetRaftCommands(server).Select(djv => context.ReadObject(djv, "raftCommand").ToString()).ToArray();
+                    var server = servers.Find(x => x.ServerStore.NodeTag == nodeTag);
+                    var raftCommands = GetRaftCommands(server).Select(djv => context.ReadObject(djv, "raftCommand").ToString()).ToArray();
 
-                        stringBuilder.AppendLine($"{string.Join($"{Environment.NewLine}\t", raftCommands)}");
-                    }
+                    stringBuilder.AppendLine($"{string.Join($"{Environment.NewLine}\t", raftCommands)}");
                 }
-
-                return stringBuilder.ToString();
             }
+
+            return stringBuilder.ToString();
         }
     }
 }

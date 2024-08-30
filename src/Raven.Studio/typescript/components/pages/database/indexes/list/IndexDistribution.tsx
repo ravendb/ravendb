@@ -41,7 +41,7 @@ function getFormattedTime(date: Date): string {
 
 function ItemWithTooltip(props: ItemWithTooltipProps) {
     const { nodeInfo, sharded, openFaulty, showStaleReason, globalIndexingStatus, index } = props;
-    const entriesCount = nodeInfo.details?.faulty ? "n/a" : nodeInfo.details?.entriesCount ?? "";
+    const entriesCount = nodeInfo.details?.faulty ? "n/a" : (nodeInfo.details?.entriesCount ?? "");
 
     const shard = (
         <div className="top shard">

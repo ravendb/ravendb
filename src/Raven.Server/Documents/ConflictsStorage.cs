@@ -677,7 +677,7 @@ namespace Raven.Server.Documents
             else if (result.Tombstone != null)
             {
                 hasLocalClusterTx = result.Tombstone.Flags.Contain(DocumentFlags.FromClusterTransaction);
-                if (result.Tombstone.Flags.Contain(DocumentFlags.Artificial))
+                if (result.Tombstone.Flags.Contain(DocumentFlags.Artificial | DocumentFlags.FromResharding))
                     return ConflictStatus.Update;
                 local = result.Tombstone.ChangeVector;
             }

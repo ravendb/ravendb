@@ -10,10 +10,18 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// <para>Modifies the lock mode of one or more indexes using the SetIndexesLockOperation.</para>
+    /// The lock mode controls how index modifications are handled and can only be applied to static indexes, not auto-indexes.
+    /// <para><strong>Note:</strong> The lock mode is updated on all nodes within the database group.</para>
+    /// </summary>
     public sealed class SetIndexesLockOperation : IMaintenanceOperation
     {
         private readonly Parameters _parameters;
 
+        /// <inheritdoc cref="SetIndexesLockOperation" />
+        /// <param name="indexName">The name of the index for which the lock mode is being modified.</param>
+        /// <param name="mode">The lock mode to be set for the index. Valid values are Unlock, LockedIgnore, and LockedError.</param>
         public SetIndexesLockOperation(string indexName, IndexLockMode mode)
         {
             if (indexName == null)
@@ -28,6 +36,8 @@ namespace Raven.Client.Documents.Operations.Indexes
             FilterAutoIndexes();
         }
 
+        /// <inheritdoc cref="SetIndexesLockOperation" />
+        /// <param name="parameters">The Parameters object containing the list of index names and the lock mode to apply.</param>
         public SetIndexesLockOperation(Parameters parameters)
         {
             if (parameters == null)
@@ -85,9 +95,19 @@ namespace Raven.Client.Documents.Operations.Indexes
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
+        /// <summary>
+        /// Represents the parameters required to set the lock mode for multiple indexes.
+        /// This class includes the list of index names and the lock mode to apply.
+        /// </summary>
         public sealed class Parameters
         {
+            /// <summary>
+            /// An array of index names for which the lock mode is being modified.
+            /// </summary>
             public string[] IndexNames { get; set; }
+            /// <summary>
+            /// The lock mode to be applied to the specified indexes. Valid values are Unlock, LockedIgnore, and LockedError.
+            /// </summary>
             public IndexLockMode Mode { get; set; }
         }
     }

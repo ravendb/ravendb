@@ -33,6 +33,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Data.BTrees;
@@ -878,11 +879,11 @@ namespace Raven.Server.Json
                 throw new NotSupportedException($"Cannot write query includes of '{includes.GetType()}' type in '{result.GetType()}'.");
 
             writer.WritePropertyName(nameof(result.IndexTimestamp));
-            writer.WriteString(result.IndexTimestamp.ToString(DefaultFormat.DateTimeFormatsToWrite));
+            writer.WriteString(result.IndexTimestamp.GetDefaultRavenFormat());
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.LastQueryTime));
-            writer.WriteString(result.LastQueryTime.ToString(DefaultFormat.DateTimeFormatsToWrite));
+            writer.WriteString(result.LastQueryTime.GetDefaultRavenFormat());
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.IsStale));
@@ -1895,8 +1896,13 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
-                writer.WritePropertyName(includeDoc.GetMetadata().GetId());
-                writer.WriteObject(includeDoc);
+                var metadata = includeDoc.GetMetadata();
+                writer.WritePropertyName(metadata.GetId());
+
+                if (metadata.TryGet(Constants.Documents.Metadata.Sharding.Subscription.NonPersistentFlags, out NonPersistentDocumentFlags flag) && flag.HasFlag(NonPersistentDocumentFlags.AllowDataAsNull))
+                    writer.WriteNull();
+                else
+                    writer.WriteObject(includeDoc);
 
                 await writer.MaybeOuterFlushAsync()
                             .ConfigureAwait(false);

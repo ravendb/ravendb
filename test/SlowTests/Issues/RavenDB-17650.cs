@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
@@ -7,8 +10,12 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server;
 using Raven.Server.Config;
-using SlowTests.MailingList;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
+using Sparrow.Extensions;
+using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -64,7 +71,7 @@ namespace SlowTests.Issues
                 }
             };
             var successMre = new AsyncManualResetEvent();
-            var _ = worker.Run( batch =>
+            var _ = worker.Run(batch =>
             {
                 successMre.Set();
             }, cts.Token);
@@ -82,6 +89,8 @@ namespace SlowTests.Issues
         public async Task Should_Retry_When_AllTopologyNodesDownException_Was_Thrown(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, shouldRunInMemory: false);
+            var subscriptionLog = new List<(DateTime, string)>();
+            subscriptionLog.Add((DateTime.UtcNow, $"Start running on: {string.Join(", ", nodes.Select(x => $"[{x.ServerStore.NodeTag}: {x.WebUrl}]"))}"));
             using var store = GetDocumentStore(new Options(options)
             {
                 ReplicationFactor = 2,
@@ -112,29 +121,88 @@ namespace SlowTests.Issues
             var failMre = new AsyncManualResetEvent();
             worker.OnSubscriptionConnectionRetry += e =>
             {
+                subscriptionLog.Add((DateTime.UtcNow, $"OnSubscriptionConnectionRetry: {e}"));
                 if (e is AllTopologyNodesDownException)
                 {
                     failMre.Set();
                 }
             };
+            worker.OnEstablishedSubscriptionConnection += () =>
+            {
+                subscriptionLog.Add((DateTime.UtcNow, $"OnEstablishedSubscriptionConnection: {((IPEndPoint)worker?._tcpClient?.Client?.RemoteEndPoint)?.Address.ToString()}"));
+            };
+            worker.OnUnexpectedSubscriptionError += ex =>
+            {
+                subscriptionLog.Add((DateTime.UtcNow, $"OnUnexpectedSubscriptionError: {ex}"));
+            };
             var successMre = new AsyncManualResetEvent();
-            var _ = worker.Run( batch =>
+            var _ = worker.Run(batch =>
             {
                 successMre.Set();
             }, cts.Token);
 
             //revive node
             Assert.True(await failMre.WaitAsync(TimeSpan.FromSeconds(15)), "Subscription didn't fail as expected.");
-            ReviveNode(result0.DataDirectory, result0.Url);
-            ReviveNode(result1.DataDirectory, result1.Url);
-            Assert.True(await successMre.WaitAsync(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
+            var revivedNodes = new List<RavenServer>();
+            revivedNodes.Add(ReviveNode(result0.DataDirectory, result0.Url));
+            revivedNodes.Add(ReviveNode(result1.DataDirectory, result1.Url));
+            if (await successMre.WaitAsync(TimeSpan.FromSeconds(15)) == false)
+            {
+                subscriptionLog.Add((DateTime.UtcNow, $"Could not reconnect subscription on {result0.Url} & {result1.Url}"));
+
+                foreach (var node in revivedNodes)
+                {
+                    using (node.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        try
+                        {
+                            var json = node.ServerStore.Cluster.ReadDatabaseTopology(context, store.Database).ToJson();
+
+                            using var bjro = context.ReadObject(json, "ReadDatabaseTopology", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            subscriptionLog.Add((DateTime.UtcNow, $"ReadDatabaseTopology for ['{node.ServerStore.NodeTag}', {node.WebUrl}]{Environment.NewLine}{bjro}"));
+                        }
+                        catch (Exception e)
+                        {
+                            subscriptionLog.Add((DateTime.UtcNow, $"Could not ReadDatabaseTopology for ['{node.ServerStore.NodeTag}', {node.WebUrl}]{Environment.NewLine}{e}"));
+                        }
+                    }
+                    subscriptionLog.Add((DateTime.UtcNow, $"GetClusterTopology for ['{node.ServerStore.NodeTag}', {node.WebUrl}]{Environment.NewLine}{node.ServerStore.GetClusterTopology()}"));
+                }
+
+                List<ClusterObserverLogEntry> logs = new List<ClusterObserverLogEntry>();
+                await ActionWithLeader((l) =>
+        {
+            var x = l.ServerStore.Observer.ReadDecisionsForDatabase();
+            if (x.List == null)
+                return Task.CompletedTask;
+            logs = x.List.ToList();
+
+            return Task.CompletedTask;
+        }, revivedNodes);
+                var sb = new StringBuilder();
+                if (logs == null)
+                {
+                    sb.AppendLine($"ReadDecisionsForDatabase was null");
+                }
+                else if (logs.Count == 0)
+                    sb.AppendLine($"ReadDecisionsForDatabase was empty");
+                else
+                {
+                    sb.AppendLine(
+                        $"Cluster Observer Log Entries:{Environment.NewLine}{string.Join(Environment.NewLine, logs.Select(x => x.ToString()))}");
+                }
+
+                subscriptionLog.Add((DateTime.UtcNow, sb.ToString()));
+                Assert.Fail(string.Join(Environment.NewLine, subscriptionLog.Select(x => $"#### {x.Item1.GetDefaultRavenFormat()}: {x.Item2}")));
+            }
         }
 
-        private void ReviveNode(string nodeDataDirectory, string nodeUrl)
+        private RavenServer ReviveNode(string nodeDataDirectory, string nodeUrl)
         {
             var cs = new Dictionary<string, string>(DefaultClusterSettings);
             cs[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = nodeUrl;
-            var revivedServer = GetNewServer(new ServerCreationOptions
+            return GetNewServer(new ServerCreationOptions
             {
                 DeletePrevious = false,
                 RunInMemory = false,
@@ -242,7 +310,7 @@ namespace SlowTests.Issues
             Assert.True(disableSucceeded.Disabled);
 
             var aggregateException = await Assert.ThrowsAsync<AggregateException>(() => t);
-            
+
             var actualExceptionWasThrown = false;
             var subscriptionInvalidStateExceptionWasThrown = false;
             foreach (var e in aggregateException.InnerExceptions)

@@ -98,7 +98,7 @@ class conflicts extends shardViewModelBase {
             required: true,
             aceValidation: true,
             validation: [{
-                validator: (val: string) => _.every(conflictTokens, t => !val.includes(t)),
+                validator: (val: string) => conflictTokens.every(t => !val.includes(t)),
                 message: "Document contains conflicts markers"
             }]
         });
@@ -133,7 +133,7 @@ class conflicts extends shardViewModelBase {
         );
 
         this.columnPreview.install(".conflicts-grid", ".js-conflict-details-tooltip",
-            (details: replicationConflictListItemDto, column: virtualColumn, e: JQueryEventObject,
+            (details: replicationConflictListItemDto, column: virtualColumn, e: JQuery.TriggeredEvent,
              onValue: (context: any, valueToCopy?: string) => void) => {
                 if (column instanceof textColumn) {
                     if (column.header === "Last Modified") {
@@ -154,13 +154,13 @@ class conflicts extends shardViewModelBase {
         }
 
         this.columnPreview.install(".conflicts-grid", ".js-conflicts-grid-tooltip",
-            (item: replicationConflictListItemDto, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+            (item: replicationConflictListItemDto, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
                 if (column instanceof textColumn) {
                     if (column.header === "Date") {
                         onValue(moment.utc(item.LastModified), item.LastModified);
                     } else {
                         const value = column.getCellValue(item);
-                        if (!_.isUndefined(value)) {
+                        if (value !== undefined) {
                             const json = JSON.stringify(value, null, 4);
                             const html = highlight(json, languages.javascript, "js");
                             onValue(html, json);
@@ -204,7 +204,7 @@ class conflicts extends shardViewModelBase {
         }
     }
 
-    private handleLoadAction(conflictToLoad: replicationConflictListItemDto, event: JQueryEventObject) {
+    private handleLoadAction(conflictToLoad: replicationConflictListItemDto, event: JQuery.TriggeredEvent) {
         event.preventDefault();
 
         const documentId = conflictToLoad.Id;

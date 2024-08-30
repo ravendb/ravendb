@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.ETL
 
         public void Initialize(DatabaseRecord record)
         {
-            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, record.QueueEtls, toRemove: null);
+            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, record.QueueEtls, toRemove: null, null, null);
         }
 
         public event Action<EtlProcess> ProcessAdded;
@@ -109,7 +109,8 @@ namespace Raven.Server.Documents.ETL
             List<OlapEtlConfiguration> newOlapDestinations,
             List<ElasticSearchEtlConfiguration> newElasticSearchDestinations,
             List<QueueEtlConfiguration> newQueueDestinations,
-            List<EtlProcess> toRemove)
+            List<EtlProcess> toRemove, Dictionary<string, string> responsibleNodes,
+            List<string> explanations)
         {
             lock (_loadProcessedLock)
             {
@@ -158,7 +159,9 @@ namespace Raven.Server.Documents.ETL
 
                 foreach (var process in newProcesses)
                 {
-                    process.Start();
+                    var reason = GetStartReason(responsibleNodes, explanations, process);
+
+                    process.Start(reason);
 
                     OnProcessAdded(process);
 
@@ -458,12 +461,13 @@ namespace Raven.Server.Documents.ETL
             ea.ThrowIfNeeded();
         }
 
-        private bool IsMyEtlTask<T, TConnectionString>(DatabaseRecord record, T etlTask, ref Dictionary<string, string> responsibleNodes)
+        private bool IsMyEtlTask<T, TConnectionString>(DatabaseRecord record, T etlTask, ref Dictionary<string, string> responsibleNodes, out List<string> explanations)
             where TConnectionString : ConnectionString
             where T : EtlConfiguration<TConnectionString>
         {
             var processState = GetProcessState(etlTask.Transforms, _database, etlTask.Name);
-            var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, record.Topology, etlTask, processState, _database.NotificationCenter);
+            explanations = new List<string>();
+            var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, record.Topology, etlTask, processState, _database.NotificationCenter, explanations);
 
             responsibleNodes[etlTask.Name] = whoseTaskIsIt;
 
@@ -483,9 +487,11 @@ namespace Raven.Server.Documents.ETL
 
             var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+            List<string> explanations = null;
+
             foreach (var config in record.RavenEtls)
             {
-                if (IsMyEtlTask<RavenEtlConfiguration, RavenConnectionString>(record, config, ref responsibleNodes))
+                if (IsMyEtlTask<RavenEtlConfiguration, RavenConnectionString>(record, config, ref responsibleNodes, out explanations))
                 {
                     myRavenEtl.Add(config);
                 }
@@ -493,7 +499,7 @@ namespace Raven.Server.Documents.ETL
 
             foreach (var config in record.SqlEtls)
             {
-                if (IsMyEtlTask<SqlEtlConfiguration, SqlConnectionString>(record, config, ref responsibleNodes))
+                if (IsMyEtlTask<SqlEtlConfiguration, SqlConnectionString>(record, config, ref responsibleNodes, out explanations))
                 {
                     mySqlEtl.Add(config);
                 }
@@ -501,7 +507,7 @@ namespace Raven.Server.Documents.ETL
 
             foreach (var config in record.OlapEtls)
             {
-                if (IsMyEtlTask<OlapEtlConfiguration, OlapConnectionString>(record, config, ref responsibleNodes))
+                if (IsMyEtlTask<OlapEtlConfiguration, OlapConnectionString>(record, config, ref responsibleNodes, out explanations))
                 {
                     myOlapEtl.Add(config);
                 }
@@ -509,7 +515,7 @@ namespace Raven.Server.Documents.ETL
 
             foreach (var config in record.ElasticSearchEtls)
             {
-                if (IsMyEtlTask<ElasticSearchEtlConfiguration, ElasticSearchConnectionString>(record, config, ref responsibleNodes))
+                if (IsMyEtlTask<ElasticSearchEtlConfiguration, ElasticSearchConnectionString>(record, config, ref responsibleNodes, out explanations))
                 {
                     myElasticSearchEtl.Add(config);
                 }
@@ -517,7 +523,7 @@ namespace Raven.Server.Documents.ETL
 
             foreach (var config in record.QueueEtls)
             {
-                if (IsMyEtlTask<QueueEtlConfiguration, QueueConnectionString>(record, config, ref responsibleNodes))
+                if (IsMyEtlTask<QueueEtlConfiguration, QueueConnectionString>(record, config, ref responsibleNodes, out explanations))
                 {
                     myQueueEtl.Add(config);
                 }
@@ -672,7 +678,7 @@ namespace Raven.Server.Documents.ETL
                 }
             }
 
-            LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, toRemove.SelectMany(x => x.Value).ToList());
+            LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, toRemove.SelectMany(x => x.Value).ToList(), responsibleNodes, explanations);
 
             if (toRemove.Count == 0)
                 return;
@@ -692,7 +698,7 @@ namespace Raven.Server.Documents.ETL
 
                             using (process)
                             {
-                                string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, responsibleNodes);
+                                string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, responsibleNodes, explanations);
                                 process.Stop(reason);
                             }
                         }
@@ -745,7 +751,8 @@ namespace Raven.Server.Documents.ETL
             List<OlapEtlConfiguration> myOlapEtl,
             List<ElasticSearchEtlConfiguration> myElasticSearchEtl,
             List<QueueEtlConfiguration> myQueueEtl,
-            Dictionary<string, string> responsibleNodes)
+            Dictionary<string, string> responsibleNodes,
+            List<string> explanations)
         {
             EtlConfigurationCompareDifferences? differences = null;
             var transformationDiffs = new List<(string TransformationName, EtlConfigurationCompareDifferences Difference)>();
@@ -812,12 +819,40 @@ namespace Raven.Server.Documents.ETL
             {
                 if (responsibleNodes.TryGetValue(process.ConfigurationName, out var responsibleNode))
                 {
-                    reason += $"ETL was moved to another node. Responsible node is: {responsibleNode}";
+                    reason += "ETL was moved to another node. ";
+
+                    if (string.IsNullOrEmpty(responsibleNode) == false)
+                        reason += $"Responsible node is: {responsibleNode}. ";
+
+                    if (explanations != null)
+                        reason += $"(Node switch explanation: {string.Join(". ", explanations)}) ";
                 }
                 else
                 {
                     reason += $"ETL was deleted or moved to another node (no configuration named '{process.ConfigurationName}' was found). ";
                 }
+            }
+
+            return reason;
+        }
+
+        private string GetStartReason(Dictionary<string, string> responsibleNodes, List<string> explanations, EtlProcess process)
+        {
+            string reason;
+
+            if (responsibleNodes?.TryGetValue(process.ConfigurationName, out var responsibleNode) == true)
+            {
+                if (responsibleNode == _serverStore.NodeTag)
+                    reason = "The node is responsible for this task ";
+                else
+                    reason = $"Node {responsibleNode} should handle this task";
+
+                if (explanations is { Count: > 0 })
+                    reason += $"(Node selection explanation: {string.Join(". ", explanations)}) ";
+            }
+            else
+            {
+                reason = "Initialize";
             }
 
             return reason;

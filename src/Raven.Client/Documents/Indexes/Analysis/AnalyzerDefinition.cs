@@ -5,8 +5,14 @@ namespace Raven.Client.Documents.Indexes.Analysis
 {
     public sealed class AnalyzerDefinition
     {
+        /// <summary>
+        /// Name of the analyzer
+        /// </summary>
         public string Name { get; set; }
 
+        /// <summary>
+        /// C# source-code of the analyzer
+        /// </summary>
         public string Code { get; set; }
 
         public DynamicJsonValue ToJson()

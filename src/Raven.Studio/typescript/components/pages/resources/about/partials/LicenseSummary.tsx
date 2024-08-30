@@ -16,7 +16,7 @@ import forceLicenseUpdateCommand from "commands/licensing/forceLicenseUpdateComm
 import licenseModel from "models/auth/licenseModel";
 import useConfirm from "components/common/ConfirmDialog";
 import useId from "hooks/useId";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 interface LicenseSummaryProps {
     asyncCheckLicenseServerConnectivity: AsyncState<ConnectivityStatus>;

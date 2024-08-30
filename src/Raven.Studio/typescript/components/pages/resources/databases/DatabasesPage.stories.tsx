@@ -1,5 +1,5 @@
 ﻿import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { Meta, ComponentStory, StoryObj } from "@storybook/react";
+import { Meta, StoryFn, StoryObj } from "@storybook/react";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import React from "react";
 import { DatabasesPage } from "./DatabasesPage";
@@ -32,7 +32,7 @@ function getDatabaseNamesForNode(nodeTag: string, dto: DatabaseSharedInfo): stri
     return dto.nodes.some((x) => x.tag === nodeTag) ? [dto.name] : [];
 }
 
-export const Sharded: ComponentStory<typeof DatabasesPage> = () => {
+export const Sharded: StoryFn<typeof DatabasesPage> = () => {
     commonInit();
 
     const value = mockStore.databases.with_Sharded();
@@ -42,7 +42,7 @@ export const Sharded: ComponentStory<typeof DatabasesPage> = () => {
     return <DatabasesPage />;
 };
 
-export const Cluster: ComponentStory<typeof DatabasesPage> = () => {
+export const Cluster: StoryFn<typeof DatabasesPage> = () => {
     commonInit();
 
     const value = mockStore.databases.with_Cluster();
@@ -52,7 +52,7 @@ export const Cluster: ComponentStory<typeof DatabasesPage> = () => {
     return <DatabasesPage />;
 };
 
-export const WithDifferentAccessLevel: ComponentStory<typeof DatabasesPage> = () => {
+export const WithDifferentAccessLevel: StoryFn<typeof DatabasesPage> = () => {
     commonInit();
 
     const { accessManager } = mockStore;
@@ -82,7 +82,7 @@ export const WithDifferentAccessLevel: ComponentStory<typeof DatabasesPage> = ()
     return <DatabasesPage />;
 };
 
-export const WithLoadError: ComponentStory<typeof DatabasesPage> = () => {
+export const WithLoadErrorOnSingleNode: StoryFn<typeof DatabasesPage> = () => {
     commonInit();
 
     const value = mockStore.databases.with_Cluster();
@@ -94,7 +94,19 @@ export const WithLoadError: ComponentStory<typeof DatabasesPage> = () => {
     return <DatabasesPage />;
 };
 
-export const WithDeletion: ComponentStory<typeof DatabasesPage> = () => {
+export const WithLoadErrorOnAllNodes: StoryFn<typeof DatabasesPage> = () => {
+    commonInit();
+
+    const value = mockStore.databases.with_Cluster();
+
+    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value), {
+        loadError: ["A", "B", "C"],
+    });
+
+    return <DatabasesPage />;
+};
+
+export const WithDeletion: StoryFn<typeof DatabasesPage> = () => {
     commonInit();
 
     const value = mockStore.databases.with_Cluster((x) => {
@@ -106,7 +118,7 @@ export const WithDeletion: ComponentStory<typeof DatabasesPage> = () => {
     return <DatabasesPage />;
 };
 
-export const Single: ComponentStory<typeof DatabasesPage> = () => {
+export const Single: StoryFn<typeof DatabasesPage> = () => {
     commonInit();
 
     const value = mockStore.databases.with_Single();
@@ -116,7 +128,7 @@ export const Single: ComponentStory<typeof DatabasesPage> = () => {
     return <DatabasesPage />;
 };
 
-export const CompactDatabaseAuto: ComponentStory<typeof DatabasesPage> = () => {
+export const CompactDatabaseAuto: StoryFn<typeof DatabasesPage> = () => {
     commonInit();
 
     const value = mockStore.databases.with_Single();
@@ -137,7 +149,7 @@ function assignNodeType(tag: string): databaseGroupNodeType {
     }
 }
 
-export const DifferentNodeStates: ComponentStory<typeof DatabasesPage> = () => {
+export const DifferentNodeStates: StoryFn<typeof DatabasesPage> = () => {
     commonInit();
 
     const clusterDb = DatabasesStubs.nonShardedClusterDatabase().toDto();

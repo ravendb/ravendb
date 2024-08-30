@@ -92,7 +92,7 @@ class clusterTopologyManager {
         });
 
         this.localNodeUrl = ko.pureComputed(() => {
-            const localNode = _.find(this.topology().nodes(), x => x.tag() === this.localNodeTag());
+            const localNode = this.topology().nodes().find(x => x.tag() === this.localNodeTag());
             return localNode ? localNode.serverUrl() : null;
         });
 

@@ -35,6 +35,7 @@ namespace Raven.Server.Documents
 {
     public sealed class DatabasesLandlord : IDisposable
     {
+        public const string Init = "Init";
         public const string DoNotRemove = "DoNotRemove";
 
         private readonly AsyncGuard _disposing;
@@ -157,7 +158,7 @@ namespace Raven.Server.Documents
                                 // we need to update this upon any shard topology change
                                 // and upon migration completion
                                 var databaseContext = GetOrAddShardedDatabaseContext(databaseName, rawRecord);
-                                await databaseContext.UpdateDatabaseRecordAsync(rawRecord, index);
+                                await databaseContext.UpdateDatabaseRecordAsync(rawRecord, index, type, changeType);
                             }
                             else
                             {
@@ -270,28 +271,26 @@ namespace Raven.Server.Documents
 
             var database = await task;
 
-            switch (changeType)
-            {
-                case ClusterDatabaseChangeType.RecordChanged:
-                    await database.StateChangedAsync(index);
-                    if (type == ClusterStateMachine.SnapshotInstalled)
+                    switch (changeType)
                     {
-                        database.NotifyOnPendingClusterTransaction(index, changeType);
-                    }
-                    break;
+                        case ClusterDatabaseChangeType.RecordChanged:
+                            await database.StateChangedAsync(index, type, changeType);
+                            if (type == ClusterStateMachine.SnapshotInstalled)
+                            {
+                                database.NotifyOnPendingClusterTransaction();
+                            }
+                            break;
 
                 case ClusterDatabaseChangeType.ValueChanged:
                     await database.ValueChangedAsync(index, type, changeState);
                     break;
 
                 case ClusterDatabaseChangeType.PendingClusterTransactions:
-                case ClusterDatabaseChangeType.ClusterTransactionCompleted:
-
                     if (ForTestingPurposes?.BeforeHandleClusterTransactionOnDatabaseChanged != null)
                         await ForTestingPurposes.BeforeHandleClusterTransactionOnDatabaseChanged.Invoke(_serverStore);
 
                     database.SetIds(rawRecord);
-                    database.NotifyOnPendingClusterTransaction(index, changeType);
+                    database.NotifyOnPendingClusterTransaction();
                     break;
                 default:
                     ThrowUnknownClusterDatabaseChangeType(changeType);
@@ -308,6 +307,7 @@ namespace Raven.Server.Documents
             {
                 case nameof(PutServerWideBackupConfigurationCommand):
                 case nameof(UpdatePeriodicBackupStatusCommand):
+                case nameof(UpdateResponsibleNodeForTasksCommand):
                     return true;
 
                 default:
@@ -878,7 +878,8 @@ namespace Raven.Server.Documents
 
         private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, string caller = null)
         {
-            if (await _databaseSemaphore.WaitAsync(_concurrentDatabaseLoadTimeout) == false)
+            var timeToWait = caller == Init ? Timeout.InfiniteTimeSpan : _concurrentDatabaseLoadTimeout;
+            if (await _databaseSemaphore.WaitAsync(timeToWait) == false)
                 throw new DatabaseConcurrentLoadTimeoutException("Too many databases loading concurrently, timed out waiting for them to load.");
 
             return await CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup);
@@ -996,7 +997,7 @@ namespace Raven.Server.Documents
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =
             new ConcurrentDictionary<string, ConcurrentQueue<string>>(StringComparer.OrdinalIgnoreCase);
 
-        public static DocumentDatabase CreateDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
+        public static DocumentDatabase CreateDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<LogMode, string> addToInitLog)
         {
             return ShardHelper.IsShardName(name) ?
                 new ShardedDocumentDatabase(name, configuration, serverStore, addToInitLog) :
@@ -1005,15 +1006,24 @@ namespace Raven.Server.Documents
 
         private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup, Action<string> addToInitLog)
         {
-            void AddToInitLog(string txt)
+            void AddToInitLog(LogMode logMode, string txt)
             {
                 addToInitLog?.Invoke(txt);
                 string msg = txt;
                 msg = $"[Load Database] {DateTime.UtcNow} :: Database '{databaseName}' : {msg}";
                 if (InitLog.TryGetValue(databaseName.Value, out var q))
                     q.Enqueue(msg);
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(msg);
+
+                switch (logMode)
+                {
+                    case LogMode.Operations when _logger.IsOperationsEnabled:
+                        _logger.Operations(msg);
+                        break;
+
+                    case LogMode.Information when _logger.IsInfoEnabled:
+                        _logger.Info(msg);
+                        break;
+                }
             }
 
             DocumentDatabase documentDatabase = null;
@@ -1025,7 +1035,7 @@ namespace Raven.Server.Documents
                     s => new ConcurrentQueue<string>(),
                     (s, existing) => new ConcurrentQueue<string>());
 
-                AddToInitLog("Starting database initialization");
+                AddToInitLog(LogMode.Operations, "Starting database initialization");
 
                 var sp = Stopwatch.StartNew();
 
@@ -1040,7 +1050,7 @@ namespace Raven.Server.Documents
 
                 ForTestingPurposes?.AfterDatabaseInitialize?.Invoke();
 
-                AddToInitLog("Finish database initialization");
+                AddToInitLog(LogMode.Operations, "Finish database initialization");
                 DeleteDatabaseCachedInfo(documentDatabase.Name, throwOnError: false);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
@@ -1247,7 +1257,6 @@ namespace Raven.Server.Documents
             RecordRestored,
             ValueChanged,
             PendingClusterTransactions,
-            ClusterTransactionCompleted
         }
 
         public bool UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)
@@ -1374,7 +1383,11 @@ namespace Raven.Server.Documents
 
                             nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters
                             {
-                                DatabaseName = databaseName, LastEtag = nextIdleDatabaseActivity.LastEtag, Logger = _logger, ServerStore = _serverStore
+                                DatabaseName = databaseName,
+                                LastEtag = nextIdleDatabaseActivity.LastEtag,
+                                Logger = _logger,
+                                ServerStore = _serverStore,
+                                IsIdle = true
                             });
 
                             RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
@@ -1512,7 +1525,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static async ValueTask NotifyFeaturesAboutStateChangeAsync(DatabaseRecord record, long index, StateChange state)
+        public static async ValueTask NotifyFeaturesAboutStateChangeAsync(DatabaseRecord record, long index, StateChange state, string type,
+            DatabasesLandlord.ClusterDatabaseChangeType? changeType = null)
         {
             if (CanSkipDatabaseRecordChange())
                 return;
@@ -1540,7 +1554,14 @@ namespace Raven.Server.Documents
                         $"{state.Name} != {record.DatabaseName}");
 
                     if (state.Logger.IsInfoEnabled)
-                        state.Logger.Info($"Starting to process record {index} (current {state.LastIndexChange}) for {record.DatabaseName}.");
+                    {
+                        string msg = $"Starting to process record {index} (current {state.LastIndexChange}) for {record.DatabaseName}. Type: {type}. ";
+
+                        if (changeType != null)
+                            msg += $"Cluster database change type: {changeType}";
+
+                        state.Logger.Info(msg);
+                    }
 
                     try
                     {

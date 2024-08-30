@@ -18,5 +18,11 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
         {
             return RequestHandler.ServerStore.ModifyRevisionsForConflicts(context, RequestHandler.DatabaseName, configuration, raftRequestId);
         }
+
+        protected override ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
+        {
+            RequestHandler.LogTaskToAudit(RevisionsHandler.ConflictedRevisionsConfigTag, Index, configuration);
+            return ValueTask.CompletedTask;
+        }
     }
 }

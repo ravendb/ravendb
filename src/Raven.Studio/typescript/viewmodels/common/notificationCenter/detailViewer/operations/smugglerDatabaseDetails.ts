@@ -573,7 +573,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             return null;
         }
 
-        return this.processingItems[name].ewma.value();
+        return this.processingItems[name].ewma.value().toLocaleString();
     }
 
     private static showSpeed(name: string) {
@@ -602,7 +602,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             return false;
         }
 
-        const isUpdate = !_.isUndefined(incoming);
+        const isUpdate = incoming !== undefined;
 
         if (!isUpdate) {
             // object was just created  - only copy message -> message field

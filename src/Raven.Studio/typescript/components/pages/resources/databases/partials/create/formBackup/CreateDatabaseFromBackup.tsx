@@ -102,11 +102,6 @@ export default function CreateDatabaseFromBackup({
         return tryHandleSubmit(async () => {
             reportEvent("database", "restore");
 
-            asyncDatabaseNameValidation.execute(formValues.basicInfoStep.databaseName);
-            if (!asyncDatabaseNameValidation.result) {
-                return;
-            }
-
             // It causes errors when fetching stats. Commented for now
             // databasesManager.default.activateAfterCreation(formValues.basicInfoStep.databaseName);
 
@@ -122,8 +117,8 @@ export default function CreateDatabaseFromBackup({
         });
     };
 
-    const handleGoNext = useCallback(() => {
-        nextStepWithValidation(validateToTargetStep(currentStep));
+    const handleGoNext = useCallback(async () => {
+        await nextStepWithValidation(validateToTargetStep(currentStep));
     }, [currentStep, nextStepWithValidation, validateToTargetStep]);
 
     useCreateDatabaseShortcuts({
@@ -177,13 +172,7 @@ export default function CreateDatabaseFromBackup({
                             Finish
                         </ButtonWithSpinner>
                     ) : (
-                        <Button
-                            type="button"
-                            color="primary"
-                            className="rounded-pill"
-                            onClick={handleGoNext}
-                            disabled={asyncDatabaseNameValidation.loading}
-                        >
+                        <Button type="button" color="primary" className="rounded-pill" onClick={handleGoNext}>
                             Next <Icon icon="arrow-thin-right" margin="ms-1" />
                         </Button>
                     )}

@@ -27,7 +27,7 @@ class recentErrorDetails extends dialogViewModelBase {
 
     copyErrorDetails(): void {
         const errorDetails = this.recentError.details();
-        copyToClipboard.copy(errorDetails, "Error has been copied to clipboard");
+        copyToClipboard.copy(errorDetails, "Error has been copied to clipboard", document.getElementById("recent-error-details"));
     }
 
     static supportsDetailsFor(notification: abstractNotification) {

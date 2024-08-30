@@ -6,7 +6,7 @@ import useConfirm from "components/common/ConfirmDialog";
 import classNames from "classnames";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 import { useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import useBoolean from "components/hooks/useBoolean";
 import { Switch } from "components/common/Checkbox";
 import AceEditor from "components/common/AceEditor";

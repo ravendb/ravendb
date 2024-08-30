@@ -9,10 +9,21 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// <para>Adjusts the priority of index threads using the SetIndexesPriorityOperation.
+    /// Each index operates on its own dedicated thread, and this operation allows you to raise or lower the thread's priority.</para>
+    /// By default, RavenDB assigns a lower priority to indexing threads compared to request-processing threads.
+    /// 
+    /// <para><strong>Indexes scope:</strong> The priority can be set for both static and auto indexes.</para>
+    /// <para><strong>Nodes scope:</strong> The priority is updated on all nodes within the database group.</para>
+    /// </summary>
     public sealed class SetIndexesPriorityOperation : IMaintenanceOperation
     {
         private readonly Parameters _parameters;
 
+        /// <inheritdoc cref="SetIndexesPriorityOperation" />
+        /// <param name="indexName">The name of the index for which the priority is being modified.</param>
+        /// <param name="priority">The priority level to set for the index. Valid values are Low, Normal, and High.</param>
         public SetIndexesPriorityOperation(string indexName, IndexPriority priority)
         {
             if (indexName == null)
@@ -25,6 +36,8 @@ namespace Raven.Client.Documents.Operations.Indexes
             };
         }
 
+        /// <inheritdoc cref="SetIndexesPriorityOperation" />
+        /// <param name="parameters">The Parameters object containing the list of index names and the priority level to apply.</param>
         public SetIndexesPriorityOperation(Parameters parameters)
         {
             if (parameters == null)
@@ -73,9 +86,19 @@ namespace Raven.Client.Documents.Operations.Indexes
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
+        /// <summary>
+        /// Represents the parameters required to set the priority level for multiple indexes.
+        /// This class includes the list of index names and the priority level to apply.
+        /// </summary>
         public sealed class Parameters
         {
+            /// <summary>
+            /// An array of index names for which the priority is being modified.
+            /// </summary>
             public string[] IndexNames { get; set; }
+            /// <summary>
+            /// The priority level to apply to the specified indexes. Valid values are Low, Normal, and High.
+            /// </summary>
             public IndexPriority Priority { get; set; }
         }
     }

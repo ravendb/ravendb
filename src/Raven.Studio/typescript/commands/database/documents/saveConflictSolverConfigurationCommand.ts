@@ -8,7 +8,7 @@ class saveConflictSolverConfigurationCommand extends commandBase {
 
     constructor(db: database | string, configuration: Raven.Client.ServerWide.ConflictSolver) {
         super();
-        this.databaseName = (_.isString(db) ? db : db.name);
+        this.databaseName = typeof db === "string" ? db : db.name;
         this.configuration = configuration;
     }
 

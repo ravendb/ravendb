@@ -21,7 +21,7 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
     [RavenAction("/studio/upgrade-info", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
     public async Task GetUpgradeInfo()
     {
-        if (ServerVersion.Build == ServerVersion.DevBuildNumber)
+        if (ServerVersion.Build < 60_000)
         {
             NoContentStatus();
             return;

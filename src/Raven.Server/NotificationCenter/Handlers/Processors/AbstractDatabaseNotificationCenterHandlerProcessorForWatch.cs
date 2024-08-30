@@ -39,7 +39,8 @@ internal abstract class AbstractDatabaseNotificationCenterHandlerProcessorForWat
             {
                 foreach (var alert in storedNotifications)
                 {
-                    await writer.WriteToWebSocket(alert.Json);
+                    using (alert)
+                        await writer.WriteToWebSocket(alert.Json);
                 }
             }
 

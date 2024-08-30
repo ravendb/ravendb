@@ -24,6 +24,7 @@ import DatabaseUtils from "components/utils/DatabaseUtils";
 import liveQueueSinkStatsWebSocketClient from "common/liveQueueSinkStatsWebSocketClient";
 import showDataDialog from "viewmodels/common/showDataDialog";
 import app from "durandal/app";
+import { sumBy } from "common/typeUtils";
 
 type treeActionType = "toggleTrack" | "trackItem" | "gapItem" | "previewEtlScript" | "previewSinkScript" |
                       "subscriptionErrorItem" | "subscriptionPendingItem" | "subscriptionConnectionItem" | "previewSubscriptionQuery";
@@ -600,7 +601,7 @@ class ongoingTasksStats extends shardViewModelBase {
         this.enableLiveView();
 
         const $body = $("body");
-        this.registerDisposableDelegateHandler($body, "click", ".js-task-details-btn", (event: JQueryEventObject) => {
+        this.registerDisposableDelegateHandler($body, "click", ".js-task-details-btn", (event: JQuery.TriggeredEvent) => {
             event.preventDefault();
             app.showBootstrapDialog(new showDataDialog("Error details", this.currentDetails, "plain"));
             
@@ -799,10 +800,10 @@ class ongoingTasksStats extends shardViewModelBase {
     }
 
     private checkBufferUsage() {
-        const replicationDataCount = _.sumBy(this.replicationData, x => x.Performance.length);
-        const etlDataCount = _.sumBy(this.etlData, t => _.sumBy(t.Stats, s => s.Performance.length));
-        const queueSinkDataCount = _.sumBy(this.queueSinkData, t => _.sumBy(t.Stats, s => s.Performance.length));
-        const subscriptionDataCount = _.sumBy(this.subscriptionData, x => x.BatchPerformance.length + x.ConnectionPerformance.length);
+        const replicationDataCount = sumBy(this.replicationData, x => x.Performance.length);
+        const etlDataCount = sumBy(this.etlData, t => sumBy(t.Stats, s => s.Performance.length));
+        const queueSinkDataCount = sumBy(this.queueSinkData, t => sumBy(t.Stats, s => s.Performance.length));
+        const subscriptionDataCount = sumBy(this.subscriptionData, x => x.BatchPerformance.length + x.ConnectionPerformance.length);
         
         const dataCount = replicationDataCount + etlDataCount + queueSinkDataCount + subscriptionDataCount;
 
@@ -1005,16 +1006,16 @@ class ongoingTasksStats extends shardViewModelBase {
     }
 
     private findAndSetTaskNames(): void {
-        this.replicationData = _.orderBy(this.replicationData, [x => x.Type, x => x.Description], ["desc", "asc"]);
-        this.etlData = _.orderBy(this.etlData, [x => x.EtlType, x => x.TaskName], ["asc", "asc"]);
-        this.queueSinkData = _.orderBy(this.queueSinkData, [x => x.BrokerType, x => x.TaskName], ["asc", "asc"]);
-        this.subscriptionData = _.orderBy(this.subscriptionData, [x => x.TaskName]);
+        this.replicationData = _.orderBy(this.replicationData, [(x: any) => x.Type, (x: any) => x.Description], ["desc", "asc"]);
+        this.etlData = _.orderBy(this.etlData, [(x: any) => x.EtlType, (x: any) => x.TaskName], ["asc", "asc"]);
+        this.queueSinkData = _.orderBy(this.queueSinkData, [(x: any) => x.BrokerType, (x: any) => x.TaskName], ["asc", "asc"]);
+        this.subscriptionData = _.orderBy(this.subscriptionData, [(x: any) => x.TaskName]);
         
         this.etlData.forEach(etl => {
-            etl.Stats = _.orderBy(etl.Stats, [x => x.TransformationName], ["asc"]);
+            etl.Stats = _.orderBy(etl.Stats, [(x: any) => x.TransformationName], ["asc"]);
         });
         this.queueSinkData.forEach(etl => {
-            etl.Stats = _.orderBy(etl.Stats, [x => x.ScriptName], ["asc"]);
+            etl.Stats = _.orderBy(etl.Stats, [(x: any) => x.ScriptName], ["asc"]);
         });
         
         const trackInfos: trackInfo[] = [];
@@ -1133,7 +1134,7 @@ class ongoingTasksStats extends shardViewModelBase {
     }
     
     private calcMaxYOffset(): void {
-        const heightSum = _.sumBy(this.filteredTrackNames(), track => {
+        const heightSum = sumBy(this.filteredTrackNames(), track => {
             const isOpened = _.includes(this.expandedTracks(), track);
             const trackInfo = this.tracksInfo().find(x => x.name === track);
             return isOpened ? trackInfo.openedHeight : trackInfo.closedHeight;
@@ -2271,20 +2272,20 @@ class ongoingTasksStats extends shardViewModelBase {
                     const baseElement = context.rootStats as EtlPerformanceBaseWithCache;
                     switch (context.item.Name) {
                         case "Extract":
-                            _.forIn(baseElement.NumberOfExtractedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+                            Object.entries(baseElement.NumberOfExtractedItems).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
                                 if (value) {
                                     tooltipHtml += `<div class="tooltip-li">Extracted <div class="value">${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()} </div></div>`;
                                 }
                             });
 
-                            _.forIn(baseElement.LastFilteredOutEtags, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+                            Object.entries(baseElement.LastFilteredOutEtags).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
                                 if (value) {
                                     tooltipHtml += `<div class="tooltip-li">Last filtered out Etag for ${key}: <div class="value">${value} </div></div>`;
                                 }
                             });
                             break;
                         case "Transform":
-                            _.forIn(baseElement.NumberOfTransformedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+                            Object.entries(baseElement.NumberOfTransformedItems).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
                                 if (value) {
                                     tooltipHtml += `<div class="tooltip-li">Transformed ${ongoingTasksStats.etlItemTypeToUi(key)}: <div class="value">${value.toLocaleString()} </div></div>`;
                                     
@@ -2295,7 +2296,7 @@ class ongoingTasksStats extends shardViewModelBase {
                                 }
                             });
 
-                            _.forIn(baseElement.NumberOfTransformedTombstones, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+                            Object.entries(baseElement.NumberOfTransformedTombstones).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
                                 if (value) {
                                     tooltipHtml += `<div class="tooltip-li">Transformed ${ongoingTasksStats.etlItemTypeToUi(key)} tombstones: <div class="value">${value.toLocaleString()} </div></div>`;
                                 }
@@ -2305,7 +2306,7 @@ class ongoingTasksStats extends shardViewModelBase {
                                 tooltipHtml += `<div class="tooltip-li">Transformation error count: <div class="value">${baseElement.TransformationErrorCount.toLocaleString()} </div></div>`;
                             }
 
-                            _.forIn(baseElement.LastTransformedEtags, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+                            Object.entries(baseElement.LastTransformedEtags).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
                                 if (value) {
                                     tooltipHtml += `<div class="tooltip-li">Last transformed Etag for ${key}: <div class="value">${value} </div></div>`;
                                 }
@@ -2450,7 +2451,7 @@ class ongoingTasksStats extends shardViewModelBase {
         try {
             let importedData: exportFileFormat = JSON.parse(result);
             
-            if (_.isArray(importedData)) {
+            if (Array.isArray(importedData)) {
                 // maybe we imported old format let's try to convert
                 importedData = {
                     Replication: importedData as any, // we force casting here

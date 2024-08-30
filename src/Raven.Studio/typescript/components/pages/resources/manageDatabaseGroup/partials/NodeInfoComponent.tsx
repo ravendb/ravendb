@@ -23,7 +23,7 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
 import useConfirm from "components/common/ConfirmDialog";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
 
 interface OrchestratorInfoComponentProps {
@@ -123,16 +123,29 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
                             Delete from group
                         </DropdownToggle>
                         <DropdownMenu>
-                            <DropdownItem onClick={() => deleteFromGroup(node.tag, false)}>
+                            <DropdownItem
+                                onClick={() => deleteFromGroup(node.tag, false)}
+                                className="d-flex flex-row align-items-center gap-1"
+                            >
                                 <Icon icon="disconnected" />
-                                <span>Soft Delete</span>&nbsp;
-                                <br />
-                                <small>stop replication and keep database files on the node</small>
+                                <div className="d-flex flex-column">
+                                    <span className="lh-1">Soft Delete</span>
+                                    <small className="text-muted">
+                                        Stop replication and keep database files on the node
+                                    </small>
+                                </div>
                             </DropdownItem>
-                            <DropdownItem onClick={() => deleteFromGroup(node.tag, true)}>
-                                <Icon icon="trash" color="danger" /> <span className="text-danger">Hard Delete</span>
-                                <br />
-                                &nbsp;<small>stop replication and remove database files on the node</small>
+                            <DropdownItem
+                                onClick={() => deleteFromGroup(node.tag, true)}
+                                className="d-flex flex-row align-items-center gap-1"
+                            >
+                                <Icon icon="trash" color="danger" />
+                                <div className="d-flex flex-column">
+                                    <span className="text-danger lh-1">Hard Delete</span>
+                                    <small className="text-muted">
+                                        Stop replication and remove database files on the node
+                                    </small>
+                                </div>
                             </DropdownItem>
                         </DropdownMenu>
                     </UncontrolledDropdown>
@@ -199,16 +212,29 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
                             Delete from group
                         </DropdownToggle>
                         <DropdownMenu>
-                            <DropdownItem onClick={() => deleteFromGroup(node.tag, false)}>
+                            <DropdownItem
+                                onClick={() => deleteFromGroup(node.tag, false)}
+                                className="d-flex flex-row align-items-center gap-1"
+                            >
                                 <Icon icon="trash" />
-                                <span>Soft Delete</span>&nbsp;
-                                <br />
-                                <small>stop replication and keep database files on the node</small>
+                                <div className="d-flex flex-column">
+                                    <span className="lh-1">Soft Delete</span>
+                                    <small className="text-muted">
+                                        Stop replication and keep database files on the node
+                                    </small>
+                                </div>
                             </DropdownItem>
-                            <DropdownItem onClick={() => deleteFromGroup(node.tag, true)}>
-                                <Icon icon="alerts" color="danger" /> <span className="text-danger">Hard Delete</span>
-                                <br />
-                                &nbsp;<small>stop replication and remove database files on the node</small>
+                            <DropdownItem
+                                onClick={() => deleteFromGroup(node.tag, true)}
+                                className="d-flex flex-row align-items-center gap-1"
+                            >
+                                <Icon icon="alerts" color="danger" />
+                                <div className="d-flex flex-column">
+                                    <span className="text-danger lh-1">Hard Delete</span>
+                                    <small className="text-muted">
+                                        Stop replication and remove database files on the node
+                                    </small>
+                                </div>
                             </DropdownItem>
                         </DropdownMenu>
                     </UncontrolledDropdown>

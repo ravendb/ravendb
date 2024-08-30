@@ -9,7 +9,7 @@ class saveSubscriptionTaskCommand extends commandBase {
 
     constructor( db: database | string, payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions,  taskId?: number) {
         super();
-        this.databaseName = (_.isString(db) ? db : db.name);
+        this.databaseName = (typeof db === "string" ? db : db.name);
         this.taskId = taskId;
         this.payload = payload;
     }

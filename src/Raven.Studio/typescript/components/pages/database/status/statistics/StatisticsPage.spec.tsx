@@ -2,7 +2,7 @@
 import { act, rtlRender } from "test/rtlTestUtils";
 import React from "react";
 import { mockServices } from "test/mocks/services/MockServices";
-import { composeStory } from "@storybook/testing-react";
+import { composeStory } from "@storybook/react";
 import { boundCopy } from "components/utils/common";
 import * as stories from "../../status/statistics/StatisticsPage.stories";
 import { IndexesStubs } from "test/stubs/IndexesStubs";

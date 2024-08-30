@@ -204,4 +204,33 @@ internal static class DocumentationUrls
             public const string RollupAndRetention = nameof(RollupAndRetention);
         }
     }
+
+    internal static class Operations
+    {
+        internal static class ServerOperations
+        {
+            internal static class Analyzers
+            {
+                /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/indexes/using-analyzers#creating-custom-analyzers"/></remarks>
+                public static string CustomAnalyzers => nameof(CustomAnalyzers);
+            }
+            
+            internal static class Sorters
+            {
+                /// <remarks><seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/client-api/operations/maintenance/sorters/put-sorter#put-custom-sorter"/></remarks>
+                public static string CustomSorters = nameof(CustomSorters);
+            }
+
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/csharp/client-api/operations/maintenance/clean-change-vector"/></remarks>
+            public static string UpdateUnusedDatabasesOperation = nameof(UpdateUnusedDatabasesOperation);
+            
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/client-api/operations/maintenance/indexes/set-index-lock"/></remarks>
+            public static string SetDatabasesLockOperation = nameof(SetDatabasesLockOperation);  
+            
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/client-api/operations/server-wide/toggle-dynamic-database-distribution"/></remarks>
+            public static string SetDatabaseDynamicDistributionOperation = nameof(SetDatabaseDynamicDistributionOperation);
+            
+            
+        }
+    }
 }

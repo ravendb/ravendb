@@ -6,7 +6,7 @@ import {
     RichPanelName,
     RichPanelActions,
 } from "components/common/RichPanel";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import useBoolean from "components/hooks/useBoolean";
 import DatabaseCustomSorterTest from "components/pages/database/settings/customSorters/DatabaseCustomSorterTest";
 import { useAppSelector } from "components/store";
@@ -20,7 +20,7 @@ interface DatabaseCustomSortersServerWideListItemProps {
 export default function DatabaseCustomSortersServerWideListItem({
     sorter,
 }: DatabaseCustomSortersServerWideListItemProps) {
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const { value: isTestMode, toggle: toggleIsTestMode } = useBoolean(false);
 

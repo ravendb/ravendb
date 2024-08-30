@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
@@ -223,7 +222,7 @@ loadToOrders(partitionBy(key), o);
                 Assert.True(result.Success);
                 Assert.False(result.Disabled);
 
-                var database = await WaitForDatabaseToUnlockAsync(store, timeout: TimeSpan.FromMilliseconds(1000));
+                var database = await WaitForDatabaseToUnlockAsync(store, timeout: TimeSpan.FromSeconds(10));
                 Assert.NotNull(database);
 
                 var etlDone2 = WaitForEtl(database, (n, statistics) => statistics.LoadSuccesses != 0);

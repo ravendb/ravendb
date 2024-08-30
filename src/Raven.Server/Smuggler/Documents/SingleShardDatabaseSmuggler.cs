@@ -61,7 +61,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private bool SkipCompareExchange(CompareExchangeKey key)
         {
-            if (ClusterTransactionCommand.IsAtomicGuardKey(key.Key, out var docId))
+            if (ClusterWideTransactionHelper.IsAtomicGuardKey(key.Key, out var docId))
             {
                 var shardNumber = ShardHelper.GetShardNumberFor(_sharding, _allocator, docId);
                 return shardNumber != _index;

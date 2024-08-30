@@ -69,7 +69,7 @@ namespace SlowTests.Client.Subscriptions
                 using (database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    subscriptionState = database.SubscriptionStorage.GetSubscriptionFromServerStore(context, sn);
+                    subscriptionState = database.SubscriptionStorage.GetSubscriptionByName(context, sn);
                 }
 
                 var index = database.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()

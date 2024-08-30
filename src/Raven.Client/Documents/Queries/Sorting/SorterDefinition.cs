@@ -5,8 +5,14 @@ namespace Raven.Client.Documents.Queries.Sorting
 {
     public sealed class SorterDefinition
     {
+        /// <summary>
+        /// Name of the sorter
+        /// </summary>
         public string Name { get; set; }
 
+        /// <summary>
+        /// C# source-code of the sorter
+        /// </summary>
         public string Code { get; set; }
 
         public DynamicJsonValue ToJson()

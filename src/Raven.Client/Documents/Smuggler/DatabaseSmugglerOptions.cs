@@ -46,7 +46,8 @@ namespace Raven.Client.Documents.Smuggler
                                                                                   DatabaseRecordItemType.QueueEtls |
                                                                                   DatabaseRecordItemType.IndexesHistory |
                                                                                   DatabaseRecordItemType.Refresh |
-                                                                                  DatabaseRecordItemType.DataArchival;
+                                                                                  DatabaseRecordItemType.DataArchival |
+                                                                                  DatabaseRecordItemType.QueueSinks;
 
         internal const DatabaseItemType OperateOnFirstShardOnly = DatabaseItemType.Indexes |
                                                               DatabaseItemType.DatabaseRecord |

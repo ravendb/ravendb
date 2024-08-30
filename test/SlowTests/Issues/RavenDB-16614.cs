@@ -10,10 +10,10 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
-using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -57,7 +57,7 @@ namespace SlowTests.Issues
             using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
             {
                 // this forces us to create an orphan!
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/phoebe"),
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<AtomicGuard>(ClusterWideTransactionHelper.GetAtomicGuardKey("users/phoebe"),
                     new AtomicGuard {Id = "users/phoebe"}, 0));
                 await session.StoreAsync(new User {Name = "arava"}, "users/arava");
                 await session.SaveChangesAsync();
@@ -81,11 +81,11 @@ namespace SlowTests.Issues
                 using (var session = store2.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
                 {
                     var val = await store2.Operations.SendAsync(
-                        new GetCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/phoebe")));
+                        new GetCompareExchangeValueOperation<AtomicGuard>(ClusterWideTransactionHelper.GetAtomicGuardKey("users/phoebe")));
                     Assert.Null(val);
 
                     val = await store2.Operations.SendAsync(
-                        new GetCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/arava")));
+                        new GetCompareExchangeValueOperation<AtomicGuard>(ClusterWideTransactionHelper.GetAtomicGuardKey("users/arava")));
 
                     var arava = await session.LoadAsync<User>("users/arava");
                     var cv = session.Advanced.GetChangeVectorFor(arava);
@@ -158,7 +158,7 @@ namespace SlowTests.Issues
                 var metadata = session.Advanced.GetMetadataFor(arava);
                 var cv = session.Advanced.GetChangeVectorFor(arava);
                 var cti = cv.ToChangeVectorList().Single(x => x.NodeTag == ChangeVectorParser.TrxnInt);
-                var guard = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/arava")));
+                var guard = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<AtomicGuard>(ClusterWideTransactionHelper.GetAtomicGuardKey("users/arava")));
                 Assert.Equal(cti.Etag, guard.Index);
             }
         }

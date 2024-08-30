@@ -1,6 +1,7 @@
 ﻿import { MockedValue, ServiceMocks } from "test/mocks/services/AutoMockService";
 import { mockServices } from "test/mocks/services/MockServices";
-import Mock = jest.Mock;
+
+import { MockedObject } from "@storybook/test";
 
 export function createValue<T>(value: MockedValue<T>, defaultValue: T): T {
     if (value instanceof Function) {
@@ -32,7 +33,7 @@ export function debugMocks() {
         const mockService = (context as any)[serviceName] as ServiceMocks<any>;
         const mockMethods = Object.keys(mockService);
         mockMethods.forEach((methodName) => {
-            const mockMethod = mockService[methodName] as Mock;
+            const mockMethod = mockService[methodName] as MockedObject<any>;
             const callsCount = mockMethod.mock.calls.length;
             const hasImplementation = !!mockMethod.getMockImplementation();
 

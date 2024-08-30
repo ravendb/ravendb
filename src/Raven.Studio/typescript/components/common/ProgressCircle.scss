@@ -33,7 +33,7 @@
 
     .state-desc {
         font-size: 9px;
-        color: colors.$text-muted-color;
+        color: colors.$text-muted-var;
         text-transform: uppercase;
         font-weight: bold;
         margin-bottom: sizes.$gutter-xxs;
@@ -46,11 +46,11 @@
         height: $state-indicator-size;
         width: $state-indicator-size;
         border-radius: $state-indicator-size;
-        color: colors.$panel-header-bg;
+        color: colors.$panel-header-bg-var;
         display: flex;
         justify-content: center;
         align-items: center;
-        background-color: colors.$text-muted-color;
+        background-color: colors.$text-muted-var;
         position: relative;
 
         i {
@@ -66,43 +66,43 @@
 
     &.success {
         .state-desc {
-            color: colors.$text-muted-color;
+            color: colors.$text-muted-var;
         }
 
         .state-indicator {
-            background-color: colors.$success;
+            background-color: colors.$success-var;
         }
     }
 
     &.failed {
         .state-desc {
-            color: colors.$text-muted-color;
+            color: colors.$text-muted-var;
         }
 
         .state-indicator {
-            background-color: colors.$danger;
+            background-color: colors.$danger-var;
         }
     }
 
     &.warning {
         .state-desc {
-            color: colors.$text-muted-color;
+            color: colors.$text-muted-var;
         }
 
         .state-indicator {
-            background-color: colors.$warning;
+            background-color: colors.$warning-var;
         }
     }
 
     &.running {
         .state-desc {
-            color: colors.$text-muted-color;
+            color: colors.$text-muted-var;
             display: flex;
             align-items: flex-end;
 
             strong {
                 font-size: 14px;
-                color: colors.$text-color;
+                color: colors.$text-color-var;
                 margin-right: sizes.$gutter-xxs;
             }
         }
@@ -111,7 +111,7 @@
             background-color: colors.$well-bg-var;
 
             i {
-                color: colors.$progress-color;
+                color: colors.$progress-var;
             }
         }
 
@@ -131,7 +131,7 @@
                 stroke-linecap: round;
                 stroke-width: 4;
                 fill: transparent;
-                stroke: colors.$progress-color;
+                stroke: colors.$progress-var;
                 stroke-dasharray: 81.68 81.68; // 2 * pi * r / r = 13
                 //stroke-dashoffset: 30; // offset = circumference - percent / 100 * circumference
             }

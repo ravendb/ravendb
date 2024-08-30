@@ -308,7 +308,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 NotificationCenter = _database.NotificationCenter,
                 OnParsingError = OnParsingError,
                 OnMissingNextBackupInfo = OnMissingNextBackupInfo,
-                ServerStore = _serverStore
+                ServerStore = _serverStore,
+                IsIdle = false
             });
         }
 
@@ -466,7 +467,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 using (_database.PreventFromUnloadingByIdleOperations())
                 {
-                    backupResult = (BackupResult)backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
+                    backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
+
+                    periodicBackup.BackupStatus = runningBackupStatus;
+                    ScheduleNextBackup(periodicBackup, backupResult?.Elapsed, lockTaken: false);
+
                     tcs.SetResult(backupResult);
                 }
             }
@@ -481,6 +486,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations($"Canceled the backup thread: '{periodicBackup.Configuration.Name}'", oce);
 
+                periodicBackup.BackupStatus = runningBackupStatus;
+                ScheduleNextBackup(periodicBackup, backupResult?.Elapsed, lockTaken: false);
+
                 tcs.SetCanceled();
             }
             catch (Exception e)
@@ -488,12 +496,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations($"Failed to run the backup thread: '{periodicBackup.Configuration.Name}'", e);
 
-                tcs.SetException(e);
-            }
-            finally
-            {
                 periodicBackup.BackupStatus = runningBackupStatus;
                 ScheduleNextBackup(periodicBackup, backupResult?.Elapsed, lockTaken: false);
+
+                tcs.SetException(e);
             }
         }
 

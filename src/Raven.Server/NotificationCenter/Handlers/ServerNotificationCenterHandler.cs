@@ -31,17 +31,20 @@ namespace Raven.Server.NotificationCenter.Handlers
                     {
                         foreach (var action in storedNotifications)
                         {
-                            if (isValidFor != null)
+                            using (action)
                             {
-                                if (action.Json.TryGet("Database", out string db) == false ||
-                                    isValidFor(db, false) == false)
-                                    continue; // not valid for this, skipping
-                            }
+                                if (isValidFor != null)
+                                {
+                                    if (action.Json.TryGet("Database", out string db) == false ||
+                                        isValidFor(db, false) == false)
+                                        continue; // not valid for this, skipping
+                                }
 
-                            if (TrafficWatchManager.HasRegisteredClients) 
-                                AddStringToHttpContext(action.Json.ToString(), TrafficWatchChangeType.Notifications);
-                            
-                            await writer.WriteToWebSocket(action.Json);
+                                if (TrafficWatchManager.HasRegisteredClients)
+                                    AddStringToHttpContext(action.Json.ToString(), TrafficWatchChangeType.Notifications);
+
+                                await writer.WriteToWebSocket(action.Json);
+                            }
                         }
                     }
 

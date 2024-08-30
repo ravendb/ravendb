@@ -47,11 +47,11 @@ pluginWidget.install({});
 
 import { commonInit } from "components/common/shell/setup";
 
-import { ModuleMocker } from 'jest-mock';
-import {useState} from "react";
-import {createStoreConfiguration} from "components/store";
-import {setEffectiveTestStore} from "components/storeCompat";
-window.jest = new ModuleMocker(window);
+import { fn } from "@storybook/test";
+import { useState } from "react";
+import { createStoreConfiguration } from "components/store";
+import { setEffectiveTestStore } from "components/storeCompat";
+window.jest = { fn }
 
 commonInit();
 
@@ -61,10 +61,11 @@ studioSettings.default.configureLoaders(mockJQueryPromise, mockJQueryPromise, mo
 
 import { Provider } from "react-redux";
 
+import { resetAllMocks } from "@storybook/test";
 
 export const decorators = [
     (Story) => {
-        jest.resetAllMocks();
+        resetAllMocks();
 
         const [store] = useState(() => {
             const storeConfiguration = createStoreConfiguration();
@@ -83,7 +84,7 @@ export const decorators = [
 ]
 
 export const parameters = {
-  actions: { argTypesRegex: "^on[A-Z].*" },
+  actions: { }, //TODO: it was regexp
   controls: {
     matchers: {
       color: /(background|color)$/i,

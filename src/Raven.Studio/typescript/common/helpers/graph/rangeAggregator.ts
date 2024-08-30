@@ -48,7 +48,7 @@ class rangeAggregator {
 
         // 1. Find appropriate start position for the new element
         
-        this.ptrStart = _.sortedIndexBy<workData>(this.workData, { pointInTime: startTime } as workData, x => x.pointInTime);
+        this.ptrStart = _.sortedIndexBy<workData>(this.workData, { pointInTime: startTime } as workData, (x: workData) => x.pointInTime);
 
         let previousValue = (this.ptrStart === 0) ? this.workData[0].numberOfItems : this.workData[this.ptrStart - 1].numberOfItems;
        

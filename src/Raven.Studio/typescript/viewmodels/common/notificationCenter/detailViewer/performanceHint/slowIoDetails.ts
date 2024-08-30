@@ -22,7 +22,7 @@ class slowIoDetails extends abstractPerformanceHintDetails {
         super(hint, notificationCenter);
 
         // extract values - ignore keys
-        this.tableItems = _.map((this.hint.details() as Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails).Writes, v => v);
+        this.tableItems = Object.values((this.hint.details() as Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails).Writes);
 
         // newest first
         this.tableItems.reverse();
@@ -58,7 +58,7 @@ class slowIoDetails extends abstractPerformanceHintDetails {
         this.columnPreview.install(".slowWriteDetails", ".js-slow-write-details-tooltip",
             (details: Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo,
              column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (!(column instanceof actionColumn)) {
                     if (column.header === "Date") {
                         onValue(moment.utc(details.Date), details.Date);

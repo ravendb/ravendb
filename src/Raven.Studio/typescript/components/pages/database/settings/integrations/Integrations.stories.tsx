@@ -1,10 +1,10 @@
 ﻿import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
 import {
-    forceStoryRerender,
     withStorybookContexts,
     withBootstrap5,
     databaseAccessArgType,
+    withForceRerender,
 } from "test/storybookTestUtils";
 import Integrations from "./Integrations";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -14,7 +14,7 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
     title: "Pages/Database/Settings/Integrations",
-    decorators: [withStorybookContexts, withBootstrap5],
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 
 interface IntegrationsStoryArgs {
@@ -54,7 +54,7 @@ export const IntegrationsStory: StoryObj<IntegrationsStoryArgs> = {
         databasesService.withIntegrationsPostgreSqlCredentials(args.credentialsDto);
         databasesService.withGenerateSecret();
 
-        return <Integrations {...forceStoryRerender()} />;
+        return <Integrations />;
     },
     argTypes: {
         databaseAccess: databaseAccessArgType,

@@ -12,6 +12,7 @@ class accessManager {
     
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
     secureServer = ko.observable<boolean>(true);
+    allowEncryptedDatabasesOverHttp = ko.observable<boolean>(false);
 
     
     // cluster node has the same privileges as cluster admin
@@ -96,7 +97,7 @@ class accessManager {
     
     readOnlyOrAboveForDatabase(db: database | string) {
         if (db) {
-            const accessLevel = this.getEffectiveDatabaseAccessLevel((_.isString(db) ? db : db.name));
+            const accessLevel = this.getEffectiveDatabaseAccessLevel(typeof db === "string" ? db : db.name);
             return accessLevel === "DatabaseRead";
         }
         return null;
@@ -104,7 +105,7 @@ class accessManager {
     
     readWriteAccessOrAboveForDatabase(db: database | string) {
         if (db) {
-            const accessLevel = this.getEffectiveDatabaseAccessLevel((_.isString(db) ? db : db.name));
+            const accessLevel = this.getEffectiveDatabaseAccessLevel(typeof db === "string" ? db : db.name);
             return accessLevel === "DatabaseReadWrite" || accessLevel === "DatabaseAdmin";
         } 
         return null;
@@ -112,7 +113,7 @@ class accessManager {
     
     adminAccessOrAboveForDatabase(db: database | string) {
         if (db) {
-            const accessLevel = this.getEffectiveDatabaseAccessLevel((_.isString(db) ? db : db.name));
+            const accessLevel = this.getEffectiveDatabaseAccessLevel(typeof db === "string" ? db : db.name);
             return accessLevel === "DatabaseAdmin";
         }
         return null;

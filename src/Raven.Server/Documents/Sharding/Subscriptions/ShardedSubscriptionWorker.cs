@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -8,6 +9,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
@@ -16,10 +18,11 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
     public sealed class ShardedSubscriptionWorker : AbstractSubscriptionWorker<ShardedSubscriptionBatch, BlittableJsonReaderObject>
     {
         private readonly int _shardNumber;
-        private readonly RequestExecutor _shardRequestExecutor;
+        private RequestExecutor _shardRequestExecutor;
         private readonly SubscriptionConnectionsStateOrchestrator _state;
         private bool _closedDueNoDocsLeft;
         private readonly ShardedDatabaseContext _databaseContext;
+        public Task SubscriptionTask => _subscriptionTask;
 
         public ShardedSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RequestExecutor re, SubscriptionConnectionsStateOrchestrator state) : base(options, dbName)
         {
@@ -61,7 +64,28 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             }
         }
 
-        protected override RequestExecutor GetRequestExecutor() => _shardRequestExecutor;
+        protected override Task TrySetRedirectNode(RequestExecutor reqEx, IReadOnlyList<ServerNode> curTopology)
+        {
+            if (_databaseContext.ShardsTopology.TryGetValue(_shardNumber, out var topology))
+            {
+                var node = topology.WhoseTaskIsIt(RachisState.Follower, _state.SubscriptionState, null);
+                if (node == null)
+                    return Task.CompletedTask;
+
+                _redirectNode = _shardRequestExecutor.TopologyNodes.FirstOrDefault(x => x.ClusterTag == node);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        protected override RequestExecutor GetRequestExecutor()
+        {
+            if (_shardRequestExecutor == null || _shardRequestExecutor.Disposed)
+            {
+                _shardRequestExecutor = _databaseContext.ShardExecutor.GetRequestExecutorAt(_shardNumber);
+            }
+            return _shardRequestExecutor;
+        }
 
         protected override void SetLocalRequestExecutor(string url, X509Certificate2 cert)
         {
@@ -192,17 +216,36 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         {
             if (_databaseContext.ShardsTopology.TryGetValue(_shardNumber, out var topology))
             {
-                var node = topology.WhoseTaskIsIt(_databaseContext.ServerStore.Engine.CurrentState, _state.SubscriptionState, null);
-                if (node == null || _shardRequestExecutor == null)
+                var node = topology.WhoseTaskIsIt(RachisState.Follower, _state.SubscriptionState, null);
+                if (node == null)
                     return;
+
+                if (_shardRequestExecutor == null || _shardRequestExecutor.Disposed)
+                {
+                    GetRequestExecutor();
+                    _redirectNode = await TryGetRequestedNode(_shardRequestExecutor, node) ?? _redirectNode;
+                    return;
+                }
 
                 if (_shardRequestExecutor.TopologyNodes == null)
                 {
-                    _redirectNode = (await _shardRequestExecutor.GetRequestedNode(node)).Node;
+                    _redirectNode = await TryGetRequestedNode(_shardRequestExecutor, node) ?? _redirectNode;
                     return;
                 }
 
                 _redirectNode = _shardRequestExecutor.TopologyNodes.FirstOrDefault(x => x.ClusterTag == node);
+            }
+        }
+
+        private async Task<ServerNode> TryGetRequestedNode(RequestExecutor re, string node)
+        {
+            try
+            {
+                return (await re.GetRequestedNode(node)).Node;
+            }
+            catch
+            {
+                return null;
             }
         }
     }

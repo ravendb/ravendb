@@ -1,381 +1,216 @@
 ﻿using System;
-using System.Buffers;
+using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
-internal static class BasicComparers
+// This is copy-pasted from Raven.Server.Documents.Queries.Sorting.AlphaNumeric.AlphaNumericFieldComparator and adjusted for Corax input.
+internal sealed class AlphanumericalComparer
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static int CompareAscending(ReadOnlySpan<byte> x, ReadOnlySpan<byte> y)
+    public static readonly AlphanumericalComparer Instance = new AlphanumericalComparer();
+
+    private AlphanumericalComparer()
     {
-        return x.SequenceCompareTo(y);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsSpace(byte c)
+    private unsafe ref struct AlphanumericStringComparisonState
     {
-        return c == ' ';
-    }
+        private readonly Span<char> _curCharacters;
+        public uint CurPositionInString = 0;
+        private readonly ReadOnlySpan<byte> _originalString;
+        public readonly uint StringLength;
+        private bool _curSequenceIsNumber = false;
+        private uint _numberLength = 0;
+        private uint _curSequenceStartPosition = 0;
+        private uint _stringBufferOffset = 0;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsSpace(char c)
-    {
-        return c == ' ';
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsDigit(byte c)
-    {
-        return c >= '0' && c <= '9';
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsDigit(char c)
-    {
-        return c >= '0' && c <= '9';
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static byte ToUpper(byte c)
-    {
-        if (c >= 'a' && c <= 'z')
-            return (byte)(c - ('a' - 'A'));
-
-        return c;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static char ToUpper(char c)
-    {
-        return char.ToUpperInvariant(c);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsSameLetterDifferentCase(byte a, byte b)
-    {
-        return (a >= 'A' && a <= 'z') && (b >= 'A' && b <= 'z') && (a - ('a' - 'A') == b || a + ('a' - 'A') == b);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsSameLetterDifferentCase(char a, char b)
-    {
-        return (a >= 'A' && a <= 'z') && (b >= 'A' && b <= 'z') && (a - ('a' - 'A') == b || a + ('a' - 'A') == b);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsLetter(byte c)
-    {
-        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsLetter(char c)
-    {
-        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-    }
-
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int CompareAlphanumericAscending(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
-    {
-        if (a.Length == 0)
-            return b.Length == 0 ? 0 : -1;
-        if (a.Length == 0)
-            return 1;
-
-        // Natural order string sorting ported from Martin Pool's C implementation as a reference. 
-        //   strnatcmp.c -- Perform 'natural order' comparisons of strings in C.
-        // https://github.com/sourcefrog/natsort               
-
-        int ai = 0, bi = 0;
-        while (true)
+        public void ScanNextAlphabeticOrNumericSequence()
         {
-            byte ca = ai < a.Length ? a[ai] : (byte)0;
-            byte cb = bi < b.Length ? b[bi] : (byte)0;
+            _curSequenceStartPosition = _stringBufferOffset;
+            var (usedBytes, usedChars) = ReadCharacter(_originalString, _stringBufferOffset, _curCharacters);
+            _curSequenceIsNumber = usedChars == 1 && char.IsDigit(_curCharacters[0]);
+            _numberLength = 0;
 
-            // We need to check if it is ASCII or not and act accordingly.
-            if ((ca & 0b1000_0000) != 0 || (cb & 0b1000_0000) != 0)
-                goto NotAscii;
+            var curCharacterIsDigit = _curSequenceIsNumber;
+            var insideZeroPrefix = _curSequenceIsNumber && _curCharacters[0] == '0';
 
-            /* skip over leading spaces or zeros */
-            while (IsSpace(ca))
-                ca = a[++ai];
-
-            while (IsSpace(cb))
-                cb = b[++bi];
-
-            /* process run of digits */
-            if (IsDigit(ca) && IsDigit(cb))
+            // Walk through all following characters that are digits or
+            // characters in BOTH strings starting at the appropriate marker.
+            // Collect char arrays.
+            do
             {
-                bool fractional = (ca == '0' || cb == '0');
-                if (fractional)
+                if (_curSequenceIsNumber)
                 {
-                    int result = CompareLeft(a.Slice(ai), b.Slice(bi));
-                    if (result != 0)
-                        return result;
+                    if (_curCharacters[0] != '0')
+                    {
+                        insideZeroPrefix = false;
+                    }
+
+                    if (insideZeroPrefix == false)
+                    {
+                        _numberLength++;
+                    }
+                }
+
+                CurPositionInString += usedChars;
+                _stringBufferOffset += usedBytes;
+
+                if (CurPositionInString < StringLength)
+                {
+                    (usedBytes, usedChars) = ReadCharacter(_originalString, _stringBufferOffset, _curCharacters);
+                    curCharacterIsDigit = usedChars == 1 && char.IsDigit(_curCharacters[0]);
                 }
                 else
                 {
-                    int result = CompareRight(a.Slice(ai), b.Slice(bi));
-                    if (result != 0)
-                        return result;
+                    break;
                 }
-            }
-
-            if (ca == 0 && cb == 0)
-            {
-                /* The strings compare the same.  Perhaps the caller
-                       will want to call strcmp to break the tie. */
-                return 0;
-            }
-
-            // If both are letters... 
-            if (IsLetter(ca) && IsLetter(cb))
-            {
-                if (IsSameLetterDifferentCase(ca, cb))
-                {
-                    return -(ca - cb);
-                }
-
-                var cca = ToUpper(ca);
-                var ccb = ToUpper(cb);
-                if (cca != ccb)
-                {
-                    return cca - ccb;
-                }
-            }
-            else if (ca != cb)
-            {
-                return ca - cb;
-            }
-
-            ++ai;
-            ++bi;
+            } while (curCharacterIsDigit == _curSequenceIsNumber);
         }
 
-        NotAscii:
-        return CompareAlphanumericAscendingUtf8(a.Slice(ai), b.Slice(bi));
-    }
+        [ThreadStatic]
+        private static Decoder Decoder;
 
-    private static int CompareAlphanumericAscendingUtf8(ReadOnlySpan<byte> byteA, ReadOnlySpan<byte> byteB)
-    {
-        var auxiliarMemory = ArrayPool<char>.Shared.Rent(byteA.Length + byteB.Length);
-        var a = auxiliarMemory.AsSpan().Slice(0, byteA.Length);
-        var b = auxiliarMemory.AsSpan().Slice(byteA.Length, byteB.Length);
-
-        var aLength = Encoding.UTF8.GetChars(byteA, a);
-        var bLength = Encoding.UTF8.GetChars(byteB, b);
-
-        a.Slice(0, aLength);
-        b.Slice(0, bLength);
-
-        int result = 0;
-        int ai = 0, bi = 0;
-        while (true)
+        public AlphanumericStringComparisonState(ReadOnlySpan<byte> originalString, Span<char> curCharacters)
         {
-            char ca = ai < a.Length ? a[ai] : (char)0;
-            char cb = bi < b.Length ? b[bi] : (char)0;
-
-            /* skip over leading spaces or zeros */
-            while (IsSpace(ca))
-                ca = a[++ai];
-
-            while (IsSpace(cb))
-                cb = b[++bi];
-
-            /* process run of digits */
-            if (IsDigit(ca) && IsDigit(cb))
-            {
-                bool fractional = (ca == '0' || cb == '0');
-                if (fractional)
-                {
-                    result = CompareLeft(a.Slice(ai), b.Slice(bi));
-                    if (result != 0)
-                        goto End;
-                }
-                else
-                {
-                    result = CompareRight(a.Slice(ai), b.Slice(bi));
-                    if (result != 0)
-                        goto End;
-                }
-            }
-
-            if (ca == 0 && cb == 0)
-            {
-                /* The strings compare the same.  Perhaps the caller
-                       will want to call strcmp to break the tie. */
-                result = 0;
-                goto End;
-            }
-
-            // If both are letters... 
-            if (IsLetter(ca) && IsLetter(cb))
-            {
-                if (IsSameLetterDifferentCase(ca, cb))
-                {
-                    return -(ca - cb);
-                }
-
-                var cca = ToUpper(ca);
-                var ccb = ToUpper(cb);
-                if (cca != ccb)
-                {
-                    return cca - ccb;
-                }
-            }
-            else if (ca != cb)
-            {
-                return ca - cb;
-            }
-
-            ++ai;
-            ++bi;
+            _curCharacters = curCharacters;
+            _originalString = originalString;
+            StringLength = (uint)originalString.Length;
         }
 
-
-        End:
-        ArrayPool<char>.Shared.Return(auxiliarMemory);
-        return result;
-    }
-
-    private static int CompareRight(ReadOnlySpan<byte> ax, ReadOnlySpan<byte> bx)
-    {
-        int bias = 0;
-        int a = 0;
-        int b = 0;
-
-        /* The longest run of digits wins.  That aside, the greatest
-           value wins, but we can't know that it will until we've scanned
-           both numbers to know that they have the same magnitude, so we
-           remember it in BIAS. */
-        for (;; a++, b++)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static (uint BytesUsed, uint CharUsed) ReadCharacter(ReadOnlySpan<byte> str, uint offset, Span<char> charactersBuffer)
         {
-            byte av = a < ax.Length ? ax[a] : (byte)0;
-            byte bv = b < bx.Length ? bx[b] : (byte)0;
+            var currentCharacter = Unsafe.Add(ref MemoryMarshal.GetReference(str), offset);
+            if ((uint)currentCharacter <= 0b0111_1111)
+            {
+                charactersBuffer[0] = (char)currentCharacter;
+                return (1, 1);
+            }
 
-            if (!IsDigit(av) && !IsDigit(bv))
-                return bias;
-            if (!IsDigit(av))
-                return -1;
-            if (!IsDigit(bv))
-                return +1;
-            if (av < bv)
+            uint bytesUsed = ReadCharacterUtf8(str, offset, charactersBuffer, out uint charUsed);
+            return (bytesUsed, charUsed);
+        }
+
+        private static uint ReadCharacterUtf8(ReadOnlySpan<byte> str, uint offset, Span<char> charactersBuffer, out uint charUsed)
+        {
+            var decoder = Decoder ??= Encoding.UTF8.GetDecoder();
+
+            //Numbers and ASCII are always 1 so we will pay the price only in case of UTF-8 characters.
+            //http://www.unicode.org/versions/Unicode9.0.0/ch03.pdf#page=54
+            var (byteLengthOfCharacter, charNeededToEncodeCharacters) = Unsafe.Add(ref MemoryMarshal.GetReference(str), offset) switch
             {
-                if (bias != 0)
-                    bias = -1;
-            }
-            else if (av > bv)
+                <= 0b0111_1111 => (1, 1), /* 1 byte sequence: 0b0xxxxxxxx */
+                <= 0b1101_1111 => (2, Encoding.UTF8.GetCharCount(str.Slice((int)offset, 2))), /* 2 byte sequence: 0b110xxxxxx */
+                <= 0b1110_1111 => (3, Encoding.UTF8.GetCharCount(str.Slice((int)offset, 3))), /* 0b1110xxxx: 3 bytes sequence */
+                <= 0b1111_0111 => (4, Encoding.UTF8.GetCharCount(str.Slice((int)offset, 4))), /* 0b11110xxx: 4 bytes sequence */
+                _ => throw new InvalidDataException($"Characters should be between 1 and 4 bytes long and cannot match the specified sequence. This is invalid code.")
+            };
+
+            Debug.Assert(4 >= charNeededToEncodeCharacters, $"Character requires more than  space to be decoded.");
+
+            //In case of surrogate we could've to use two characters to convert it.
+            decoder.Convert(str.Slice((int)offset, byteLengthOfCharacter), charactersBuffer, flush: true, out int bytesUsed, out var charUsedInt, out _);
+            charUsed = (uint)charUsedInt;
+            return (uint)bytesUsed;
+        }
+
+        public int CompareWithAnotherState(ref AlphanumericStringComparisonState other)
+        {
+            ref var string1State = ref this;
+            ref var string2State = ref other;
+
+            // if both sequences are numbers, compare between them
+            if (string1State._curSequenceIsNumber && string2State._curSequenceIsNumber)
             {
-                if (bias != 0)
-                    bias = +1;
+                // if effective numbers are not of the same length, it means that we can tell which is greater (in an order of magnitude, actually)
+                if (string1State._numberLength != string2State._numberLength)
+                {
+                    return string1State._numberLength.CompareTo(string2State._numberLength);
+                }
+
+                // else, it means they should be compared by string, again, we compare only the effective numbers
+                // One digit is always one byte, so no need to care about chars vs bytes 
+                return string1State._originalString.Slice((int)(string1State._stringBufferOffset - string1State._numberLength), (int)string1State._numberLength)
+                    .SequenceCompareTo(string2State._originalString.Slice((int)(string2State._stringBufferOffset - string2State._numberLength),
+                        (int)string2State._numberLength));
             }
-            else if (a == 0 || b == 0)
-                return bias;
+
+            // if one of the sequences is a number and the other is not, the number is always smaller
+            if (string1State._curSequenceIsNumber != string2State._curSequenceIsNumber)
+            {
+                if (string1State._curSequenceIsNumber)
+                    return -1;
+                return 1;
+            }
+
+            // should be case insensitive
+            Span<char> ch1 = stackalloc char[4];
+            Span<char> ch2 = stackalloc char[4];
+            var offset1 = string1State._curSequenceStartPosition;
+            var offset2 = string2State._curSequenceStartPosition;
+
+            var length1 = string1State._stringBufferOffset - string1State._curSequenceStartPosition;
+            var length2 = string2State._stringBufferOffset - string2State._curSequenceStartPosition;
+
+            while (length1 > 0 && length2 > 0)
+            {
+                var (read1Bytes, read1Chars) = ReadCharacter(string1State._originalString, offset1, ch1);
+                var (read2Bytes, read2Chars) = ReadCharacter(string2State._originalString, offset2, ch2);
+
+                length1 -= read1Bytes;
+                length2 -= read2Bytes;
+
+                int result = read1Chars switch
+                {
+                    1 when read2Chars == 1 => char.ToLowerInvariant(ch1[0]) - char.ToLowerInvariant(ch2[0]),
+                    2 when read2Chars == 2 => ch1.Slice(0, (int)read1Chars).SequenceCompareTo(ch2.Slice(0, (int)read2Chars)),
+                    1 => -1, //non-surroagate is always bigger than surrogate character
+                    _ => 1
+                };
+
+                if (result == 0)
+                {
+                    offset1 += read1Bytes;
+                    offset2 += read2Bytes;
+                    continue;
+                }
+
+                return result;
+            }
+
+            return (int)(length1 - length2);
         }
     }
-
-    private static int CompareRight(ReadOnlySpan<char> ax, ReadOnlySpan<char> bx)
-    {
-        int bias = 0;
-        int a = 0;
-        int b = 0;
-
-        /* The longest run of digits wins.  That aside, the greatest
-           value wins, but we can't know that it will until we've scanned
-           both numbers to know that they have the same magnitude, so we
-           remember it in BIAS. */
-        for (;; a++, b++)
-        {
-            char av = a < ax.Length ? ax[a] : (char)0;
-            char bv = b < bx.Length ? bx[b] : (char)0;
-
-            if (!IsDigit(av) && !IsDigit(bv))
-                return bias;
-            if (!IsDigit(av))
-                return -1;
-            if (!IsDigit(bv))
-                return +1;
-            if (av < bv)
-            {
-                if (bias != 0)
-                    bias = -1;
-            }
-            else if (av > bv)
-            {
-                if (bias != 0)
-                    bias = +1;
-            }
-            else if (a == 0 || b == 0)
-                return bias;
-        }
-    }
-
-    private static int CompareLeft(ReadOnlySpan<byte> ax, ReadOnlySpan<byte> bx)
-    {
-        int a = 0;
-        int b = 0;
-
-        /* Compare two left-aligned numbers: the first to have a
-           different value wins. */
-        for (;; a++, b++)
-        {
-            byte av = a < ax.Length ? ax[a] : (byte)0;
-            byte bv = b < bx.Length ? bx[b] : (byte)0;
-
-            if (!IsDigit(av) && !IsDigit(bv))
-                return 0;
-            if (!IsDigit(av))
-                return -1;
-            if (!IsDigit(bv))
-                return +1;
-            if (av < bv)
-                return -1;
-            if (av > bv)
-                return +1;
-        }
-    }
-
-    private static int CompareLeft(ReadOnlySpan<char> ax, ReadOnlySpan<char> bx)
-    {
-        int a = 0;
-        int b = 0;
-
-        /* Compare two left-aligned numbers: the first to have a
-           different value wins. */
-        for (;; a++, b++)
-        {
-            char av = a < ax.Length ? ax[a] : (char)0;
-            char bv = b < bx.Length ? bx[b] : (char)0;
-
-            if (!IsDigit(av) && !IsDigit(bv))
-                return 0;
-            if (!IsDigit(av))
-                return -1;
-            if (!IsDigit(bv))
-                return +1;
-            if (av < bv)
-                return -1;
-            if (av > bv)
-                return +1;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int CompareAscending<T>(T x, T y)
-    {
-        if (typeof(T) == typeof(long))
-        {
-            return Math.Sign((long)(object)x - (long)(object)y);
-        }
-        else if (typeof(T) == typeof(double))
-        {
-            return Math.Sign((double)(object)x - (double)(object)y);
-        }
     
-        throw new NotSupportedException("Not supported");
+    public int Compare(ReadOnlySpan<byte> string1, ReadOnlySpan<byte> string2)
+    {
+        Span<char> buffers = stackalloc char[8];
+        var string1State = new AlphanumericStringComparisonState(string1, buffers.Slice(0, 4));
+        var string2State = new AlphanumericStringComparisonState(string2, buffers.Slice(4));
+
+        
+        // Walk through two the strings with two markers.
+        while (string1State.CurPositionInString < string1State.StringLength &&
+               string2State.CurPositionInString < string2State.StringLength)
+        {
+            string1State.ScanNextAlphabeticOrNumericSequence();
+            string2State.ScanNextAlphabeticOrNumericSequence();
+
+            var result = string1State.CompareWithAnotherState(ref string2State);
+            if (result != 0)
+            {
+                return result;
+            }
+        }
+
+        if (string1State.CurPositionInString < string1State.StringLength)
+            return 1;
+        if (string2State.CurPositionInString < string2State.StringLength)
+            return -1;
+
+        return 0;
     }
 }
-

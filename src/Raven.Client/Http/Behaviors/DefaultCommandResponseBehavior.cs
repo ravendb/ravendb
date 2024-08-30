@@ -41,6 +41,8 @@ internal sealed class DefaultCommandResponseBehavior : AbstractCommandResponseBe
 
     public override async ValueTask<bool> TryHandleConflictAsync<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpResponseMessage response)
     {
+        command.OnResponseFailure(response);
+
         await ExceptionDispatcher.Throw(context, response, unsuccessfulResponseBehavior: CommandUnsuccessfulResponseBehavior.WrapException).ConfigureAwait(false);
         return false;
     }

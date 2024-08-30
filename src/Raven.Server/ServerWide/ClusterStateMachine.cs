@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -63,7 +60,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
-using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
@@ -311,7 +307,7 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        public long LastNotifiedIndex => Interlocked.Read(ref _rachisLogIndexNotifications.LastModifiedIndex);
+        public long LastNotifiedIndex => _rachisLogIndexNotifications.LastModifiedIndex;
 
         public readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
@@ -736,7 +732,7 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.UnrecoverableClusterError, $"{_parent.CurrentTerm}/{index}"), context.Transaction, sendNotificationEvenIfDoesntExist: false);
+                    serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.UnrecoverableClusterError, $"{index}"), context.Transaction, sendNotificationEvenIfDoesntExist: false);
                 }
                 catch
                 {
@@ -753,11 +749,11 @@ namespace Raven.Server.ServerWide
                     {
                         serverStore.NotificationCenter.Add(AlertRaised.Create(
                             null,
-                            "Unrecoverable Cluster Error",
+                            $"Unrecoverable Cluster Error at Index {index}",
                             error,
                             AlertType.UnrecoverableClusterError,
                             NotificationSeverity.Error,
-                            key: $"{_parent.CurrentTerm}/{index}",
+                            key: $"{index}",
                             details: new ExceptionDetails(exception)));
                     }
                     catch
@@ -1017,18 +1013,13 @@ namespace Raven.Server.ServerWide
                 var errors = clusterTransaction.ExecuteCompareExchangeCommands(rawRecord.GetClusterTransactionId(), context, index, compareExchangeItems);
                 if (errors == null)
                 {
-                    DatabasesLandlord.ClusterDatabaseChangeType notify;
                     var clusterTransactionResult = new ClusterTransactionResult();
                     if (clusterTransaction.HasDocumentsInTransaction)
                     {
                         clusterTransactionResult.GeneratedResult = clusterTransaction.SaveCommandsBatch(context, rawRecord, index);
-                        notify = DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions;
-                    }
-                    else
-                    {
-                        notify = DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
                     }
 
+                    var notify = DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions;
                     NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify, null);
 
                     return clusterTransactionResult;
@@ -1757,6 +1748,8 @@ namespace Raven.Server.ServerWide
 
         private unsafe List<string> AddDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
+            _parent.ForTestingPurposes?.BeforeExecuteAddDatabaseCommand?.Invoke();
+
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
             Exception exception = null;
             try
@@ -2631,8 +2624,11 @@ namespace Raven.Server.ServerWide
                 // we do this under the write tx lock before we update the last applied index
                 _rachisLogIndexNotifications.AddTask(index);
 
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+                var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
+                tx.OnDispose += _ =>
                 {
+                    if (tx.Committed == false)
+                        return;
                     ExecuteAsyncTask(index, () => Changes.OnDatabaseChanges(databaseName, index, type, change, changeState));
                 };
             };
@@ -3554,7 +3550,7 @@ namespace Raven.Server.ServerWide
         {
             using (var raw = ReadRawDatabaseRecord(context, name))
             {
-                return raw.Sharding.MaterializedConfiguration;
+                return raw?.Sharding.MaterializedConfiguration;
             }
         }
 
@@ -3856,7 +3852,7 @@ namespace Raven.Server.ServerWide
             return doc;
         }
 
-        public static IEnumerable<(Slice Key, BlittableJsonReaderObject Value)> ReadValuesStartingWith<TTransaction>(TransactionOperationContext<TTransaction> context, string startsWithKey)
+        public static IEnumerable<(Slice Key, BlittableJsonReaderObject Value)> ReadValuesStartingWith<TTransaction>(TransactionOperationContext<TTransaction> context, string startsWithKey, long skip = 0L)
             where TTransaction : RavenTransaction
         {
             var startsWithKeyLower = startsWithKey.ToLowerInvariant();
@@ -3864,7 +3860,7 @@ namespace Raven.Server.ServerWide
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-                foreach (var holder in items.SeekByPrimaryKeyPrefix(startsWithSlice, Slices.Empty, 0))
+                foreach (var holder in items.SeekByPrimaryKeyPrefix(startsWithSlice, Slices.Empty, skip))
                 {
                     var reader = holder.Value.Reader;
                     var size = GetDataAndEtagTupleFromReader(context, reader, out BlittableJsonReaderObject doc, out long _);

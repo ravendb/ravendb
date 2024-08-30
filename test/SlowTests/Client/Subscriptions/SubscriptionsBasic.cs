@@ -383,7 +383,7 @@ namespace SlowTests.Client.Subscriptions
                     using (database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        subscriptionState = database.SubscriptionStorage.GetSubscriptionFromServerStore(context, subscriptionId);
+                        subscriptionState = database.SubscriptionStorage.GetSubscriptionByName(context, subscriptionId);
                     }
                     var index = database.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
                     {
@@ -1613,7 +1613,7 @@ namespace SlowTests.Client.Subscriptions
                 var name = $"Subscription0";
                 var subscription = db
                     .SubscriptionStorage
-                    .GetRunningSubscription(context, null, name, false);
+                    .GetSubscriptionWithDataByNameFromServerStore(context, name, history: false, running: true);
                 Assert.NotNull(subscription);
                 db.SubscriptionStorage.DropSubscriptionConnections(subscription.SubscriptionId,
                     new SubscriptionClosedException("Dropped by Test"));

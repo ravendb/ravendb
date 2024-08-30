@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
+using System.Diagnostics;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -87,7 +89,7 @@ namespace Raven.Server.Documents.Includes
             _includedKeys.Add(id);
         }
 
-        public bool TryGetAtomicGuard(string key, long maxAllowedRaftId, out long index, out BlittableJsonReaderObject value)
+        public bool TryGetCompareExchange(string key, long? maxAtomicGuardIndex, out long index, out BlittableJsonReaderObject value)
         {
             index = -1;
             value = null;
@@ -97,18 +99,19 @@ namespace Raven.Server.Documents.Includes
 
             var result = _compareExchangeStorage.GetCompareExchangeValue(_serverContext, key);
 
-            if (result.Index > maxAllowedRaftId)
+            Debug.Assert(ClusterWideTransactionHelper.IsAtomicGuardKey(key) == false || maxAtomicGuardIndex.HasValue);
+            if (ClusterWideTransactionHelper.IsAtomicGuardKey(key) && maxAtomicGuardIndex.HasValue && result.Index > maxAtomicGuardIndex)
                 return false; // we are seeing partially committed value, skip it
 
             if (result.Index < 0)
                 return false;
-
+            
             index = result.Index;
             value = result.Value;
             return true;
         }
 
-        internal void Materialize(long maxAllowedRaftId)
+        internal void Materialize(long? maxAllowedAtomicGuardIndex)
         {
             if (_includedKeys == null || _includedKeys.Count == 0)
                 return;
@@ -118,12 +121,12 @@ namespace Raven.Server.Documents.Includes
                 if (string.IsNullOrEmpty(includedKey))
                     continue;
 
-                if (TryGetAtomicGuard(includedKey, maxAllowedRaftId, out var index, out var value) == false)
-                    continue;
-
+                if (TryGetCompareExchange(includedKey, maxAllowedAtomicGuardIndex, out var index, out var value) == false
+                    && ClusterWideTransactionHelper.IsAtomicGuardKey(includedKey))
+                    continue;  
+                
                 Results ??= new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
-
-                Results.Add(includedKey, new CompareExchangeValue<BlittableJsonReaderObject>(includedKey, index, value));
+                Results.Add(includedKey, new CompareExchangeValue<BlittableJsonReaderObject>(includedKey, index,  value));
             }
         }
 

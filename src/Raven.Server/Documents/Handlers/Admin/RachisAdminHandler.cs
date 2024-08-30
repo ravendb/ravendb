@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var isClusterAdmin = IsClusterAdmin();
                     command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
 
-                    var (etag, result) = await ServerStore.Engine.PutAsync(command);
+                    var (etag, result) = await ServerStore.Engine.PutToLeaderAsync(command);
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                     var ms = context.CheckoutMemoryStream();
                     try
@@ -69,8 +69,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                         {
                             context.Write(writer, new DynamicJsonValue
                             {
-                                [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
-                                [nameof(ServerStore.PutRaftCommandResult.Data)] = result,
+                                [nameof(PutRaftCommand.PutRaftCommandResult.RaftCommandIndex)] = etag,
+                                [nameof(PutRaftCommand.PutRaftCommandResult.Data)] = result,
                             });
                         }
 
@@ -82,6 +82,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                     {
                         context.ReturnMemoryStream(ms);
                     }
+                }
+                catch (TermValidationException)
+                {
+                    HttpContext.Response.Headers["Reached-Leader"] = "false";
+                    throw;
                 }
                 catch (NotLeadingException e)
                 {
@@ -151,12 +156,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/log", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetLogs()
         {
-            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
-            {
-                context.OpenReadTransaction();
-                context.Write(writer, ServerStore.GetLogDetails(context));
-            }
+            using (var processor = new RachisAdminHandlerProcessorForGetClusterLogs(this)) 
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/admin/debug/cluster/history-logs", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]

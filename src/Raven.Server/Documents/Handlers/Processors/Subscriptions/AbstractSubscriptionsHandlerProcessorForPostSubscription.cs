@@ -37,6 +37,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             {
                 var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), null);
                 bool pinToMentorNodeWasSet = json.TryGet(nameof(SubscriptionUpdateOptions.PinToMentorNode), out bool pinToMentorNode);
+                bool disabledWasSet = json.TryGet(nameof(SubscriptionUpdateOptions.Disabled), out bool _);
                 var options = JsonDeserializationServer.SubscriptionUpdateOptions(json);
                 var id = options.Id;
 
@@ -65,14 +66,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                         if (id == null)
                         {
                             // subscription with such name doesn't exist, add new subscription
-                            await CreateSubscriptionInternalAsync(json, id: null, disabled: false, options, context);
+                            await CreateSubscriptionInternalAsync(json, id: null, options.Disabled, options, context);
                             return;
                         }
 
                         if (options.Name == null)
                         {
                             // subscription with such id doesn't exist, add new subscription using id
-                            await CreateSubscriptionInternalAsync(json, id, disabled: false, options, context);
+                            await CreateSubscriptionInternalAsync(json, id, options.Disabled, options, context);
                             return;
                         }
 
@@ -86,7 +87,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                         catch (SubscriptionDoesNotExistException)
                         {
                             // subscription with such id or name doesn't exist, add new subscription using both name and id
-                            await CreateSubscriptionInternalAsync(json, id, disabled: false, options, context);
+                            await CreateSubscriptionInternalAsync(json, id, options.Disabled, options, context);
                             return;
                         }
                     }
@@ -104,13 +105,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 if (pinToMentorNodeWasSet == false)
                     options.PinToMentorNode = state.PinToMentorNode;
 
+                if (disabledWasSet == false)
+                    options.Disabled = state.Disabled;
+
                 if (SubscriptionsHandler.SubscriptionHasChanges(options, state) == false)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return;
                 }
 
-                await CreateSubscriptionInternalAsync(json, id, disabled: false, options, context);
+                await CreateSubscriptionInternalAsync(json, id, options.Disabled, options, context);
             }
         }
 

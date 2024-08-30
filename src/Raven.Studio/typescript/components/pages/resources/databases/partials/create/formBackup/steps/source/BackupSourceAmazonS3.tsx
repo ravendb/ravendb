@@ -6,7 +6,7 @@ import { CreateDatabaseFromBackupFormData as FormData } from "../../createDataba
 import { FormInput, FormSelectAutocomplete, FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
-import { restorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/restorePointUtils";
+import { useRestorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/useRestorePointUtils";
 import { useAsyncDebounce } from "components/utils/hooks/useAsyncDebounce";
 import { availableS3Regions } from "components/utils/common";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
@@ -167,6 +167,7 @@ export default function BackupSourceAmazonS3() {
 
 function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
     const { resourcesService } = useServices();
+    const { mapToSelectOptions } = useRestorePointUtils();
 
     const { control } = useFormContext<FormData>();
 
@@ -211,7 +212,7 @@ function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
                 true,
                 isSharded ? index : undefined
             );
-            return restorePointUtils.mapToSelectOptions(dto);
+            return mapToSelectOptions(dto);
         },
         [
             amazonS3Data.accessKey,

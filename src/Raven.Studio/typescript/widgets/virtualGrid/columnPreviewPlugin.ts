@@ -72,7 +72,7 @@ class columnPreviewPlugin<T extends object> {
     }
 
     install(containerSelector: string, tooltipSelector: string,
-            previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject,
+            previewContextProvider: (item: T, column: virtualColumn, event: JQuery.TriggeredEvent,
                                      onValueProvided: (value: any, valueToCopy?: any, wrapValue?: boolean) => void) => void, opts?: {
             additionalFeatures?: columnPreviewFeature[];
         }) {
@@ -105,7 +105,7 @@ class columnPreviewPlugin<T extends object> {
                     previewContextProvider(element, column, e, (value, valueToCopy, wrapValue) => {
                         const markup = markupProvider(value, column, element, wrapValue);
                         this.show(markup, e);
-                        this.currentValue = _.isUndefined(valueToCopy) ? value : valueToCopy;
+                        this.currentValue = valueToCopy === undefined ? value : valueToCopy;
                         this.currentElement = element;
                     });
                 }
@@ -147,7 +147,7 @@ class columnPreviewPlugin<T extends object> {
         });
     }
 
-    show(markup: string, e: JQueryEventObject) {
+    show(markup: string, e: JQuery.TriggeredEvent) {
         const $parent = this.$tooltip.parent().offsetParent();
         const parentOffset = $parent.offset();
         const $cell = $(e.target).closest(".cell");
@@ -209,7 +209,7 @@ class columnPreviewPlugin<T extends object> {
         this.$tooltip.html("");
     }
     
-    private findItemAndColumn(e: JQueryEventObject): [T, virtualColumn] {
+    private findItemAndColumn(e: JQuery.MouseEnterEvent): [T, virtualColumn] {
         const row = this.grid.findRowForCell(e.target);
         const column = this.grid.findColumnForCell(e.target);
         return [row.data as T, column];

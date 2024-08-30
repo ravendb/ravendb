@@ -27,6 +27,7 @@ import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import licenseModel from "models/auth/licenseModel";
 import { EditSqlEtlInfoHub } from "viewmodels/database/tasks/EditSqlEtlInfoHub";
+import { sortBy } from "common/typeUtils";
 
 class sqlTaskTestMode {
     
@@ -151,7 +152,7 @@ class sqlTaskTestMode {
             new testSqlReplicationCommand(this.db, dto)
                 .execute()
                 .done((testResult: Raven.Server.Documents.ETL.Providers.SQL.Test.SqlEtlTestScriptResult) => {
-                    this.testResults(_.flatMap(testResult.Summary, x => x.Commands));
+                    this.testResults(testResult.Summary.flatMap(x => x.Commands));
                     this.debugOutput(testResult.DebugOutput);
                     this.loadErrors(testResult.LoadErrors);
                     this.slowSqlWarnings(testResult.SlowSqlWarnings); 
@@ -307,7 +308,7 @@ class editSqlEtlTask extends shardViewModelBase {
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStringsNames = Object.keys(result.SqlConnectionStrings);
-                this.sqlEtlConnectionStringsNames(_.sortBy(connectionStringsNames, x => x.toUpperCase()));
+                this.sqlEtlConnectionStringsNames(sortBy(connectionStringsNames, (x: string) => x.toUpperCase()));
             });
     }
 
@@ -708,7 +709,7 @@ class editSqlEtlTask extends shardViewModelBase {
 
             const usedOptions = usedCollections().filter(k => k !== key);
 
-            const filteredOptions = _.difference(options, usedOptions);
+            const filteredOptions: string[] = options.filter(x => !usedOptions.includes(x));
 
             if (key) {
                 result = filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));

@@ -28,7 +28,7 @@ import DocumentRevisionsSelectActions from "./DocumentRevisionsSelectActions";
 import { StickyHeader } from "components/common/StickyHeader";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useAppUrls } from "components/hooks/useAppUrls";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import FeatureAvailabilitySummaryWrapper, {
@@ -50,7 +50,7 @@ todo("Feature", "Damian", "Add the Revert revisions view");
 
 export default function DocumentRevisions() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const { value: isEnforceConfigurationModalOpen, toggle: toggleEnforceConfigurationModal } = useBoolean(false);
     const [editRevisionData, setEditRevisionData] = useState<EditRevisionData>(null);
@@ -220,7 +220,7 @@ export default function DocumentRevisions() {
                                             </ButtonWithSpinner>
                                         </div>
                                     </div>
-                                    <div className="mt-5">
+                                    <div className="mt-3">
                                         <DocumentRevisionsSelectActions />
                                     </div>
                                 </Row>

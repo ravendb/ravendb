@@ -16,23 +16,29 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Rachis
 {
-    public partial class Follower : IDisposable
+    public class Follower : IDisposable
     {
         private static int _uniqueId;
 
         private readonly RachisConsensus _engine;
+        public RachisConsensus Engine => _engine;
         private readonly long _term;
         private readonly RemoteConnection _connection;
+        public RemoteConnection Connection => _connection;
         private PoolOfThreads.LongRunningWork _followerLongRunningWork;
 
         private readonly string _debugName;
         private readonly RachisLogRecorder _debugRecorder;
+        public RachisLogRecorder DebugRecorder => _debugRecorder;
+        public FollowerDebugView.FollowerPhase Phase = FollowerDebugView.FollowerPhase.Initial;
+        public RaftDebugView ToDebugView => new FollowerDebugView(this);
 
         public Follower(RachisConsensus engine, long term, RemoteConnection remoteConnection)
         {
             _engine = engine;
             _connection = remoteConnection;
             _term = term;
+            engine.Follower = this;
 
             // this will give us a unique identifier for this follower
             var uniqueId = Interlocked.Increment(ref _uniqueId);
@@ -99,7 +105,7 @@ namespace Raven.Server.Rachis
 
                     _engine.CommandsVersionManager.SetClusterVersion(appendEntries.MinCommandVersion);
 
-                    _debugRecorder.Record("Got entries");
+                    _debugRecorder.Record($"Got {appendEntries.EntriesCount} entries");
                     _engine.Timeout.Defer(_connection.Source);
                     if (appendEntries.EntriesCount != 0)
                     {
@@ -129,6 +135,7 @@ namespace Raven.Server.Rachis
                                 );
                         }
                     }
+                    _debugRecorder.Record($"Finished reading {entries.Count} entries from stream");
 
                     // don't start write transaction for noop
                     if (lastCommit != appendEntries.LeaderCommit ||
@@ -396,9 +403,10 @@ namespace Raven.Server.Rachis
             // at this point, the leader will send us a snapshot message
             // in most cases, it is an empty snapshot, then start regular append entries
             // the reason we send this is to simplify the # of states in the protocol
-
+            
+            Phase = FollowerDebugView.FollowerPhase.Snapshot;
             var snapshot = _connection.ReadInstallSnapshot(context);
-            _debugRecorder.Record("Start receiving snapshot");
+            _debugRecorder.Record($"Got snapshot info: last included index:{snapshot.LastIncludedIndex} at term {snapshot.LastIncludedTerm}");
 
             // reading the snapshot from network and committing it to the disk might take a long time. 
             Task onFullSnapshotInstalledTask = null;
@@ -410,7 +418,6 @@ namespace Raven.Server.Rachis
                 }, cts, "ReadAndCommitSnapshot");
             }
 
-            _debugRecorder.Record("Snapshot was received and committed");
 
             // notify the state machine, we do this in an async manner, and start
             // the operator in a separate thread to avoid timeouts while this is
@@ -477,8 +484,12 @@ namespace Raven.Server.Rachis
 
         private async Task<Task> ReadAndCommitSnapshotAsync(InstallSnapshot snapshot, CancellationToken token)
         {
+            _debugRecorder.Record("Start receiving the snapshot");
+
             var command = new FollowerReadAndCommitSnapshotCommand(_engine, this, snapshot, token);
             await _engine.TxMerger.Enqueue(command);
+
+            _debugRecorder.Record("Snapshot was successfully received and committed");
 
             return command.OnFullSnapshotInstalledTask;
         }
@@ -750,8 +761,10 @@ namespace Raven.Server.Rachis
 
             // if leader / candidate, this remove them from play and revert to follower mode
             await _engine.SetNewStateAsync(RachisState.Follower, this, _term,
-                $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}");
-            _engine.LeaderTag = _connection.Source;
+                $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}", beforeStateChangedEvent: () =>
+                {
+                    _engine.LeaderTag = _connection.Source;
+                });
 
             _debugRecorder.Record("Follower connection accepted");
 
@@ -774,12 +787,13 @@ namespace Raven.Server.Rachis
                     try
                     {
                         _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
-
+                        Phase = FollowerDebugView.FollowerPhase.Negotiation;
                         using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                         {
                             NegotiateWithLeader(context, (LogLengthNegotiation)obj);
                         }
 
+                        Phase = FollowerDebugView.FollowerPhase.Steady;
                         FollowerSteadyState();
                     }
                     catch (Exception e) when (RachisConsensus.IsExpectedException(e))

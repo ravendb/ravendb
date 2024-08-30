@@ -20,6 +20,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
@@ -193,15 +194,17 @@ namespace Raven.Server.Web.System
         public async Task Put()
         {
             var raftRequestId = GetRaftRequestIdFromQuery();
-
+            
             await ServerStore.EnsureNotPassiveAsync();
-            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var index = GetLongFromHeaders("ETag");
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 1;
                 var json = await context.ReadForDiskAsync(RequestBodyStream(), "Database Record");
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
+
+                if (await ProxyToLeaderIfNeeded(context, databaseRecord, replicationFactor, index))
+                    return;
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
@@ -298,6 +301,40 @@ namespace Raven.Server.Web.System
             }
         }
 
+        private async Task<bool> ProxyToLeaderIfNeeded(JsonOperationContext context, DatabaseRecord databaseRecord, int replicationFactor, long? index)
+        {
+            var leaderTag = ServerStore.Engine.LeaderTag;
+            if (leaderTag == null)
+            {
+                using (var cts = CreateHttpRequestBoundTimeLimitedOperationToken(TimeSpan.FromSeconds(15)))
+                {
+                    leaderTag = await ServerStore.Engine.WaitForLeaderChange(leader: null, cts.Token);
+                }
+            }
+            if (leaderTag != ServerStore.NodeTag)
+            {
+                // proxy the command to the leader
+                var leaderRequestExecutor = ServerStore.GetLeaderRequestExecutor(leaderTag);
+                var command = new CreateDatabaseOperation.CreateDatabaseCommand(DocumentConventions.Default, databaseRecord, replicationFactor, index);
+                await leaderRequestExecutor.ExecuteAsync(command, context);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(DatabasePutResult.RaftCommandIndex)] = command.Result.RaftCommandIndex,
+                        [nameof(DatabasePutResult.Name)] = command.Result.Name,
+                        [nameof(DatabasePutResult.Topology)] = command.Result.Topology.ToJson(),
+                        [nameof(DatabasePutResult.NodesAddedTo)] = command.Result.NodesAddedTo
+                    });
+                }
+                return true;
+            }
+
+            return false;
+        }
+
         private void RecreateIndexes(string databaseName, DatabaseRecord databaseRecord)
         {
             var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseName, true, true, true, databaseRecord);
@@ -307,11 +344,19 @@ namespace Raven.Server.Web.System
                 return;
             }
 
-            var addToInitLog = new Action<string>(txt =>
+            var addToInitLog = new Action<LogMode, string>((logMode, txt) =>
             {
                 var msg = $"[Recreating indexes] {DateTime.UtcNow} :: Database '{databaseName}' : {txt}";
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(msg);
+
+                switch (logMode)
+                {
+                    case LogMode.Operations when Logger.IsOperationsEnabled:
+                        Logger.Operations(msg);
+                        break;
+                    case LogMode.Information when Logger.IsInfoEnabled:
+                        Logger.Info(msg);
+                        break;
+                }
             });
 
             using (var documentDatabase = DatabasesLandlord.CreateDocumentDatabase(databaseName, databaseConfiguration, ServerStore, addToInitLog))
@@ -382,7 +427,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task<(long Index, DatabaseTopology Topology, List<string> Urls)> CreateDatabase(string name, DatabaseRecord databaseRecord, ClusterOperationContext context, int replicationFactor, long? index, string raftRequestId)
+        private async Task<(long Index, DatabaseTopology Topology, List<string> Urls)> CreateDatabase(string name, DatabaseRecord databaseRecord, TransactionOperationContext context, int replicationFactor, long? index, string raftRequestId)
         {
             var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId, replicationFactor: replicationFactor);
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
@@ -398,16 +443,15 @@ namespace Raven.Server.Web.System
                     $"The database '{name}' was created but is not accessible, because one or more of the nodes on which this database was supposed to reside on, threw an exception.", e);
             }
 
-            var clusterTopology = ServerStore.GetClusterTopology(context);
-            var nodeUrlsAddedTo = new List<string>();
-            foreach (var member in members)
+            using (context.OpenReadTransaction())
             {
-                nodeUrlsAddedTo.Add(clusterTopology.GetUrlFromTag(member));
-            }
+                var clusterTopology = ServerStore.GetClusterTopology(context);
+                var nodeUrlsAddedTo = new List<string>();
+                foreach (var member in members)
+                {
+                    nodeUrlsAddedTo.Add(clusterTopology.GetUrlFromTag(member));
+                }
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
                 DatabaseTopology topology;
                 if (databaseRecord.IsSharded)
                 {
@@ -418,7 +462,7 @@ namespace Raven.Server.Web.System
                 }
                 else
                 {
-                    topology = ServerStore.Cluster.ReadDatabaseTopology(ctx, name);
+                    topology = ServerStore.Cluster.ReadDatabaseTopology(context, name);
                 }
                 return (newIndex, topology, nodeUrlsAddedTo);
             }
@@ -473,8 +517,9 @@ namespace Raven.Server.Web.System
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
+                var cancelToken = CreateBackgroundOperationToken();
                 var configuration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
-                var restoreConfiguration = RestoreUtils.GetRestoreConfigurationAndSource(ServerStore, configuration, out var restoreSource);
+                var restoreConfiguration = RestoreUtils.GetRestoreConfigurationAndSource(ServerStore, configuration, out var restoreSource, cancelToken);
 
                 if (restoreConfiguration.ShardRestoreSettings != null)
                 {
@@ -496,8 +541,6 @@ namespace Raven.Server.Web.System
                 }
 
                 await ServerStore.EnsureNotPassiveAsync();
-
-                var cancelToken = CreateBackgroundOperationToken();
 
                 var operationId = ServerStore.Operations.GetNextOperationId();
 
@@ -1247,9 +1290,8 @@ namespace Raven.Server.Web.System
             if (ResourceNameValidator.IsValidResourceName(databaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                context.OpenReadTransaction();
                 await CreateDatabase(databaseName, configuration.DatabaseRecord, context, 1, null, RaftIdGenerator.NewId());
             }
 

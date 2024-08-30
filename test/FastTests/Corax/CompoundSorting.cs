@@ -101,7 +101,6 @@ public class CompoundSorting : RavenTestBase
             .OrderBy(nameof(Dto.Floating), OrderingType.Double)
             .ToList()
             .Select(i => i.Id);
-
         Assert.Equal(new[]{"1", "2", "3"}, queryStrAscFloatAsc);
 
         var queryStrAscFloatDesc = GetBaseQuery(session, indexName, boxedComparer)

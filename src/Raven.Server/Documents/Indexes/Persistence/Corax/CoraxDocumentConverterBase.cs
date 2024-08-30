@@ -50,9 +50,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public List<long> LongsListForEnumerableScope;
     public List<double> DoublesListForEnumerableScope;
     public List<BlittableJsonReaderObject> BlittableJsonReaderObjectsListForEnumerableScope;
-    private HashSet<IndexField> _complexFields;
     public bool IgnoreComplexObjectsDuringIndex;
     public List<string[]> CompoundFields;
+    protected HashSet<string> _nonExistingFieldsOfDocument;
 
     protected abstract bool SetDocumentFields<TBuilder>(
         LazyStringValue key, LazyStringValue sourceDocumentId,
@@ -105,6 +105,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 }
             }
         }
+
+        _nonExistingFieldsOfDocument = new HashSet<string>();
     }
     
     public IndexFieldsMapping GetKnownFieldsForQuerying() => _knownFieldsForReaders.Value;
@@ -137,7 +139,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         out bool shouldSkip)
         where TBuilder : IIndexEntryBuilder
     {
-        if (_index.Type.IsMapReduce() == false && field.Indexing == FieldIndexing.No && field.Storage == FieldStorage.No && (_complexFields is null || _complexFields.Contains(field) == false))
+        if (_index.Type.IsMapReduce() == false && field.Indexing == FieldIndexing.No && field.Storage == FieldStorage.No && (_index.ComplexFieldsNotIndexedByCorax is null || _index.ComplexFieldsNotIndexedByCorax.Contains(field) == false))
             ThrowFieldIsNoIndexedAndStored(field);
         
         shouldSkip = false;
@@ -403,6 +405,30 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         }
     }
 
+    protected void RegisterMissingFieldFor(IndexField field)
+    {
+        if (field.Id == CoraxConstants.IndexWriter.DynamicField || _index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
+            return;
+        
+        _nonExistingFieldsOfDocument.Add(field.Name);
+    }
+
+    protected void WriteNonExistingMarkerForMissingFields<TBuilder>(TBuilder builder) where TBuilder : IIndexEntryBuilder
+    {
+        if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList) 
+            return;
+
+        foreach (var fieldName in _nonExistingFieldsOfDocument)
+        {
+            var path = _fields[fieldName].Name;
+            var fieldId= _fields[fieldName].Id;
+        
+            builder.WriteNonExistingMarker(fieldId, path);
+        }
+            
+        _nonExistingFieldsOfDocument.Clear();
+    }
+
     [DoesNotReturn]
     private static void ThrowFieldIsNoIndexedAndStored(IndexField field)
     {
@@ -468,8 +494,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     private void DisableIndexingForComplexObject(IndexField field)
     {
         field.Indexing = FieldIndexing.No;
-        _complexFields ??= new();
-        _complexFields.Add(field);
+       _index.SetComplexFieldNotIndexedByCoraxStaticIndex(field);
         
         if (GetKnownFieldsForWriter().TryGetByFieldId(field.Id, out var binding))
         {

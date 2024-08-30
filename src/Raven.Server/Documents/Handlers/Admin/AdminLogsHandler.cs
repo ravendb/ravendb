@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Config;
+using Raven.Server.EventListener;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils.MicrosoftLogging;
 using Raven.Server.Json;
@@ -52,6 +53,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "logs/configuration");
 
                 var configuration = JsonDeserializationServer.Parameters.SetLogsConfigurationParameters(json);
+                if (configuration.Persist)
+                    AssertCanPersistConfiguration();
 
                 if (configuration.RetentionTime == null)
                     configuration.RetentionTime = ServerStore.Configuration.Logs.RetentionTime?.AsTimeSpan;
@@ -309,6 +312,55 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             NoContentStatus();
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/event-listener/configuration", "GET", AuthorizationStatus.Operator)]
+        public async Task GetEventListenerConfiguration()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var json = context.ReadObject(EventListenerToLog.Instance.ToJson(), "event-listener/configuration");
+                    writer.WriteObject(json);
+                }
+            }
+        }
+
+        [RavenAction("/admin/event-listener/configuration", "POST", AuthorizationStatus.Operator)]
+        public async Task SetEventListenerConfiguration()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "event-listener/configuration");
+
+                var configuration = JsonDeserializationServer.EventListenerConfiguration(json);
+                if (configuration.Persist)
+                    AssertCanPersistConfiguration();
+
+                EventListenerToLog.Instance.UpdateConfiguration(configuration);
+
+                if (configuration.Persist)
+                {
+                    try
+                    {
+                        using var jsonFileModifier = SettingsJsonModifier.Create(context, ServerStore.Configuration.ConfigPath);
+                        jsonFileModifier.SetOrRemoveIfDefault(configuration.EventListenerMode, x => x.DebugConfiguration.EventListenerMode);
+                        jsonFileModifier.CollectionSetOrRemoveIfDefault(configuration.EventTypes, x => x.DebugConfiguration.EventTypes);
+                        jsonFileModifier.SetOrRemoveIfDefault(configuration.MinimumDurationInMs, x => x.DebugConfiguration.MinimumDuration);
+                        jsonFileModifier.SetOrRemoveIfDefault(configuration.AllocationsLoggingIntervalInMs, x => x.DebugConfiguration.AllocationsLoggingInterval);
+                        jsonFileModifier.SetOrRemoveIfDefault(configuration.AllocationsLoggingCount, x => x.DebugConfiguration.AllocationsLoggingCount);
+                        await jsonFileModifier.ExecuteAsync();
+                    }
+                    catch (Exception e)
+                    {
+                        throw new PersistConfigurationException(
+                            "The event listener configuration was modified but couldn't be persistent. The configuration will be reverted on server restart.", e);
+                    }
+                }
+
+                NoContentStatus();
+            }
         }
     }
 }

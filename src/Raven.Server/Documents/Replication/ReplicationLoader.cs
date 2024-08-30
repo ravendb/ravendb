@@ -276,12 +276,12 @@ namespace Raven.Server.Documents.Replication
                     break;
 
                 case RegisterReplicationHubAccessCommand reg:
-                    DisposeRelatedPullReplication(reg.HubName, reg.CertificateThumbprint);
+                    DisposeRelatedPullReplication(reg.HubName, reg.CertificateThumbprint, reg.Database);
                     break;
             }
             return Task.CompletedTask;
 
-            void DisposeRelatedPullReplication(string hub, string certThumbprint)
+            void DisposeRelatedPullReplication(string hub, string certThumbprint, string sourceDatabase = null)
             {
                 if (hub == null)
                     return;
@@ -291,7 +291,9 @@ namespace Raven.Server.Documents.Replication
                     if (repl is IncomingPullReplicationHandler pullHandler == false)
                         continue;
 
-                    if (string.Equals(pullHandler._incomingPullReplicationParams.Name, hub, StringComparison.OrdinalIgnoreCase) == false)
+                    if (string.Equals(pullHandler._incomingPullReplicationParams.Name, hub, StringComparison.OrdinalIgnoreCase) == false ||
+                        (string.IsNullOrEmpty(sourceDatabase) == false &&
+                         string.Equals(pullHandler._incomingPullReplicationParams.SourceDatabaseName, sourceDatabase, StringComparison.OrdinalIgnoreCase) == false))
                         continue;
 
                     if (certThumbprint != null && pullHandler.CertificateThumbprint != certThumbprint)
@@ -314,7 +316,9 @@ namespace Raven.Server.Documents.Replication
                     if (repl is OutgoingPullReplicationHandlerAsHub asHub == false)
                         continue;
 
-                    if (string.Equals(asHub.PullReplicationDefinitionName, hub, StringComparison.OrdinalIgnoreCase) == false)
+                    if (string.Equals(asHub.PullReplicationDefinitionName, hub, StringComparison.OrdinalIgnoreCase) == false ||
+                        (string.IsNullOrEmpty(sourceDatabase) == false &&
+                         string.Equals(sourceDatabase, repl.Destination.Database, StringComparison.OrdinalIgnoreCase) == false))
                         continue;
 
                     if (certThumbprint != null && asHub.CertificateThumbprint != certThumbprint)
@@ -422,7 +426,7 @@ namespace Raven.Server.Documents.Replication
                     $"PullReplicationDefinitionName '{initialRequest.PullReplicationDefinitionName}' does not match the pull replication definition name: {pullReplicationDefinition.Name}");
 
             var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the hub will have the same task id.
-            var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);
+            var externalReplication = pullReplicationDefinition.ToPullReplicationAsHub(initialRequest, taskId);
 
             var outgoingReplication = new OutgoingPullReplicationHandlerAsHub(this, Database, externalReplication, initialRequest.Info)
             {
@@ -588,6 +592,7 @@ namespace Raven.Server.Documents.Replication
         public sealed class PullReplicationParams
         {
             public string Name;
+            public string SourceDatabaseName;
             public string[] AllowedPaths;
             public PullReplicationMode Mode;
             public PreventDeletionsMode? PreventDeletionsMode;
@@ -1136,7 +1141,8 @@ namespace Raven.Server.Documents.Replication
                         TaskId = sink.TaskId,
                         ConnectionStringName = sink.ConnectionStringName,
                         HubName = sink.HubName,
-                        CertificateWithPrivateKey = sink.CertificateWithPrivateKey
+                        CertificateWithPrivateKey = sink.CertificateWithPrivateKey,
+                        AccessName = sink.AccessName
                     };
 
                     i += 1;

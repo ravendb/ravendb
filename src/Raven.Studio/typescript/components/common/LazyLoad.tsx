@@ -3,7 +3,7 @@ import React, { ReactNode } from "react";
 
 interface LazyLoadProps {
     children?: ReactNode | ReactNode[];
-    active?: boolean;
+    active: boolean;
     className?: string;
 }
 
@@ -20,7 +20,3 @@ export function LazyLoad(props: LazyLoadProps): JSX.Element {
 
     return <React.Fragment>{children}</React.Fragment>;
 }
-
-LazyLoad.defaultProps = {
-    active: true,
-};

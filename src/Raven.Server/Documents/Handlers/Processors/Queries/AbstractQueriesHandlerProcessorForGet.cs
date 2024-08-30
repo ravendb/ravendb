@@ -122,6 +122,9 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                     if (string.IsNullOrWhiteSpace(parameters.Debug) == false)
                     {
                         await HandleDebugAsync(indexQuery, queryContext, context, parameters, existingResultEtag, token);
+                        
+                        tracker.Dispose();
+
                         return;
                     }
 
@@ -190,6 +193,8 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
                         AddQueryTimingsToTrafficWatch(indexQuery);
                     }
+
+                    tracker.Dispose();
                 }
             }
             catch (Exception e)

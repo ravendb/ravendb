@@ -28,7 +28,7 @@ import FeatureAvailabilitySummaryWrapper, {
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 export default function ClientDatabaseConfiguration() {
     const { manageServerService } = useServices();

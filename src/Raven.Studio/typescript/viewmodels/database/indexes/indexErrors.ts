@@ -8,6 +8,7 @@ import getIndexesErrorCountCommand from "commands/database/index/getIndexesError
 import indexErrorInfoModel from "models/database/index/indexErrorInfoModel";
 import getIndexesErrorCommand from "commands/database/index/getIndexesErrorCommand";
 import moment = require("moment");
+import { sortBy } from "common/typeUtils";
 
 type nameAndCount = {
     name: string;
@@ -65,7 +66,7 @@ class indexErrors extends shardViewModelBase {
             });
             
             const mappedResult = Array.from(result.entries()).map(([name, count]) => ({ name, count }));
-            return _.sortBy(mappedResult, x => x.name.toLocaleLowerCase());
+            return sortBy(mappedResult, x => x.name.toLocaleLowerCase());
         });
         
         this.erroredActionNames = ko.pureComputed(() => {
@@ -83,7 +84,7 @@ class indexErrors extends shardViewModelBase {
             })
             
             const mappedResult = Array.from(result.entries()).map(([name, count]) => ({ name, count }));
-            return _.sortBy(mappedResult, x => x.name.toLocaleLowerCase());
+            return sortBy(mappedResult, x => x.name.toLocaleLowerCase());
         });
     }
     
@@ -204,11 +205,11 @@ class indexErrors extends shardViewModelBase {
                 item.onDetailsLoaded(results);
                 item.filterAndShow(this.filterItems);
             })
-            .fail(result => item.onDetailsLoadError(result.responseJSON.Message));
+            .fail((result: JQueryXHR) => item.onDetailsLoadError(result.responseJSON.Message));
     }
 
     private mapItems(indexErrorsDto: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {
-        const mappedItems = _.flatMap(indexErrorsDto, value => {
+        const mappedItems = indexErrorsDto.flatMap(value => {
             return value.Errors.map((errorDto: Raven.Client.Documents.Indexes.IndexingError): IndexErrorPerDocument =>
                 ({
                     ...errorDto,
@@ -219,7 +220,7 @@ class indexErrors extends shardViewModelBase {
                 }));
         });
 
-        return _.orderBy(mappedItems, [x => x.Timestamp], ["desc"]);
+        return _.orderBy(mappedItems, [(x: IndexErrorPerDocument) => x.Timestamp], ["desc"]);
     }
 
     filterItems(error: IndexErrorPerDocument): boolean {

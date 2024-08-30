@@ -12,6 +12,7 @@ import getGlobalClientConfigurationCommand = require("commands/resources/getGlob
 import genUtils = require("common/generalUtils");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database = require("models/resources/database");
+import { sortBy } from "common/typeUtils";
 
 class identity {
     prefix = ko.observable<string>();
@@ -179,7 +180,7 @@ class identities extends shardViewModelBase {
             new getIdentitiesCommand(this.db)
                 .execute()
                 .done((identities: dictionary<number>) => {
-                    const mappedIdentities = _.map(identities, (value, key): identity => {
+                    const mappedIdentities = Object.entries(identities).map(([key, value]) => {
                         return new identity(key, value, this.effectiveIdentitySeparator());
                     });
 
@@ -189,7 +190,7 @@ class identities extends shardViewModelBase {
                         mappedIdentities.filter(x => x.prefix().toLocaleLowerCase().includes(this.filter().toLocaleLowerCase())) :
                         mappedIdentities;
 
-                    filteredIdentities = _.sortBy(filteredIdentities, x => x.prefix());
+                    filteredIdentities = sortBy(filteredIdentities, x => x.prefix());
 
                     task.resolve({
                         totalResultCount: filteredIdentities.length,
@@ -221,7 +222,7 @@ class identities extends shardViewModelBase {
         grid.init(() => this.fetchIdentities(), () => gridColumns);
         
         this.columnPreview.install(".js-identities-grid", ".js-identities-tooltip",
-            (identityItem: identity, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+            (identityItem: identity, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
             if (column instanceof textColumn) {
                 onValue(column.getCellValue(identityItem));
             }

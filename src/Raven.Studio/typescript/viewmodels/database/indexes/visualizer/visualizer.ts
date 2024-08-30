@@ -7,6 +7,7 @@ import getIndexDebugSourceDocumentsCommand = require("commands/database/index/ge
 import eventsCollector = require("common/eventsCollector");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import { range } from "common/typeUtils";
 
 type autoCompleteItem = {
     label: string;
@@ -171,7 +172,7 @@ class visualizer extends shardViewModelBase {
                         const rangeStartInt = parseInt(rangeStart, 10);
                         const rangeEndInt = parseInt(rangeEnd, 10);
                         if (rangeStartInt <= rangeEndInt) {
-                            return _.range(rangeStartInt, rangeEndInt, 1).map(x => prefix + "/" + x);
+                            return range(rangeStartInt, rangeEndInt, 1).map(x => prefix + "/" + x);
                         }
                     }
                 }
@@ -205,7 +206,7 @@ class visualizer extends shardViewModelBase {
                     }
                 });
 
-                if (_.some(leaf.Entries, e => e.Source && e.Source !== documentName)) {
+                if (leaf.Entries.some(e => e.Source && e.Source !== documentName)) {
                     containsDifferentReference = true;
                 }
             });

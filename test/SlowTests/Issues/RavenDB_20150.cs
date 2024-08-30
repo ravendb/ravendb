@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -92,12 +93,19 @@ public class RavenDB_20150 : ClusterTestBase
                 }, true);
 
                 Assert.True(done);
+
+                //Running cluster transaction to immediately mark the tombstone as handled by the cluster transaction mechanism and allow cleaning it
+                using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide, DisableAtomicDocumentWritesInClusterWideTransaction = true}))
+                {
+                    await session.StoreAsync(new TestOjb());
+                    await session.SaveChangesAsync();
+                }
             }
 
             //unsuspend and wait for the tombstone cleaner
             leader.ServerStore.Observer.Suspended = false;
 
-            await WaitAndAssertForValueAsync(() => leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks > timeBeforeCxDeletion.Ticks, true);
+            await WaitAndAssertForGreaterThanAsync(() => Task.FromResult(leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks), timeBeforeCxDeletion.Ticks);
 
             //ensure compare exchange tombstones were deleted after the tombstone cleanup
             foreach (var node in nodes)
@@ -120,5 +128,10 @@ public class RavenDB_20150 : ClusterTestBase
                 Assert.Equal(0, numOfCompareExchanges);
             }
         }
+    }
+    
+    private class TestOjb
+    {
+        public string Id { get; set; }
     }
 }

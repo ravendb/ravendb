@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -510,7 +511,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (compareExchangeActions != null && item.Document.ChangeVector != null && item.Document.ChangeVector.Contains(ChangeVectorParser.TrxnTag))
                     {
-                        var key = ClusterTransactionCommand.GetAtomicGuardKey(item.Document.Id);
+                        var key = ClusterWideTransactionHelper.GetAtomicGuardKey(item.Document.Id);
                         await compareExchangeActions.WriteKeyValueAsync(key, null, item.Document);
                         continue;
                     }
@@ -1020,6 +1021,10 @@ namespace Raven.Server.Smuggler.Documents
                 try
                 {
                     await actions.WriteDatabaseRecordAsync(databaseRecord, result, _options.AuthorizationStatus, _options.OperateOnDatabaseRecordTypes);
+                }
+                catch (LicenseLimitException)
+                {
+                    throw;
                 }
                 catch (Exception e)
                 {

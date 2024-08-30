@@ -3,6 +3,7 @@ import appUrl = require("common/appUrl");
 import { bridgeToReact } from "common/reactUtils";
 import { BootstrapPlaygroundPage } from "components/pages/BootstrapPlaygroundPage";
 import { AboutPage } from "components/pages/resources/about/AboutPage";
+import React from "react";
 
 function aboutItem() {
     return new leafMenuItem({
@@ -13,6 +14,34 @@ function aboutItem() {
         nav: true,
         css: 'icon-info',
         dynamicHash: appUrl.forAbout
+    });
+}
+
+interface WhatsNewItemOptions {
+    isNewVersionAvailable?: boolean;
+    isWhatsNewVisible?: boolean;
+}
+
+function whatsNewItem({ isNewVersionAvailable = false, isWhatsNewVisible = false }: WhatsNewItemOptions = {}) {
+    
+    const moduleId = bridgeToReact(
+        () => React.createElement(AboutPage, { initialChangeLogMode: "changeLog" }),
+        "nonShardedView"
+    );
+
+    const badgeHtml = isNewVersionAvailable
+        ? `<div class="badge badge-info rounded-pill">Update available</div>`
+        : null
+
+    return new leafMenuItem({
+        route: 'whatsNew',
+        moduleId,
+        title: 'What\'s new',
+        tooltip: "What's new",
+        nav: isWhatsNewVisible,
+        css: 'icon-sparkles',
+        dynamicHash: appUrl.forWhatsNew,
+        badgeHtml
     });
 }
 
@@ -47,6 +76,7 @@ function clusterDashboard() {
 
 export = {
     about: aboutItem,
+    whatsNew: whatsNewItem,
     bs: bs5Item,
     clusterDashboard
 };

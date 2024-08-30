@@ -9,10 +9,18 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Analyzers
 {
+    /// <summary>
+    /// Adds analyzers to a specific database using the PutAnalyzersOperation.
+    /// 
+    /// <para><strong>Note:</strong> By default, this operation applies to the default database of the document store being used. 
+    /// To target a different database, use the ForDatabase() method.</para>
+    /// </summary>
     public sealed class PutAnalyzersOperation : IMaintenanceOperation
     {
         private readonly AnalyzerDefinition[] _analyzersToAdd;
 
+        /// <inheritdoc cref="PutAnalyzersOperation" />
+        /// <param name="analyzersToAdd">An array of AnalyzerDefinition objects representing the analyzers to be added to the database.</param>
         public PutAnalyzersOperation(params AnalyzerDefinition[] analyzersToAdd)
         {
             if (analyzersToAdd == null || analyzersToAdd.Length == 0)

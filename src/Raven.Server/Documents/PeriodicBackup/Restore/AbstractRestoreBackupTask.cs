@@ -228,11 +228,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected void CreateDocumentDatabase()
         {
             var configuration = CreateDatabaseConfiguration();
-            var addToInitLog = new Action<string>(txt => // init log is not save in mem during RestoreBackup
+            var addToInitLog = new Action<LogMode, string>((logMode, txt) => // init log is not save in mem during RestoreBackup
             {
                 var msg = $"[RestoreBackup] {DateTime.UtcNow} :: Database '{DatabaseName}' : {txt}";
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(msg);
+
+                switch (logMode)
+                {
+                    case LogMode.Operations when Logger.IsOperationsEnabled:
+                        Logger.Operations(msg);
+                        break;
+                    case LogMode.Information when Logger.IsInfoEnabled:
+                        Logger.Info(msg);
+                        break;
+                }
             });
 
             Database = DatabasesLandlord.CreateDocumentDatabase(DatabaseName, configuration, ServerStore, addToInitLog);
@@ -449,6 +457,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     task.Disabled = true;
                 }
             }
+
+            if (databaseRecord.QueueSinks != null)
+            {
+                foreach (var task in databaseRecord.QueueSinks)
+                {
+                    task.Disabled = true;
+                }
+            }
         }
 
         private ClusterTopology GetClusterTopology()
@@ -555,6 +571,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.QueueEtls = smugglerDatabaseRecord.QueueEtls;
                     databaseRecord.QueueConnectionStrings = smugglerDatabaseRecord.QueueConnectionStrings;
                     databaseRecord.IndexesHistory = smugglerDatabaseRecord.IndexesHistory;
+                    databaseRecord.Refresh = smugglerDatabaseRecord.Refresh;
+                    databaseRecord.Integrations = smugglerDatabaseRecord.Integrations;
+                    databaseRecord.Studio = smugglerDatabaseRecord.Studio;
+                    databaseRecord.RevisionsForConflicts = smugglerDatabaseRecord.RevisionsForConflicts;
+                    databaseRecord.DataArchival = smugglerDatabaseRecord.DataArchival;
+                    databaseRecord.QueueSinks = smugglerDatabaseRecord.QueueSinks;
                 };
             }
 

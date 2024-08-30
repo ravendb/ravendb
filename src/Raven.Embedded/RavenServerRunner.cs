@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Sparrow.Platform;
 using Sparrow.Utils;
@@ -30,7 +32,24 @@ namespace Raven.Embedded
                 commandLineArgs.Add($"--Embedded.ParentProcessId={currentProcess.Id}");
             }
 
-            commandLineArgs.Add($"--License.Eula.Accepted={options.AcceptEula}");
+            if (options.Licensing != null)
+            {
+                if (string.IsNullOrWhiteSpace(options.Licensing.License) == false &&
+                    string.IsNullOrWhiteSpace(options.Licensing.LicensePath) == false)
+                    throw new ArgumentException($"Only one of Licence options '{nameof(options.Licensing.License)}' or '{nameof(options.Licensing.LicensePath)}' should be specified");
+
+                if (string.IsNullOrWhiteSpace(options.Licensing.License) == false)
+                    commandLineArgs.Add($"--License={CommandLineArgumentEscaper.EscapeSingleArg(options.Licensing.License)}");
+                else if (string.IsNullOrWhiteSpace(options.Licensing.LicensePath) == false)
+                    commandLineArgs.Add($"--License.Path={CommandLineArgumentEscaper.EscapeSingleArg(options.Licensing.LicensePath)}");
+
+                commandLineArgs.Add($"--License.Eula.Accepted={options.Licensing.EulaAccepted}");
+                commandLineArgs.Add($"--License.DisableAutoUpdate={options.Licensing.DisableAutoUpdate}");
+                commandLineArgs.Add($"--License.DisableAutoUpdateFromApi={options.Licensing.DisableAutoUpdateFromApi}");
+                commandLineArgs.Add($"--License.DisableLicenseSupportCheck={options.Licensing.DisableLicenseSupportCheck}");
+                commandLineArgs.Add($"--License.ThrowOnInvalidOrMissingLicense={options.Licensing.ThrowOnInvalidOrMissingLicense}");
+            }
+
             commandLineArgs.Add("--Setup.Mode=None");
             commandLineArgs.Add($"--DataDir={CommandLineArgumentEscaper.EscapeSingleArg(options.DataDirectory)}");
             commandLineArgs.Add($"--Logs.Path={CommandLineArgumentEscaper.EscapeSingleArg(options.LogsPath)}");
@@ -143,6 +162,16 @@ namespace Raven.Embedded
 
         private static void RemoveEnvironmentVariables(ProcessStartInfo processStartInfo)
         {
+            if (ForTestingPurposes?.EnvironmentVariablesToCopyToInternalProcess != null)
+            {
+                var environmentVariablesToCopyToInternalProcess = Environment.GetEnvironmentVariables()
+                    .Cast<DictionaryEntry>()
+                    .Where(x => ForTestingPurposes.EnvironmentVariablesToCopyToInternalProcess.Contains(x.Key.ToString()));
+
+                foreach (DictionaryEntry envVar in environmentVariablesToCopyToInternalProcess)
+                    processStartInfo.EnvironmentVariables[envVar.Key.ToString()] = envVar.Value.ToString();
+            }
+
             if (processStartInfo.Environment == null || processStartInfo.Environment.Count == 0)
                 return;
 
@@ -160,6 +189,21 @@ namespace Raven.Embedded
 
             foreach (var key in variablesToRemove)
                 processStartInfo.Environment.Remove(key);
+        }
+
+        private static TestingStuff ForTestingPurposes;
+
+        internal static TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal List<string> EnvironmentVariablesToCopyToInternalProcess;
         }
     }
 }

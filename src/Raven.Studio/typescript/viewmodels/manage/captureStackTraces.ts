@@ -8,6 +8,7 @@ import fileDownloader = require("common/fileDownloader");
 import fileImporter = require("common/fileImporter");
 import genUtils = require("common/generalUtils");
 import icomoonHelpers from "common/helpers/view/icomoonHelpers";
+import ThreadInfo = Raven.Server.Dashboard.ThreadInfo;
 
 type stackFrame = {
     short: string;
@@ -130,7 +131,7 @@ class captureStackTraces extends viewModelBase {
 
             let depth = 0;
             for (; depth < minDepth; depth++) {
-                if (_.some(sharedStacks, x => x.stackTrace[depth] !== sharedStacks[0].stackTrace[depth])) {
+                if (sharedStacks.some(x => x.stackTrace[depth] !== sharedStacks[0].stackTrace[depth])) {
                     break;
                 }
             }
@@ -554,9 +555,9 @@ class captureStackTraces extends viewModelBase {
         const threadInfo = this.getThreadInfo(threadIds);
 
         if (threadInfo.length) {
-            const groupByName = _.groupBy(threadInfo, x => x.Name);
+            const groupByName = _.groupBy(threadInfo, (x: ThreadInfo) => x.Name);
             return Object.keys(groupByName).map(key => {
-                const ids = groupByName[key].map(x => x.Id);
+                const ids = groupByName[key].map((x: ThreadInfo) => x.Id);
                 
                 const shortName = ids.length > 2 ? (
                     "[" + ids[0] + "," + ids[1] + " and " + (ids.length - 2) + " more] " + key

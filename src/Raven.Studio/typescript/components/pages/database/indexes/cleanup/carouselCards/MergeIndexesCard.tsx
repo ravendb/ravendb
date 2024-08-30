@@ -65,7 +65,7 @@ function MainPanel({ mergable }: MergeIndexesCardProps) {
             </div>
 
             {mergable.data.map((mergableGroup, groupKey) => (
-                <RichPanel key={"mergeGroup-" + mergableGroup.mergedIndexDefinition.Name} hover>
+                <RichPanel key={"mergeGroup-" + groupKey} hover>
                     <RichPanelHeader className="px-3 py-2 flex-wrap flex-row gap-3">
                         <div className="mt-1">
                             <Button

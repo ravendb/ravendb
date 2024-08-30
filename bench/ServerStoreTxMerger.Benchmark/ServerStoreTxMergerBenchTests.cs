@@ -114,7 +114,7 @@ public class ActualTests : RachisConsensusTestBase
         var tasks = new HashSet<Task>();
         foreach (var cmd in cmds)
         {
-            var t = _leader.PutAsync(cmd);
+            var t = _leader.SendToLeaderAsync(cmd);
             tasks.Add(t);
 
             if (tasks.Count < 1500)

@@ -63,9 +63,9 @@ class serverWideTasks extends viewModelBase {
         
         const oldTaskIds = oldTasks.map(x => x.taskId);
         const newTaskIds = result.Tasks.map(x => x.TaskId);
-        const toDeleteIds = _.without(oldTaskIds, ...newTaskIds);
+        const toDeleteIds = oldTaskIds.filter(x => !newTaskIds.includes(x));
 
-        const groupedTasks = _.groupBy(result.Tasks, x => x.TaskType);
+        const groupedTasks = _.groupBy(result.Tasks, (x: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideTask) => x.TaskType);
         
         this.mergeTasks(this.serverWideExternalReplicationTasks,
             groupedTasks["Replication" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
@@ -94,7 +94,7 @@ class serverWideTasks extends viewModelBase {
                 existingItem.update(item);
             } else {
                 const newItem = ctr(item);
-                const insertIdx = _.sortedIndexBy(container(), newItem, x => x.taskName().toLocaleLowerCase());
+                const insertIdx = _.sortedIndexBy(container(), newItem, (x: ongoingTaskModel) => x.taskName().toLocaleLowerCase());
                 container.splice(insertIdx, 0, newItem);
             }
         })

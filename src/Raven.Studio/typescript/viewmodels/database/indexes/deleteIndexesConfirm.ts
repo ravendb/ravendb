@@ -38,8 +38,8 @@ class deleteIndexesConfirm extends dialogViewModelBase {
     showWarning = false;
     deleteTask = $.Deferred<boolean>();
 
-    indexesInfoForDelete = Array<indexInfoForDelete>();
-    lockedIndexNames = Array<string>();
+    indexesInfoForDelete: indexInfoForDelete[] = [];
+    lockedIndexNames: string[] = [];
 
     private indexes: IndexToDelete[];
 
@@ -79,7 +79,7 @@ class deleteIndexesConfirm extends dialogViewModelBase {
             this.subTitleHtml = `You're deleting <strong>${this.indexesInfoForDelete.length}</strong> indexes:`;
         }
 
-        this.showWarning = _.some(this.indexesInfoForDelete, x => x.reduceOutputCollection);
+        this.showWarning = this.indexesInfoForDelete.some(x => x.reduceOutputCollection);
     }
 
     deleteIndexes() {
@@ -91,7 +91,7 @@ class deleteIndexesConfirm extends dialogViewModelBase {
                 if (this.indexesInfoForDelete.length > 1) {
                     messagePublisher.reportSuccess("Successfully deleted " + this.indexesInfoForDelete.length + " indexes!");
                 }
-                this.deleteTask.resolve(true, this.indexesInfoForDelete.map(x => x.indexName));
+                this.deleteTask.resolve(true);
             })
             .fail(() => this.deleteTask.reject());
 

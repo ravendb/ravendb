@@ -56,8 +56,8 @@ namespace RachisTests
         [Fact]
         public async Task Adding_additional_node_that_goes_offline_and_then_online_should_still_work()
         {
-            var node4 = SetupServer(false, 53899);
-            var node5 = SetupServer(false, 53898);
+            var node4 = SetupServer();
+            var node5 = SetupServer();
             DisconnectFromNode(node4);
             DisconnectFromNode(node5);
             var leader = await CreateNetworkAndGetLeader(3);
@@ -151,8 +151,8 @@ namespace RachisTests
             var node2 = await CreateNetworkAndGetLeader(1);
             var url = node2.Url;
 
-            await node1.PutAsync(new TestCommand { Name = "test", Value = 10 });
-            await node2.PutAsync(new TestCommand { Name = "test", Value = 20 });
+            await node1.SendToLeaderAsync(new TestCommand { Name = "test", Value = 10 });
+            await node2.SendToLeaderAsync(new TestCommand { Name = "test", Value = 20 });
 
             string id;
             using (node1.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))

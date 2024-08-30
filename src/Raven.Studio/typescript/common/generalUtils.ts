@@ -1,7 +1,10 @@
 ﻿/// <reference path="../../typings/tsd.d.ts" />
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import moment = require("moment");
-import { SyntheticEvent } from "react";
+import { MouseEvent } from "react";
+import { isBoolean } from "common/typeUtils";
+
+type AtLeastOne<T> = [T, ...T[]];
 
 type SelectionState = "AllSelected" | "SomeSelected" | "Empty";
 
@@ -493,9 +496,9 @@ class genUtils {
 
         if (stripNullAndEmptyValues) {
             return JSON.stringify(obj, (key, val) => {
-                const isNull = _.isNull(val);
-                const isEmptyObj = _.isEqual(val, {});
-                const isEmptyArray = _.isEqual(val, []);
+                const isNull = val === null;
+                const isEmptyObj = val instanceof Object && Object.keys(val).length === 0;
+                const isEmptyArray = Array.isArray(val) && val.length === 0;
 
                 return isNull || isEmptyObj || isEmptyArray ? undefined : val;
 
@@ -563,7 +566,7 @@ class genUtils {
                            internalCallback: (result: { isValid: boolean, message: string } | boolean) => void) => {
                                             func(val, params, (currentValue, result) => {
                                                    if (currentValue === val) {
-                                                       if (_.isBoolean(result)) {
+                                                       if (isBoolean(result)) {
                                                            internalCallback(result);
                                                        } else if (result) {
                                                            internalCallback({ isValid: false, message: result});
@@ -609,11 +612,9 @@ class genUtils {
         return code;
     }
     
-    static canConsumeDelegatedEvent(event: JQueryEventObject | Event | SyntheticEvent) {
-        const rawEvent: Event | SyntheticEvent = ("originalEvent" in event) ? event.originalEvent : event;
-        
-        const target = rawEvent.target as HTMLElement;
-        const currentTarget = rawEvent.currentTarget as HTMLElement;
+    static canConsumeDelegatedEvent(event: MouseEvent<HTMLElement>) {
+        const target = event.target as HTMLElement;
+        const currentTarget = event.currentTarget as HTMLElement;
         
         let element = target;
         
@@ -715,11 +716,23 @@ class genUtils {
         throw new Error("Didn't expect to get here. " + msg);
     }
 
+    static exhaustiveStringTuple<T extends string>() {
+        return function <L extends AtLeastOne<T>>(
+          ...x: L extends any
+            ? Exclude<T, L[number]> extends never
+              ? L
+              : Exclude<T, L[number]>[]
+            : never
+        ) {
+          return x;
+        };
+      }
+
     static formatLocation(location: databaseLocationSpecifier) {
         if (location.shardNumber != null) {
             return "Shard #" + location.shardNumber + " on Node " + location.nodeTag;
         }
-        
+   
         return "Node " + location.nodeTag;
     }
     
@@ -761,6 +774,22 @@ class genUtils {
         }
         
         return date.startsWith("0001-01-01");
+    }
+
+    static isNewVersionAvailable(
+        serverVersion: serverBuildVersionDto,
+        latestVersion: Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo
+    ) {
+        if (!latestVersion) {
+            return false;
+        }
+    
+        if (!serverVersion) {
+            return false;
+        }
+    
+        const isDevBuildNumber = (num: number) => num >= 40 && num < 90;
+        return !isDevBuildNumber(latestVersion.BuildNumber) && latestVersion.BuildNumber > serverVersion.BuildVersion;
     }
 } 
 

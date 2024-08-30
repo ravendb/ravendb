@@ -47,9 +47,8 @@ class collectionsTracker {
     }
 
     private collectionsLoaded(collectionsStats: collectionsStats) {
-        const collections = collectionsStats.collections;
-
-        _.remove(collections, c => !c.documentCount());
+        const collections = collectionsStats.collections.filter(x => x.documentCount());
+        
         collections.sort((a, b) => this.sortAlphaNumericCollection(a.name, b.name));
 
         const allDocsCollection = collection.createAllDocumentsCollection(collectionsStats.numberOfDocuments());
@@ -69,7 +68,7 @@ class collectionsTracker {
     }
     
     getCollectionColorIndex(collectionName: string) {
-        return (_.findIndex(collectionsTracker.default.collections(), x => x.name === collectionName) + 5) % 6;
+        return (collectionsTracker.default.collections().findIndex( x => x.name === collectionName) + 5) % 6;
         // 6 is the number of classes that I have defined in etl.less for colors...
     }    
     

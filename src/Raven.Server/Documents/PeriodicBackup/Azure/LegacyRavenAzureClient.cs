@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     {"x-ms-date", now.ToString("R")},
                     {"x-ms-version", AzureStorageVersion},
                     {"x-ms-blob-type", "BlockBlob"},
-                    {"Content-Length", stream.Length.ToString(CultureInfo.InvariantCulture)}
+                    {Constants.Headers.ContentLength, stream.Length.ToString(CultureInfo.InvariantCulture)}
                 }
             };
 
@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     {
                         {"x-ms-date", now.ToString("R")},
                         {"x-ms-version", AzureStorageVersion},
-                        {"Content-Length", subStream.Length.ToString(CultureInfo.InvariantCulture)}
+                        {Constants.Headers.ContentLength, subStream.Length.ToString(CultureInfo.InvariantCulture)}
                     }
                 };
 
@@ -305,7 +305,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 {
                     {"x-ms-date", now.ToString("R")},
                     {"x-ms-version", AzureStorageVersion},
-                    {"Content-Length", Encoding.UTF8.GetBytes(xmlString).Length.ToString(CultureInfo.InvariantCulture)}
+                    {Constants.Headers.ContentLength, Encoding.UTF8.GetBytes(xmlString).Length.ToString(CultureInfo.InvariantCulture)}
                 }
             };
 
@@ -439,7 +439,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var data = await response.Content.ReadAsStreamAsync();
             var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
 
-            return new Blob(data, headers);
+            if (response.Content.Headers.TryGetValues(Constants.Headers.ContentLength, out var values) == false)
+                throw new InvalidOperationException("Content-Length header is not present");
+
+            var contentLength = values.FirstOrDefault();
+            if (long.TryParse(contentLength, out var size) == false)
+                throw new InvalidOperationException($"Content-Length header is present but could not be parsed, got: {contentLength}");
+
+            return new Blob(data, headers, size);
         }
 
         public void DeleteContainer()
@@ -655,7 +662,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             if (httpContentHeaders != null)
             {
-                if (httpContentHeaders.TryGetValues("Content-Length", out IEnumerable<string> lengthValues))
+                if (httpContentHeaders.TryGetValues(Constants.Headers.ContentLength, out IEnumerable<string> lengthValues))
                     contentLength = lengthValues.First();
 
                 if (httpContentHeaders.TryGetValues(Constants.Headers.ContentType, out IEnumerable<string> typeValues))
@@ -663,7 +670,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
             else
             {
-                if (httpHeaders.TryGetValues("Content-Length", out IEnumerable<string> lengthValues))
+                if (httpHeaders.TryGetValues(Constants.Headers.ContentLength, out IEnumerable<string> lengthValues))
                     contentLength = lengthValues.First();
 
                 if (httpHeaders.TryGetValues(Constants.Headers.ContentType, out IEnumerable<string> typeValues))

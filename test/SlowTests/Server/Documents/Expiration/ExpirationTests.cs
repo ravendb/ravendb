@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -88,7 +89,8 @@ namespace SlowTests.Server.Documents.Expiration
                     {
                         Name = "Company Name"
                     };
-                    var expiry = DateTime.Now; // intentionally local time
+                    var now = DateTime.Now;// intentionally local time
+                    var expiry = now;
                     if (dateTimeFormat.Value == DateTimeKind.Utc)
                         expiry = expiry.ToUniversalTime();
 
@@ -120,7 +122,9 @@ namespace SlowTests.Server.Documents.Expiration
                     using (var session = store.OpenAsyncSession())
                     {
                         var company2 = await session.LoadAsync<Company>(company.Id);
-                        Assert.Null(company2);
+                        Assert.True(company2 == null,
+                            $"company2 == null, dateTimeFormat.Key: {dateTimeFormat.Key}, dateTimeFormat.Value: {dateTimeFormat.Value}, " +
+                            $"now: {now}, expiry: {expiry}, {database.Time.GetUtcNow()}");
                     }
                 }
             }
@@ -423,10 +427,7 @@ namespace SlowTests.Server.Documents.Expiration
                 {DefaultFormat.DateTimeFormatsToRead[6], DateTimeKind.Utc},
             };
             Assert.Equal(utcFormats.Count, DefaultFormat.DateTimeFormatsToRead.Length);
-
-            var database2 = GetDatabaseName();
             var cluster = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0);
-            await ShardingCluster.CreateShardedDatabaseInCluster(database2, replicationFactor: 2, cluster, shards: 3);
 
             var configuration = new ExpirationConfiguration
             {
@@ -434,19 +435,16 @@ namespace SlowTests.Server.Documents.Expiration
                 DeleteFrequencyInSec = 100
             };
 
-            using (var store = Sharding.GetDocumentStore(new Options
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, 3, 2, 3);
+            options.ModifyDatabaseRecord += record =>
             {
-                Server = cluster.Leader,
-                CreateDatabase = false,
-                ModifyDatabaseName = _ => database2,
-                ModifyDatabaseRecord = record =>
+                if (compressed)
                 {
-                    if (compressed)
-                    {
-                        record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
-                    }
-                },
-            }))
+                    record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                }
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 foreach (var dateTimeFormat in utcFormats)
                 {
@@ -467,6 +465,7 @@ namespace SlowTests.Server.Documents.Expiration
                             var metadata = session.Advanced.GetMetadataFor(comp);
                             metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(dateTimeFormat.Key);
                         }
+                        session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 1, timeout: TimeSpan.FromSeconds(60));
                         session.SaveChanges();
                     }
 
@@ -483,6 +482,7 @@ namespace SlowTests.Server.Documents.Expiration
                                 var metadata = session.Advanced.GetMetadataFor(comp);
                                 metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(dateTimeFormat.Key);
                             }
+                            session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 1, timeout: TimeSpan.FromSeconds(60));
                             session.SaveChanges();
                         }
 
@@ -526,7 +526,7 @@ namespace SlowTests.Server.Documents.Expiration
                         using (var session = store.OpenAsyncSession())
                         {
                             var company = await session.LoadAsync<Company>($"company/{i}");
-                            Assert.Null(company);
+                            Assert.True(company == null,$"ID: company/{i}, format: {dateTimeFormat.Key}, total: {numOfDocs}");
                         }
                     }
                 }

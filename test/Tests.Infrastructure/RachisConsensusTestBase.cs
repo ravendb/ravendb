@@ -206,9 +206,9 @@ namespace Tests.Infrastructure
 
         protected bool EnableCaptureWriteTransactionStackTrace = false;
 
-        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null, bool shouldRunInMemory = true, string nodeTag = null)
+        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int electionTimeout = 300, [CallerMemberName] string caller = null, bool shouldRunInMemory = true, string nodeTag = null)
         {
-            var tcpListener = new TcpListener(IPAddress.Loopback, port);
+            var tcpListener = new TcpListener(IPAddress.Loopback, 0);
             tcpListener.Start();
             char ch;
             if (bootstrap)
@@ -309,9 +309,13 @@ namespace Tests.Infrastructure
                 {
                     var stream = tcpClient.GetStream();
                     var remoteConnection = new RemoteConnection(rachis.Tag, rachis.CurrentTerm, stream,
-                        features: new TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures
+                        features: new TcpConnectionHeaderMessage.SupportedFeatures(TcpConnectionHeaderMessage.ClusterTcpVersion)
                         {
-                            MultiTree = true
+                            Cluster = new TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures
+                            {
+                                BaseLine = true,
+                                MultiTree = true
+                            }
                         }, () => tcpClient.Client?.Disconnect(false));
 
                     await rachis.AcceptNewConnectionAsync(remoteConnection, tcpClient.Client.RemoteEndPoint, hello =>
@@ -379,7 +383,7 @@ namespace Tests.Infrastructure
         {
             for (var i = 0; i < numberOfCommands; i++)
             {
-                await ActionWithLeader(l => l.PutAsync(new TestCommand
+                await ActionWithLeader(l => l.SendToLeaderAsync(new TestCommand
                 {
                     Name = name,
                     Value = value
@@ -404,11 +408,11 @@ namespace Tests.Infrastructure
             List<Task> waitingList = new List<Task>();
             for (var i = 1; i <= numberOfCommands; i++)
             {
-                var task = leader.PutAsync(new TestCommand
+                var task = leader.CurrentLeader.PutAsync(new TestCommand
                 {
                     Name = name,
                     Value = value ?? i
-                });
+                }, Timeout.InfiniteTimeSpan);
 
                 waitingList.Add(task);
             }

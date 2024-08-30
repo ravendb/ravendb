@@ -16,6 +16,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using ConnectionStatus = Raven.Server.Documents.Subscriptions.ISubscriptionConnection.ConnectionStatus;
 
 namespace Raven.Server.Documents.TcpHandlers;
 
@@ -160,11 +161,6 @@ public sealed class SubscriptionConnectionForShard : SubscriptionConnection
         State = state;
         _state = (SubscriptionConnectionsStateForShard)state;
         return state;
-    }
-
-    protected override void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)
-    {
-        includeDocumentsCommand.IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
     }
 
     internal override async Task HandleBatchStatusAsync<TState, TConnection>(TState state, SubscriptionBatchStatus status, Stopwatch sendingCurrentBatchStopwatch, SubscriptionConnectionInUse markInUse, SubscriptionBatchStatsScope batchScope)

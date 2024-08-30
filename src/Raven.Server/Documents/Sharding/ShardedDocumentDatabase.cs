@@ -42,7 +42,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
 
     public ShardedDocumentsMigrator DocumentsMigrator { get; private set; }
 
-    public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
+    public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<LogMode, string> addToInitLog)
         : base(name, configuration, serverStore, addToInitLog)
     {
         ShardNumber = ShardHelper.GetShardNumberFromDatabaseName(name);
@@ -65,7 +65,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         _ = DocumentsMigrator.ExecuteMoveDocumentsAsync();
     }
 
-    protected override DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
+    protected override DocumentsStorage CreateDocumentsStorage(Action<LogMode, string> addToInitLog)
     {
         return ShardedDocumentsStorage = new ShardedDocumentsStorage(this, addToInitLog);
     }
@@ -204,6 +204,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                 if (MaxIndex >= 0)
                 {
                     _database.RachisLogIndexNotifications.NotifyListenersAbout(MaxIndex, null);
+                    _database.ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(MaxIndex);
                     _database._nextClusterCommand = MaxCommandCount;
                 }
             }

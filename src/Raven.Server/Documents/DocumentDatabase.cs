@@ -78,7 +78,7 @@ namespace Raven.Server.Documents
     public class DocumentDatabase : IDisposable
     {
         private readonly ServerStore _serverStore;
-        private readonly Action<string> _addToInitLog;
+        private readonly Action<LogMode, string> _addToInitLog;
         private readonly Logger _logger;
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
         internal TestingStuff ForTestingPurposes;
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents
 
         private readonly SemaphoreSlim _updateValuesLocker = new(1, 1);
 
-        public Action<string> AddToInitLog => _addToInitLog;
+        public Action<LogMode, string> AddToInitLog => _addToInitLog;
 
         /// <summary>
         /// The current lock, used to make sure indexes have a unique names
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents
             _lastIdleTicks = DateTime.MinValue.Ticks;
         }
 
-        public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
+        public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<LogMode, string> addToInitLog)
         {
             Name = name;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents
 
                 if (Configuration.Core.RunInMemory == false)
                 {
-                    _addToInitLog("Creating db.lock file");
+                    _addToInitLog(LogMode.Information, "Creating db.lock file");
                     _fileLocker = new FileLocker(Configuration.Core.DataDirectory.Combine("db.lock").FullPath);
                     _fileLocker.TryAcquireWriteLock(_logger);
 
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents
                     if (DisableOngoingTasks)
                     {
                         var msg = $"MAINTENANCE WARNING: Found disable.tasks.marker file. All tasks will not start. Please remove the file and restart the '{Name}' database.";
-                        _addToInitLog(msg);
+                        _addToInitLog(LogMode.Information, msg);
                         if (_logger.IsOperationsEnabled)
                             _logger.Operations(msg);
                     }
@@ -188,6 +188,7 @@ namespace Raven.Server.Documents
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
 
                 RachisLogIndexNotifications = new DatabaseRaftIndexNotifications(_serverStore.Engine.StateMachine._rachisLogIndexNotifications, DatabaseShutdown);
+                ClusterWideTransactionIndexWaiter = new RaftIndexWaiter(DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>
                 {
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath, stacktrace);
@@ -207,7 +208,7 @@ namespace Raven.Server.Documents
 
         public readonly bool DisableOngoingTasks;
 
-        protected virtual DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
+        protected virtual DocumentsStorage CreateDocumentsStorage(Action<LogMode, string> addToInitLog)
         {
             return new DocumentsStorage(this, addToInitLog);
         }
@@ -384,21 +385,21 @@ namespace Raven.Server.Documents
 
                 InitializeCompareExchangeStorage();
 
-                _addToInitLog("Initializing NotificationCenter");
+                _addToInitLog(LogMode.Information, "Initializing NotificationCenter");
                 NotificationCenter.Initialize();
 
-                _addToInitLog("Initializing DocumentStorage");
+                _addToInitLog(LogMode.Information, "Initializing DocumentStorage");
                 DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
-                _addToInitLog("Starting Transaction Merger");
+                _addToInitLog(LogMode.Information, "Starting Transaction Merger");
                 TxMerger.Initialize(DocumentsStorage.ContextPool, IsEncrypted, Is32Bits);
                 TxMerger.Start();
-                _addToInitLog("Initializing ConfigurationStorage");
+                _addToInitLog(LogMode.Information, "Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();
 
                 if ((options & InitializeOptions.SkipLoadingDatabaseRecord) == InitializeOptions.SkipLoadingDatabaseRecord)
                     return;
 
-                _addToInitLog("Loading Database");
+                _addToInitLog(LogMode.Information, "Loading Database");
 
                 MetricCacher.Initialize();
 
@@ -418,11 +419,11 @@ namespace Raven.Server.Documents
                 ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
-                _addToInitLog("Initializing IndexStore (async)");
+                _addToInitLog(LogMode.Information, "Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
-                _addToInitLog("Initializing Replication");
+                _addToInitLog(LogMode.Information, "Initializing Replication");
                 ReplicationLoader?.Initialize(record, index);
-                _addToInitLog("Initializing ETL");
+                _addToInitLog(LogMode.Information, "Initializing ETL");
                 EtlLoader.Initialize(record);
                 QueueSinkLoader.Initialize(record);
 
@@ -446,7 +447,7 @@ namespace Raven.Server.Documents
 
                 DatabaseShutdown.ThrowIfCancellationRequested();
 
-                _addToInitLog("Initializing SubscriptionStorage completed");
+                _addToInitLog(LogMode.Information, "Initializing SubscriptionStorage completed");
 
                 TombstoneCleaner.Start();
 
@@ -456,14 +457,14 @@ namespace Raven.Server.Documents
                 using (ctx.OpenReadTransaction())
                 {
                     var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
-                    Interlocked.Exchange(ref LastCompletedClusterTransactionIndex, lastCompletedClusterTransactionIndex);
+                    ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(lastCompletedClusterTransactionIndex);
                 }
 
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange);
+                        await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange, nameof(Initialize));
                         RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
                     }
                     catch (Exception e)
@@ -533,14 +534,8 @@ namespace Raven.Server.Documents
         private readonly ManualResetEventSlim _hasClusterTransaction;
         public readonly DatabaseMetricCacher MetricCacher;
 
-        public void NotifyOnPendingClusterTransaction(long index, DatabasesLandlord.ClusterDatabaseChangeType changeType)
+        public void NotifyOnPendingClusterTransaction()
         {
-            if (changeType == DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted)
-            {
-                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
-                return;
-            }
-
             _hasClusterTransaction.Set();
         }
 
@@ -548,8 +543,7 @@ namespace Raven.Server.Documents
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
 
-        public long LastCompletedClusterTransactionIndex;
-
+        public readonly RaftIndexWaiter ClusterWideTransactionIndexWaiter;
         public bool IsEncrypted => MasterKey != null;
 
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
@@ -581,7 +575,8 @@ namespace Raven.Server.Documents
                     continue;
                 }
 
-                _hasClusterTransaction.Wait(DatabaseShutdown);
+                //To make sure we mark compare exchange tombstone for cleaning  
+                _hasClusterTransaction.Wait(Configuration.Cluster.MaxClusterTransactionCompareExchangeTombstoneCheckInterval.AsTimeSpan, DatabaseShutdown);
                 if (DatabaseShutdown.IsCancellationRequested)
                     return;
 
@@ -594,9 +589,10 @@ namespace Raven.Server.Documents
                     {
                         var batchSize = Configuration.Cluster.MaxClusterTransactionsBatchSize;
                         var executed = ExecuteClusterTransaction(context, batchSize);
-                        if (executed.BatchSize == batchSize)
+                        if (executed.BatchSize != 0)
                         {
-                            // we might have more to execute
+                            // We might have more to execute if we read full batch
+                            // If we didn't read full batch we may want to update the last completed index for new cluster wide transaction with no database command so we need to open a new read transaction 
                             _hasClusterTransaction.Set();
                         }
                     }
@@ -654,7 +650,7 @@ namespace Raven.Server.Documents
 
         public (long BatchSize, long CommandsCount) ExecuteClusterTransaction(ClusterOperationContext context, int batchSize)
         {
-            using var batchCollector = CollectCommandsBatch(context, LastCompletedClusterTransactionIndex, batchSize);
+            using var batchCollector = CollectCommandsBatch(context, ClusterWideTransactionIndexWaiter.LastIndex, batchSize);
 
             ServerStore.ForTestingPurposes?.BeforeExecuteClusterTransactionBatch?.Invoke(Name, batchCollector.GetData().ToList());
 
@@ -670,10 +666,11 @@ namespace Raven.Server.Documents
 
                 if (batchCollector.Count == 0)
                 {
-                    var index = CompareExchangeStorage.GetLastCompareExchangeIndex(context);
-
-                    if (RachisLogIndexNotifications.LastModifiedIndex != index)
-                        RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
+                    var cmpXchgIndex = CompareExchangeStorage.GetLastCompareExchangeIndex(context);
+                    var tombstoneCmpxchgIndex = CompareExchangeStorage.GetLastCompareExchangeTombstoneIndex(context);
+                    var index = Math.Max(cmpXchgIndex, tombstoneCmpxchgIndex);
+                
+                    ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(index);
                     return (0, 0);
                 }
 
@@ -720,12 +717,14 @@ namespace Raven.Server.Documents
                 }
 
                 var commandsCount = 0;
+                long maxIndex = 0;
                 foreach (var command in batch)
                 {
                     commandsCount += command.Commands.Count;
-
                     OnClusterTransactionCompletion(command, mergedCommands);
+                    maxIndex = command.Index;
                 }
+                ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(maxIndex);
 
                 return (batch.Count, commandsCount);
             }
@@ -747,12 +746,14 @@ namespace Raven.Server.Documents
                 {
                     TxMerger.EnqueueSync(mergedCommand);
                     OnClusterTransactionCompletion(command, mergedCommand);
+                    ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(command.Index);
 
                     _clusterTransactionDelayOnFailure = 1000;
                     command.Processed = true;
                 }
                 catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
                 {
+                    ClusterWideTransactionIndexWaiter.NotifyListenersAboutError(e);
                     OnClusterTransactionCompletion(command, e);
                     NotificationCenter.Add(AlertRaised.Create(
                         Name,
@@ -780,10 +781,6 @@ namespace Raven.Server.Documents
             {
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
-
-
-                RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
-                ThreadingHelper.InterlockedExchangeMax(ref LastCompletedClusterTransactionIndex, index);
 
                 ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId, mergedCommands.ModifiedCollections);
 
@@ -1543,7 +1540,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async ValueTask StateChangedAsync(long index)
+        public async ValueTask StateChangedAsync(long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType)
         {
             try
             {
@@ -1589,7 +1586,7 @@ namespace Raven.Server.Documents
 
                 ServerStore.DatabasesLandlord.ForTestingPurposes?.DelayNotifyFeaturesAboutStateChange?.Invoke();
 
-                await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange);
+                await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange, type, changeType);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
@@ -1727,7 +1724,7 @@ namespace Raven.Server.Documents
                 record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
 
-            return DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange);
+            return DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange, nameof(RefreshFeaturesAsync));
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)
@@ -2103,7 +2100,7 @@ namespace Raven.Server.Documents
 
             internal Action AfterSnapshotOfDocuments;
 
-            internal Action<DynamicJsonValue, WebSocket> OnNextMessageChangesApi;
+            internal Action<object, WebSocket> OnNextMessageChangesApi;
 
             internal bool SkipDrainAllRequests = false;
 

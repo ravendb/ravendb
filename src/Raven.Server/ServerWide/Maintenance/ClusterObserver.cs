@@ -307,7 +307,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 foreach (var (cmd, updateReason) in cleanUnusedAutoIndexesCommands)
                 {
-                    await _engine.PutAsync(cmd);
+                    await _engine.SendToLeaderAsync(cmd);
                     _observerLogger.AddToDecisionLog(cmd.DatabaseName, updateReason, _iteration);
                 }
 
@@ -370,7 +370,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     ResponsibleNodePerDatabase = responsibleNodePerDatabase
                 }, RaftIdGenerator.NewId());
 
-                await _engine.PutAsync(command);
+                await _engine.SendToLeaderAsync(command);
             }
             if (deletions != null)
             {
@@ -400,7 +400,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         throw new NotLeadingException("This node is no longer the leader, so abort the cleaning.");
                     }
 
-                    await _engine.PutAsync(cmd);
+                    await _engine.SendToLeaderAsync(cmd);
                 }
             }
 
@@ -408,7 +408,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 foreach (var confirmCommand in confirmCommands)
                 {
-                    await _engine.PutAsync(confirmCommand);
+                    await _engine.SendToLeaderAsync(confirmCommand);
                 }
             }
         }
@@ -636,23 +636,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, string databaseName, MergedDatabaseObservationState mergedState, out long maxEtag) where TRavenTransaction : RavenTransaction
         {
-            List<long> periodicBackupTaskIds;
-            maxEtag = long.MaxValue;
-            bool isSharded;
+            maxEtag = -1;
 
-            if (mergedState.RawDatabase != null)
-            {
-                periodicBackupTaskIds = mergedState.RawDatabase.PeriodicBackupsTaskIds;
-                isSharded = mergedState.RawDatabase.IsSharded;
-            }
-            else
-            {
-                using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, databaseName))
-                {
-                    periodicBackupTaskIds = rawRecord.PeriodicBackupsTaskIds;
-                    isSharded = rawRecord.IsSharded;
-                }
-            }
+            var periodicBackupTaskIds = mergedState.RawDatabase.PeriodicBackupsTaskIds;
+            var isSharded = mergedState.RawDatabase.IsSharded;
 
             foreach (var (shardNumber, state) in mergedState.States)
             {
@@ -693,7 +680,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             continue;
                         }
 
-                        if (lastRaftIndex < maxEtag)
+                        if (maxEtag == -1 || lastRaftIndex < maxEtag)
                             maxEtag = lastRaftIndex.Value;
 
                         if (maxEtag == 0)
@@ -701,37 +688,42 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                 }
 
-                if (state != null)
+                // we are checking this here, not in the main loop, to avoid returning 'NoMoreTombstones' when maxEtag is 0
+                foreach (var nodeTag in state.DatabaseTopology.AllNodes)
                 {
-                    // we are checking this here, not in the main loop, to avoid returning 'NoMoreTombstones' when maxEtag is 0
-                    foreach (var nodeTag in state.DatabaseTopology.AllNodes)
-                    {
-                        if (state.Current.ContainsKey(nodeTag) == false) // we have a state change, do not remove anything
-                            return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
-                    }
+                    if (state.Current.ContainsKey(nodeTag) == false) // we have a state change, do not remove anything
+                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                }
 
-                    foreach (var nodeTag in state.DatabaseTopology.AllNodes)
-                    {
-                        var hasState = state.Current.TryGetValue(nodeTag, out var nodeReport);
-                        Debug.Assert(hasState, $"Could not find state for node '{nodeTag}' for database '{state.Name}'.");
-                        if (hasState == false)
-                            return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                foreach (var nodeTag in state.DatabaseTopology.AllNodes)
+                {
+                    var hasState = state.Current.TryGetValue(nodeTag, out var nodeReport);
+                    Debug.Assert(hasState, $"Could not find state for node '{nodeTag}' for database '{state.Name}'.");
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                    if (hasState == false)
+                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
 
-                        if (nodeReport.Report.TryGetValue(state.Name, out var report) == false)
+                    var hasReport = nodeReport.Report.TryGetValue(state.Name, out var report);
+                    Debug.Assert(hasReport || nodeReport.Error != null, $"Could not find report for node '{nodeTag}' for database '{state.Name}'.");
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                    if (hasReport == false)
+                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+
+                    var clusterWideTransactionIndex = report.LastClusterWideTransactionRaftIndex;
+                    if (maxEtag == -1 || clusterWideTransactionIndex < maxEtag)
+                        maxEtag = clusterWideTransactionIndex;
+
+                    foreach (var kvp in report.LastIndexStats)
+                    {
+                        var lastIndexedCompareExchangeReferenceTombstoneEtag = kvp.Value.LastIndexedCompareExchangeReferenceTombstoneEtag;
+                        if (lastIndexedCompareExchangeReferenceTombstoneEtag == null)
                             continue;
 
-                        foreach (var kvp in report.LastIndexStats)
-                        {
-                            var lastIndexedCompareExchangeReferenceTombstoneEtag = kvp.Value.LastIndexedCompareExchangeReferenceTombstoneEtag;
-                            if (lastIndexedCompareExchangeReferenceTombstoneEtag == null)
-                                continue;
+                        if (maxEtag == -1 || lastIndexedCompareExchangeReferenceTombstoneEtag < maxEtag)
+                            maxEtag = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
 
-                            if (lastIndexedCompareExchangeReferenceTombstoneEtag < maxEtag)
-                                maxEtag = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
-
-                            if (maxEtag == 0)
-                                return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
-                        }
+                        if (maxEtag == 0)
+                            return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
                     }
                 }
             }
@@ -810,7 +802,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 throw new NotLeadingException("This node is no longer the leader, so we abort updating the database databaseTopology");
             }
 
-            return _engine.PutAsync(cmd);
+            return _engine.SendToLeaderAsync(cmd);
         }
 
         private Task<(long Index, object Result)> Delete(DeleteDatabaseCommand cmd)
@@ -819,7 +811,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 throw new NotLeadingException("This node is no longer the leader, so we abort the deletion command");
             }
-            return _engine.PutAsync(cmd);
+            return _engine.SendToLeaderAsync(cmd);
         }
 
         public void Dispose()

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -180,7 +181,15 @@ namespace InterversionTests
 
                 await SetupReplicationAsync(store, oldStore);
 
-                var replicationLoader = (await Databases.GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
+                ReplicationLoader replicationLoader = null;
+                await WaitForValueAsync(async () =>
+                {
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                    replicationLoader = database.ReplicationLoader;
+                    return replicationLoader.OutgoingFailureInfo?.Count > 0;
+                }, true);
+
+                Assert.NotNull(replicationLoader);
                 Assert.NotEmpty(replicationLoader.OutgoingFailureInfo);
                 Assert.True(WaitForValue(() => replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.RetriesCount > 2), true));
                 Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Any(x => x.GetType() == typeof(LegacyReplicationViolationException))));

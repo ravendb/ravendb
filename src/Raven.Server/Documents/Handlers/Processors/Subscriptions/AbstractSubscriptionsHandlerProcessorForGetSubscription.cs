@@ -1,28 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using static Raven.Server.Documents.Subscriptions.SubscriptionStorage;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
 {
-    internal abstract class AbstractSubscriptionsHandlerProcessorForGetSubscription<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractSubscriptionsHandlerProcessorForGetSubscription<TRequestHandler, TOperationContext, TState> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
+        where TState : SubscriptionState
     {
         protected AbstractSubscriptionsHandlerProcessorForGetSubscription([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
-        protected abstract IEnumerable<SubscriptionState> GetSubscriptions(ClusterOperationContext context, int start, int pageSize, bool history, bool running, long? id, string name);
+        protected abstract IEnumerable<TState> GetAllSubscriptions(ClusterOperationContext context, int start, int pageSize, bool history, bool running);
+        protected abstract TState GetSubscriptionByName(ClusterOperationContext context, bool history, bool running, string name);
+        protected abstract TState GetSubscriptionById(ClusterOperationContext context, bool history, bool running, long id);
 
         public override async ValueTask ExecuteAsync()
         {
@@ -47,14 +51,48 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             }
         }
 
-        internal static void WriteGetAllResult(AsyncBlittableJsonTextWriterForDebug writer, IEnumerable<SubscriptionState> subscriptions, ClusterOperationContext context)
+        private IEnumerable<TState> GetSubscriptions(ClusterOperationContext context, int start, int pageSize, bool history, bool running, long? id, string name)
+        {
+            IEnumerable<TState> subscriptions;
+            if (string.IsNullOrEmpty(name) && id == null)
+            {
+                subscriptions = GetAllSubscriptions(context, start, pageSize, history, running);
+            }
+            else
+            {
+                TState subscription;
+                if (string.IsNullOrEmpty(name) == false)
+                {
+                    subscription = GetSubscriptionByName(context, history, running, name);
+                }
+                else if (id.HasValue)
+                {
+                    subscription = GetSubscriptionById(context, history, running, id.Value);
+                }
+                else
+                {
+                    throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
+                }
+                if (subscription == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return null;
+                }
+
+                subscriptions = new[] { subscription };
+            }
+
+            return subscriptions;
+        }
+
+        internal void WriteGetAllResult(AsyncBlittableJsonTextWriterForDebug writer, IEnumerable<TState> subscriptions, ClusterOperationContext context)
         {
             writer.WriteStartObject();
             writer.WriteArray(context, "Results", subscriptions.Select(SubscriptionStateAsJson), (w, c, subscription) => c.Write(w, subscription));
             writer.WriteEndObject();
         }
 
-        private static DynamicJsonValue SubscriptionStateAsJson(SubscriptionState state)
+        protected virtual DynamicJsonValue SubscriptionStateAsJson(TState state)
         {
             var json = new DynamicJsonValue
             {
@@ -71,32 +109,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 [nameof(SubscriptionState.ArchivedDataProcessingBehavior)] = state.ArchivedDataProcessingBehavior
             };
 
-            if (state is SubscriptionGeneralDataAndStats stateAndStats)
-            {
-                json[nameof(SubscriptionGeneralDataAndStats.Connections)] = GetSubscriptionConnectionsJson(stateAndStats.Connections);
-                json[nameof(SubscriptionGeneralDataAndStats.RecentConnections)] = stateAndStats.RecentConnections == null
-                    ? Array.Empty<SubscriptionConnectionInfo>()
-                    : stateAndStats.RecentConnections.Select(r => r.ToJson());
-                json[nameof(SubscriptionGeneralDataAndStats.RecentRejectedConnections)] = stateAndStats.RecentRejectedConnections == null
-                    ? Array.Empty<SubscriptionConnectionInfo>()
-                    : stateAndStats.RecentRejectedConnections.Select(r => r.ToJson());
-                json[nameof(SubscriptionGeneralDataAndStats.CurrentPendingConnections)] = stateAndStats.CurrentPendingConnections == null
-                    ? Array.Empty<SubscriptionConnectionInfo>()
-                    : stateAndStats.CurrentPendingConnections.Select(r => r.ToJson());
-            }
-
             return json;
         }
 
-        private static DynamicJsonArray GetSubscriptionConnectionsJson(List<SubscriptionConnection> subscriptionList)
-        {
-            if (subscriptionList == null)
-                return new DynamicJsonArray();
-
-            return new DynamicJsonArray(subscriptionList.Select(s => GetSubscriptionConnectionJson(s)));
-        }
-
-        private static DynamicJsonValue GetSubscriptionConnectionJson(SubscriptionConnection x)
+        protected static DynamicJsonValue GetSubscriptionConnectionJson<T>(SubscriptionConnectionBase<T> x) where T : AbstractIncludesCommand
         {
             if (x == null)
                 return new DynamicJsonValue();

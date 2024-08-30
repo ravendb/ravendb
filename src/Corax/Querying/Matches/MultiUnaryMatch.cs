@@ -529,7 +529,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
             _count = matchBuffer.Count;
         }
         
-        return MergeHelper.And(buffer, buffer, matchBuffer.Results);
+        return MergeHelper.And(buffer, buffer.Slice(0, matches), matchBuffer.Results);
     }
 
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
@@ -552,13 +552,13 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
             MultiUnaryItem comparer = _comparers[index];
             var prefix = Constants.QueryInspectionNode.Comparer + index + "_";
             parameters.Add(prefix + Constants.QueryInspectionNode.FieldType, comparer.Type.ToString());
-            parameters.Add(prefix + Constants.QueryInspectionNode.Operation, comparer._leftSideOperation.ToString());
+            parameters.Add(prefix + Constants.QueryInspectionNode.Operation + (comparer._isBetween ? "Left" : string.Empty), comparer._leftSideOperation.ToString());
             parameters.Add(prefix + (comparer._isBetween ? Constants.QueryInspectionNode.Term : Constants.QueryInspectionNode.LowValue), comparer.LeftAsString());
             
             if (comparer._isBetween)
             {
                 parameters.Add(prefix + Constants.QueryInspectionNode.HighValue, comparer.RightAsString());
-                parameters.Add(prefix + Constants.QueryInspectionNode.Operation, comparer._rightSideOperation.ToString());
+                parameters.Add(prefix + Constants.QueryInspectionNode.Operation  + (comparer._isBetween ? "Right" : string.Empty), comparer._rightSideOperation.ToString());
             }
         }
 

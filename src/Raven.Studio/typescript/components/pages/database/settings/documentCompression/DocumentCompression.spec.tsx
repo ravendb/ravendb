@@ -1,7 +1,7 @@
 import React from "react";
 import { rtlRender, RtlScreen, within } from "test/rtlTestUtils";
 import * as stories from "./DocumentCompression.stories";
-import { composeStories } from "@storybook/testing-react";
+import { composeStories } from "@storybook/react";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 const { DefaultDocumentCompression } = composeStories(stories);

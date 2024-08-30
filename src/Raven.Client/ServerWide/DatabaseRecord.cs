@@ -566,10 +566,22 @@ namespace Raven.Client.ServerWide
         public Dictionary<string, RollingIndexDeployment> RollingDeployment { get; set; }
     }
 
+    /// <summary>
+    /// Specifies lock mode of the database
+    /// </summary>
     public enum DatabaseLockMode
     {
+        /// <summary>
+        /// Any change to the database will be applied
+        /// </summary>
         Unlock,
+        /// <summary>
+        /// Prevent database deletion (without exception)
+        /// </summary>
         PreventDeletesIgnore,
+        /// <summary>
+        /// Prevent database deletion (throws exception)
+        /// </summary>
         PreventDeletesError
     }
 

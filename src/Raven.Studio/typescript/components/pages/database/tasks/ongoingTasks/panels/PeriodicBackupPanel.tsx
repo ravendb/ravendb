@@ -35,7 +35,7 @@ import { clusterSelectors } from "components/common/shell/clusterSlice";
 import useId from "hooks/useId";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 interface PeriodicBackupPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> {
     forceReload: () => void;
@@ -139,7 +139,7 @@ function Details(props: PeriodicBackupPanelProps) {
     const neverBackedUp = !data.shared.lastFullBackup;
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const backupNowVisible = data.shared.serverWide || hasDatabaseAdminAccess;
 
@@ -242,7 +242,7 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
     const { data, allowSelect, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, sourceView } =
         props;
 
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.hasDatabaseAdminAccess());
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;

@@ -83,7 +83,7 @@ namespace Raven.Server.Documents
         private static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
-        private readonly Action<string> _addToInitLog;
+        private readonly Action<LogMode, string> _addToInitLog;
 
         private readonly Logger _logger;
         private readonly string _name;
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public DocumentsStorage(DocumentDatabase documentDatabase, Action<string> addToInitLog)
+        public DocumentsStorage(DocumentDatabase documentDatabase, Action<LogMode, string> addToInitLog)
         {
             DocumentDatabase = documentDatabase;
             SetDocumentsStorageSchemas();
@@ -2048,11 +2048,13 @@ namespace Raven.Server.Documents
                         }
                         break;
                     case 2:
-                        if (expectedValues.Contains(cvArray[0].NodeTag) == false ||
+                        if ((expectedValues.Contains(cvArray[0].NodeTag) == false ||
                             expectedValues.Contains(cvArray[1].NodeTag) == false ||
-                            cvArray[0].NodeTag == cvArray[1].NodeTag)
+                            cvArray[0].NodeTag == cvArray[1].NodeTag) &&
+                            cvArray[0].NodeTag != ChangeVectorParser.SinkInt &&
+                            cvArray[1].NodeTag != ChangeVectorParser.SinkInt)
                         {
-                            Debug.Assert(false, $"FromClusterTransaction, expect RAFT or TRXN, {changeVector}");
+                            Debug.Assert(false, $"FromClusterTransaction, expect RAFT or TRXN or SINK, {changeVector}");
                         }
                         break;
                     default:

@@ -1,6 +1,6 @@
 import { FormInput, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { CreateDatabaseRegularFormData as FormData } from "../createDatabaseRegularValidation";
 import { useAppSelector } from "components/store";
@@ -67,6 +67,7 @@ function IsEncryptedField() {
 
     const hasEncryption = useAppSelector(licenseSelectors.statusValue("HasEncryption"));
     const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
+    const isAllowEncryptedDatabasesOverHttp = useAppSelector(accessManagerSelectors.isAllowEncryptedDatabasesOverHttp);
 
     return (
         <div className="d-flex align-items-center justify-content-center">
@@ -77,7 +78,7 @@ function IsEncryptedField() {
                         message: <EncryptionUnavailableMessage />,
                     },
                     {
-                        isActive: !isSecureServer,
+                        isActive: !isAllowEncryptedDatabasesOverHttp && !isSecureServer,
                         message: <AuthenticationOffMessage />,
                     },
                 ]}
@@ -87,7 +88,11 @@ function IsEncryptedField() {
                     color="primary"
                     control={control}
                     name="basicInfoStep.isEncrypted"
-                    disabled={!hasEncryption || !isSecureServer || formState.isSubmitting}
+                    disabled={
+                        !hasEncryption ||
+                        (!isAllowEncryptedDatabasesOverHttp && !isSecureServer) ||
+                        formState.isSubmitting
+                    }
                 >
                     <Icon icon="encryption" />
                     Encrypt at Rest

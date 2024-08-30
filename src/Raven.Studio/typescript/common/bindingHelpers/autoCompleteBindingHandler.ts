@@ -78,7 +78,7 @@ class autoCompleteBindingHandler {
             element.style.display = this.getAllAutoCompleteItems($element).length > 0 ? "block" : "none"));
 
         // Up, down, enter all have special meaning.
-        input.on('keydown', (args: JQueryEventObject) => this.handleKeyPress(element, $element, input, args));
+        input.on('keydown', (args) => this.handleKeyPress(element, $element, input, args));
 
         // When the results change and we have 1 or more, display the auto complete container.
         const results: KnockoutObservableArray<any> = allBindings()['foreach'];
@@ -109,7 +109,7 @@ class autoCompleteBindingHandler {
             .filter((el: HTMLElement) => el.textContent && el.textContent.trim().toLowerCase().indexOf(textLower) >= 0)[0];
     }
 
-    handleKeyPress(element: HTMLElement, $element: JQuery, $input: JQuery, args: JQueryEventObject) {
+    handleKeyPress(element: HTMLElement, $element: JQuery, $input: JQuery<HTMLElement>, args: JQuery.KeyDownEvent<HTMLElement>) {
         const enter = 13;
         const escape = 27;
         const downArrow = 40;
@@ -178,7 +178,7 @@ class autoCompleteBindingHandler {
         } else if (args.which === enter) {
             args.preventDefault();
             args.stopPropagation();
-            const itemToSelect = curSelected.length ? curSelected : $(this.findAutoCompleteItemMatching($element, $input.val()));
+            const itemToSelect = curSelected.length ? curSelected : $(this.findAutoCompleteItemMatching($element, $input.val() as string));
             if (itemToSelect.length) {
                 itemToSelect.click();
             }

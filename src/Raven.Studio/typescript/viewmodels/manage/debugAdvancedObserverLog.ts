@@ -88,12 +88,12 @@ class clusterObserverLog extends viewModelBase {
 
         this.columnPreview.install("virtual-grid", ".js-observer-log-tooltip", 
             (entry: Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry, 
-             column: textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>, e: JQueryEventObject, 
+             column: textColumn<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>, e: JQuery.TriggeredEvent, 
              onValue: (context: any, valueToCopy?: string) => void) => {
             const value = column.getCellValue(entry);
             if (column.header === "Date") {
                 onValue(moment.utc(entry.Date), entry.Date);
-            } else if (!_.isUndefined(value)) {
+            } else if (value !== undefined) {
                 onValue(generalUtils.escapeHtml(value), value);
             }
         });

@@ -16,7 +16,7 @@ import { Icon } from "components/common/Icon";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { SortableModeCounterProvider } from "./partials/useSortableModeCounter";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSlice";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 function getDynamicDatabaseDistributionWarning(
     hasDynamicNodesDistribution: boolean,
@@ -70,7 +70,7 @@ export function ManageDatabaseGroupPage() {
     const enableDynamicDatabaseDistribution = isOperatorOrAbove && !dynamicDatabaseDistributionWarning;
 
     return (
-        <>
+        <div className="content-margin">
             <StickyHeader>
                 <div className="flex-horizontal">
                     {!db.isSharded && (
@@ -107,20 +107,18 @@ export function ManageDatabaseGroupPage() {
                     )}
                 </div>
             </StickyHeader>
-            <div className="content-margin">
-                <SortableModeCounterProvider>
-                    {db.isSharded ? (
-                        <React.Fragment key="sharded-db">
-                            <OrchestratorsGroup />
-                            {db.shards.map((shard) => {
-                                return <ShardsGroup key={shard.name} db={shard} />;
-                            })}
-                        </React.Fragment>
-                    ) : (
-                        <NodeGroup key="non-sharded-db" db={db} />
-                    )}
-                </SortableModeCounterProvider>
-            </div>
-        </>
+            <SortableModeCounterProvider>
+                {db.isSharded ? (
+                    <React.Fragment key="sharded-db">
+                        <OrchestratorsGroup />
+                        {db.shards.map((shard) => {
+                            return <ShardsGroup key={shard.name} db={shard} />;
+                        })}
+                    </React.Fragment>
+                ) : (
+                    <NodeGroup key="non-sharded-db" db={db} />
+                )}
+            </SortableModeCounterProvider>
+        </div>
     );
 }

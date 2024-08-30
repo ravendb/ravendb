@@ -57,6 +57,8 @@ import compoundField from "models/database/index/compoundField";
 import getDatabaseLicenseLimitsUsage = require("commands/licensing/getDatabaseLicenseLimitsUsage");
 import { LicenseLimitReachStatus, getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import getClusterLicenseLimitsUsage = require("commands/licensing/getClusterLicenseLimitsUsage");
+import convertToStaticDialog = require("viewmodels/database/indexes/convertToStaticDialog");
+import convertedIndexesToStaticStorage = require("common/storage/convertedIndexesToStaticStorage");
 
 class editIndex extends shardViewModelBase {
     
@@ -351,7 +353,7 @@ class editIndex extends shardViewModelBase {
                 if (indexToEditName) {
                     const canActivateResult = $.Deferred<canActivateResultDto>();
                     
-                    // before loading index from server check if it isn't merge suggestion
+                    // before loading index from server check if it isn't merge suggestion or converted to static index
                     try {
                         const merged = mergedIndexesStorage.getMergedIndex(db, indexToEditName);
                         if (merged) {
@@ -360,6 +362,15 @@ class editIndex extends shardViewModelBase {
                             this.initIndex();
                             this.originalIndexName = indexToEditName;
                             
+                            canActivateResult.resolve({ can: true });
+                            return canActivateResult;
+                        }
+
+                        const convertedToStatic = convertedIndexesToStaticStorage.getIndex(db.name, indexToEditName);
+                        if (convertedToStatic) {
+                            this.editedIndex(new indexDefinition(convertedToStatic.definition));
+                            this.initIndex();
+
                             canActivateResult.resolve({ can: true });
                             return canActivateResult;
                         }
@@ -492,7 +503,7 @@ class editIndex extends shardViewModelBase {
 
         const $body = $("body");
         
-        this.registerDisposableDelegateHandler($body, "click", ".js-change-to-corax", (event: JQueryEventObject) => {
+        this.registerDisposableDelegateHandler($body, "click", ".js-change-to-corax", (event: JQuery.TriggeredEvent) => {
             this.searchEngineConfiguration("Corax");
             messagePublisher.reportSuccess("Changed Index search engine to Corax");
             
@@ -883,7 +894,7 @@ class editIndex extends shardViewModelBase {
             const options = configurationItem.PerDatabaseIndexingConfigurationOptions;
             const usedOptions = this.editedIndex().configuration().filter(f => f !== item).map(x => x.key());
 
-            const filteredOptions = _.difference(options, usedOptions);
+            const filteredOptions = options.filter(x => !usedOptions.includes(x));
 
             if (key) {
                 return filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
@@ -899,7 +910,7 @@ class editIndex extends shardViewModelBase {
             const fieldNames = this.fieldNames();
             const otherFieldNames = this.editedIndex().fields().filter(f => f !== field).map(x => x.name());
 
-            const filteredFieldNames = _.difference(fieldNames, otherFieldNames);
+            const filteredFieldNames = fieldNames.filter(x => !otherFieldNames.includes(x));
 
             if (name) {
                 return filteredFieldNames.filter(x => x.toLowerCase().includes(name.toLowerCase()));
@@ -1173,6 +1184,11 @@ class editIndex extends shardViewModelBase {
         app.showBootstrapDialog(new optimizeDialog(this.editedIndex().name()));
     }
 
+    openConvertToStaticDialog() {
+        eventsCollector.default.reportEvent("index", "convert-to-static");
+        app.showBootstrapDialog(new convertToStaticDialog(this.editedIndex().name(), this.db.name));
+    }
+
     formatIndex(mapIndex: number) {
         eventsCollector.default.reportEvent("index", "format-index");
         const index: indexDefinition = this.editedIndex();
@@ -1220,7 +1236,7 @@ class editIndex extends shardViewModelBase {
             // eslint-disable-next-line no-constant-condition
             while (true) {
                 const suggestedName = fileNameWoExtension + idx + ".cs";
-                if (_.every(sources(), x => x.name() !== suggestedName)) {
+                if (sources().every( x => x.name() !== suggestedName)) {
                     return suggestedName;
                 }
                 idx++;

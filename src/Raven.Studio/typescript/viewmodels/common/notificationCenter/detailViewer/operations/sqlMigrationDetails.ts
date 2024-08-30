@@ -162,7 +162,7 @@ class sqlMigrationDetails extends abstractOperationDetails {
             messages.scrollTop = messages.scrollHeight;
         }
         
-        const inProgressItemIdx = _.findIndex(this.items(), x => x.stage() === "processing");
+        const inProgressItemIdx = this.items().findIndex(x => x.stage() === "processing");
         if (inProgressItemIdx !== -1) {
             const $itemsContainer = $(".items-container");
             const $currentItem = $(".migration-item:eq(" + inProgressItemIdx + ")", $itemsContainer);
@@ -187,7 +187,7 @@ class sqlMigrationDetails extends abstractOperationDetails {
             return false;
         }
 
-        const isUpdate = !_.isUndefined(incoming);
+        const isUpdate = incoming !== undefined;
 
         if (!isUpdate) {
             // object was just created  - only copy message -> message field

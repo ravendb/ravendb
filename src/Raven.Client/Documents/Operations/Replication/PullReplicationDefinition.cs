@@ -85,17 +85,18 @@ namespace Raven.Client.Documents.Operations.Replication
             }
         }
 
-        public ExternalReplication ToExternalReplication(ReplicationInitialRequest request, long taskId)
+        internal PullReplicationAsHub ToPullReplicationAsHub(ReplicationInitialRequest request, long taskId)
         {
-            return new ExternalReplication
+            return new PullReplicationAsHub
             {
                 Url = request.SourceUrl,
                 Database = request.Database,
-                Name = request.PullReplicationSinkTaskName,
+                Name = request.PullReplicationDefinitionName,
                 DelayReplicationFor = DelayReplicationFor,
                 MentorNode = MentorNode,
                 PinToMentorNode = PinToMentorNode,
-                TaskId = taskId
+                TaskId = taskId,
+                Mode = Mode
             };
         }
     }

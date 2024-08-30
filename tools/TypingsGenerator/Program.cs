@@ -72,6 +72,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Debugging;
+using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Indexes.Spatial;
@@ -91,6 +92,7 @@ using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.EventListener;
 using Raven.Server.Integrations.PostgreSQL.Handlers;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
@@ -327,6 +329,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TestIndexParameters));
             scripter.AddType(typeof(TestIndexResult));
             scripter.AddType(typeof(IndexResetMode));
+            scripter.AddType(typeof(ConversionOutputType));
 
             // cluster
             scripter.AddType(typeof(ClusterTopology));
@@ -579,6 +582,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LogMode));
             scripter.AddType(typeof(SetLogsConfigurationOperation.Parameters));
             scripter.AddType(typeof(PutTrafficWatchConfigurationOperation.Parameters));
+            scripter.AddType(typeof(EventListenerToLog.EventListenerConfiguration));
 
             // adminJs console
             scripter.AddType(typeof(AdminJsScript));

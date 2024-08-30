@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
@@ -17,12 +18,14 @@ using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
+using System.Diagnostics;
+using Voron.Impl.Backup;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public static class RestoreUtils
     {
-        public static RestoreBackupConfigurationBase GetRestoreConfigurationAndSource(ServerStore serverStore, BlittableJsonReaderObject restoreConfiguration, out IRestoreSource restoreSource)
+        public static RestoreBackupConfigurationBase GetRestoreConfigurationAndSource(ServerStore serverStore, BlittableJsonReaderObject restoreConfiguration, out IRestoreSource restoreSource, OperationCancelToken token)
         {
             RestoreBackupConfigurationBase configuration;
             RestoreType restoreType = default;
@@ -43,19 +46,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 case RestoreType.S3:
                     var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
                     configuration = s3Configuration;
-                    restoreSource = new RestoreFromS3(serverStore, s3Configuration);
+                    restoreSource = new RestoreFromS3(serverStore, s3Configuration, token.Token);
                     break;
 
                 case RestoreType.Azure:
                     var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
                     configuration = azureConfiguration;
-                    restoreSource = new RestoreFromAzure(serverStore, azureConfiguration);
+                    restoreSource = new RestoreFromAzure(serverStore, azureConfiguration, token.Token);
                     break;
 
                 case RestoreType.GoogleCloud:
                     var googleCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
                     configuration = googleCloudConfiguration;
-                    restoreSource = new RestoreFromGoogleCloud(serverStore, googleCloudConfiguration);
+                    restoreSource = new RestoreFromGoogleCloud(serverStore, googleCloudConfiguration, token.Token);
                     break;
 
                 default:
@@ -92,7 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return new RestoreBackupTask(serverStore, configuration, restoreSource, filesToRestore, token);
         }
 
-        public static async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, RavenConfiguration configuration)
+        public static async Task<Stream> CopyRemoteStreamLocallyAsync(Stream stream, Size size, RavenConfiguration configuration, Action<string> onProgress, CancellationToken cancellationToken)
         {
             if (stream.CanSeek)
                 return stream;
@@ -108,9 +111,26 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             try
             {
-                AssertFreeSpace(stream, basePath.FullPath);
+                AssertFreeSpace(size, basePath.FullPath);
 
-                await stream.CopyToAsync(file);
+                var sw = Stopwatch.StartNew();
+                var swForProgress = Stopwatch.StartNew();
+                long totalRead = 0;
+
+                onProgress?.Invoke($"Copying ZipArchive locally, size: {size}");
+
+                await stream.CopyToAsync(file, readCount =>
+                {
+                    totalRead += readCount;
+                    if (swForProgress.ElapsedMilliseconds > 5000)
+                    {
+                        swForProgress.Restart();
+                        onProgress?.Invoke($"Copied: {new Size(totalRead, SizeUnit.Bytes)}/{size}");
+                    }
+                }, cancellationToken);
+
+                onProgress?.Invoke($"Copied ZipArchive locally, took: {sw.Elapsed}");
+
                 file.Seek(0, SeekOrigin.Begin);
 
                 return file;
@@ -132,7 +152,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                 throw;
             }
-
         }
 
         private static async Task<List<string>> GetOrderedFilesToRestoreAsync(IRestoreSource restoreSource, RestoreBackupConfigurationBase configuration)
@@ -162,27 +181,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return filesToRestore;
         }
 
-        private static void AssertFreeSpace(Stream stream, string basePath)
+        private static void AssertFreeSpace(Size size, string basePath)
         {
-            long streamLength;
-
-            try
-            {
-                streamLength = stream.Length;
-            }
-            catch (NotSupportedException)
-            {
-                // nothing we can do
-                return;
-            }
-
             var spaceInfo = DiskUtils.GetDiskSpaceInfo(basePath);
             if (spaceInfo == null)
                 return;
 
             // + we need to download the snapshot
+            // + we need to unzip the snapshot
             // + leave 1GB of free space
-            var freeSpaceNeeded = new Size(streamLength, SizeUnit.Bytes) + new Size(1, SizeUnit.Gigabytes);
+            var freeSpaceNeeded = 2 * size + new Size(1, SizeUnit.Gigabytes);
 
             if (freeSpaceNeeded > spaceInfo.TotalFreeSpace)
                 throw new DiskFullException($"There is not enough space on '{basePath}', we need at least {freeSpaceNeeded} in order to successfully copy the snapshot backup file locally. Currently available space is {spaceInfo.TotalFreeSpace}.");

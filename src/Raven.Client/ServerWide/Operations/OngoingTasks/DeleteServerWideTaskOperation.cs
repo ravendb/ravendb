@@ -8,11 +8,18 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.OngoingTasks
 {
+    /// <summary>
+    /// Operations for deleting server-wide ongoing task.
+    /// </summary>
     public sealed class DeleteServerWideTaskOperation : IServerOperation
     {
         private readonly string _name;
         private readonly OngoingTaskType _type;
 
+        /// <inheritdoc cref="DeleteServerWideTaskOperation"/>
+        /// <param name="name">Name of the ongoing task</param>
+        /// <param name="type">Specifies the ongoing task type.</param>
+        /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
         public DeleteServerWideTaskOperation(string name, OngoingTaskType type)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));

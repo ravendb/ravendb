@@ -9,10 +9,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Analyzers
 {
+    /// <summary>
+    /// Server-wide operation to send custom analyzer to the server
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Operations.ServerOperations.Analyzers.CustomAnalyzers"/>
     public sealed class PutServerWideAnalyzersOperation : IServerOperation
     {
         private readonly AnalyzerDefinition[] _analyzersToAdd;
 
+        /// <inheritdoc cref="PutServerWideAnalyzersOperation"/>
+        /// <param name="analyzersToAdd">List (as param) of AnalyzerDefinition to send to the server</param>
+        /// <exception cref="ArgumentNullException">Thrown when analyzersToAdd is empty or null</exception>
         public PutServerWideAnalyzersOperation(params AnalyzerDefinition[] analyzersToAdd)
         {
             if (analyzersToAdd == null || analyzersToAdd.Length == 0)

@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return Task.FromResult<Stream>(stream);
         }
 
-        public Task<ZipArchive> GetZipArchiveForSnapshot(string path)
+        public Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress)
         {
             return Task.FromResult(ZipFile.Open(path, ZipArchiveMode.Read, System.Text.Encoding.UTF8));
         }

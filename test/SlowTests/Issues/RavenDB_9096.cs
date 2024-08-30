@@ -72,7 +72,7 @@ namespace SlowTests.Issues
                     Assert.Empty(filtered);
 
                     var results = await session.Query<Doc, DocIndex>().AggregateBy(x => x.ByField(y => y.IntVal)).ExecuteAsync();
-                    Assert.Empty(results["IntVal"].Values.Where(x => x.Range == "-9223372036854775808"));
+                    Assert.DoesNotContain(results["IntVal"].Values, x => x.Range == "-9223372036854775808");
                     Assert.NotEmpty(results["IntVal"].Values.Where(x => x.Range == "1"));
                 }
             }

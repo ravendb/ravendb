@@ -1,12 +1,20 @@
 import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
-import { composeStories } from "@storybook/testing-react";
+import { composeStories } from "@storybook/react";
 
 import * as stories from "./DatabasesPage.stories";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
-const { Single, Cluster, Sharded, DifferentNodeStates, WithLoadError, WithDifferentAccessLevel, WithOfflineNodes } =
-    composeStories(stories);
+const {
+    Single,
+    Cluster,
+    Sharded,
+    DifferentNodeStates,
+    WithLoadErrorOnSingleNode,
+    WithLoadErrorOnAllNodes,
+    WithDifferentAccessLevel,
+    WithOfflineNodes,
+} = composeStories(stories);
 
 const selectors = {
     clusterDatabaseName: DatabasesStubs.nonShardedClusterDatabase().name,
@@ -40,8 +48,8 @@ describe("DatabasesPage", function () {
         await screen.findByText("9 Indexing errors");
     });
 
-    it("can render load error", async () => {
-        const { screen, fireClick } = rtlRender(<WithLoadError />);
+    it("can render load error on single node", async () => {
+        const { screen, fireClick } = rtlRender(<WithLoadErrorOnSingleNode />);
 
         await screen.findByText(/Manage group/i);
 
@@ -50,6 +58,13 @@ describe("DatabasesPage", function () {
         const findAllDistributionDetailsTitle = await screen.findAllByTitle(/Expand distribution details/i);
 
         await fireClick(findAllDistributionDetailsTitle[0]);
+    });
+
+    it("can render load error on all nodes", async () => {
+        const { screen } = rtlRender(<WithLoadErrorOnAllNodes />);
+
+        // general info section is hidden
+        expect(screen.queryByClassName("icon-documents")).not.toBeInTheDocument();
     });
 
     it("can render sharded view", async () => {

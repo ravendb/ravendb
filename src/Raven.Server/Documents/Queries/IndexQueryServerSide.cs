@@ -347,7 +347,10 @@ namespace Raven.Server.Documents.Queries
         private static void SetupTracker(IndexQueryServerSide indexQuery, RequestTimeTracker tracker)
         {
             if (tracker != null)
+            {
                 tracker.Query = indexQuery.Query;
+                tracker.QueryParameters = indexQuery.QueryParameters;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

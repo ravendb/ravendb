@@ -9,10 +9,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Sorters
 {
+    /// <summary>
+    /// <para>The Lucene indexing engine allows you to create custom sorters where you can define how query results will be ordered based on your specific requirements.</para>
+    /// <para>Use PutSortersOperation to deploy a custom sorter to the RavenDB server.</para>
+    /// <para>Once deployed, it can be used to sort query results for all queries made on the database scoped to your Document Store.</para>
+    /// </summary>
     public sealed class PutSortersOperation : IMaintenanceOperation
     {
         private readonly SorterDefinition[] _sortersToAdd;
 
+        /// <inheritdoc cref="PutSortersOperation" />
+        /// <param name="sortersToAdd">An array of SorterDefinition objects representing the custom sorters to be deployed to the server.</param>
         public PutSortersOperation(params SorterDefinition[] sortersToAdd)
         {
             if (sortersToAdd == null || sortersToAdd.Length == 0)

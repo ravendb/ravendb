@@ -15,7 +15,7 @@ class recordTransactionsCommand extends commandBase {
         };
         
         return this.post<operationIdDto>(url, JSON.stringify(payload), this.db, { dataType: undefined })
-            .done(() => this.reportSuccess("Transaction Commands Recoding was started for database: " + (_.isString(this.db) ? this.db : this.db.name)))
+            .done(() => this.reportSuccess("Transaction Commands Recoding was started for database: " + (typeof this.db === "string" ? this.db : this.db.name)))
             .fail((response: JQueryXHR) => this.reportError("Failed to start recording transaction commands", response.responseText, response.statusText));
     }
 

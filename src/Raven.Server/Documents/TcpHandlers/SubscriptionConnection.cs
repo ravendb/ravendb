@@ -412,11 +412,6 @@ namespace Raven.Server.Documents.TcpHandlers
             return SubscriptionBatchStatus.DocumentsSent;
         }
 
-        protected virtual void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)
-        {
-            includeDocumentsCommand.IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: false);
-        }
-
         protected virtual StatusMessageDetails GetDefault()
         {
             return new StatusMessageDetails

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
@@ -10,6 +11,7 @@ using Raven.Server.Documents.Sharding.Operations.Queries;
 using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions;
@@ -67,11 +69,12 @@ public sealed class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJs
     }
 
     private ShardedQueryResult _result;
+    private HashSet<string> _missingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-    private ValueTask TryGatherMissingDocumentIncludesAsync(List<BlittableJsonReaderObject> list)
+    private async ValueTask TryGatherMissingDocumentIncludesAsync(List<BlittableJsonReaderObject> list)
     {
         if (list == null || list.Count == 0)
-            return ValueTask.CompletedTask;
+            return;
 
         _result = new ShardedQueryResult
         {
@@ -87,9 +90,33 @@ public sealed class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJs
         }
 
         if (missingDocumentIncludes == null)
-            return ValueTask.CompletedTask;
+            return;
+        var processedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await ShardedQueryProcessor.HandleMissingDocumentIncludesAsync(Context, request: null, _databaseContext, missingDocumentIncludes, _result, processedIds, metadataOnly: false, token: _databaseContext.DatabaseShutdown);
 
-        return ShardedQueryProcessor.HandleMissingDocumentIncludesAsync(Context, request: null, _databaseContext, missingDocumentIncludes, _result, metadataOnly: false, token: _databaseContext.DatabaseShutdown);
+        if (missingDocumentIncludes.Count - processedIds.Count == 0)
+        {
+            // all missing includes exists and were processed
+            return;
+        }
+
+        foreach (var id in missingDocumentIncludes)
+        {
+            if (processedIds.Contains(id))
+            {
+                continue;
+            }
+
+            // we have non-existing included document, need to return null for them to the actual client
+            _result.Includes.Add(Context.ReadObject(new DynamicJsonValue
+            {
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Id] = id,
+                    [Constants.Documents.Metadata.Sharding.Subscription.NonPersistentFlags] = nameof(NonPersistentDocumentFlags.AllowDataAsNull)
+                }
+            }, id));
+        }
     }
 
     public void CloneIncludes(ClusterOperationContext context, OrchestratorIncludesCommandImpl includes)

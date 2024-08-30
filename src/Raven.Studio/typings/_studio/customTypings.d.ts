@@ -50,6 +50,8 @@ interface JQuery {
     multiselect(action?: string): void;
     multiselect(options?: any): void;
 
+    durationPicker(options?: any): void;
+
     highlight(): void;
 
     toggleFullScreen(): void;

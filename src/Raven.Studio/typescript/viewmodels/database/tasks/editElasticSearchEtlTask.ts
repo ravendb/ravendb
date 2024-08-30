@@ -27,6 +27,7 @@ import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import licenseModel from "models/auth/licenseModel";
 import { EditElasticSearchEtlInfoHub } from "viewmodels/database/tasks/EditElasticSearchEtlInfoHub";
+import { sortBy } from "common/typeUtils";
 class elasticSearchTaskTestMode {
 
     documentId = ko.observable<string>();
@@ -292,7 +293,7 @@ class editElasticSearchEtlTask extends shardViewModelBase {
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStringsNames = Object.keys(result.ElasticSearchConnectionStrings);
-                this.elasticSearchEtlConnectionStringsNames(_.sortBy(connectionStringsNames, x => x.toUpperCase()));
+                this.elasticSearchEtlConnectionStringsNames(sortBy(connectionStringsNames, x => x.toUpperCase()));
             });
     }
 
@@ -635,7 +636,7 @@ class editElasticSearchEtlTask extends shardViewModelBase {
 
             const usedOptions = usedCollections().filter(k => k !== key);
 
-            const filteredOptions = _.difference(options, usedOptions);
+            const filteredOptions = options.filter(x => !usedOptions.includes(x));
 
             if (key) {
                 result = filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));

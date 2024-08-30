@@ -592,7 +592,7 @@ class trafficWatch extends viewModelBase {
         
         this.columnPreview.install("virtual-grid", ".js-traffic-watch-tooltip",
             (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, column: textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>,
-             e: JQueryEventObject, onValue: (value: any, valueToCopy?: string, wrapValue?: boolean) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (value: any, valueToCopy?: string, wrapValue?: boolean) => void) => {
                 if (column.header === "Duration") {
                     onValue(trafficWatch.isHttpItem(item) ? item.ElapsedMilliseconds.toLocaleString() + " ms" : "n/a");
                 } else if (column.header === "Details") {

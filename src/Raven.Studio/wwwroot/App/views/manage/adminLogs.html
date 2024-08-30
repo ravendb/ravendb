@@ -120,8 +120,8 @@
                                 <div class="flex-horizontal gap-3">
                                     <div class="flex-vertical">
                                         <label class="small-label">Traffic Watch Log</label>
-                                        <div>
-                                            <button type="button" class="btn btn-default btn-sm close-panel margin-right-sm" id="js-traffic-watch-config" data-bind="click: $root.configureTrafficWatch">
+                                        <div class="d-flex align-items-center gap-1">
+                                            <button type="button" class="btn btn-default btn-sm close-panel" id="js-traffic-watch-config" data-bind="click: $root.configureTrafficWatch">
                                             <i class="icon-settings"></i>
                                             <span>Configure</span>
                                         </button>
@@ -131,20 +131,31 @@
                                 </div>
                                     <div class="flex-vertical">
                                         <label class="small-label">Microsoft logs</label>
-                                        <div>
-                                            <button type="button" class="btn btn-default btn-sm close-panel margin-right-sm" data-bind="click: $root.configureMicrosoftLogs">
-                                            <i class="icon-settings"></i>
-                                            <span>Configure</span>
-                                        </button>
-                                        <span class="text-success" data-bind="visible: $root.isMicrosoftLogsEnabled()">Active</span>
-                                        <span class="text-default" data-bind="visible: !$root.isMicrosoftLogsEnabled()">Disabled</span>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <button type="button" class="btn btn-default btn-sm close-panel" data-bind="click: $root.configureMicrosoftLogs">
+                                                <i class="icon-settings"></i>
+                                                <span>Configure</span>
+                                            </button>
+                                            <span class="text-success" data-bind="visible: $root.isMicrosoftLogsEnabled()">Active</span>
+                                            <span class="text-default" data-bind="visible: !$root.isMicrosoftLogsEnabled()">Disabled</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="small-label">Event Listener</label>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <button type="button" class="btn btn-default btn-sm close-panel" data-bind="click: $root.configureEventListener">
+                                                <i class="icon-settings"></i>
+                                                <span>Configure</span>
+                                            </button>
+                                            <span class="text-success" data-bind="visible: $root.isEventListenerEnabled()">Active</span>
+                                            <span class="text-default" data-bind="visible: !$root.isEventListenerEnabled()">Disabled</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        <div class="flex-horizontal">
+                                <div class="flex-horizontal">
                                     <div class="flex-grow"></div>
                                     <button class="btn btn-success btn-sm close-panel margin-top-sm"><span>Close</span></button>
-                        </div>
+                                </div>
                             </form>
                     </div>
                 </div>
