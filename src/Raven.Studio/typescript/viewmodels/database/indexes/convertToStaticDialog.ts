@@ -60,7 +60,7 @@ class convertToStaticDialog extends dialogViewModelBase {
                         fileDownloader.downloadAsTxt(result, fileName);
                         break;
                     case "Json":
-                        fileDownloader.downloadAsJson(this.getIndexDefinitionFromJson(result), fileName);
+                        fileDownloader.downloadAsJson(JSON.parse(result), fileName);
                         break;
                     default:
                         assertUnreachable(outputType);

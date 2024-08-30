@@ -204,7 +204,10 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         
         while (indexEntry.MoveNext())
         {
-            if(fields.Contains(indexEntry.FieldRootPage) == false)
+            if (fields.Contains(indexEntry.FieldRootPage) == false)
+                continue;
+            
+            if (indexEntry.IsNonExisting)
                 continue;
 
             var key = indexEntry.IsNull 
@@ -212,7 +215,6 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
                 : indexEntry.Current.Decoded();
             
             InsertTerm(key, indexEntry.Frequency);
-
         }
         
         return CreateQueue(termFreqMap);

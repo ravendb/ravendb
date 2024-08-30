@@ -115,13 +115,32 @@ namespace Tests.Infrastructure
 
         protected void EnsureReplicating(DocumentStore src, DocumentStore dst, string id = null)
         {
-            id ??= "marker/" + Guid.NewGuid();
-            using (var s = src.OpenSession())
+            var sharding = Sharding.GetShardingConfiguration(src);
+            if (sharding == null || id != null)
             {
-                s.Store(new { }, id);
-                s.SaveChanges();
+                id ??= "marker/" + Guid.NewGuid();
+                using (var s = src.OpenSession())
+                {
+                    s.Store(new { }, id);
+                    s.SaveChanges();
+                }
+                Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 15 * 1000));
+                return;
             }
-            Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 15 * 1000));
+
+            foreach (var shardNumber in sharding.Shards.Keys)
+            {
+                var database = ShardHelper.ToShardName(src.Database, shardNumber);
+                id = $"marker/{Guid.NewGuid()}${Sharding.GetRandomIdForShard(sharding, shardNumber)}";
+
+                using (var s = src.OpenSession(database))
+                {
+                    s.Store(new { }, id);
+                    s.SaveChanges();
+                }
+
+                Assert.NotNull(WaitForDocumentToReplicate<object>(dst, id, 30 * 1000));
+            }
         }
 
         public async Task EnsureReplicatingAsync(IDocumentStore src, IDocumentStore dst)

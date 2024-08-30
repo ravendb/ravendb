@@ -9,10 +9,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Sorters
 {
+    /// <summary>
+    /// Server-wide operation to send custom sorter definition to the server.
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Operations.ServerOperations.Sorters.CustomSorters"/>
     public sealed class PutServerWideSortersOperation : IServerOperation
     {
         private readonly SorterDefinition[] _sortersToAdd;
 
+        ///<inheritdoc cref="PutServerWideSortersOperation"/>
+        /// <param name="sortersToAdd">List of custom sorters definitions (as params)</param>
+        /// <exception cref="ArgumentNullException">Thrown when sortersToAdd is empty or it's null.</exception>
         public PutServerWideSortersOperation(params SorterDefinition[] sortersToAdd)
         {
             if (sortersToAdd == null || sortersToAdd.Length == 0)

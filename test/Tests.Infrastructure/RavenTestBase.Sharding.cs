@@ -152,6 +152,12 @@ public partial class RavenTestBase
             return ShardHelper.ToShardName(databaseName ?? store.Database, shard);
         }
 
+        public ShardingConfiguration GetShardingConfiguration(IDocumentStore store, string database = null)
+        {
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(database ?? store.Database));
+            return record.Sharding;
+        }
+
         public async Task<ShardingConfiguration> GetShardingConfigurationAsync(IDocumentStore store, string database = null)
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database ?? store.Database));

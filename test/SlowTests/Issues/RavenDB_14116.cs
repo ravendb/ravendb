@@ -35,7 +35,6 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new Companies_ByPhone().Execute(store);
                 using (var commands = store.Commands())
                 {
                     commands.Put(
@@ -61,6 +60,9 @@ namespace SlowTests.Issues
                             { Raven.Client.Constants.Documents.Metadata.Collection, "Companies" }
                         });
                 }
+                
+                var index = new Companies_ByPhone();
+                index.Execute(store);
 
                 Indexes.WaitForIndexing(store);
 
@@ -73,7 +75,6 @@ namespace SlowTests.Issues
                         .Not
                         .WhereExists(x => x.Phone)
                         .ToList();
-                    WaitForUserToContinueTheTest(store);
 
                     Assert.Equal(1, companies.Count);
                     Assert.Equal("CF", companies[0].Name);

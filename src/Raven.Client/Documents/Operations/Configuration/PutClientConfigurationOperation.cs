@@ -8,10 +8,20 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Configuration
 {
+    /// <summary>
+    /// Sets or modifies the client configuration on the server using the PutClientConfigurationOperation.
+    /// The client configuration consists of various options that control client-server communication.
+    /// 
+    /// <para>The initial configuration is set when creating the Document Store, but it can be dynamically modified by a database administrator using this operation.</para>
+    /// 
+    /// <para><strong>Note:</strong> The client will update its configuration the next time it sends a request to the database.</para>
+    /// </summary>
     public sealed class PutClientConfigurationOperation : IMaintenanceOperation
     {
         private readonly ClientConfiguration _configuration;
 
+        /// <inheritdoc cref="PutClientConfigurationOperation" />
+        /// <param name="configuration">The ClientConfiguration object containing the configuration settings to be applied on the server.</param>
         public PutClientConfigurationOperation(ClientConfiguration configuration)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));

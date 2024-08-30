@@ -5,8 +5,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
+    /// <summary>
+    /// Retrieves collection statistics, including total count of documents and conflicts, 
+    /// and the number of documents per each collection.
+    /// </summary>
     public sealed class GetCollectionStatisticsOperation : IMaintenanceOperation<CollectionStatistics>
     {
+        /// <inheritdoc cref="GetCollectionStatisticsOperation"/>
+        public GetCollectionStatisticsOperation()
+        {
+        }
+
         public RavenCommand<CollectionStatistics> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetCollectionStatisticsCommand();

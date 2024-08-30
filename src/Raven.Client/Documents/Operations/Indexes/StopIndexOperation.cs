@@ -6,10 +6,26 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// <para>Pauses a single index in the database using the StopIndexOperation.
+    /// A paused index performs no indexing on the node it is paused for, but continues indexing new data is indexed by the index on database-group nodes where the index is not paused.
+    /// Although a paused index can still be queried, results may be stale when querying the node where the index is paused.</para>
+    /// <para><strong>Notes:</strong> </para>
+    /// <list type="bullet">
+    /// <item>
+    /// <description>The index will be paused only on the preferred node, not across all database-group nodes.</description>
+    /// </item>
+    /// <item>
+    /// <description>To pause indexing for all indexes in the database, use the StopIndexingOperation.</description>
+    /// </item>
+    /// </list>
+    /// </summary>
     public sealed class StopIndexOperation : IMaintenanceOperation
     {
         private readonly string _indexName;
 
+        /// <inheritdoc cref="StopIndexOperation" />
+        /// <param name="indexName">The name of the index to be paused.</param>
         public StopIndexOperation(string indexName)
         {
             _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));

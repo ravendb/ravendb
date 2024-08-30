@@ -10,9 +10,18 @@ public class GcEventsListener : AbstractEventListener
 
     public IReadOnlyCollection<GcEventsHandler.GCEventBase> Events => _events;
 
+    private readonly HashSet<EventType> _eventsToLog =
+    [
+        EventType.GC,
+        EventType.GCSuspend,
+        EventType.GCRestart,
+        EventType.GCFinalizers,
+        EventType.GCHeapStats
+    ];
+
     public GcEventsListener()
     {
-        _handler = new GcEventsHandler(e => _events.Add(e));
+        _handler = new GcEventsHandler(e => _events.Add(e), _eventsToLog);
         EnableEvents(DotNetEventType.GC);
     }
 

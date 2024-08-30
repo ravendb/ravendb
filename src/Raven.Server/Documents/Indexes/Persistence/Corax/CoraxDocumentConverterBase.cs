@@ -55,6 +55,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public List<BlittableJsonReaderObject> BlittableJsonReaderObjectsListForEnumerableScope;
     public bool IgnoreComplexObjectsDuringIndex;
     public List<string[]> CompoundFields;
+    protected HashSet<string> _nonExistingFieldsOfDocument;
 
     protected abstract bool SetDocumentFields<TBuilder>(
         LazyStringValue key, LazyStringValue sourceDocumentId,
@@ -109,6 +110,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 }
             }
         }
+
+        _nonExistingFieldsOfDocument = new HashSet<string>();
     }
     
     public IndexFieldsMapping GetKnownFieldsForQuerying() => _knownFieldsForReaders.Value;
@@ -418,6 +421,30 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             default:
                 throw new NotSupportedException(valueType + " is not a supported type for indexing");
         }
+    }
+
+    protected void RegisterMissingFieldFor(IndexField field)
+    {
+        if (field.Id == CoraxConstants.IndexWriter.DynamicField || _index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
+            return;
+        
+        _nonExistingFieldsOfDocument.Add(field.Name);
+    }
+
+    protected void WriteNonExistingMarkerForMissingFields<TBuilder>(TBuilder builder) where TBuilder : IIndexEntryBuilder
+    {
+        if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList) 
+            return;
+
+        foreach (var fieldName in _nonExistingFieldsOfDocument)
+        {
+            var path = _fields[fieldName].Name;
+            var fieldId= _fields[fieldName].Id;
+        
+            builder.WriteNonExistingMarker(fieldId, path);
+        }
+            
+        _nonExistingFieldsOfDocument.Clear();
     }
 
     [DoesNotReturn]
