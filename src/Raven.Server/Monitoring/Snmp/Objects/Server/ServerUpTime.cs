@@ -1,9 +1,12 @@
+using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    internal sealed class ServerUpTime : ScalarObjectBase<TimeTicks>
+    internal sealed class ServerUpTime : ScalarObjectBase<TimeTicks>, IMetricInstrument<long>
     {
         private readonly ServerStatistics _statistics;
 
@@ -17,9 +20,11 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         {
             return SnmpValuesHelper.TimeSpanToTimeTicks(_statistics.UpTime);
         }
+
+        public long GetCurrentMeasurement() => (long)_statistics.UpTime.TotalMilliseconds;
     }
 
-    internal sealed class ServerUpTimeGlobal : ScalarObjectBase<TimeTicks>
+    internal sealed class ServerUpTimeGlobal : ScalarObjectBase<TimeTicks>, IMetricInstrument<long>
     {
         private readonly ServerStatistics _statistics;
 
@@ -32,6 +37,11 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         protected override TimeTicks GetData()
         {
             return SnmpValuesHelper.TimeSpanToTimeTicks(_statistics.UpTime);
+        }
+
+        public long GetCurrentMeasurement()
+        {
+            return (long)_statistics.UpTime.TotalMilliseconds;
         }
     }
 }

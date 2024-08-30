@@ -31,6 +31,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using MethodCallExpression = System.Linq.Expressions.MethodCallExpression;
+using NotSupportedException = System.NotSupportedException;
 
 namespace Raven.Client.Documents.Linq
 {
@@ -1746,18 +1747,21 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 {
                     DocumentQuery.AndAlso();
                 }
+                
                 if (options.HasFlag(SearchOptions.Not))
                 {
-                    DocumentQuery.OpenSubclause();
-                    DocumentQuery.WhereExists(expressionInfo.Path);
-                    DocumentQuery.AndAlso();
-                    DocumentQuery.NegateNext();
-                }
+                    if (options.HasFlag(SearchOptions.And) && IsPreviousSearchOnSameField(target, expression))
+                    {
+                        DocumentQuery.NegateNext();
+                        DocumentQuery.Search(expressionInfo.Path, searchTerms, @operator);
+                    }
 
-                DocumentQuery.Search(expressionInfo.Path, searchTerms, @operator);
-                if (options.HasFlag(SearchOptions.Not))
+                    else
+                        WhereExistsAndNegatedSearch(expressionInfo, searchTerms, @operator);
+                }
+                else
                 {
-                    DocumentQuery.CloseSubclause();
+                    DocumentQuery.Search(expressionInfo.Path, searchTerms, @operator);
                 }
 
                 DocumentQuery.Boost(boost);
@@ -1780,6 +1784,31 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (((SearchOptions)value).HasFlag(SearchOptions.Guess))
                 _chainedWhere = true;
+            
+            return;
+
+            void WhereExistsAndNegatedSearch(ExpressionInfo expressionInfo, string searchTerms, SearchOperator @operator)
+            {
+                DocumentQuery.OpenSubclause();
+                DocumentQuery.WhereExists(expressionInfo.Path);
+                DocumentQuery.AndAlso();
+                DocumentQuery.NegateNext();
+                DocumentQuery.Search(expressionInfo.Path, searchTerms, @operator);
+                DocumentQuery.CloseSubclause();
+            }
+            
+            bool IsPreviousSearchOnSameField(Expression searchTargetExpression, Expression currentSearchExpression)
+            {
+                if (searchTargetExpression is MethodCallExpression targetMce && currentSearchExpression is MethodCallExpression currentSearchMce)
+                {
+                    var targetExpressionInfo = GetMember(targetMce.Arguments[1]);
+                    var currentSearchExpressionInfo = GetMember(currentSearchMce.Arguments[1]);
+                
+                    return targetExpressionInfo.Path == currentSearchExpressionInfo.Path;
+                }
+            
+                return false;
+            }
         }
 
         private void VisitListMethodCall(MethodCallExpression expression)
@@ -1821,7 +1850,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         }
                         else
                         {
-                            VisitAny(expression);
+                            using (AnyModeScope())
+                            {
+                                VisitAny(expression);
+                            }
                         }
                         break;
                     }
@@ -2179,7 +2211,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
             DocumentQuery<T> documentQuery => documentQuery.SetFilterMode(@on),
             AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.SetFilterMode(@on),
             _ => throw new NotSupportedException($"Currently {DocumentQuery.GetType()} doesn't support {nameof(LinqExtensions.Filter)}.") 
-        };        
+        };
+
+        private IDisposable AnyModeScope() => DocumentQuery switch
+        {
+            DocumentQuery<T> documentQuery => documentQuery.SetAnyMode(),
+            AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.SetAnyMode(),
+            _ => throw new NotSupportedException($"Currently {DocumentQuery.GetType()} doesn't support {nameof(Enumerable.Any)} method.")
+        };
         
         private void AddFilterLimit(int filterLimit)
         {

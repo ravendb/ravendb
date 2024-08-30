@@ -14,7 +14,10 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             title: "All Documents",
             nav: false,
             css: "icon-documents",
-            dynamicHash: appUrls.documents
+            dynamicHash: appUrls.documents,
+            search: {
+                alternativeTitles: ["Documents"]
+            }
         }),
         new leafMenuItem({
             route: "databases/documents/revisions/bin",
@@ -23,7 +26,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             title: "Revisions Bin",
             nav: false,
             css: "icon-revisions-bin",
-            dynamicHash: appUrls.revisionsBin
+            dynamicHash: appUrls.revisionsBin,
         }),
         new collectionMenuItem(),
         new leafMenuItem({
@@ -44,7 +47,10 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: "icon-documents-query",
             alias: true,
-            dynamicHash: appUrls.query("")
+            dynamicHash: appUrls.query(""),
+            search: {
+                isExcluded: true, // it is also defined in indexes menu
+            }
         }),
         new leafMenuItem({
             route: "databases/edit",
@@ -52,14 +58,23 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             shardingMode: "allShards",
             title: "Edit Document",
             nav: false,
-            itemRouteToHighlight: "databases/documents"
+            css: "icon-new-document",
+            itemRouteToHighlight: "databases/documents",
+            dynamicHash: appUrls.newDoc,
+            search: {
+                overrideTitle: "Add New Document",
+                alternativeTitles: ["Create Document"],
+            }
         }),
         new leafMenuItem({
             route: "databases/ts/edit",
             moduleId: require("viewmodels/database/timeSeries/editTimeSeries"),
             title: "Edit Time Series",
             nav: false,
-            itemRouteToHighlight: "databases/documents"
+            itemRouteToHighlight: "databases/documents",
+            search: {
+                isExcluded: true
+            }
         }),
         new leafMenuItem({
             route: "databases/identities",
@@ -68,7 +83,12 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             title: "Identities",
             nav: true,
             css: "icon-identities",
-            dynamicHash: appUrls.identities
+            dynamicHash: appUrls.identities,
+            search: {
+                innerActions: [
+                    { name: "Add New Identity", alternativeNames: ["Create Identity"] }
+                ],
+            },
         }),
         new leafMenuItem({
             route: "databases/cmpXchg",
@@ -85,7 +105,13 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             shardingMode: "allShards",
             title: "Edit Compare Exchange Value",
             nav: false,
-            itemRouteToHighlight: "databases/cmpXchg"
+            css: "icon-plus",
+            itemRouteToHighlight: "databases/cmpXchg",
+            dynamicHash: appUrls.cmpXchg,
+            search: {
+                overrideTitle: "Add New Compare Exchange Value",
+                alternativeTitles: ["Create Compare Exchange Value"],
+            }
         }),
         new leafMenuItem({
             route: "databases/documents/conflicts",

@@ -45,18 +45,9 @@ import saveDocumentsCompressionCommand = require("commands/database/documents/sa
 import promoteDatabaseNodeCommand = require("commands/database/debug/promoteDatabaseNodeCommand");
 import revertRevisionsCommand = require("commands/database/documents/revertRevisionsCommand");
 import getConflictSolverConfigurationCommand = require("commands/database/documents/getConflictSolverConfigurationCommand");
-import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
-import testRabbitMqServerConnectionCommand = require("commands/database/cluster/testRabbitMqServerConnectionCommand");
-import testKafkaServerConnectionCommand = require("commands/database/cluster/testKafkaServerConnectionCommand");
-import testElasticSearchNodeConnectionCommand = require("commands/database/cluster/testElasticSearchNodeConnectionCommand");
 import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
 import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecordCommand");
 import saveConflictSolverConfigurationCommand = require("commands/database/documents/saveConflictSolverConfigurationCommand");
-import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
-import deleteConnectionStringCommand = require("commands/database/settings/deleteConnectionStringCommand");
-import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
-import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
-import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import saveCustomSorterCommand = require("commands/database/settings/saveCustomSorterCommand");
 import queryCommand = require("commands/database/query/queryCommand");
 import getIntegrationsPostgreSqlSupportCommand = require("commands/database/settings/getIntegrationsPostgreSqlSupportCommand");
@@ -70,6 +61,7 @@ import { createDatabaseCommand } from "commands/resources/createDatabaseCommand"
 import { restoreDatabaseFromBackupCommand } from "commands/resources/restoreDatabaseFromBackupCommand";
 import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
 import saveCustomAnalyzerCommand from "commands/database/settings/saveCustomAnalyzerCommand";
+import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -243,58 +235,6 @@ export default class DatabasesService {
         return new saveConflictSolverConfigurationCommand(databaseName, dto).execute();
     }
 
-    async getConnectionStrings(databaseName: string) {
-        return new getConnectionStringsCommand(databaseName).execute();
-    }
-
-    async saveConnectionString(databaseName: string, connectionString: ConnectionStringDto) {
-        return new saveConnectionStringCommand(databaseName, connectionString).execute();
-    }
-
-    async deleteConnectionString(
-        databaseName: string,
-        type: Raven.Client.Documents.Operations.ETL.EtlType,
-        connectionStringName: string
-    ) {
-        return new deleteConnectionStringCommand(databaseName, type, connectionStringName).execute();
-    }
-
-    async testClusterNodeConnection(serverUrl: string, databaseName?: string, bidirectional = true) {
-        return new testClusterNodeConnectionCommand(serverUrl, databaseName, bidirectional).execute();
-    }
-
-    async testSqlConnectionString(databaseName: string, connectionString: string, factoryName: string) {
-        return new testSqlConnectionStringCommand(databaseName, connectionString, factoryName).execute();
-    }
-
-    async testRabbitMqServerConnection(databaseName: string, connectionString: string) {
-        return new testRabbitMqServerConnectionCommand(databaseName, connectionString).execute();
-    }
-
-    async testKafkaServerConnection(
-        databaseName: string,
-        bootstrapServers: string,
-        useServerCertificate: boolean,
-        connectionOptionsDto: {
-            [optionKey: string]: string;
-        }
-    ) {
-        return new testKafkaServerConnectionCommand(
-            databaseName,
-            bootstrapServers,
-            useServerCertificate,
-            connectionOptionsDto
-        ).execute();
-    }
-
-    async testElasticSearchNodeConnection(
-        databaseName: string,
-        serverUrl: string,
-        authenticationDto: Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication
-    ) {
-        return new testElasticSearchNodeConnectionCommand(databaseName, serverUrl, authenticationDto).execute();
-    }
-
     async getDatabaseRecord(databaseName: string, reportRefreshProgress = false) {
         return new getDatabaseRecordCommand(databaseName, reportRefreshProgress).execute();
     }
@@ -345,5 +285,9 @@ export default class DatabasesService {
 
     async distributeSecret(...args: ConstructorParameters<typeof distributeSecretCommand>) {
         return new distributeSecretCommand(...args).execute();
+    }
+
+    async getDocumentsMetadataByIDPrefix(...args: ConstructorParameters<typeof getDocumentsMetadataByIDPrefixCommand>) {
+        return new getDocumentsMetadataByIDPrefixCommand(...args).execute();
     }
 }

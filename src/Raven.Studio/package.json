@@ -125,6 +125,7 @@
         "durandal": "^2.2.0",
         "eonasdan-bootstrap-datetimepicker": "^4.17.49",
         "favico.js": "^0.3.10",
+        "fuse.js": "^7.0.0",
         "immer": "^10.1.1",
         "jquery": "^3.7.1",
         "jquery-blockui": "^2.7.0",

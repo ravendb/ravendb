@@ -45,7 +45,7 @@ public class RavenDB_21689 : StorageTest
                 builder.Write(0, Encodings.Utf8.GetBytes($"doc/{docIdx}"));
                 builder.Write(1, Encodings.Utf8.GetBytes("false"));
                 builder.Write(2, Encodings.Utf8.GetBytes($"abc{docIdx}"));
-                
+                builder.EndWriting();
             }
 
             indexWriter.Commit();

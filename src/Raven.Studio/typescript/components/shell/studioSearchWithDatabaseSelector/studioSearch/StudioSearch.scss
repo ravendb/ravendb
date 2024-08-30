@@ -1,0 +1,240 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+@use "Content/scss/bs5variables";
+@use "Content/scss/variables";
+
+@mixin make-icon-color($name, $color-before, $color-after) {
+    .icon-#{$name}::before {
+        color: $color-before !important;
+    }
+
+    .icon-addon-#{$name}::after {
+        color: $color-after !important;
+    }
+}
+
+.studio-search {
+    &__results {
+        width: 100%;
+        margin-top: sizes.$gutter-xxs !important;
+        padding: 0 !important;
+        cursor: default;
+        max-height: 640px;
+        overflow-y: auto;
+
+        .dropdown-item {
+            font-size: 0.875rem;
+        }
+    }
+
+    &__toggle {
+        display: flex !important;
+        flex-grow: 1;
+        padding: 0 !important;
+        border: 0 !important;
+        background: none !important;
+
+        &:before {
+            content: "search";
+            color: colors.$border-color-light-var;
+            font-family: "Icomoon";
+            display: flex;
+            align-items: center;
+            height: 100%;
+            position: absolute;
+            left: sizes.$gutter-xs;
+            pointer-events: none;
+        }
+    }
+
+    &__dropdown-item {
+        padding: sizes.$gutter-xxs sizes.$gutter-xs !important;
+        color: colors.$text-emphasis-var !important;
+        border-radius: sizes.$border-radius-sm !important;
+        transition: none;
+        border: 1px solid transparent !important;
+
+        &:hover,
+        &:focus,
+        &:active {
+            background-color: colors.$panel-header-bg-var !important;
+            transition: bs5variables.$transition-base;
+        }
+
+        &.active {
+            background-color: colors.$panel-header-bg-var !important;
+            border: 1px solid colors.$border-color-light-var !important;
+        }
+    }
+
+    &__route {
+        text-transform: capitalize;
+        font-size: 0.688rem;
+        color: colors.$text-muted-var;
+    }
+
+    &__switch-database {
+        .dropdown-item {
+            position: relative;
+            &:hover,
+            &:focus {
+                &::after {
+                    content: "Switch →";
+                    position: absolute;
+                    right: sizes.$gutter-xs;
+                    top: 0;
+                    color: colors.$link-color;
+                    display: flex;
+                    align-items: center;
+                    height: 100%;
+                }
+            }
+        }
+    }
+
+    &__input {
+        border-radius: 0 sizes.$border-radius-pill sizes.$border-radius-pill 0 !important;
+        padding: 0 0 0 sizes.$gutter !important;
+        min-height: 35px !important;
+    }
+
+    &__database-col {
+        max-height: 540px;
+        overflow-y: auto;
+
+        &__header {
+            &--sticky {
+                position: sticky;
+                top: 0;
+                background-color: colors.$panel-bg-1-var;
+                border-radius: sizes.$border-radius;
+                @for $i from 1 through 10 {
+                    &:nth-of-type(#{$i}) {
+                        z-index: 2 + $i - 1;
+                    }
+                }
+            }
+        }
+
+        &__group {
+            margin: sizes.$gutter-xs sizes.$gutter-sm;
+            padding-bottom: sizes.$gutter-xs;
+            border-bottom: 1px solid colors.$border-color-light-var;
+
+            &__header {
+                padding: 0 0 sizes.$gutter-xs 0 !important;
+                color: colors.$text-emphasis-var !important;
+                font-weight: bs5variables.$font-weight-bold !important;
+                @include make-icon-color(document, colors.$color-4, colors.$color-4);
+                @include make-icon-color(documents, colors.$color-4, colors.$color-4);
+                @include make-icon-color(index, colors.$color-4-3, colors.$color-4-3);
+                @include make-icon-color(tasks, colors.$color-5-3, colors.$color-5-3);
+                @include make-icon-color(settings, colors.$color-2-1, colors.$color-2-1);
+                @include make-icon-color(stats, colors.$color-3, colors.$color-3);
+
+                &--sticky {
+                    position: sticky;
+                    top: 0;
+                    background-color: colors.$panel-bg-1-var;
+                    padding: var(--bs-dropdown-header-padding-y) 0 !important;
+                    border-radius: sizes.$border-radius;
+                    @for $i from 1 through 10 {
+                        &:nth-of-type(#{$i}) {
+                            z-index: 2 + $i - 1;
+                        }
+                    }
+                }
+            }
+
+            &:last-of-type {
+                border-bottom: none;
+                padding-bottom: sizes.$gutter-xxs;
+            }
+        }
+    }
+    &__server-col {
+        max-height: 540px;
+        overflow-y: auto;
+
+        @media (min-width: sizes.$screen-sm-max) {
+            border-left: 1px solid colors.$border-color-light-var;
+        }
+
+        &__group {
+            margin: 0 sizes.$gutter-xxs sizes.$gutter-xs sizes.$gutter-xxs;
+            padding-bottom: sizes.$gutter-xs;
+        }
+
+        &__header {
+            color: colors.$text-emphasis-var !important;
+            font-weight: bs5variables.$font-weight-bold !important;
+
+            &--sticky {
+                position: sticky;
+                top: 0;
+                background-color: colors.$panel-bg-1-var;
+                border-radius: sizes.$border-radius;
+                @for $i from 1 through 10 {
+                    &:nth-of-type(#{$i}) {
+                        z-index: 2 + $i - 1;
+                    }
+                }
+            }
+        }
+
+        @include make-icon-color(cluster, colors.$color-5-1, colors.$color-5-1);
+        @include make-icon-color(client-configuration, colors.$color-5-2, colors.$color-5-2);
+        @include make-icon-color(studio-configuration, colors.$color-5-3, colors.$color-5-3);
+        @include make-icon-color(server-settings, colors.$color-1, colors.$color-1);
+        @include make-icon-color(administrator-js-console, colors.$color-1-1, colors.$color-1-1);
+        @include make-icon-color(certificate, colors.$color-1-2, colors.$color-1-2);
+        @include make-icon-color(server-wide-tasks, colors.$color-1-3, colors.$color-1-3);
+        @include make-icon-color(server-wide-custom-analyzers, colors.$color-2, colors.$color-2);
+        @include make-icon-color(server-wide-custom-sorters, colors.$color-2-1, colors.$color-2-1);
+        @include make-icon-color(admin-logs, colors.$color-2-2, colors.$color-2-2);
+        @include make-icon-color(traffic-watch, colors.$color-2-3, colors.$color-2-3);
+        @include make-icon-color(gather-debug-information, colors.$color-3, colors.$color-3);
+        @include make-icon-color(system-storage, colors.$color-3-1, colors.$color-3-1);
+        @include make-icon-color(manage-server-io-test, colors.$color-3-2, colors.$color-3-2);
+        @include make-icon-color(stack-traces, colors.$color-3-3, colors.$color-3-3);
+        @include make-icon-color(manage-server-running-queries, colors.$color-4, colors.$color-4);
+        @include make-icon-color(debug-advanced, colors.$color-4-1, colors.$color-4-1);
+        @include make-icon-color(resources, colors.$color-4-1, colors.$color-4-1);
+        @include make-icon-color(cluster-dashboard, colors.$color-4-2, colors.$color-4-2);
+        @include make-icon-color(manage-server, colors.$color-4-3, colors.$color-4-3);
+        @include make-icon-color(info, colors.$color-5, colors.$color-5);
+        @include make-icon-color(sparkles, colors.$color-2, colors.$color-2);
+    }
+
+    &__legend-col {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+
+        &__group {
+            &__header {
+                background-color: colors.$panel-header-bg-var;
+                border-top: 1px solid colors.$border-color-light-var;
+                border-bottom-left-radius: sizes.$border-radius;
+                border-bottom-right-radius: sizes.$border-radius;
+                padding: sizes.$gutter-xs var(--bs-dropdown-header-padding-x) !important;
+                display: flex !important;
+                flex-wrap: wrap;
+                gap: sizes.$gutter-sm !important;
+                font-size: 0.75rem !important;
+                kbd {
+                    min-width: 21px;
+                    min-height: 21px;
+                }
+            }
+        }
+    }
+
+    &__ellipsis-overflow {
+        flex: 1 !important;
+        line-height: 1.07;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}

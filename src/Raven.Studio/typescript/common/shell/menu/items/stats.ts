@@ -27,7 +27,13 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             tooltip: "Displays IO metrics status",
             nav: true,
             css: 'icon-io-test',
-            dynamicHash: appUrls.ioStats
+            dynamicHash: appUrls.ioStats,
+            search: {
+                innerActions: [
+                    { name: "Export IO Stats" },
+                    { name: "Import IO Stats" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/status/storage/report',
@@ -70,14 +76,23 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             title: 'Ongoing Tasks Stats',
             nav: true,
             css: 'icon-replication-stats',
-            dynamicHash: appUrls.ongoingTasksStats
+            dynamicHash: appUrls.ongoingTasksStats,
+            search: {
+                innerActions: [
+                    { name: "Export Ongoing Tasks Stats" },
+                    { name: "Import Ongoing Tasks Stats" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'databases/status/debug*details',
             moduleId: null,
             title: 'Debug',
             nav: false,
-            css: 'icon-debug'
+            css: 'icon-debug',
+            search: {
+                isExcluded: true
+            }
         })
     ];
 

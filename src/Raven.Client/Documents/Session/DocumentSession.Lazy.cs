@@ -63,6 +63,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         Lazy<T> ILazySessionOperations.Load<T>(string id, Action<T> onEval)
         {
+            if (string.IsNullOrWhiteSpace(id))
+                return new Lazy<T>(() => default);
+
             if (IsLoaded(id))
                 return new Lazy<T>(() => Load<T>(id));
             var lazyLoadOperation = new LazyLoadOperation<T>(this, new LoadOperation(this).ById(id)).ById(id);

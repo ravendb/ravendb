@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -29,6 +31,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             if (fromBucket > toBucket || fromBucket < 0 || toBucket < 0)
                 throw new ArgumentException($"Invalid buckets range [{fromBucket}-{toBucket}]");
 
+            List<PrefixedShardingSetting> prefixedShardingSettings;
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             using (var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, database))
@@ -38,6 +41,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 if (raw.IsSharded == false)
                     throw new InvalidOperationException($"{database} is not sharded");
+
+                prefixedShardingSettings = raw.Sharding.Prefixed;
             }
 
             var operationId = ServerStore.Operations.GetNextOperationId();
@@ -52,9 +57,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 var result = new ReshardingResult();
                 var messages = new AsyncQueue<string>(token.Token);
+
                 using (ServerStore.Sharding.RegisterForReshardingStatusUpdate(database, messages))
                 {
                     var bucket = fromBucket;
+                    string prefix = null;
+                    var nextRangeStart = -1;
+
                     while (ServerStore.ServerShutdown.IsCancellationRequested == false)
                     {
                         token.ThrowIfCancellationRequested();
@@ -64,8 +73,34 @@ namespace Raven.Server.Documents.Sharding.Handlers
                             if (bucket > toBucket)
                                 break;
 
-                            var (index, _) = await ServerStore.Sharding.StartBucketMigration(database, bucket, toShard,
-                                $"{raftId ?? Guid.NewGuid().ToString()}/{bucket}");
+                            if (bucket >= ShardHelper.NumberOfBuckets)
+                            {
+                                // bucket belongs to a prefixed range
+                                // need to find the corresponding prefix setting in order to validate the destination shard
+
+                                if (bucket >= nextRangeStart)
+                                {
+                                    // if bucket < nextRangeStart then we already know the prefix setting from previous iteration
+
+                                    foreach (var setting in prefixedShardingSettings)
+                                    {
+                                        var bucketRangeStart = setting.BucketRangeStart;
+                                        nextRangeStart = bucketRangeStart + ShardHelper.NumberOfBuckets;
+
+                                        if (bucket < bucketRangeStart || bucket >= nextRangeStart) 
+                                            continue; 
+
+                                        prefix = setting.Prefix;
+                                        break;
+                                    }
+                                }
+
+                                if (string.IsNullOrEmpty(prefix))
+                                    throw new InvalidOperationException($"Bucket {bucket} should belong to a prefixed range, but a corresponding {nameof(PrefixedShardingSetting)} wasn't found in database record");
+                            }
+
+                            var (index, _) = await ServerStore.Sharding.StartBucketMigration(database, bucket, toShard, prefix, 
+                                raftId: $"{raftId ?? Guid.NewGuid().ToString()}/{bucket}");
                             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, token.Token);
 
                             bucket++;

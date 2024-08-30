@@ -16,7 +16,7 @@ import rootItems = require("common/shell/menu/items/rootItems");
 export = generateMenuItems;
 
 interface GenerateMenuItemsOptions {
-    db: database;
+    db: database | string;
     isNewVersionAvailable: boolean;
     isWhatsNewVisible: boolean;
 }

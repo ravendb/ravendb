@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
+using Sparrow;
 
 namespace Corax.Querying.Matches.Meta
 {
@@ -24,7 +25,7 @@ namespace Corax.Querying.Matches.Meta
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int And(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
-            if (Vector256.IsHardwareAccelerated)
+            if (AdvInstructionSet.IsAcceleratedVector256)
                 return AndVectorized(dst, dstLength, left, leftLength, right, rightLength);
 
             return AndScalar(dst, dstLength, left, leftLength, right, rightLength);
@@ -212,7 +213,7 @@ namespace Corax.Querying.Matches.Meta
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Or(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
-            if (Sse2.IsSupported)
+            if (AdvInstructionSet.X86.IsSupportedSse)
                 return OrNonTemporal(dst, dstLength, left, leftLength, right, rightLength);
             return OrScalar(dst, dstLength, left, leftLength, right, rightLength);
         }

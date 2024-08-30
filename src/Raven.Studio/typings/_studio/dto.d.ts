@@ -94,7 +94,7 @@ interface documentMetadataDto {
     '@counters'?: Array<string>;
     '@counters-snapshot'?: dictionary<number>;
     '@timeseries-snapshot'?: dictionary<revisionTimeSeriesDto>;
-    '@timeseries': Array<string>;
+    '@timeseries'?: Array<string>;
     '@expires'?: string;
     '@refresh'?: string;
     '@archive-at'?: string;
@@ -202,6 +202,19 @@ interface menuItem {
     disableWithReason?: KnockoutObservable<string>;
     type: menuItemType;
     parent: KnockoutObservable<menuItem>;
+}
+
+interface menuSearchConfig {
+    alternativeTitles?: string[];
+    innerActions?: innerMenuAction[];
+    overrideTitle?: string;
+    isExcluded?: boolean;
+    isCapitalizedDisabled?: boolean;
+}
+
+interface innerMenuAction {
+    name: string;
+    alternativeNames?: string[];
 }
 
 type dynamicHashType = KnockoutObservable<string> | (() => string);
@@ -864,9 +877,9 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
 }
 
 type StudioTaskType = "Replication" | "PullReplicationAsHub" | "PullReplicationAsSink" | "Backup" | "Subscription" |
-    "RavenEtl" | "SqlEtl" | "OlapEtl" | "ElasticSearchEtl" | "KafkaQueueEtl" | "RabbitQueueEtl" | "KafkaQueueSink" | "RabbitQueueSink";
+    "RavenEtl" | "SqlEtl" | "OlapEtl" | "ElasticSearchEtl" | "KafkaQueueEtl" | "RabbitQueueEtl" | "AzureQueueStorageQueueEtl" | "KafkaQueueSink" | "RabbitQueueSink";
     
-type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ";
+type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage";
 
 type StudioQueueSinkType = "KafkaQueueSink" | "RabbitQueueSink";
 
@@ -1017,3 +1030,6 @@ type SqlConnectionString = Raven.Client.Documents.Operations.ETL.SQL.SqlConnecti
 type GetConnectionStringsResult = Omit<Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult, "SqlConnectionStrings"> & {
     SqlConnectionStrings: {[key: string]: SqlConnectionString;};
 }
+
+
+type AzureQueueStorageAuthenticationType = "connectionString" | "entraId" | "passwordless";

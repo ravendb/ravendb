@@ -1,0 +1,24 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+@use "Content/scss/bs5variables";
+@use "Content/scss/variables";
+
+.database-switcher {
+    min-width: 300px;
+    max-width: 300px;
+    width: 300px;
+    border-radius: sizes.$border-radius-pill 0 0 sizes.$border-radius-pill !important;
+
+    .react-select__control {
+        min-height: 35px;
+        height: 35px;
+        border-radius: sizes.$border-radius-pill 0 0 sizes.$border-radius-pill !important;
+        background-color: colors.$panel-header-bg-var;
+    }
+
+    .database-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}

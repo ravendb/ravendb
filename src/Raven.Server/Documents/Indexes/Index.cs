@@ -960,6 +960,7 @@ namespace Raven.Server.Documents.Indexes
                 LastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
                 MaxNumberOfOutputsPerDocument = _indexStorage.ReadMaxNumberOfOutputsPerDocument(tx);
                 ArchivedDataProcessingBehavior = _indexStorage.ReadArchivedDataProcessingBehavior(tx);
+                CoraxComplexFieldIndexingBehavior = _indexStorage.ReadCoraxComplexFieldIndexingBehavior(tx);
             }
         }
 
@@ -4497,7 +4498,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        
+        public IndexingConfiguration.CoraxComplexFieldIndexingBehavior CoraxComplexFieldIndexingBehavior { get; private set; }
         
         public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; private set; }
 

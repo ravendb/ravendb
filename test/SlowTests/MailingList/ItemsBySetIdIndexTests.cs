@@ -4,6 +4,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -189,6 +191,8 @@ namespace SlowTests.MailingList
                     { e=>e.LastTestDate, FieldStorage.Yes},
                     { e=>e.LastTestId, FieldStorage.Yes}
                 };
+
+                Index(x => x.Attributes, FieldIndexing.No);
             }
         }
 

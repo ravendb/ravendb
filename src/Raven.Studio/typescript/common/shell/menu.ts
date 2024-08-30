@@ -25,7 +25,7 @@ class menu {
     width = ko.observable<number>(280);
 
     private type = 'menu';
-    private items: KnockoutObservable<Array<menuItem>> = ko.observable(null);
+    public items: KnockoutObservable<Array<menuItem>> = ko.observable(null);
 
     private resetMenuLevelToActiveItem: {
         isActive: boolean,

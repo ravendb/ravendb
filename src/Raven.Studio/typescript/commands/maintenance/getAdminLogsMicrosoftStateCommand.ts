@@ -1,10 +1,9 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
-import Dictionary = System.Collections.Generic.Dictionary;
 
 interface GetAdminLogsMicrosoftStateCommandResult {
     IsActive: boolean;
-    Loggers: Dictionary<string, string>;
+    Loggers: Record<string, string>;
 }
 
 class getAdminLogsMicrosoftStateCommand extends commandBase {

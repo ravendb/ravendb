@@ -46,6 +46,8 @@ abstract class ongoingTaskModel {
                 return "Kafka ETL";
             case "RabbitQueueEtl":
                 return "RabbitMQ ETL";
+            case "AzureQueueStorageQueueEtl":
+                return "Azure Queue Storage ETL";
             default:
                 return taskType;
         }

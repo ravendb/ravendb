@@ -1,22 +1,27 @@
+using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class ServerStorageUsedSize : ScalarObjectBase<Gauge32>
+    public sealed class ServerStorageUsedSize(ServerStore store) : ScalarObjectBase<Gauge32>(SnmpOids.Server.StorageUsedSize), IMetricInstrument<long>
     {
-        private readonly ServerStore _store;
-
-        public ServerStorageUsedSize(ServerStore store)
-            : base(SnmpOids.Server.StorageUsedSize)
+        private long Value
         {
-            _store = store;
+            get
+            {
+                var stats = store._env.Stats();
+                return stats.UsedDataFileSizeInBytes / 1024L / 1024L;
+            }
         }
 
         protected override Gauge32 GetData()
         {
-            var stats = _store._env.Stats();
-            return new Gauge32(stats.UsedDataFileSizeInBytes / 1024L / 1024L);
+            return new Gauge32(Value);
         }
+
+        public long GetCurrentMeasurement() => Value;
     }
 }

@@ -29,12 +29,23 @@ namespace SlowTests.Issues
                 {
                     @"from e in docs.Employees
 select new {
-    a = e.Select(x=>CreateField(x.Key, x.Value))
+    _ = e.Select(x=> {
+            if (x.Key == ""@metadata"")
+                return null;
+
+            if (x.Key == ""Address"")
+                return x.Value.Select(y => CreateField(""Address_"" + y.Key, y.Value.ToString()));
+            
+            return CreateField(x.Key, x.Value);
+        })
 }"
                 }
             }));
 
             Indexes.WaitForIndexing(store);
+
+            WaitForUserToContinueTheTest(store);
+
             var statistics = store.Maintenance.Send(new GetStatisticsOperation());
             Assert.Equal(IndexState.Normal, statistics.Indexes.Single(x => x.Name == "index").State);
 

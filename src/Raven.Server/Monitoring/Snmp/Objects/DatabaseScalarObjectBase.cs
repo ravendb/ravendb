@@ -1,5 +1,9 @@
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects
 {
@@ -7,7 +11,6 @@ namespace Raven.Server.Monitoring.Snmp.Objects
         where TData : ISnmpData
     {
         protected readonly string DatabaseName;
-
         protected readonly DatabasesLandlord Landlord;
 
         protected DatabaseScalarObjectBase(string databaseName, DatabasesLandlord landlord, string dots, int index)
@@ -25,6 +28,26 @@ namespace Raven.Server.Monitoring.Snmp.Objects
                 return GetData(Landlord.TryGetOrCreateResourceStore(DatabaseName).Result);
 
             return default(TData);
+        }
+
+        protected bool TryGetDatabase(out DocumentDatabase database)
+        {
+            if (Landlord.IsDatabaseLoaded(DatabaseName))
+            {
+                database = Landlord.TryGetOrCreateResourceStore(DatabaseName).Result;
+                return true;
+            }
+
+            database = null;
+            return false;
+        }
+        
+        
+        protected DocumentDatabase GetDatabase()
+        {
+            if (Landlord.IsDatabaseLoaded(DatabaseName))
+                return Landlord.TryGetOrCreateResourceStore(DatabaseName).Result;
+            return null;
         }
     }
 }

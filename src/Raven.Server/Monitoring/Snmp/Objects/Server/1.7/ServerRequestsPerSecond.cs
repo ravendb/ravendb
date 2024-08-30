@@ -1,29 +1,33 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class ServerRequestsPerSecond : ScalarObjectBase<Gauge32>
+    public sealed class ServerRequestsPerSecond(MetricCounters metrics, ServerRequestsPerSecond.RequestRateType requestRateType)
+        : ScalarObjectBase<Gauge32>(GetOid(requestRateType)), ITaggedMetricInstrument<int>
     {
-        private readonly MetricCounters _metrics;
-        private readonly RequestRateType _requestRateType;
-
-        public ServerRequestsPerSecond(MetricCounters metrics, RequestRateType requestRateType)
-            : base(GetOid(requestRateType))
+        private int Value
         {
-            _metrics = metrics;
-            _requestRateType = requestRateType;
+            get
+            {
+                return requestRateType switch
+                {
+                    RequestRateType.OneMinute => (int)metrics.Requests.RequestsPerSec.OneMinuteRate,
+                    RequestRateType.FiveSeconds => (int)metrics.Requests.RequestsPerSec.FiveSecondRate,
+                    _ => throw new ArgumentOutOfRangeException(nameof(requestRateType), requestRateType, null)
+                };
+            }
         }
-
+        
+        public Measurement<int> GetCurrentMeasurement() => new(Value, new KeyValuePair<string, object>("RateType", requestRateType));
+        
         protected override Gauge32 GetData()
         {
-            return _requestRateType switch
-            {
-                RequestRateType.OneMinute => new Gauge32((int)_metrics.Requests.RequestsPerSec.OneMinuteRate),
-                RequestRateType.FiveSeconds => new Gauge32((int)_metrics.Requests.RequestsPerSec.FiveSecondRate),
-                _ => throw new ArgumentOutOfRangeException(nameof(_requestRateType), _requestRateType, null)
-            };
+            return new Gauge32(Value);
         }
 
         private static string GetOid(RequestRateType requestRateType)

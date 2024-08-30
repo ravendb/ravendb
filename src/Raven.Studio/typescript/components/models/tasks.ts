@@ -114,6 +114,7 @@ export interface OngoingTaskQueueSinkSharedInfo extends OngoingTaskSharedInfo {
 export type OngoingTaskKafkaEtlSharedInfo = OngoingTaskQueueEtlSharedInfo;
 
 export type OngoingTaskRabbitMqEtlSharedInfo = OngoingTaskQueueEtlSharedInfo;
+export type OngoingTaskAzureQueueStorageEtlSharedInfo = OngoingTaskQueueEtlSharedInfo;
 
 export type OngoingTaskKafkaSinkSharedInfo = OngoingTaskQueueSinkSharedInfo;
 
@@ -162,6 +163,8 @@ export type OngoingTaskKafkaEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export type OngoingTaskRabbitMqEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
+export type OngoingTaskAzureQueueStorageEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
+
 export type OngoingTaskKafkaSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export type OngoingTaskRabbitMqSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
@@ -172,7 +175,8 @@ export type AnyEtlOngoingTaskInfo =
     | OngoingTaskElasticSearchEtlInfo
     | OngoingTaskRavenEtlInfo
     | OngoingTaskKafkaEtlInfo
-    | OngoingTaskRabbitMqEtlInfo;
+    | OngoingTaskRabbitMqEtlInfo
+    | OngoingTaskAzureQueueStorageEtlInfo;
 
 export interface OngoingTaskInfo<
     TSharded extends OngoingTaskSharedInfo = OngoingTaskSharedInfo,
@@ -232,6 +236,11 @@ export type OngoingTaskKafkaEtlInfo = OngoingTaskInfo<
 export type OngoingTaskRabbitMqEtlInfo = OngoingTaskInfo<
     OngoingTaskRabbitMqEtlSharedInfo,
     OngoingEtlTaskNodeInfo<OngoingTaskRabbitMqEtlNodeInfoDetails>
+>;
+
+export type OngoingTaskAzureQueueStorageEtlInfo = OngoingTaskInfo<
+    OngoingTaskAzureQueueStorageEtlSharedInfo,
+    OngoingEtlTaskNodeInfo<OngoingTaskAzureQueueStorageEtlNodeInfoDetails>
 >;
 
 export type OngoingTaskKafkaSinkInfo = OngoingTaskInfo<

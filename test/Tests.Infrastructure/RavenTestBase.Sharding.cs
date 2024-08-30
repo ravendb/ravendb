@@ -111,15 +111,12 @@ public partial class RavenTestBase
             return options;
         }
 
-        public static int GetNextSortedShardNumber(PrefixedShardingSetting prefixedShardingSetting, int shardNumber)
-        {
-            var shardsSorted = prefixedShardingSetting.Shards.OrderBy(x => x).ToArray();
-            return GetNextSortedShardNumber(shardNumber, shardsSorted);
-        }
+        public static int GetNextSortedShardNumber(Dictionary<int, DatabaseTopology> shards, int shardNumber) =>
+            GetNextSortedShardNumber(shards.Keys, shardNumber);
 
-        public static int GetNextSortedShardNumber(Dictionary<int, DatabaseTopology> shards, int shardNumber)
+        public static int GetNextSortedShardNumber(ICollection<int> shards, int shardNumber)
         {
-            var shardsSorted = shards.Keys.OrderBy(x => x).ToArray();
+            var shardsSorted = shards.OrderBy(x => x).ToArray();
             return GetNextSortedShardNumber(shardNumber, shardsSorted);
         }
 

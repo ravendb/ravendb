@@ -142,14 +142,27 @@ body {
         }
 
         .navbar .navbar-header .navbar-brand {
-            font-size: 26px;
+            font-size: 24px;
 
             .main-logo {
                 display: none;
             }
 
-            .icon-raven {
-                display: block;
+            .collapsed-logo {
+                .icon-raven {
+                    display: flex;
+                    font-size: 28px;
+                    line-height: 28px;
+                    justify-content: center;
+                    align-items: center;
+                }
+                .server-environment-label__collapsed {
+                    display: block;
+                    font-size: 0.57rem;
+                    padding: 1px 3px;
+                    margin-top: 3px;
+                    line-height: initial;
+                }
             }
         }
 
@@ -187,17 +200,6 @@ body {
     &.pin-notifications {
         #notification-center {
             transition: none;
-        }
-    }
-
-    &.show-search {
-        @media (max-width: @screen-sm-max) {
-            .search-container {
-                //TODO.slidein-style;
-                box-shadow: 0 0 0 1px @gray-lighter;
-                display: block;
-                z-index: 20;
-            }
         }
     }
 

@@ -392,9 +392,9 @@ namespace Raven.Server.Rachis
 
         public static string ReadNodeTag(TransactionOperationContext context)
         {
-            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+            var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
 
-            var readResult = state.Read(TagSlice);
+            var readResult = state?.Read(TagSlice);
             return readResult == null ? InitialTag : readResult.Reader.ToStringValue();
         }
 

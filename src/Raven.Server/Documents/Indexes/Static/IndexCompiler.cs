@@ -163,11 +163,12 @@ namespace Raven.Server.Documents.Indexes.Static
             return assemblyMetadata.GetReference();
         }
 
-        public static AbstractStaticIndexBase Compile(IndexDefinition definition)
+        public static AbstractStaticIndexBase Compile(IndexDefinition definition, long indexVersion)
         {
+            
             var cSharpSafeName = GetCSharpSafeName(definition.Name);
 
-            var @class = CreateClass(cSharpSafeName, definition);
+            var @class = CreateClass(cSharpSafeName, definition, indexVersion);
 
             var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, definition);
             var type = compilationResult.Type;
@@ -529,12 +530,12 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
         
-        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
+        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition, long indexVersion)
         {
             var statements = new List<StatementSyntax>();
             var maps = definition.Maps.ToList();
             var fieldNamesValidator = new FieldNamesValidator();
-            var methodDetector = new MethodDetectorRewriter();
+            var methodDetector = new MethodDetectorRewriter(indexVersion);
             var stackDepthRetriever = new StackDepthRetriever();
             var members = new SyntaxList<MemberDeclarationSyntax>();
             var maxDepthInRecursiveLinqQuery = 0;

@@ -7,7 +7,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.SqlMigration;
-using SlowTests.Server.Documents.ETL;
 using SlowTests.Server.Documents.Migration;
 using Tests.Infrastructure;
 using Xunit;
@@ -31,7 +30,7 @@ public class RavenDB_22426 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Etl)]
-    public void TestOldFactoryNameWithNoEncryptParameter()
+    public void TestOldFactoryName()
     {
         using (var store = GetDocumentStore())
         {
@@ -50,9 +49,7 @@ public class RavenDB_22426 : RavenTestBase
 
                 var etlDone = Etl.WaitForEtlToComplete(store, (n, s) => GetDtosCount(connectionString) == 1);
                 
-                var connectionStringWithoutEncryptOption = connectionString.Replace("Encrypt=Optional;", string.Empty);
-                
-                SetupSqlEtl(store, connectionStringWithoutEncryptOption, EtlScript);
+                SetupSqlEtl(store, connectionString, EtlScript);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 

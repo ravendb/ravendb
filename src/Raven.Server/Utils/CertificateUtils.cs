@@ -325,12 +325,12 @@ namespace Raven.Server.Utils
             certificateGenerator.AddExtension(X509Extensions.KeyUsage.Id, true, new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment));
             if (isClientCertificate)
             {
-                certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true, new ExtendedKeyUsage(KeyPurposeID.IdKPClientAuth));
+                certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true, new ExtendedKeyUsage(KeyPurposeID.id_kp_clientAuth));
             }
             else
             {
                 certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true,
-                    new ExtendedKeyUsage(KeyPurposeID.IdKPServerAuth, KeyPurposeID.IdKPClientAuth));
+                    new ExtendedKeyUsage(KeyPurposeID.id_kp_serverAuth, KeyPurposeID.id_kp_clientAuth));
             }
 
             if (isCaCertificate)
@@ -369,7 +369,7 @@ namespace Raven.Server.Utils
             certificateGenerator.SetPublicKey(subjectKeyPair.Public);
 
             X509Certificate certificate = certificateGenerator.Generate(signatureFactory);
-            var store = new Pkcs12Store();
+            var store = new Pkcs12StoreBuilder().Build();
             string friendlyName = certificate.SubjectDN.ToString();
             var certificateEntry = new X509CertificateEntry(certificate);
             var keyEntry = new AsymmetricKeyEntry(subjectKeyPair.Private);
@@ -415,7 +415,7 @@ namespace Raven.Server.Utils
             certificateGenerator.AddExtension(X509Extensions.KeyUsage.Id, true,
                 new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.CrlSign | KeyUsage.KeyCertSign));
             certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true,
-                new ExtendedKeyUsage(KeyPurposeID.IdKPServerAuth, KeyPurposeID.IdKPClientAuth));
+                new ExtendedKeyUsage(KeyPurposeID.id_kp_serverAuth, KeyPurposeID.id_kp_clientAuth));
 
             // Valid For
             DateTime notBefore = DateTime.UtcNow.Date.AddDays(-7);
@@ -456,7 +456,7 @@ namespace Raven.Server.Utils
             ca = (issuerKeyPair.Private, issuerKeyPair.Public);
             name = certificate.SubjectDN;
 
-            var store = new Pkcs12Store();
+            var store = new Pkcs12StoreBuilder().Build();
             string friendlyName = certificate.SubjectDN.ToString();
             var certificateEntry = new X509CertificateEntry(certificate);
             var keyEntry = new AsymmetricKeyEntry(subjectKeyPair.Private);

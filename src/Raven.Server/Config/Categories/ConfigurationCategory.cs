@@ -174,12 +174,13 @@ namespace Raven.Server.Config.Categories
 
                         if (minValue == null)
                         {
-                            if (property.Info.PropertyType.IsEnum)
+                            if (property.Info.PropertyType.IsEnum || (Nullable.GetUnderlyingType(property.Info.PropertyType)?.IsEnum ?? false))
                             {
+                                var propertyType = Nullable.GetUnderlyingType(property.Info.PropertyType) ?? property.Info.PropertyType;
                                 object parsedValue;
                                 try
                                 {
-                                    parsedValue = Enum.Parse(property.Info.PropertyType, value, true);
+                                    parsedValue = Enum.Parse(propertyType, value, true);
                                 }
                                 catch (ArgumentException)
                                 {
@@ -231,11 +232,13 @@ namespace Raven.Server.Config.Categories
                                     {
                                         var parsedItem = Enum.Parse(enumType, item, ignoreCase: true);
                                         Expression.Lambda<Action>(
+#pragma warning disable IL2026
                                             Expression.Call(
                                                 Expression.Constant(hashSet, property.Info.PropertyType),
                                                 "Add",
                                                 Type.EmptyTypes,
                                                 Expression.Constant(parsedItem, enumType))
+#pragma warning restore IL2026
                                         ).Compile()();
                                     }
 
@@ -404,8 +407,10 @@ namespace Raven.Server.Config.Categories
 
         private List<ConfigurationProperty> GetConfigurationPropertiesInternal(Type type)
         {
+#pragma warning disable IL2070
             var configurationProperties = from property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                                          let configurationEntryAttribute = property.GetCustomAttributes<ConfigurationEntryAttribute>().FirstOrDefault()
+#pragma warning restore IL2070
+                let configurationEntryAttribute = property.GetCustomAttributes<ConfigurationEntryAttribute>().FirstOrDefault()
                                           where configurationEntryAttribute != null // filter out properties which aren't marked as configuration entry
                                           orderby configurationEntryAttribute.Order // properties are initialized in order of declaration
                                           select property;

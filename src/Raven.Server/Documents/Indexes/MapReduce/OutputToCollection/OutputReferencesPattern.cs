@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.RegularExpressions;
+using Raven.Client;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 
@@ -126,7 +127,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             public void ValidateId(string id)
             {
-                var identityPartsSeparator = _database?.IdentityPartsSeparator ?? '/';
+                var identityPartsSeparator = _database?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator;
 
                 if (id.EndsWith(identityPartsSeparator))
                     ThrowInvalidId(id, $"reference ID must not end with '{identityPartsSeparator}' character");

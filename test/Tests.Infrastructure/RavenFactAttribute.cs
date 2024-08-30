@@ -19,19 +19,21 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
 
     public bool ElasticSearchRequired { get; set; }
 
+    public bool AzureQueueStorageRequired { get; set; }
+
     public bool NightlyBuildRequired { get; set; }
 
     public override string Skip
     {
         get
         {
-            return ShouldSkip(_skip,  _category,  licenseRequired: LicenseRequired,  nightlyBuildRequired: NightlyBuildRequired,  msSqlRequired: MsSqlRequired,  elasticSearchRequired: ElasticSearchRequired);
+            return ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, msSqlRequired: MsSqlRequired, elasticSearchRequired: ElasticSearchRequired, azureQueueStorageRequired: AzureQueueStorageRequired);
         }
 
         set => _skip = value;
     }
 
-    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired)
+    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired, bool azureQueueStorageRequired)
     {
         var s = ShouldSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
         if (s != null)
@@ -41,6 +43,9 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
             return skip;
 
         if (elasticSearchRequired && RequiresElasticSearchRetryFactAttribute.ShouldSkip(out skip))
+            return skip;
+
+        if (azureQueueStorageRequired && AzureQueueStorageHelper.ShouldSkip(out skip))
             return skip;
 
         return null;

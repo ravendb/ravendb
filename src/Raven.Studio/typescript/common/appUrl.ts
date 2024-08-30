@@ -37,11 +37,13 @@ class appUrl {
         patch: ko.pureComputed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase())),
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
+        newDoc: ko.pureComputed(() => appUrl.forNewDoc(appUrl.currentDatabase())),
+        newCmpXchg: ko.pureComputed(() => appUrl.forEditCmpXchg(null, appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.pureComputed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
         editReplicationHub: (taskId?: number) => ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase(), taskId)),
         editReplicationSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditReplicationSink(appUrl.currentDatabase(), taskId)),
-        editPeriodicBackupTask: (sourceView: EditPeriodicBackupTaskSourceView, taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), sourceView, taskId)),
+        editPeriodicBackupTask: (sourceView: EditPeriodicBackupTaskSourceView, isManual: boolean, taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), sourceView, isManual, taskId)),
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
         editRavenEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId)),
         editSqlEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase(), taskId)),
@@ -49,6 +51,7 @@ class appUrl {
         editElasticSearchEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditElasticSearchEtl(appUrl.currentDatabase(), taskId)),
         editKafkaEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditKafkaEtl(appUrl.currentDatabase(), taskId)),
         editRabbitMqEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditRabbitMqEtl(appUrl.currentDatabase(), taskId)),
+        editAzureQueueStorageEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditAzureQueueStorageEtl(appUrl.currentDatabase(), taskId)),
         editKafkaSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditKafkaSink(appUrl.currentDatabase(), taskId)),
         editRabbitMqSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditRabbitMqSink(appUrl.currentDatabase(), taskId)),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
@@ -72,6 +75,7 @@ class appUrl {
         editElasticSearchEtlTaskUrl: ko.pureComputed(() => appUrl.forEditElasticSearchEtl(appUrl.currentDatabase())),
         editKafkaEtlTaskUrl: ko.pureComputed(() => appUrl.forEditKafkaEtl(appUrl.currentDatabase())),
         editRabbitMqEtlTaskUrl: ko.pureComputed(() => appUrl.forEditRabbitMqEtl(appUrl.currentDatabase())),
+        editAzureQueueStorageEtlTaskUrl: ko.pureComputed(() => appUrl.forEditAzureQueueStorageEtl(appUrl.currentDatabase())),
         editKafkaSinkTaskUrl: ko.pureComputed(() => appUrl.forEditKafkaSink(appUrl.currentDatabase())),
         editRabbitMqSinkTaskUrl: ko.pureComputed(() => appUrl.forEditRabbitMqSink(appUrl.currentDatabase())),
         csvImportUrl: ko.pureComputed(() => appUrl.forCsvImport(appUrl.currentDatabase())),
@@ -103,7 +107,6 @@ class appUrl {
         refresh: ko.pureComputed(() => appUrl.forRefresh(appUrl.currentDatabase())),
         customSorters: ko.pureComputed(() => appUrl.forCustomSorters(appUrl.currentDatabase())),
         customAnalyzers: ko.pureComputed(() => appUrl.forCustomAnalyzers(appUrl.currentDatabase())),
-        editCustomAnalyzer: ko.pureComputed(() => appUrl.forEditCustomAnalyzer(appUrl.currentDatabase())),
         integrations: ko.pureComputed(() => appUrl.forIntegrations(appUrl.currentDatabase())),
         connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
         conflictResolution: ko.pureComputed(() => appUrl.forConflictResolution(appUrl.currentDatabase())),
@@ -216,11 +219,6 @@ class appUrl {
 
     static forServerWideCustomAnalyzers(): string {
         return "#admin/settings/serverWideCustomAnalyzers";
-    }
-
-    static forEditServerWideCustomAnalyzer(serverWideCustomAnalyzerName? : string): string {
-        const analyzerNamePart = serverWideCustomAnalyzerName ? "?&analyzerName=" + encodeURIComponent(serverWideCustomAnalyzerName) : "";
-        return "#admin/settings/editServerWideCustomAnalyzer" + analyzerNamePart;
     }
 
     static forServerWideCustomSorters(): string {
@@ -407,13 +405,6 @@ class appUrl {
         return "#databases/settings/customAnalyzers?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forEditCustomAnalyzer(db: database | string, analyzerName?: string): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        const namePart = analyzerName ? "&name=" + encodeURIComponent(analyzerName) : "";
-
-        return "#databases/settings/editCustomAnalyzer?" + databasePart + namePart;
-    }
-
     static forIntegrations(db: database): string {
         return "#databases/settings/integrations?" + appUrl.getEncodedDbPart(db);
     }
@@ -588,11 +579,12 @@ class appUrl {
         return "#databases/tasks/editReplicationSinkTask?" + databasePart + taskPart;
     }
 
-    static forEditPeriodicBackupTask(db: database | string, sourceView: EditPeriodicBackupTaskSourceView, taskId?: number): string {
+    static forEditPeriodicBackupTask(db: database | string, sourceView: EditPeriodicBackupTaskSourceView, isManual: boolean, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const sourceViewPart = "&sourceView=" + sourceView;
+        const manualPart = isManual ? "&manual=true" : "";
         const taskPart = taskId ? "&taskId=" + taskId : "";
-        return "#databases/tasks/editPeriodicBackupTask?" + databasePart + sourceViewPart + taskPart;
+        return "#databases/tasks/editPeriodicBackupTask?" + databasePart + sourceViewPart + manualPart + taskPart;
     }
     
     static forEditManualBackup(db: database | string): string {
@@ -642,6 +634,12 @@ class appUrl {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editRabbitMqEtlTask?" + databasePart + taskPart;
+    }
+
+    static forEditAzureQueueStorageEtl(db: database | string, taskId?: number): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        return "#databases/tasks/editAzureQueueStorageEtlTask?" + databasePart + taskPart;
     }
 
     static forEditKafkaSink(db: database | string, taskId?: number): string {

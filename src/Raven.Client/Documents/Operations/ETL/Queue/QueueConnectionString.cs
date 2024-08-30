@@ -12,6 +12,8 @@ public sealed class QueueConnectionString : ConnectionString
     public KafkaConnectionSettings KafkaConnectionSettings { get; set; }
 
     public RabbitMqConnectionSettings RabbitMqConnectionSettings { get; set; }
+
+    public AzureQueueStorageConnectionSettings AzureQueueStorageConnectionSettings { get; set; }
     
     public override ConnectionStringType Type => ConnectionStringType.Queue;
 
@@ -29,6 +31,12 @@ public sealed class QueueConnectionString : ConnectionString
                 if (RabbitMqConnectionSettings == null || string.IsNullOrWhiteSpace(RabbitMqConnectionSettings.ConnectionString))
                 {
                     errors.Add($"{nameof(RabbitMqConnectionSettings)} has no valid setting.");
+                }
+                break;
+            case QueueBrokerType.AzureQueueStorage:
+                if (AzureQueueStorageConnectionSettings.IsValidConnection() == false)
+                {
+                    errors.Add($"{nameof(AzureQueueStorageConnectionSettings)} has no valid setting.");
                 }
                 break;
             default:
@@ -52,6 +60,9 @@ public sealed class QueueConnectionString : ConnectionString
 
                 url = indexOfStartServerUri != -1 ? connectionString.Substring(indexOfStartServerUri + 1) : null;
                 break;
+            case QueueBrokerType.AzureQueueStorage:
+                url = AzureQueueStorageConnectionSettings.GetStorageUrl();
+                break;
             default:
                 throw new NotSupportedException($"'{BrokerType}' broker is not supported");
         }
@@ -66,6 +77,7 @@ public sealed class QueueConnectionString : ConnectionString
         json[nameof(BrokerType)] = BrokerType;
         json[nameof(KafkaConnectionSettings)] = KafkaConnectionSettings?.ToJson();
         json[nameof(RabbitMqConnectionSettings)] = RabbitMqConnectionSettings?.ToJson();
+        json[nameof(AzureQueueStorageConnectionSettings)] = AzureQueueStorageConnectionSettings?.ToJson();
 
         return json;
     }

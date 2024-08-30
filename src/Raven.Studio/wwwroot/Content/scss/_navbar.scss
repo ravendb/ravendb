@@ -1,0 +1,183 @@
+@import "colors";
+@import "sizes";
+@import "bs5variables";
+@import "variables";
+
+$navbar-height: 70px;
+$navbar-height-xs: $navbar-height;
+
+@keyframes bounceInOnce {
+    0%,
+    70%,
+    100% {
+        -webkit-transition-timing-function: cubic-bezier(0.85, 0, 0.25, 0.995);
+        transition-timing-function: cubic-bezier(0.85, 0, 0.25, 0.995);
+    }
+
+    0% {
+        -webkit-transform: scale3d(0.3, 0.3, 0.3);
+        transform: scale3d(0.3, 0.3, 0.3);
+    }
+
+    70% {
+        -webkit-transform: scale3d(1.1, 1.1, 1.1);
+        transform: scale3d(1.1, 1.1, 1.1);
+    }
+
+    100% {
+        -webkit-transform: scale3d(1, 1, 1);
+        transform: scale3d(1, 1, 1);
+    }
+}
+$bounceinonce-properties: bounceInOnce 0.15s 1 both;
+
+.navbar {
+    grid-area: navbar;
+    height: $navbar-height-xs;
+    border-bottom: 1px solid $border-color-light-var;
+    background-color: $body-bg-var;
+    display: flex;
+    align-items: center;
+    z-index: $zindex-navbar-fixed;
+
+    @supports (backdrop-filter: blur(24px)) {
+        background-color: transparent;
+        backdrop-filter: blur(24px);
+    }
+
+    @media (min-width: $screen-md) {
+        height: $navbar-height;
+    }
+
+    #navbar {
+        @media (max-width: $screen-sm-max) {
+            margin-right: $gutter-xxs;
+            gap: $gutter-xs;
+        }
+        margin: $gutter-sm;
+        display: flex;
+        flex-grow: 1;
+        justify-content: flex-end;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: $gutter;
+    }
+
+    .navbar-header {
+        border-right: 1px solid $border-color-light-var;
+        height: $navbar-height;
+        width: var(--menu-width);
+        gap: 1rem;
+
+        .navbar-brand {
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            .main-logo {
+                width: 9.375rem;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .icon-raven {
+                display: none;
+                color: #388ee9;
+            }
+
+            &:hover {
+                filter: $hover-filter-var;
+            }
+        }
+
+        .server-environment-label {
+            &__collapsed {
+                display: none;
+            }
+        }
+    }
+
+    .navbar-right {
+        @media (max-width: $screen-sm-max) {
+            margin-right: $gutter-xs;
+        }
+
+        display: flex;
+        flex-direction: row;
+        gap: $gutter-sm;
+        align-items: center;
+        margin-right: $gutter-sm;
+
+        li {
+            display: inline-block;
+            position: relative;
+
+            a {
+                display: block;
+                height: 100%;
+                color: $base-text-color;
+                transition: none;
+                &:hover {
+                    filter: $hover-filter-var;
+                    transition: $transition-base;
+                }
+            }
+
+            a.active {
+                position: relative;
+                color: $primary-var;
+
+                .notification-counter {
+                    border-color: $border-color-light-var;
+                }
+            }
+
+            .notification-counter {
+                position: absolute;
+                width: 18px;
+                height: 18px;
+                font-size: 10px;
+                line-height: 15px;
+                color: $white;
+                text-align: center;
+                top: -$gutter-xs;
+                right: -$gutter-xxs;
+                background-color: $primary-var;
+                border-radius: 50%;
+                border: 1px solid $border-color-light-var;
+                display: none;
+
+                &.success {
+                    background-color: $success-var;
+                }
+
+                &.info {
+                    background-color: $info-var;
+                }
+
+                &.warning {
+                    background-color: $warning-var;
+                }
+
+                &.danger {
+                    background-color: $danger-var;
+                }
+
+                &.show {
+                    display: block;
+                }
+            }
+        }
+
+        [class*=" icon-"],
+        [class^="icon-"] {
+            font-size: 21px;
+        }
+
+        @media (min-width: $screen-md) {
+            float: right;
+        }
+    }
+}
