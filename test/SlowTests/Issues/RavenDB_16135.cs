@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     Assert.Equal(2, companiesRevisions.Count);
                 }
 
-                var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60));
+                var operation = await store.Maintenance.SendAsync(new RevisionsHelper.RevertRevisionsOperation(last, 60));
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
                 using (var session = store.OpenAsyncSession())
@@ -64,55 +64,5 @@ namespace SlowTests.Issues
             }
         }
 
-        private class RevertRevisionsOperation : IMaintenanceOperation<OperationIdResult>
-        {
-            private readonly RevertRevisionsRequest _request;
-
-            public RevertRevisionsOperation(DateTime time, long window)
-            {
-                _request = new RevertRevisionsRequest() { Time = time, WindowInSec = window };
-            }
-
-            public RevertRevisionsOperation(RevertRevisionsRequest request)
-            {
-                _request = request ?? throw new ArgumentNullException(nameof(request));
-            }
-
-            public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
-            {
-                return new RevertRevisionsCommand(_request);
-            }
-
-            private class RevertRevisionsCommand : RavenCommand<OperationIdResult>
-            {
-                private readonly RevertRevisionsRequest _request;
-
-                public RevertRevisionsCommand(RevertRevisionsRequest request)
-                {
-                    _request = request;
-                }
-
-                public override bool IsReadRequest => false;
-
-                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-                {
-                    url = $"{node.Url}/databases/{node.Database}/revisions/revert";
-
-                    return new HttpRequestMessage
-                    {
-                        Method = HttpMethod.Post,
-                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)).ConfigureAwait(false))
-                    };
-                }
-
-                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-                {
-                    if (response == null)
-                        ThrowInvalidResponse();
-
-                    Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<OperationIdResult>(response);
-                }
-            }
-        }
     }
 }

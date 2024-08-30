@@ -27,10 +27,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return Task.FromResult(_client.DownloadObject(path));
         }
 
-        protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
+        protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress)
         {
             Stream stream = _client.DownloadObject(path);
-            var file = await CopyRemoteStreamLocally(stream);
+            var size = await _client.GetObjectSizeAsync(path);
+            var file = await CopyRemoteStreamLocallyAsync(stream, size, onProgress);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 

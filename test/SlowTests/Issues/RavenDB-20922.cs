@@ -180,7 +180,7 @@ namespace SlowTests.Issues
                 var count = 0;
                 string info = "";
 
-                await ActionWithLeader((l) => l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index[0].Name, IndexState.Disabled, database, Guid.NewGuid().ToString())),
+                await ActionWithLeader((l) => l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(index[0].Name, IndexState.Disabled, database, Guid.NewGuid().ToString())),
                     Servers);
                 //Check index is disabled
                 await CheckIndexStateInTheCluster(database, index[0].Name, IndexState.Disabled);
@@ -252,7 +252,7 @@ namespace SlowTests.Issues
                 var count = 0;
                 string info = "";
 
-                await ActionWithLeader((l) => l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index.Name, IndexState.Disabled, database, Guid.NewGuid().ToString())),
+                await ActionWithLeader((l) => l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(index.Name, IndexState.Disabled, database, Guid.NewGuid().ToString())),
                     Servers);
                 //Check index is disabled
                 await CheckIndexStateInTheCluster(database, index.Name, IndexState.Disabled);
@@ -321,7 +321,7 @@ namespace SlowTests.Issues
 
                 Assert.Equal(1, count);
 
-                await ActionWithLeader((l) => l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index[0].Name, IndexState.Normal, database, Guid.NewGuid().ToString())),
+                await ActionWithLeader((l) => l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(index[0].Name, IndexState.Normal, database, Guid.NewGuid().ToString())),
                     Servers);
 
                 await CheckIndexStateInTheCluster(database, index[0].Name, IndexState.Normal);
@@ -362,7 +362,7 @@ namespace SlowTests.Issues
 
                 Assert.Equal(1, count);
 
-                await ActionWithLeader((l) => l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index.Name, IndexState.Normal, database, Guid.NewGuid().ToString())),
+                await ActionWithLeader((l) => l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(index.Name, IndexState.Normal, database, Guid.NewGuid().ToString())),
                     Servers);
 
                 await CheckIndexStateInTheCluster(database, index.Name, IndexState.Normal);

@@ -30,6 +30,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Data.BTrees;
@@ -748,11 +749,11 @@ namespace Raven.Server.Json
                 throw new NotSupportedException($"Cannot write query includes of '{includes.GetType()}' type in '{result.GetType()}'.");
 
             writer.WritePropertyName(nameof(result.IndexTimestamp));
-            writer.WriteString(result.IndexTimestamp.ToString(DefaultFormat.DateTimeFormatsToWrite));
+            writer.WriteString(result.IndexTimestamp.GetDefaultRavenFormat());
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.LastQueryTime));
-            writer.WriteString(result.LastQueryTime.ToString(DefaultFormat.DateTimeFormatsToWrite));
+            writer.WriteString(result.LastQueryTime.GetDefaultRavenFormat());
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.IsStale));
@@ -1474,6 +1475,12 @@ namespace Raven.Server.Json
             }
 
             if (document == Document.ExplicitNull)
+            {
+                writer.WriteNull();
+                return;
+            }
+
+            if (document.Data == null && document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.AllowDataAsNull))
             {
                 writer.WriteNull();
                 return;

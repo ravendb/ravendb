@@ -21,9 +21,9 @@ namespace Raven.Server.NotificationCenter
         private readonly string _database;
 
         private DateTime _warningUpdateTime = new DateTime();
-        private readonly ConcurrentQueue<(string indexName, WarnIndexOutputsPerDocument.WarningDetails warningDetails)> _warningIndexOutputsPerDocumentQueue =  new();
+        private readonly ConcurrentQueue<(string indexName, WarnIndexOutputsPerDocument.WarningDetails warningDetails)> _warningIndexOutputsPerDocumentQueue = new();
 
-        private readonly ConcurrentQueue<(string indexName, IndexingReferenceLoadWarning.WarningDetails warningDetails)> _warningReferenceDocumentLoadsQueue =  new();
+        private readonly ConcurrentQueue<(string indexName, IndexingReferenceLoadWarning.WarningDetails warningDetails)> _warningReferenceDocumentLoadsQueue = new();
 
         private MismatchedReferencesLoadWarning _mismatchedReferencesLoadWarning;
 
@@ -43,7 +43,7 @@ namespace Raven.Server.NotificationCenter
 
         public void AddWarning(string indexName, WarnIndexOutputsPerDocument.WarningDetails indexOutputsWarning)
         {
-            if (CanAdd(out DateTime now) == false) 
+            if (CanAdd(out DateTime now) == false)
                 return;
 
             indexOutputsWarning.LastWarningTime = now;
@@ -68,12 +68,12 @@ namespace Raven.Server.NotificationCenter
 
             EnsureTimer();
         }
-        
+
         public void AddWarning(MismatchedReferencesLoadWarning mismatchedReferenceLoadWarningDetails)
         {
             if (CanAdd(out DateTime now) == false)
                 return;
-            
+
             _mismatchedReferencesLoadWarning = mismatchedReferenceLoadWarningDetails;
 
             EnsureTimer();
@@ -88,7 +88,7 @@ namespace Raven.Server.NotificationCenter
                 return false;
 
             _warningUpdateTime = now;
-            
+
             return true;
         }
 
@@ -138,7 +138,7 @@ namespace Raven.Server.NotificationCenter
 
                 if (referenceLoadsHint != null)
                     _notificationCenter.Add(referenceLoadsHint);
-                
+
                 if (_mismatchedReferencesLoadWarning != null)
                 {
                     AlertRaised mismatchedReferencesAlert = GetMismatchedReferencesAlert();
@@ -156,15 +156,18 @@ namespace Raven.Server.NotificationCenter
         {
             using (_notificationsStorage.Read(HighOutputsRate, out NotificationTableValue ntv))
             {
-                WarnIndexOutputsPerDocument details;
-                if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
-                    details = new WarnIndexOutputsPerDocument();
-                else
-                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<WarnIndexOutputsPerDocument>(detailsJson, HighOutputsRate);
+                using (ntv)
+                {
+                    WarnIndexOutputsPerDocument details;
+                    if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                        details = new WarnIndexOutputsPerDocument();
+                    else
+                        details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<WarnIndexOutputsPerDocument>(detailsJson, HighOutputsRate);
 
-                return PerformanceHint.Create(_database, "High indexing fanout ratio",
-                    "Number of map results produced by an index exceeds the performance hint configuration key (MaxIndexOutputsPerDocument).",
-                    PerformanceHintType.Indexing, NotificationSeverity.Warning, Source, details);
+                    return PerformanceHint.Create(_database, "High indexing fanout ratio",
+                        "Number of map results produced by an index exceeds the performance hint configuration key (MaxIndexOutputsPerDocument).",
+                        PerformanceHintType.Indexing, NotificationSeverity.Warning, Source, details);
+                }
             }
         }
 
@@ -172,19 +175,22 @@ namespace Raven.Server.NotificationCenter
         {
             using (_notificationsStorage.Read(ReferencesLoad, out NotificationTableValue ntv))
             {
-                IndexingReferenceLoadWarning details;
-                if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
-                    details = new IndexingReferenceLoadWarning();
-                else
-                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<IndexingReferenceLoadWarning>(detailsJson, ReferencesLoad);
+                using (ntv)
+                {
+                    IndexingReferenceLoadWarning details;
+                    if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                        details = new IndexingReferenceLoadWarning();
+                    else
+                        details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<IndexingReferenceLoadWarning>(detailsJson, ReferencesLoad);
 
-                return PerformanceHint.Create(_database, "High indexing load reference rate",
-                    "We have detected high number of LoadDocument() / LoadCompareExchangeValue() calls per single reference item. The update of a reference will result in reindexing all documents that reference it. " +
-                    "Please see Indexing Performance graph to check the performance of your indexes.",
-                    PerformanceHintType.Indexing_References, NotificationSeverity.Warning, Source, details);
+                    return PerformanceHint.Create(_database, "High indexing load reference rate",
+                        "We have detected high number of LoadDocument() / LoadCompareExchangeValue() calls per single reference item. The update of a reference will result in reindexing all documents that reference it. " +
+                        "Please see Indexing Performance graph to check the performance of your indexes.",
+                        PerformanceHintType.Indexing_References, NotificationSeverity.Warning, Source, details);
+                }
             }
         }
-        
+
         private AlertRaised GetMismatchedReferencesAlert()
         {
             return AlertRaised.Create(_database, $"Loading documents with mismatched collection name in '{_mismatchedReferencesLoadWarning.IndexName}' index",

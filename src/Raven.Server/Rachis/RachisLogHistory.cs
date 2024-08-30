@@ -113,9 +113,22 @@ namespace Raven.Server.Rachis
             return null;
         }
 
+        public static unsafe DateTime? GetDateTimeByGuid(ClusterOperationContext context, string guid)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+            using (Slice.From(context.Allocator, guid, out var guidSlice))
+            {
+                if (table.ReadByKey(guidSlice, out var reader) == false)
+                    return null;
+
+                var ticks = Bits.SwapBytes(*(long*)reader.Read((int)(LogHistoryColumn.Ticks), out _));
+                return new DateTime(ticks);
+            }
+        }
+
         public static string GetTypeFromCommand(BlittableJsonReaderObject cmd)
         {
-            if (cmd.TryGet("Type", out string type) == false)
+            if (cmd.TryGet(nameof(CommandBase.Type), out string type) == false)
             {
                 throw new RachisApplyException("Cannot execute command, wrong format");
             }

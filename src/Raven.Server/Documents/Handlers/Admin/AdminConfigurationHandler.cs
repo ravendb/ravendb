@@ -15,8 +15,10 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using ConfigurationEntryScope = Raven.Server.Config.Attributes.ConfigurationEntryScope;
 
 namespace Raven.Server.Documents.Handlers.Admin
@@ -67,7 +69,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var entry = new ConfigurationEntryDatabaseValue(Database.Configuration, databaseRecord, configurationEntryMetadata, status);
                 settingsResult.Settings.Add(entry);
             }
-
+            
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
@@ -94,22 +96,48 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 var databaseSettingsJson = await context.ReadForDiskAsync(RequestBodyStream(), Constants.DatabaseSettings.StudioId);
 
-                var settings = new Dictionary<string, string>();
+                var settingsToUpdate = new Dictionary<string, string>();
                 var prop = new BlittableJsonReaderObject.PropertyDetails();
 
                 for (int i = 0; i < databaseSettingsJson.Count; i++)
                 {
                     databaseSettingsJson.GetPropertyByIndex(i, ref prop);
-                    settings.Add(prop.Name, prop.Value?.ToString());
+                    settingsToUpdate.Add(prop.Name, prop.Value?.ToString());
                 }
                 
-                var command = new PutDatabaseSettingsCommand(settings, Database.Name, GetRaftRequestIdFromQuery());
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    using (context.OpenReadTransaction())
+                    {
+                        var databaseRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name);
+                        var currentSettings = databaseRecord.Settings;
+                        
+                        var updatedSettingsKeys = GetUpdatedSettingsKeys(currentSettings, settingsToUpdate);
+
+                        LogAuditFor(Database.Name, "CHANGE", $"Database configuration. Changed settings: {string.Join(" ", updatedSettingsKeys)}");
+                    }
+                }
+                
+                var command = new PutDatabaseSettingsCommand(settingsToUpdate, Database.Name, GetRaftRequestIdFromQuery());
 
                 long index = (await Server.ServerStore.SendToLeaderAsync(command)).Index;
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
             }
 
             NoContentStatus(HttpStatusCode.Created);
+        }
+
+        private static List<string> GetUpdatedSettingsKeys(Dictionary<string, string> currentSettings, Dictionary<string, string> settingsToUpdate)
+        {
+            var updatedSettings = new List<string>();
+
+            foreach (var settingToUpdate in settingsToUpdate)
+            {
+                if (currentSettings.TryGetValue(settingToUpdate.Key, out var currentSettingValue) == false || currentSettingValue != settingToUpdate.Value)
+                    updatedSettings.Add(settingToUpdate.Key);
+            }
+
+            return updatedSettings;
         }
 
         [RavenAction("/databases/*/admin/configuration/studio", "PUT", AuthorizationStatus.DatabaseAdmin)]

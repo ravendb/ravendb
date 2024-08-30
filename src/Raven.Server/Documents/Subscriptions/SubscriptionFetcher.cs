@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils.Enumerators;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Subscriptions
@@ -15,9 +17,9 @@ namespace Raven.Server.Documents.Subscriptions
             Logger = LoggingSource.Instance.GetLogger<SubscriptionFetcher<T>>(Database.Name);
         }
 
-        protected abstract IEnumerable<T> FetchByEtag();
+        protected abstract IEnumerator<T> FetchByEtag();
 
-        protected abstract IEnumerable<T> FetchFromResend();
+        protected abstract IEnumerator<T> FetchFromResend();
 
         public IEnumerable<T> GetEnumerator()
         {
@@ -96,26 +98,24 @@ namespace Raven.Server.Documents.Subscriptions
 
         }
 
-        protected override IEnumerable<(Document Previous, Document Current)> FetchByEtag()
+        protected override IEnumerator<(Document Previous, Document Current)> FetchByEtag()
         {
             return Collection switch
             {
-                Constants.Documents.Collections.AllDocumentsCollection =>
-                    Database.DocumentsStorage.RevisionsStorage.GetCurrentAndPreviousRevisionsForSubscriptionsFrom(DocsContext, StartEtag + 1, 0, long.MaxValue),
-                _ =>
-                    Database.DocumentsStorage.RevisionsStorage.GetCurrentAndPreviousRevisionsForSubscriptionsFrom(DocsContext, new CollectionName(Collection), StartEtag + 1, long.MaxValue)
+                Constants.Documents.Collections.AllDocumentsCollection => new TransactionForgetAboutCurrentPreviousRevisionEnumerator(
+                    Database.DocumentsStorage.RevisionsStorage.GetCurrentAndPreviousRevisionsForSubscriptionsFrom(DocsContext, StartEtag + 1, 0, long.MaxValue)
+                        .GetEnumerator(), DocsContext),
+                _ => new TransactionForgetAboutCurrentPreviousRevisionEnumerator(
+                    Database.DocumentsStorage.RevisionsStorage
+                        .GetCurrentAndPreviousRevisionsForSubscriptionsFrom(DocsContext, new CollectionName(Collection), StartEtag + 1, long.MaxValue)
+                        .GetEnumerator(), DocsContext)
             };
         }
 
-        protected override IEnumerable<(Document Previous, Document Current)> FetchFromResend()
+        protected override IEnumerator<(Document Previous, Document Current)> FetchFromResend()
         {
-            foreach (var r in SubscriptionConnectionsState.GetRevisionsFromResend(ClusterContext, Active))
-            {
-                yield return (
-                    Database.DocumentsStorage.RevisionsStorage.GetRevision(DocsContext, r.Previous),
-                    Database.DocumentsStorage.RevisionsStorage.GetRevision(DocsContext, r.Current)
-                    );
-            }
+            return new TransactionForgetAboutCurrentPreviousRevisionEnumerator(SubscriptionConnectionsState.GetRevisionsFromResend(Database, ClusterContext, DocsContext, Active)
+                .GetEnumerator(), DocsContext);
         }
     }
 
@@ -126,23 +126,25 @@ namespace Raven.Server.Documents.Subscriptions
         {
         }
 
-        protected override IEnumerable<Document> FetchByEtag()
+        protected override IEnumerator<Document> FetchByEtag()
         {
             return Collection switch
             {
                 Constants.Documents.Collections.AllDocumentsCollection =>
-                    Database.DocumentsStorage.GetDocumentsFrom(DocsContext, StartEtag + 1, 0, long.MaxValue),
+                    new TransactionForgetAboutDocumentEnumerator(Database.DocumentsStorage.GetDocumentsFrom(DocsContext, StartEtag + 1, 0, long.MaxValue)
+                        .GetEnumerator(), DocsContext),
                 _ =>
-                    Database.DocumentsStorage.GetDocumentsFrom(
+                    new TransactionForgetAboutDocumentEnumerator(Database.DocumentsStorage.GetDocumentsFrom(
                         DocsContext,
                         Collection,
                         StartEtag + 1,
                         0,
                         long.MaxValue)
+                        .GetEnumerator(), DocsContext)
             };
         }
 
-        protected override IEnumerable<Document> FetchFromResend()
+        protected override IEnumerator<Document> FetchFromResend()
         {
             foreach (var record in SubscriptionConnectionsState.GetDocumentsFromResend(ClusterContext, Active))
             {

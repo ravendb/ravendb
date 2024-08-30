@@ -113,9 +113,13 @@ namespace Raven.Client.Extensions
 
             writer.WritePropertyName(nameof(options.MentorNode));
             writer.WriteString(options.MentorNode);
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(options.Disabled));
-            writer.WriteBool(options.Disabled);
+
+            if (options.DisabledWasSet)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(options.Disabled));
+                writer.WriteBool(options.Disabled);
+            }
 
             writer.WriteEndObject();
         }

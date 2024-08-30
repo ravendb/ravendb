@@ -47,7 +47,7 @@ public class RavenDB_21412 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Monitoring)]
+    [RavenFact(RavenTestCategory.Monitoring, LicenseRequired = true)]
     public async Task Verify_OngoingTasks_In_Snmp_Return_Proper_Counts()
     {
         DoNotReuseServer();

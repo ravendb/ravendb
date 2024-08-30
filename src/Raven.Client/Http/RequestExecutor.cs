@@ -516,6 +516,8 @@ namespace Raven.Client.Http
             {
                 if (Disposed == false)
                     throw;
+
+                return false;
             }
             finally
             {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -13,8 +14,10 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -125,6 +128,16 @@ namespace FastTests
                 }, true);
 
                 Assert.True(value);
+
+                // wait for the command to be applied all the way so timer will be updated if needed
+                AsyncHelpers.RunSync(async () =>
+                {
+                    long index = 0;
+                    var res = WaitForValue(() => _parent.Cluster.TryGetLastRaftIndexForCommand(serverStore.Server, nameof(UpdateResponsibleNodeForTasksCommand), out index), true);
+                    Assert.True(res);
+                    Assert.True(index > 0);
+                    await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(index, new() { serverStore.Server });
+                });
             }
 
             /// <summary>
@@ -589,6 +602,25 @@ namespace FastTests
                 {
                     tcs.TrySetResult(null);
                 }
+            }
+            
+            public async Task<(string[] files, Operations.Operation operation)> GetBackupFilesAndAssertCountAsync(string backupPath, int expectedCount, string databaseName, long backupOpId, params Operations.Operation[] operations)
+            {
+                var directories = Directory.GetDirectories(backupPath).Select(Directory.GetFiles).ToArray();
+                var filesEnumerable = directories.First()
+                    .Where(Raven.Client.Documents.Smuggler.BackupUtils.IsBackupFile);
+                var files = Raven.Client.Documents.Smuggler.BackupUtils.OrderBackups(filesEnumerable).ToArray();
+                
+                using var context = JsonOperationContext.ShortTermSingleUse();
+                var database = await _parent.GetDatabase(databaseName);
+                var operation = database.Operations.GetOperation(backupOpId);
+                if (files.Length != expectedCount)
+                {
+                    var jsonOperation = $"[{string.Join(",\n", operations.Concat(new[] { operation }).Select(x => context.ReadObject(x.ToJson(), "backup operation")))}]"; 
+                    Assert.Fail($"Expected {expectedCount} backup files but found {files.Length}.\n{string.Join("\n", files)}\n{jsonOperation}\n{string.Join("\n", directories.SelectMany(x => x))}");
+                }
+                
+                return (files, operation);
             }
         }
     }

@@ -46,14 +46,14 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
                             yield return result;
 
-                            if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
-                                yield break;
-
                             if (++numberOfDocs >= BatchSize)
                                 yield break;
                         }
                         else
                             yield return result;
+
+                        if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
+                            yield break;
                     }
                 }
             }

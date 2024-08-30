@@ -2,9 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
@@ -900,6 +902,30 @@ namespace FastTests
             }
 
             return sb.ToString();
+        }
+
+        public static async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
+        {
+            using (var ms = new MemoryStream())
+            {
+                WebSocketReceiveResult result;
+                do
+                {
+                    try
+                    {
+                        result = await source.ReceiveAsync(buffer, CancellationToken.None);
+                    }
+                    catch (Exception)
+                    {
+                        break;
+                    }
+                    ms.Write(buffer.Array, buffer.Offset, result.Count);
+                }
+                while (!result.EndOfMessage);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
+            }
         }
     }
 }

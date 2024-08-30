@@ -77,6 +77,9 @@ namespace Raven.Server.Web.System
             {
                 using (context.OpenReadTransaction())
                 {
+                    if (ServerStore.Server.AllowEncryptedDatabasesOverHttp)
+                        HttpContext.Response.Headers[nameof(ServerStore.Server.AllowEncryptedDatabasesOverHttp)] = "true";
+
                     var studioConfigurationJson = ServerStore.Cluster.Read(context, Constants.Configuration.StudioId, out long _);
                     if (studioConfigurationJson == null)
                     {

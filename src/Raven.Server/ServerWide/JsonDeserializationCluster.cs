@@ -62,6 +62,8 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, RefreshConfiguration> RefreshConfiguration = GenerateJsonDeserializationRoutine<RefreshConfiguration>();
 
+        public static readonly Func<BlittableJsonReaderObject, StudioConfiguration> StudioConfiguration = GenerateJsonDeserializationRoutine<StudioConfiguration>();
+
         public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ServerWideBackupConfiguration> ServerWideBackupConfiguration = GenerateJsonDeserializationRoutine<ServerWideBackupConfiguration>();
@@ -105,8 +107,6 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, ElasticSearchEtlConfiguration> ElasticSearchEtlConfiguration = GenerateJsonDeserializationRoutine<ElasticSearchEtlConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, QueueEtlConfiguration> QueueEtlConfiguration = GenerateJsonDeserializationRoutine<QueueEtlConfiguration>();
-
-        public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
 
         public static readonly Func<BlittableJsonReaderObject, AddOrUpdateCompareExchangeCommand.CompareExchangeResult> CompareExchangeResult = GenerateJsonDeserializationRoutine<AddOrUpdateCompareExchangeCommand.CompareExchangeResult>();
 

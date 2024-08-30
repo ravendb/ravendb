@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide
             Register(MetricCacher.Keys.Server.DiskSpaceInfo, TimeSpan.FromSeconds(15), CalculateDiskSpaceInfo);
             Register(MetricCacher.Keys.Server.MemInfo, TimeSpan.FromSeconds(15), CalculateMemInfo);
             Register(MetricCacher.Keys.Server.MaxServerLimits, TimeSpan.FromHours(1), CalculateMaxServerLimits);
-            Register(MetricCacher.Keys.Server.CurrentServerLimits, TimeSpan.FromMinutes(5), CalculateCurrentServerLimits);
+            Register(MetricCacher.Keys.Server.CurrentServerLimits, TimeSpan.FromMinutes(3), CalculateCurrentServerLimits);
             Register(MetricCacher.Keys.Server.GcAny, TimeSpan.FromSeconds(15), () => CalculateGcMemoryInfo(GCKind.Any));
             Register(MetricCacher.Keys.Server.GcBackground, TimeSpan.FromSeconds(15), () => CalculateGcMemoryInfo(GCKind.Background));
             Register(MetricCacher.Keys.Server.GcEphemeral, TimeSpan.FromSeconds(15), () => CalculateGcMemoryInfo(GCKind.Ephemeral));
@@ -60,28 +60,29 @@ namespace Raven.Server.ServerWide
         {
             return GC.GetGCMemoryInfo(gcKind);
         }
+
         private static object CalculateMemInfo()
         {
-            if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
-                return MemInfo.Invalid;
+            if (PlatformDetails.RunningOnLinux)
+                return MemInfoReader.Read();
 
-            return MemInfoReader.Read();
+            return MemInfo.Invalid;
         }
 
         private static object CalculateMaxServerLimits()
         {
-            if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
-                return LimitsInfo.Invalid;
+            if (PlatformDetails.RunningOnLinux)
+                return LimitsReader.ReadMaxLimits();
 
-            return LimitsReader.ReadMaxLimits();
+            return LimitsInfo.Invalid;
         }
 
         private static object CalculateCurrentServerLimits()
         {
-            if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
-                return LimitsInfo.Invalid;
+            if (PlatformDetails.RunningOnLinux || PlatformDetails.RunningOnWindows)
+                return AsyncHelpers.RunSync(LimitsReader.ReadCurrentLimitsAsync);
 
-            return AsyncHelpers.RunSync(LimitsReader.ReadCurrentLimitsAsync);
+            return LimitsInfo.Invalid;
         }
     }
 }

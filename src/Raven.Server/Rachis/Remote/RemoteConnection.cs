@@ -22,7 +22,7 @@ namespace Raven.Server.Rachis.Remote
         private string _destTag;
         private string _src;
         private readonly Stream _stream;
-        private readonly TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures _features;
+        private readonly TcpConnectionHeaderMessage.SupportedFeatures _features;
         private readonly JsonOperationContext.MemoryBuffer _buffer;
         private readonly JsonOperationContext _context;
         private readonly IDisposable _releaseBuffer;
@@ -34,14 +34,14 @@ namespace Raven.Server.Rachis.Remote
         public string Source => _src;
         public Stream Stream => _stream;
         public string Dest => _destTag;
-        public TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures Features => _features;
+        public TcpConnectionHeaderMessage.SupportedFeatures Features => _features;
 
-        public RemoteConnection(string src, long term, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures features, Action disconnect, [CallerMemberName] string caller = null)
+        public RemoteConnection(string src, long term, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures features, Action disconnect, [CallerMemberName] string caller = null)
             : this(dest: "?", src, term, stream,features, disconnect, caller)
         {
         }
 
-        public RemoteConnection(string dest, string src, long term, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures features, Action disconnect, [CallerMemberName] string caller = null)
+        public RemoteConnection(string dest, string src, long term, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures features, Action disconnect, [CallerMemberName] string caller = null)
         {
             _destTag = dest;
             _src = src;
@@ -292,14 +292,14 @@ namespace Raven.Server.Rachis.Remote
             }
         }
 
-        public SnapshotReader CreateReader()
+        public SnapshotReader CreateReader(RachisLogRecorder debugRecorder)
         {
-            return new RemoteSnapshotReader(this);
+            return new RemoteSnapshotReader(debugRecorder, this);
         }
 
-        public SnapshotReader CreateReaderToStream(Stream stream)
+        public SnapshotReader CreateReaderToStream(RachisLogRecorder debugRecorder, Stream stream)
         {
-            return new RemoteToStreamSnapshotReader(this, stream);
+            return new RemoteToStreamSnapshotReader(debugRecorder, this, stream);
         }
 
         public T Read<T>(JsonOperationContext context)

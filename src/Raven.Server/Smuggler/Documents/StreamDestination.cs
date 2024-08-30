@@ -324,6 +324,22 @@ namespace Raven.Server.Smuggler.Documents
                     WriteIndexesHistory(databaseRecord.IndexesHistory);
                 }
 
+                if (databaseRecord.Studio != null)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.Studio));
+
+                    WriteStudioConfiguration(databaseRecord.Studio);
+                }
+
+                if (databaseRecord.RevisionsForConflicts != null)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.RevisionsForConflicts));
+
+                    WriteRevisionsForConflictsConfiguration(databaseRecord.RevisionsForConflicts);
+                }
+
                 switch (authorizationStatus)
                 {
                     case AuthorizationStatus.DatabaseAdmin:
@@ -443,12 +459,30 @@ namespace Raven.Server.Smuggler.Documents
                             _writer.WriteEndObject();
                         }
 
-
-
                         break;
                 }
 
                 await _writer.MaybeFlushAsync();
+            }
+
+            private void WriteRevisionsForConflictsConfiguration(RevisionsCollectionConfiguration revisionsForConflictsConfiguration)
+            {
+                if (revisionsForConflictsConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _context.Write(_writer, revisionsForConflictsConfiguration.ToJson());
+            }
+
+            private void WriteStudioConfiguration(StudioConfiguration studioConfiguration)
+            {
+                if (studioConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _context.Write(_writer, studioConfiguration.ToJson());
             }
 
             private void WriteHubPullReplications(List<PullReplicationDefinition> hubPullReplications)
@@ -1411,7 +1445,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (stream == null)
                             {
                                 progress.Attachments.ErroredCount++;
-                                throw new ArgumentException($"Document {document.Id} seems to have a attachment hash: {hash}, but no correlating hash was found in the storage.");
+                                throw new ArgumentException($"Document {document.Id} seems to have an attachment hash: {hash}, but no correlating hash was found in the storage.");
                             }
                             await WriteAttachmentStreamAsync(hash, stream, tag);
                         }

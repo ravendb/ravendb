@@ -106,8 +106,11 @@ namespace Raven.Server.NotificationCenter
 
                 using (_notificationsStorage.Read(notification.Id, out NotificationTableValue existing))
                 {
-                    if (existing?.PostponedUntil > SystemTime.UtcNow)
-                        return;
+                    using (existing)
+                    {
+                        if (existing?.PostponedUntil > SystemTime.UtcNow)
+                            return;
+                    }
                 }
 
                 foreach (var watcher in Watchers)
@@ -119,7 +122,7 @@ namespace Raven.Server.NotificationCenter
 
                     // serialize to avoid race conditions
                     // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
-                    watcher.NotificationsQueue.Enqueue(notification.ToJson());
+                    watcher.Enqueue(notification.ToJson());
                 }
             }
             catch (ObjectDisposedException)
@@ -140,19 +143,42 @@ namespace Raven.Server.NotificationCenter
             if (postponed)
                 return scope;
 
-            var now = SystemTime.UtcNow;
-
-            actions = actions.Where(x => x.PostponedUntil == null || x.PostponedUntil <= now);
+            actions = Filter(actions);
 
             return scope;
+
+            static IEnumerable<NotificationTableValue> Filter(IEnumerable<NotificationTableValue> actions)
+            {
+                var now = SystemTime.UtcNow;
+
+                foreach (var ntv in actions)
+                {
+                    if (ntv.PostponedUntil == null)
+                    {
+                        yield return ntv;
+                        continue;
+                    }
+
+                    if (ntv.PostponedUntil <= now)
+                    {
+                        yield return ntv;
+                        continue;
+                    }
+
+                    ntv.Dispose();
+                }
+            }
         }
 
         public string GetStoredMessage(string id)
         {
             using (_notificationsStorage.Read(id, out var value))
             {
-                value.Json.TryGet(nameof(Notification.Message), out string message);
-                return message;
+                using (value)
+                {
+                    value.Json.TryGet(nameof(Notification.Message), out string message);
+                    return message;
+                }
             }
         }
 
@@ -205,12 +231,29 @@ namespace Raven.Server.NotificationCenter
         }
     }
 
-    public class ConnectedWatcher
+    public sealed class ConnectedWatcher
     {
-        public AsyncQueue<DynamicJsonValue> NotificationsQueue;
+        private readonly AsyncQueue<DynamicJsonValue> _notificationsQueue;
+        private readonly int _maxNotificationsQueueSize;
 
-        public IWebsocketWriter Writer;
+        public readonly IWebsocketWriter Writer;
 
-        public CanAccessDatabase Filter;
+        public readonly CanAccessDatabase Filter;
+
+        public ConnectedWatcher(AsyncQueue<DynamicJsonValue> notificationsQueue, int maxNotificationsQueueSize, IWebsocketWriter writer, CanAccessDatabase filter)
+        {
+            _notificationsQueue = notificationsQueue;
+            _maxNotificationsQueueSize = maxNotificationsQueueSize;
+            Writer = writer;
+            Filter = filter;
+        }
+
+        public void Enqueue(DynamicJsonValue json)
+        {
+            if (_notificationsQueue.Count >= _maxNotificationsQueueSize) 
+                return;
+
+            _notificationsQueue.Enqueue(json);
+        }
     }
 }

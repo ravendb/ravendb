@@ -47,6 +47,9 @@ namespace Raven.Server.NotificationCenter
             _pagingUpdates[(int)operation] = now;
             _pagingQueue.Enqueue(new PagingInformation(operation, action, details, numberOfResults, pageSize, duration, now, totalDocumentsSizeInBytes));
 
+            if (ForTestingPurposes?.DisableDequeue == true)
+                return;
+
             while (_pagingQueue.Count > 50)
                 _pagingQueue.TryDequeue(out _);
 
@@ -150,31 +153,49 @@ namespace Raven.Server.NotificationCenter
         {
             using (_notificationsStorage.Read(id, out NotificationTableValue ntv))
             {
-                PagingPerformanceDetails details;
-                if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
-                    details = new PagingPerformanceDetails();
-                else
-                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<PagingPerformanceDetails>(detailsJson, id);
-
-                switch (type)
+                using (ntv)
                 {
-                    case PagingOperationType.Documents:
-                    case PagingOperationType.Queries:
-                        return PerformanceHint.Create(_database, $"Page size too big ({type.ToString().ToLower()})",
-                            "We have detected that some of the requests are returning excessive amount of documents. Consider using smaller page sizes or streaming operations.",
-                            PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
-                    case PagingOperationType.Revisions:
-                        return PerformanceHint.Create(_database, "Page size too big (revisions)", 
-                            "We have detected that some of the requests are returning excessive amount of revisions. Consider using smaller page sizes.",
-                            PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
-                    case PagingOperationType.CompareExchange:
-                        return PerformanceHint.Create(_database, "Page size too big (compare exchange)",
-                            "We have detected that some of the requests are returning excessive amount of compare exchange values. Consider using smaller page sizes.",
-                            PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(type), type, null);
+                    PagingPerformanceDetails details;
+                    if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                        details = new PagingPerformanceDetails();
+                    else
+                        details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<PagingPerformanceDetails>(detailsJson, id);
+
+                    switch (type)
+                    {
+                        case PagingOperationType.Documents:
+                        case PagingOperationType.Queries:
+                            return PerformanceHint.Create(_database, $"Page size too big ({type.ToString().ToLower()})",
+                                "We have detected that some of the requests are returning excessive amount of documents. Consider using smaller page sizes or streaming operations.",
+                                PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
+                        case PagingOperationType.Revisions:
+                            return PerformanceHint.Create(_database, "Page size too big (revisions)",
+                                "We have detected that some of the requests are returning excessive amount of revisions. Consider using smaller page sizes.",
+                                PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
+                        case PagingOperationType.CompareExchange:
+                            return PerformanceHint.Create(_database, "Page size too big (compare exchange)",
+                                "We have detected that some of the requests are returning excessive amount of compare exchange values. Consider using smaller page sizes.",
+                                PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(type), type, null);
+                    }
                 }
             }
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal sealed class TestingStuff
+        {
+            internal bool DisableDequeue;
         }
 
         public void Dispose()

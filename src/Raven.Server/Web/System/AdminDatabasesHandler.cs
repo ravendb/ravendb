@@ -187,15 +187,17 @@ namespace Raven.Server.Web.System
         public async Task Put()
         {
             var raftRequestId = GetRaftRequestIdFromQuery();
-
+            
             await ServerStore.EnsureNotPassiveAsync();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
             {
                 var index = GetLongFromHeaders("ETag");
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 1;
                 var json = await context.ReadForDiskAsync(RequestBodyStream(), "Database Record");
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
+
+                if (await ProxyToLeaderIfNeeded(context, databaseRecord, replicationFactor, index))
+                    return;
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
@@ -285,6 +287,40 @@ namespace Raven.Server.Web.System
             }
         }
 
+        private async Task<bool> ProxyToLeaderIfNeeded(JsonOperationContext context, DatabaseRecord databaseRecord, int replicationFactor, long? index)
+        {
+            var leaderTag = ServerStore.Engine.LeaderTag;
+            if (leaderTag == null)
+            {
+                using (var cts = CreateHttpRequestBoundTimeLimitedOperationToken(TimeSpan.FromSeconds(15)))
+                {
+                    leaderTag = await ServerStore.Engine.WaitForLeaderChange(leader: null, cts.Token);
+                }
+            }
+            if (leaderTag != ServerStore.NodeTag)
+            {
+                // proxy the command to the leader
+                var leaderRequestExecutor = ServerStore.GetLeaderRequestExecutor(leaderTag);
+                var command = new CreateDatabaseOperation.CreateDatabaseCommand(databaseRecord, replicationFactor, index);
+                await leaderRequestExecutor.ExecuteAsync(command, context);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(DatabasePutResult.RaftCommandIndex)] = command.Result.RaftCommandIndex,
+                        [nameof(DatabasePutResult.Name)] = command.Result.Name,
+                        [nameof(DatabasePutResult.Topology)] = command.Result.Topology.ToJson(),
+                        [nameof(DatabasePutResult.NodesAddedTo)] = command.Result.NodesAddedTo
+                    });
+                }
+                return true;
+            }
+
+            return false;
+        }
+
         private void RecreateIndexes(DatabaseRecord databaseRecord)
         {
             var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseRecord.DatabaseName, true, true, true, databaseRecord);
@@ -294,11 +330,19 @@ namespace Raven.Server.Web.System
                 return;
             }
 
-            var addToInitLog = new Action<string>(txt =>
+            var addToInitLog = new Action<LogMode, string>((logMode, txt) =>
             {
                 var msg = $"[Recreating indexes] {DateTime.UtcNow} :: Database '{databaseRecord.DatabaseName}' : {txt}";
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(msg);
+                switch (logMode)
+                {
+                    case LogMode.Operations when Logger.IsOperationsEnabled:
+                        Logger.Operations(msg);
+                    break;
+
+                    case LogMode.Information when Logger.IsInfoEnabled:
+                        Logger.Info(msg);
+                    break;
+                }
             });
 
             using (var documentDatabase = new DocumentDatabase(databaseRecord.DatabaseName, databaseConfiguration, ServerStore, addToInitLog))
@@ -371,7 +415,15 @@ namespace Raven.Server.Web.System
 
         private async Task<(long, DatabaseTopology, List<string>)> CreateDatabase(string name, DatabaseRecord databaseRecord, TransactionOperationContext context, int replicationFactor, long? index, string raftRequestId)
         {
-            var dbRecordExist = ServerStore.Cluster.DatabaseExists(context, name);
+            bool dbRecordExist;
+            ClusterTopology clusterTopology;
+
+            using (context.OpenReadTransaction())
+            {
+                dbRecordExist = ServerStore.Cluster.DatabaseExists(context, name);
+                clusterTopology = ServerStore.GetClusterTopology(context);
+            }
+
             if (index.HasValue && dbRecordExist == false)
                 throw new BadRequestException($"Attempted to modify non-existing database: '{name}'");
 
@@ -389,7 +441,6 @@ namespace Raven.Server.Web.System
             {
                 throw new BadRequestException("Database document validation failed.", e);
             }
-            var clusterTopology = ServerStore.GetClusterTopology(context);
             ValidateClusterMembers(clusterTopology, databaseRecord);
 
             if (databaseRecord.Topology?.Count > 0)
@@ -433,10 +484,9 @@ namespace Raven.Server.Web.System
                 nodeUrlsAddedTo.Add(clusterTopology.GetUrlFromTag(member));
             }
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
+            using (context.OpenReadTransaction())
             {
-                var topology = ServerStore.Cluster.ReadDatabaseTopology(ctx, name);
+                var topology = ServerStore.Cluster.ReadDatabaseTopology(context, name);
                 return (newIndex, topology, nodeUrlsAddedTo);
             }
         }
@@ -507,6 +557,7 @@ namespace Raven.Server.Web.System
         public async Task GetRestorePoints()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var cancelToken = CreateHttpRequestBoundOperationToken())
             {
                 PeriodicBackupConnectionType connectionType;
                 var type = GetStringValuesQueryString("type", false).FirstOrDefault();
@@ -549,7 +600,7 @@ namespace Raven.Server.Web.System
 
                     case PeriodicBackupConnectionType.S3:
                         var s3Settings = JsonDeserializationServer.S3Settings(restorePathBlittable);
-                        using (var s3RestoreUtils = new S3RestorePoints(ServerStore.Configuration, sortedList, context, s3Settings))
+                        using (var s3RestoreUtils = new S3RestorePoints(ServerStore.Configuration, sortedList, context, s3Settings, cancelToken.Token))
                         {
                             await s3RestoreUtils.FetchRestorePoints(s3Settings.RemoteFolderName);
                         }
@@ -558,7 +609,7 @@ namespace Raven.Server.Web.System
 
                     case PeriodicBackupConnectionType.Azure:
                         var azureSettings = JsonDeserializationServer.AzureSettings(restorePathBlittable);
-                        using (var azureRestoreUtils = new AzureRestorePoints(ServerStore.Configuration, sortedList, context, azureSettings))
+                        using (var azureRestoreUtils = new AzureRestorePoints(ServerStore.Configuration, sortedList, context, azureSettings, cancelToken.Token))
                         {
                             await azureRestoreUtils.FetchRestorePoints(azureSettings.RemoteFolderName);
                         }
@@ -566,7 +617,7 @@ namespace Raven.Server.Web.System
 
                     case PeriodicBackupConnectionType.GoogleCloud:
                         var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(restorePathBlittable);
-                        using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(ServerStore.Configuration, sortedList, context, googleCloudSettings))
+                        using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(ServerStore.Configuration, sortedList, context, googleCloudSettings, cancelToken.Token))
                         {
                             await googleCloudRestoreUtils.FetchRestorePoints(googleCloudSettings.RemoteFolderName);
                         }
@@ -1360,7 +1411,6 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                context.OpenReadTransaction();
                 await CreateDatabase(databaseName, configuration.DatabaseRecord, context, 1, null, RaftIdGenerator.NewId());
             }
 

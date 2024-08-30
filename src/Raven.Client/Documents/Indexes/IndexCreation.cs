@@ -103,6 +103,10 @@ namespace Raven.Client.Documents.Indexes
                         definition.Name = x.IndexName;
                         definition.Priority = x.Priority ?? IndexPriority.Normal;
                         definition.State = x.State ?? IndexState.Normal;
+
+                        if (x.SearchEngineType.HasValue) 
+                            definition.Configuration[Constants.Configuration.Indexes.IndexingStaticSearchEngineType] = x.SearchEngineType.Value.ToString();
+
                         return definition;
                     }
                     finally

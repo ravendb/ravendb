@@ -269,11 +269,11 @@ namespace Raven.Server.Web
             return GetIntValueQueryString(StartParameter, required: false) ?? defaultStart;
         }
 
-        protected int GetPageSize()
+        protected int GetPageSize(int defaultPageSize = int.MaxValue)
         {
             var pageSize = GetIntValueQueryString(PageSizeParameter, required: false);
             if (pageSize.HasValue == false)
-                return int.MaxValue;
+                return defaultPageSize;
 
             return pageSize.Value;
         }

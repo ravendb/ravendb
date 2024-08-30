@@ -181,6 +181,8 @@ namespace Voron
 
         public Action<StorageEnvironment> BeforeSchemaUpgrade { get; set; }
 
+        public Action<StorageEnvironment> AfterDatabaseCreation { get; set; }
+
         public ScratchSpaceUsageMonitor ScratchSpaceUsage { get; }
 
         public TimeSpan LongRunningFlushingWarning = TimeSpan.FromMinutes(5);
@@ -234,7 +236,7 @@ namespace Voron
 
         public Func<string, bool> ShouldUseKeyPrefix { get; set; }
 
-        public Action<string> AddToInitLog;
+        public Action<LogMode, string> AddToInitLog;
 
         public event Action<StorageEnvironmentOptions> OnDirectoryInitialize;
 

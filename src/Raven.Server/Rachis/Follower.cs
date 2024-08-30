@@ -31,18 +31,24 @@ namespace Raven.Server.Rachis
         private static int _uniqueId;
 
         private readonly RachisConsensus _engine;
+        public RachisConsensus Engine => _engine;
         private readonly long _term;
         private readonly RemoteConnection _connection;
+        public RemoteConnection Connection => _connection;
         private PoolOfThreads.LongRunningWork _followerLongRunningWork;
 
         private readonly string _debugName;
         private readonly RachisLogRecorder _debugRecorder;
+        public RachisLogRecorder DebugRecorder => _debugRecorder;
+        public FollowerDebugView.FollowerPhase Phase = FollowerDebugView.FollowerPhase.Initial;
+        public RaftDebugView ToDebugView => new FollowerDebugView(this);
 
         public Follower(RachisConsensus engine, long term, RemoteConnection remoteConnection)
         {
             _engine = engine;
             _connection = remoteConnection;
             _term = term;
+            engine.Follower = this;
 
             // this will give us a unique identifier for this follower
             var uniqueId = Interlocked.Increment(ref _uniqueId);
@@ -109,7 +115,7 @@ namespace Raven.Server.Rachis
 
                     ClusterCommandsVersionManager.SetClusterVersion(appendEntries.MinCommandVersion);
 
-                    _debugRecorder.Record("Got entries");
+                    _debugRecorder.Record($"Got {appendEntries.EntriesCount} entries");
                     _engine.Timeout.Defer(_connection.Source);
                     if (appendEntries.EntriesCount != 0)
                     {
@@ -139,6 +145,7 @@ namespace Raven.Server.Rachis
                                 );
                         }
                     }
+                    _debugRecorder.Record($"Finished reading {entries.Count} entries from stream");
 
                     // don't start write transaction for noop
                     if (lastCommit != appendEntries.LeaderCommit ||
@@ -474,9 +481,10 @@ namespace Raven.Server.Rachis
             // at this point, the leader will send us a snapshot message
             // in most cases, it is an empty snapshot, then start regular append entries
             // the reason we send this is to simplify the # of states in the protocol
-
+            
+            Phase = FollowerDebugView.FollowerPhase.Snapshot;
             var snapshot = _connection.ReadInstallSnapshot(context);
-            _debugRecorder.Record("Start receiving snapshot");
+            _debugRecorder.Record($"Got snapshot info: last included index:{snapshot.LastIncludedIndex} at term {snapshot.LastIncludedTerm}");
 
             // reading the snapshot from network and committing it to the disk might take a long time. 
             Task onFullSnapshotInstalledTask = null;
@@ -488,7 +496,6 @@ namespace Raven.Server.Rachis
                 }, cts, "ReadAndCommitSnapshot");
             }
 
-            _debugRecorder.Record("Snapshot was received and committed");
 
             // notify the state machine, we do this in an async manner, and start
             // the operator in a separate thread to avoid timeouts while this is
@@ -558,6 +565,7 @@ namespace Raven.Server.Rachis
         private Task ReadAndCommitSnapshot(InstallSnapshot snapshot, CancellationToken token)
         {
             Task onFullSnapshotInstalledTask = null;
+            _debugRecorder.Record("Start receiving the snapshot");
 
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction())
@@ -642,6 +650,8 @@ namespace Raven.Server.Rachis
 
                 context.Transaction.Commit();
             }
+            _debugRecorder.Record("Snapshot was successfully received and committed");
+
             return onFullSnapshotInstalledTask;
         }
 
@@ -654,16 +664,21 @@ namespace Raven.Server.Rachis
 
             using (var temp = new StreamsTempFile(filePath.FullPath, context.Environment))
             using (var stream = temp.StartNewStream())
-            using (var remoteReader = _connection.CreateReaderToStream(stream))
+            using (var remoteReader = _connection.CreateReaderToStream(_debugRecorder, stream))
             {
                 if (ReadSnapshot(remoteReader, context, txw, dryRun: true, token) == false)
                     return false;
 
+                _debugRecorder.Record($"Finished reading the snapshot from stream with total size of {remoteReader.ReadSize}");
+                _debugRecorder.Record("Start applying the snapshot");
+
                 stream.Seek(0, SeekOrigin.Begin);
-                using (var fileReader = new StreamSnapshotReader(stream))
+                using (var fileReader = new StreamSnapshotReader(_debugRecorder, stream))
                 {
                     ReadSnapshot(fileReader, context, txw, dryRun: false, token);
                 }
+
+                _debugRecorder.Record("Finished applying the snapshot");
             }
 
             return true;
@@ -697,11 +712,12 @@ namespace Raven.Server.Rachis
 
                         if (dryRun == false)
                         {
+                            _debugRecorder.Record($"Install {treeName}");
                             txw.DeleteTree(treeName);
                             tree = txw.CreateTree(treeName);
                         }
 
-                        if (_connection.Features.MultiTree)
+                        if (_connection.Features.Cluster.MultiTree)
                             flags = (TreeFlags)reader.ReadInt32();
 
                         for (long i = 0; i < entries; i++)
@@ -773,6 +789,7 @@ namespace Raven.Server.Rachis
                             Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable,
                                 out Slice tableName);//The Slice will be freed on context close
                             var tableTree = txw.ReadTree(tableName, RootObjectType.Table);
+                            _debugRecorder.Record($"Install {tableName}");
 
                             // Get the table schema
                             var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
@@ -822,7 +839,7 @@ namespace Raven.Server.Rachis
 
         private void ReadInstallSnapshotAndIgnoreContent(CancellationToken token)
         {
-            var reader = _connection.CreateReader();
+            var reader = _connection.CreateReader(_debugRecorder);
             while (true)
             {
                 token.ThrowIfCancellationRequested();
@@ -1163,12 +1180,13 @@ namespace Raven.Server.Rachis
                     try
                     {
                         _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
-
+                        Phase = FollowerDebugView.FollowerPhase.Negotiation;
                         using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                         {
                             NegotiateWithLeader(context, (LogLengthNegotiation)obj);
                         }
 
+                        Phase = FollowerDebugView.FollowerPhase.Steady;
                         FollowerSteadyState();
                     }
                     catch (Exception e) when (RachisConsensus.IsExpectedException(e))

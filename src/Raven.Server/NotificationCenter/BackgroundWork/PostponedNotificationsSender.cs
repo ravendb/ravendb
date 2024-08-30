@@ -63,19 +63,22 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
                 using (_notificationsStorage.Read(next.Id, out NotificationTableValue notification))
                 {
-                    if (notification == null) // could be deleted meanwhile
-                        continue;
+                    using (notification)
+                    {
+                        if (notification == null) // could be deleted meanwhile
+                            continue;
 
-                    try
-                    {
-                        foreach (var watcher in _watchers)
+                        try
                         {
-                            await watcher.Writer.WriteToWebSocket(notification.Json);
+                            foreach (var watcher in _watchers)
+                            {
+                                await watcher.Writer.WriteToWebSocket(notification.Json);
+                            }
                         }
-                    }
-                    finally
-                    {
-                        _notificationsStorage.ChangePostponeDate(next.Id, null);
+                        finally
+                        {
+                            _notificationsStorage.ChangePostponeDate(next.Id, null);
+                        }
                     }
                 }
             }
@@ -89,17 +92,20 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             {
                 foreach (var action in actions)
                 {
-                    if (CancellationToken.IsCancellationRequested)
-                        break;
-
-                    next.Enqueue(new PostponedNotification
+                    using (action)
                     {
-                        Id = action.Json[nameof(Notification.Id)].ToString(),
-                        PostponedUntil = action.PostponedUntil.Value
-                    });
+                        if (CancellationToken.IsCancellationRequested)
+                            break;
 
-                    if (next.Count == take)
-                        break;
+                        next.Enqueue(new PostponedNotification
+                        {
+                            Id = action.Json[nameof(Notification.Id)].ToString(),
+                            PostponedUntil = action.PostponedUntil.Value
+                        });
+
+                        if (next.Count == take)
+                            break;
+                    }
                 }
             }
 

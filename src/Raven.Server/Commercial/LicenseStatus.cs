@@ -13,7 +13,7 @@ namespace Raven.Server.Commercial
 
         public string LicensedTo { get; set; }
 
-        public Dictionary<string, object> Attributes { get; set; }
+        public Dictionary<LicenseAttribute, object> Attributes { get; set; }
 
         public string ErrorMessage { get; set; }
 
@@ -21,7 +21,7 @@ namespace Raven.Server.Commercial
 
         public DateTime FirstServerStartDate { get; set; }
 
-        private T GetValue<T>(string attributeName)
+        private T GetValue<T>(LicenseAttribute attributeName)
         {
             if (Attributes == null)
                 return default(T);
@@ -35,9 +35,14 @@ namespace Raven.Server.Commercial
             return (T)value;
         }
 
+        public bool Enabled(LicenseAttribute attribute)
+        {
+            return GetValue<bool>(attribute);
+        }
+
         public bool CanActivate(out DateTime? canBeActivateUntil)
         {
-            canBeActivateUntil = GetValue<DateTime?>("canBeActivatedUntil");
+            canBeActivateUntil = GetValue<DateTime?>(LicenseAttribute.CanBeActivatedUntil);
             return canBeActivateUntil == null || canBeActivateUntil.Value >= DateTime.UtcNow.Date;
         }
 
@@ -61,7 +66,7 @@ namespace Raven.Server.Commercial
 
         public double Ratio => Math.Max((double)MaxMemory / MaxCores, 1);
 
-        private int MaxClusterSizeInternal => GetValue<int?>("maxClusterSize") ?? 1;
+        private int MaxClusterSizeInternal => GetValue<int?>(LicenseAttribute.MaxClusterSize) ?? 1;
 
         public LicenseType Type
         {
@@ -74,7 +79,7 @@ namespace Raven.Server.Commercial
                     return LicenseType.None;
 
                 if (Attributes != null &&
-                    Attributes.TryGetValue("type", out object type) &&
+                    Attributes.TryGetValue(LicenseAttribute.Type, out object type) &&
                     type is int)
                 {
                     var typeAsInt = (int)type;
@@ -86,21 +91,21 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public int Version => GetValue<int?>("version") ?? -1;
+        public int Version => GetValue<int?>(LicenseAttribute.Version) ?? -1;
 
-        public DateTime? Expiration => GetValue<DateTime?>("expiration");
+        public DateTime? Expiration => GetValue<DateTime?>(LicenseAttribute.Expiration);
 
-        public int MaxMemory => GetValue<int?>("memory") ?? 6;
+        public int MaxMemory => GetValue<int?>(LicenseAttribute.Memory) ?? 6;
 
-        public int MaxCores => GetValue<int?>("cores") ?? 3;
+        public int MaxCores => GetValue<int?>(LicenseAttribute.Cores) ?? 3;
 
-        public bool IsIsv => GetValue<bool>("redist");
+        public bool IsIsv => GetValue<bool>(LicenseAttribute.Redist);
 
-        public bool HasEncryption => GetValue<bool>("encryption");
+        public bool HasEncryption => GetValue<bool>(LicenseAttribute.Encryption);
 
-        public bool HasSnmpMonitoring => GetValue<bool>("snmp");
+        public bool HasSnmpMonitoring => GetValue<bool>(LicenseAttribute.Snmp);
 
-        public bool DistributedCluster => GetValue<bool>("distributedCluster");
+        public bool DistributedCluster => GetValue<bool>(LicenseAttribute.DistributedCluster);
 
         public int MaxClusterSize
         {
@@ -117,27 +122,27 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public bool HasSnapshotBackups => GetValue<bool>("snapshotBackup");
+        public bool HasSnapshotBackups => GetValue<bool>(LicenseAttribute.SnapshotBackup);
 
-        public bool HasCloudBackups => GetValue<bool>("cloudBackup");
+        public bool HasCloudBackups => GetValue<bool>(LicenseAttribute.CloudBackup);
 
-        public bool HasDynamicNodesDistribution => GetValue<bool>("dynamicNodesDistribution");
+        public bool HasDynamicNodesDistribution => GetValue<bool>(LicenseAttribute.DynamicNodesDistribution);
 
-        public bool HasExternalReplication => GetValue<bool>("externalReplication");
+        public bool HasExternalReplication => GetValue<bool>(LicenseAttribute.ExternalReplication);
 
-        public bool HasDelayedExternalReplication => GetValue<bool>("delayedExternalReplication");
+        public bool HasDelayedExternalReplication => GetValue<bool>(LicenseAttribute.DelayedExternalReplication);
 
-        public bool HasRavenEtl => GetValue<bool>("ravenEtl");
+        public bool HasRavenEtl => GetValue<bool>(LicenseAttribute.RavenEtl);
 
-        public bool HasSqlEtl => GetValue<bool>("sqlEtl");
+        public bool HasSqlEtl => GetValue<bool>(LicenseAttribute.SqlEtl);
 
-        public bool HasHighlyAvailableTasks => GetValue<bool>("highlyAvailableTasks");
+        public bool HasHighlyAvailableTasks => GetValue<bool>(LicenseAttribute.HighlyAvailableTasks);
 
-        public bool HasPullReplicationAsHub => GetValue<bool>("pullReplicationAsHub");
+        public bool HasPullReplicationAsHub => GetValue<bool>(LicenseAttribute.PullReplicationAsHub);
 
-        public bool HasPullReplicationAsSink => GetValue<bool>("pullReplicationAsSink");
+        public bool HasPullReplicationAsSink => GetValue<bool>(LicenseAttribute.PullReplicationAsSink);
 
-        public bool HasEncryptedBackups => GetValue<bool>("encryptedBackup");
+        public bool HasEncryptedBackups => GetValue<bool>(LicenseAttribute.EncryptedBackup);
 
         public bool CanAutoRenewLetsEncryptCertificate
         {
@@ -146,7 +151,7 @@ namespace Raven.Server.Commercial
                 if (Attributes == null)
                     return false;
 
-                if (Attributes.TryGetValue("letsEncryptAutoRenewal", out var value) == false)
+                if (Attributes.TryGetValue(LicenseAttribute.LetsEncryptAutoRenewal, out var value) == false)
                     return Type != LicenseType.Developer; // backward compatibility
 
                 if (value is bool == false)
@@ -156,32 +161,33 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public bool IsCloud => GetValue<bool>("cloud");
+        public bool IsCloud => Enabled(LicenseAttribute.Cloud);
 
-        public bool HasDocumentsCompression => GetValue<bool>("documentsCompression");
+        public bool HasDocumentsCompression => Enabled(LicenseAttribute.DocumentsCompression);
 
-        public bool HasTimeSeriesRollupsAndRetention => GetValue<bool>("timeSeriesRollupsAndRetention");
+        public bool HasTimeSeriesRollupsAndRetention => Enabled(LicenseAttribute.TimeSeriesRollupsAndRetention);
 
-        public bool HasAdditionalAssembliesFromNuGet => GetValue<bool>("additionalAssembliesNuget");
+        public bool HasAdditionalAssembliesFromNuGet => GetValue<bool>(LicenseAttribute.AdditionalAssembliesNuget);
 
-        public bool HasMonitoringEndpoints => GetValue<bool>("monitoringEndpoints");
+        public bool HasMonitoringEndpoints => GetValue<bool>(LicenseAttribute.MonitoringEndpoints);
 
-        public bool HasOlapEtl => GetValue<bool>("olapEtl");
+        public bool HasOlapEtl => GetValue<bool>(LicenseAttribute.OlapEtl);
 
-        public bool HasReadOnlyCertificates => GetValue<bool>("readOnlyCertificates");
+        public bool HasReadOnlyCertificates => GetValue<bool>(LicenseAttribute.ReadOnlyCertificates);
 
-        public bool HasTcpDataCompression => GetValue<bool>("tcpDataCompression");
+        public bool HasTcpDataCompression => GetValue<bool>(LicenseAttribute.TcpDataCompression);
 
-        public bool HasConcurrentDataSubscriptions => GetValue<bool>("concurrentSubscriptions");
+        public bool HasConcurrentDataSubscriptions => GetValue<bool>(LicenseAttribute.ConcurrentSubscriptions);
 
-        public bool HasElasticSearchEtl => GetValue<bool>("elasticSearchEtl");
+        public bool HasElasticSearchEtl => GetValue<bool>(LicenseAttribute.ElasticSearchEtl);
         
-        public bool HasQueueEtl => GetValue<bool>("queueEtl");
+        public bool HasQueueEtl => GetValue<bool>(LicenseAttribute.QueueEtl);
 
-        public bool HasPowerBI => GetValue<bool>("powerBI");
+        public bool HasPowerBI => GetValue<bool>(LicenseAttribute.PowerBI);
 
-        public bool HasPostgreSqlIntegration => GetValue<bool>("postgreSqlIntegration");
+        public bool HasPostgreSqlIntegration => GetValue<bool>(LicenseAttribute.PostgreSqlIntegration);
 
+        public bool HasServerWideExternalReplications => Enabled(LicenseAttribute.ServerWideExternalReplications);
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

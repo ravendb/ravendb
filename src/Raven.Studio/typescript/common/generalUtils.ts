@@ -3,6 +3,8 @@ import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import moment = require("moment");
 import d3 = require("d3");
 
+type AtLeastOne<T> = [T, ...T[]];
+
 class genUtils {
     
     static integerMaxValue = 2147483647;
@@ -723,6 +725,18 @@ class genUtils {
     static assertUnreachable(x: never, msg?: string): never {
         throw new Error("Didn't expect to get here. " + msg);
     }
+
+    static exhaustiveStringTuple<T extends string>() {
+        return function <L extends AtLeastOne<T>>(
+          ...x: L extends any
+            ? Exclude<T, L[number]> extends never
+              ? L
+              : Exclude<T, L[number]>[]
+            : never
+        ) {
+          return x;
+        };
+      }
 } 
 
 export = genUtils;

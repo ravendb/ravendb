@@ -27,6 +27,11 @@ import disableAdminLogsMicrosoftCommand = require("commands/maintenance/disableA
 import saveAdminLogsMicrosoftConfigurationCommand = require("commands/maintenance/saveAdminLogsMicrosoftConfigurationCommand");
 import configureMicrosoftLogsDialog = require("./configureMicrosoftLogsDialog");
 import messagePublisher from "common/messagePublisher";
+import getAdminLogsEventListenerConfigurationCommand = require("commands/maintenance/getAdminLogsEventListenerConfigurationCommand");
+import saveAdminLogsEventListenerConfigurationCommand = require("commands/maintenance/saveAdminLogsEventListenerConfigurationCommand");
+import configureEventListenerDialog = require("viewmodels/manage/configureEventListenerDialog");
+
+type EventListenerConfigurationDto = Omit<Raven.Server.EventListener.EventListenerToLog.EventListenerConfiguration, "Persist">;
 
 class heightCalculator {
     
@@ -104,6 +109,8 @@ class adminLogs extends viewModelBase {
 
     isMicrosoftLogsEnabled = ko.observable<boolean>(false);
     microsoftLogsConfiguration = ko.observable<string>("");
+
+    private eventListenerConfiguration = ko.observable<EventListenerConfigurationDto>();
     
     editedConfiguration = ko.observable<adminLogsConfig>(adminLogsConfig.empty());
     editedHeaderName = ko.observable<adminLogsHeaderType>("Source");
@@ -139,6 +146,7 @@ class adminLogs extends viewModelBase {
     endDateToUse: KnockoutComputed<string>;
 
     trafficWatchEnabled: KnockoutComputed<boolean>;
+    isEventListenerEnabled: KnockoutComputed<boolean>;
 
     // show user location of traffic watch in logs configuration button
     highlightTrafficWatch: boolean;
@@ -150,7 +158,7 @@ class adminLogs extends viewModelBase {
         
         this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", "loadLogsConfig",
             "includeFilter", "excludeFilter", "removeConfigurationEntry", "itemHtmlProvider", "setAdminLogMode", 
-            "configureTrafficWatch", "configureMicrosoftLogs");
+            "configureTrafficWatch", "configureMicrosoftLogs", "configureEventListener");
         
         this.initObservables();
         this.initValidation();
@@ -195,6 +203,11 @@ class adminLogs extends viewModelBase {
         this.trafficWatchEnabled = ko.pureComputed(() => {
             const config = this.trafficWatchConfiguration();
             return config?.enabled() ?? false;
+        });
+
+        this.isEventListenerEnabled = ko.pureComputed(() => {
+            const config = this.eventListenerConfiguration();
+            return config?.EventListenerMode === "ToLogFile";
         });
     }
     
@@ -297,8 +310,9 @@ class adminLogs extends viewModelBase {
         const trafficWatchConfigTask = this.loadTrafficWatchConfig();
         const loadIsMicrosoftLogsEnabledTask = this.loadIsMicrosoftLogsEnabled();
         const loadMicrosoftLogsConfigurationTask = this.loadMicrosoftLogsConfiguration();
+        const loadEventListenerConfigurationTask = this.loadEventListenerConfiguration();
         
-        return $.when<any>(logConfigsTask, trafficWatchConfigTask, loadIsMicrosoftLogsEnabledTask, loadMicrosoftLogsConfigurationTask);
+        return $.when<any>(logConfigsTask, trafficWatchConfigTask, loadIsMicrosoftLogsEnabledTask, loadMicrosoftLogsConfigurationTask, loadEventListenerConfigurationTask);
     }
     
     loadLogsConfig() {
@@ -319,6 +333,11 @@ class adminLogs extends viewModelBase {
     loadMicrosoftLogsConfiguration() {
         return new getAdminLogsMicrosoftConfigurationCommand().execute()
             .done(result => this.microsoftLogsConfiguration(JSON.stringify(result, null, 4)));
+    }
+
+    loadEventListenerConfiguration() {
+        return new getAdminLogsEventListenerConfigurationCommand().execute()
+            .done(result => this.eventListenerConfiguration(result));
     }
 
     setAdminLogMode(newMode: Sparrow.Logging.LogMode) {
@@ -696,6 +715,17 @@ class adminLogs extends viewModelBase {
                         .execute()
                         .done(() => this.loadMicrosoftLogsConfiguration());
                 }
+            });
+    }
+
+    configureEventListener() {
+        app.showBootstrapDialog(new configureEventListenerDialog(this.eventListenerConfiguration()))
+            .done((config: Raven.Server.EventListener.EventListenerToLog.EventListenerConfiguration) => {
+                if (config) {
+                    new saveAdminLogsEventListenerConfigurationCommand(config)
+                        .execute()
+                        .done(() => this.loadEventListenerConfiguration());
+                }    
             });
     }
 }

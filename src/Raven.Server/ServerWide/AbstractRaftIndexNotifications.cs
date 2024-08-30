@@ -4,7 +4,7 @@ using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Sparrow.Server;
+using Raven.Server.Documents;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide;
@@ -12,41 +12,32 @@ namespace Raven.Server.ServerWide;
 public abstract class AbstractRaftIndexNotifications<TNotification> : IDisposable
 where TNotification : RaftIndexNotification
 {
-    public long LastModifiedIndex;
-    protected readonly ConcurrentQueue<ErrorHolder> _errors = new ConcurrentQueue<ErrorHolder>();
+    protected readonly ConcurrentQueue<ErrorHolder> Errors = new ConcurrentQueue<ErrorHolder>();
     private readonly ConcurrentQueue<TNotification> _recentNotifications = new ConcurrentQueue<TNotification>();
-    private readonly AsyncManualResetEvent _notifiedListeners;
     private int _numberOfErrors;
+    private readonly RaftIndexWaiter _raftIndexWaiter;
+
+    public long LastModifiedIndex => _raftIndexWaiter.LastIndex;
 
     protected AbstractRaftIndexNotifications(CancellationToken token)
     {
-        _notifiedListeners = new AsyncManualResetEvent(token);
+        _raftIndexWaiter = new RaftIndexWaiter(token);
     }
 
     public virtual void Dispose()
     {
-        _notifiedListeners.Dispose();
+        _raftIndexWaiter.Dispose();
     }
 
     public async Task WaitForIndexNotification(long index, CancellationToken token)
     {
-        while (true)
+        try
         {
-            // first get the task, then wait on it
-            var waitAsync = _notifiedListeners.WaitAsync(token);
-
-            if (index <= Interlocked.Read(ref LastModifiedIndex))
-                break;
-
-            if (token.IsCancellationRequested)
-                ThrowCanceledException(index, LastModifiedIndex, isExecution: false);
-
-            if (await waitAsync == false)
-            {
-                var copy = Interlocked.Read(ref LastModifiedIndex);
-                if (index <= copy)
-                    break;
-            }
+            await _raftIndexWaiter.WaitAsync(index, token);
+        }
+        catch (OperationCanceledException)
+        {
+            ThrowCanceledException(index, _raftIndexWaiter.LastIndex);
         }
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -55,34 +46,25 @@ where TNotification : RaftIndexNotification
             if (await WaitForTaskCompletion(index, new Lazy<Task>(tcs.Task)))
                 return;
 
-            ThrowCanceledException(index, LastModifiedIndex, isExecution: true);
+            ThrowCanceledException(index, _raftIndexWaiter.LastIndex, isExecution: true);
         }
     }
 
     public async Task WaitForIndexNotification(long index, TimeSpan timeout)
     {
-        while (true)
+        try
         {
-            // first get the task, then wait on it
-            var waitAsync = _notifiedListeners.WaitAsync(timeout);
-
-            if (index <= Interlocked.Read(ref LastModifiedIndex))
-                break;
-
-            if (await waitAsync == false)
-            {
-                var copy = Interlocked.Read(ref LastModifiedIndex);
-                if (index <= copy)
-                    break;
-
-                ThrowTimeoutException(timeout, index, copy);
-            }
+            await _raftIndexWaiter.WaitAsync(index, timeout);
+        }
+        catch (TimeoutException)
+        {
+            ThrowTimeoutException(timeout, index, _raftIndexWaiter.LastIndex);
         }
 
         if (await WaitForTaskCompletion(index, new Lazy<Task>(TimeoutManager.WaitFor(timeout))))
             return;
 
-        ThrowTimeoutException(timeout, index, LastModifiedIndex, isExecution: true);
+        ThrowTimeoutException(timeout, index, _raftIndexWaiter.LastIndex, isExecution: true);
     }
 
     public abstract Task<bool> WaitForTaskCompletion(long index, Lazy<Task> waitingTask);
@@ -91,7 +73,7 @@ where TNotification : RaftIndexNotification
     {
         if (e != null)
         {
-            _errors.Enqueue(new ErrorHolder
+            Errors.Enqueue(new ErrorHolder
             {
                 Index = index,
                 Exception = ExceptionDispatchInfo.Capture(e)
@@ -99,13 +81,12 @@ where TNotification : RaftIndexNotification
 
             if (Interlocked.Increment(ref _numberOfErrors) > 25)
             {
-                _errors.TryDequeue(out _);
+                Errors.TryDequeue(out _);
                 Interlocked.Decrement(ref _numberOfErrors);
             }
         }
 
-        ThreadingHelper.InterlockedExchangeMax(ref LastModifiedIndex, index);
-        _notifiedListeners.SetAndResetAtomically();
+        _raftIndexWaiter.SetAndNotifyListenersIfHigher(index);
     }
 
     public void RecordNotification(TNotification notification)

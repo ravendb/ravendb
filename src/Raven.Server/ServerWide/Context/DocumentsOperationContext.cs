@@ -18,6 +18,7 @@ namespace Raven.Server.ServerWide.Context
             set
             {
                 value = value.StripTrxnTags();
+                value = value.StripSinkTags();
 
                 if (DbIdsToIgnore == null || DbIdsToIgnore.Count == 0 || string.IsNullOrEmpty(value))
                 {

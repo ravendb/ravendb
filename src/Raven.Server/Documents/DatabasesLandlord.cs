@@ -32,6 +32,7 @@ namespace Raven.Server.Documents
 {
     public class DatabasesLandlord : IDisposable
     {
+        public const string Init = "Init";
         public const string DoNotRemove = "DoNotRemove";
         private readonly AsyncReaderWriterLock _disposing = new AsyncReaderWriterLock();
 
@@ -163,10 +164,10 @@ namespace Raven.Server.Documents
                     switch (changeType)
                     {
                         case ClusterDatabaseChangeType.RecordChanged:
-                            await database.StateChangedAsync(index);
+                            await database.StateChangedAsync(index, type, changeType);
                             if (type == ClusterStateMachine.SnapshotInstalled)
                             {
-                                database.NotifyOnPendingClusterTransaction(index, changeType);
+                                database.NotifyOnPendingClusterTransaction();
                             }
                             break;
 
@@ -175,13 +176,12 @@ namespace Raven.Server.Documents
                             break;
 
                         case ClusterDatabaseChangeType.PendingClusterTransactions:
-                        case ClusterDatabaseChangeType.ClusterTransactionCompleted:
                             if (ForTestingPurposes?.BeforeHandleClusterTransactionOnDatabaseChanged != null)
                                 await ForTestingPurposes.BeforeHandleClusterTransactionOnDatabaseChanged.Invoke(_serverStore);
 
                             database.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
                             database.ClusterTransactionId = topology.ClusterTransactionIdBase64;
-                            database.NotifyOnPendingClusterTransaction(index, changeType);
+                            database.NotifyOnPendingClusterTransaction();
                             break;
 
                         default:
@@ -248,6 +248,7 @@ namespace Raven.Server.Documents
             {
                 case nameof(PutServerWideBackupConfigurationCommand):
                 case nameof(UpdatePeriodicBackupStatusCommand):
+                case nameof(UpdateResponsibleNodeForTasksCommand):
                     return true;
 
                 default:
@@ -574,7 +575,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, Action<string> addToInitLog = null, [CallerMemberName] string caller = null)
+        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, Action<LogMode, string> addToInitLog = null, [CallerMemberName] string caller = null)
         {
             IDisposable release = null;
             try
@@ -609,6 +610,7 @@ namespace Raven.Server.Documents
                         return database;
                     }
                 }
+
                 return CreateDatabase(databaseName, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, caller, addToInitLog);
             }
             finally
@@ -669,7 +671,7 @@ namespace Raven.Server.Documents
             throw new ObjectDisposedException("The server is being disposed, cannot load database " + databaseName);
         }
 
-        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, DateTime? wakeup, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, bool ignoreNotRelevant, string caller, Action<string> addToInitLog = null)
+        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, DateTime? wakeup, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, bool ignoreNotRelevant, string caller, Action<LogMode, string> addToInitLog = null)
         {
             var config = CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant);
             if (config == null)
@@ -683,17 +685,18 @@ namespace Raven.Server.Documents
 
         private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, string caller = null)
         {
-            if (await _databaseSemaphore.WaitAsync(_concurrentDatabaseLoadTimeout) == false)
+            var timeToWait = caller == Init ? Timeout.InfiniteTimeSpan : _concurrentDatabaseLoadTimeout;
+            if (await _databaseSemaphore.WaitAsync(timeToWait) == false)
                 throw new DatabaseConcurrentLoadTimeoutException("Too many databases loading concurrently, timed out waiting for them to load.");
 
-            return await CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup);
+            return await CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup, caller: caller);
         }
 
-        private Task<DocumentDatabase> CreateDatabaseUnderResourceSemaphore(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, Action<string> addToInitLog = null, string caller = null)
+        private Task<DocumentDatabase> CreateDatabaseUnderResourceSemaphore(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, Action<LogMode, string> addToInitLog = null, string caller = null)
         {
             try
             {
-                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config, wakeup, addToInitLog), TaskCreationOptions.RunContinuationsAsynchronously);
+                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config, wakeup, addToInitLog, caller), TaskCreationOptions.RunContinuationsAsynchronously);
                 var database = DatabasesCache.GetOrAdd(databaseName, task);
                 if (database == task)
                 {
@@ -722,7 +725,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private DocumentDatabase ActuallyCreateDatabase(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, Action<string> addToInitLog = null)
+        private DocumentDatabase ActuallyCreateDatabase(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, Action<LogMode, string> addToInitLog = null, string caller = null)
         {
             IDisposable release = null;
             try
@@ -733,7 +736,7 @@ namespace Raven.Server.Documents
                 //if false, this means we have started disposing, so we shouldn't create a database now
                 release = EnterReadLockImmediately(databaseName);
 
-                var db = CreateDocumentsStorage(databaseName, config, wakeup, addToInitLog);
+                var db = CreateDocumentsStorage(databaseName, config, wakeup, addToInitLog, caller);
                 _serverStore.NotificationCenter.Add(
                     DatabaseChanged.Create(databaseName.Value, DatabaseChangeType.Load));
 
@@ -792,17 +795,27 @@ namespace Raven.Server.Documents
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =
             new ConcurrentDictionary<string, ConcurrentQueue<string>>(StringComparer.OrdinalIgnoreCase);
 
-        private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup, Action<string> addToInitLog)
+        private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup, Action<LogMode, string> addToInitLog, string caller = null)
         {
-            void AddToInitLog(string txt)
+            void AddToInitLog(LogMode logMode, string txt)
             {
-                addToInitLog?.Invoke(txt);
+                addToInitLog?.Invoke(logMode, txt);
                 string msg = txt;
                 msg = $"[Load Database] {DateTime.UtcNow} :: Database '{databaseName}' : {msg}";
+
                 if (InitLog.TryGetValue(databaseName.Value, out var q))
                     q.Enqueue(msg);
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(msg);
+
+                switch (logMode)
+                {
+                    case LogMode.Operations when _logger.IsOperationsEnabled:
+                        _logger.Operations(msg);
+                        break;
+
+                    case LogMode.Information when _logger.IsInfoEnabled:
+                        _logger.Info(msg);
+                        break;
+                }
             }
 
             DocumentDatabase documentDatabase = null;
@@ -814,7 +827,7 @@ namespace Raven.Server.Documents
                     s => new ConcurrentQueue<string>(),
                     (s, existing) => new ConcurrentQueue<string>());
 
-                AddToInitLog("Starting database initialization");
+                AddToInitLog(LogMode.Operations,$"Starting database initialization. Action taken by '{caller}'");
 
                 var sp = Stopwatch.StartNew();
                 documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
@@ -828,11 +841,10 @@ namespace Raven.Server.Documents
 
                 ForTestingPurposes?.AfterDatabaseInitialize?.Invoke();
 
-                AddToInitLog("Finish database initialization");
+                AddToInitLog(LogMode.Operations, "Finish database initialization");
                 DeleteDatabaseCachedInfo(documentDatabase.Name, throwOnError: false);
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
+                AddToInitLog(LogMode.Information, $"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
                 OnDatabaseLoaded(config.ResourceName);
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
@@ -1003,7 +1015,6 @@ namespace Raven.Server.Documents
             RecordRestored,
             ValueChanged,
             PendingClusterTransactions,
-            ClusterTransactionCompleted
         }
 
         public bool UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)
@@ -1131,7 +1142,8 @@ namespace Raven.Server.Documents
                                 DatabaseName = databaseName,
                                 LastEtag = nextIdleDatabaseActivity.LastEtag,
                                 Logger = _logger,
-                                ServerStore = _serverStore
+                                ServerStore = _serverStore,
+                                IsIdle = true
                             });
 
                             RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);

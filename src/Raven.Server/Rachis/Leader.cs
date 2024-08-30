@@ -36,6 +36,7 @@ namespace Raven.Server.Rachis
     {
         private TaskCompletionSource<object> _topologyModification;
         private readonly RachisConsensus _engine;
+        public RachisConsensus Engine => _engine;
         private readonly string _threadName;
 
         public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
@@ -92,6 +93,7 @@ namespace Raven.Server.Rachis
         private MultipleUseFlag _running = new MultipleUseFlag();
         public bool Running => _running.IsRaised();
 
+        public RaftDebugView ToDebugView => new LeaderDebugView(this);
         public void Start(Dictionary<string, RemoteConnection> connections = null)
         {
             _running.Raise();
@@ -522,12 +524,11 @@ namespace Raven.Server.Rachis
                 if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < Term)
                     return;// can't commit until at least one entry from our term has been published
 
-                changedFromLeaderElectToLeader = _engine.TakeOffice();
-
                 var sp = Stopwatch.StartNew();
                 maxIndexOnQuorum = _engine.Apply(context, maxIndexOnQuorum, this, sp);
-
                 context.Transaction.Commit();
+                
+                changedFromLeaderElectToLeader = _engine.TakeOffice();
 
                 var elapsed = sp.Elapsed;
                 if (RachisStateMachine.EnableDebugLongCommit && elapsed > TimeSpan.FromSeconds(5))
@@ -866,6 +867,8 @@ namespace Raven.Server.Rachis
                         }
                         context.Transaction.Commit();
                     }
+                    
+                    _engine.LastAppended = DateTime.UtcNow;
 
                     if (tasks.Count > 0)
                         _newEntry.Set();

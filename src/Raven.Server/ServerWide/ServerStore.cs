@@ -24,6 +24,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
@@ -123,8 +124,9 @@ namespace Raven.Server.ServerWide
         private readonly OperationsStorage _operationsStorage;
         public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
 
-        private RequestExecutor _clusterRequestExecutor;
-        private long _lastClusterTopologyIndex = -1;
+        private RequestExecutor _leaderRequestExecutor;
+
+        internal long _lastClusterTopologyIndex = -1;
 
         public readonly RavenConfiguration Configuration;
         private readonly RavenServer _server;
@@ -763,6 +765,7 @@ namespace Raven.Server.ServerWide
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null, this);
             options.BeforeSchemaUpgrade = _server.BeforeSchemaUpgrade;
+            options.AfterDatabaseCreation = _server.AfterDatabaseCreation;
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
             options.DiscardVirtualMemory = Configuration.Storage.DiscardVirtualMemory;
@@ -936,6 +939,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
+
         public void TriggerDatabases()
         {
             _engine.StateMachine.Changes.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
@@ -954,7 +958,7 @@ namespace Raven.Server.ServerWide
                         {
                             try
                             {
-                                await DatabasesLandlord.ClusterOnDatabaseChanged(db, 0, "Init", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
+                                await DatabasesLandlord.ClusterOnDatabaseChanged(db, 0, DatabasesLandlord.Init, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
                             }
                             catch (Exception e)
                             {
@@ -1133,9 +1137,6 @@ namespace Raven.Server.ServerWide
 
         private void OnTopologyChangeInternal(ClusterTopology topology, Dictionary<string, NodeStatus> status = null)
         {
-            if (_lastClusterTopologyIndex < topology.Etag)
-                _lastClusterTopologyIndex = topology.Etag;
-
             NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag,
                 NodeTag, _engine.CurrentTerm, _engine.CurrentState, status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
 
@@ -1183,6 +1184,9 @@ namespace Raven.Server.ServerWide
                     break;
                 case nameof(PutServerWideBackupConfigurationCommand):
                     RescheduleTimerIfDatabaseIdle(databaseName, state);
+                    break;
+                case nameof(UpdateResponsibleNodeForTasksCommand):
+                    RescheduleTimerIfDatabaseIdleOnUpdatedResponsibleNode(databaseName, state);
                     break;
             }
 
@@ -1298,6 +1302,23 @@ namespace Raven.Server.ServerWide
             if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{nextIdleDatabaseActivity.DateTime}', with dueTime: {nextIdleDatabaseActivity.DueTime} ms.");
 
+        }
+
+        private void RescheduleTimerIfDatabaseIdleOnUpdatedResponsibleNode(string db, object state)
+        {
+            if (IdleDatabases.ContainsKey(db) == false)
+                return;
+
+            var nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters()
+            {
+                DatabaseName = db,
+                NotificationCenter = NotificationCenter,
+                Logger = Logger,
+                ServerStore = Server.ServerStore,
+                IsIdle = true
+            });
+
+            DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, nextIdleDatabaseActivity);
         }
 
         private void ConfirmCertificateReplacedValueChanged(long index, string type)
@@ -2458,7 +2479,7 @@ namespace Raven.Server.ServerWide
                         LicenseManager,
                         DatabasesLandlord,
                         _env,
-                        _clusterRequestExecutor,
+                        _leaderRequestExecutor,
                         ContextPool,
                         ByteStringMemoryCache.Cleaner,
                         InitializationCompleted,
@@ -3038,131 +3059,31 @@ namespace Raven.Server.ServerWide
                     cts.CancelAfter(cmd.Timeout.Value);
                 } 
 
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    return await SendToLeaderAsyncInternal(context, cmd, cts.Token);
+                return await Engine.SendToLeaderAsync(cmd, cts.Token);
             }
         }
 
-        private async Task<(long Index, object Result)> SendToLeaderAsyncInternal(TransactionOperationContext context, CommandBase cmd, CancellationToken token)
+        public RequestExecutor GetLeaderRequestExecutor(string leaderTag)
         {
-            //I think it is reasonable to expect timeout twice of error retry
-            var timeoutTask = TimeoutManager.WaitFor(Engine.OperationTimeout, token);
-            Exception requestException = null;
-            while (true)
-            {
-                token.ThrowIfCancellationRequested();
+            if (string.IsNullOrEmpty(leaderTag))
+                throw new NoLeaderException();
 
-                if (_engine.CurrentState == RachisState.Leader && _engine.CurrentLeader?.Running == true)
-                {
-                    try
-                    {
-                        return await _engine.PutAsync(cmd);
-                    }
-                    catch (Exception e) when (e is ConcurrencyException || e is NotLeadingException)
-                    {
-                        // if the leader was changed during the PutAsync, we will retry.
-                        continue;
-                    }
-                }
-                if (_engine.CurrentState == RachisState.Passive)
-                {
-                    ThrowInvalidEngineState(cmd);
-                }
+            var clusterTopology = GetClusterTopology();
 
-                var logChange = _engine.WaitForHeartbeat();
-
-                var reachedLeader = new Reference<bool>();
-                var cachedLeaderTag = _engine.LeaderTag; // not actually working
-                try
-                {
-                    if (cachedLeaderTag == null)
-                    {
-                        await Task.WhenAny(logChange, timeoutTask);
-                        token.ThrowIfCancellationRequested();
-
-                        if (timeoutTask.IsCompleted)
-                            ThrowTimeoutException(cmd, requestException);
-
-                        continue;
-                    }
-
-                    var response = await SendToNodeAsync(context, cachedLeaderTag, cmd, reachedLeader, token);
-                    return (response.Index, cmd.FromRemote(response.Result));
-                }
-                catch (Exception ex)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Tried to send message to leader (reached: {reachedLeader.Value}), retrying", ex);
-
-                    if (reachedLeader.Value)
-                        throw;
-
-                    requestException = ex;
-                }
-
-                await Task.WhenAny(logChange, timeoutTask);
-                token.ThrowIfCancellationRequested();
-
-                if (timeoutTask.IsCompleted)
-                {
-                    ThrowTimeoutException(cmd, requestException);
-                }
-            }
-        }
-
-        private static void ThrowInvalidEngineState(CommandBase cmd)
-        {
-            throw new NotSupportedException("Cannot send command " + cmd.GetType().FullName + " to the cluster because this node is passive." + Environment.NewLine +
-                                            "Passive nodes aren't members of a cluster and require admin action (such as creating a db) " +
-                                            "to indicate that this node should create its own cluster");
-        }
-
-        private void ThrowTimeoutException(CommandBase cmd, Exception requestException)
-        {
-            throw new TimeoutException($"Could not send command {cmd.GetType().FullName} from {NodeTag} to leader because there is no leader, " +
-                                       $"and we timed out waiting for one after {Engine.OperationTimeout}", requestException);
-        }
-
-        private async Task<(long Index, object Result)> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, CommandBase cmd,
-            Reference<bool> reachedLeader, CancellationToken token)
-        {
-            var djv = cmd.ToJson(context);
-            var cmdJson = context.ReadObject(djv, "raft/command");
-
-            ClusterTopology clusterTopology;
-            using (context.OpenReadTransaction())
-                clusterTopology = _engine.GetTopology(context);
-
-            if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
-                throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
-
-            cmdJson.TryGet("Type", out string commandType);
-            var command = new PutRaftCommand(cmdJson, _engine.Url, commandType)
-            {
-                Timeout = cmd.Timeout
-            };
+            if (clusterTopology.Members.TryGetValue(leaderTag, out string leaderUrl) == false)
+                throw new InvalidOperationException("Leader " + leaderTag + " was not found in the topology members");
 
             var serverCertificateChanged = Interlocked.Exchange(ref _serverCertificateChanged, 0) == 1;
 
-            if (_clusterRequestExecutor == null
+            if (_leaderRequestExecutor == null
                 || serverCertificateChanged
-                || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
+                || _leaderRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
             {
                 var newExecutor = CreateNewClusterRequestExecutor(leaderUrl);
-                Interlocked.Exchange(ref _clusterRequestExecutor, newExecutor);
+                Interlocked.Exchange(ref _leaderRequestExecutor, newExecutor);
             }
 
-            try
-            {
-                await _clusterRequestExecutor.ExecuteAsync(command, context, token: token);
-            }
-            catch
-            {
-                reachedLeader.Value = command.HasReachLeader();
-                throw;
-            }
-
-            return (command.Result.RaftCommandIndex, command.Result.Data);
+            return _leaderRequestExecutor;
         }
 
         protected internal async Task WaitForExecutionOnSpecificNode(TransactionOperationContext context, string node, long index)
@@ -3249,64 +3170,6 @@ namespace Raven.Server.ServerWide
             return requestExecutor;
         }
 
-        private class PutRaftCommand : RavenCommand<PutRaftCommandResult>, IRaftCommand
-        {
-            private readonly BlittableJsonReaderObject _command;
-            private bool _reachedLeader;
-            public override bool IsReadRequest => false;
-
-            public bool HasReachLeader() => _reachedLeader;
-
-            private readonly string _source;
-            private readonly string _commandType;
-
-            public PutRaftCommand(BlittableJsonReaderObject command, string source, string commandType)
-            {
-                _command = command;
-                _source = source;
-                _commandType = commandType;
-            }
-
-            public override void OnResponseFailure(HttpResponseMessage response)
-            {
-                if (response.Headers.Contains("Reached-Leader") == false)
-                    return;
-                _reachedLeader = response.Headers.GetValues("Reached-Leader").Contains("true");
-            }
-
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-            {
-                url = $"{node.Url}/admin/rachis/send?source={_source}&commandType={_commandType}";
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream =>
-                    {
-                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
-                        {
-                            writer.WriteObject(_command);
-                        }
-                    })
-                };
-
-                return request;
-            }
-
-            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {
-                Result = JsonDeserializationCluster.PutRaftCommandResult(response);
-            }
-
-            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
-        }
-
-        public class PutRaftCommandResult
-        {
-            public long RaftCommandIndex { get; set; }
-
-            public object Data { get; set; }
-        }
-
         public Task WaitForTopology(Leader.TopologyModification state, CancellationToken token)
         {
             return _engine.WaitForTopology(state, token: token);
@@ -3329,7 +3192,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 var features = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Cluster, tcp.ProtocolVersion);
-                var remoteConnection = new RemoteConnection(_engine.Tag, _engine.CurrentTerm, tcp.Stream, features.Cluster, disconnect);
+                var remoteConnection = new RemoteConnection(_engine.Tag, _engine.CurrentTerm, tcp.Stream, features, disconnect);
 
                 _engine.AcceptNewConnection(remoteConnection, remoteEndpoint);
             }
@@ -3516,28 +3379,6 @@ namespace Raven.Server.ServerWide
             res[nameof(TcpConnectionInfo.Urls)] = array;
 
             return res;
-        }
-
-        public DynamicJsonValue GetLogDetails(ClusterOperationContext context, int max = 100)
-        {
-            RachisConsensus.GetLastTruncated(context, out var index, out var term);
-            var range = Engine.GetLogEntriesRange(context);
-            var entries = new DynamicJsonArray();
-            foreach (var entry in Engine.GetLogEntries(range.Min, context, max))
-            {
-                entries.Add(entry.ToString());
-            }
-
-            var json = new DynamicJsonValue
-            {
-                [nameof(LogSummary.CommitIndex)] = Engine.GetLastCommitIndex(context),
-                [nameof(LogSummary.LastTruncatedIndex)] = index,
-                [nameof(LogSummary.LastTruncatedTerm)] = term,
-                [nameof(LogSummary.FirstEntryIndex)] = range.Min,
-                [nameof(LogSummary.LastLogEntryIndex)] = range.Max,
-                [nameof(LogSummary.Entries)] = entries
-            };
-            return json;
         }
 
         public IEnumerable<Client.ServerWide.Operations.MountPointUsage> GetMountPointUsageDetailsFor(StorageEnvironmentWithType environment, bool includeTempBuffers)

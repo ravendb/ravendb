@@ -58,10 +58,15 @@ namespace Raven.Server.Documents.Handlers
                         if (string.IsNullOrWhiteSpace(debug) == false)
                         {
                             await Debug(queryContext, debug, token, tracker, httpMethod);
+                            
+                            tracker.Dispose();
+                            
                             return;
                         }
 
                         await Query(queryContext, token, tracker, httpMethod);
+                        
+                        tracker.Dispose();
                     }
                 }
                 catch (Exception e)
@@ -79,10 +84,12 @@ namespace Raven.Server.Documents.Handlers
                                            HttpContext.Request.Path.Value +
                                            e.ToString();
                         }
+
                         tracker.Query = errorMessage;
                         if (TrafficWatchManager.HasRegisteredClients)
                             AddStringToHttpContext(errorMessage, TrafficWatchChangeType.Queries);
                     }
+
                     throw;
                 }
             }

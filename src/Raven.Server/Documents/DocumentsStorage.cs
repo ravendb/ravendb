@@ -182,7 +182,7 @@ namespace Raven.Server.Documents
 
         public DocumentsContextPool ContextPool;
 
-        public DocumentsStorage(DocumentDatabase documentDatabase, Action<string> addToInitLog)
+        public DocumentsStorage(DocumentDatabase documentDatabase, Action<LogMode, string> addToInitLog)
         {
             DocumentDatabase = documentDatabase;
             _name = DocumentDatabase.Name;
@@ -199,7 +199,7 @@ namespace Raven.Server.Documents
         public CountersStorage CountersStorage;
         public TimeSeriesStorage TimeSeriesStorage;
         public DocumentPutAction DocumentPut;
-        private readonly Action<string> _addToInitLog;
+        private readonly Action<LogMode, string> _addToInitLog;
 
         // this is used to remember the metadata about collections / documents for
         // common operations. It always points to the latest valid transaction and is updated by
@@ -2103,15 +2103,17 @@ namespace Raven.Server.Documents
                         }
                         break;
                     case 2:
-                        if (expectedValues.Contains(cvArray[0].NodeTag) == false ||
+                        if ((expectedValues.Contains(cvArray[0].NodeTag) == false ||
                             expectedValues.Contains(cvArray[1].NodeTag) == false ||
-                            cvArray[0].NodeTag == cvArray[1].NodeTag)
+                            cvArray[0].NodeTag == cvArray[1].NodeTag) &&
+                            cvArray[0].NodeTag != ChangeVectorParser.SinkInt &&
+                            cvArray[1].NodeTag != ChangeVectorParser.SinkInt)
                         {
-                            Debug.Assert(false, $"FromClusterTransaction, expect RAFT or TRXN, {changeVector}");
+                            Debug.Assert(false, $"FromClusterTransaction, expect RAFT or TRXN or SINK, {changeVector}");
                         }
                         break;
                     default:
-                       Debug.Assert(false, $"FromClusterTransaction, expect change vector of length 1 or 2, {changeVector}");
+                        Debug.Assert(false, $"FromClusterTransaction, expect change vector of length 1 or 2, {changeVector}");
                         break;
                 }
             }

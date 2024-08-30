@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Server.Documents;
+using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
@@ -16,6 +17,7 @@ namespace Raven.Server.NotificationCenter
         private readonly string _source;
         private readonly bool _doPerformanceHintIfTooLong;
         private readonly Stopwatch _sw;
+        private bool _isDisposed;
         
         public RequestTimeTracker(HttpContext context, Logger logger, DocumentDatabase database, string source, bool doPerformanceHintIfTooLong = true)
         {
@@ -37,9 +39,15 @@ namespace Raven.Server.NotificationCenter
         }
         
         public string Query { get; set; }
+        public BlittableJsonReaderObject QueryParameters { get; set; }
 
         public void Dispose()
         {
+            if (_isDisposed)
+                return;
+            
+            _isDisposed = true;
+            
             if (_sw.Elapsed <= _database.Configuration.PerformanceHints.TooLongRequestThreshold.AsTimeSpan)
                 return;
 
@@ -48,10 +56,12 @@ namespace Raven.Server.NotificationCenter
             
             try
             {
+                var queryWithParameters = $"{Query}\n{QueryParameters}";
+                
                 _database
                     .NotificationCenter
                     .RequestLatency
-                    .AddHint(_sw.ElapsedMilliseconds, _source, Query);
+                    .AddHint(_sw.ElapsedMilliseconds, _source, queryWithParameters);
             }
             catch (Exception e)
             {

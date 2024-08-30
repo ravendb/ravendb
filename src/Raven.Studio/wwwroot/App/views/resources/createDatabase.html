@@ -58,11 +58,11 @@
                             </div>
                         </div>
                         <div>
-                           <div class="encryption" data-bind="template: { name: 'create-db-encryption' }, visible: advancedVisibility.encryption() && isSecureServer">
+                           <div class="encryption" data-bind="template: { name: 'create-db-encryption' }, visible: advancedVisibility.encryption() && (isSecureServer() || allowEncryptedDatabasesOverHttp())">
                            </div>
                         </div>
                         <div>
-                            <div class="encryption" data-bind="template: { name: 'authentication-is-off' }, visible: advancedVisibility.encryption() && !isSecureServer">
+                            <div class="encryption" data-bind="template: { name: 'authentication-is-off' }, visible: advancedVisibility.encryption() && (!isSecureServer() && !allowEncryptedDatabasesOverHttp())">
                             </div>
                         </div>
                         <div>

@@ -12,6 +12,7 @@ using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -44,7 +45,6 @@ namespace SlowTests.Cluster
         [Fact]
         public Task ParallelClusterTransactions() => ParallelClusterTransactions(3);
 
-
         public async Task ParallelClusterTransactions(int numberOfNodes)
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -62,29 +62,35 @@ namespace SlowTests.Cluster
                 var tasks = new List<Task>();
                 var random = new Random();
 
-                for (int i = 0; i < 100; i++)
+                var t = Parallel.ForAsync(0, 100, RavenTestHelper.DefaultParallelOptions, async (_, token) =>
                 {
-                    var t = Task.Run(async () =>
+                    if (token.IsCancellationRequested)
+                        return;
+
+                    var nodeNum = random.Next(0, numberOfNodes);
+                    using (var store = GetDocumentStore(new Options
                     {
-                        var nodeNum = random.Next(0, numberOfNodes);
-                        using (var store = GetDocumentStore(new Options
-                        {
-                            Server = cluster.Nodes[nodeNum],
-                            CreateDatabase = false
-                        }))
+                        Server = cluster.Nodes[nodeNum],
+                        CreateDatabase = false
+                    }))
+                    {
+                        using (store.SetRequestTimeout(TimeSpan.FromSeconds(30), db))
                         {
                             for (int j = 0; j < 10; j++)
                             {
+                                if (token.IsCancellationRequested)
+                                    return;
+
                                 try
                                 {
-                                    await store.Operations.ForDatabase(db).SendAsync(new PutCompareExchangeValueOperation<User>($"usernames/{Interlocked.Increment(ref count)}", new User(), 0));
+                                    await store.Operations.ForDatabase(db).SendAsync(new PutCompareExchangeValueOperation<User>($"usernames/{Interlocked.Increment(ref count)}", new User(), 0), token: token);
 
                                     using (var session = store.OpenAsyncSession(db))
                                     {
                                         session.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
                                         session.Advanced.ClusterTransaction.CreateCompareExchangeValue($"usernames/{Interlocked.Increment(ref count)}", new User());
-                                        await session.StoreAsync(new User());
-                                        await session.SaveChangesAsync();
+                                        await session.StoreAsync(new User(), token);
+                                        await session.SaveChangesAsync(token);
                                     }
                                 }
                                 catch
@@ -93,9 +99,9 @@ namespace SlowTests.Cluster
                                 }
                             }
                         }
-                    });
-                    tasks.Add(t);
-                }
+                    }
+                });
+                tasks.Add(t);
 
 
                 var cts = new CancellationTokenSource();
