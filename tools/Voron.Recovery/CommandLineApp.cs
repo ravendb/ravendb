@@ -68,7 +68,7 @@ namespace Voron.Recovery
                 var ignoreDataIntegrityErrorsOfAlreadySyncedTransactionsArg = cmd.Option("--IgnoreInvalidDataErrorsOfAlreadySyncedTransactions", "Default is false.", CommandOptionType.SingleValue);
                 var ignoreInvalidPagesInARowArg = cmd.Option("--IgnoreInvalidPagesInARow", "Default is false.", CommandOptionType.SingleValue);
 
-                var loggingModeArg = cmd.Option("--LoggingLevel", "Logging mode: Operations or Information.", CommandOptionType.SingleValue);
+                var loggingModeArg = cmd.Option("--LoggingLevel", $"Logging level: {string.Join(",", Enum.GetNames<LogLevel>())}", CommandOptionType.SingleValue);
 
                 var masterKey = cmd.Option("--MasterKey", "Encryption key: base64 string of the encryption master key", CommandOptionType.SingleValue);
 
