@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Sparrow;
+using Sparrow.Platform;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
@@ -71,6 +72,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         }
         // proof that we can release regions released across multiple transactions
         Assert.Equal([4096], Env.CurrentStateRecord.SparsePageRanges);
+        (_, long beforePhysicalSize) = Env.DataPager.GetFileSize(Env.CurrentStateRecord.DataPagerState);
 
         Env.FlushLogToDataFile();
         Assert.Equal(128 * 1024 * 1024, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
@@ -81,9 +83,19 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         // storing sectors using 512 bytes. So if we aren't aligned on 4KB on the disk, hole punching may not actually
         // clear all the blocks. We give ourselves a maximum of 8KB spare for this reason
         Assert.Equal(allocatedSize, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
-        long expectedSize = allocatedSize - (32 * 1024 * 1024);
-        Assert.True(Math.Abs(expectedSize - physicalSize) <= 4096 * 2,
+        const long amountOfSpaceSaved = (32 * 1024 * 1024);
+        if (PlatformDetails.RunningOnMacOsx is false)
+        {
+            long expectedSize = allocatedSize - amountOfSpaceSaved;
+            Assert.True(Math.Abs(expectedSize - physicalSize) <= 4096 * 2,
             $"Expected size: {new Size(expectedSize, SizeUnit.Bytes)}, actual size: {new Size(physicalSize, SizeUnit.Bytes)}");
+        }
+        else
+        {
+            // MacOS is doing weird stuff here, because it is eagerly marking the file as sparse
+            // so we'll just verify that we were able to save _some_ space.
+            Assert.True((beforePhysicalSize - physicalSize) > 20*1024*1024);
+        }
     }
 
     [RavenFact(RavenTestCategory.Voron)]
