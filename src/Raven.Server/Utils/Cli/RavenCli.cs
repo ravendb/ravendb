@@ -360,11 +360,7 @@ namespace Raven.Server.Utils.Cli
         {
             RavenLogManager.Instance.ConfigureLogging(new SetLogsConfigurationOperation.Parameters
             {
-                Logs = new SetLogsConfigurationOperation.LogsConfiguration
-                {
-                    MinLevel = logMode,
-                    MaxLevel = LogLevel.Fatal
-                }
+                Logs = new SetLogsConfigurationOperation.LogsConfiguration(minLevel: logMode, maxLevel: LogLevel.Fatal)
             });
         }
 

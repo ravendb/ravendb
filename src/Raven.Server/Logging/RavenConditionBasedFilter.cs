@@ -19,7 +19,15 @@ public sealed class RavenConditionBasedFilter : ConditionBasedFilter
         _minLevel = filter.MinLevel.ToNLogLogLevel();
         _maxLevel = filter.MaxLevel.ToNLogLogLevel();
         Action = filter.Action.ToNLogFilterResult();
-        Condition = filter.Condition;
+
+        try
+        {
+            Condition = filter.Condition;
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException($"Could not parse '{filter.Condition}' expression.", e);
+        }
     }
 
     protected override FilterResult Check(LogEventInfo logEvent)
