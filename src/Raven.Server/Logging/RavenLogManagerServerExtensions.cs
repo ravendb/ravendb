@@ -393,19 +393,19 @@ internal static class RavenLogManagerServerExtensions
 #endif
             DefaultRule = c.FindRuleByName(Constants.Logging.Names.DefaultRuleName);
             if (DefaultRule == null)
-                throw new InvalidOperationException($"Could not find '{Constants.Logging.Names.DefaultRuleName}' rule in the configuration file.");
+                ThrowNoRule(Constants.Logging.Names.DefaultRuleName);
 
             DefaultAuditRule = c.FindRuleByName(Constants.Logging.Names.DefaultAuditRuleName);
             if (DefaultAuditRule == null)
-                throw new InvalidOperationException($"Could not find '{Constants.Logging.Names.DefaultAuditRuleName}' rule in the configuration file.");
+                ThrowNoRule(Constants.Logging.Names.DefaultAuditRuleName);
 
             SystemRule = c.FindRuleByName(Constants.Logging.Names.SystemRuleName);
             if (SystemRule == null)
-                throw new InvalidOperationException($"Could not find '{Constants.Logging.Names.SystemRuleName}' rule in the configuration file.");
+                ThrowNoRule(Constants.Logging.Names.SystemRuleName);
 
             MicrosoftRule = c.FindRuleByName(Constants.Logging.Names.MicrosoftRuleName);
             if (MicrosoftRule == null)
-                throw new InvalidOperationException($"Could not find '{Constants.Logging.Names.MicrosoftRuleName}' rule in the configuration file.");
+                ThrowNoRule(Constants.Logging.Names.MicrosoftRuleName);
 
             LogManager.Setup(x => x.LoadConfiguration(c));
             LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
@@ -422,6 +422,11 @@ internal static class RavenLogManagerServerExtensions
             InternalLogger.LogLevel = configuration.Logs.NLogInternalLevel.ToNLogLogLevel();
             InternalLogger.LogToConsole = configuration.Logs.NLogLogToConsole;
             InternalLogger.LogToConsoleError = configuration.Logs.NLogLogToConsoleError;
+        }
+
+        static void ThrowNoRule(string ruleName)
+        {
+            throw new InvalidOperationException($"Could not find '{ruleName}' rule in the configuration file.");
         }
     }
 
