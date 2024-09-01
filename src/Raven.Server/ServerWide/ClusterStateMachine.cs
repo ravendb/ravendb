@@ -598,8 +598,6 @@ namespace Raven.Server.ServerWide
                         // Once the certificate is in the cluster, no need to keep it locally so we delete it.
                         if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string key))
                             DeleteLocalState(context, key);
-
-                        DeleteLocalState(context, RavenServer.LetsEncryptRefreshedCertificateThumbprint);
                         break;
 
                     case nameof(PutClientConfigurationCommand):
