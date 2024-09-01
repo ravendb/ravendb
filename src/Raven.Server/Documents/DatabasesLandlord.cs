@@ -1106,6 +1106,9 @@ namespace Raven.Server.Documents
                 oldTimer.Dispose();
             }
 
+            if (idleDatabaseActivity == null)
+                return;
+
             var newTimer = new Timer(_ => NextScheduledActivityCallback(databaseName, idleDatabaseActivity), null, idleDatabaseActivity.DueTime, Timeout.Infinite);
             _wakeupTimers.AddOrUpdate(databaseName, _ => newTimer, (_, __) => newTimer);
         }
