@@ -600,6 +600,8 @@ public static class CoraxQueryBuilder
                 case MethodType.Spatial_Disjoint:
                 case MethodType.Spatial_Intersects:
                     return HandleSpatial(builderParameters, me, methodType);
+                case MethodType.Vector_Search:
+                    return HandleVector(builderParameters, me);
                 case MethodType.Regex:
                     return HandleRegex(builderParameters, me, ref leftOnlyOptimization);
                 case MethodType.MoreLikeThis:
@@ -611,6 +613,34 @@ public static class CoraxQueryBuilder
         }
 
         throw new InvalidQueryException("Unable to understand query", metadata.QueryText, queryParameters);
+    }
+
+    private static IQueryMatch HandleVector(Parameters builderParameters, MethodExpression me)
+    {
+        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(builderParameters.Metadata.Query, builderParameters.QueryParameters, me.Arguments[0], builderParameters.Metadata);
+        var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters.Allocator, fieldName, builderParameters.Index, builderParameters.IndexFieldsMapping,
+            builderParameters.FieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, hasBoost: builderParameters.HasBoost);
+        var (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[1]);
+        var vector = valueType switch
+        {
+            ValueTokenType.String => Convert.FromBase64String(value.ToString()),
+            _ => throw new NotSupportedException("Vector on " + valueType)
+        };
+
+         var minimumMatch = 0.95f;
+
+         if (me.Arguments.Count > 2)
+         {
+             (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[2]);
+             minimumMatch = valueType switch
+             {
+                 ValueTokenType.Long => (long)value,
+                 ValueTokenType.Double => (float)(double)value,
+                 _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + valueType)
+             };
+         }
+        
+        return builderParameters.IndexSearcher.VectorQuery(fieldMetadata, vector, minimumMatch);
     }
 
     private static IQueryMatch HandleIn(Parameters builderParameters, InExpression ie, bool exact)

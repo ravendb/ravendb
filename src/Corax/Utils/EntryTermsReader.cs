@@ -409,6 +409,7 @@ public unsafe struct EntryTermsReader
                 continue;
             }
 
+            // TODO: Handle vector here
             if (IsRaw)
             {
                 using var ctx = JsonOperationContext.ShortTermSingleUse();
