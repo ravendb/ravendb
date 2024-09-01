@@ -9,6 +9,7 @@ using JetBrains.Annotations;
 using NLog;
 using NLog.Common;
 using NLog.Config;
+using NLog.Filters;
 using NLog.Targets;
 using NLog.Targets.Wrappers;
 using Raven.Client.ServerWide.Operations.Logs;
@@ -540,7 +541,9 @@ internal static class RavenLogManagerServerExtensions
             ArchiveAboveSizeInMb = archiveAboveSize.GetValue(SizeUnit.Megabytes),
             Path = server.Configuration.Logs.Path.FullPath,
             CurrentMinLevel = currentMinLevel.FromNLogLogLevel(),
-            CurrentMaxLevel = currentMaxLevel.FromNLogLogLevel()
+            CurrentMaxLevel = currentMaxLevel.FromNLogLogLevel(),
+            Filters = GetFilters(defaultRule),
+            LogFilterDefaultAction = defaultRule.FilterDefaultAction.ToLogFilterAction()
         };
     }
 
@@ -585,8 +588,26 @@ internal static class RavenLogManagerServerExtensions
         return new AdminLogsConfiguration
         {
             CurrentMinLevel = currentMinLevel.FromNLogLogLevel(),
-            CurrentMaxLevel = currentMaxLevel.FromNLogLogLevel()
+            CurrentMaxLevel = currentMaxLevel.FromNLogLogLevel(),
+            Filters = GetFilters(webSocketRule),
+            LogFilterDefaultAction = webSocketRule.FilterDefaultAction.ToLogFilterAction()
         };
+    }
+
+    private static List<LogFilter> GetFilters(LoggingRule loggingRule)
+    {
+        var filters = new List<LogFilter>();
+
+        if (loggingRule.Filters == null || loggingRule.Filters.Count == 0)
+            return filters;
+
+        foreach (var filter in loggingRule.Filters)
+        {
+            if (filter is RavenConditionBasedFilter cFilter)
+                filters.Add(cFilter.Filter);
+        }
+
+        return filters;
     }
 
     public static IEnumerable<FileInfo> GetLogFiles(this RavenLogManager logManager, RavenServer server, DateTime? from, DateTime? to)

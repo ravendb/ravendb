@@ -1,4 +1,6 @@
-﻿using System.Net.Http;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -67,6 +69,10 @@ namespace Raven.Client.ServerWide.Operations.Logs
 
         public bool EnableArchiveFileCompression { get; set; }
 
+        public List<LogFilter> Filters { get; set; } = new();
+
+        public LogFilterAction LogFilterDefaultAction { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -80,6 +86,8 @@ namespace Raven.Client.ServerWide.Operations.Logs
                 [nameof(MaxArchiveDays)] = MaxArchiveDays,
                 [nameof(MaxArchiveFiles)] = MaxArchiveFiles,
                 [nameof(EnableArchiveFileCompression)] = EnableArchiveFileCompression,
+                [nameof(Filters)] = new DynamicJsonArray(Filters.Select(x => x.ToJson())),
+                [nameof(LogFilterDefaultAction)] = LogFilterDefaultAction
             };
         }
     }
@@ -134,12 +142,18 @@ namespace Raven.Client.ServerWide.Operations.Logs
 
         public LogLevel CurrentMaxLevel { get; set; }
 
+        public List<LogFilter> Filters { get; set; } = new();
+
+        public LogFilterAction LogFilterDefaultAction { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(CurrentMinLevel)] = CurrentMinLevel,
-                [nameof(CurrentMaxLevel)] = CurrentMaxLevel
+                [nameof(CurrentMaxLevel)] = CurrentMaxLevel,
+                [nameof(Filters)] = new DynamicJsonArray(Filters.Select(x => x.ToJson())),
+                [nameof(LogFilterDefaultAction)] = LogFilterDefaultAction
             };
         }
     }

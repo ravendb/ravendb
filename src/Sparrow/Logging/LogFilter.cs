@@ -1,9 +1,10 @@
 using System;
 using NLog.Filters;
+using Sparrow.Json.Parsing;
 
 namespace Sparrow.Logging;
 
-public sealed class LogFilter
+public sealed class LogFilter : IDynamicJson
 {
     internal LogFilter()
     {
@@ -25,6 +26,17 @@ public sealed class LogFilter
     public string Condition { get; internal set; }
 
     public LogFilterAction Action { get; internal set; }
+
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(MinLevel)] = MinLevel,
+            [nameof(MaxLevel)] = MaxLevel,
+            [nameof(Condition)] = Condition,
+            [nameof(LogFilterAction)] = Action
+        };
+    }
 }
 
 internal static class LogFilterExtensions
@@ -45,6 +57,25 @@ internal static class LogFilterExtensions
                 return FilterResult.IgnoreFinal;
             default:
                 throw new ArgumentOutOfRangeException(nameof(action), action, null);
+        }
+    }
+
+    public static LogFilterAction ToLogFilterAction(this FilterResult result)
+    {
+        switch (result)
+        {
+            case FilterResult.Neutral:
+                return LogFilterAction.Neutral;
+            case FilterResult.Log:
+                return LogFilterAction.Log;
+            case FilterResult.Ignore:
+                return LogFilterAction.Ignore;
+            case FilterResult.LogFinal:
+                return LogFilterAction.LogFinal;
+            case FilterResult.IgnoreFinal:
+                return LogFilterAction.IgnoreFinal;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(result), result, null);
         }
     }
 }

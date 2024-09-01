@@ -8,13 +8,14 @@ namespace Raven.Server.Logging;
 
 public sealed class RavenConditionBasedFilter : ConditionBasedFilter
 {
+    public readonly LogFilter Filter;
+
     private readonly NLog.LogLevel _minLevel;
     private readonly NLog.LogLevel _maxLevel;
 
     public RavenConditionBasedFilter([NotNull] LogFilter filter)
     {
-        if (filter == null) 
-            throw new ArgumentNullException(nameof(filter));
+        Filter = filter ?? throw new ArgumentNullException(nameof(filter));
 
         _minLevel = filter.MinLevel.ToNLogLogLevel();
         _maxLevel = filter.MaxLevel.ToNLogLogLevel();
