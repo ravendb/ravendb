@@ -15,27 +15,56 @@ namespace Raven.Client.ServerWide.Operations.Logs
 
         public sealed class LogsConfiguration
         {
+            public LogsConfiguration()
+            {
+            }
+
+            public LogsConfiguration(LogLevel minLevel, LogLevel maxLevel)
+            {
+                MinLevel = minLevel;
+                MaxLevel = maxLevel;
+            }
+
             public LogLevel MinLevel { get; set; }
 
             public LogLevel MaxLevel { get; set; }
 
-            public List<LogFilter> Filters { get; set; }
+            public List<LogFilter> Filters { get; set; } = new();
 
             public LogFilterAction LogFilterDefaultAction { get; set; }
         }
 
         public sealed class MicrosoftLogsConfiguration
         {
+            public MicrosoftLogsConfiguration()
+            {
+            }
+
+            public MicrosoftLogsConfiguration(LogLevel minLevel)
+            {
+                MinLevel = minLevel;
+            }
+
             public LogLevel MinLevel { get; set; }
         }
 
         public sealed class AdminLogsConfiguration
         {
+            public AdminLogsConfiguration()
+            {
+            }
+
+            public AdminLogsConfiguration(LogLevel minLevel, LogLevel maxLevel)
+            {
+                MinLevel = minLevel;
+                MaxLevel = maxLevel;
+            }
+
             public LogLevel MinLevel { get; set; }
 
             public LogLevel MaxLevel { get; set; }
 
-            public List<LogFilter> Filters { get; set; }
+            public List<LogFilter> Filters { get; set; } = new();
 
             public LogFilterAction LogFilterDefaultAction { get; set; }
         }

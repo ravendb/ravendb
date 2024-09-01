@@ -159,11 +159,7 @@ public class ModifyConfigurationTests : RavenTestBase
     [RavenFact(RavenTestCategory.Logging)]
     public async Task PersistLogConfiguration()
     {
-        var newParams = new SetLogsConfigurationOperation.LogsConfiguration
-        {
-            MinLevel = LogLevel.Debug,
-            MaxLevel = LogLevel.Error
-        };
+        var newParams = new SetLogsConfigurationOperation.LogsConfiguration(minLevel: LogLevel.Debug, maxLevel: LogLevel.Error);
 
         var settingsJsonPath = Path.GetTempFileName();
         var options = await CreateSettingsJsonFile(settingsJsonPath);

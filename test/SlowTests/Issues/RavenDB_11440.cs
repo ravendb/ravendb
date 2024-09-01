@@ -54,11 +54,8 @@ namespace SlowTests.Issues
 
                     try
                     {
-                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.LogsConfiguration
-                        {
-                            MinLevel = newMinLevel,
-                            MaxLevel = newMaxLevel
-                        }), cts.Token);
+                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(
+                            new SetLogsConfigurationOperation.LogsConfiguration(minLevel: newMinLevel, maxLevel: newMaxLevel)), cts.Token);
 
                         var configuration2 = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation(), cts.Token);
 
@@ -75,11 +72,9 @@ namespace SlowTests.Issues
                     }
                     finally
                     {
-                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.LogsConfiguration
-                        {
-                            MinLevel = configuration1.Logs.CurrentMinLevel,
-                            MaxLevel = configuration1.Logs.CurrentMaxLevel
-                        }), cts.Token);
+                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(
+                            new SetLogsConfigurationOperation.LogsConfiguration(minLevel: configuration1.Logs.CurrentMinLevel,
+                                maxLevel: configuration1.Logs.CurrentMaxLevel)), cts.Token);
                     }
                 }
             }
