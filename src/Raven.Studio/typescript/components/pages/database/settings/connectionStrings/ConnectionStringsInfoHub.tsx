@@ -1,4 +1,4 @@
-﻿import { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
+import { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
@@ -34,6 +34,10 @@ export function ConnectionStringsInfoHub() {
             },
             {
                 featureName: defaultFeatureAvailability[5].featureName,
+                value: features.hasQueueEtl,
+            },
+            {
+                featureName: defaultFeatureAvailability[6].featureName,
                 value: features.hasQueueEtl,
             },
         ],
@@ -113,6 +117,13 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "RabbitMQ ETL",
         featureIcon: "rabbitmq-etl",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+    {
+        featureName: "Azure Queue Storage ETL",
+        featureIcon: "azure-queue-storage-etl",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },

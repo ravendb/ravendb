@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Operations.Counters
     {
         public List<CounterOperation> Operations;
         public string DocumentId;
-        
+
         public static DocumentCountersOperation Parse(BlittableJsonReaderObject input)
         {
             if (input.TryGet(nameof(DocumentId), out string docId) == false || docId == null)
@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Operations.Counters
     {
         public CounterOperationType Type;
         public string CounterName;
-        public long Delta;
+        public long Delta = 1;
 
         internal string ChangeVector;
         internal string DocumentId;

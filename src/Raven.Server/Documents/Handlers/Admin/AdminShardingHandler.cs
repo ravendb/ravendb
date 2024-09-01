@@ -22,6 +22,24 @@ namespace Raven.Server.Documents.Handlers.Admin
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
         }
 
+        [RavenAction("/databases/*/admin/sharding/prefixed", "PUT", AuthorizationStatus.DatabaseAdmin)]
+        public Task AddPrefixedShardingSetting()
+        {
+            throw new NotSupportedException("This operation is not available from a specific shard");
+        }
+
+        [RavenAction("/databases/*/admin/sharding/prefixed", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+        public Task DeletePrefixedShardingSetting()
+        {
+            throw new NotSupportedException("This operation is not available from a specific shard");
+        }
+
+        [RavenAction("/databases/*/admin/sharding/prefixed", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task UpdatePrefixedShardingSetting()
+        {
+            throw new NotSupportedException("This operation is not available from a specific shard");
+        }
+
         private void ValidateShardDatabaseName()
         {
             if (ShardHelper.IsShardName(DatabaseName) == false)

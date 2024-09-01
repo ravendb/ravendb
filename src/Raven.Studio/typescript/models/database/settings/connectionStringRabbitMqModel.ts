@@ -55,6 +55,7 @@ class connectionStringRabbitMqModel extends connectionStringModel {
             },
             
             KafkaConnectionSettings: null,
+            AzureQueueStorageConnectionSettings: null,
         }, true, []);
     }
     
@@ -69,6 +70,7 @@ class connectionStringRabbitMqModel extends connectionStringModel {
             },
 
             KafkaConnectionSettings: null,
+            AzureQueueStorageConnectionSettings: null,
         };
     }
 

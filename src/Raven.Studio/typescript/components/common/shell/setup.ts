@@ -41,9 +41,13 @@ function initRedux() {
 
     databasesManager.default.onUpdateCallback = throttledUpdateDatabases;
 
-    activeDatabaseTracker.default.database.subscribe((db) =>
-        globalDispatch(databaseActions.activeDatabaseChanged(db?.name ?? null))
-    );
+    activeDatabaseTracker.default.database.subscribe((db) => {
+        globalDispatch(databaseActions.activeDatabaseChanged(db?.name ?? null));
+
+        if (!db) {
+            globalDispatch(collectionsTrackerActions.collectionsLoaded([]));
+        }
+    });
 
     clusterTopologyManager.default.localNodeTag.subscribe((tag) => {
         globalDispatch(clusterActions.localNodeTagLoaded(tag));

@@ -572,6 +572,8 @@ class databaseGroupGraph {
                     return icomoonHelpers.getCodePointForCanvas("kafka-etl");
                 case "RabbitQueueEtl":
                     return icomoonHelpers.getCodePointForCanvas("rabbitmq-etl");
+                case "AzureQueueStorageQueueEtl":
+                    return icomoonHelpers.getCodePointForCanvas("azure-queue-storage-etl");
                 case "KafkaQueueSink":
                     return icomoonHelpers.getCodePointForCanvas("kafka-sink");
                 case "RabbitQueueSink":

@@ -428,10 +428,7 @@ namespace SlowTests.Sharding.Cluster
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 0);
 
-                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
-                {
-                    DocumentIds = new[] { id, id2, id3 }
-                }));
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { id, id2, id3 }));
 
                 expectedSize = 1887;
                 AssertStats(db, bucket, expectedSize, expectedDocs: 0);
@@ -629,10 +626,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(0, stats.NumberOfDocuments);
                 }
 
-                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
-                {
-                    DocumentIds = new[] { id }
-                }));
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { id }));
 
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())

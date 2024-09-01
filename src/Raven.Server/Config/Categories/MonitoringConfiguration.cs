@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Monitoring.Snmp;
@@ -30,16 +32,117 @@ namespace Raven.Server.Config.Categories
         public MonitoringConfiguration()
         {
             Snmp = new SnmpConfiguration();
+            OpenTelemetry = new OpenTelemetryConfiguration();
         }
 
         public SnmpConfiguration Snmp { get; }
+        public OpenTelemetryConfiguration OpenTelemetry { get; }
 
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
             Snmp.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
-
+            OpenTelemetry.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
             Initialized = true;
+        }
+
+        [ConfigurationCategory(ConfigurationCategoryType.Monitoring)]
+        public sealed class OpenTelemetryConfiguration : ConfigurationCategory
+        {
+            [Description("Indicates if OpenTelemetry is enabled or not. Default: false")]
+            [DefaultValue(false)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool Enabled { get; set; }
+            
+            [Description("Sets the OpenTelemetry service instance ID. When it's not set, RavenDB will use public hostname; if not available, node tag will be used as the identifier.")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ServiceInstanceId", ConfigurationEntryScope.ServerWideOnly)]
+            public string ServiceInstanceId { get; set; }
+            
+            [Description("Indicates if RavenDB's OpenTelemetry metrics are enabled or not. Default: true")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool ServerMetersEnabled { get; set; }
+            
+            [Description("Indicates if AspNetCore metric is enabled or not. Default: false")]
+            [DefaultValue(false)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.AspNetCore.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool AspNetCoreInstrumentationMetersEnabled { get; set; }
+            
+            [Description("Indicates if Runtime metric is enabled or not. Default: false")]
+            [DefaultValue(false)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Runtime.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool RuntimeInstrumentationMetersEnabled { get; set; }
+            
+            [Description("Indicates if metrics should be exported with the OpenTelemetry protocol.")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool OpenTelemetryProtocolExporter { get; set; }
+            
+            [Description("Endpoint where OpenTelemetryProtocol should sends data. Default: null (internal OTLP default settings).")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.Endpoint", ConfigurationEntryScope.ServerWideOnly)]
+            public string OtlpEndpoint { get; set; }
+            
+            [Description("Defines the protocol that OpenTelemetryProtocol should use to send data. Default: null (internal OTLP default settings).")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.Protocol", ConfigurationEntryScope.ServerWideOnly)]
+            public OtlpExportProtocol? OtlpProtocol { get; set; }
+            
+            [Description("OpenTelemetryProtocol custom headers. Default: null.")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.Headers", ConfigurationEntryScope.ServerWideOnly)]
+            public string OtlpHeaders { get; set; }           
+            
+            [Description("OpenTelemetryProtocol export processor type. Default: null.")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.ExportProcessorType", ConfigurationEntryScope.ServerWideOnly)]
+            public ExportProcessorType? OtlpExportProcessorType { get; set; }
+            
+            [Description("OpenTelemetryProtocol timeout value. Default: null.")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.OpenTelemetryProtocol.Timeout", ConfigurationEntryScope.ServerWideOnly)]
+            public int? OtlpTimeout { get; set; }
+            
+            [Description("Indicates if metrics should be exported to the console output.")]
+            [DefaultValue(false)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ConsoleExporter", ConfigurationEntryScope.ServerWideOnly)]
+            public bool ConsoleExporter { get; set; }
+            
+            [Description("Expose metrics related to server storage.")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.Storage.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool ServerStorage { get; set; }
+            
+            [Description("Expose metrics related to CPU credits.")]
+            [DefaultValue(false)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.CPUCredits.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool CPUCredits { get; set; }
+            
+            [Description("Expose metrics related to resources usage.")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.Resources.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool Resources { get; set; }
+
+            [Description("Expose metrics related to aggregated database statistics.")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.TotalDatabases.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool TotalDatabases { get; set; }
+            
+            [Description("Expose metrics related to requests.")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.Requests.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool Requests { get; set; }
+            
+            [Description("Expose metrics related to GC.")]
+            [DefaultValue(false)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.GC.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool GcEnabled { get; set; }
+            
+            [Description("Expose metrics related to general information about the cluster and its licensing.")]
+            [DefaultValue(true)]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.Meters.Server.General.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool GeneralEnabled { get; set; }
         }
 
         [ConfigurationCategory(ConfigurationCategoryType.Monitoring)]

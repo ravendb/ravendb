@@ -349,6 +349,10 @@ namespace Raven.Server.Dashboard
             long rabbitMqEtlCountOnNode = GetTaskCountOnNode<QueueEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.QueueDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.RabbitMq);
             
+            var azureQueueStorageEtlCount = database.EtlLoader.GetQueueDestinationCountByBroker(QueueBrokerType.AzureQueueStorage);
+            long azureQueueStorageEtlCountOnNode = GetTaskCountOnNode<QueueEtlConfiguration>(database, dbRecord, serverStore, database.EtlLoader.QueueDestinations,
+                task => EtlLoader.GetProcessState(task.Transforms, database, task.Name), task => task.BrokerType == QueueBrokerType.AzureQueueStorage);
+            
             var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
             long periodicBackupCountOnNode = BackupUtils.GetTasksCountOnNode(serverStore, database.Name, context);
 
@@ -364,8 +368,8 @@ namespace Raven.Server.Dashboard
                 task => QueueSinkLoader.GetProcessState(task.Scripts, database, task.Name), task => task.BrokerType == QueueBrokerType.RabbitMq);
 
             ongoingTasksCount = extRepCount + replicationHubCount + replicationSinkCount +
-                                ravenEtlCount + sqlEtlCount + elasticSearchEtlCount + olapEtlCount + kafkaEtlCount + rabbitMqEtlCount +
-                                periodicBackupCount + subscriptionCount +
+                                ravenEtlCount + sqlEtlCount + elasticSearchEtlCount + olapEtlCount + kafkaEtlCount +
+                                rabbitMqEtlCount + azureQueueStorageEtlCount + periodicBackupCount + subscriptionCount +
                                 kafkaSinkCount + rabbitMqSinkCount;
 
             return new DatabaseOngoingTasksInfoItem
@@ -380,6 +384,7 @@ namespace Raven.Server.Dashboard
                 OlapEtlCount = olapEtlCountOnNode,
                 KafkaEtlCount = kafkaEtlCountOnNode,
                 RabbitMqEtlCount = rabbitMqEtlCountOnNode,
+                AzureQueueStorageEtlCount = azureQueueStorageEtlCountOnNode,
                 PeriodicBackupCount = periodicBackupCountOnNode,
                 SubscriptionCount = subscriptionCountOnNode,
                 KafkaSinkCount = kafkaSinkCountOnNode,

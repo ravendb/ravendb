@@ -17,7 +17,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects
         }
 
         protected abstract TData GetData();
-
+        
         public override ISnmpData Data
         {
             get

@@ -1,3 +1,49 @@
+function BuildDummyApp ($outDir, $target) {
+
+    if ($target) {
+        write-host "Building Dummy App for $($target.Name)..."
+    } else {
+        write-host "Building Dummy App no specific target..."
+    }
+
+    $output = [io.path]::combine($outDir, "DummyApp");
+    $quotedOutput = '"' + $output + '"'
+    New-Item -Path $output -ItemType "Directory"
+
+    Push-Location
+
+    try {
+        Set-Location $output
+
+        Invoke-Expression -Command "dotnet new console"
+
+        $command = "dotnet" 
+        $commandArgs = @( "publish" )
+
+        
+        $commandArgs += @( "--output", $quotedOutput )
+
+        $configuration = if ($global:isPublishConfigurationDebug) { 'Debug' } else { 'Release' }
+        $commandArgs += @( "--configuration", $configuration )
+
+        if ($target) {
+            $commandArgs += $( "--runtime", "$($target.Runtime)" )
+            $commandArgs += $( "--self-contained", "true" )
+        }
+
+        if ($target -and [string]::IsNullOrEmpty($target.Arch) -eq $false) {
+            $commandArgs += "/p:Platform=$($target.Arch)"
+        }
+
+        write-host -ForegroundColor Cyan "Publish Dummy App: $command $commandArgs"
+        Invoke-Expression -Command "$command $commandArgs"
+        CheckLastExitCode
+    } 
+    finally {
+        [Console]::ResetColor()
+        Pop-Location
+    }
+} 
 
 function BuildServer ( $srcDir, $outDir, $target) {
 
@@ -34,9 +80,9 @@ function BuildServer ( $srcDir, $outDir, $target) {
 
     $commandArgs += '/p:SourceLinkCreate=true'
     
-    #if ($target -and $global:isPublishBundlingEnabled) {
-    #    $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
-    #}
+    if ($target -and $global:isPublishBundlingEnabled) {
+        $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:Client_IncludeZstd=false'
+    }
 
     if ($env:RAVEN_IS_RUNNING_ON_CI){
         $commandArgs += '/p:ContinuousIntegrationBuild=true'
@@ -179,7 +225,7 @@ function ShouldBuildStudio( $studioOutDir, $dontRebuildStudio, $dontBuildStudio 
     return $true
 }
 
-function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
+function BuildTool ( $toolName, $srcDir, $outDir, $target ) {
     write-host "Building $toolName for $($target.Name)..."
     $command = "dotnet" 
     $commandArgs = @( "publish" )
@@ -199,9 +245,9 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
 
     $commandArgs += "/p:SourceLinkCreate=true"
     
-    #if ($target -and $global:isPublishBundlingEnabled) {
-    #    $commandArgs += "/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=$trim"
-    #}
+    if ($target -and $global:isPublishBundlingEnabled) {
+        $commandArgs += "/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:Client_IncludeZstd=false"
+    }
 
     if ($env:RAVEN_IS_RUNNING_ON_CI){
         $commandArgs += '/p:ContinuousIntegrationBuild=true'
@@ -210,6 +256,28 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
     write-host -ForegroundColor Cyan "Publish ${toolName}: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
+}
+
+function BuildDebug ( $srcDir, $outDir, $target ) {
+    BuildTool debug $srcDir $outDir $target
+
+    if ($target -and $global:isPublishBundlingEnabled) {
+        # workaround for https://github.com/microsoft/perfview/issues/2035
+        
+        $output = [io.path]::combine($outDir, "debug");
+        $amd64 = [io.path]::combine($output, "amd64");
+        $arm64 = [io.path]::combine($output, "arm64");
+        $x86 = [io.path]::combine($output, "x86");
+
+        Write-Host "Removing $amd64"
+        Remove-Item $amd64 -ErrorAction SilentlyContinue -Recurse
+
+        Write-Host "Removing $arm64"
+        Remove-Item $arm64 -ErrorAction SilentlyContinue -Recurse
+
+        Write-Host "Removing $x86"
+        Remove-Item $x86 -ErrorAction SilentlyContinue -Recurse
+    }
 }
 
 function BuildEmbedded ( $srcDir, $outDir, $framework) {

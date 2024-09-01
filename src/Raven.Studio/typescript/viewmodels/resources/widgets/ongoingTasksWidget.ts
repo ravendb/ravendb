@@ -61,6 +61,11 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             icon: "icon-rabbitmq-etl",
             colorClass: "rabbitmq-etl"
         },
+        "AzureQueueStorageQueueEtl": {
+            nameForUI: "Azure Queue Storage ETL",
+            icon: "icon-azure-queue-storage-etl",
+            colorClass: "azure-queue-storage-etl",
+        },
         "KafkaQueueSink": {
             nameForUI: "Kafka Sink",
             icon: "icon-kafka-sink",
@@ -294,6 +299,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "KafkaQueueEtl";
             case "RabbitMqEtlCount":
                 return "RabbitQueueEtl";
+            case "AzureQueueStorageEtlCount":
+                return "AzureQueueStorageQueueEtl";
             case "KafkaSinkCount":
                 return "KafkaQueueSink";
             case "RabbitMqSinkCount":

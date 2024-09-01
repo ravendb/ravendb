@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -798,7 +799,7 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    var store = new Pkcs12Store();
+                    var store = new Pkcs12StoreBuilder().Build();
                     store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
 
                     getKey = store.GetKey;
@@ -925,7 +926,7 @@ namespace Raven.Server.ServerWide
                     byte[] mac = CalculatePbeMac(algId.Algorithm, salt, itCount, password, false, data);
                     byte[] dig = dInfo.GetDigest();
 
-                    if (!Arrays.ConstantTimeAreEqual(mac, dig))
+                    if (!Arrays.FixedTimeEquals(mac, dig))
                     {
                         if (password.Length > 0)
                             throw new IOException("PKCS12 key store MAC invalid - wrong password or corrupted file.");
@@ -933,7 +934,7 @@ namespace Raven.Server.ServerWide
                         // Try with incorrect zero length password
                         mac = CalculatePbeMac(algId.Algorithm, salt, itCount, password, true, data);
 
-                        if (!Arrays.ConstantTimeAreEqual(mac, dig))
+                        if (!Arrays.FixedTimeEquals(mac, dig))
                             throw new IOException("PKCS12 key store MAC invalid - wrong password or corrupted file.");
 
                         wrongPkcs12Zero = true;
@@ -1011,7 +1012,7 @@ namespace Raven.Server.ServerWide
                     //
                     // set the attributes
                     //
-                    IDictionary attributes = new Hashtable();
+                    IDictionary<DerObjectIdentifier, Asn1Encodable> attributes = new Dictionary<DerObjectIdentifier, Asn1Encodable>();
                     Asn1OctetString localId = null;
                     string alias = null;
 
@@ -1029,17 +1030,17 @@ namespace Raven.Server.ServerWide
 
                                 // TODO We might want to "merge" attribute sets with
                                 // the same OID - currently, differing values give an error
-                                if (attributes.Contains(aOid.Id))
+                                if (attributes.ContainsKey(aOid))
                                 {
                                     // OK, but the value has to be the same
-                                    if (!attributes[aOid.Id].Equals(attr))
+                                    if (!attributes[aOid].Equals(attr))
                                     {
                                         //throw new IOException("attempt to add existing attribute with different value");
                                     }
                                 }
                                 else
                                 {
-                                    attributes.Add(aOid.Id, attr);
+                                    attributes.Add(aOid, attr);
                                 }
 
                                 if (aOid.Equals(PkcsObjectIdentifiers.Pkcs9AtFriendlyName))
@@ -1098,12 +1099,12 @@ namespace Raven.Server.ServerWide
 
             public IEnumerable Aliases
             {
-                get { return new EnumerableProxy(GetAliasesTable().Keys); }
+                get { return GetAliasesTable().Keys; }
             }
 
-            private IDictionary GetAliasesTable()
+            private IDictionary<string, string> GetAliasesTable()
             {
-                IDictionary tab = new Hashtable();
+                IDictionary<string, string> tab = new Dictionary<string, string>();
 
                 foreach (string key in certs.Keys)
                 {
@@ -1231,7 +1232,7 @@ namespace Raven.Server.ServerWide
             {
                 AsymmetricKeyParameter privKey = PrivateKeyFactory.CreateKey(privKeyInfo);
 
-                IDictionary attributes = new Hashtable();
+                Dictionary<DerObjectIdentifier, Asn1Encodable> attributes = new();
                 AsymmetricKeyEntry keyEntry = new AsymmetricKeyEntry(privKey, attributes);
 
                 string alias = null;
@@ -1252,15 +1253,15 @@ namespace Raven.Server.ServerWide
 
                             // TODO We might want to "merge" attribute sets with
                             // the same OID - currently, differing values give an error
-                            if (attributes.Contains(aOid.Id))
+                            if (attributes.ContainsKey(aOid))
                             {
                                 // OK, but the value has to be the same
-                                if (!attributes[aOid.Id].Equals(attr))
+                                if (!attributes[aOid].Equals(attr))
                                     throw new IOException("attempt to add existing attribute with different value");
                             }
                             else
                             {
-                                attributes.Add(aOid.Id, attr);
+                                attributes.Add(aOid, attr);
                             }
 
                             if (aOid.Equals(PkcsObjectIdentifiers.Pkcs9AtFriendlyName))

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
@@ -9,17 +8,23 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class DatabaseChanges : AbstractDatabaseChanges<DatabaseConnectionState>, IDatabaseChanges
+    internal class DatabaseChanges : AbstractDatabaseChanges<DatabaseConnectionState>, IDatabaseChanges, ISingleNodeDatabaseChanges
     {
-        public DatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag) 
+        public DatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose, string nodeTag)
             : base(requestExecutor, databaseName, onDispose, nodeTag, throttleConnection: false)
         {
         }
 
-        public async Task<IDatabaseChanges> EnsureConnectedNow()
+        async Task<IDatabaseChanges> IConnectableChanges<IDatabaseChanges>.EnsureConnectedNow()
         {
             var changes = await EnsureConnectedNowAsync().ConfigureAwait(false);
             return changes as IDatabaseChanges;
+        }
+
+        async Task<ISingleNodeDatabaseChanges> IConnectableChanges<ISingleNodeDatabaseChanges>.EnsureConnectedNow()
+        {
+            var changes = await EnsureConnectedNowAsync().ConfigureAwait(false);
+            return changes as ISingleNodeDatabaseChanges;
         }
 
         public IChangesObservable<DocumentChange> ForDocument(string docId)
@@ -57,10 +62,11 @@ namespace Raven.Client.Documents.Changes
 
             return taskedObservable;
         }
-        
+
         public IChangesObservable<OperationStatusChange> ForOperationId(long operationId)
         {
-            Debug.Assert(string.IsNullOrEmpty(_nodeTag) == false, "Changes API must be provided a node tag in order to track node-specific operations.");
+            if (string.IsNullOrWhiteSpace(_nodeTag))
+                throw new ArgumentException("Changes API must be provided a node tag in order to track node-specific operations.");
 
             var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", operationId.ToString());
 
@@ -73,7 +79,8 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<OperationStatusChange> ForAllOperations()
         {
-            Debug.Assert(string.IsNullOrEmpty(_nodeTag) == false, "Changes API must be provided a node tag in order to track node-specific operations.");
+            if (string.IsNullOrWhiteSpace(_nodeTag))
+                throw new ArgumentException("Changes API must be provided a node tag in order to track node-specific operations.");
 
             var counter = GetOrAddConnectionState("all-operations", "watch-operations", "unwatch-operations", null);
 

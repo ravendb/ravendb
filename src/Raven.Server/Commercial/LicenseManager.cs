@@ -1605,6 +1605,33 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.ReadOnlyCertificates, details);
         }
 
+        public bool CanUseOpenTelemetryMonitoring(bool withNotification, bool startUp)
+        {
+            if (IsValid(out _) == false)
+                return false;
+
+            if (LicenseStatus.HasMonitoringEndpoints)
+            {
+                if (startUp)
+                    return true;
+                else
+                {
+                    const string details = "Your license allows you to run OpenTelemetry meters, but OpenTelemetry is initialized at process startup. To enable the OpenTelemetry feature, you must restart the process.";
+                    throw GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
+                }
+            }
+
+            {
+                const string details = "Your current license doesn't include the monitoring feature.";
+                var exception = GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: withNotification);
+
+                if (startUp)
+                    return false;
+                
+                throw exception;
+            }
+        }
+
         public bool CanUseSnmpMonitoring(bool withNotification)
         {
             if (IsValid(out _) == false)

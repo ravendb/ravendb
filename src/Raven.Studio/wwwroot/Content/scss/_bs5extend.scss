@@ -1,3 +1,5 @@
+@use "Content/scss/variables";
+
 // TODO replace all panels widh cards -> remove css
 .panel {
     background-color: $panel-bg-1;
@@ -209,14 +211,10 @@
 
 .btn .kbd {
     font-size: 10px;
-    kbd {
-        background-color: transparent;
-        box-shadow: none;
-        color: inherit;
-        border: 1px solid;
-        border-radius: $border-radius-sm;
-        padding: 1px 4px;
-    }
+}
+
+kbd {
+    border: 1px solid $border-color-light-var;
 }
 
 .carousel-auto-height {
@@ -322,10 +320,6 @@ select {
 
 .w-fit-content {
     width: fit-content;
-}
-
-.empty-set {
-    max-width: 30rem;
 }
 
 .accordion-item {

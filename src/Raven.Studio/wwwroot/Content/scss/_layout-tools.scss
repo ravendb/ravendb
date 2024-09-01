@@ -235,7 +235,7 @@ $directions: ("top", "right", "bottom", "left");
 }
 
 ::-webkit-scrollbar-track {
-    background-color: transparent;
+    background-color: inherit;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -254,5 +254,42 @@ $directions: ("top", "right", "bottom", "left");
 }
 
 ::-webkit-scrollbar-corner {
-    background-color: transparent;
+    background-color: inherit;
 }
+
+// Define directions
+$border-sides: ("left", "right");
+
+// Define sizes as a map
+$border-sizes: (
+    "": $border-radius,
+    "-pill": $border-radius-pill,
+    "-lg": $border-radius-lg,
+    "-sm": $border-radius-sm,
+    "-none": 0,
+);
+
+// Mixin to generate classes
+@mixin border-radius-classes {
+    @each $border-side in $border-sides {
+        @each $size-name, $size-value in $border-sizes {
+            .border-top-#{$border-side}-radius#{$size-name} {
+                @if $border-side == "left" {
+                    border-top-left-radius: $size-value !important;
+                } @else if $border-side == "right" {
+                    border-top-right-radius: $size-value !important;
+                }
+            }
+
+            .border-bottom-#{$border-side}-radius#{$size-name} {
+                @if $border-side == "left" {
+                    border-bottom-left-radius: $size-value !important;
+                } @else if $border-side == "right" {
+                    border-bottom-right-radius: $size-value !important;
+                }
+            }
+        }
+    }
+}
+
+@include border-radius-classes;

@@ -1716,7 +1716,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
 
-                res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<long>("dummy", 2L, res.Index));
+                res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<long>("dummy", 2L, 0)); // compare exchange doesn't exist so we need to pass index 0
                 Assert.True(res.Successful);
 
                 using (var session = store.OpenAsyncSession())

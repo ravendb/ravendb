@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
 using Tests.Infrastructure;
@@ -69,5 +70,47 @@ public sealed class RavenDB_21430 : RavenTestBase
         }
     }
 
-    private sealed record ComplexField(Query.Order Order, Query.Order Field, string Id = null);
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
+    public async Task SearchComplexField()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var session = store.OpenAsyncSession();
+        await session.StoreAsync(new ComplexField(new Query.Order() { Company = "Maciej" }, new Query.Order() { Company = "Test" }));
+        await session.StoreAsync(new ComplexField(null, null));
+        await session.SaveChangesAsync();
+
+        var index = new Index();
+        await index.ExecuteAsync(store);
+
+        var errors = await WaitForPredicateAsync(x => x.Length > 0 && x[0].Errors.Length > 0, () => store.Maintenance.SendAsync(new GetIndexErrorsOperation(new[] { index.IndexName })));
+        Assert.Equal(index.IndexName, errors[0].Name);
+        Assert.Contains("he value of 'Order' field is a complex object", errors[0].Errors[0].Error);
+        var result = await session.Query<ComplexField, Index>()
+            .Search(x => x.Order, "maciej")
+            .ToListAsync();
+        Assert.Equal(0, result.Count);
+    }
+
+    private sealed class Index : AbstractIndexCreationTask<ComplexField>
+    {
+        public Index()
+        {
+            Map = fields => fields.Select(i => new { i.Order });
+            Index(x => x.Order, FieldIndexing.Search);
+        }
+    }
+
+    private sealed class ComplexField(Query.Order Order, Query.Order Field, string Id = null)
+    {
+        public Query.Order Order { get; init; } = Order;
+        public Query.Order Field { get; init; } = Field;
+        public string Id { get; init; } = Id;
+
+        public void Deconstruct(out Query.Order Order, out Query.Order Field, out string Id)
+        {
+            Order = this.Order;
+            Field = this.Field;
+            Id = this.Id;
+        }
+    }
 }

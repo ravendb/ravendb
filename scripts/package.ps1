@@ -28,6 +28,12 @@ function CreateToolsPackage( $projectDir, $releaseDir, $packOpts ) {
 
     LayoutToolsPackage $packageDir $projectDir $packOpts
 
+    $toolsDir = [io.path]::combine($packageDir, "Tools")
+    $runtimeConfigFileName = [io.path]::combine($toolsDir, "Raven.Server.runtimeconfig.json")
+    $settingFileName = [io.path]::combine($toolsDir, "settings.default.json")
+    Remove-Item -ErrorAction SilentlyContinue $runtimeConfigFileName
+    Remove-Item -ErrorAction SilentlyContinue $settingFileName
+
     $releaseArchiveFile = GetRavenArchiveFileName $packOpts.VersionInfo.Version $target "Tools"
     $releaseArchivePath = [io.path]::combine($releaseDir, $releaseArchiveFile)
     if ($target.IsUnix) {
@@ -75,11 +81,10 @@ function LayoutServerPackage ( $packageDir, $projectDir, $packOpts ) {
     $target = $packOpts.Target
     CopyStudioPackageToServerOutputDirectory $packOpts
 
-    #if ($target.IsUnix -and $global:isPublishBundlingEnabled) {
-    #    # TODO get 'net8.0' from somewhere
-    #    $buildDir = [io.path]::Combine($projectDir, "src", "Raven.Server", "bin", "Release", "net8.0", $target.Runtime)
-    #    CopyNativeBinariesRequiredForDebugging $buildDir "$($packOpts.OutDirs.Server)" $target.NativeBinExtension
-    #}
+    if ($target.IsUnix -and $global:isPublishBundlingEnabled) {
+       $buildDir = [io.path]::combine($packOpts.outDirs.Main, "DummyApp")
+       CopyNativeBinariesRequiredForDebugging $buildDir "$($packOpts.OutDirs.Server)" $target.NativeBinExtension
+    }
 
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir

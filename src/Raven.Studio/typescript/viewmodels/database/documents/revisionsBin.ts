@@ -157,7 +157,13 @@ class revisionsBin extends shardViewModelBase {
 
                     this.spinners.delete(true);
 
-                    new deleteRevisionsForDocumentsCommand(selectedIds, this.db)
+                    const parameters: Raven.Client.Documents.Operations.Revisions.DeleteRevisionsOperation.Parameters = {
+                        DocumentIds: selectedIds,
+                        RevisionsChangeVectors: [],
+                        RemoveForceCreatedRevisions: true,
+                    }
+
+                    new deleteRevisionsForDocumentsCommand(this.db?.name, parameters)
                         .execute()
                         .always(() => {
                             this.spinners.delete(false);

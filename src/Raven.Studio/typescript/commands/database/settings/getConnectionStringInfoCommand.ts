@@ -44,6 +44,10 @@ class getConnectionStringInfoCommand extends commandBase {
     static forRabbitMqEtl(db: database | string, connectionStringName: string) {
         return new getConnectionStringInfoCommand(db, "Queue", connectionStringName);
     }
+    
+    static forAzureQueueStorageEtl(db: database, connectionStringName: string) {
+        return new getConnectionStringInfoCommand(db, "Queue", connectionStringName);
+    }
 }
 
 export = getConnectionStringInfoCommand; 

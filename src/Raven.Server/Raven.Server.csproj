@@ -62,9 +62,6 @@
     <None Include="Web\Studio\EmbeddedData\NorthwindModel.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows64)' == 'true'">
-    <None Include="..\..\libs\libsodium\libsodium.win.x64.dll" Link="libsodium.win.x64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\libs\librvnpal\librvnpal.win.x64.dll" Link="librvnpal.win.x64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -76,9 +73,6 @@
     </None>
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows32)' == 'true'">
-    <None Include="..\..\libs\libsodium\libsodium.win.x86.dll" Link="libsodium.win.x86.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\libs\librvnpal\librvnpal.win.x86.dll" Link="librvnpal.win.x86.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -90,9 +84,6 @@
     </None>
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinux64)' == 'true'">
-    <None Include="..\..\libs\libsodium\libsodium.linux.x64.so" Link="libsodium.linux.x64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\libs\librvnpal\librvnpal.linux.x64.so" Link="librvnpal.linux.x64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -101,9 +92,6 @@
     </None>
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm64)' == 'true'">
-    <None Include="..\..\libs\libsodium\libsodium.arm.64.so" Link="libsodium.arm.64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\libs\librvnpal\librvnpal.arm.64.so" Link="librvnpal.arm.64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -112,9 +100,6 @@
     </None>
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm32)' == 'true'">
-    <None Include="..\..\libs\libsodium\libsodium.arm.32.so" Link="libsodium.arm.32.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\libs\librvnpal\librvnpal.arm.32.so" Link="librvnpal.arm.32.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -123,9 +108,6 @@
     </None>
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsMacOS64)' == 'true'">
-    <None Include="..\..\libs\libsodium\libsodium.mac.x64.dylib" Link="libsodium.mac.x64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\libs\librvnpal\librvnpal.mac.x64.dylib" Link="librvnpal.mac.x64.dylib">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -134,9 +116,6 @@
     </None>
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsMacOSArm64)' == 'true'">
-    <None Include="..\..\libs\libsodium\libsodium.mac.arm64.dylib" Link="libsodium.mac.arm64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\libs\librvnpal\librvnpal.mac.arm64.dylib" Link="librvnpal.mac.arm64.dylib">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -155,8 +134,10 @@
     <PackageReference Include="AWSSDK.Core" Version="3.7.400.5" />
     <PackageReference Include="AWSSDK.Glacier" Version="3.7.400.5" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.400.5" />
-    <PackageReference Include="Azure.Identity" Version="1.12.0" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.21.2" />
+    <PackageReference Include="Azure.Identity" Version="1.12.0" />
+    <PackageReference Include="Azure.Storage.Queues" Version="12.18.0" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.8.0" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.8.0" />
     <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.8.0" />
@@ -173,7 +154,7 @@
     <PackageReference Include="Google.Api.Gax.Rest" Version="4.8.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.10.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
-    <PackageReference Include="librdkafka.redist" Version="2.5.0" />
+    <PackageReference Include="libsodium" Version="1.0.20" />
     <PackageReference Include="Lucene.Net" Version="3.0.60010" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60010" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
@@ -195,8 +176,12 @@
     <PackageReference Include="NuGet.PackageManagement" Version="6.11.0" />
     <PackageReference Include="NuGet.Protocol" Version="6.11.0" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.5.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.9.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.9.0" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.9.0" />
     <PackageReference Include="Parquet.Net" Version="4.24.0" />
-    <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
     <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>

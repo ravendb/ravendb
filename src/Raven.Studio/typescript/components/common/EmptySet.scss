@@ -1,0 +1,23 @@
+@use "Content/scss/sizes";
+
+.empty-set {
+    max-width: 30rem;
+
+    &.compact {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: sizes.$gutter-xs;
+        white-space: normal;
+        max-width: 100%;
+
+        i {
+            font-size: 24px;
+            padding: 0;
+        }
+
+        .lead {
+            font-size: 1rem;
+        }
+    }
+}

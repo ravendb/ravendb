@@ -12,13 +12,10 @@ public abstract partial class AbstractDocumentQuery<T, TSelf>
 
         builder.Invoke(builderImpl);
 
-        object shardContext;
-
-        if (builderImpl.DocumentIds.Count == 1)
-            shardContext = builderImpl.DocumentIds.First();
-        else
-            shardContext = builderImpl.DocumentIds;
-
-        QueryParameters.Add(Constants.Documents.Querying.Sharding.ShardContextParameterName, shardContext);
+        QueryParameters.Add(Constants.Documents.Querying.Sharding.ShardContextParameterName, new
+        {
+            builderImpl.DocumentIds,
+            builderImpl.Prefixes
+        });
     }
 }

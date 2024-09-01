@@ -52,6 +52,7 @@ export default function CreateDatabaseRegularStepBasicInfo() {
                         name="basicInfoStep.databaseName"
                         placeholder="Database Name"
                         id="DbName"
+                        autoComplete="off"
                     />
                 </Col>
             </Row>

@@ -1,20 +1,17 @@
 ﻿using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class CpuCreditsMax : ScalarObjectBase<Integer32>
+    public sealed class CpuCreditsMax(RavenServer.CpuCreditsState state) : ScalarObjectBase<Integer32>(SnmpOids.Server.CpuCreditsMax), IMetricInstrument<int>
     {
-        private readonly RavenServer.CpuCreditsState _state;
-
-        public CpuCreditsMax(RavenServer.CpuCreditsState state) 
-            : base(SnmpOids.Server.CpuCreditsMax)
-        {
-            _state = state;
-        }
+        private int Value => (int)state.MaxCredits;
 
         protected override Integer32 GetData()
         {
-            return new Integer32((int)_state.MaxCredits);
+            return new Integer32(Value);
         }
+        
+        public int GetCurrentMeasurement() => Value;
     }
 }

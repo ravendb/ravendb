@@ -1,21 +1,18 @@
 using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class ServerConcurrentRequests : ScalarObjectBase<Integer32>
+    public sealed class ServerConcurrentRequests(MetricCounters metrics) : ScalarObjectBase<Integer32>(SnmpOids.Server.ConcurrentRequests), IMetricInstrument<int>
     {
-        private readonly MetricCounters _metrics;
-
-        public ServerConcurrentRequests(MetricCounters metrics)
-            : base(SnmpOids.Server.ConcurrentRequests)
-        {
-            _metrics = metrics;
-        }
-
+        private int Value => (int)metrics.Requests.ConcurrentRequestsCount;
+        
         protected override Integer32 GetData()
         {
-            return new Integer32((int)_metrics.Requests.ConcurrentRequestsCount);
+            return new Integer32(Value);
         }
+
+        public int GetCurrentMeasurement() => Value;
     }
 }

@@ -1,20 +1,16 @@
 ﻿using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class CpuCreditsCurrentConsumption : ScalarObjectBase<OctetString>
+    public sealed class CpuCreditsCurrentConsumption(RavenServer.CpuCreditsState state)
+        : ScalarObjectBase<OctetString>(SnmpOids.Server.CpuCreditsCurrentConsumption), IMetricInstrument<double>
     {
-        private readonly RavenServer.CpuCreditsState _state;
-
-        public CpuCreditsCurrentConsumption(RavenServer.CpuCreditsState state) 
-            : base(SnmpOids.Server.CpuCreditsCurrentConsumption)
-        {
-            _state = state;
-        }
-
         protected override OctetString GetData()
         {
-            return new OctetString(_state.CurrentConsumption.ToString("F1"));
+            return new OctetString(state.CurrentConsumption.ToString("F1"));
         }
+
+        public double GetCurrentMeasurement() => state.CurrentConsumption;
     }
 }

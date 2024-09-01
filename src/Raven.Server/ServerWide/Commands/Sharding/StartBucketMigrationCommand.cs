@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -18,6 +20,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
         public int? SourceShard;
         public int DestinationShard;
         public int Bucket;
+        public string Prefix;
 
         private ShardBucketMigration _migration;
 
@@ -25,15 +28,15 @@ namespace Raven.Server.ServerWide.Commands.Sharding
         {
         }
 
-        public StartBucketMigrationCommand(int bucket, int destShard, string database, string raftId) : base(database, raftId)
+        public StartBucketMigrationCommand(int bucket, int? sourceShard, int destShard, string database, string prefix, string raftId) : base(database, raftId)
         {
+            if (bucket >= ShardHelper.NumberOfBuckets && string.IsNullOrEmpty(prefix))
+                throw new InvalidOperationException($"Bucket {bucket} belongs to a prefixed range, but 'prefix' parameter wasn't provided");
+
+            SourceShard = sourceShard;
             Bucket = bucket;
             DestinationShard = destShard;
-        }
-
-        public StartBucketMigrationCommand(int bucket, int sourceShard, int destShard, string database, string raftId) : this(bucket, destShard, database, raftId)
-        {
-            SourceShard = sourceShard;
+            Prefix = prefix;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
@@ -55,8 +58,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 }
             }
 
-            if (record.Sharding.Shards.ContainsKey(DestinationShard) == false)
-                throw new RachisApplyException($"Destination shard {DestinationShard} doesn't exists");
+            AssertDestinationShardExists(record.Sharding);
 
             _migration = new ShardBucketMigration
             {
@@ -114,11 +116,30 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             }
         }
 
+        private void AssertDestinationShardExists(ShardingConfiguration shardingConfiguration)
+        {
+            if (shardingConfiguration.Shards.ContainsKey(DestinationShard) == false)
+                throw new RachisApplyException($"Database '{DatabaseName}' : Failed to start migration of bucket '{Bucket}'. Destination shard {DestinationShard} doesn't exist");
+
+            if (string.IsNullOrEmpty(Prefix)) 
+                return;
+
+            // prefixed bucket range
+            var index = shardingConfiguration.Prefixed.BinarySearch(new PrefixedShardingSetting(Prefix), PrefixedSettingComparer.Instance);
+            if (index < 0)
+                throw new RachisApplyException($"Database '{DatabaseName}' : Failed to start migration of bucket '{Bucket}'. Prefix {Prefix} doesn't exist");
+
+            var shards = shardingConfiguration.Prefixed[index].Shards;
+            if (shards == null || shards.Contains(DestinationShard) == false)
+                throw new RachisApplyException($"Database '{DatabaseName}' : Failed to start migration of bucket '{Bucket}'. Destination shard {DestinationShard} doesn't exist");
+        }
+
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(SourceShard)] = SourceShard;
             json[nameof(DestinationShard)] = DestinationShard;
             json[nameof(Bucket)] = Bucket;
+            json[nameof(Prefix)] = Prefix;
         }
     }
 }

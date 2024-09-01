@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
@@ -83,45 +84,55 @@ namespace SlowTests.Issues
 
                     });
                     session.SaveChanges();
+                    
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())
                 {
                     DateTimeOffset? myFromDate = new DateTimeOffset(new DateTime(2013, 1, 1));
                     DateTimeOffset? myToDate = new DateTimeOffset(new DateTime(2013, 1, 2));
-
-                    var query = session.Query<TestObject>();
-
-
+                    
+                    var query = session.Query<TestObjectIndex.IndexEntry, TestObjectIndex>();
+                    
                     //good query
-                    var res1 = query.Where(x => x.DateRangesWithNumbers.Any(dateRange =>
-                         (dateRange.From <= myFromDate && dateRange.To >= myFromDate) ||
-                         (dateRange.From <= myToDate && dateRange.To >= myToDate)))
-                          .ToList();
+                    var res1 = query.Where(x =>
+                            (x.From <= myFromDate && x.To >= myFromDate) ||
+                            (x.From <= myToDate && x.To >= myToDate))
+                        .ProjectInto<TestObject>()
+                        .ToList();
 
                     //bad query
-                    var res2 = query.Where(x => x.DateRangesWithNumbers.Any(dateRange =>
-                          (myFromDate >= dateRange.From && myFromDate <= dateRange.To) ||
-                          (myToDate >= dateRange.From && myToDate <= dateRange.To)))
-                          .ToList();
-                    var areEquivalent = (res1.Count == res2.Count) && !res1.Except(res2).Any();
-                    Assert.Equal(areEquivalent, true);
-
+                    var res2 = query.Where(x =>
+                            (myFromDate >= x.From && myFromDate <= x.To) ||
+                            (myToDate >= x.From && myToDate <= x.To))
+                        .ProjectInto<TestObject>()
+                        .ToList();
+                    
+                    Assert.Equal(3, res1.Count);
+                    Assert.Equal(3, res2.Count);
                 }
             }
         }
 
         private class TestObjectIndex : AbstractIndexCreationTask<TestObject>
         {
+            public class IndexEntry
+            {
+                public DateTimeOffset From { get; set; }
+                public DateTimeOffset To { get; set; }
+                public int Number { get; set; }
+            }
+            
             public TestObjectIndex()
             {
-                Map = testobjects => from testobject in testobjects
-                                     from daterangewithnumber in testobject.DateRangesWithNumbers
-                                     select new
+                Map = testObjects => from testObject in testObjects
+                                     from dateRangeWithNumber in testObject.DateRangesWithNumbers
+                                     select new IndexEntry()
                                      {
-                                         From = daterangewithnumber.From,
-                                         To = daterangewithnumber.To,
-                                         Number = daterangewithnumber.Number
+                                         From = dateRangeWithNumber.From,
+                                         To = dateRangeWithNumber.To,
+                                         Number = dateRangeWithNumber.Number
                                      };
             }
         }

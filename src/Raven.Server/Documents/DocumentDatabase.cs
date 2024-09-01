@@ -194,7 +194,6 @@ namespace Raven.Server.Documents
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath, stacktrace);
                 });
                 _hasClusterTransaction = new ManualResetEventSlim(false);
-                IdentityPartsSeparator = '/';
                 QueueSinkLoader = new QueueSinkLoader(this, serverStore);
                 _proxyRequestExecutor = CreateRequestExecutor();
                 _serverStore.Server.ServerCertificateChanged += OnCertificateChange;
@@ -332,7 +331,12 @@ namespace Raven.Server.Documents
 
         public byte[] MasterKey { get; private set; }
 
-        public char IdentityPartsSeparator { get; private set; }
+        private char? _localIdentityPartsSeparator;
+
+        public char IdentityPartsSeparator
+        {
+            get => _localIdentityPartsSeparator ?? _serverStore.DefaultIdentityPartsSeparator;
+        }
 
         public ClientConfiguration ClientConfiguration { get; private set; }
 
@@ -1579,9 +1583,9 @@ namespace Raven.Server.Documents
                 }
 
                 ClientConfiguration = record.Client;
-                IdentityPartsSeparator = record.Client is { Disabled: false }
-                    ? record.Client.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator
-                    : Constants.Identities.DefaultSeparator;
+                _localIdentityPartsSeparator = record.Client is { Disabled: false, IdentityPartsSeparator: not null }
+                    ? record.Client.IdentityPartsSeparator
+                    : null;
                 StudioConfiguration = record.Studio;
 
                 ServerStore.DatabasesLandlord.ForTestingPurposes?.DelayNotifyFeaturesAboutStateChange?.Invoke();

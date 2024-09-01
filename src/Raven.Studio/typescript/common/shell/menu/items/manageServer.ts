@@ -20,15 +20,28 @@ function getManageServerMenuItem() {
             title: "Cluster",
             nav: true,
             css: 'icon-cluster',
-            dynamicHash: appUrl.forCluster
+            dynamicHash: appUrl.forCluster,
+            search: {
+                alternativeTitles: ["Cluster Topology"],
+                innerActions: [
+                    { name: "Delete Node from Cluster", alternativeNames: ["Remove Node from Cluster"] },
+                    { name: "Reassign cores" },
+                    { name: "Force timeout" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/addClusterNode',
             moduleId: require("viewmodels/manage/addClusterNode"),
             title: "Add Cluster Node",
             nav: false,
+            css: "icon-plus",
             dynamicHash: appUrl.forAddClusterNode,
-            itemRouteToHighlight: 'admin/settings/cluster'
+            itemRouteToHighlight: 'admin/settings/cluster',
+            search: {
+                overrideTitle: "Add New Cluster Node",
+                alternativeTitles: ["Create Cluster Node"],
+            }
         }),
         new leafMenuItem({
             route: 'admin/settings/clientConfiguration',
@@ -37,7 +50,16 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-client-configuration',
             dynamicHash: appUrl.forGlobalClientConfiguration,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Identity parts separator" },
+                    { name: "Maximum number of requests per session" },
+                    { name: "Load Balance Behavior" },
+                    { name: "Seed" },
+                    { name: "Read Balance Behavior" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/studioConfiguration',
@@ -46,7 +68,15 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-studio-configuration',
             dynamicHash: appUrl.forGlobalStudioConfiguration,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Server Environment" },
+                    { name: "Default Replication Factor" },
+                    { name: "Collapse documents when opening" },
+                    { name: "Help improve the Studio by gathering anonymous usage statistics" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/serverSettings',
@@ -82,23 +112,41 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-server-wide-tasks',
             dynamicHash: appUrl.forServerWideTasks,
-            requiredAccess: "ClusterAdmin"
+            requiredAccess: "ClusterAdmin",
+            search: {
+                innerActions: [
+                    { name: "Server-Wide External Replication" },
+                    { name: "Server-Wide Periodic Backup" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideBackup',
             moduleId: require("viewmodels/manage/editServerWideBackup"),
             title: "Edit Server-Wide Backup Task",
             nav: false,
+            css: "icon-plus",
             dynamicHash: appUrl.forEditServerWideBackup,
-            itemRouteToHighlight: 'admin/settings/serverWideTasks'
+            itemRouteToHighlight: 'admin/settings/serverWideTasks',
+            requiredAccess: "ClusterAdmin",
+            search: {
+                overrideTitle: "Add New Server-Wide Backup Task",
+                alternativeTitles: ["Create Server-Wide Backup Task"],
+            }
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideExternalReplication',
             moduleId: require("viewmodels/manage/editServerWideExternalReplication"),
             title: "Edit Server-Wide External Replication Task",
             nav: false,
+            css: "icon-plus",
             dynamicHash: appUrl.forEditServerWideExternalReplication,
-            itemRouteToHighlight: 'admin/settings/serverWideTasks'
+            itemRouteToHighlight: 'admin/settings/serverWideTasks',
+            requiredAccess: "ClusterAdmin",
+            search: {
+                overrideTitle: "Add New Server-Wide External Replication Task",
+                alternativeTitles: ["Create Server-Wide External Replication Task"],
+            }
         }),
         new leafMenuItem({
             route: 'admin/settings/serverWideCustomAnalyzers',
@@ -107,15 +155,14 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-server-wide-custom-analyzers',
             dynamicHash: appUrl.forServerWideCustomAnalyzers,
-            requiredAccess: "Operator"
-        }),
-        new leafMenuItem({
-            route: 'admin/settings/editServerWideCustomAnalyzer',
-            moduleId: require("viewmodels/manage/editServerWideCustomAnalyzer"),
-            title: "Edit Server-Wide Custom Analyzer",
-            nav: false,
-            dynamicHash: appUrl.forEditServerWideCustomAnalyzer,
-            itemRouteToHighlight: 'admin/settings/serverWideCustomAnalyzers'
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Add New Server-Wide Custom Analyzer", alternativeNames: ["Create Server-Wide Custom Analyzer"] },
+                    { name: "Edit Server-Wide Custom Analyzer" },
+                    { name: "DeleteServer-Wide Custom Analyzer", alternativeNames: ["Remove Server-Wide Custom Analyzer"] },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/serverWideCustomSorters',
@@ -124,7 +171,14 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-server-wide-custom-sorters',
             dynamicHash: appUrl.forServerWideCustomSorters,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Add New Server-Wide Custom Sorter", alternativeNames: ["Create Server-Wide Custom Sorter"] },
+                    { name: "Edit New Server-Wide Custom Sorter" },
+                    { name: "Delete New Server-Wide Custom Sorter", alternativeNames: ["Remove New Server-Wide Custom Sorter"] },
+                ],
+            },
         }),
         new separatorMenuItem(),
         new separatorMenuItem('Debug'),
@@ -135,7 +189,13 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-admin-logs',
             dynamicHash: appUrl.forAdminLogs,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Export logs" },
+                    { name: "Download logs" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/trafficWatch',
@@ -144,7 +204,12 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-traffic-watch',
             dynamicHash: appUrl.forTrafficWatch,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Export Traffic Logs" }
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/debugInfo',
@@ -153,7 +218,14 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-gather-debug-information',
             dynamicHash: appUrl.forDebugInfo,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                alternativeTitles: ["Create Debug Package"],
+                innerActions: [
+                    { name: "Gather Debug Info" },
+                    { name: "Download Debug Package" },
+                ],
+            }
         }),
         new leafMenuItem({
             route: 'admin/settings/storageReport',
@@ -173,7 +245,13 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-manage-server-io-test',
             dynamicHash: appUrl.forSystemIoStats,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Export IO stats" },
+                    { name: "Import IO stats" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/captureStackTraces',
@@ -182,7 +260,14 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-stack-traces', 
             dynamicHash: appUrl.forCaptureStackTraces,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Capture Stack Trace" },
+                    { name: "Export Stack Traces" },
+                    { name: "Import Stack Traces" },
+                ]
+            }
         }),
         new leafMenuItem({
             route: 'admin/settings/runningQueries',
@@ -198,11 +283,75 @@ function getManageServerMenuItem() {
             title: 'Advanced',
             nav: true,
             css: 'icon-debug-advanced',
-            hash: appUrl.forDebugAdvancedThreadsRuntime(),
-            requiredAccess: "Operator"
+            dynamicHash: appUrl.forDebugAdvancedThreadsRuntime,
+            requiredAccess: "Operator",
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debug/advanced/threadsRuntime',
+            moduleId: require('viewmodels/manage/debugAdvancedThreadsRuntime'),
+            title: 'Advanced',
+            nav: false,
+            css: 'icon-debug-advanced',
+            dynamicHash: appUrl.forDebugAdvancedThreadsRuntime,
+            itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            requiredAccess: "Operator",
+            search: {
+                overrideTitle: "Threads Runtime Info",
+            },
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debug/advanced/memoryMappedFiles',
+            moduleId: require('viewmodels/manage/debugAdvancedMemoryMappedFiles'),
+            title: "Advanced",
+            nav: false,
+            css: 'icon-debug-advanced',
+            dynamicHash: appUrl.forDebugAdvancedMemoryMappedFiles,
+            itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            requiredAccess: "Operator",
+            search: {
+                overrideTitle: 'Memory Mapped Files',
+            }
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debug/advanced/observerLog',
+            moduleId: require('viewmodels/manage/debugAdvancedObserverLog'),
+            title: 'Advanced',
+            nav: false,
+            css: 'icon-debug-advanced',
+            dynamicHash: appUrl.forDebugAdvancedObserverLog,
+            itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            requiredAccess: "Operator",
+            search: {
+                overrideTitle: 'Cluster Observer Log',
+            }
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debug/advanced/recordTransactionCommands',
+            moduleId: require('viewmodels/manage/debugAdvancedRecordTransactionCommands'),
+            title: 'Advanced',
+            nav: false,
+            css: 'icon-debug-advanced',
+            dynamicHash: appUrl.forDebugAdvancedRecordTransactionCommands,
+            itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            requiredAccess: "Operator",
+            search: {
+                overrideTitle: 'Record Transaction Commands',
+            }
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debug/advanced/replayTransactionCommands',
+            moduleId: require('viewmodels/manage/debugAdvancedReplayTransactionCommands'),
+            title: 'Advanced',
+            nav: false,
+            css: 'icon-debug-advanced',
+            dynamicHash: appUrl.forDebugAdvancedReplayTransactionCommands,
+            itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            requiredAccess: "Operator",
+            search: {
+                overrideTitle: 'Replay Transaction Commands',
+            }
         }),
     ];
 
     return new intermediateMenuItem('Manage Server', items, 'icon-manage-server', null);
 }
-

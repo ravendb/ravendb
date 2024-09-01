@@ -1,4 +1,5 @@
-﻿using Lucene.Net.Documents;
+﻿using System;
+using Lucene.Net.Documents;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -10,6 +11,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
     {
         public readonly IndexCompiler.IndexMethods Methods = new IndexCompiler.IndexMethods();
 
+        private long IndexVersion { get; set; }
+        
+        public MethodDetectorRewriter(long indexVersion)
+        {
+            IndexVersion = indexVersion;
+        }
+
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             var expression = node.Expression.ToString();
@@ -20,6 +28,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             {
                 case "this.LoadDocument":
                 case nameof(AbstractCommonApiForIndexes.LoadDocument):
+                    AssertLoadDocumentHasConstantCollectionName(node);
                     Methods.HasLoadDocument = true;
                     break;
                 case "this.TransformWith":
@@ -67,6 +76,14 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         {
             Methods.HasGroupBy = true;
             return base.VisitGroupClause(node);
+        }
+
+        private void AssertLoadDocumentHasConstantCollectionName(InvocationExpressionSyntax node)
+        {
+            var collectionExpression = node.ArgumentList.Arguments[1].Expression;
+                
+            if (collectionExpression is not LiteralExpressionSyntax && IndexVersion >= IndexDefinitionBaseServerSide.IndexVersion.LoadDocumentWithDynamicCollectionNameShouldThrow)
+                throw new ArgumentException("LoadDocument method has to be called with constant value as collection name");
         }
     }
 }

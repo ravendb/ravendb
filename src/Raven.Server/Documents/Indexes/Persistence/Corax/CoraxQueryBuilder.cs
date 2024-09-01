@@ -280,7 +280,7 @@ public static class CoraxQueryBuilder
 
                 var indexVersion = builderParameters.Index.Definition.Version;
 
-                if (indexVersion >= IndexDefinitionBaseServerSide.IndexVersion.UseNonExistingPostingList)
+                if (IndexDefinitionBaseServerSide.IndexVersion.IsNonExistingPostingListSupported(indexVersion))
                 {
                     var queryWithNullAndNonExistingMatches = indexSearcher.IncludeNonExistingMatch(in sortBy.Field, queryWithNullMatches, sortBy.Ascending);
                     coraxQuery = queryWithNullAndNonExistingMatches;

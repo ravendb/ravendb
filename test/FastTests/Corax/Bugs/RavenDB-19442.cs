@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -34,6 +35,7 @@ namespace FastTests.Corax.Bugs
 
                 session.Store(new TestData()
                 {
+                    Complex = true,
                     Identifier = "hehe3",
                     Name = "a2",
                     Second = "b3"
@@ -42,20 +44,26 @@ namespace FastTests.Corax.Bugs
                 session.SaveChanges();
             }
 
-            new ComplexIndex().Execute(store);
-            WaitForUserToContinueTheTest(store);
+            var index = new ComplexIndex();
+            index.Execute(store);
             Indexes.WaitForIndexing(store);
 
+            var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
+            Assert.Equal(1, indexErrors.Length);
+            
+            Assert.Contains("field is a complex object", indexErrors[0].Errors[0].Error);
             using (var session = store.OpenSession())
             {
                 var users = session
                     .Query<TestData, ComplexIndex>()
                     .Customize(x => x.WaitForNonStaleResults())
-                    .Where(x => x.Identifier == "hehe3")
+                    .Where(x => x.Identifier.StartsWith("hehe"))
                     .ToList();
 
-                Assert.Equal(1, users.Count);
+                Assert.Equal(2, users.Count);
             }
+
+            WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, 2);
         }
 
         public class TestData
@@ -63,12 +71,13 @@ namespace FastTests.Corax.Bugs
             public string Name { get; set; }
             public string Second { get; set; }
             public string Identifier { get; set; }
+            public bool Complex { get; set; }
         }
         private class ComplexIndex : AbstractIndexCreationTask<TestData>
         {
             public ComplexIndex()
             {
-                Map = datas => datas.Select(i => new { Identifier = i.Identifier, Complex = new { i.Name, i.Second } });
+                Map = datas => datas.Select(i => new { Identifier = i.Identifier, Complex = i.Complex ? new { i.Name, i.Second } : null });
 
                 Index("Complex", FieldIndexing.Exact);
             }

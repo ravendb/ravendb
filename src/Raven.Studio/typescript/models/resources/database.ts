@@ -29,7 +29,6 @@ abstract class database {
     dynamicNodesDistribution = ko.observable<boolean>(false);
     
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
-    environmentClass = database.createEnvironmentColorComputed("label", this.environment);
 
     databaseAccess = ko.observable<databaseAccessLevel>();
     databaseAccessText = ko.observable<string>();
@@ -136,7 +135,8 @@ abstract class database {
             isFixOrder: this.fixOrder(),
             indexesCount: this.indexesCount(),
             lockMode: this.lockMode(),
-            deletionInProgress: this.deletionInProgress().map(x => x.tag)
+            deletionInProgress: this.deletionInProgress().map(x => x.tag),
+            environment: this.environment(),
         }
     }
     

@@ -33,6 +33,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     const hasSqlEtl = useAppSelector(licenseSelectors.statusValue("HasSqlEtl"));
     const hasOlapEtl = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));
     const hasRabbitMqEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const hasAzureQueueStorageEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasKafkaSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
@@ -136,6 +137,38 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         {!hasReplicationSink && <LicenseRestrictedBadge licenseRequired="Professional +" />}
                     </TaskItem>
                 </Row>
+                <HrHeader>Backups & Subscriptions</HrHeader>
+                <Row className="gy-sm">
+                    <TaskItem
+                        title="Create new Backup task"
+                        href={appUrl.forEditPeriodicBackupTask(db.name, "OngoingTasks", false)}
+                        className="backup"
+                        target="PeriodicBackup"
+                    >
+                        <Icon icon="periodic-backup" />
+                        <h4 className="mt-1 mb-0">Periodic Backup</h4>
+                        {!hasPeriodicBackups && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                    </TaskItem>
+
+                    <TaskItem
+                        title="Create new Subscription task"
+                        href={appUrl.forEditSubscription(db.name)}
+                        className="subscription"
+                        target="Subscription"
+                        disabled={isSubscriptionDisabled}
+                        disableReason={getSubscriptionDisableReason()}
+                    >
+                        <Icon icon="subscription" />
+                        <h4 className="mt-1 mb-0">Subscription</h4>
+                        {!isProfessionalOrAbove && (
+                            <CounterBadge
+                                count={subscriptionsDatabaseCount}
+                                limit={subscriptionsDatabaseLimit}
+                                hideNotReached
+                            />
+                        )}
+                    </TaskItem>
+                </Row>
                 <HrHeader>ETL (RavenDB ⇛ TARGET)</HrHeader>
                 <Row className="gy-sm">
                     <TaskItem
@@ -207,6 +240,19 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         <h4 className="mt-1 mb-0">RabbitMQ ETL</h4>
                         {!hasRabbitMqEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
+
+                    <TaskItem
+                        title="Create new Azure Queue Storage ETL task"
+                        href={appUrl.forEditAzureQueueStorageEtl(db.name)}
+                        className="azure-queue-storage-etl"
+                        target="AzureQueueStorageETL"
+                        disabled={isSharded}
+                        disableReason={getDisableReasonForSharded()}
+                    >
+                        <Icon icon="azure-queue-storage-etl" />
+                        <h4 className="mt-1 mb-0">Azure Queue Storage ETL</h4>
+                        {!hasAzureQueueStorageEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                    </TaskItem>
                 </Row>
                 <HrHeader>SINK (SOURCE ⇛ RavenDB)</HrHeader>
                 <Row className="gy-sm">
@@ -234,38 +280,6 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         <Icon icon="rabbitmq-sink" />
                         <h4 className="mt-1 mb-0">RabbitMQ Sink</h4>
                         {!hasRabbitMqSink && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
-                    </TaskItem>
-                </Row>
-                <HrHeader>Backups & Subscriptions</HrHeader>
-                <Row className="gy-sm">
-                    <TaskItem
-                        title="Create new Backup task"
-                        href={appUrl.forEditPeriodicBackupTask(db.name, "OngoingTasks")}
-                        className="backup"
-                        target="PeriodicBackup"
-                    >
-                        <Icon icon="periodic-backup" />
-                        <h4 className="mt-1 mb-0">Periodic Backup</h4>
-                        {!hasPeriodicBackups && <LicenseRestrictedBadge licenseRequired="Professional +" />}
-                    </TaskItem>
-
-                    <TaskItem
-                        title="Create new Subscription task"
-                        href={appUrl.forEditSubscription(db.name)}
-                        className="subscription"
-                        target="Subscription"
-                        disabled={isSubscriptionDisabled}
-                        disableReason={getSubscriptionDisableReason()}
-                    >
-                        <Icon icon="subscription" />
-                        <h4 className="mt-1 mb-0">Subscription</h4>
-                        {!isProfessionalOrAbove && (
-                            <CounterBadge
-                                count={subscriptionsDatabaseCount}
-                                limit={subscriptionsDatabaseLimit}
-                                hideNotReached
-                            />
-                        )}
                     </TaskItem>
                 </Row>
             </ModalBody>

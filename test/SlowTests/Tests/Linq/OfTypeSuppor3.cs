@@ -8,6 +8,8 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -43,6 +45,7 @@ namespace SlowTests.Tests.Linq
                                       .Single();
 
                     Assert.NotNull(item.Strings);
+                    Assert.NotNull(item.Values);
                 }
             }
         }
@@ -64,6 +67,9 @@ namespace SlowTests.Tests.Linq
                                                  });
 
                 Store(result => result.Strings, FieldStorage.Yes);
+
+                Store(x => x.Values, FieldStorage.Yes);
+                Index(x => x.Values, FieldIndexing.No);
             }
 
         }

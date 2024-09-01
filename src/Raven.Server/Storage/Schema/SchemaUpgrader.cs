@@ -14,15 +14,15 @@ namespace Raven.Server.Storage.Schema
     {
         internal sealed class CurrentVersion
         {
-            public const int ServerVersion = 60_000;
+            public const int ServerVersion = 61_000;
 
             public const int ConfigurationVersion = 50_000;
 
-            public const int DocumentsVersion = 60_000;
+            public const int DocumentsVersion = 61_000;
 
-            public const int LuceneIndexVersion = 60_000;
+            public const int LuceneIndexVersion = 61_000;
 
-            public const int CoraxIndexVersion = 60_000;
+            public const int CoraxIndexVersion = 61_000;
 
             public static (int Version, StorageType Type) GetIndexVersionAndStorageType(SearchEngineType type) => type switch
             {

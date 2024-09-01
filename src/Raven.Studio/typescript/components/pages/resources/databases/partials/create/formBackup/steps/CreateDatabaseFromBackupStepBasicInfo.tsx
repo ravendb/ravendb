@@ -34,6 +34,7 @@ export default function CreateDatabaseFromBackupStepBasicInfo() {
                         name="basicInfoStep.databaseName"
                         id="DbName"
                         placeholder="Database Name"
+                        autoComplete="off"
                     />
                 </Col>
             </Row>

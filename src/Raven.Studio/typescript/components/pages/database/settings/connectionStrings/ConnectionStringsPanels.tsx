@@ -59,6 +59,8 @@ function getTypeLabel(type: StudioEtlType): string {
             return "RavenDB";
         case "Sql":
             return "SQL";
+        case "AzureQueueStorage":
+            return "Azure Queue Storage";
         default:
             return type;
     }
@@ -78,6 +80,8 @@ function getIcon(type: StudioEtlType): IconName {
             return "kafka";
         case "RabbitMQ":
             return "rabbitmq";
+        case "AzureQueueStorage":
+            return "azure-queue-storage";
         default:
             return null;
     }

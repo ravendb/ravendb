@@ -1,6 +1,5 @@
 using System;
 using Microsoft.Data.SqlClient;
-using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 
 namespace Tests.Infrastructure.ConnectionString
 {
@@ -21,8 +20,6 @@ namespace Tests.Infrastructure.ConnectionString
                 return localConnectionString;
 
             var remoteConnectionString = Environment.GetEnvironmentVariable(EnvironmentVariable);
-
-            remoteConnectionString = SqlConnectionStringUtil.GetConnectionStringWithOptionalEncrypt(remoteConnectionString);
             
             if (TryConnect(remoteConnectionString, out errorMessage))
                 return remoteConnectionString;

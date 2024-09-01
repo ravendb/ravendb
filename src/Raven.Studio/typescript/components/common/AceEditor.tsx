@@ -2,7 +2,7 @@ import React, { LegacyRef, useEffect, useState } from "react";
 import { AceEditorMode, LanguageService } from "components/models/aceEditor";
 import { Ace } from "ace-builds";
 import { setCompleters } from "ace-builds/src-noconflict/ext-language_tools";
-import ReactAce, { IAceEditorProps, IAceOptions, ICommand as CommandFromReactAce } from "react-ace";
+import ReactAce, { IAceEditorProps, IAceOptions, ICommand } from "react-ace";
 import "./AceEditor.scss";
 import classNames from "classnames";
 
@@ -75,7 +75,7 @@ export default function AceEditor(props: AceEditorProps) {
 
     const errorMessage = validationErrorMessage ?? aceErrorMessage;
 
-    const commands: Command[] = execute
+    const commands: ICommand[] = execute
         ? [
               ...defaultCommands,
               {
@@ -107,6 +107,7 @@ export default function AceEditor(props: AceEditorProps) {
                     setOptions={overriddenSetOptions}
                     onValidate={onValidate}
                     commands={commands}
+                    onLoad={removeFindNextCommand} // (ctrl+k is used for studio search)
                     {...rest}
                 />
                 <span className="fullScreenModeLabel">Press Shift+F11 to enter full screen mode</span>
@@ -120,12 +121,7 @@ export default function AceEditor(props: AceEditorProps) {
     );
 }
 
-// Can be removed after https://github.com/securingsincity/react-ace/pull/1881 is merged
-interface Command extends CommandFromReactAce {
-    readOnly?: boolean;
-}
-
-const defaultCommands: Command[] = [
+const defaultCommands: ICommand[] = [
     {
         name: "Open Fullscreen",
         bindKey: {
@@ -138,3 +134,7 @@ const defaultCommands: Command[] = [
         readOnly: true,
     },
 ];
+
+const removeFindNextCommand = (editor: Ace.Editor) => {
+    editor.commands.removeCommand(editor.commands.byName.findnext);
+};

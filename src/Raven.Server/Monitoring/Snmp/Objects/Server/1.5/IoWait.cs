@@ -1,10 +1,12 @@
+using System.IO;
 using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class IoWait : ScalarObjectBase<Gauge32>
+    public sealed class IoWait : ScalarObjectBase<Gauge32>, IMetricInstrument<int>
     {
         private readonly MetricCacher _metricCacher;
         private readonly ICpuUsageCalculator _calculator;
@@ -16,9 +18,13 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             _calculator = calculator;
         }
 
+        private int? Value => (int?)_metricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, _calculator.Calculate).MachineIoWait;
+
         protected override Gauge32 GetData()
         {
-            return new Gauge32((int)_metricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, _calculator.Calculate).MachineIoWait);
+            return new Gauge32(Value!.Value);
         }
+
+        public int GetCurrentMeasurement() => Value ?? 0;
     }
 }

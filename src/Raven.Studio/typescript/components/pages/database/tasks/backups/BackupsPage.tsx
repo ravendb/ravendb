@@ -255,7 +255,7 @@ export function BackupsPage() {
     };
 
     const createNewPeriodicBackupTask = () => {
-        const url = appUrl.forEditPeriodicBackupTask(db.name, "Backups");
+        const url = appUrl.forEditPeriodicBackupTask(db.name, "Backups", false);
         router.navigate(url);
     };
 

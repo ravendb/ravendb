@@ -6,12 +6,9 @@ import sys = require("durandal/system");
 import menu = require("common/shell/menu");
 import generateMenuItems = require("common/shell/menu/generateMenuItems");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import databaseSwitcher = require("common/shell/databaseSwitcher");
 import accessManager = require("common/shell/accessManager");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import favNodeBadge = require("common/shell/favNodeBadge");
-import searchBox = require("common/shell/searchBox");
-import database = require("models/resources/database");
 import license = require("models/auth/licenseModel");
 import buildInfo = require("models/resources/buildInfo");
 import changesContext = require("common/changesContext");
@@ -63,6 +60,7 @@ import UpgradeModal from "./shell/UpgradeModal";
 import getStudioBootstrapCommand from "commands/resources/getStudioBootstrapCommand";
 import serverSettings from "common/settings/serverSettings";
 import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
+import StudioSearchWithDatabaseSwitcher from "components/shell/studioSearchWithDatabaseSelector/StudioSearchWithDatabaseSwitcher";
 
 class shell extends viewModelBase {
 
@@ -109,12 +107,9 @@ class shell extends viewModelBase {
     allShardsUrl: KnockoutObservable<string>;
     clientCertificate = clientCertificateModel.certificateInfo;
     certificateExpirationState = clientCertificateModel.certificateExpirationState;
-    
     latestVersionInfo = ko.observable<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>();
-
+    
     mainMenu: menu;
-    searchBox = new searchBox();
-    databaseSwitcher = new databaseSwitcher();
     favNodeBadge = new favNodeBadge();
 
     smallScreen = ko.observable<boolean>(false);
@@ -127,15 +122,20 @@ class shell extends viewModelBase {
     studioLoadingFakeRequest: requestExecution;
     
     serverEnvironment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
-    serverEnvironmentClass = database.createEnvironmentColorComputed("text", this.serverEnvironment);
-    
+    serverEnvironmentClass: KnockoutComputed<string>;
+    serverEnvironmentShortText: KnockoutComputed<string>;
+
     private onBootstrapFinishedTask = $.Deferred<void>();
 
     upgradeModalView: ReactInKnockout<typeof UpgradeModal>;
     isUpgradeModalVisible = ko.observable<boolean>(false);
+
+    studioSearchWithDatabaseSwitcherView: ReactInKnockout<typeof StudioSearchWithDatabaseSwitcher>;
     
     constructor() {
         super();
+        
+        shell.instance = this;
 
         this.studioLoadingFakeRequest = protractedCommandsDetector.instance.requestStarted(0);
 
@@ -232,6 +232,45 @@ class shell extends viewModelBase {
         });
 
         this.mainMenu = new menu(menuItems);
+        
+        this.studioSearchWithDatabaseSwitcherView = ko.computed(() => {
+            return {
+                component: StudioSearchWithDatabaseSwitcher,
+                props: {
+                    menuItems: this.mainMenu.items(),
+                },
+            };
+        });
+
+        this.serverEnvironmentClass = ko.pureComputed(() => {
+            const env = this.serverEnvironment();
+            
+            switch (env) {
+                case "Production":
+                    return "bg-danger";
+                case "Testing":
+                    return "bg-success";
+                case "Development":
+                    return "bg-info";
+                default:
+                    return "";
+            }
+        })
+
+        this.serverEnvironmentShortText = ko.pureComputed(() => {
+            const env = this.serverEnvironment();
+            
+            switch (env) {
+                case "Production":
+                    return "PROD";
+                case "Testing":
+                    return "TEST";
+                case "Development":
+                    return "DEV";
+                default:
+                    return "";
+            }
+        });
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -448,8 +487,6 @@ class shell extends viewModelBase {
 
         $(window).resize(checkScreenSize);
 
-        this.databaseSwitcher.initialize();
-        this.searchBox.initialize();
         this.favNodeBadge.initialize(); 
         
         notificationCenter.instance.initialize();

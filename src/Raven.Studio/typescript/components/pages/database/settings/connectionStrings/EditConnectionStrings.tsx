@@ -1,4 +1,4 @@
-﻿import { Icon } from "components/common/Icon";
+import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import { Button, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
 import Select, {
@@ -25,6 +25,7 @@ import useConnectionStringsLicense, { ConnectionStringsLicenseFeatures } from ".
 import assertUnreachable from "components/utils/assertUnreachable";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import AzureQueueStorageConnectionString from "components/pages/database/settings/connectionStrings/editForms/AzureQueueStorageConnectionString";
 
 export interface EditConnectionStringsProps {
     initialConnection?: Connection;
@@ -139,6 +140,7 @@ const connectionStringsOptions: SelectOptionWithIcon<StudioEtlType>[] = [
     { value: "ElasticSearch", label: "ElasticSearch", icon: "elasticsearch" },
     { value: "Kafka", label: "Kafka", icon: "kafka" },
     { value: "RabbitMQ", label: "RabbitMQ", icon: "rabbitmq" },
+    { value: "AzureQueueStorage", label: "Azure Queue Storage", icon: "azure-queue-storage-etl" },
 ];
 
 function getAvailableConnectionStringsOptions(
@@ -157,6 +159,7 @@ function getAvailableConnectionStringsOptions(
                 return features.hasElasticSearchEtl;
             case "Kafka":
             case "RabbitMQ":
+            case "AzureQueueStorage":
                 return features.hasQueueEtl;
             default:
                 return assertUnreachable(type);
@@ -178,6 +181,8 @@ function getEditConnectionStringComponent(type: StudioEtlType): (props: EditConn
             return KafkaConnectionString;
         case "RabbitMQ":
             return RabbitMqConnectionString;
+        case "AzureQueueStorage":
+            return AzureQueueStorageConnectionString;
         default:
             return null;
     }

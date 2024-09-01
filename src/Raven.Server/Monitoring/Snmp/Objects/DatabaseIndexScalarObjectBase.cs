@@ -4,9 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects
 {
@@ -42,6 +44,18 @@ namespace Raven.Server.Monitoring.Snmp.Objects
         protected Index GetIndex(DocumentDatabase database)
         {
             return database.IndexStore.GetIndex(IndexName);
+        }
+
+        protected bool TryGetIndex(out Index index)
+        {
+            if (TryGetDatabase(out var database))
+            {
+                index = GetIndex(database);
+                return index != null;
+            }
+
+            index = null;
+            return false;
         }
     }
 }

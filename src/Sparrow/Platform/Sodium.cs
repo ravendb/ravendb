@@ -13,8 +13,6 @@ namespace Sparrow.Platform
         {
             try
             {
-                DynamicNativeLibraryResolver.Register(typeof(Sodium).Assembly, LIBSODIUM);
-
                 var rc = sodium_init();
                 if (rc != 0)
                     throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);

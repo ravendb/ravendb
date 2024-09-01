@@ -24,7 +24,12 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Replication;
@@ -73,6 +78,7 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using DateTime = System.DateTime;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server
 {
@@ -101,6 +107,7 @@ namespace Raven.Server
         private IWebHost _redirectingWebHost;
 
         private readonly Logger _tcpLogger;
+        private bool _openTelemetryInitialized;
         private readonly ExternalCertificateValidator _externalCertificateValidator;
         internal readonly JsonContextPool _tcpContextPool;
 
@@ -140,7 +147,6 @@ namespace Raven.Server
             Conventions = conventions ?? DocumentConventions.DefaultForServer;
 
             JsonDeserializationValidator.Validate();
-
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
@@ -198,7 +204,16 @@ namespace Raven.Server
             sp.Restart();
             ListenToPipes().IgnoreUnobservedExceptions();
             Router = new RequestRouter(RouteScanner.AllRoutes, this);
-
+            try
+            {
+                ServerStore.PreInitialize();
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Could not open the server store", e);
+                throw;
+            }
             try
             {
                 ListenEndpoints = GetServerAddressesAndPort();
@@ -208,7 +223,6 @@ namespace Raven.Server
                     options.AddServerHeader = false;
 
                     options.AllowSynchronousIO = Configuration.Http.AllowSynchronousIo;
-
                     options.Limits.MaxRequestLineSize = (int)Configuration.Http.MaxRequestLineSize.GetValue(SizeUnit.Bytes);
                     options.Limits.MaxRequestBodySize = null; // no limit!
                     options.Limits.MinResponseDataRate = null; // no limit!
@@ -264,6 +278,8 @@ namespace Raven.Server
                     .UseShutdownTimeout(TimeSpan.FromSeconds(1))
                     .ConfigureServices(services =>
                     {
+                        ConfigureOpenTelemetry(services);
+
                         if (Configuration.Http.UseResponseCompression)
                         {
                             services.Configure<ResponseCompressionOptions>(options =>
@@ -366,7 +382,8 @@ namespace Raven.Server
 
                 StartSnmp();
                 StartPostgresServer();
-
+                StartOpenTelemetry();
+                
                 if (Configuration.Server.CpuCreditsBase != null ||
                     Configuration.Server.CpuCreditsMax != null ||
                     Configuration.Server.CpuCreditsExhaustionFailoverThreshold != null ||
@@ -413,6 +430,122 @@ namespace Raven.Server
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations("Could not start server", e);
                 throw;
+            }
+        }
+        
+        private void StartOpenTelemetry()
+        {
+            if (_openTelemetryInitialized == false)
+                return; // since we're not exposing there is no reason to initialize meters itself.
+            
+            MetricsManager = new MetricsManager(ServerStore.Server); 
+            MetricsManager.Execute();
+        }
+
+        private void ConfigureOpenTelemetry(IServiceCollection services)
+        {
+            var openTelemetryConfiguration = Configuration.Monitoring.OpenTelemetry;
+            if (openTelemetryConfiguration.Enabled == false)
+                return;
+            
+            if (TryReadServiceInstanceId(out var serviceInstanceId) == false)
+                return;
+            
+            var openTelemetryBuilder = services.AddOpenTelemetry();
+            
+            openTelemetryBuilder.WithMetrics(ConfigureMetrics);
+            void ConfigureMetrics(MeterProviderBuilder builder)
+            {
+                builder.ConfigureResource(x => x.AddEnvironmentVariableDetector());
+                var configuration = Configuration.Monitoring.OpenTelemetry;
+                builder.SetResourceBuilder(
+                    ResourceBuilder.CreateDefault()
+                        .AddService("server", "ravendb", serviceInstanceId: serviceInstanceId));
+                if (configuration.AspNetCoreInstrumentationMetersEnabled)
+                    builder.AddAspNetCoreInstrumentation();
+                if (configuration.RuntimeInstrumentationMetersEnabled)
+                    builder.AddRuntimeInstrumentation();
+                
+                if (configuration.GeneralEnabled)
+                    builder.AddMeter(Constants.Meters.GeneralMeter);
+                
+                if (configuration.Requests)
+                    builder.AddMeter(Constants.Meters.RequestsMeter);
+
+                if (configuration.ServerStorage)
+                    builder.AddMeter(Constants.Meters.StorageMeter);
+                
+                if (configuration.GcEnabled)
+                    builder.AddMeter(Constants.Meters.GcMeter);
+                
+                if (configuration.TotalDatabases)
+                    builder.AddMeter(Constants.Meters.TotalDatabasesMeter);
+                
+                if (configuration.Resources)
+                    builder.AddMeter(Constants.Meters.Resources);
+                
+                if (configuration.CPUCredits)
+                    builder.AddMeter(Constants.Meters.CpuCreditsMeter);
+                
+                if (configuration.ConsoleExporter)
+                    builder.AddConsoleExporter();
+
+                if (configuration.OpenTelemetryProtocolExporter)
+                {
+                    builder.AddOtlpExporter(x =>
+                    {
+                        if (configuration.OtlpEndpoint != null)
+                            x.Endpoint = new Uri(configuration.OtlpEndpoint);
+
+                        if (configuration.OtlpProtocol != null)
+                            x.Protocol = configuration.OtlpProtocol.Value;
+
+                        if (configuration.OtlpHeaders != null)
+                            x.Headers = configuration.OtlpHeaders;
+
+                        if (configuration.OtlpExportProcessorType != null)
+                            x.ExportProcessorType = configuration.OtlpExportProcessorType.Value;
+
+                        if (configuration.OtlpTimeout != null)
+                            x.TimeoutMilliseconds = configuration.OtlpTimeout.Value;
+                    });
+                }
+
+                
+                _openTelemetryInitialized = true;
+            }
+            
+            bool TryReadServiceInstanceId(out string serviceId)
+            {
+                if (string.IsNullOrEmpty(Configuration.Monitoring.OpenTelemetry.ServiceInstanceId) == false)
+                {
+                    serviceId = Configuration.Monitoring.OpenTelemetry.ServiceInstanceId;
+                    return true;
+                }
+
+                if (Configuration.Core.PublicServerUrl.HasValue)
+                {
+                    try
+                    {
+                        var uri = new Uri(Configuration.Core.PublicServerUrl.Value.UriValue);
+                        if (string.IsNullOrEmpty(uri.Host) == false)
+                        {
+                            serviceId = uri.Host;
+                            return true;
+                        }
+                    }
+                    catch
+                    {
+                        //ignore
+                    }
+                }
+
+                if (ClusterStateMachine.TryReadNodeTag(ServerStore, out serviceId)) 
+                    return true;
+                
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("OpenTelemetry monitoring requires the service instance ID for initialization; however, it is still unavailable. Therefore, OpenTelemetry initialization is skipped.");
+                return false;
             }
         }
 
@@ -1965,7 +2098,7 @@ namespace Raven.Server
                         $"1) Change the ServerUrl.Tcp property in setting.json file.{Environment.NewLine}" +
                         $"2) Run the server from the command line with --ServerUrl.Tcp option.{Environment.NewLine}" +
                         $"3) Add RAVEN_ServerUrl_Tcp to the Environment Variables.{Environment.NewLine}" +
-                        "For more information go to https://ravendb.net/l/EJS81M/6.0";
+                        "For more information go to https://ravendb.net/l/EJS81M/6.1";
 
                         errors.Add(new IOException(msg, ex));
                         if (Logger.IsOperationsEnabled)
@@ -2447,6 +2580,7 @@ namespace Raven.Server
 
         private TcpListenerStatus _tcpListenerStatus;
         public SnmpWatcher SnmpWatcher;
+        public MetricsManager MetricsManager;
         public PgServer PostgresServer;
         private Timer _refreshClusterCertificate;
         private HttpsConnectionMiddleware _httpsConnectionMiddleware;

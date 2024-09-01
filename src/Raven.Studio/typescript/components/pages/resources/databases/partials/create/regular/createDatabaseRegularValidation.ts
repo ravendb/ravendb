@@ -25,6 +25,7 @@ const replicationAndShardingStepSchema = yup.object({
         }),
     isDynamicDistribution: yup.boolean(),
     isManualReplication: yup.boolean(),
+    isPrefixesForShards: yup.boolean(),
 });
 
 const manualNodeSelectionStepSchema = yup.object({
@@ -70,11 +71,50 @@ const manualNodeSelectionStepSchema = yup.object({
         ),
 });
 
+const shardingPrefixesStepSchema = yup.object({
+    prefixesForShards: yup
+        .array()
+        .of(
+            yup.object({
+                prefix: yup.string().when("$isPrefixesForShards", {
+                    is: true,
+                    then: (schema) =>
+                        schema
+                            .trim()
+                            .strict()
+                            .required()
+                            .test(
+                                "invalid-ending-character",
+                                "The prefix must end with '/' or '-' characters",
+                                (value) => {
+                                    return value.endsWith("/") || value.endsWith("-");
+                                }
+                            )
+                            .test("unique-prefix", "Prefix must be unique", (value, ctx) => {
+                                return ctx.options.context.usedPrefixes.filter((x: string) => x === value).length < 2;
+                            }),
+                }),
+                shardNumbers: yup
+                    .array()
+                    .of(yup.number())
+                    .when("$isPrefixesForShards", {
+                        is: true,
+                        then: (schema) => schema.min(1, "Select at least one shard"),
+                    }),
+            })
+        )
+        .when("$isPrefixesForShards", {
+            is: true,
+            then: (schema) => schema.min(1),
+        }),
+});
+
 export const createDatabaseRegularSchema = yup.object({
     basicInfoStep: basicInfoStepSchema,
     encryptionStep: encryptionStepSchema,
     replicationAndShardingStep: replicationAndShardingStepSchema,
     manualNodeSelectionStep: manualNodeSelectionStepSchema,
+    shardingPrefixesStep: shardingPrefixesStepSchema,
     dataDirectoryStep: dataDirectoryStepSchema,
 });
 

@@ -137,4 +137,10 @@ public sealed class RabbitMqDocumentTransformer<T> : QueueDocumentTransformer<T,
 
         return result.Instance;
     }
+
+    protected override void LoadToFunction(string name, ScriptRunnerResult result, CloudEventAttributes cloudEventAttributes)
+    {
+         // not needed for RabbitMq
+        throw new System.NotImplementedException();
+    }
 }

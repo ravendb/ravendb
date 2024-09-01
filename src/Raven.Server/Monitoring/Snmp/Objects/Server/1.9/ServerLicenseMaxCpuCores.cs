@@ -1,9 +1,10 @@
 using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class ServerLicenseMaxCpuCores : ScalarObjectBase<Integer32>
+    public sealed class ServerLicenseMaxCpuCores : ScalarObjectBase<Integer32>, IMetricInstrument<int>
     {
         private readonly ServerStore _store;
 
@@ -13,10 +14,13 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             _store = store;
         }
 
+        private int Value => _store.LicenseManager.LicenseStatus.MaxCores;
+        
         protected override Integer32 GetData()
         {
-            var status = _store.LicenseManager.LicenseStatus;
-            return new Integer32(status.MaxCores);
+            return new Integer32(Value);
         }
+
+        public int GetCurrentMeasurement() => Value;
     }
 }

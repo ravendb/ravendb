@@ -1,0 +1,396 @@
+<div class="content-margin edit-azure-queue-storage-etl-task edit-ongoing-task" data-bind="css: { 'test-mode': enableTestArea }">
+    <div class="align-items-center justify-content-between d-flex gap-2 margin-bottom-md padding-top-xs">
+        <div class="flex-horizontal gap-2">
+            <i class="icon-azure-queue-storage-etl"></i>
+            <h2 data-bind="text: $root.isAddingNewEtlTask() ? 'New Azure Queue Storage ETL' : 'Edit Azure Queue Storage ETL'" class="mb-0"></h2>
+            <span class="badge license-restricted-badge enterprise" data-bind="if: !hasQueueEtl">Enterprise</span>
+        </div>
+        <div class="flex-end margin-right-xs" data-bind="react: $root.infoHubView"></div>
+    </div>
+    <div class="row flex-row">
+        <div class="col-xs-12 col-lg-6 flex-vertical">
+            <form class="flex-form" data-bind="submit: saveEtl" autocomplete="off">
+                <div class="flex-header">
+                    <span data-placement="right" data-toggle="tooltip" data-html="true" data-animation="true"
+                          data-bind="tooltipText: $root.hasQueueEtl ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
+                            <i class="icon-save"></i><span>Save</span>
+                        </button>
+                    </span>
+                    <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
+                </div>
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasQueueEtl }">
+                    <div class="panel-body" data-bind="with: editedEtl">
+                        <div class="form-group margin-top">
+                            <label for="taskName" class="control-label">Task Name</label>
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the Azure Queue Storage ETL task (optional)" data-bind="textInput: taskName">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">Task State</label>
+                            <div class="flex-grow">
+                                <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
+                                    <span data-bind="text: stateText()"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#" data-bind="click: _.partial($root.setState, 'Enabled')"><span>Enabled</span></a></li>
+                                    <li><a href="#" data-bind="click: _.partial($root.setState, 'Disabled')"><span>Disabled</span></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div data-bind="if: $root.activeDatabase() && $root.activeDatabase().isEncrypted">
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="bg-info inline-block padding padding-xs small">
+                                    <i class="icon-info"></i>
+                                    Note: Database <strong data-bind="text: $root.activeDatabase().name"></strong> is encrypted
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle">
+                                    <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
+                                    <label for="toggle-non-encrypted-channel">Allow ETL on a non-encrypted communication channel</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle" data-placement="right" data-toggle="tooltip" data-bind="attr: { title: $root.isSharded() ? 'Not supported in sharded databases' : 'Toggle on to set a responsible node for the task'  }"
+                                 data-animation="true">
+                                <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor, disable: $root.isSharded()">
+                                <label for="responsibleNode">Set responsible node</label>
+                            </div>
+                        </div>
+                        <div data-bind="compose: $root.taskResponsibleNodeSectionView"></div>
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle">
+                                <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString">
+                                <label for="createNewString">Create new Azure Queue Storage connection string</label>
+                            </div>
+                        </div>
+                        <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">
+                            <div class="form-group">
+                                <div class="flex-grow" data-bind="compose: $root.connectionStringView"></div>
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName, visible: !$root.createNewConnectionString()">
+                            <label class="control-label">Connection String</label>
+                            <div class="flex-grow">
+                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
+                                        data-bind="textInput: connectionStringName, disable: $root.etlConnectionStringsDetails().length === 0,
+                                                   attr: { 'title': $root.etlConnectionStringsDetails().length === 0 ? 'No connection strings were defined' : 'Select a connection string' }">
+                                    <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                </button>
+                                <ul class="dropdown-menu"
+                                    data-bind="foreach: $root.etlConnectionStringsDetails">
+                                    <li data-bind="click: _.partial($root.useConnectionString, $data.Name)">
+                                        <a href="#">
+                                            <div class="row">
+                                                <strong class="col-xs-7" data-bind="text: $data.Name"></strong>
+                                            </div>
+                                        </a>
+                                    </li>
+                                </ul>
+                                <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
+                            </div>
+                        </div>
+                        <div class="flex-horizontal">
+                            <div class="flex-grow margin-top">
+                                <button type="button" class="btn btn-info" data-bind="click: $root.toggleAdvancedArea">
+                                    <i class="icon-settings"></i>
+                                    <span data-bind="text: $root.showAdvancedOptions() ? 'Close Advanced' : 'Advanced'"></span>
+                                </button>
+                            </div>
+                            <div>
+                                <button class="btn btn-default btn-info" title="Test the New connection string connection"
+                                        data-bind="click: $root.onTestConnection, disable: $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
+                                    <i class="icon-rocket"></i>
+                                    <span>Test Connection</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div data-bind="collapse: $root.showAdvancedOptions">
+                            <div class="panel-body">
+                                <div data-bind="compose: $root.optionsPerQueueEtlView"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="panel-addon" data-bind="with: testConnectionResult">
+                            <div class="padding bg-success small" data-bind="visible: Success">
+                                <div>Successfully connected to Azure Queue Storage server</div>
+                            </div>
+                            <div data-bind="if: !Success">
+                                <div class="padding bg-danger small">
+                                    <h2>Connection test failed!</h2>
+                                    <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                                    <div>
+                                        <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel-addon" data-bind="visible: etlConnectionStringsDetails().length === 0 && !createNewConnectionString()">
+                            <div class="padding bg-warning text-warning small">
+                                <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-header" data-bind="css: { 'pe-none item-disabled': !$root.hasQueueEtl }">
+                    <div class="flex-row margin-top">
+                        <h3>Transform Scripts</h3>
+                        <button type="button" id="addNewScript" data-bind="click: addNewTransformation, disable: editedEtl().showEditTransformationArea" class="btn btn-info pull-right">
+                            <i class="icon-plus"></i><span>Add Transformation Script</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="scroll" data-bind="css: { 'pe-none item-disabled': !$root.hasQueueEtl }">
+                    <div class="etl-list" id="transformsList" data-bind="with: editedEtl">
+                        <div data-bind="if: transformationScripts().length === 0 && !editedTransformationScriptSandbox()">
+                            <div class="text-center text-muted">
+                                <i class="icon-lg icon-empty-set"></i>
+                                <h3 class="margin-top margin-top-sm"
+                                    data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No transformation scripts have been defined.
+                                </h3>
+                            </div>
+                        </div>
+                        <div data-bind="foreach: transformationScripts">
+                            <div class="panel panel-hover item" data-bind="css: { active: $data === $parent.transformationScriptSelectedForEdit() }">
+                                <div class="padding padding-sm">
+                                    <div class="flex-horizontal">
+                                        <div class="flex-grow info">
+                                            <div class="transformer-name" title="Transformation script name">
+                                                <span data-bind="text: name"></span>
+                                                <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
+                                            </div>
+                                            <div class="collections">
+                                                Collections:
+                                                <span class="etl-collections" data-bind="foreach: transformScriptCollections, visible: !applyScriptForAllCollections() && transformScriptCollections().length" title="The Collections transformed">
+                                                    <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
+                                                </span>
+                                                <span class="etl-collections" data-bind="visible: applyScriptForAllCollections" title="The Collections transformed">
+                                                    <span>All collections</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="actions">
+                                            <button data-bind="click: $parent.editTransformationScript.bind($parent, $data)" class="btn btn-default"><i class="icon-edit" title="Edit script"></i></button>
+                                            <button data-bind="click: $root.removeTransformationScript" class="btn btn-danger"><i class="icon-trash" title="Delete script"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedEtl(), css: { 'pe-none item-disabled': !$root.hasQueueEtl }">
+            <div class="flex-grow" data-bind="if: showEditTransformationArea">
+                <div id="editTransform" class="panel padding">
+                    <div data-bind="with: editedTransformationScriptSandbox">
+                        <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
+                            <label class="control-label"><strong>Name:</strong></label>
+                            <div class="flex-grow margin-left">
+                                <input type="text" class="form-control" placeholder="Enter script name" autocomplete="off"
+                                       data-bind="textInput: name, disable: $root.enableTestArea() || !isNew()" />
+                            </div>
+                        </div>
+                        <label><strong>Script:</strong></label>
+                        <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
+                        <div data-bind="validationElement: script">
+                            <pre class="form-control editor"
+                                 data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 250px;"></pre>
+                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
+                                <div class="help-block" data-bind="validationMessage: script"></div>
+                            </div>
+                        </div>
+                        <div class="margin-bottom-sm margin-top-sm">
+                            <div class="flex-horizontal">
+                                <div class="flex-grow">
+                                    <div class="dropdown btn-block flex-grow">
+                                        <input class="form-control dropdown-toggle" placeholder="Select (or enter) a collection" data-toggle="dropdown" autocomplete="off"
+                                               data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                        <ul class="dropdown-menu" role="menu" style="display: none;"
+                                            data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutoCompleter(transformScriptCollections, inputCollection)">
+                                            <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
+                                                <a role="menuitem" tabindex="-1" href="#">
+                                                    <span data-bind="text: $data"></span>
+                                                </a>
+                                                <div class="divider" data-bind="visible: $root.constructor.isApplyToAll($data)"></div>
+                                            </li>
+                                        </ul>
+                                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
+                                            <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-info" data-bind="click: addCollection, enable: inputCollection() && canAddCollection()"><i class="icon-plus"></i> <span>Add Collection</span></button>
+                                </div>
+                            </div>
+                            <div data-bind="visible: transformScriptCollections().length" class="margin-top-sm">
+                                <label><strong>Collections Selected:</strong></label>
+                                <ul class="well collection-list" data-bind="foreach: transformScriptCollections">
+                                    <li>
+                                        <div class="name" data-bind="text: $data"></div>
+                                        <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="toggle margin-top" data-bind="visible: !isNew() && !$root.enableTestArea()">
+                            <input id="reset" type="checkbox" data-bind="checked: resetScript">
+                            <label for="reset">Apply script to documents from beginning of time (Reset)</label>
+                        </div>
+                        <div class="flex-horizontal margin-top">
+                            <div data-bind="visible: !$root.enableTestArea()">
+                                <button class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') + ' this transformation script' }">
+                                    <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                                </button>
+                                <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                            </div>
+                            <div class="flex-separator"></div>
+                            <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()" title="Click to open the test area">
+                                <i class="icon-rocket"></i> <span>Test script</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="js-test-area" data-bind="collapse: $root.enableTestArea()">
+                    <div class="panel">
+                        <div class="panel-body flex-form" data-bind="with: $root.test">
+                            <div class="form-group flex-horizontal margin-top">
+                                <label class="control-label">Document ID</label>
+                                <div class="flex-grow" data-bind="validationElement: documentId">
+                                    <input type="text" id="documentId" data-bind="textInput: documentId" class="form-control" placeholder="Document ID" autocomplete="off"
+                                           title="This field is required." data-orig-title=""/><span class="help-block" style="display: none;"></span>
+                                    <ul class="documentIdAutocomplete dropdown-menu autocomplete-list" role="menu"
+                                        data-bind="autoComplete: '#documentId', foreach: docsIdsAutocompleteResults">
+                                        <li role="presentation" data-bind="click: _.partial($parent.onAutocompleteOptionSelected, $data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind="text: $data"></span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <button class="btn btn-default" type="button"
+                                        data-bind="click: previewDocument, css: { 'btn-spinner': spinners.preview }, disable: spinners.preview() || !documentId()" title="Show document preview">
+                                    <i class="icon-import"></i> <span>Load document</span>
+                                </button>
+                            </div>
+                            <div class="flex-horizontal">
+                                <div class="flex-separator"></div>
+                                <button type="button" class="btn btn-primary margin-right margin-right-sm" data-bind="click: runTest, css: { 'btn-spinner': spinners.test }, disable: spinners.test()">
+                                    <i class="icon-rocket"></i>
+                                    <span>Test</span>
+                                </button>
+                                <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea">
+                                    <i class="icon-cancel"></i> <span>Close Test Area</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="test-container flex-grow flex-vertical" data-bind="with: test, css: { 'pe-none item-disabled': !$root.hasQueueEtl }">
+        <div class="absolute-center text-center z-1" data-bind="visible: !testAlreadyExecuted() && !loadedDocument()">
+            <i class="icon-info icon-xl"></i>
+            Choose <strong>Document ID</strong> used for test and click <strong>Test</strong> button
+        </div>
+        <div class="tabs">
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" data-bind="visible: loadedDocument">
+                    <a href="#documentPreview" role="tab" data-toggle="tab">
+                        <i class="icon-preview"></i><span>Document Preview</span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: testAlreadyExecuted">
+                    <a href="#testResults" role="tab" data-toggle="tab">
+                        <i class="icon-admin-logs"></i><span>Test Results</span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: warningsCount">
+                    <a href="#warnings" role="tab" data-toggle="tab">
+                        <i class="icon-exclamation"></i><span>Warnings</span><span class="label label-warning margin-left margin-left-sm" data-bind="text: warningsCount || ''"></span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: debugOutput().length">
+                    <a href="#debugOutput" role="tab" data-toggle="tab">
+                        <i class="icon-administrator-js-console"></i><span>Debug output</span><span class="label label-info margin-left margin-left-sm" data-bind="text: debugOutput().length || ''"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="tab-content flex-grow">
+            <div role="tabpanel" class="tab-pane fade" id="documentPreview">
+                <div class="margin-bottom margin-bottom-sm">Document ID: <strong data-bind="text: loadedDocumentId"></strong></div>
+                <pre data-bind="html: loadedDocument"></pre>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="warnings">
+                <div class="transformation-errors" data-bind="visible: transformationErrors().length">
+                    <h3>Transformation Script Errors:</h3>
+                    <div data-bind="foreach: transformationErrors">
+                        <pre class="margin-left margin-bottom margin-bottom-sm" data-bind="text: Error"></pre>
+                    </div>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="testResults">
+                <div data-bind="foreach: testResults">
+                    <div class="result-item margin-bottom">
+                        <div class="header margin-bottom">
+                            <span>Queue Name:</span>
+                            <strong data-bind="text: QueueName || 'Default'"></strong>
+                        </div>
+                        <div data-bind="foreach: Messages" class="test-output">
+                            <div class="header margin-bottom">
+                                <span>Message body:</span>
+                                <pre data-bind="text: Body" class="margin-top"></pre>
+                                <div class="margin-top-sm" data-bind="with: Attributes">
+                                    <div data-bind="visible: Id">
+                                        <span>Id:</span>
+                                        <strong data-bind="text: Id"></strong>
+                                    </div>
+                                    <div data-bind="visible: PartitionKey">
+                                        <span>Partition key:</span>
+                                        <strong data-bind="text: PartitionKey"></strong>
+                                    </div>
+                                    <div data-bind="visible: Type">
+                                        <span>Type:</span>
+                                        <strong data-bind="text: Type"></strong>
+                                    </div>
+                                    <div data-bind="visible: Source">
+                                        <span>Source:</span>
+                                        <strong data-bind="text: Source"></strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-bind="visible: !testResults().length">
+                    <i class="icon-info"></i> <span>Simulation returned empty result</span>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="debugOutput">
+                <pre class="absolute-fill" data-bind="text: debugOutput().join('\r\n')"></pre>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="backdrop" data-bind="click: $root.toggleTestArea"></div>

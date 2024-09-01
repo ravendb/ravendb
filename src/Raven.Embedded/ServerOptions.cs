@@ -100,7 +100,7 @@ namespace Raven.Embedded
             public string ServerCertificateThumbprint { get; internal set; }
         }
 
-        public class LicensingOptions
+        public sealed class LicensingOptions
         {
             public string License { get; set; }
             public string LicensePath { get; set; }
@@ -111,6 +111,4 @@ namespace Raven.Embedded
             public bool ThrowOnInvalidOrMissingLicense { get; set; }
         }
     }
-
-
 }

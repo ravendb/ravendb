@@ -127,7 +127,9 @@ namespace Raven.Server.Web.System
                 record.Topology?.ValidateTopology(record.DatabaseName);
             }
         }
-        public static void FillDatabaseTopology(ServerStore server, ClusterOperationContext context, string name, DatabaseRecord record, int replicationFactor, long? index)
+
+        public static void FillDatabaseTopology(ServerStore server, ClusterOperationContext context, string name, DatabaseRecord record, int replicationFactor,
+            long? index, bool isRestore)
         {
             if (replicationFactor <= 0)
                 throw new ArgumentException("Replication factor must be greater than 0.");
@@ -147,10 +149,7 @@ namespace Raven.Server.Web.System
 
             if (record.IsSharded)
             {
-                server.Sharding.FillShardingConfiguration(record, clusterTopology, index);
-
-                if (server.Sharding.BlockPrefixedSharding && record.Sharding.Prefixed is { Count: > 0 })
-                    throw new InvalidOperationException("Cannot use prefixed sharding, this feature is currently blocked");
+                server.Sharding.FillShardingConfiguration(record, clusterTopology, index, isRestore);
 
                 if (string.IsNullOrEmpty(record.Sharding.DatabaseId))
                 {

@@ -50,16 +50,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             _commandBuilder = _providerFactory.InitializeCommandBuilder();
             _connection = _providerFactory.CreateConnection();
             var connectionString = etl.Configuration.Connection.ConnectionString;
-
-            if (_etl.Configuration.Connection.FactoryName == "System.Data.SqlClient" &&
-                SqlConnectionStringParser.GetConnectionStringValue(connectionString, new string[] { "Encrypt" }) == null)
-            {
-                // We want to ensure compatibility between deprecated System.Data.SqlClient (where Encrypt parameter defaults to false)
-                // and Microsoft.Data.SqlClient which defaults it to SqlConnectionEncryptOption.Mandatory. If no option is provided,
-                // we set it to SqlConnectionEncryptOption.Optional (equivalent of false).
-                connectionString = SqlConnectionStringUtil.GetConnectionStringWithOptionalEncrypt(connectionString);
-            }
-            
             _connection.ConnectionString = connectionString;
 
             OpenConnection(database, etl.Configuration.Name, etl.Configuration.ConnectionStringName);

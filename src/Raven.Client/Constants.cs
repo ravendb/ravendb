@@ -447,6 +447,12 @@ namespace Raven.Client
                     }
 
                     internal const string ShardContextParameterName = "__shardContext";
+
+                    internal const string ShardContextDocumentIds = "DocumentIds";
+
+                    internal const string ShardContextPrefixes = "Prefixes";
+
+
                 }
             }
 

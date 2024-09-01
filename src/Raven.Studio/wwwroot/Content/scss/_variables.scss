@@ -19,7 +19,7 @@ $menu-width: 280px;
 $right-panel-width: 440px;
 $menu-width-collapsed: 120px;
 $navbar-height: 70px;
-$navbar-height-xs: 51px;
+$navbar-height-xs: $navbar-height;
 $top-alert-height: 23px;
 
 $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
@@ -178,7 +178,7 @@ $btn-border-radius-large: $border-radius-large;
 $btn-border-radius-small: $border-radius-small;
 
 $notification-center-bg: $body-bg;
-$main-menu-hover: colors.$gray-darker;
+$main-menu-hover: colors.$panel-bg-1-var;
 $menu-text-color: $text-color;
 $on-base-background-color: $text-color;
 $on-base-background-color-emphasis: $text-emphasis;
@@ -281,8 +281,8 @@ $zindex-notification-center: 1035;
 $zindex-menu-resize: 1035;
 $zindex-popover: 1060;
 $zindex-tooltip: $zindex-notification-center - 1;
-$zindex-navbar-fixed: 1030;
 $zindex-modal-background: 1040;
+$zindex-navbar-fixed: 1041;
 $zindex-modal: 1050;
 $zindex-modal-1: 1051;
 $zindex-menu-xs: 1090;
@@ -667,8 +667,8 @@ $list-group-link-heading-color: #333;
 //
 //##
 
-$panel-body-padding: $grid-gutter-width / 2;
-$panel-heading-padding: 7px $grid-gutter-width / 2;
+$panel-body-padding: sizes.$gutter-sm;
+$panel-heading-padding: 7px sizes.$gutter-sm;
 $panel-footer-padding: $panel-heading-padding;
 $panel-border-radius: $border-radius-base;
 //** Border color for elements within panels

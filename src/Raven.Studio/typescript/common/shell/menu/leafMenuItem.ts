@@ -4,6 +4,7 @@ import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 
 class leafMenuItem implements menuItem {
     title: string;
+    search?: menuSearchConfig;
     tooltip: string;
     nav: boolean | KnockoutObservable<boolean>;
     route: string | Array<string>;
@@ -26,8 +27,9 @@ class leafMenuItem implements menuItem {
     countPrefix: KnockoutComputed<string>;
     sizeClass: KnockoutComputed<string>;
 
-    constructor({ title, tooltip, route, moduleId, nav, hash, css, dynamicHash, disableWithReason, openAsDialog, itemRouteToHighlight, shardingMode, badgeData, badgeHtml, alias, requiredAccess }: {
+    constructor({ title, search, tooltip, route, moduleId, nav, hash, css, dynamicHash, disableWithReason, openAsDialog, itemRouteToHighlight, shardingMode, badgeData, badgeHtml, alias, requiredAccess }: {
         title: string,
+        search?: menuSearchConfig,
         route: string | Array<string>,
         moduleId: any,
         nav: boolean | KnockoutObservable<boolean>,
@@ -52,6 +54,7 @@ class leafMenuItem implements menuItem {
         this.badgeData = badgeData || ko.observable<number>();
         this.itemRouteToHighlight = itemRouteToHighlight;
         this.title = title;
+        this.search = search;
         this.tooltip = tooltip;
         this.route = route;
         this.moduleId = moduleId;

@@ -52,6 +52,8 @@ namespace SlowTests.Issues
                                      }
                                  };
                 StoresStrings.Add(Constants.Documents.Indexing.Fields.AllFields, FieldStorage.Yes);
+
+                Index(x => x.Pet, FieldIndexing.No);
             }
         }
 

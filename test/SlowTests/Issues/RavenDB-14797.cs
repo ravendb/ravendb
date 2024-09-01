@@ -204,9 +204,8 @@ namespace SlowTests.Issues
 
                 Fields = new Dictionary<string, IndexFieldOptions>
                 {
-                    {
-                        Constants.Documents.Indexing.Fields.AllFields, new IndexFieldOptions { Storage = FieldStorage.Yes }
-                    }
+                    { Constants.Documents.Indexing.Fields.AllFields, new IndexFieldOptions { Storage = FieldStorage.Yes } },
+                    { "Communication", new IndexFieldOptions() { Storage = FieldStorage.Yes, Indexing = FieldIndexing.No } }
                 };
             }
         }
@@ -255,6 +254,9 @@ namespace SlowTests.Issues
                                         return communications;
                                     }"
                 };
+
+                Fields ??= new();
+                Fields.Add("Communications", new IndexFieldOptions() { Storage = FieldStorage.Yes, Indexing = FieldIndexing.No });
             }
         }
 

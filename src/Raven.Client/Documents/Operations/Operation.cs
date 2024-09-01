@@ -18,13 +18,13 @@ namespace Raven.Client.Documents.Operations
 {
     public sealed class Operation<TResult> : Operation
     {
-        internal Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, TResult result, long id, string nodeTag = null)
+        internal Operation(RequestExecutor requestExecutor, Func<ISingleNodeDatabaseChanges> changes, DocumentConventions conventions, TResult result, long id, string nodeTag = null)
             : base(requestExecutor, changes, conventions, id, nodeTag)
         {
             Result = result;
         }
 
-        internal Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, TResult result, long id, string nodeTag, Task afterOperationCompleted)
+        internal Operation(RequestExecutor requestExecutor, Func<ISingleNodeDatabaseChanges> changes, DocumentConventions conventions, TResult result, long id, string nodeTag, Task afterOperationCompleted)
             : base(requestExecutor, changes, conventions, id, nodeTag, afterOperationCompleted)
         {
             Result = result;
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations
     public class Operation : IObserver<OperationStatusChange>
     {
         private readonly RequestExecutor _requestExecutor;
-        private readonly Func<IDatabaseChanges> _changes;
+        private readonly Func<ISingleNodeDatabaseChanges> _changes;
         private readonly DocumentConventions _conventions;
         private readonly Task _afterOperationCompleted;
         private readonly long _id;
@@ -54,12 +54,12 @@ namespace Raven.Client.Documents.Operations
 
         private bool _isProcessing;
 
-        public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, string nodeTag = null)
+        public Operation(RequestExecutor requestExecutor, Func<ISingleNodeDatabaseChanges> changes, DocumentConventions conventions, long id, string nodeTag = null)
             : this(requestExecutor, changes, conventions, id, nodeTag: nodeTag, afterOperationCompleted: null)
         {
         }
 
-        internal Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, string nodeTag, Task afterOperationCompleted)
+        internal Operation(RequestExecutor requestExecutor, Func<ISingleNodeDatabaseChanges> changes, DocumentConventions conventions, long id, string nodeTag, Task afterOperationCompleted)
         {
             _requestExecutor = requestExecutor;
             _changes = changes;

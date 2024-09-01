@@ -1,19 +1,24 @@
 using System.Threading;
 using Lextm.SharpSnmpLib;
+using Raven.Server.Monitoring.OpenTelemetry;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public sealed class ThreadPoolAvailableCompletionPortThreads : ScalarObjectBase<Gauge32>
+    public sealed class ThreadPoolAvailableCompletionPortThreads() : ScalarObjectBase<Gauge32>(SnmpOids.Server.ThreadPoolAvailableCompletionPortThreads), IMetricInstrument<int>
     {
-        public ThreadPoolAvailableCompletionPortThreads()
-            : base(SnmpOids.Server.ThreadPoolAvailableCompletionPortThreads)
+        private int Value
         {
+            get
+            {
+                ThreadPool.GetAvailableThreads(out _, out var completionPortThreeads);
+                return completionPortThreeads;
+            }
         }
-
         protected override Gauge32 GetData()
         {
-            ThreadPool.GetAvailableThreads(out _, out var completionPortThreeads);
-            return new Gauge32(completionPortThreeads);
+            return new Gauge32(Value);
         }
+
+        public int GetCurrentMeasurement() => Value;
     }
 }
