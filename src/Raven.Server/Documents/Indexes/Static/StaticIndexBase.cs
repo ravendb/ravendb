@@ -12,6 +12,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -325,6 +326,23 @@ namespace Raven.Server.Documents.Indexes.Static
                     return r;
 
                 return null;
+            }
+        }
+
+        public object Vector(object value)
+        {
+            switch (value)
+            {
+                case LazyStringValue lsv:
+                    return new VectorField(Convert.FromBase64String(lsv));
+                case LazyCompressedStringValue lcsv:
+                    return new VectorField(Convert.FromBase64String(lcsv));
+                case string s:
+                    return new VectorField(Convert.FromBase64String(s));
+                case byte[] b:
+                    return new VectorField(b);
+                default:
+                    throw new NotSupportedException();
             }
         }
 

@@ -49,6 +49,8 @@
 
         TimeSeries,
 
-        Unknown
+        Unknown,
+        
+        Vector_Search
     }
 }

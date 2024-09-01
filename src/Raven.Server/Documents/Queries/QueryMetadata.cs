@@ -290,6 +290,13 @@ function execute(doc, args){
             IsCollectionQuery = false;
         }
 
+        public void AddVectorField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
+        {
+            IsCollectionQuery = false;
+            IndexFieldNames.Add(new QueryFieldName(fieldName.Value, fieldName.IsQuoted));
+            
+        }
+        
         public void AddWhereField(QueryFieldName fieldName,
             BlittableJsonReaderObject parameters,
             bool search = false,
@@ -2326,16 +2333,9 @@ function execute(doc, args){
                     case MethodType.Search:
                     case MethodType.Regex:
                     case MethodType.Lucene:
-                        fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName.Value, parameters);
+                        fieldName = GetQueryFieldName(methodName, arguments, parameters);
 
-                        if (arguments.Count == 1)
-                            throw new InvalidQueryException($"Method {methodName}() expects second argument to be provided", QueryText, parameters);
-
-                        if (!(arguments[1] is ValueExpression))
-                            throw new InvalidQueryException($"Method {methodName}() expects value token as second argument, got {arguments[1]} type", QueryText,
-                                parameters);
-
-                        if (methodType == MethodType.Search || methodType == MethodType.Lucene)
+                        if (methodType is MethodType.Search or MethodType.Lucene)
                             _metadata.AddWhereField(fieldName, parameters, search: true, methodName: methodName.Value);
                         else
                             _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0, methodName: methodName.Value);
@@ -2391,6 +2391,11 @@ function execute(doc, args){
                     case MethodType.Spatial_Intersects:
                         HandleSpatial(methodName.Value, arguments, withoutAlias: true, parameters);
                         return;
+                    
+                    case MethodType.Vector_Search:
+                        fieldName = GetQueryFieldName(methodName, arguments, parameters);
+                        _metadata.AddVectorField(fieldName, parameters);
+                        break;
 
                     case MethodType.MoreLikeThis:
                         HandleMoreLikeThis(methodName.Value, arguments, parameters);
@@ -2408,6 +2413,20 @@ function execute(doc, args){
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
                 }
+            }
+
+            private QueryFieldName GetQueryFieldName(StringSegment methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
+            {
+                QueryFieldName fieldName;
+                fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName.Value, parameters);
+
+                if (arguments.Count == 1)
+                    throw new InvalidQueryException($"Method {methodName}() expects second argument to be provided", QueryText, parameters);
+
+                if (arguments[1] is not ValueExpression)
+                    throw new InvalidQueryException($"Method {methodName}() expects value token as second argument, got {arguments[1]} type", QueryText,
+                        parameters);
+                return fieldName;
             }
 
             private void HandleProximity(string methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)

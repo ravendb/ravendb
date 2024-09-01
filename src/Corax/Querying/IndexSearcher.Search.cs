@@ -385,4 +385,10 @@ public partial class IndexSearcher
         analyzer = a;
         return a;
     }
+
+    public IQueryMatch VectorQuery(FieldMetadata fieldMetadata, byte[] vectorToSearch, float minimumMatch)
+    {
+        long rootPageByFieldName = GetRootPageByFieldName(fieldMetadata.FieldName);
+        return new ExactVectorSearchMatch(this, _transaction, rootPageByFieldName, vectorToSearch, minimumMatch);
+    }
 }
