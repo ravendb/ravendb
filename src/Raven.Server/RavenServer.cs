@@ -40,6 +40,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Exceptions;
 using Raven.Server.Https;
 using Raven.Server.Integrations.PostgreSQL;
 using Raven.Server.Json;
@@ -970,9 +971,9 @@ namespace Raven.Server
             return false;
         }
 
-        private Task<Task> _currentRefreshTask = Task.FromResult(Task.CompletedTask);
+        private Lazy<Task> _currentRefreshTask = new Lazy<Task>(Task.CompletedTask);
 
-        public Task RefreshTask => _currentRefreshTask.Unwrap();
+        public Task RefreshTask => _currentRefreshTask.IsValueCreated ? _currentRefreshTask.Value : Task.FromException(new InvalidOperationException("Refresh task wasn't started"));
 
         public void RefreshClusterCertificateTimerCallback(object state)
         {
@@ -1010,17 +1011,18 @@ namespace Raven.Server
             var forceRenew = state as bool? ?? false;
 
             var currentRefreshTask = _currentRefreshTask;
-            if (currentRefreshTask.Unwrap().IsCompleted == false)
+            if (currentRefreshTask.IsValueCreated == false || currentRefreshTask.Value.IsCompleted == false)
             {
                 _refreshClusterCertificate?.Change(TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
                 return false;
             }
 
-            var refreshCertificate = new Task<Task>(() => DoActualCertificateRefresh(currentCertificate, raftRequestId, forceRenew: forceRenew));
+            var refreshCertificate = new Lazy<Task>(() => DoActualCertificateRefresh(currentCertificate, raftRequestId, forceRenew: forceRenew));
             if (Interlocked.CompareExchange(ref _currentRefreshTask, refreshCertificate, currentRefreshTask) != currentRefreshTask)
                 return false;
 
-            refreshCertificate.Start();
+            // materialize the task
+            _ = refreshCertificate.Value;
             return true;
         }
 
@@ -1127,6 +1129,8 @@ namespace Raven.Server
             }
         }
 
+        private (DateTime At, X509Certificate2 Certificate) _tempLetsEncryptRefreshCertificate = default;
+
         protected async Task<X509Certificate2> RefreshViaLetsEncrypt(CertificateUtils.CertificateHolder currentCertificate, bool forceRenew)
         {
             byte[] newCertBytes;
@@ -1200,23 +1204,14 @@ namespace Raven.Server
                 return null;
             }
 
-            // TODO: force renew should generate new date everytime (abusing this can hit the let's encrypt limits)? or try to reuse the generated certificate for today?
-            var name = $"Refreshed@{renewalDate:O}";
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
+            if (_tempLetsEncryptRefreshCertificate.At == renewalDate) // reuse
             {
-                // let's check if we already did a refresh today
-                // this is a HACK we use the name as a thumbprint here
-                var read = ServerStore.Cluster.GetLocalStateByThumbprint(ctx, LetsEncryptRefreshedCertificateThumbprint);
-                if (read != null)
-                {
-                    var cert = JsonDeserializationServer.CertificateDefinition(read);
-                    if (cert.Name == name)
-                    {
-                        var certBytes = Convert.FromBase64String(cert.Certificate);
-                        return CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
-                    }
-                }
+                return _tempLetsEncryptRefreshCertificate.Certificate;
+            }
+
+            using (_tempLetsEncryptRefreshCertificate.Certificate)
+            {
+                _tempLetsEncryptRefreshCertificate = default;
             }
 
             try
@@ -1238,39 +1233,12 @@ namespace Raven.Server
                 throw new InvalidOperationException("Failed to load (and validate) the new certificate which was received during the refresh process.", e);
             }
 
-            StoreLocallyLetsEncryptNewCertificate(name, refreshedCertificate);
-
-            return refreshedCertificate;
-        }
-
-        public const string LetsEncryptRefreshedCertificateThumbprint = "LetsEncryptRefreshedCertificateThumbprint";
-
-        private void StoreLocallyLetsEncryptNewCertificate(string name, X509Certificate2 refreshedCertificate)
-        {
-            var certDef = new CertificateDefinition
-            {
-                Name = name,
-                Certificate = Convert.ToBase64String(refreshedCertificate.Export(X509ContentType.Pfx)),
-                Permissions = new Dictionary<string, DatabaseAccess>(),
-                SecurityClearance = SecurityClearance.ClusterNode,
-                Thumbprint = refreshedCertificate.Thumbprint,
-                PublicKeyPinningHash = refreshedCertificate.GetPublicKeyPinningHash(),
-                NotAfter = refreshedCertificate.NotAfter,
-                NotBefore = refreshedCertificate.NotBefore
-            };
-
-            // to avoid multiple refreshes in the case of cluster instability, we will store it locally first
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var certificate = ctx.ReadObject(certDef.ToJson(), "Server/Certificate/Definition"))
-            using (var tx = ctx.OpenWriteTransaction())
-            {
-                // this is a HACK we use the name as a thumbprint here
-                ServerStore.Cluster.PutLocalState(ctx, LetsEncryptRefreshedCertificateThumbprint, certificate, certDef);
-                tx.Commit();
-            }
-
+            _tempLetsEncryptRefreshCertificate = (renewalDate, refreshedCertificate);
+            
             if (_forTestingPurposes?.ThrowExceptionAfterLetsEncryptRefresh == true)
                 throw new InvalidOperationException("We refreshed the Let's encrypt certificate, but fail to redistribute it.");
+
+            return refreshedCertificate;
         }
 
         public (bool ShouldRenew, DateTime RenewalDate) CalculateRenewalDate(CertificateUtils.CertificateHolder currentCertificate, bool forceRenew)
@@ -1357,6 +1325,11 @@ namespace Raven.Server
 
                 await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand(Convert.ToBase64String(newCertificate.Export(X509ContentType.Pfx)), replaceImmediately,
                     $"{raftRequestId}/install-new-certificate"));
+
+                using (_tempLetsEncryptRefreshCertificate.Certificate)
+                {
+                    _tempLetsEncryptRefreshCertificate = default;
+                }
             }
             catch (Exception e)
             {
@@ -2847,7 +2820,9 @@ namespace Raven.Server
                 {
                     try
                     {
-                        _currentRefreshTask?.Wait();
+                        // under a race when we just refreshed and disposed (without materializing)
+                        // we will wait for the task to be materialized and closed with OperationCanceledException
+                        _currentRefreshTask.Value.Wait();
                     }
                     catch (OperationCanceledException)
                     {
