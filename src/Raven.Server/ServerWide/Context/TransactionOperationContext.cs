@@ -68,7 +68,7 @@ namespace Raven.Server.ServerWide.Context
 
         public TTransaction OpenReadTransaction([CallerMemberName] string caller = null)
         {
-            if (Transaction != null && Transaction.Disposed == false)
+            if (Transaction is { Disposed: false })
                 ThrowTransactionAlreadyOpened();
 
             Transaction = CreateReadTransaction();

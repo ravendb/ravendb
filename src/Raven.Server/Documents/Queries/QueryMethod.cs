@@ -50,6 +50,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "sum", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Sum;
 
+            if (string.Equals(methodName, "vector.search", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Vector_Search;
+            
             if (string.Equals(methodName, "spatial.within", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Spatial_Within;
 

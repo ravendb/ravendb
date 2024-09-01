@@ -411,6 +411,9 @@ namespace Raven.Server.Documents.Queries
                         return HandleSpatial(query, me, metadata, parameters, methodType, factories.GetSpatialFieldFactory);
                     case MethodType.MoreLikeThis:
                         return new MatchAllDocsQuery();
+                    case MethodType.Vector_Search:
+                        throw new InvalidQueryException("Vector Search is not available for the Lucene indexing engine, only in the Corax indexing engine.", query.QueryText, parameters);
+                        break;
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
                         return null; // never hit

@@ -27,6 +27,7 @@ using System.IO;
 using System.Text;
 using Corax.Indexing;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Sparrow.Binary;
 using static Raven.Server.Config.Categories.IndexingConfiguration;
 
@@ -304,6 +305,11 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 @double = iConvertible.ToDouble(CultureInfo.InvariantCulture);
 
                 builder.Write(fieldId, path,  iConvertible.ToString(CultureInfo.InvariantCulture), @long, @double);
+                break;
+            
+            case ValueType.Vector:
+                var vectorBuffer = ((VectorField)value).Buffer;
+                builder.WriteVector(fieldId,path,  vectorBuffer);
                 break;
 
             case ValueType.Enumerable:
