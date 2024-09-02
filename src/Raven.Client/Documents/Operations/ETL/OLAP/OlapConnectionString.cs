@@ -141,7 +141,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public override DynamicJsonValue ToAuditJson()
         {
-            var json = base.ToJson();
+            var json = base.ToAuditJson();
             json[nameof(LocalSettings)] = LocalSettings?.ToAuditJson();
             json[nameof(S3Settings)] = S3Settings?.ToAuditJson();
             json[nameof(AzureSettings)] = AzureSettings?.ToAuditJson();
