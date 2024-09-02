@@ -330,6 +330,25 @@ namespace Raven.Server.Documents.Indexes.Static
                 return null;
             }
         }
+     
+        public object VectorSearch(object value)
+        {
+            var str = value switch
+            {
+                LazyStringValue lsv => (string)lsv,
+                LazyCompressedStringValue lcsv => lcsv,
+                string s => s,
+                DynamicNullObject => null,
+                null => null,
+                _ => throw new NotSupportedException("Only strings are supported, but got: " + value?.GetType().FullName)
+            };
+
+            if (str is null)
+                return null;
+
+            return new VectorField(GenerateEmbeddings.UsingI8(str));
+        }
+
 
         public object Vector(object value)
         {

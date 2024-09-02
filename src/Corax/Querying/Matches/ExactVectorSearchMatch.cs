@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
+using Newtonsoft.Json;
 using Sparrow;
 using Voron;
 using Voron.Data.Lookups;
@@ -22,7 +23,8 @@ namespace Corax.Querying.Matches
         private readonly long _count = searcher.NumberOfEntries;
         private Lookup<Int64LookupKey>.ForwardIterator _entriesPagesIt;
         private bool _firstFill = true;
-        private PageLocator _pageLocator = new PageLocator();
+        private readonly PageLocator _pageLocator = new();
+        private Dictionary<long, float> _scores = new();
 
         public SkipSortingResult AttemptToSkipSorting()
         {
@@ -57,20 +59,24 @@ namespace Corax.Querying.Matches
         public int AndWith(Span<long> buffer, int matches)
         {
             var matchIndex = 0;
-            Page lastPage = default;
-            for (int i = 0; i < matches; i++)
+            var bufferIndex = 0;
+            using var enumerator = searcher.GetEntryTermsReader(buffer[..matches], _pageLocator);
+            while (enumerator.MoveNext())
             {
-                var reader = searcher.GetEntryTermsReader(buffer[i], ref lastPage);
-                if (ExactVectorMatch(reader))
+                var reader = enumerator.Current;
+                long id = buffer[bufferIndex];
+                if (ExactVectorMatch(id, reader))
                 {
-                    buffer[matchIndex++] = buffer[i];
+                    buffer[matchIndex++] = id;
                 }
+
+                bufferIndex++;
             }
 
             return matchIndex;
         }
 
-        private bool ExactVectorMatch(EntryTermsReader reader)
+        private bool ExactVectorMatch(long id, EntryTermsReader reader)
         {
             while (reader.FindNextStored(fieldRootPage))
             {
@@ -78,7 +84,8 @@ namespace Corax.Querying.Matches
                 if(vector.Length != vectorToSearch.Length)
                     continue;
 
-                var similarity = SimilarityI8(vectorToSearch, vector);
+                var similarity = SimilarityI1(vectorToSearch, vector);
+                _scores[id] = similarity; 
                 if (similarity > minimumMatch)
                     return true;
             }
@@ -86,7 +93,7 @@ namespace Corax.Querying.Matches
             return false;
         }
 
-        public static unsafe float SimilarityI8(Span<byte> lhs, Span<byte> rhs)
+        public static unsafe float SimilarityI1(Span<byte> lhs, Span<byte> rhs)
         {
             // Code adapted from:
             // https://github.com/dotnet/smartcomponents/blob/main/src/SmartComponents.LocalEmbeddings/EmbeddingI1.cs#L103
@@ -151,6 +158,18 @@ namespace Corax.Querying.Matches
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
+            // TODO: Need to think about a way that doesn't allocate so much for scoring
+            for (int i = 0; i < matches.Length; i++)
+            {
+                if (_scores.TryGetValue(matches[i], out var f))
+                {
+                    scores[i] = f;
+                }
+            }
+            /*
+             This is another way to achieve the same thing, but it is significantly slower
+             
+             
             Page lastPage = default;
             for (int i = 0; i < matches.Length; i++)
             {
@@ -161,10 +180,11 @@ namespace Corax.Querying.Matches
                     var vector = reader.StoredField.Value.ToSpan();
                     if (vector.Length != vectorToSearch.Length)
                         continue;
-                    scores[i] = SimilarityI8(vectorToSearch, vector) * boostFactor;
+                    scores[i] = SimilarityI1(vectorToSearch, vector) * boostFactor;
                     break;
                 }
             }
+            */
         }
 
         public QueryInspectionNode Inspect()
