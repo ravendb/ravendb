@@ -293,8 +293,21 @@ function execute(doc, args){
         public void AddVectorField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
             IsCollectionQuery = false;
-            IndexFieldNames.Add(new QueryFieldName(fieldName.Value, fieldName.IsQuoted));
-            
+            var split = fieldName.Value.Split(".");
+            if (split.Length > 1 && NotInRootAliasPaths(split[0]))
+            {
+                ThrowUnknownAlias(split[0], parameters);
+            }
+            var indexFieldName = GetIndexFieldName(fieldName, parameters);
+            IndexFieldNames.Add(indexFieldName);
+            if (WhereFields.TryGetValue(indexFieldName, out var existingField))
+            {
+                existingField.IsVector = true;
+            }
+            else
+            {
+                WhereFields[indexFieldName] = new WhereField(false, false, null) { IsVector = true };
+            }
         }
         
         public void AddWhereField(QueryFieldName fieldName,
@@ -338,6 +351,7 @@ function execute(doc, args){
                 IsCollectionQuery = false;
             }
 
+            bool isVector = false;
             if (IndexFieldNames.Add(indexFieldName) == false)
             {
                 // RavenDB-14176
@@ -348,10 +362,14 @@ function execute(doc, args){
                     search |= existingField.IsFullTextSearch;
                     exact |= existingField.IsExactSearch;
                     spatial = spatial ?? existingField.Spatial;
+                    isVector |= existingField.IsVector;
                 }
             }
 
-            WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact, spatial: spatial);
+            WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact, spatial: spatial)
+            {
+                IsVector = isVector
+            };
         }
 
         private void Build(BlittableJsonReaderObject parameters)
@@ -2393,6 +2411,7 @@ function execute(doc, args){
                         return;
                     
                     case MethodType.Vector_Search:
+                    case MethodType.Vector_Nearest:
                         fieldName = GetQueryFieldName(methodName, arguments, parameters);
                         _metadata.AddVectorField(fieldName, parameters);
                         break;

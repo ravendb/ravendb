@@ -51,6 +51,7 @@
 
         Unknown,
         
-        Vector_Search
+        Vector_Search,
+        Vector_Nearest,
     }
 }

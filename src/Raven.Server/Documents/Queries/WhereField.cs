@@ -10,6 +10,8 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool IsExactSearch;
 
+        public bool IsVector;
+
         public WhereField(bool isFullTextSearch, bool isExactSearch, AutoSpatialOptions spatial)
         {
             Spatial = spatial;

@@ -55,6 +55,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                             if (field.HasHighlighting)
                                 indexField.Indexing |= AutoFieldIndexing.Highlighting;
+                            
+                            if (field.IsVector)
+                                indexField.Indexing |= AutoFieldIndexing.Vector;
 
                             if (field.Spatial != null)
                                 indexField.Spatial = new AutoSpatialOptions(field.Spatial);

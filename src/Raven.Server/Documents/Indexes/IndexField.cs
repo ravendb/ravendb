@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Utils;
@@ -36,6 +37,8 @@ namespace Raven.Server.Documents.Indexes
         public FieldTermVector TermVector { get; set; }
 
         public SpatialOptions Spatial { get; set; }
+        
+        public bool Vector { get; set; }
 
         public IndexField()
         {
@@ -87,6 +90,7 @@ namespace Raven.Server.Documents.Indexes
                 && string.Equals(Analyzer, other.Analyzer, StringComparison.Ordinal)
                 && Storage == other.Storage
                 && Indexing == other.Indexing
+                && Vector == other.Vector
                 && TermVector == other.TermVector;
         }
 
@@ -115,6 +119,7 @@ namespace Raven.Server.Documents.Indexes
                 hashCode = (hashCode * 397) ^ (Analyzer != null ? StringComparer.Ordinal.GetHashCode(Analyzer) : 0);
                 hashCode = (hashCode * 397) ^ (int)Storage;
                 hashCode = (hashCode * 397) ^ Id;
+                hashCode = (hashCode * 397) ^ (Vector ? 233 : 343);
                 hashCode = (hashCode * 397) ^ (int)Indexing;
                 hashCode = (hashCode * 397) ^ (int)TermVector;
                 hashCode = (hashCode * 397) ^ (HasSuggestions ? 233 : 343);
@@ -230,6 +235,19 @@ namespace Raven.Server.Documents.Indexes
 
             var hasHighlighting = Indexing.HasFlag(AutoFieldIndexing.Highlighting);
 
+            if (Indexing.HasFlag(AutoFieldIndexing.Vector))
+            {
+                fields.Add(new IndexField
+                {
+                    Vector = true,
+                    Name = GetVectorAutoIndexFieldName(Name),
+                    OriginalName = originalName,
+                    Storage = FieldStorage.Yes,
+                    Indexing = FieldIndexing.No,
+                    Id = ++lastUsedId.Value
+                });
+            }
+            
             if (Indexing.HasFlag(AutoFieldIndexing.Search) || hasHighlighting)
             {
                 fields.Add(new IndexField
@@ -298,6 +316,12 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public static string GetVectorAutoIndexFieldName(string name)
+        {
+            return $"vector({name})";
+        }
+
+        
         public static string GetSearchAutoIndexFieldName(string name)
         {
             return $"search({name})";
