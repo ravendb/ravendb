@@ -138,21 +138,20 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     foreach (var file in RavenLogManager.Instance.GetLogFiles(Server, startUtc, endUtc))
                     {
-                        // TODO [ppekrol]
-                        //// Skip this file if either the last write time or the creation time could not be determined
-                        //if (LoggingSource.TryGetLastWriteTimeUtc(filePath, out var logLastWriteTimeUtc) == false ||
-                        //    LoggingSource.TryGetCreationTimeUtc(filePath, out var logCreationTimeUtc) == false)
-                        //    continue;
+                        // Skip this file if either the last write time or the creation time could not be determined
+                        if (RavenLogManager.Instance.TryGetLastWriteTimeUtc(file, out var logLastWriteTimeUtc) == false ||
+                            RavenLogManager.Instance.TryGetCreationTimeUtc(file, out var logCreationTimeUtc) == false)
+                            continue;
 
-                        //bool isWithinDateRange =
-                        //    // Check if the file was created before the end date.
-                        //    (endUtc.HasValue == false || logCreationTimeUtc < endUtc.Value) &&
-                        //    // Check if the file was last modified after the start date.
-                        //    (startUtc.HasValue == false || logLastWriteTimeUtc > startUtc.Value);
+                        bool isWithinDateRange =
+                            // Check if the file was created before the end date.
+                            (endUtc.HasValue == false || logCreationTimeUtc < endUtc.Value) &&
+                            // Check if the file was last modified after the start date.
+                            (startUtc.HasValue == false || logLastWriteTimeUtc > startUtc.Value);
 
-                        //// Skip this file if it does not fall within the specified date range
-                        //if (isWithinDateRange == false)
-                        //    continue;
+                        // Skip this file if it does not fall within the specified date range
+                        if (isWithinDateRange == false)
+                            continue;
 
                         try
                         {

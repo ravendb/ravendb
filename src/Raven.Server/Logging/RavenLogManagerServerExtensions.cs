@@ -35,6 +35,8 @@ namespace Raven.Server.Logging;
 
 internal static class RavenLogManagerServerExtensions
 {
+    private const string DateOnlyFormat = "yyyy-MM-dd";
+
     private static readonly NullTarget NullTarget = new(nameof(NullTarget));
 
     private static readonly ConcurrentDictionary<string, Assembly> LoadedAssemblies = new(StringComparer.OrdinalIgnoreCase);
@@ -321,6 +323,8 @@ internal static class RavenLogManagerServerExtensions
             ConcurrentWrites = false,
             WriteFooterOnArchivingOnly = true,
             ArchiveAboveSize = archiveAboveSize.GetValue(SizeUnit.Bytes),
+            ArchiveOldFileOnStartup = true,
+            ArchiveOldFileOnStartupAboveSize = archiveAboveSize.GetValue(SizeUnit.Bytes),
             EnableArchiveFileCompression = enableArchiveFileCompression,
         };
 
@@ -463,6 +467,8 @@ internal static class RavenLogManagerServerExtensions
             ConcurrentWrites = false,
             WriteFooterOnArchivingOnly = true,
             ArchiveAboveSize = configuration.Security.AuditLogArchiveAboveSize.GetValue(SizeUnit.Bytes),
+            ArchiveOldFileOnStartup = true,
+            ArchiveOldFileOnStartupAboveSize = configuration.Security.AuditLogArchiveAboveSize.GetValue(SizeUnit.Bytes),
             EnableArchiveFileCompression = configuration.Security.AuditLogEnableArchiveFileCompression
         };
 
@@ -642,6 +648,53 @@ internal static class RavenLogManagerServerExtensions
 
             yield return fileInfo;
         }
+    }
+
+    internal static bool TryGetLastWriteTimeUtc(this RavenLogManager logManager, FileInfo file, out DateTime dateTimeUtc) =>
+        TryGetFileTimeInternal(file, File.GetLastWriteTimeUtc, out dateTimeUtc);
+
+    internal static bool TryGetLastWriteTimeLocal(this RavenLogManager logManager, FileInfo file, out DateTime dateTimeLocal) =>
+        TryGetFileTimeInternal(file, File.GetLastWriteTime, out dateTimeLocal);
+
+    internal static bool TryGetCreationTimeUtc(this RavenLogManager logManager, FileInfo file, out DateTime dateTimeUtc) =>
+        TryGetFileTimeInternal(file, fp => GetLogFileCreationTime(fp, DateTimeKind.Utc), out dateTimeUtc);
+
+    internal static bool TryGetCreationTimeLocal(this RavenLogManager logManager, FileInfo file, out DateTime dateTimeLocal) =>
+        TryGetFileTimeInternal(file, fp => GetLogFileCreationTime(fp, DateTimeKind.Local), out dateTimeLocal);
+
+    private static bool TryGetFileTimeInternal(FileInfo file, Func<string, DateTime> fileTimeGetter, out DateTime dateTime)
+    {
+        dateTime = default;
+        try
+        {
+            if (file.FullName.Contains(Path.DirectorySeparatorChar) && file.Exists == false)
+                return false;
+
+            dateTime = fileTimeGetter(file.FullName);
+            return true;
+        }
+        catch
+        {
+            // ignored
+        }
+
+        return false;
+    }
+
+    internal static DateTime GetLogFileCreationTime(string filePathOrName, DateTimeKind timeKind)
+    {
+        var fileName = filePathOrName.Contains(Path.DirectorySeparatorChar) ? Path.GetFileName(filePathOrName) : filePathOrName;
+        var timestamp = fileName.Substring(0, fileName.IndexOf('.'));
+
+        if (DateTime.TryParseExact(timestamp, DateOnlyFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dateTime) == false) // backward compatibility
+            throw new InvalidOperationException($"Could not parse the log file name '{fileName}'");
+
+        return timeKind switch
+        {
+            DateTimeKind.Utc => dateTime.ToUniversalTime(),
+            DateTimeKind.Local => dateTime,
+            _ => throw new ArgumentOutOfRangeException(nameof(timeKind), timeKind, null)
+        };
     }
 
     private static async Task InstallAdditionalTargetsAsync(RavenConfiguration configuration)
