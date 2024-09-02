@@ -574,7 +574,7 @@ internal static class RavenLogManagerServerExtensions
 
         return new MicrosoftLogsConfiguration
         {
-            CurrentMinLevel = currentMinLevel.FromNLogLogLevel(), // TODO [ppekrol] this is incorrect, need to convert
+            CurrentMinLevel = currentMinLevel.FromNLogFinalMinLogLevel(),
             MinLevel = server.Configuration.Logs.MicrosoftMinLevel
         };
     }

@@ -116,5 +116,31 @@ namespace Sparrow.Logging
                     throw new ArgumentOutOfRangeException(nameof(logLevel), logLevel, null);
             }
         }
+
+        public static LogLevel FromNLogFinalMinLogLevel(this NLog.LogLevel logLevel)
+        {
+            if (logLevel == NLog.LogLevel.Trace)
+                return LogLevel.Debug;
+
+            if (logLevel == NLog.LogLevel.Debug)
+                return LogLevel.Info;
+
+            if (logLevel == NLog.LogLevel.Info)
+                return LogLevel.Warn;
+
+            if (logLevel == NLog.LogLevel.Warn)
+                return LogLevel.Error;
+
+            if (logLevel == NLog.LogLevel.Error)
+                return LogLevel.Fatal;
+
+            if (logLevel == NLog.LogLevel.Fatal)
+                return LogLevel.Off;
+
+            if (logLevel == NLog.LogLevel.Off)
+                return LogLevel.Trace;
+
+            throw new ArgumentOutOfRangeException(nameof(logLevel), logLevel, null);
+        }
     }
 }
