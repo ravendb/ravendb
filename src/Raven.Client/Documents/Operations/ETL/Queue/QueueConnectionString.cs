@@ -72,7 +72,7 @@ public class QueueConnectionString : ConnectionString
 
     public override DynamicJsonValue ToAuditJson()
     {
-        var json = base.ToJson();
+        var json = base.ToAuditJson();
         
         json[nameof(BrokerType)] = BrokerType;
         json[nameof(KafkaConnectionSettings)] = KafkaConnectionSettings?.ToAuditJson();
