@@ -6,10 +6,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TransactionsRecording
 {
+    /// <summary>
+    /// <para>Starts recording database transactions using the StartTransactionsRecordingOperation.
+    /// The recorded transactions will be saved to the specified file path.</para>
+    /// <para>This is typically used for debugging or analysis purposes.</para>
+    /// </summary>
     public sealed class StartTransactionsRecordingOperation : IMaintenanceOperation
     {
         private readonly string _filePath;
 
+        /// <inheritdoc cref="StartTransactionsRecordingOperation" />
+        /// <param name="filePath">The file path where the transaction recordings will be saved.</param>
         public StartTransactionsRecordingOperation(string filePath)
         {
             _filePath = filePath;

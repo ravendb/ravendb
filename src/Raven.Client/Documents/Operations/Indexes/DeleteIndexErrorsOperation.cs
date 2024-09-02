@@ -6,14 +6,23 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// Deletes indexing errors using the DeleteIndexErrorsOperation.
+    /// This operation clears the errors associated with the index but does not change the index's state from 'Error' to 'Normal.'
+    /// 
+    /// <para><strong>Note:</strong> This operation is executed only on the server node as defined by the current client configuration.</para>
+    /// </summary>
     public sealed class DeleteIndexErrorsOperation : IMaintenanceOperation
     {
         private readonly string[] _indexNames;
 
+        /// <inheritdoc cref="DeleteIndexErrorsOperation" />
         public DeleteIndexErrorsOperation()
         {
         }
 
+        /// <inheritdoc cref="DeleteIndexErrorsOperation" />
+        /// <param name="indexNames">An array of index names for which the errors should be deleted.</param>
         public DeleteIndexErrorsOperation(string[] indexNames)
         {
             _indexNames = indexNames;

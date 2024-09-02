@@ -304,7 +304,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             reader.Reset();
             while (reader.FindNext(fieldRootPage))
             {
-                if (reader.IsNull)
+                if (reader.IsNull || reader.IsNonExisting)
                     continue;
 
                 isMatching = result.RangeType switch
@@ -351,6 +351,9 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         reader.Reset();
         while (reader.FindNext(fieldRootPage))
         {
+            if (reader.IsNonExisting)
+                continue;
+            
             var key = reader.IsNull
                 ? Constants.ProjectionNullValueSlice
                 : reader.Current.Decoded();

@@ -9,11 +9,20 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
+    /// <summary>
+    ///  Allows to specify the IDs of database instances that no longer exist so that their entries can be removed from the database change vector.
+    /// This operation does not affect any documents' current change vectors, but from now on when documents are modified or created their change vector will not include the obsolete entries.
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Operations.ServerOperations.UpdateUnusedDatabasesOperation"/>
     public sealed class UpdateUnusedDatabasesOperation : IServerOperation
     {
         private readonly string _database;
         private readonly Parameters _parameters;
 
+        /// <inheritdoc cref="UpdateUnusedDatabasesOperation"/>
+        /// <param name="database">Name of the database</param>
+        /// <param name="unusedDatabaseIds">The database IDs to be removed from the change vector</param>
+        /// <exception cref="ArgumentException">Thrown when database is null or empty.</exception>
         public UpdateUnusedDatabasesOperation(string database, HashSet<string> unusedDatabaseIds)
         {
             if (string.IsNullOrEmpty(database))

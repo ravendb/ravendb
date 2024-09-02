@@ -77,6 +77,7 @@ public unsafe struct EntryTermsReader
 {
     private readonly LowLevelTransaction _llt;
     private readonly HashSet<long> _nullTermsMarkers;
+    private readonly HashSet<long> _nonExistingTermsMarkers;
     private readonly long _dicId;
     private byte* _cur;
     private readonly byte* _end, _start;
@@ -96,12 +97,14 @@ public unsafe struct EntryTermsReader
     public bool IsRaw;
     public bool IsList;
     public bool IsNull;
+    public bool IsNonExisting;
 
     //rootPages has to be sorted.
-    public EntryTermsReader(LowLevelTransaction llt, HashSet<long> nullTermsMarkers, byte* cur, int size, long dicId)
+    public EntryTermsReader(LowLevelTransaction llt, HashSet<long> nullTermsMarkers, HashSet<long> nonExistingTermsMarkers, byte* cur, int size, long dicId)
     {
         _llt = llt;
         _nullTermsMarkers = nullTermsMarkers;
+        _nonExistingTermsMarkers = nonExistingTermsMarkers;
         _start = _cur;
         _cur = cur;
         _start = cur;
@@ -116,6 +119,7 @@ public unsafe struct EntryTermsReader
     public bool FindNextStored(long fieldRootPage)
     {
         IsNull = false;
+        IsNonExisting = false;
 
         while (MoveNextStoredField())
         {
@@ -137,6 +141,7 @@ public unsafe struct EntryTermsReader
     public bool FindNextSpatial(long fieldRootPage)
     {        
         IsNull = false;
+        IsNonExisting = false;
 
         while (MoveNextSpatial())
         {
@@ -153,6 +158,7 @@ public unsafe struct EntryTermsReader
             return false;
 
         IsNull = false;
+        IsNonExisting = false;
         var termContainerId = VariableSizeEncoding.Read<long>(_cur, out var offset) + _prevTerm;
         _prevTerm = termContainerId;
         _cur += offset;
@@ -197,6 +203,7 @@ public unsafe struct EntryTermsReader
             return false;
 
         IsNull = false;
+        IsNonExisting = false;
         var termContainerId = VariableSizeEncoding.Read<long>(_cur, out var offset) + _prevTerm;
         _prevTerm = termContainerId;
         _cur += offset;
@@ -228,10 +235,12 @@ public unsafe struct EntryTermsReader
         }
 
         IsNull = _nullTermsMarkers.Contains(TermId);
+        IsNonExisting = _nonExistingTermsMarkers.Contains(TermId);
         
         Container.Get(_llt, TermId, out var termItem);
         FieldRootPage = termItem.PageLevelMetadata;
-        if (IsNull == false)
+        
+        if (IsNull == false && IsNonExisting == false)
         {
             TermsReader.Set(Current, termItem, _dicId);
         }
@@ -320,6 +329,7 @@ public unsafe struct EntryTermsReader
         _prevLong = 0;
         _prevTerm = 0;
         IsNull = false;
+        IsNonExisting = false;
     }
 
     public string Debug(Indexing.IndexWriter w)

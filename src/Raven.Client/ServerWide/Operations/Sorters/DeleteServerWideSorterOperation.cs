@@ -7,10 +7,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Sorters
 {
+    /// <summary>
+    /// Server-wide operation to delete custom sorter definition from the server.
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Operations.ServerOperations.Sorters.CustomSorters"/>
     public sealed class DeleteServerWideSorterOperation : IServerOperation
     {
         private readonly string _sorterName;
 
+        /// <inheritdoc cref="DeleteServerWideSorterOperation"/>
+        /// <param name="sorterName">Name of custom sorter to delete.</param>
+        /// <exception cref="ArgumentNullException">Thrown when `sorterName` is null or empty.</exception>
         public DeleteServerWideSorterOperation(string sorterName)
         {
             _sorterName = sorterName ?? throw new ArgumentNullException(nameof(sorterName));
