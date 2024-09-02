@@ -117,10 +117,11 @@ public unsafe struct EntryTermsReader
         Current.Initialize(llt);
     }
 
-    public EntryTermsReader(LowLevelTransaction llt, HashSet<long> nullTermsMarkers, long dicId)
+    public EntryTermsReader(LowLevelTransaction llt, HashSet<long> nullTermsMarkers,  HashSet<long> nonExistingTermsMarkers, long dicId)
     {
         _llt = llt;
         _nullTermsMarkers = nullTermsMarkers;
+        _nonExistingTermsMarkers = nonExistingTermsMarkers;
         _start = _cur;
         _dicId = dicId;
         Current = new();
