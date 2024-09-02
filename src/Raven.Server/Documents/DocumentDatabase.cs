@@ -754,6 +754,10 @@ namespace Raven.Server.Documents
                     DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
                 }
             }
+            catch (OperationCanceledException) when (_serverStore.ServerShutdown.IsCancellationRequested)
+            {
+                // server store is being disposed
+            }
             catch (Exception e)
             {
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Generating offline database info failed: {e}");
