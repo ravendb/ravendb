@@ -57,6 +57,10 @@ namespace Raven.Client.ServerWide.Operations.Logs
 
         public LogLevel CurrentMaxLevel { get; set; }
 
+        public List<LogFilter> CurrentFilters { get; set; } = new();
+
+        public LogFilterAction CurrentLogFilterDefaultAction { get; set; }
+
         public LogLevel MinLevel { get; set; }
 
         public LogLevel MaxLevel { get; set; }
@@ -68,10 +72,6 @@ namespace Raven.Client.ServerWide.Operations.Logs
         public int? MaxArchiveFiles { get; set; }
 
         public bool EnableArchiveFileCompression { get; set; }
-
-        public List<LogFilter> Filters { get; set; } = new();
-
-        public LogFilterAction LogFilterDefaultAction { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -86,8 +86,8 @@ namespace Raven.Client.ServerWide.Operations.Logs
                 [nameof(MaxArchiveDays)] = MaxArchiveDays,
                 [nameof(MaxArchiveFiles)] = MaxArchiveFiles,
                 [nameof(EnableArchiveFileCompression)] = EnableArchiveFileCompression,
-                [nameof(Filters)] = new DynamicJsonArray(Filters.Select(x => x.ToJson())),
-                [nameof(LogFilterDefaultAction)] = LogFilterDefaultAction
+                [nameof(CurrentFilters)] = new DynamicJsonArray(CurrentFilters.Select(x => x.ToJson())),
+                [nameof(CurrentLogFilterDefaultAction)] = CurrentLogFilterDefaultAction
             };
         }
     }
@@ -142,9 +142,9 @@ namespace Raven.Client.ServerWide.Operations.Logs
 
         public LogLevel CurrentMaxLevel { get; set; }
 
-        public List<LogFilter> Filters { get; set; } = new();
+        public List<LogFilter> CurrentFilters { get; set; } = new();
 
-        public LogFilterAction LogFilterDefaultAction { get; set; }
+        public LogFilterAction CurrentLogFilterDefaultAction { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -152,8 +152,8 @@ namespace Raven.Client.ServerWide.Operations.Logs
             {
                 [nameof(CurrentMinLevel)] = CurrentMinLevel,
                 [nameof(CurrentMaxLevel)] = CurrentMaxLevel,
-                [nameof(Filters)] = new DynamicJsonArray(Filters.Select(x => x.ToJson())),
-                [nameof(LogFilterDefaultAction)] = LogFilterDefaultAction
+                [nameof(CurrentFilters)] = new DynamicJsonArray(CurrentFilters.Select(x => x.ToJson())),
+                [nameof(CurrentLogFilterDefaultAction)] = CurrentLogFilterDefaultAction
             };
         }
     }
