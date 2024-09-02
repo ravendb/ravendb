@@ -116,12 +116,12 @@ namespace Raven.Server.Documents.Indexes
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(ArchivedDataProcessingBehavior));
-            
+
             if (ArchivedDataProcessingBehavior == null)
                 writer.WriteNull();
             else
                 writer.WriteInteger((int)ArchivedDataProcessingBehavior);
-            
+
             writer.WriteComma();
 
             PersistFields(context, writer);
@@ -155,15 +155,15 @@ namespace Raven.Server.Documents.Indexes
             public const long TimeTicks = 50_000;
 
             public const long Analyzers = 52_000;
-            
+
             public const long ReduceKeyProcessorHashDoubleFix = 52_001; // RavenDB-17572
 
             public const long ProperlyParseThreeDigitsMillisecondsDates = 52_002; // RavenDB-17711
 
             public const long EngineTypeStored = 54_000; // introducing Corax, added engine type to the index storage
-            
+
             public const long GuaranteedOrderOfPropertiesInMapReduceIndexes_Legacy = 54_001; // RavenDB-17312
-            
+
             public const long GuaranteedOrderOfGroupByFieldsInMapReduceIndexes = 54_002; // RavenDB-17312 - version 54_001 had an issue so we had to fix it and bump version again
 
             private const long TimeTicksSupportInJavaScriptIndexes_54 = 54_003; // RavenDB-19625
@@ -177,13 +177,18 @@ namespace Raven.Server.Documents.Indexes
             public const long PhraseQuerySupportInCoraxIndexes = 60_002;
             public const long StoreOnlySupportInCoraxIndexes = 60_003; // RavenDB-22369
             public const long JavaScriptProperlyHandleDynamicFieldsIndexFields = 60_004; // RavenDB-22363
-            public const long LoadDocumentWithDynamicCollectionNameShouldThrow = 61_000; // RavenDB-22359
+            public const long UseNonExistingPostingList_60 = 60_005; // RavenDB-22703
+
+            public const long Base61Version = 61_000;
+            
+            public const long LoadDocumentWithDynamicCollectionNameShouldThrow = Base61Version; // RavenDB-22359
             public const long CoraxComplexFieldIndexingBehavior = 61_001;
+            public const long UseNonExistingPostingList_61 = 61_002; // RavenDB-22703
 
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = CoraxComplexFieldIndexingBehavior;
+            public const long CurrentVersion = UseNonExistingPostingList_61;
 
             public static bool IsTimeTicksInJavaScriptIndexesSupported(long indexVersion)
             {
@@ -193,6 +198,14 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 return indexVersion >= TimeTicksSupportInJavaScriptIndexes_54;
+            }
+
+            public static bool IsNonExistingPostingListSupported(long indexVersion)
+            {
+                if (indexVersion >= Base61Version)
+                    return indexVersion >= UseNonExistingPostingList_61;
+
+                return indexVersion >= UseNonExistingPostingList_60;
             }
         }
     }
@@ -504,7 +517,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (archivedDataProcessingBehaviorAsInt == null)
                 return null;
-            
+
             return (ArchivedDataProcessingBehavior)archivedDataProcessingBehaviorAsInt;
         }
 

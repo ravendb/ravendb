@@ -31,13 +31,17 @@ public sealed unsafe class CoraxIndexedEntriesReader : IDisposable
         entryReader.Reset();
         while (entryReader.MoveNext())
         {
-            if(_indexSearcher.FieldCache.TryGetField(entryReader.FieldRootPage, out var fieldName)==false)
+            if (_indexSearcher.FieldCache.TryGetField(entryReader.FieldRootPage, out var fieldName) == false)
+                continue;
+            
+            if (entryReader.IsNonExisting)
                 continue;
 
             string value = entryReader.IsNull 
                 ? null 
                 : entryReader.Current.ToString();
-            SetValue(fieldName, value  switch
+            
+            SetValue(fieldName, value switch
             {
                 Constants.EmptyString => string.Empty,
                 _ => value

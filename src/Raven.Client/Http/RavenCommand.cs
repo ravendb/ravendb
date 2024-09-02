@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
 using Raven.Client.Http.Behaviors;
+using Raven.Client.Json;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
@@ -108,11 +109,24 @@ namespace Raven.Client.Http
             throw new InvalidOperationException($"'{GetType()}' command must override the SetResponse method which expects response with the following type: {ResponseType}.");
         }
 
-        public virtual Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken token)
+        public virtual async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken token)
         {
             // We must use HttpCompletionOption.ResponseHeadersRead otherwise the client will buffer the response
             // and we'll get OutOfMemoryException in huge responses (> 2GB).
-            return client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
+            try
+            {
+                return await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+            }
+            finally
+            {
+                if (request.Content is BlittableJsonContent bjc)
+                {
+                    var requestBodyTask = bjc.EnsureCompletedAsync();
+
+                    if (requestBodyTask.IsCompleted == false)
+                        await requestBodyTask.ConfigureAwait(false);
+                }
+            }
         }
 
         public virtual void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)

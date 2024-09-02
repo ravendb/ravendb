@@ -7,10 +7,18 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Analyzers
 {
+    /// <summary>
+    /// Deletes an analyzer from a specific database using the DeleteAnalyzerOperation.
+    /// 
+    /// <para><strong>Note:</strong> By default, this operation applies to the default database of the document store being used. 
+    /// To target a different database, use the ForDatabase() method.</para>
+    /// </summary>
     public sealed class DeleteAnalyzerOperation : IMaintenanceOperation
     {
         private readonly string _analyzerName;
 
+        /// <inheritdoc cref="DeleteAnalyzerOperation" />
+        /// <param name="analyzerName">The name of the analyzer to be deleted.</param>
         public DeleteAnalyzerOperation(string analyzerName)
         {
             _analyzerName = analyzerName ?? throw new ArgumentNullException(nameof(analyzerName));

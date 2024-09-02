@@ -57,11 +57,17 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
                         throw new ArgumentOutOfRangeException($"{spatialOptions.MethodType} is not implemented.");
                 }
 
-                InsertRegularField(indexField, value, indexContext,builder, sourceDocument, out innerShouldSkip);
+                InsertRegularField(indexField, value, indexContext, builder, sourceDocument, out innerShouldSkip);
             }
-            else if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value))
+            else
             {
-                InsertRegularField(indexField, value, indexContext, builder, sourceDocument,  out innerShouldSkip);
+                var successfulRead = BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value);
+            
+                if (successfulRead)
+                    InsertRegularField(indexField, value, indexContext, builder, sourceDocument, out innerShouldSkip);
+
+                if (successfulRead == false || innerShouldSkip)
+                    RegisterMissingFieldFor(indexField);
             }
             
             hasFields |= innerShouldSkip == false;
@@ -73,8 +79,10 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
         if (key != null)
         {
             Debug.Assert(document.LowerId == null || (key == document.LowerId));
-            builder.Write( 0, string.Empty, id.AsSpan());
+            builder.Write(0, string.Empty, id.AsSpan());
         }
+        
+        WriteNonExistingMarkerForMissingFields(builder);
             
         if (_storeValue)
         {

@@ -253,7 +253,8 @@ public static class CoraxQueryBuilder
                 coraxQuery = MaterializeWhenNeeded(builderParameters, coraxQuery, ref streamingOptimization);
             }
             // We sort on known field types, we'll optimize based on the first one to get the rest
-            else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence } sortBy, ..])
+            // Non-existing posting list isn't aware of dynamic fields, so we can't use this optimization for them
+            else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence, Field.FieldId: not CoraxConstants.IndexWriter.DynamicField } sortBy, ..])
             {
                 var maxTermToScan = builderParameters.Take switch
                 {
@@ -267,7 +268,7 @@ public static class CoraxQueryBuilder
                 // We have no where clause and a sort by index, can just scan over the relevant index if there is a single order by clause
                 // if we have multiple clauses, we'll get the first $TAKE+1 terms from the index, then sort just those, leading to the same
                 // behavior, but far faster
-                var betweenQuery =  sortBy.FieldType switch
+                var betweenQuery = sortBy.FieldType switch
                 {
                      MatchCompareFieldType.Integer => indexSearcher.BetweenQuery(sortBy.Field, long.MinValue, long.MaxValue, forward: sortBy.Ascending, streamingEnabled: true, maxNumberOfTerms: maxTermToScan),
                      MatchCompareFieldType.Floating => indexSearcher.BetweenQuery(sortBy.Field, double.MinValue, double.MaxValue, forward: sortBy.Ascending, streamingEnabled: true, maxNumberOfTerms: maxTermToScan),
@@ -275,8 +276,20 @@ public static class CoraxQueryBuilder
                      _ => throw new ArgumentOutOfRangeException("Already checked the FieldType, but was: " + sortBy.FieldType)
                 };
 
-                coraxQuery = indexSearcher.IncludeNullMatch(in sortBy.Field, betweenQuery, sortBy.Ascending);
-                streamingOptimization.SkipOrderByClause = true; //manually turn off the order by
+                var queryWithNullMatches = indexSearcher.IncludeNullMatch(in sortBy.Field, betweenQuery, sortBy.Ascending);
+
+                var indexVersion = builderParameters.Index.Definition.Version;
+
+                if (IndexDefinitionBaseServerSide.IndexVersion.IsNonExistingPostingListSupported(indexVersion))
+                {
+                    var queryWithNullAndNonExistingMatches = indexSearcher.IncludeNonExistingMatch(in sortBy.Field, queryWithNullMatches, sortBy.Ascending);
+                    coraxQuery = queryWithNullAndNonExistingMatches;
+                }
+
+                else
+                    coraxQuery = queryWithNullMatches;
+                
+                streamingOptimization.SkipOrderByClause = true; // manually turn off the order by
             }
             else 
             {

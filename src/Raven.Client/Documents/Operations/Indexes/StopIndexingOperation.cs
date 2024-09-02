@@ -6,6 +6,11 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
+    /// <summary>
+    /// <para>Pauses indexing for the entire database using the StopIndexingOperation.
+    /// If you need to stop a single index, use the StopIndexOperation instead.</para>
+    /// <para><strong>Note:</strong> Indexing will automatically resume after a server restart or by using the StartIndexingOperation.</para>
+    /// </summary>
     public sealed class StopIndexingOperation : IMaintenanceOperation
     {
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
