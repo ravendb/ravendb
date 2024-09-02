@@ -289,13 +289,8 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         return deleted;
     }
 
-    private void HandleSlowSql(long elapsedMilliseconds, string stmt)
+    protected virtual void HandleSlowSql(long elapsedMilliseconds, string stmt)
     {
-        if (this is SnowflakeDatabaseWriter)
-            // User can't create an index on the column in Snowflake, so there's no reason to spawn SlowSqlWarning.
-            // There are other ways to improve Snowflake performance like clustering keys, but it's not aligned with the SlowSql warning purpose.
-            return; 
-        
         if (Logger.IsInfoEnabled)
             Logger.Info($"[{_etlName}] Slow SQL detected. Execution took: {elapsedMilliseconds:#,#;;0}ms, statement: {stmt}");
 
@@ -501,7 +496,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
 
         sb.Append($") {syntax.StartSyntax}");
 
-        sb.Append(GetParameterNameForCommandString(pkName, false)).Append(", ");
+        sb.Append(GetParameterNameForCommandString(pkName, parseJson: false)).Append(", ");
 
         foreach (var column in itemToReplicate.Columns)
         {
@@ -546,7 +541,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
             if (parameterize)
             {
                 var dbParameter = cmd.CreateParameter();
-                dbParameter.ParameterName = GetParameterNameForCommandString("p" + j, false);
+                dbParameter.ParameterName = GetParameterNameForCommandString("p" + j, parseJson: false);
                 dbParameter.Value = toDeleteSqlItems[j].DocumentId.ToString();
                 cmd.Parameters.Add(dbParameter);
                 sb.Append(dbParameter.ParameterName);

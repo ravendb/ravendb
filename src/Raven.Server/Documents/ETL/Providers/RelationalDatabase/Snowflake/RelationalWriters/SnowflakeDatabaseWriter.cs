@@ -134,4 +134,10 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
             connection.Dispose();
         }
     }
+
+    protected override void HandleSlowSql(long elapsedMilliseconds, string stmt)
+    {
+        // User can't create an index on the column in Snowflake, so there's no reason to spawn SlowSqlWarning.
+        // There are other ways to improve Snowflake performance like clustering keys, but it's not aligned with the SlowSql warning purpose.
+    }
 }

@@ -40,10 +40,11 @@ public class RelationalDatabaseWriterSimulator(IRelationalDatabaseWriter writer,
 
         for (int i = 0; i < toSqlItems.Count; i += maxParams)
         {
-            var command = writer.GetDeleteCommand(tableName, pkName, toSqlItems, i, parameterize, maxParams, out int countOfDeletes);
-            var commandText = command.CommandText;
-            command.Dispose();
-            yield return commandText;
+            using (var command = writer.GetDeleteCommand(tableName, pkName, toSqlItems, i, parameterize, maxParams, out int countOfDeletes))
+            {
+                var commandText = command.CommandText;
+                yield return commandText;    
+            }
         }
     }
 }

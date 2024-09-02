@@ -110,7 +110,7 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
 
     protected override string GetParameterNameForDbParameter(string paramName)
     {
-        return GetParameterNameForCommandString(paramName, false);
+        return GetParameterNameForCommandString(paramName, parseJson: false);
     }
 
     protected override string GetParameterNameForCommandString(string targetParamName, bool parseJson)

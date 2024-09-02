@@ -10,6 +10,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Server.Strings;
 
 namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 
@@ -105,7 +106,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
 
         var buffer = value.Buffer;
 
-        if (*(long*)buffer != 7883660417928814884 || // $attachm
+        if ("$attachment/"u8.IsEqualConstant(buffer, value.Size) ||
             *(int*)(buffer + 8) != 796159589) // ent/
         {
             attachmentName = null;

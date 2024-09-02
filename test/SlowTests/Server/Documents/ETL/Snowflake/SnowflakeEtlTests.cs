@@ -1325,7 +1325,7 @@ loadToOrders(orderData);
     }
 
     [RequiresSnowflakeFact]
-    public async Task SnowflakeConnectionStringAuditJsonShouldnNotContainCredentials()
+    public void SnowflakeConnectionStringAuditJsonShouldnNotContainCredentials()
     {
         SnowflakeConnectionString cs = new() { ConnectionString = "secret", Name = "Test" };
         var auditJson = cs.ToAuditJson();
