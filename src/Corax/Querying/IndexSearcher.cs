@@ -123,10 +123,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     
     public EntryTermsReaderEnumerator GetEntryTermsReader(Span<long> ids, PageLocator pageLocator)
     {
-        if (_nullTermsMarkersLoaded == false)
-        {
-            InitializeNullTermsMarkers();
-        }
+        InitializeSpecialTermsMarkers();
 
         return new EntryTermsReaderEnumerator(this, ids, pageLocator);
     }
@@ -149,7 +146,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             searcher._entryIdToLocation.GetFor(ids, locations, -1);
             Container.GetAll(searcher._transaction.LowLevelTransaction, locations, (UnmanagedSpan*)spanBuffer.Ptr, -1, pageLocator);
             _index = -1;
-            Current = new(searcher._transaction.LowLevelTransaction, searcher._nullTermsMarkers, searcher._dictionaryId);
+            Current = new(searcher._transaction.LowLevelTransaction, searcher._nullTermsMarkers, searcher._nonExistingTermsMarkers, searcher._dictionaryId);
         }
 
         public bool MoveNext()
@@ -646,7 +643,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         if (_nullTermsMarkersLoaded == false)
         {
-            InitializeNullTermsMarkers();
+            _nullTermsMarkersLoaded = true;
+            _nullTermsMarkers = new HashSet<long>();
+            
+            InitNullPostingList();
+            
+            if (_nullPostingListsTree != null)
+                LoadSpecialTermMarkers(_nullPostingListsTree, _nullTermsMarkers);
         }
 
         if (_nonExistingTermsMarkersLoaded == false)
@@ -659,17 +662,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             if (_nonExistingPostingListsTree != null)
                 LoadSpecialTermMarkers(_nonExistingPostingListsTree, _nonExistingTermsMarkers);
         }
-    }
-
-    private void InitializeNullTermsMarkers()
-    {
-        _nullTermsMarkersLoaded = true;
-        _nullTermsMarkers = new HashSet<long>();
-            
-        InitNullPostingList();
-            
-        if (_nullPostingListsTree != null)
-            LoadSpecialTermMarkers(_nullPostingListsTree, _nullTermsMarkers);
     }
 
     public static void LoadSpecialTermMarkers(Tree postingList, HashSet<long> termsMarkers)
