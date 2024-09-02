@@ -308,7 +308,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Logging)]
         public void ConnectionStringsAuditJsonDoesntIncludeCredentials()
         {
             var sqlConnectionString = new SqlConnectionString
