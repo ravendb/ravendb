@@ -56,7 +56,10 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
         {
             var json = base.ToJson();
             
+            var databaseAndServer = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(FactoryName, ConnectionString);
             json[nameof(FactoryName)] = FactoryName;
+            json["Database"] = databaseAndServer.Database;
+            json["Server"] = databaseAndServer.Server;
 
             return json;
         }
