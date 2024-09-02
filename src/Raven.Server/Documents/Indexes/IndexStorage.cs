@@ -192,8 +192,14 @@ namespace Raven.Server.Documents.Indexes
                     string configurationKey = nameof(SearchEngineType);
                     string configurationName = _index.Type.IsAuto() ? RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType) : RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType);
 
-                    SearchEngineType defaultEngineType =
-                        _index.Type.IsAuto() ? _index.Configuration.AutoIndexingEngineType : _index.Configuration.StaticIndexingEngineType;
+                    SearchEngineType defaultEngineType = _index.Type.IsAuto() switch
+                    {
+                        // We only support Vectors in Corax, so if an auto-index is using it, let's already set it up as such, regardless
+                        // of what type of default storage engine is configured.
+                        true when _index.Definition.IndexFields.Any(x=>x.Value.Vector) => SearchEngineType.Corax,
+                        true => _index.Configuration.AutoIndexingEngineType,
+                        false => _index.Configuration.StaticIndexingEngineType
+                    };
 
                     if (defaultEngineType == SearchEngineType.None)
                         throw new InvalidDataException($"Default search engine is {SearchEngineType.None}. Please set {configurationName}.");

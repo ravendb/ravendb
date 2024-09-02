@@ -309,7 +309,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             
             case ValueType.Vector:
                 var vectorBuffer = ((VectorField)value).Buffer;
-                builder.WriteVector(fieldId,path,  vectorBuffer);
+                builder.WriteVector(fieldId, path, vectorBuffer);
                 break;
 
             case ValueType.Enumerable:
@@ -454,6 +454,39 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         _nonExistingFieldsOfDocument.Clear();
     }
 
+    [SkipLocalsInit]
+    protected void InsertVectorFields<TBuilder>(IndexField field, object value, TBuilder builder, object sourceDocument)
+        where TBuilder : IIndexEntryBuilder
+    {
+        var path = field.Name;
+        var fieldId = field.Id;
+
+        ValueType valueType = GetValueType(value);
+        switch (valueType)
+        {
+            case ValueType.Enumerable:
+                RuntimeHelpers.EnsureSufficientExecutionStack();
+                var iterator = (IEnumerable)value;
+                builder.IncrementList();
+                foreach (var item in iterator)
+                {
+                    InsertVectorFields(field, item, builder, sourceDocument);
+                }
+                builder.DecrementList();
+                break;
+            case ValueType.String:
+            case ValueType.LazyString:
+            case ValueType.LazyCompressedString:
+                    //TODO: Allocations
+                    var str = value.ToString();
+                    byte[] buffer = GenerateEmbeddings.UsingI8(str);
+                    builder.WriteVector(fieldId, path, buffer);
+                    break;
+            
+            // Everything else we ignore
+        }
+    }
+    
     [DoesNotReturn]
     private static void ThrowFieldIsNoIndexedAndStored(IndexField field)
     {

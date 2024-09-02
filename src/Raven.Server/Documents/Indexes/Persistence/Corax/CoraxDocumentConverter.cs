@@ -62,9 +62,18 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
             else
             {
                 var successfulRead = BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value);
-            
+
                 if (successfulRead)
-                    InsertRegularField(indexField, value, indexContext, builder, sourceDocument, out innerShouldSkip);
+                {
+                    if (indexField.Vector is false)
+                    {
+                        InsertRegularField(indexField, value, indexContext, builder, sourceDocument,  out innerShouldSkip);
+                    }
+                    else
+                    {
+                        InsertVectorFields(indexField, value, builder, sourceDocument);
+                    }
+                }
 
                 if (successfulRead == false || innerShouldSkip)
                     RegisterMissingFieldFor(indexField);

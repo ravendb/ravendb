@@ -18,6 +18,7 @@ using Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.Collation;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
@@ -601,7 +602,9 @@ public static class CoraxQueryBuilder
                 case MethodType.Spatial_Intersects:
                     return HandleSpatial(builderParameters, me, methodType);
                 case MethodType.Vector_Search:
-                    return HandleVector(builderParameters, me);
+                    return HandleVectorSearch(builderParameters, me);
+                case MethodType.Vector_Nearest:
+                    return HandleVectorNearest(builderParameters, me);
                 case MethodType.Regex:
                     return HandleRegex(builderParameters, me, ref leftOnlyOptimization);
                 case MethodType.MoreLikeThis:
@@ -615,30 +618,56 @@ public static class CoraxQueryBuilder
         throw new InvalidQueryException("Unable to understand query", metadata.QueryText, queryParameters);
     }
 
-    private static IQueryMatch HandleVector(Parameters builderParameters, MethodExpression me)
+    private static IQueryMatch HandleVectorNearest(Parameters builderParameters, MethodExpression me)
     {
-        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(builderParameters.Metadata.Query, builderParameters.QueryParameters, me.Arguments[0], builderParameters.Metadata);
-        var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters.Allocator, fieldName, builderParameters.Index, builderParameters.IndexFieldsMapping,
-            builderParameters.FieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, hasBoost: builderParameters.HasBoost);
         var (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[1]);
         var vector = valueType switch
         {
             ValueTokenType.String => Convert.FromBase64String(value.ToString()),
-            _ => throw new NotSupportedException("Vector on " + valueType)
+            _ => throw new NotSupportedException("Vector.Nearest on " + valueType)
         };
+        
+        return HandleVector(builderParameters, me, vector);
+    }
+    
+    private static IQueryMatch HandleVectorSearch(Parameters builderParameters, MethodExpression me)
+    {
+        var (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[1]);
+        var valueAsString = valueType switch
+        {
+            ValueTokenType.String =>value.ToString(),
+            _ => throw new NotSupportedException("Vector.Search() on " + valueType)
+        };
+        
+        return HandleVector(builderParameters, me, GenerateEmbeddings.UsingI8(valueAsString));
+    }
 
-         var minimumMatch = 0.95f;
+    private static IQueryMatch HandleVector(Parameters builderParameters, MethodExpression me, byte[] vector)
+    {
+        var metadata = builderParameters.Metadata;
+        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(builderParameters.Metadata.Query, builderParameters.QueryParameters, me.Arguments[0], builderParameters.Metadata);
+        if (metadata.IsDynamic)
+        {
+            fieldName = new QueryFieldName(AutoIndexField.GetVectorAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
+        }
 
-         if (me.Arguments.Count > 2)
-         {
-             (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[2]);
-             minimumMatch = valueType switch
-             {
-                 ValueTokenType.Long => (long)value,
-                 ValueTokenType.Double => (float)(double)value,
-                 _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + valueType)
-             };
-         }
+        var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters.Allocator, fieldName, builderParameters.Index, builderParameters.IndexFieldsMapping,
+            builderParameters.FieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, hasBoost: builderParameters.HasBoost);
+
+        var minimumMatch = 0.90f;
+
+        if (me.Arguments.Count > 2)
+        {
+            object value;
+            ValueTokenType valueType;
+            (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[2]);
+            minimumMatch = valueType switch
+            {
+                ValueTokenType.Long => (long)value,
+                ValueTokenType.Double => (float)(double)value,
+                _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + valueType)
+            };
+        }
         
         return builderParameters.IndexSearcher.VectorQuery(fieldMetadata, vector, minimumMatch);
     }

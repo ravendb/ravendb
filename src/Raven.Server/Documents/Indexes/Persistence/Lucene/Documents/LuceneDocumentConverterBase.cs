@@ -132,6 +132,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             _storeValueField = new Field(storeValueFieldName, Array.Empty<byte>(), 0, 0, Field.Store.YES);
 
+            foreach ((var name, var field) in _fields)
+            {
+                if (field.Vector)
+                    throw new NotSupportedException("Vector Search is enabled only for Corax indexes, not Lucene. But was asked to index " + name + " as a vector");
+            }
+            
             Scope = new (storeValue, _storeValueField);
         }
 
@@ -347,6 +353,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
 
                 return newFields;
+            }
+
+            if (valueType == ValueType.Vector)
+            {
+                throw new NotSupportedException("Vector operations are only supported in Corax indexes, not with Lucene indexes");
             }
 
             if (valueType == ValueType.DateOnly)

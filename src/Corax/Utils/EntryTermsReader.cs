@@ -80,7 +80,7 @@ public unsafe struct EntryTermsReader
     private readonly HashSet<long> _nonExistingTermsMarkers;
     private readonly long _dicId;
     private byte* _cur;
-    private readonly byte* _end, _start;
+    private byte* _end, _start;
     private long _prevTerm;
     private long _prevLong;
 
@@ -115,6 +115,26 @@ public unsafe struct EntryTermsReader
         
         Current = key;
         Current.Initialize(llt);
+    }
+
+    public EntryTermsReader(LowLevelTransaction llt, HashSet<long> nullTermsMarkers, long dicId)
+    {
+        _llt = llt;
+        _nullTermsMarkers = nullTermsMarkers;
+        _start = _cur;
+        _dicId = dicId;
+        Current = new();
+        Current.Initialize(llt);
+    }
+
+    public void Reuse(byte* cur, int size)
+    {
+        _start = _cur;
+        _cur = cur;
+        _start = cur;
+        _end = cur + size;
+        _prevTerm = 0;
+        _prevLong = 0;
     }
 
     public bool FindNextStored(long fieldRootPage)
