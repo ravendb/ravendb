@@ -542,8 +542,8 @@ internal static class RavenLogManagerServerExtensions
             Path = server.Configuration.Logs.Path.FullPath,
             CurrentMinLevel = currentMinLevel.FromNLogLogLevel(),
             CurrentMaxLevel = currentMaxLevel.FromNLogLogLevel(),
-            Filters = GetFilters(defaultRule),
-            LogFilterDefaultAction = defaultRule.FilterDefaultAction.ToLogFilterAction()
+            CurrentFilters = GetFilters(defaultRule),
+            CurrentLogFilterDefaultAction = defaultRule.FilterDefaultAction.ToLogFilterAction()
         };
     }
 
@@ -589,8 +589,8 @@ internal static class RavenLogManagerServerExtensions
         {
             CurrentMinLevel = currentMinLevel.FromNLogLogLevel(),
             CurrentMaxLevel = currentMaxLevel.FromNLogLogLevel(),
-            Filters = GetFilters(webSocketRule),
-            LogFilterDefaultAction = webSocketRule.FilterDefaultAction.ToLogFilterAction()
+            CurrentFilters = GetFilters(webSocketRule),
+            CurrentLogFilterDefaultAction = webSocketRule.FilterDefaultAction.ToLogFilterAction()
         };
     }
 
