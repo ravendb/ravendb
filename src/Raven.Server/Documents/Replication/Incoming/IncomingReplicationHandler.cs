@@ -437,10 +437,24 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 try
                                 {
-                                  
-                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                        newChangeVector,
-                                        attachmentTombstone.LastModifiedTicks);
+                                    if (attachmentTombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
+                                    {
+                                      
+
+
+                                        database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                            newChangeVector,
+                                            attachmentTombstone.LastModifiedTicks, storageOnly: true);
+                                    }
+                                    else
+                                    {
+
+                                        database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                            newChangeVector,
+                                            attachmentTombstone.LastModifiedTicks, storageOnly: false);
+
+                                    }
+
                                 }
                                 catch (Exception e)
                                 {

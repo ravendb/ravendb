@@ -1081,9 +1081,14 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 await Indexes.WaitForIndexingAsync(store);
                 using (var session = store.OpenSession())
                 {
-                    var res = session.Advanced.RawQuery<Order>("from index 'MultipleAttachmentsIndex' as o where o.AttachmentRetiredAt != null").WaitForNonStaleResults().ToList();
-
+                    var res = session.Advanced.RawQuery<Order>("from index 'MultipleAttachmentsIndex' as o where o.AttachmentFlags != null").WaitForNonStaleResults().ToList();
                     Assert.Equal(docsCount, res.Count);
+
+                    var res2 = session.Advanced.RawQuery<Order>("from index 'MultipleAttachmentsIndex' as o where o.AttachmentFlags != 'Retired'").WaitForNonStaleResults().ToList();
+                    Assert.Equal(docsCount, res2.Count);
+
+                    var res3 = session.Advanced.RawQuery<Order>("from index 'MultipleAttachmentsIndex' as o where o.AttachmentFlags == 'None'").WaitForNonStaleResults().ToList();
+                    Assert.Equal(docsCount, res3.Count);
                 }
 
                 // move in time & start retire
@@ -1096,9 +1101,17 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 await Indexes.WaitForIndexingAsync(store);
                 using (var session = store.OpenSession())
                 {
-                    var res = session.Advanced.RawQuery<Order>("from index 'MultipleAttachmentsIndex' as o where o.AttachmentRetiredAt == null").WaitForNonStaleResults().ToList();
-
+                    var res = session.Advanced.RawQuery<Order>("from index 'MultipleAttachmentsIndex' as o where o.AttachmentRetiredAt != null").WaitForNonStaleResults().ToList();
                     Assert.Equal(docsCount, res.Count);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var res = session.Advanced.RawQuery<Order>("from index 'MultipleAttachmentsIndex' as o where o.AttachmentFlags == 'Retired'").WaitForNonStaleResults().ToList();
+                    Assert.Equal(docsCount, res.Count);
+
+                    var res2 = session.Advanced.RawQuery<Order>("from index 'MultipleAttachmentsIndex' as o where o.AttachmentFlags != 'Retired'").WaitForNonStaleResults().ToList();
+                    Assert.Equal(0, res2.Count);
                 }
             }
         }

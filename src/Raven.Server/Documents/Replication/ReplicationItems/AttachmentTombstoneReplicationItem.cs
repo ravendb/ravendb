@@ -13,16 +13,20 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
     {
         public Slice Key;
         public DocumentFlags Flags;
+        public AttachmentTombstoneFlags TombstoneFlags;
 
         public override long Size => base.Size + // common 
                                      sizeof(long) + // Last modified ticks
                                      sizeof(int) + // size of key
-                                     Key.Size;
+                                     Key.Size +
+                                     sizeof(AttachmentTombstoneFlags);
 
         public override DynamicJsonValue ToDebugJson()
         {
             var djv = base.ToDebugJson();
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
+            djv[nameof(Flags)] = Flags;
+            djv[nameof(TombstoneFlags)] = TombstoneFlags;
             return djv;
         }
 
@@ -46,6 +50,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Memory.Copy(pTemp + tempBufferPos, Key.Content.Ptr, Key.Size);
                 tempBufferPos += Key.Size;
 
+                *(AttachmentTombstoneFlags*)(pTemp + tempBufferPos) = TombstoneFlags;
+                tempBufferPos += sizeof(AttachmentTombstoneFlags);
+
                 stream.Write(tempBuffer, 0, tempBufferPos);
 
                 stats.RecordAttachmentTombstoneOutput(Size);
@@ -61,6 +68,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 var size = *(int*)Reader.ReadExactly(sizeof(int));
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out Key));
 
+                TombstoneFlags = *(AttachmentTombstoneFlags*)Reader.ReadExactly(sizeof(AttachmentTombstoneFlags)) | AttachmentTombstoneFlags.None;
                 stats.RecordAttachmentTombstoneRead(Size);
             }
         }
@@ -69,7 +77,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             var item = new AttachmentTombstoneReplicationItem();
             item.Key = Key.Clone(allocator);
-
+            item.TombstoneFlags = TombstoneFlags;
             item.ToDispose(new DisposableAction(() =>
             {
                 item.Key.Release(allocator);
