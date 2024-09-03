@@ -1568,11 +1568,11 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if(true)
-                return;
-
-            const string message = "Your current license doesn't include the Snowflake ETL feature";
-            throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
+            // todo: uncomment the code below after license work 
+            // if(LicenseStatus.HasSnowflakeEtl)
+            //     return;
+            // const string message = "Your current license doesn't include the Snowflake ETL feature";
+            // throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
         }
 
         public void AssertCanAddConcurrentDataSubscriptions()
