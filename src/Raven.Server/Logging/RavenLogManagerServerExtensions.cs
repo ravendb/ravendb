@@ -49,16 +49,14 @@ internal static class RavenLogManagerServerExtensions
     {
         RuleName = Constants.Logging.Names.SystemRuleName,
         FinalMinLevel = LogLevel.Warn,
-        LoggerNamePattern = "System.*",
-        Targets = { NullTarget }
+        LoggerNamePattern = "System.*"
     };
 
     private static LoggingRule MicrosoftRule = new()
     {
         RuleName = Constants.Logging.Names.MicrosoftRuleName,
-        FinalMinLevel = LogLevel.Warn,
-        LoggerNamePattern = "Microsoft.*",
-        Targets = { NullTarget }
+        FinalMinLevel = LogLevel.Info,
+        LoggerNamePattern = "Microsoft.*"
     };
 
 #if !RVN
