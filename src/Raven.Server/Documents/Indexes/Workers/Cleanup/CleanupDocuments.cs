@@ -46,12 +46,11 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
             return true;
         }
 
-        protected override bool HandleDelete(TombstoneIndexItem tombstoneIndexItem, string collection, Lazy<IndexWriteOperationBase> writer, QueryOperationContext queryContext,
+        protected override void HandleDelete(TombstoneIndexItem tombstoneIndexItem, string collection, Lazy<IndexWriteOperationBase> writer, QueryOperationContext queryContext,
             TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             var tombstone = TombstoneIndexItem.DocumentTombstoneIndexItemToTombstone(queryContext.Documents, tombstoneIndexItem);
             _index.HandleDelete(tombstone, collection, writer, indexContext, stats);
-            return true;
         }
     }
 }
