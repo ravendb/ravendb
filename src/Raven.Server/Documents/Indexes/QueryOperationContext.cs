@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -55,12 +56,12 @@ namespace Raven.Server.Documents.Indexes
                 _releaseServer = _database.ServerStore.ContextPool.AllocateOperationContext(out Server);
         }
 
-        public IDisposable OpenReadTransaction()
+        public IDisposable OpenReadTransaction([CallerMemberName] string caller = null)
         {
-            var documentsTx = Documents.OpenReadTransaction();
+            var documentsTx = Documents.OpenReadTransaction(caller);
             RavenTransaction serverTx = null;
             if (Server != null)
-                serverTx = Server.OpenReadTransaction();
+                serverTx = Server.OpenReadTransaction(caller);
 
             return new DisposeTransactions(documentsTx, serverTx);
         }
