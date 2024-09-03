@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Attachments
 {
-    public class AzureRetiredAttachmentsSlowTests : AzureRetiredAttachmentsHolder
+    public class AzureRetiredAttachmentsSlowTests : RetiredAttachmentsAzureBase
     {
         //TODO: egor test CanUploadRetiredAttachmentToAzureIfItAlreadyExists - will rewrite the retired attachment, even if it is the same - is it the behaviour we want?
         //TODO: egor do big attachments tests

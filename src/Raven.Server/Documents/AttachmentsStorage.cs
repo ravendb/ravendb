@@ -207,11 +207,14 @@ namespace Raven.Server.Documents
                 var attachmentEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
                 var size = TableValueToLong((int)AttachmentsTable.Size, ref attachmentTvr);
+                var retireAt = TableValueToLong((int)AttachmentsTable.RetireAt, ref attachmentTvr);
+
                 using (TableValueToSlice(context, (int)AttachmentsTable.Name, ref attachmentTvr, out var nameSlice))
                 using (TableValueToSlice(context, (int)AttachmentsTable.ContentType, ref attachmentTvr, out var contentTypeSlice))
                 using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref attachmentTvr, out var hashSlice))
                 using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
                 using (TableValueToSlice(context, (int)AttachmentsTable.Collection, ref attachmentTvr, out var collectionSlice))
+
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     // add Retired flag
@@ -224,7 +227,7 @@ namespace Raven.Server.Documents
                     tvb.Add(changeVectorSlice);
                     tvb.Add(size);
                     tvb.Add(Bits.SwapBytes((int)AttachmentFlags.Retired));
-                    tvb.Add(-1L);
+                    tvb.Add(retireAt);
                     tvb.Add(collectionSlice);
                     table.Update(attachmentTvr.Id, tvb);
 
@@ -311,7 +314,8 @@ namespace Raven.Server.Documents
                         size = TableValueToLong((int)AttachmentsTable.Size, ref oldValue);
 
                         retireAt = TableValueToLong((int)AttachmentsTable.RetireAt, ref oldValue);
-                        if (retireAt == -1L)
+                        var existingFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue);
+                        if (existingFlags.HasFlag(AttachmentFlags.Retired) == false && retireAt == -1L)
                         {
                             var dbRecord = _documentDatabase.ReadDatabaseRecord();
                             Debug.Assert(collectionName != null, "collectionName != null");
@@ -372,10 +376,37 @@ namespace Raven.Server.Documents
                                         {
                                             var existingEtag = TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
                                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                                            //TODO: egor if we update retired attachment (can this even happen?) we might delete the old one from cloud storage...
+                                            //TODO: egor if we update retired attachment (can this even happen?) we might delete the old one from cloud storage... I think need to check if it is retired && if it has purgeOn delete ?
                                             var existingAttachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref partialTvr);
                                             var existingRetireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref partialTvr);
-                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingAttachmentFlags, existingRetireAtTicks, collectionName.Name);
+
+                                            if (existingAttachmentFlags.Contain(AttachmentFlags.Retired))
+                                            {
+                                                var dbRecord2 = _documentDatabase.ReadDatabaseRecord();
+                                                if (dbRecord2.RetiredAttachments is { Disabled: false })
+                                                {
+                                                    if (dbRecord2.RetiredAttachments.PurgeOnDelete == false)
+                                                    {
+                                                        // we cannot delete from cloud since PurgeOnDelete is false
+                                                        DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingAttachmentFlags, existingRetireAtTicks, collectionName.Name, storageOnly: true);
+
+                                                    }
+                                                    else
+                                                    {
+                                                        DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingAttachmentFlags, existingRetireAtTicks, collectionName.Name, storageOnly: false);
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingAttachmentFlags, existingRetireAtTicks, collectionName.Name, storageOnly: false);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                // we cannot delete from retired since there is no configuration
+                                                DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingAttachmentFlags, existingRetireAtTicks, collectionName.Name, storageOnly: false);
+                                            }
+
                                         }
                                     }
                                 }
@@ -403,7 +434,7 @@ namespace Raven.Server.Documents
                         {
                             if (fromEtl && flags.Contain(AttachmentFlags.Retired))
                             {
-                                retireAt = -1L;
+                                retireAt = retireAtDt.HasValue == false ? -1L : retireAtDt.Value.Ticks;
                             }
                             else
                             {
@@ -1535,7 +1566,7 @@ namespace Raven.Server.Documents
                     attachmentEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
                 }
 
-                CreateTombstone(context, key, attachmentEtag, changeVector, lastModifiedTicks, flags: DocumentFlags.None);
+                CreateTombstone(context, key, attachmentEtag, changeVector, lastModifiedTicks, (int)DocumentFlags.None);
                 return;
             }
 
@@ -1569,7 +1600,6 @@ namespace Raven.Server.Documents
         private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash,
             string changeVector, long lastModifiedTicks, DocumentFlags flags, AttachmentFlags attachmentFlags, long retireAtTicks, string collection, bool storageOnly = false)
         {
-            CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, flags);
             if (attachmentFlags.HasFlag(AttachmentFlags.Retired))
             {
                 if (storageOnly == false)
@@ -1577,9 +1607,18 @@ namespace Raven.Server.Documents
                     // populate retired tree
                     TryDeleteRetiredAttachment(context, key, collection);
                 }
+                else
+                {
+                   RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
+
+                    // we create attachment tombstone with special flag to mark that we don't want to delete the attachment from cloud
+                    CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, (int)AttachmentTombstoneFlags.FromStorageOnly);
+                }
             }
             else
             {
+                CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, (int)flags);
+
                 if (retireAtTicks != -1)
                 {
                     RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
@@ -1598,7 +1637,7 @@ namespace Raven.Server.Documents
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag,
-            string changeVector, long lastModifiedTicks, DocumentFlags flags)
+            string changeVector, long lastModifiedTicks, int flags)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
 
@@ -1616,7 +1655,7 @@ namespace Raven.Server.Documents
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add((byte)Tombstone.TombstoneType.Attachment);
                 tvb.Add(null, 0);
-                tvb.Add((int)flags);
+                tvb.Add(flags);
                 tvb.Add(cv.Content.Ptr, cv.Size);
                 tvb.Add(lastModifiedTicks);
                 table.Insert(tvb);

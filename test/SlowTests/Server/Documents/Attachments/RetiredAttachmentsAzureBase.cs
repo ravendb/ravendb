@@ -9,27 +9,27 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Exceptions;
 using Raven.Client.Util;
-using Raven.Server.Documents.PeriodicBackup.Aws;
-using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.Azure;
 using SlowTests.Server.Documents.ETL.Olap;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Attachments;
 
-public class S3RetiredAttachmentsHolder : RetiredAttachmentsHolder<S3Settings>
+public abstract class RetiredAttachmentsAzureBase : RetiredAttachmentsHolder<AzureSettings>
 {
-    protected S3RetiredAttachmentsHolder RetiredAttachments;
-    public S3RetiredAttachmentsHolder(ITestOutputHelper output) : base(output)
+    protected RetiredAttachmentsAzureBase RetiredAttachments;
+
+    protected RetiredAttachmentsAzureBase(ITestOutputHelper output) : base(output)
     {
         RetiredAttachments = this;
     }
 
     public override IAsyncDisposable CreateCloudSettings([CallerMemberName] string caller = null)
     {
-        Settings = Etl.GetS3Settings(nameof(RetiredAttachments), $"{caller}-{Guid.NewGuid()}");
+        Settings = Etl.GetAzureSettings(nameof(RetiredAttachments), $"{caller}-{Guid.NewGuid()}");
         Assert.NotNull(Settings);
 
         return new AsyncDisposableAction(async () =>
@@ -38,7 +38,7 @@ public class S3RetiredAttachmentsHolder : RetiredAttachmentsHolder<S3Settings>
         });
     }
 
-    public override async Task PutRetireAttachmentsConfiguration(DocumentStore store, S3Settings settings, List<string> collections = null, string database = null)
+    public override async Task PutRetireAttachmentsConfiguration(DocumentStore store, AzureSettings settings, List<string> collections = null, string database = null)
     {
         if (collections == null)
             collections = new List<string> { "Orders" };
@@ -47,27 +47,22 @@ public class S3RetiredAttachmentsHolder : RetiredAttachmentsHolder<S3Settings>
 
         var config = new RetiredAttachmentsConfiguration()
         {
-            S3Settings = settings, Disabled = false, RetirePeriods = collections.ToDictionary(x => x, x => TimeSpan.FromMinutes(3)), RetireFrequencyInSec = 1000
+            AzureSettings = settings, Disabled = false, RetirePeriods = collections.ToDictionary(x => x, x => TimeSpan.FromMinutes(3)), RetireFrequencyInSec = 1000
         };
         ModifyRetiredAttachmentsConfig?.Invoke(config);
         await store.Maintenance.ForDatabase(database).SendAsync(new ConfigureRetiredAttachmentsOperation(config));
     }
 
-    protected override void AssertUploadRetiredAttachmentToCloudThenManuallyDeleteAndGetShouldThrowInternal(RavenException e)
+    protected override async Task<List<FileInfoDetails>> GetBlobsFromCloudAndAssertForCount(AzureSettings settings, int expected, int timeout = 120_000)
     {
-        Assert.Contains("The specified key does not exist", e.Message);
-    }
-
-    protected override async Task<List<FileInfoDetails>> GetBlobsFromCloudAndAssertForCount(S3Settings settings, int expected, int timeout = 120_000)
-    {
-        List<S3FileInfoDetails> cloudObjects = null;
+        List<RavenStorageClient.BlobProperties> cloudObjects = null;
         var val3 = await WaitForValueAsync(async () =>
         {
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
-            using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
+            using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
             {
                 var prefix = $"{settings.RemoteFolderName}";
-                cloudObjects = await s3Client.ListAllObjectsAsync(prefix, string.Empty, false);
+                cloudObjects = (await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false)).List.ToList();
                 return cloudObjects.Count;
             }
         }, expected, timeout);
@@ -80,16 +75,16 @@ public class S3RetiredAttachmentsHolder : RetiredAttachmentsHolder<S3Settings>
 
         return cloudObjects.Select(x => new FileInfoDetails()
         {
-            FullPath = x.FullPath,
-            LastModified = x.LastModified
+            FullPath = x.Name,
+            LastModified = x.LastModified?.DateTime ?? DateTime.MinValue
         }).ToList();
     }
 
-    public override async Task DeleteObjects(S3Settings s3Settings)
+    public override async Task DeleteObjects(AzureSettings AzureSettings)
     {
-        if (s3Settings == null)
+        if (AzureSettings == null)
             return;
 
-        await S3Tests.DeleteObjects(s3Settings, prefix: $"{s3Settings.RemoteFolderName}", delimiter: string.Empty);
+        await AzureTests.DeleteObjects(AzureSettings, prefix: $"{AzureSettings.RemoteFolderName}", delimiter: string.Empty);
     }
 }

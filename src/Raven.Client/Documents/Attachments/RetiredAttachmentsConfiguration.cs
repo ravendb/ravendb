@@ -15,6 +15,11 @@ namespace Raven.Client.Documents.Attachments
         public Dictionary<string, TimeSpan> RetirePeriods { get; set; }
         public long? RetireFrequencyInSec { get; set; }
         public long? MaxItemsToProcess { get; set; }
+
+        /// <summary>
+        /// Purge the retired attachments when the document is deleted.
+        /// Default: false
+        /// </summary>
         public bool PurgeOnDelete { get; set; }
 
         public override int GetHashCode()

@@ -79,7 +79,7 @@ public abstract class RetiredAttachmentsHolderBase : ReplicationTestBase
         Assert.Equal(attachmentName, retired.Details.Name);
         Assert.Equal(streamSize, retired.Details.Size);
         Assert.Equal(AttachmentFlags.Retired, retired.Details.Flags);
-        Assert.Null(retired.Details.RetireAt);
+        Assert.NotNull(retired.Details.RetireAt);
         using var retiredStream = new MemoryStream();
         await retired.Stream.CopyToAsync(retiredStream);
         stream.Position = 0;
