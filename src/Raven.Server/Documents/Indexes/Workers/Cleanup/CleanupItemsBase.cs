@@ -18,7 +18,6 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
         private readonly Logger _logger;
 
         private readonly Index _index;
-        private readonly IndexItemType _itemType;
         private readonly IndexingConfiguration _configuration;
 
         protected readonly IndexStorage IndexStorage;
@@ -26,10 +25,8 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
         protected CleanupItemsBase(Index index, IndexStorage indexStorage, IndexingConfiguration configuration, MapReduceIndexingContext mapReduceContext)
         {
             _index = index;
-            _itemType = _index.ItemType;
             _configuration = configuration;
-            _logger = LoggingSource.Instance
-                .GetLogger<CleanupItemsBase>(indexStorage.DocumentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger(indexStorage.DocumentDatabase.Name, GetType().FullName);
 
             IndexStorage = indexStorage;
         }
@@ -48,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
 
         protected abstract bool IsValidTombstoneType(TombstoneIndexItem tombstone);
 
-        protected abstract bool HandleDelete(TombstoneIndexItem tombstone, string collection, Lazy<IndexWriteOperationBase> writer, QueryOperationContext queryContext,
+        protected abstract void HandleDelete(TombstoneIndexItem tombstone, string collection, Lazy<IndexWriteOperationBase> writer, QueryOperationContext queryContext,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
 
@@ -84,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
                     while (keepRunning)
                     {
                         var hasChanges = false;
-                        
+
                         ClearStatsIfNeeded();
 
                         using (queryContext.OpenReadTransaction())
@@ -114,11 +111,8 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
                                 if (IsValidTombstoneType(tombstone) == false)
                                     continue; // this can happen when we have '@all_docs'
 
-                                var deleted = HandleDelete(tombstone, collection, writeOperation, queryContext, indexContext, collectionStats);
+                                HandleDelete(tombstone, collection, writeOperation, queryContext, indexContext, collectionStats);
                                 stats.RecordTombstoneDeleteSuccess();
-
-                                if (deleted && _itemType == IndexItemType.TimeSeries)
-                                    continue;
 
                                 var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.Cleanup, queryContext, indexContext, writeOperation, lastEtag,
                                     lastCollectionEtag,

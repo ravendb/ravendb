@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
             return true;
         }
 
-        protected override bool HandleDelete(TombstoneIndexItem tombstone, string collection, Lazy<IndexWriteOperationBase> writer,
+        protected override void HandleDelete(TombstoneIndexItem tombstone, string collection, Lazy<IndexWriteOperationBase> writer,
             QueryOperationContext queryContext, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_timeSeriesStats.TryGetValue(tombstone.LuceneKey, out var result) == false)
@@ -61,16 +61,15 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
             
             // if the time series is not completely deleted, we can skip further processing
             if (result.Item1 != default && result.Item1.Count != 0)
-                return false;
+                return;
 
             if (result.Deleted)
-                return false;
+                return;
 
             HandleTimeSeriesDelete(tombstone, collection, writer, queryContext, indexContext, stats);
 
             result.Deleted = true;
             _timeSeriesStats[tombstone.LuceneKey] = result;
-            return true;
         }
 
         protected virtual void HandleTimeSeriesDelete(TombstoneIndexItem tombstone, string collection, Lazy<IndexWriteOperationBase> writer,

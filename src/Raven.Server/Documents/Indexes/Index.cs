@@ -264,8 +264,6 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly IndexItemType _itemType;
 
-        internal IndexItemType ItemType => _itemType;
-
         internal bool SourceDocumentIncludedInOutput;
         private bool _alreadyNotifiedAboutIncludingDocumentInOutput;
 
