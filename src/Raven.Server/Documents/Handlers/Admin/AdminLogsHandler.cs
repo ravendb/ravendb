@@ -35,6 +35,14 @@ namespace Raven.Server.Documents.Handlers.Admin
             throw new InvalidOperationException("This endpoints requires 6.2 Client API or newer.");
         }
 
+        protected override void AssertCanPersistConfiguration()
+        {
+            base.AssertCanPersistConfiguration();
+
+            if (Server.Configuration.Logs.ConfigPath != null)
+                throw new InvalidOperationException("Configuration cannot be persisted because logs were configured via external configuration file, please modify the file directly.");
+        }
+
         [RavenAction("/admin/logs/configuration", "GET", AuthorizationStatus.Operator)]
         public async Task GetConfiguration()
         {
