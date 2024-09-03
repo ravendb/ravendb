@@ -939,7 +939,8 @@ namespace Voron.Impl
         public NativeMemory.ThreadStats CurrentTransactionHolder { get; set; }
         
         public PageLocator PageLocator => _pageLocator;
-
+        
+        public string CallerName { get; set; }
 
         private readonly UnguardedDisposableScope _disposableScope = new();
 
