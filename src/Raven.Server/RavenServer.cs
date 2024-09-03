@@ -971,9 +971,9 @@ namespace Raven.Server
             return false;
         }
 
-        private Lazy<Task> _currentRefreshTask = new Lazy<Task>(Task.CompletedTask);
+        private Task<Task> _currentRefreshTask = Task.FromResult(Task.CompletedTask);
 
-        public Task RefreshTask => _currentRefreshTask.IsValueCreated ? _currentRefreshTask.Value : Task.FromException(new InvalidOperationException("Refresh task wasn't started"));
+        public Task RefreshTask => _currentRefreshTask.Result;
 
         public void RefreshClusterCertificateTimerCallback(object state)
         {
@@ -1011,18 +1011,26 @@ namespace Raven.Server
             var forceRenew = state as bool? ?? false;
 
             var currentRefreshTask = _currentRefreshTask;
-            if (currentRefreshTask.IsValueCreated == false || currentRefreshTask.Value.IsCompleted == false)
+            // it's fine to wait synchronously here, the parent task is short
+            if (currentRefreshTask.Result.IsCompleted == false)
             {
                 _refreshClusterCertificate?.Change(TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
                 return false;
             }
 
-            var refreshCertificate = new Lazy<Task>(() => DoActualCertificateRefresh(currentCertificate, raftRequestId, forceRenew: forceRenew));
-            if (Interlocked.CompareExchange(ref _currentRefreshTask, refreshCertificate, currentRefreshTask) != currentRefreshTask)
+            var tcs = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
+            if (Interlocked.CompareExchange(ref _currentRefreshTask, tcs.Task, currentRefreshTask) != currentRefreshTask)
                 return false;
 
-            // materialize the task
-            _ = refreshCertificate.Value;
+            try
+            {
+                var task = DoActualCertificateRefresh(currentCertificate, raftRequestId, forceRenew: forceRenew);
+                tcs.SetResult(task);
+            }
+            catch (Exception e)
+            {
+                tcs.SetException(e);
+            }
             return true;
         }
 
@@ -2820,9 +2828,7 @@ namespace Raven.Server
                 {
                     try
                     {
-                        // under a race when we just refreshed and disposed (without materializing)
-                        // we will wait for the task to be materialized and closed with OperationCanceledException
-                        _currentRefreshTask.Value.Wait();
+                        RefreshTask.Wait();
                     }
                     catch (OperationCanceledException)
                     {
