@@ -423,7 +423,7 @@ internal static class RavenLogManagerServerExtensions
             if (configuration.Logs.NLogInternalPath == null)
                 return;
 
-            InternalLogger.LogFile = configuration.Logs.NLogInternalPath.FullPath;
+            InternalLogger.LogFile = configuration.Logs.NLogInternalPath.Combine("nlog.internal.log").FullPath;
             InternalLogger.LogLevel = configuration.Logs.NLogInternalLevel.ToNLogLogLevel();
             InternalLogger.LogToConsole = configuration.Logs.NLogLogToConsole;
             InternalLogger.LogToConsoleError = configuration.Logs.NLogLogToConsoleError;
