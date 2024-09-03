@@ -85,6 +85,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(TxInfoResult.TransactionId)] = lowLevelTransaction.Id,
                 [nameof(TxInfoResult.ThreadId)] = lowLevelTransaction.CurrentTransactionHolder?.ManagedThreadId,
                 [nameof(TxInfoResult.ThreadName)] = lowLevelTransaction.CurrentTransactionHolder?.Name,
+                [nameof(TxInfoResult.CallerName)] = lowLevelTransaction.CallerName,
                 [nameof(TxInfoResult.StartTime)] = lowLevelTransaction.TxStartTime.GetDefaultRavenFormat(isUtc: true),
                 [nameof(TxInfoResult.TotalTime)] = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).TotalMilliseconds} mSecs",
                 [nameof(TxInfoResult.FlushInProgressLockTaken)] = lowLevelTransaction.FlushInProgressLockTaken,
@@ -103,6 +104,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public int TransactionId;
         public int ThreadId;
         public string ThreadName;
+        public string CallerName;
         public int StartTime;
         public int TotalTime;
         public bool FlushInProgressLockTaken;

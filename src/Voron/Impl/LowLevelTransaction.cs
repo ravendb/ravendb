@@ -930,6 +930,8 @@ namespace Voron.Impl
 
         public NativeMemory.ThreadStats CurrentTransactionHolder { get; set; }
 
+        public string CallerName { get; set; }
+
         public void Dispose()
         {
             if (_txState.HasFlag(TxState.Disposed))
