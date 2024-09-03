@@ -857,9 +857,6 @@ namespace Raven.Server.ServerWide
             }
 
             CheckSwapOrPageFileAndRaiseNotification();
-
-            LicenseManager.Initialize(_env, ContextPool);
-            LatestVersionCheck.Instance.Check(this);
         }
 
         public void Initialize()
