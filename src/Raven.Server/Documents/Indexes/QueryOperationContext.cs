@@ -58,11 +58,20 @@ namespace Raven.Server.Documents.Indexes
         public IDisposable OpenReadTransaction()
         {
             var documentsTx = Documents.OpenReadTransaction();
-            RavenTransaction serverTx = null;
-            if (Server != null)
-                serverTx = Server.OpenReadTransaction();
 
-            return new DisposeTransactions(documentsTx, serverTx);
+            try
+            {
+                RavenTransaction serverTx = null;
+                if (Server != null)
+                    serverTx = Server.OpenReadTransaction();
+
+                return new DisposeTransactions(documentsTx, serverTx);
+            }
+            catch
+            {
+                documentsTx.Dispose();
+                throw;
+            }
         }
 
         public void CloseTransaction()
