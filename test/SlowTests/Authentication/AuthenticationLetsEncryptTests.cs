@@ -74,11 +74,26 @@ namespace SlowTests.Authentication
             }
         }
 
+        [RavenIntegrationRetryFact(delayBetweenRetriesMs: 1000)]
+        public async Task CanGetLetsEncryptCertificateAndRenewAfterFailurePebble()
+        {
+            var acmeUrl = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_URL") ?? string.Empty;
+            Assert.NotEmpty(acmeUrl);
+
+            await CanGetLetsEncryptCertificateAndRenewAfterFailure(acmeUrl);
+        }
+
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanGetLetsEncryptCertificateAndRenewAfterFailure()
         {
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
-            
+            await CanGetLetsEncryptCertificateAndRenewAfterFailure(acmeUrl);
+        }
+
+        private async Task CanGetLetsEncryptCertificateAndRenewAfterFailure(string acmeUrl)
+        {
+            RemoveAcmeCache(acmeUrl);
+
             SetupLocalServer();
             SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
 
