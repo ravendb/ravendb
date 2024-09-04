@@ -1,4 +1,5 @@
 ﻿using Voron;
+using Voron.Data.BTrees;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -8,6 +9,26 @@ public class Bugs : StorageTest
 {
     public Bugs(ITestOutputHelper output) : base(output)
     {
+    }
+
+    [Fact]
+    public void SplitRootPageWhileReading()
+    {
+        using (var txw = Env.WriteTransaction())
+        {
+            int i=0;
+            Tree rootObjects = txw.LowLevelTransaction.RootObjects;
+            while (rootObjects.ReadHeader().RootPageNumber == 0)
+            {
+                rootObjects.Add(i.ToString(), i.ToString());
+                i++;
+            }
+
+            using (var txr = Env.ReadTransaction())
+            {
+                txr.LowLevelTransaction.RootObjects.Read("1");
+            }
+        }
     }
 
     [Fact]
