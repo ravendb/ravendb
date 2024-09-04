@@ -23,7 +23,7 @@ namespace FastTests.Voron.Bugs
 
                 var reducedOverflowSize = 2 * Constants.Storage.PageSize;
 
-                tx.LowLevelTransaction.ShrinkOverflowPage(page.PageNumber, reducedOverflowSize, new TreeMutableState(tx.LowLevelTransaction));
+                tx.LowLevelTransaction.ShrinkOverflowPage(page.PageNumber, reducedOverflowSize, tx.LowLevelTransaction.RootObjects);
 
                 var shrinkPages = (overflowSize - reducedOverflowSize) / Constants.Storage.PageSize;
 

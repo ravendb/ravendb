@@ -27,7 +27,7 @@ namespace SlowTests.Voron.LeafsCompression
             {
                 var tree = tx.ReadTree("tree");
 
-                Assert.True(tree.State.Header.Flags.HasFlag(TreeFlags.LeafsCompressed));
+                Assert.True(tree.ReadHeader().Flags.HasFlag(TreeFlags.LeafsCompressed));
                 
                 var bytes = new byte[3070];
 

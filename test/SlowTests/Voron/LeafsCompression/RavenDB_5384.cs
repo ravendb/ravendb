@@ -67,7 +67,7 @@ namespace SlowTests.Voron.LeafsCompression
             {
                 var tree = tx.ReadTree("tree");
 
-                Assert.True(tree.State.Header.Flags.HasFlag(TreeFlags.LeafsCompressed));
+                Assert.True(tree.ReadHeader().Flags.HasFlag(TreeFlags.LeafsCompressed));
 
                 foreach (var id in ids)
                 {
@@ -97,7 +97,7 @@ namespace SlowTests.Voron.LeafsCompression
             {
                 var tree = tx.ReadTree("tree");
 
-                Assert.True(tree.State.Header.Flags.HasFlag(TreeFlags.LeafsCompressed));
+                Assert.True(tree.ReadHeader().Flags.HasFlag(TreeFlags.LeafsCompressed));
 
                 foreach (var id in ids)
                 {
@@ -127,7 +127,7 @@ namespace SlowTests.Voron.LeafsCompression
             {
                 var tree = tx.ReadTree("tree");
 
-                Assert.True(tree.State.Header.Flags.HasFlag(TreeFlags.LeafsCompressed));
+                Assert.True(tree.ReadHeader().Flags.HasFlag(TreeFlags.LeafsCompressed));
 
                 foreach (var id in ids)
                 {
@@ -154,7 +154,7 @@ namespace SlowTests.Voron.LeafsCompression
             {
                 var tree = tx.ReadTree("tree");
 
-                Assert.True(tree.State.Header.Flags.HasFlag(TreeFlags.LeafsCompressed));
+                Assert.True(tree.ReadHeader().Flags.HasFlag(TreeFlags.LeafsCompressed));
 
                 foreach (var id in ids)
                 {

@@ -36,9 +36,9 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var pageCount = tree.State.Header.PageCount;
+                var pageCount = tree.ReadHeader().PageCount;
                 tree.Add("  244", new MemoryStream(new byte[512]));
-                Assert.Equal(pageCount, tree.State.Header.PageCount);
+                Assert.Equal(pageCount, tree.ReadHeader().PageCount);
                 tx.Commit();
             }
         }
