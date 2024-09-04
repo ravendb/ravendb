@@ -101,7 +101,8 @@ namespace Raven.Server.Documents.Operations
             Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
             long id,
             IOperationDetailedDescription detailedDescription = null,
-            OperationCancelToken token = null)
+            OperationCancelToken token = null,
+            string databaseName = null)
         {
             var operationState = new OperationState
             {
@@ -128,7 +129,8 @@ namespace Raven.Server.Documents.Operations
                 Id = id,
                 Description = operationDescription,
                 Token = token,
-                State = operationState
+                State = operationState,
+                DatabaseName = databaseName
             };
 
             object locker = new object();
@@ -307,6 +309,8 @@ namespace Raven.Server.Documents.Operations
             public DocumentDatabase Database;
 
             public bool Killable => Token != null;
+
+            public string DatabaseName;
 
             public DynamicJsonValue ToJson()
             {
