@@ -1547,8 +1547,8 @@ namespace Voron.Impl.Journal
                     if (CurrentFile == null || CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) < journalEntry.NumberOf4Kbs)
                     {
                         CurrentFile = NextFile(journalEntry.NumberOf4Kbs);
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"New journal file created {CurrentFile.Number:D19}");
+                        if (_logger.IsDebugEnabled)
+                            _logger.Debug($"New journal file created {CurrentFile.Number:D19}");
                     }
 
                     tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
