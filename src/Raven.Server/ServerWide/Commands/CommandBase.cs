@@ -4,6 +4,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Threading;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -33,6 +34,9 @@ namespace Raven.Server.ServerWide.Commands
         // if string.Empty passed, it will be treated as don't care,
         // if (null) value is passed, it will be treated as a bug. (will throw an exception only in Debug builds to support old clients)
         public string UniqueRequestId;
+
+        [JsonDeserializationIgnore]
+        public SingleUseFlag InUse = new SingleUseFlag();
 
         public BlittableJsonReaderObject Raw;
 
