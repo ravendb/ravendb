@@ -51,9 +51,10 @@ namespace Raven.Server.Documents.Operations
             string description,
             IOperationDetailedDescription detailedDescription,
             Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
-            OperationCancelToken token = null)
+            OperationCancelToken token = null,
+            string databaseName = null)
         {
-            var operation = CreateOperationInstance(id, _databaseName, operationType, description, detailedDescription, token);
+            var operation = CreateOperationInstance(id, _databaseName ?? databaseName, operationType, description, detailedDescription, token);
 
             return AddOperationInternalAsync(operation, taskFactory);
         }
