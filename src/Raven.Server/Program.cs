@@ -129,9 +129,6 @@ namespace Raven.Server
                 AllocationsLoggingCount = configuration.DebugConfiguration.AllocationsLoggingCount
             });
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Logging to {configuration.Logs.Path} set to [{configuration.Logs.MinLevel}, {configuration.Logs.MinLevel.ToNLogMaxLogLevel()}] level.");
-
             InitializeThreadPoolThreads(configuration);
 
             LatestVersionCheck.Instance.Initialize(configuration.Updates);
