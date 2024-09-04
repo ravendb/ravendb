@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected override async ValueTask<(long, bool)> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId,  DateTime? __)
+        protected override async ValueTask<(long OperationId, bool IsResponsibleNode)> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId,  DateTime? __)
         {
             var token = RequestHandler.CreateTimeLimitedBackgroundOperationToken();
             
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
                 token.Dispose();
             });
 
-            return (operationId, true);
+            return (operationId, IsResponsibleNode: true);
         }
 
         protected override long GetNextOperationId()

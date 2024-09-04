@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
         }
 
-        protected abstract ValueTask<(long, bool)> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId, DateTime? startTime);
+        protected abstract ValueTask<(long OperationId, bool IsResponsibleNode)> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId, DateTime? startTime);
 
         protected abstract long GetNextOperationId();
 

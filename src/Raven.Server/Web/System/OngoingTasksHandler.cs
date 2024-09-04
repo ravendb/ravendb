@@ -81,7 +81,7 @@ namespace Raven.Server.Web.System
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/admin/backup/database/status", "GET", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]
+        [RavenAction("/databases/*/admin/backup/running", "GET", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]
         public async Task GetBackupRunningStatus()
         {
             using (var processor = new OngoingTasksHandlerProcessorForGetRunningBackupOperationStatus(this))

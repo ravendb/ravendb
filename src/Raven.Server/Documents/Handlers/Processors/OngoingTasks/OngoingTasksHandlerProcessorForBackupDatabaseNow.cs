@@ -20,14 +20,14 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             return RequestHandler.Database.Operations.GetNextOperationId();
         }
         
-        protected override async ValueTask<(long, bool)> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId, DateTime? startTime)
+        protected override async ValueTask<(long OperationId, bool IsResponsibleNode)> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId, DateTime? startTime)
         {
             var nodeTag = await BackupUtils.WaitAndGetResponsibleNodeAsync(taskId, RequestHandler.Database);
 
             if (nodeTag == ServerStore.NodeTag)
             {
                 operationId = RequestHandler.Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup, operationId, startTime);
-                return (operationId, true);
+                return (operationId, IsResponsibleNode: true);
             }
 
             //redirect
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             cmd.SelectedNodeTag = nodeTag;
             await RequestHandler.ExecuteRemoteAsync(new ProxyCommand<OperationIdResult<StartBackupOperationResult>>(cmd, HttpContext.Response));
             
-            return (operationId, false);
+            return (operationId, IsResponsibleNode: false);
         }
     }
 }
