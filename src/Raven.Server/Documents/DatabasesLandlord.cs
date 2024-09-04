@@ -1568,14 +1568,14 @@ namespace Raven.Server.Documents
                     Debug.Assert(string.Equals(state.Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                         $"{state.Name} != {record.DatabaseName}");
 
-                    if (state.Logger.IsInfoEnabled)
+                    if (state.Logger.IsDebugEnabled)
                     {
                         string msg = $"Starting to process record {index} (current {state.LastIndexChange}) for {record.DatabaseName}. Type: {type}. ";
 
                         if (changeType != null)
                             msg += $"Cluster database change type: {changeType}";
 
-                        state.Logger.Info(msg);
+                        state.Logger.Debug(msg);
                     }
 
                     try
@@ -1583,13 +1583,13 @@ namespace Raven.Server.Documents
                         await state.OnChange(record, index);
                         state.LastIndexChange = index;
 
-                        if (state.Logger.IsInfoEnabled)
-                            state.Logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
+                        if (state.Logger.IsDebugEnabled)
+                            state.Logger.Debug($"Finish to process record {index} for {record.DatabaseName}.");
                     }
                     catch (Exception e)
                     {
-                        if (state.Logger.IsInfoEnabled)
-                            state.Logger.Info($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
+                        if (state.Logger.IsWarnEnabled)
+                            state.Logger.Warn($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
                         throw;
                     }
                 }
@@ -1623,8 +1623,8 @@ namespace Raven.Server.Documents
                             }
                             catch (Exception e)
                             {
-                                if (state.Logger.IsErrorEnabled)
-                                    state.Logger.Error($"Failed to log long held cluster lock: {sp.Elapsed} in database {state.Name}", e);
+                                if (state.Logger.IsDebugEnabled)
+                                    state.Logger.Debug($"Failed to log long held cluster lock: {sp.Elapsed} in database {state.Name}", e);
                             }
                         }
                     }
@@ -1636,8 +1636,8 @@ namespace Raven.Server.Documents
                 if (state.LastIndexChange > index)
                 {
                     // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
-                    if (state.Logger.IsInfoEnabled)
-                        state.Logger.Info($"Skipping record {index} (current {state.LastIndexChange}) for {record.DatabaseName} because it was already precessed.");
+                    if (state.Logger.IsDebugEnabled)
+                        state.Logger.Debug($"Skipping record {index} (current {state.LastIndexChange}) for {record.DatabaseName} because it was already precessed.");
                     return true;
                 }
 

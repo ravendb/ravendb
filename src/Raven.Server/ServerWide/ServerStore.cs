@@ -631,8 +631,8 @@ namespace Raven.Server.ServerWide
                 Configuration.Memory.MaxFreeCommittedMemoryToKeep,
                 Configuration.Memory.LowMemoryCommitLimit);
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
+            if (Logger.IsDebugEnabled)
+                Logger.Debug("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
 
             var path = Configuration.Core.DataDirectory.Combine("System");
             var storeAlertForLateRaise = new List<AlertRaised>();
