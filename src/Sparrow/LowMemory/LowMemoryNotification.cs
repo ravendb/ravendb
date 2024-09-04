@@ -19,7 +19,7 @@ namespace Sparrow.LowMemory
         private readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> _lowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
 
         public readonly MultipleUseFlag InLowMemory = new();
-        
+
         internal enum LowMemReason
         {
             None = 0,
@@ -62,12 +62,16 @@ namespace Sparrow.LowMemory
                 {
                     var now = DateTime.UtcNow;
 
-                    if (((isLowMemory && _logger.IsInfoEnabled) || _logger.IsInfoEnabled)
+                    if (((isLowMemory && _logger.IsInfoEnabled) || _logger.IsDebugEnabled)
                         && now - _lastLoggedLowMemory > _logLowMemoryInterval)
                     {
                         _lastLoggedLowMemory = now;
-                        _logger.Info($"Running {_lowMemoryHandlers.Count} low memory handlers with severity: {lowMemorySeverity}. " +
-                                           $"{MemoryUtils.GetExtendedMemoryInfo(memoryInfo, _lowMemoryMonitor.GetDirtyMemoryState())}");
+                        var message = $"Running {_lowMemoryHandlers.Count} low memory handlers with severity: {lowMemorySeverity}. {MemoryUtils.GetExtendedMemoryInfo(memoryInfo, _lowMemoryMonitor.GetDirtyMemoryState())}";
+
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(message);
+                        else if (_logger.IsDebugEnabled)
+                            _logger.Debug(message);
                     }
 
 #if NET7_0_OR_GREATER

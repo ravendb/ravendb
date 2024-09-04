@@ -2142,9 +2142,9 @@ namespace Raven.Server.Documents.Indexes
                 _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
                 _allocatedAfterPreviousCleanup = indexingStats.TotalAllocated;
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
-                    _logger.Info($"Reduced the memory usage of index '{Name}' (mode:{mode}). " +
+                    _logger.Debug($"Reduced the memory usage of index '{Name}' (mode:{mode}). " +
                                  $"Before: {new Size(allocatedBeforeCleanup, SizeUnit.Bytes)}, " +
                                  $"after: {new Size(_allocatedAfterPreviousCleanup, SizeUnit.Bytes)}");
                 }
