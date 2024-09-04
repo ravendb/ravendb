@@ -11,14 +11,17 @@ namespace Raven.Client.Util
         private static readonly TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
         internal static TimeSpan DefaultReadTimeout { get; } = TimeSpan.FromSeconds(120);
 
-        private static readonly long MinimumWriteDelayTimeInMs = (long)(DefaultWriteTimeout.TotalMilliseconds / 3);
-        private static readonly long MinimumReadDelayTimeInMs = (long)(DefaultReadTimeout.TotalMilliseconds / 3);
+        private static readonly int DefaultMinimumWriteDelayTimeInMs = (int)(DefaultWriteTimeout.TotalMilliseconds / 3);
+        private static readonly int DefaultMinimumReadDelayTimeInMs = (int)(DefaultReadTimeout.TotalMilliseconds / 3);
+
         private Stopwatch _writeSw;
         private Stopwatch _readSw;
 
         private readonly Stream _stream;
         private int _writeTimeout;
         private int _readTimeout;
+        private int _minimumWriteDelayTimeInMs = DefaultMinimumWriteDelayTimeInMs;
+        private int _minimumReadDelayTimeInMs = DefaultMinimumReadDelayTimeInMs;
         private bool _canBaseStreamTimeoutOnWrite;
         private bool _canBaseStreamTimeoutOnRead;
         private CancellationTokenSource _writeCts;
@@ -117,6 +120,7 @@ namespace Raven.Client.Util
                     _stream.ReadTimeout = value; // we only need to set it when base stream supports that, if not we are handling that ourselves
 
                 _readTimeout = value;
+                _minimumReadDelayTimeInMs = value / 3;
             }
         }
 
@@ -129,6 +133,7 @@ namespace Raven.Client.Util
                     _stream.WriteTimeout = value;  // we only need to set it when base stream supports that, if not we are handling that ourselves
 
                 _writeTimeout = value;
+                _minimumWriteDelayTimeInMs = value / 3;
             }
         }
 
@@ -175,7 +180,7 @@ namespace Raven.Client.Util
                 _requestReadCts = cancellationToken;
 #endif
             }
-            else if (_readSw.ElapsedMilliseconds > MinimumWriteDelayTimeInMs)
+            else if (_readSw.ElapsedMilliseconds > _minimumReadDelayTimeInMs)
             {
                 _readSw.Restart();
                 _readCts.CancelAfter(_readTimeout);
@@ -233,7 +238,7 @@ namespace Raven.Client.Util
                 _requestWriteCts = cancellationToken;
 #endif
             }
-            else if (_writeSw.ElapsedMilliseconds > MinimumReadDelayTimeInMs)
+            else if (_writeSw.ElapsedMilliseconds > _minimumWriteDelayTimeInMs)
             {
                 _writeSw.Restart();
                 _writeCts.CancelAfter(_writeTimeout);
