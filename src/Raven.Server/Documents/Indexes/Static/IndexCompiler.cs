@@ -91,8 +91,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
             foreach (var path in Directory.GetFiles(AppContext.BaseDirectory, "*.dll"))
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Attempting to load additional assembly from '{path}'.");
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Attempting to load additional assembly from '{path}'.");
 
                 try
                 {
@@ -104,13 +104,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     results.TryAdd(name.FullName, result);
                     results.TryAdd(name.Name, result);
 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Loaded additional assembly from '{path}' and registered it under '{name.Name}'.");
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Loaded additional assembly from '{path}' and registered it under '{name.Name}'.");
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not load additional assembly from '{path}'.", e);
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Could not load additional assembly from '{path}'.", e);
                 }
             }
 

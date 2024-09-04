@@ -748,8 +748,8 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                if (_logger.IsInfoEnabled && stopwatch != null)
-                    _logger.Info($"cluster transaction batch took {stopwatch.Elapsed:c}");
+                if (_logger.IsDebugEnabled && stopwatch != null)
+                    _logger.Debug($"cluster transaction batch took {stopwatch.Elapsed:c}");
             }
         }
 

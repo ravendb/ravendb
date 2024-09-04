@@ -828,9 +828,9 @@ namespace Voron.Impl.Journal
                     return x.Number == flushedRecord.WrittenToJournalNumber && x.GetAvailable4Kbs(flushedRecord) == 0;
                 }, unusedJournals);
 
-                if (_waj._logger.IsInfoEnabled)
+                if (_waj._logger.IsDebugEnabled)
                 {
-                    _waj._logger.Info($"Detected {unusedJournals.Count} unused journals after flush ({nameof(flushedRecord.TransactionId)} - {flushedRecord.TransactionId}). " +
+                    _waj._logger.Debug($"Detected {unusedJournals.Count} unused journals after flush ({nameof(flushedRecord.TransactionId)} - {flushedRecord.TransactionId}). " +
                                           $"Journals to delete: {string.Join(',', unusedJournals.Select(x => x.Number.ToString()))}");
                 }
 
@@ -1039,10 +1039,10 @@ namespace Voron.Impl.Journal
                     var currentStateRecord = _parent._waj._env.CurrentStateRecord;
                     var dataPagerState = currentStateRecord.DataPagerState;
                     dataPager.Sync(dataPagerState, Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes));
-                    if (_parent._waj._logger.IsInfoEnabled)
+                    if (_parent._waj._logger.IsDebugEnabled)
                     {
                         var sizeInKb = (dataPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
-                        _parent._waj._logger.Info(
+                        _parent._waj._logger.Debug(
                             $"Sync of {sizeInKb:#,#0} kb file with {_currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#0} kb dirty in {sp.Elapsed}");
                     }
                 }
@@ -1280,8 +1280,8 @@ namespace Voron.Impl.Journal
                     meter.IncrementSize(written);
                 }
 
-                if (_waj._logger.IsInfoEnabled)
-                    _waj._logger.Info($"Flushed {record.ScratchPagesTable.Count:#,#} pages to {dataPager.FileName} with {new Size(written, SizeUnit.Bytes)} in {sp.Elapsed}.");
+                if (_waj._logger.IsDebugEnabled)
+                    _waj._logger.Debug($"Flushed {record.ScratchPagesTable.Count:#,#} pages to {dataPager.FileName} with {new Size(written, SizeUnit.Bytes)} in {sp.Elapsed}.");
                 else if (_waj._logger.IsWarnEnabled && sp.Elapsed > options.LongRunningFlushingWarning)
                     _waj._logger.Warn($"Very long data flushing. It took {sp.Elapsed} to flush {record.ScratchPagesTable.Count:#,#} pages to {dataPager.FileName} with {new Size(written, SizeUnit.Bytes)}.");
 
@@ -1537,9 +1537,9 @@ namespace Voron.Impl.Journal
                 try
                 {
                     var journalEntry = PrepareToWriteToJournal(tx, ref tempTxState);
-                    if (_logger.IsInfoEnabled)
+                    if (_logger.IsDebugEnabled)
                     {
-                        _logger.Info(
+                        _logger.Debug(
                             $"Preparing to write tx {tx.Id} to journal with {journalEntry.NumberOfUncompressedPages:#,#} pages ({new Size(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize, SizeUnit.Bytes)}) in {sp.Elapsed} with {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} compressed.");
                     }
 
@@ -1560,8 +1560,8 @@ namespace Voron.Impl.Journal
                     _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
                     _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
 
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Writing {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Writing {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
 
                     if (CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) == 0)
                     {
