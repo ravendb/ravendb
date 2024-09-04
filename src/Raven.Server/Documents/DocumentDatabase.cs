@@ -1318,8 +1318,8 @@ namespace Raven.Server.Documents
                     _nextIoMetricsCleanupTime = utcNow.Add(Configuration.Storage.IoMetricsCleanupInterval.AsTimeSpan);
                 }
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Ran idle operations for database '{Name}' in {mode} mode, took: {sp.ElapsedMilliseconds}ms");
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug($"Ran idle operations for database '{Name}' in {mode} mode, took: {sp.ElapsedMilliseconds}ms");
             }
             finally
             {
