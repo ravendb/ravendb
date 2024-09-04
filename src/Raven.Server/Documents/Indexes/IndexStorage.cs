@@ -951,8 +951,8 @@ namespace Raven.Server.Documents.Indexes
 
         public unsafe IndexFailureInformation UpdateStats(DateTime indexingTime, IndexingRunStats stats)
         {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Updating statistics for '{_index.Name}'. Stats: {stats}.");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Updating statistics for '{_index.Name}'. Stats: {stats}.");
 
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())

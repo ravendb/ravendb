@@ -198,8 +198,8 @@ namespace Raven.Server
 
             MetricCacher.Initialize();
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Server store started took {sp.ElapsedMilliseconds:#,#;;0} ms");
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"Server store started took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
             sp.Restart();
             ListenToPipes().IgnoreUnobservedExceptions();
@@ -333,13 +333,13 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Could not configure server", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error("Could not configure server", e);
                 throw;
             }
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Configuring HTTP server took {sp.ElapsedMilliseconds:#,#;;0} ms");
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"Configuring HTTP server took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
             try
             {

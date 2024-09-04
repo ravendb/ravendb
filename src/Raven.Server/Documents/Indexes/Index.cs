@@ -1648,8 +1648,8 @@ namespace Raven.Server.Documents.Indexes
 
                         try
                         {
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info($"Starting indexing for '{Name}'.");
+                            if (_logger.IsDebugEnabled)
+                                _logger.Debug($"Starting indexing for '{Name}'.");
 
                             LastIndexingTime = stats.StartTime;
 
@@ -1730,8 +1730,8 @@ namespace Raven.Server.Documents.Indexes
                                         MaybeFinishRollingDeployment();
                                     }
 
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Finished indexing for '{Name}'.'");
+                                    if (_logger.IsDebugEnabled)
+                                        _logger.Debug($"Finished indexing for '{Name}'.'");
                                 }
                                 catch (TimeoutException te)
                                 {
