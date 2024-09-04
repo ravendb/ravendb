@@ -14,6 +14,7 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Sparrow.Server.Utils;
+using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Fixed;
@@ -319,10 +320,10 @@ namespace Voron.Impl
         internal void UpdateRootsIfNeeded(Tree root)
         {
             //can only happen during initial transaction that creates Root and FreeSpaceRoot trees
-            if (_envRecord.Root != null)
+            if (_envRecord.Root.RootObjectType is RootObjectType.None)
                 return;
 
-            _envRecord = _envRecord with { Root = root.State };
+            _envRecord = _envRecord with { Root = root.ReadHeader() };
 
             _root = root;
         }
@@ -347,7 +348,7 @@ namespace Voron.Impl
 
         private void InitializeRoots()
         {
-            if (_envRecord.Root != null)
+            if (_envRecord.Root.RootObjectType is RootObjectType.None)
             {
                 _root = Tree.GetRoot(this, Constants.RootTreeNameSlice, _envRecord.Root);
             }
@@ -688,7 +689,7 @@ namespace Voron.Impl
                 "To increase the quota, use the MaxStorageSize property on the storage environment options.");
         }
 
-        internal void ShrinkOverflowPage(long pageNumber, int newSize, TreeMutableState treeState)
+        internal void ShrinkOverflowPage(long pageNumber, int newSize, Tree tree)
         {
             if (_txStatus != TxStatus.None)
                 ThrowObjectDisposed();
@@ -722,7 +723,7 @@ namespace Voron.Impl
             _transactionPages.Remove(value);
             _transactionPages.Add(shrinked);
 
-            ref var treeMutableState = ref treeState.Modify();
+            ref var treeMutableState = ref tree.ModifyHeader();
             treeMutableState.OverflowPages -= prevNumberOfPages - lowerNumberOfPages;
         }
 
@@ -1076,9 +1077,8 @@ namespace Voron.Impl
                 ThrowNextPageNumberCannotBeSmallerOrEqualThanOne();
 
             _txHeader.LastPageNumber = GetNextPageNumber() - 1;
-            
-            ref var rootHeader = ref _txHeader.Root;
-            _envRecord.Root.CopyTo(ref rootHeader);
+
+            _envRecord = _envRecord with { Root = _txHeader.Root };
 
             _txHeader.TxMarker |= TransactionMarker.Commit;
 
@@ -1228,7 +1228,7 @@ namespace Voron.Impl
                 return;
             }
             
-            if (_envRecord.Root.Header.PageCount < pageId)
+            if (_envRecord.Root.PageCount < pageId)
                 return;
             
             var page = GetPage(pageId);

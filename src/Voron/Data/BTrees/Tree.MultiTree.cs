@@ -43,10 +43,10 @@ namespace Voron.Data.BTrees
             if (value.Size == 0)
                 throw new ArgumentException("Cannot add empty value to child tree");
 
-            if ((State.Header.Flags & TreeFlags.MultiValueTrees) != TreeFlags.MultiValueTrees)
+            if ((ReadHeader().Flags & TreeFlags.MultiValueTrees) != TreeFlags.MultiValueTrees)
             {
-                ref var state = ref State.Modify();
-                state.Flags |= TreeFlags.MultiValueTrees;
+                ref var header = ref ModifyHeader();
+                header.Flags |= TreeFlags.MultiValueTrees;
             }
 
             var page = FindPageFor(key, out _);
@@ -231,22 +231,23 @@ namespace Voron.Data.BTrees
                 // previously, we would convert back to a simple model if we dropped to a single entry
                 // however, it doesn't really make sense, once you got enough values to go to an actual nested 
                 // tree, you are probably going to remain that way, or be removed completely.
-                if (tree.State.Header.NumberOfEntries != 0)
+                ref readonly var header = ref tree.ReadHeader();
+                if (header.NumberOfEntries != 0)
                     return;
                 _tx.TryRemoveMultiValueTree(this, key);
                 if (_newPageAllocator != null)
                 {
                     if (IsIndexTree == false)
-                        ThrowAttemptToFreePageToNewPageAllocator(Name, tree.State.Header.RootPageNumber);
+                        ThrowAttemptToFreePageToNewPageAllocator(Name, header.RootPageNumber);
 
-                    _newPageAllocator.FreePage(tree.State.Header.RootPageNumber);
+                    _newPageAllocator.FreePage(header.RootPageNumber);
                 }
                 else
                 {
                     if (IsIndexTree)
-                        ThrowAttemptToFreeIndexPageToFreeSpaceHandling(Name, tree.State.Header.RootPageNumber);
+                        ThrowAttemptToFreeIndexPageToFreeSpaceHandling(Name, header.RootPageNumber);
 
-                    _llt.FreePage(tree.State.Header.RootPageNumber);
+                    _llt.FreePage(header.RootPageNumber);
                 }
 
                 Delete(key);
@@ -296,7 +297,7 @@ namespace Voron.Data.BTrees
             {
                 var tree = OpenMultiValueTree(key, node);
 
-                return tree.State.Header.NumberOfEntries;
+                return tree.ReadHeader().NumberOfEntries;
             }
 
             var nestedPage = new TreePage(DirectAccessFromHeader(node), (ushort)GetDataSize(node));

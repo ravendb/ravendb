@@ -13,7 +13,7 @@ public record EnvironmentStateRecord(
     long TransactionId,
     ImmutableDictionary<long, PageFromScratchBuffer> ScratchPagesTable,
     long WrittenToJournalNumber,
-    TreeMutableState Root,
+    TreeRootHeader Root,
     long NextPageNumber,
     (JournalFile Current, long Last4KWritePosition) Journal,
     object ClientState,

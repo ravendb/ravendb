@@ -154,7 +154,7 @@ namespace Voron
                     0,
                     ImmutableDictionary<long, PageFromScratchBuffer>.Empty, 
                     0,
-                    null, 
+                    default(TreeRootHeader), 
                     -1,
                     (null, -1),
                     null, 
@@ -1033,8 +1033,9 @@ namespace Voron
                             case RootObjectType.VariableSizeTree:
                                 var tree = tx.ReadTree(currentKey);
                                 RegisterPages(tree.AllPages(), name + " (VST)");
-                                if (tree.State.Header.Flags.HasFlag(TreeFlags.CompactTrees) ||
-                                    tree.State.Header.Flags.HasFlag(TreeFlags.Lookups))
+                                ref readonly var treeHeader =  ref tree.ReadHeader();
+                                if (treeHeader.Flags.HasFlag(TreeFlags.CompactTrees) ||
+                                    treeHeader.Flags.HasFlag(TreeFlags.Lookups))
                                 {
                                     var it = tree.Iterate(false);
                                     if (it.Seek(Slices.BeforeAllKeys))
@@ -1365,7 +1366,7 @@ namespace Voron
                 return new EnvironmentStats
                 {
                     FreePagesOverhead = FreeSpaceHandling.GetFreePagesOverhead(tx),
-                    RootPages = tx.RootObjects.State.Header.PageCount,
+                    RootPages = tx.RootObjects.ReadHeader().PageCount,
                     UnallocatedPagesAtEndOfFile = tx.DataPagerState.NumberOfAllocatedPages - NextPageNumber,
                     UsedDataFileSizeInBytes = (_currentStateRecord.NextPageNumber - 1) * Constants.Storage.PageSize,
                     AllocatedDataFileSizeInBytes = tx.DataPagerState.TotalDiskSpace,
@@ -1596,7 +1597,6 @@ namespace Voron
             // we must be running under the write lock
             Debug.Assert(tx.Flags is TransactionFlags.ReadWrite,"tx.Flags is TransactionFlags.ReadWrite");
             Debug.Assert(tx.ModifiedPagesInTransaction != null, "tx.ModifiedPagesInTransaction != null");
-            Debug.Assert(ReferenceEquals(tx.RootObjects.State, tx.CurrentStateRecord.Root), "ReferenceEquals(tx.RootObjects.State, tx.CurrentStateRecord.Root)");
             EnvironmentStateRecord currentStateRecord = tx.CurrentStateRecord;
             var updatedState = currentStateRecord with
             {
@@ -1606,7 +1606,7 @@ namespace Voron
                 WrittenToJournalNumber = tx.WrittenToJournalNumber == -1 ? currentStateRecord.WrittenToJournalNumber : tx.WrittenToJournalNumber,
                 ScratchPagesTable = tx.ModifiedPagesInTransaction,
                 NextPageNumber = tx.GetNextPageNumber(),
-                Root = tx.RootObjects.State,
+                Root = tx.RootObjects.ReadHeader(),
                 DataPagerState = tx.DataPagerState,
                 SparsePageRanges = tx.GetSparsePageRanges()
             };

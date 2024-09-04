@@ -336,11 +336,11 @@ public sealed partial class CompactTree : IPrepareForCommit
             if (llt.Flags != TransactionFlags.ReadWrite)
                 return null;
 
-            if ((parent.State.Header.Flags & TreeFlags.CompactTrees) != TreeFlags.CompactTrees)
+            if ((parent.ReadHeader().Flags & TreeFlags.CompactTrees) != TreeFlags.CompactTrees)
             {
                 // We will modify the parent tree state because there are Compact Trees in it.
-                ref var parentState = ref parent.State.Modify();
-                parentState.Flags |= TreeFlags.CompactTrees;
+                ref var parentHeader = ref parent.ModifyHeader();
+                parentHeader.Flags |= TreeFlags.CompactTrees;
             }
 
             long dictionaryId;

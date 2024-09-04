@@ -288,7 +288,7 @@ namespace Voron.Impl
                     var childTree = multiValueTree.Value;
 
                     using (parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef, out byte* ptr))
-                        childTree.State.CopyTo((TreeRootHeader*)ptr);
+                        *(TreeRootHeader*)ptr = childTree.ReadHeader();
                 }
             }
             
@@ -321,11 +321,10 @@ namespace Voron.Impl
 
                 tree.PrepareForCommit();
 
-                var treeState = tree.State;
-                if (treeState.IsModified)
+                if (tree.HeaderModified)
                 {
                     using (_lowLevelTransaction.RootObjects.DirectAdd(tree.Name, sizeof(TreeRootHeader), out byte* ptr))
-                        treeState.CopyTo((TreeRootHeader*)ptr);
+                        *(TreeRootHeader*)ptr = tree.ReadHeader();
                 }
             }
 
@@ -486,7 +485,7 @@ namespace Voron.Impl
             _lowLevelTransaction.RootObjects.Delete(fromName);
 
             using (_lowLevelTransaction.RootObjects.DirectAdd(toName, sizeof(TreeRootHeader), out byte* ptr))
-                fromTree.State.CopyTo((TreeRootHeader*)ptr);
+                *(TreeRootHeader*)ptr = fromTree.ReadHeader();
 
             fromTree.Rename(toName);
 
@@ -515,11 +514,11 @@ namespace Voron.Impl
                                                     "' and cannot create trees in read transactions");
 
             tree = Tree.Create(_lowLevelTransaction, this, name, flags, type, isIndexTree, newPageAllocator);
-            ref var state = ref tree.State.Modify();
+            ref var state = ref tree.ModifyHeader();
             state.RootObjectType = type;
 
             using (_lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader), out byte* ptr))
-                tree.State.CopyTo((TreeRootHeader*)ptr);
+                *(TreeRootHeader*)ptr = state;
 
             AddTree(name, tree);
 

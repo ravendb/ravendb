@@ -482,7 +482,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var index = TimeSeriesStatsSchema.Key;
             var tree = context.Transaction.InnerTransaction.ReadTree(index.Name);
-            return tree.State.Header.NumberOfEntries;
+            return tree.ReadHeader().NumberOfEntries;
         }
 
         public static IDisposable ExtractStatsKeyFromStorageKey(DocumentsOperationContext context, Slice storageKey, out Slice statsKey)

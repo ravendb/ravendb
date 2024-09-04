@@ -43,10 +43,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             MapReduceWorkContext.ReducePhaseTree = GetReducePhaseTree(indexContext.Transaction.InnerTransaction);
             MapReduceWorkContext.ResultsStoreTypes = MapReduceWorkContext.ReducePhaseTree.FixedTreeFor(ResultsStoreTypesTreeName, sizeof(byte));
 
-            if ((MapReduceWorkContext.MapPhaseTree.State.Header.Flags & TreeFlags.FixedSizeTrees) != TreeFlags.FixedSizeTrees)
+            if ((MapReduceWorkContext.MapPhaseTree.ReadHeader().Flags & TreeFlags.FixedSizeTrees) != TreeFlags.FixedSizeTrees)
             {
-                ref var state = ref MapReduceWorkContext.MapPhaseTree.State.Modify();
-                state.Flags |= TreeFlags.FixedSizeTrees;
+                ref var header = ref MapReduceWorkContext.MapPhaseTree.ModifyHeader();
+                header.Flags |= TreeFlags.FixedSizeTrees;
             }
 
             MapReduceWorkContext.DocumentMapEntries = new FixedSizeTree(

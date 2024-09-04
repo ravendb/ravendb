@@ -336,7 +336,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 {
                     if (leafPage.NumberOfEntries == 0)
                     {
-                        if (leafPage.PageNumber == tree.State.Header.RootPageNumber)
+                        if (leafPage.PageNumber == tree.ReadHeader().RootPageNumber)
                         {
                             writer.Value.DeleteReduceResult(reduceKeyHash, stats);
 
@@ -360,7 +360,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         }
 
                         throw new UnexpectedReduceTreePageException(
-                            $"Encountered empty page which isn't a root. Page {leafPage} in '{tree.Name}' tree (tree state: {tree.State})");
+                            $"Encountered empty page which isn't a root. Page {leafPage} in '{tree.Name}' tree (tree state: {tree.ReadHeader()})");
                     }
 
                     var parentPage = tree.GetParentPageOf(leafPage);
@@ -659,7 +659,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             if (decompressedDebug != null)
                 debugDetails += $"decompressed: {decompressedDebug}), ";
 
-            debugDetails += $"tree state: {tree.State}. ";
+            debugDetails += $"tree state: {tree.ReadHeader()}. ";
 
             if (failedAggregatedLeafs != null && failedAggregatedLeafs.TryGetValue(pageNumber, out var exception))
             {
