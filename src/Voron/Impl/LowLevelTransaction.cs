@@ -220,7 +220,8 @@ namespace Voron.Impl
             DataPagerState = previous.DataPagerState;
             _envRecord = previous._envRecord with
             {
-                TransactionId = txId
+                TransactionId = txId,
+                Root = previous._root.ReadHeader()
             };
             _localTxNextPageNumber = previous._localTxNextPageNumber;
             
@@ -320,7 +321,7 @@ namespace Voron.Impl
         internal void UpdateRootsIfNeeded(Tree root)
         {
             //can only happen during initial transaction that creates Root and FreeSpaceRoot trees
-            if (_envRecord.Root.RootObjectType is RootObjectType.None)
+            if (_envRecord.Root.RootObjectType is not RootObjectType.None)
                 return;
 
             _envRecord = _envRecord with { Root = root.ReadHeader() };
@@ -348,7 +349,8 @@ namespace Voron.Impl
 
         private void InitializeRoots()
         {
-            if (_envRecord.Root.RootObjectType is RootObjectType.None)
+            if (_root == null && 
+                _envRecord.Root.RootObjectType is not RootObjectType.None)
             {
                 _root = Tree.GetRoot(this, Constants.RootTreeNameSlice, _envRecord.Root);
             }
@@ -1078,7 +1080,9 @@ namespace Voron.Impl
 
             _txHeader.LastPageNumber = GetNextPageNumber() - 1;
 
-            _envRecord = _envRecord with { Root = _txHeader.Root };
+            ref readonly var rootHeader = ref _root.ReadHeader();
+            _txHeader.Root = rootHeader;
+            _envRecord = _envRecord with { Root = rootHeader };
 
             _txHeader.TxMarker |= TransactionMarker.Commit;
 
