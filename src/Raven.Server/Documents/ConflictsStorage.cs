@@ -686,7 +686,7 @@ namespace Raven.Server.Documents
         public long GetNumberOfDocumentsConflicts(DocumentsOperationContext context)
         {
             var table = new Table(ConflictsSchema, context.Transaction.InnerTransaction);
-            return table.GetTree(ConflictsSchema.Indexes[ConflictsIdSlice]).State.Header.NumberOfEntries;
+            return table.GetTree(ConflictsSchema.Indexes[ConflictsIdSlice]).ReadHeader().NumberOfEntries;
         }
 
         public long GetNumberOfConflicts(DocumentsOperationContext context)

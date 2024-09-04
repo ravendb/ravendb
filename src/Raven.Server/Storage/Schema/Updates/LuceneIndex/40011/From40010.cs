@@ -67,7 +67,7 @@ namespace Raven.Server.Storage.Schema.Updates.LuceneIndex
             var newErrorsTableTableTree = step.WriteTx.ReadTree("Errors", RootObjectType.Table);
             using (newErrorsTableTableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader), out byte* ptr))
             {
-                indexTree.State.CopyTo((TreeRootHeader*)ptr);
+                *(TreeRootHeader*)ptr = indexTree.ReadHeader();
             }
 
             var newErrorTimestampsIndexTree = newErrorsTable.GetTree(newTableSchema.Indexes[errorTimestampsSlice]);

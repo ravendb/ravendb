@@ -25,8 +25,6 @@ namespace Voron.Data.BTrees
     {
         private int _directAddUsage;
 
-        private readonly TreeMutableState _state;
-
         private static readonly ObjectPool<RecentlyFoundTreePages> FoundPagesPool = new(() => new RecentlyFoundTreePages(), 128);
 
         private RecentlyFoundTreePages _recentlyFoundPages;
@@ -41,7 +39,19 @@ namespace Voron.Data.BTrees
 
         public Slice Name { get; private set; }
 
-        public TreeMutableState State => _state;
+        private TreeRootHeader _header;
+        public bool HeaderModified;
+
+        public ref readonly TreeRootHeader ReadHeader()
+        {
+            return ref _header;
+        }
+        public ref TreeRootHeader ModifyHeader()
+        {
+            HeaderModified = true;
+            return ref _header;
+        }
+        
 
         private readonly LowLevelTransaction _llt;
         private readonly Transaction _tx;
@@ -65,7 +75,7 @@ namespace Voron.Data.BTrees
 
             _recentlyFoundPages = FoundPagesPool.Allocate();
 
-            _state = new TreeMutableState(llt, in header);
+            _header = header;
 
             llt.RegisterDisposable(new TreeDisposable(this));
         }
@@ -84,21 +94,17 @@ namespace Voron.Data.BTrees
             }
 
             _recentlyFoundPages = FoundPagesPool.Allocate();
-            _state = new TreeMutableState(llt);
-
+            
             llt.RegisterDisposable(new TreeDisposable(this));
         }
 
-        private Tree(LowLevelTransaction llt, Slice name, TreeMutableState state)
+        private Tree(LowLevelTransaction llt, Slice name, in TreeRootHeader header)
         {
             _llt = llt;
             Name = name;
 
             _recentlyFoundPages = FoundPagesPool.Allocate();
-
-
-            _state = new TreeMutableState(llt, state);
-            _state = state;
+            _header = header;
 
             llt.RegisterDisposable(new TreeDisposable(this));
         }
@@ -116,21 +122,21 @@ namespace Voron.Data.BTrees
         public bool IsLeafCompressionSupported
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (State.Header.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed; }
+            get { return (_header.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed; }
         }
 
         public bool HasNewPageAllocator { get; private set; }
 
-        public static Tree GetRoot(LowLevelTransaction llt, Slice name, TreeMutableState parentState)
+        public static Tree GetRoot(LowLevelTransaction llt, Slice name, in TreeRootHeader parentHeader)
         {
-            return new Tree(llt, name, parentState);
+            return new Tree(llt, name, in parentHeader);
         }
         
         public static Tree Open(LowLevelTransaction llt, Transaction tx, Slice name, in TreeRootHeader header, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             var tree = new Tree(llt, tx, header, name, isIndexTree, newPageAllocator);
 
-            if ((tree.State.Header.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed)
+            if ((tree._header.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed)
                 tree.InitializeCompression();
 
             return tree;
@@ -151,7 +157,7 @@ namespace Voron.Data.BTrees
 
             var tree = new Tree(llt, tx, name, isIndexTree, newPageAllocator);
 
-            ref var state = ref tree.State.Modify();
+            ref var state = ref tree.ModifyHeader();
             state.RootPageNumber = newRootPage.PageNumber;
             state.RootObjectType = type;
             state.Depth = 1;
@@ -178,7 +184,7 @@ namespace Voron.Data.BTrees
 
         private void RecordNewPage(TreePage p, int num)
         {
-            ref var header = ref State.Modify();
+            ref var header = ref ModifyHeader();
 
             header.PageCount += num;
 
@@ -198,7 +204,7 @@ namespace Voron.Data.BTrees
 
         private void RecordFreedPage(TreePage p, int num)
         {
-            ref var header = ref State.Modify();
+            ref var header = ref ModifyHeader();
 
             header.PageCount -= num;
             Debug.Assert(header.PageCount >= 0);
@@ -225,7 +231,7 @@ namespace Voron.Data.BTrees
         /// </summary>
         public long Increment(Slice key, long delta)
         {
-            Debug.Assert((State.Header.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
+            Debug.Assert((_header.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
             
             long currentValue = 0;
 
@@ -287,7 +293,7 @@ namespace Voron.Data.BTrees
 
         public void Add(Slice key, long value)
         {
-            Debug.Assert((State.Header.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
+            Debug.Assert((_header.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
             using (DirectAdd(key, sizeof(long), out byte* ptr))
                 *(long*)ptr = value;
         }
@@ -345,7 +351,7 @@ namespace Voron.Data.BTrees
 
         public void Add(Slice key, Slice value)
         {
-            Debug.Assert((State.Header.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
+            Debug.Assert((_header.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
             
             if (!value.HasValue)
                 ThrowNullReferenceException();
@@ -419,7 +425,7 @@ namespace Voron.Data.BTrees
             }
             else // new item should be recorded
             {
-                ref var state = ref State.Modify();
+                ref var state = ref ModifyHeader();
                 state.NumberOfEntries++;
             }
             
@@ -449,7 +455,7 @@ namespace Voron.Data.BTrees
                         dataPos = pageSplitter.Execute();
                     }
 
-                    DebugValidateTree(State.Header.RootPageNumber);
+                    DebugValidateTree(_header.RootPageNumber);
 
                     ptr = overFlowPos == null ? dataPos : overFlowPos;
                     return new DirectAddScope(this);
@@ -476,7 +482,7 @@ namespace Voron.Data.BTrees
                     break;
             }
 
-            page.DebugValidate(this, State.Header.RootPageNumber);
+            page.DebugValidate(this, _header.RootPageNumber);
 
             ptr = overFlowPos == null ? dataPos : overFlowPos;
             return new DirectAddScope(this);
@@ -733,7 +739,7 @@ namespace Voron.Data.BTrees
 
         private TreePage SearchForPage(Slice key, out TreeNodeHeader* node)
         {
-            var p = GetReadOnlyTreePage(State.Header.RootPageNumber);
+            var p = GetReadOnlyTreePage(_header.RootPageNumber);
 
             if (CursorPathBuffer == null)
                 CursorPathBuffer = new FastList<long>();
@@ -812,7 +818,7 @@ namespace Voron.Data.BTrees
 
         private TreePage SearchForPage(Slice key, bool allowCompressed, out TreeCursorConstructor cursorConstructor, out TreeNodeHeader* node, bool addToRecentlyFoundPages = true)
         {
-            var p = GetReadOnlyTreePage(State.Header.RootPageNumber);
+            var p = GetReadOnlyTreePage(_header.RootPageNumber);
 
             var cursor = new TreeCursor();
             cursor.Push(p);
@@ -1096,7 +1102,7 @@ namespace Voron.Data.BTrees
 
             page = ModifyPage(page);
 
-            ref var state = ref State.Modify();
+            ref var state = ref ModifyHeader();
             state.NumberOfEntries--;
 
             RemoveLeafNode(page);
@@ -1111,7 +1117,7 @@ namespace Voron.Data.BTrees
                 }
             }
 
-            page.DebugValidate(this, State.Header.RootPageNumber);
+            page.DebugValidate(this, _header.RootPageNumber);
         }
 
         public TreeIterator Iterate(bool prefetch)
@@ -1277,7 +1283,7 @@ namespace Voron.Data.BTrees
 
             var results = new List<long>();
             var stack = new Stack<TreePage>();
-            var root = GetReadOnlyTreePage(State.Header.RootPageNumber);
+            var root = GetReadOnlyTreePage(_header.RootPageNumber);
             stack.Push(root);
 
             while (stack.Count > 0)
@@ -1311,10 +1317,10 @@ namespace Voron.Data.BTrees
                     }
                     else
                     {
-                        if (State.Header.RootObjectType == RootObjectType.Table) // tables might have mixed values, fixed size trees inside have dedicated handling
+                        if (_header.RootObjectType == RootObjectType.Table) // tables might have mixed values, fixed size trees inside have dedicated handling
                             continue;
                         
-                        if ((State.Header.Flags & TreeFlags.FixedSizeTrees) == TreeFlags.FixedSizeTrees)
+                        if ((_header.Flags & TreeFlags.FixedSizeTrees) == TreeFlags.FixedSizeTrees)
                         {
                             var valueReader = GetValueReaderFromHeader(node);
 
@@ -1337,7 +1343,7 @@ namespace Voron.Data.BTrees
                                     continue;
                                 }
 
-                                if ((State.Header.Flags & TreeFlags.Streams) == TreeFlags.Streams)
+                                if ((_header.Flags & TreeFlags.Streams) == TreeFlags.Streams)
                                 {
                                     Debug.Assert(fixedSizeTree.ValueSize == ChunkDetails.SizeOf);
 
@@ -1355,7 +1361,7 @@ namespace Voron.Data.BTrees
 
         public override string ToString()
         {
-            return Name + " " + State.Header.NumberOfEntries;
+            return Name + " " + _header.NumberOfEntries;
         }
 
         internal void PrepareForCommit()
@@ -1445,7 +1451,7 @@ namespace Voron.Data.BTrees
                 prep = compactTree;
             }
 
-            Debug.Assert(State.Header.Flags.HasFlag(TreeFlags.CompactTrees));
+            Debug.Assert(_header.Flags.HasFlag(TreeFlags.CompactTrees));
 
             return (CompactTree)prep;
         }
@@ -1471,7 +1477,7 @@ namespace Voron.Data.BTrees
                 prep = lookup;
             }
 
-            Debug.Assert(State.Header.Flags.HasFlag(TreeFlags.Lookups));
+            Debug.Assert(_header.Flags.HasFlag(TreeFlags.Lookups));
 
             return (Lookup<TKey>)prep;
         }
@@ -1484,9 +1490,9 @@ namespace Voron.Data.BTrees
             {
                 fixedTree = new FixedSizeTree(_llt, this, key, valSize);
 
-                if (_llt.Flags is TransactionFlags.ReadWrite && (State.Header.Flags & TreeFlags.FixedSizeTrees) != TreeFlags.FixedSizeTrees)
+                if (_llt.Flags is TransactionFlags.ReadWrite && (_header.Flags & TreeFlags.FixedSizeTrees) != TreeFlags.FixedSizeTrees)
                 {
-                    ref var state = ref State.Modify();
+                    ref var state = ref ModifyHeader();
                     state.Flags |= TreeFlags.FixedSizeTrees;
                 }
 
@@ -1496,7 +1502,7 @@ namespace Voron.Data.BTrees
             // RavenDB-22261: It may happen that the FixedSizeTree requested does not exist, and if it does not
             // it would still return an instance. This is a workaround because the check in debug is correct.
             // https://issues.hibernatingrhinos.com/issue/RavenDB-22261/Inconsistency-in-Tree-external-API
-            Debug.Assert(fixedTree.NumberOfEntries == 0 || State.Header.Flags.HasFlag(TreeFlags.FixedSizeTrees));
+            Debug.Assert(fixedTree.NumberOfEntries == 0 || _header.Flags.HasFlag(TreeFlags.FixedSizeTrees));
 
             return fixedTree;
         }
@@ -1514,7 +1520,7 @@ namespace Voron.Data.BTrees
             // RavenDB-22261: It may happen that the FixedSizeTree requested does not exist, and if it does not
             // it would still return an instance. This is a workaround because the check in debug is correct.
             // https://issues.hibernatingrhinos.com/issue/RavenDB-22261/Inconsistency-in-Tree-external-API
-            Debug.Assert(fixedTree.NumberOfEntries == 0 || State.Header.Flags.HasFlag(TreeFlags.FixedSizeTrees));
+            Debug.Assert(fixedTree.NumberOfEntries == 0 || _header.Flags.HasFlag(TreeFlags.FixedSizeTrees));
 
 
             return fixedTree;
@@ -1607,7 +1613,7 @@ namespace Voron.Data.BTrees
 
             // This is a special case, since we are renaming the tree we need the transaction to consider it as changed
             // even though we are not going to be modifying the state per se. 
-            State.Modify();
+            ModifyHeader();
         }
 
         internal void SetNewPageAllocator(NewPageAllocator newPageAllocator)
@@ -1620,7 +1626,7 @@ namespace Voron.Data.BTrees
 
         internal void DebugValidateBranchReferences()
         {
-            var rootPageNumber = State.Header.RootPageNumber;
+            var rootPageNumber = _header.RootPageNumber;
 
             var pages = new HashSet<long>();
             var stack = new Stack<TreePage>();

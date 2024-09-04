@@ -166,7 +166,7 @@ namespace Voron.Data.Tables
                                                     "otherwise we can't compact it, this is a bug in the table schema.");
 
             var tableTree = tx.CreateTree(name, RootObjectType.Table);
-            if (tableTree.State.Header.NumberOfEntries > 0)
+            if (tableTree.ReadHeader().NumberOfEntries > 0)
                 return; // this was already created
 
             tableTree.Add(CurrentCompressionDictionaryIdSlice, 0);
@@ -200,7 +200,7 @@ namespace Voron.Data.Tables
                     var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, isIndexTree: true, newPageAllocator: tablePageAllocator);
                     using (tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader), out var ptr))
                     {
-                        indexTree.State.CopyTo((TreeRootHeader*)ptr);
+                        *(TreeRootHeader*)ptr = indexTree.ReadHeader();
                     }
                 }
                 else
@@ -216,7 +216,7 @@ namespace Voron.Data.Tables
                     var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator);
                     using (tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader), out var ptr))
                     {
-                        indexTree.State.CopyTo((TreeRootHeader*)ptr);
+                        *(TreeRootHeader*)ptr = indexTree.ReadHeader();
                     }
                 }
                 else
@@ -232,7 +232,7 @@ namespace Voron.Data.Tables
                     var indexTree = Tree.Create(tx.LowLevelTransaction, tx, dynamicKeyIndexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator);
                     using (tableTree.DirectAdd(dynamicKeyIndexDef.Name, sizeof(TreeRootHeader), out var ptr))
                     {
-                        indexTree.State.CopyTo((TreeRootHeader*)ptr);
+                        *(TreeRootHeader*)ptr = indexTree.ReadHeader();
                     }
                 }
                 else

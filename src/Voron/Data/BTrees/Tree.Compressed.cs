@@ -89,7 +89,7 @@ namespace Voron.Data.BTrees
             }
             finally
             {
-                decompressedPage.DebugValidate(this, State.Header.RootPageNumber);
+                decompressedPage.DebugValidate(this, ReadHeader().RootPageNumber);
 
                 if (skipCache == false && decompressedPage != cached)
                 {
@@ -219,8 +219,8 @@ namespace Voron.Data.BTrees
 
                                         if (usage == DecompressionUsage.Write)
                                         {
-                                            ref var state = ref State.Modify();
-                                            state.NumberOfEntries--;
+                                            ref var header = ref ModifyHeader();
+                                            header.NumberOfEntries--;
                                         }
                                     }
 
@@ -266,8 +266,8 @@ namespace Voron.Data.BTrees
 
             if (usage == DecompressionUsage.Write)
             {
-                ref var state = ref State.Modify();
-                state.NumberOfEntries--;
+                ref var header = ref ModifyHeader();
+                header.NumberOfEntries--;
 
                 if (node->Flags == TreeNodeFlags.PageRef)
                 {
@@ -302,8 +302,8 @@ namespace Voron.Data.BTrees
                 if (decompressed.LastMatch != 0)
                     return;
 
-                ref var state = ref State.Modify();
-                state.NumberOfEntries--;
+                ref var header = ref ModifyHeader();
+                header.NumberOfEntries--;
 
                 RemoveLeafNode(decompressed);
 
@@ -317,7 +317,7 @@ namespace Voron.Data.BTrees
                     }
                 }
 
-                page.DebugValidate(this, State.Header.RootPageNumber);
+                page.DebugValidate(this, ReadHeader().RootPageNumber);
             }
             finally
             {

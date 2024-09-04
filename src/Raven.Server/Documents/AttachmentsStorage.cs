@@ -642,7 +642,7 @@ namespace Raven.Server.Documents
             var count = table.NumberOfEntries;
 
             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-            var streamsCount = tree.State.Header.NumberOfEntries;
+            var streamsCount = tree.ReadHeader().NumberOfEntries;
 
             return (count, streamsCount);
         }

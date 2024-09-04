@@ -261,10 +261,10 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             if (llt.Flags != TransactionFlags.ReadWrite)
                 return null;
 
-            if ((parent.State.Header.Flags & TreeFlags.Lookups) != TreeFlags.Lookups)
+            if ((parent.ReadHeader().Flags & TreeFlags.Lookups) != TreeFlags.Lookups)
             {
-                ref var state = ref parent.State.Modify();
-                state.Flags |= TreeFlags.Lookups;
+                ref var parentHeader = ref parent.ModifyHeader();
+                parentHeader.Flags |= TreeFlags.Lookups;
             }
 
             Create(llt, out header, dictionaryId, termsContainerId);

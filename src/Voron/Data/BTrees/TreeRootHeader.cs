@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Voron.Global;
 
 namespace Voron.Data.BTrees
 {
@@ -28,5 +29,14 @@ namespace Voron.Data.BTrees
         public long NumberOfEntries;
         [FieldOffset(58)]
         public int Depth;
+
+        public override string ToString()
+        {
+            return $@" Pages: {PageCount:#,#}, Entries: {NumberOfEntries:#,#}
+    Depth: {Depth}, FixedTreeFlags: {Flags}
+    Root Page: {RootPageNumber}
+    Leafs: {LeafPages:#,#} Overflow: {OverflowPages:#,#} Branches: {BranchPages:#,#}
+    Size: {((float)(PageCount * Constants.Storage.PageSize) / (1024 * 1024)):F2} Mb";
+        }
     }
 }

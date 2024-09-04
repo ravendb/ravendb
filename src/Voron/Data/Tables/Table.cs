@@ -2293,15 +2293,14 @@ namespace Voron.Data.Tables
             foreach (var item in _treesBySliceCache)
             {
                 var tree = item.Value;
-                if (!tree.State.IsModified)
+                if (tree.HeaderModified is false)
                     continue;
 
                 var treeName = item.Key;
 
                 using (_tableTree.DirectAdd(treeName, sizeof(TreeRootHeader), out byte* ptr))
                 {
-                    var header = (TreeRootHeader*)ptr;
-                    tree.State.CopyTo(header);
+                    *(TreeRootHeader*)ptr = tree.ReadHeader();
                 }
             }
         }
@@ -2313,8 +2312,9 @@ namespace Voron.Data.Tables
             if (pk != null && pk.IsGlobal == false)
             {
                 var tree = GetTree(pk);
-                if (tree.State.Header.NumberOfEntries != NumberOfEntries)
-                    throw new InvalidDataException($"Mismatch in primary key size to table size: {tree.State.Header.NumberOfEntries} != {NumberOfEntries}");
+                var header = tree.ReadHeader();
+                if (header.NumberOfEntries != NumberOfEntries)
+                    throw new InvalidDataException($"Mismatch in primary key size to table size: {header.NumberOfEntries} != {NumberOfEntries}");
             }
 
             foreach (var fst in _schema.FixedSizeIndexes)
@@ -2364,7 +2364,7 @@ namespace Voron.Data.Tables
             if (_schema.Key == null)
                 return;
 
-            var pkIndexNumberOfEntries = GetTree(_schema.Key).State.Header.NumberOfEntries;
+            var pkIndexNumberOfEntries = GetTree(_schema.Key).ReadHeader().NumberOfEntries;
             if (_schema.Key.IsGlobal == false)
             {
                 if (NumberOfEntries != pkIndexNumberOfEntries)

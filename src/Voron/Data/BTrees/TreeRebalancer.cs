@@ -440,9 +440,9 @@ namespace Voron.Data.BTrees
             Debug.Assert(node->Flags == (TreeNodeFlags.PageRef));
 
             var rootPage = _tree.ModifyPage(node->PageNumber);
-            ref var state = ref _tree.State.Modify();
-            state.RootPageNumber = rootPage.PageNumber;
-            state.Depth--;
+            ref var header = ref _tree.ModifyHeader();
+            header.RootPageNumber = rootPage.PageNumber;
+            header.Depth--;
 
             Debug.Assert(rootPage.Dirty);
 

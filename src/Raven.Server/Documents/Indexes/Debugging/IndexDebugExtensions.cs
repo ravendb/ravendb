@@ -242,7 +242,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
         private static unsafe ReduceTree RenderTree(Tree tree, ulong reduceKeyHash, Dictionary<long, string> idToDocIdHash, Index index, TransactionOperationContext context)
         {
             var stack = new Stack<ReduceTreePage>();
-            var rootPage = tree.GetReadOnlyTreePage(tree.State.Header.RootPageNumber);
+            var rootPage = tree.GetReadOnlyTreePage(tree.ReadHeader().RootPageNumber);
 
             var root = new ReduceTreePage(rootPage);
 
@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     node.AggregationResult = GetAggregationResult(node.PageNumber, table, context);
             }
 
-            ref readonly var state = ref tree.State.Header;
+            ref readonly var state = ref tree.ReadHeader();
             return new ReduceTree
             {
                 DisplayName = GetTreeName(root.AggregationResult, index.Definition, context),

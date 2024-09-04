@@ -108,9 +108,9 @@ namespace Voron.Data.BTrees
                     TreePage newRootPage = _tree.NewPage(TreePageFlags.Branch, _page.PageNumber);
                     _cursor.Push(newRootPage);
 
-                    ref var state = ref _tree.State.Modify();
-                    state.RootPageNumber = newRootPage.PageNumber;
-                    state.Depth++;
+                    ref var header = ref _tree.ModifyHeader();
+                    header.RootPageNumber = newRootPage.PageNumber;
+                    header.Depth++;
 
                     // now add implicit left page
                     newRootPage.AddPageRefNode(0, Slices.BeforeAllKeys, _page.PageNumber);

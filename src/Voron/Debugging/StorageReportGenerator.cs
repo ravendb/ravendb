@@ -116,8 +116,9 @@ namespace Voron.Debugging
             {
                 var treeReport = GetReport(tree, input.IncludeDetails);
                 trees.Add(treeReport);
-                if (tree.State.Header.Flags.HasFlag(TreeFlags.CompactTrees) ||
-                    tree.State.Header.Flags.HasFlag(TreeFlags.Lookups))
+                TreeFlags treeFlags = tree.ReadHeader().Flags;
+                if (treeFlags.HasFlag(TreeFlags.CompactTrees) ||
+                    treeFlags.HasFlag(TreeFlags.Lookups))
                 {
                     using var it = tree.Iterate(false);
                     if (it.Seek(Slices.BeforeAllKeys))
@@ -562,7 +563,7 @@ namespace Voron.Debugging
             MultiValuesReport multiValues = null;
             StreamsReport streams = null;
 
-            ref readonly var state = ref tree.State.Header;
+            ref readonly var state = ref tree.ReadHeader();
 
             if (state.Flags == TreeFlags.MultiValueTrees)
             {
@@ -621,7 +622,7 @@ namespace Voron.Debugging
                 return new StreamsReport
                 {
                     AllocatedSpaceInBytes = -1,
-                    NumberOfStreams = tree.State.Header.NumberOfEntries,
+                    NumberOfStreams = tree.ReadHeader().NumberOfEntries,
                     Streams = [_skippedStreamsDetailsEntry],
                     TotalNumberOfAllocatedPages = -1
                 };
@@ -667,7 +668,7 @@ namespace Voron.Debugging
                 return new StreamsReport
                 {
                     Streams = streams,
-                    NumberOfStreams = tree.State.Header.NumberOfEntries,
+                    NumberOfStreams = tree.ReadHeader().NumberOfEntries,
                     TotalNumberOfAllocatedPages = totalNumberOfAllocatedPages,
                     AllocatedSpaceInBytes = PagesToBytes(totalNumberOfAllocatedPages)
                 };
@@ -744,7 +745,7 @@ namespace Voron.Debugging
         {
             var histogram = new Dictionary<int, int>();
 
-            var root = tree.GetReadOnlyTreePage(tree.State.Header.RootPageNumber);
+            var root = tree.GetReadOnlyTreePage(tree.ReadHeader().RootPageNumber);
 
             GatherBalanceDistribution(tree, root, histogram, depth: 1);
 
