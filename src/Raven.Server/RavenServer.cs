@@ -2394,9 +2394,9 @@ namespace Raven.Server
 
                         header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
 
-                        if (Logger.IsInfoEnabled)
+                        if (Logger.IsDebugEnabled)
                         {
-                            Logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
+                            Logger.Debug($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                         }
 
                         //In the case where we have mismatched version but the other side doesn't know how to handle it.
@@ -2406,9 +2406,9 @@ namespace Raven.Server
                                 tcpAuditLog.Audit(
                                     $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because: {header.Info}");
 
-                            if (Logger.IsInfoEnabled)
+                            if (Logger.IsDebugEnabled)
                             {
-                                Logger.Info($"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} " +
+                                Logger.Debug($"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} " +
                                             $"from {tcpClient.Client.RemoteEndPoint} reason: {header.Info}");
                             }
 
@@ -2477,9 +2477,9 @@ namespace Raven.Server
                     return header;
                 }
 
-                if (Logger.IsInfoEnabled)
+                if (Logger.IsDebugEnabled)
                 {
-                    Logger.Info($"TCP connection from {header.SourceNodeTag ?? tcpClient.Client.RemoteEndPoint.ToString()} " +
+                    Logger.Debug($"TCP connection from {header.SourceNodeTag ?? tcpClient.Client.RemoteEndPoint.ToString()} " +
                                 $"for '{header.Operation}' is accepted with version {supported}");
                 }
             }

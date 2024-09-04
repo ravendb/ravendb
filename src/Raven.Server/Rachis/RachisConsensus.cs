@@ -455,9 +455,9 @@ namespace Raven.Server.Rachis
             var electionTerm = CurrentTermIn(context) + 1;
             CastVoteInTerm(context, electionTerm, Tag, "Switching to single leader");
 
-            if (Log.IsInfoEnabled)
+            if (Log.IsDebugEnabled)
             {
-                Log.Info("Switching to leader state");
+                Log.Debug("Switching to leader state");
             }
             var leader = new Leader(this, electionTerm);
             SetNewStateInTx(context, RachisState.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader", () => _currentLeader = leader);
@@ -981,9 +981,9 @@ namespace Raven.Server.Rachis
 
         public void SwitchToLeaderState(long electionTerm, int version, string reason, Dictionary<string, RemoteConnection> connections = null)
         {
-            if (Log.IsInfoEnabled)
+            if (Log.IsDebugEnabled)
             {
-                Log.Info("Switching to leader state");
+                Log.Debug("Switching to leader state");
             }
             var leader = new Leader(this, electionTerm);
             SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () =>
