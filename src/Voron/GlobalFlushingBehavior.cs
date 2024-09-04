@@ -69,9 +69,9 @@ namespace Voron
                         if (_envsToSync.Count == 0)
                             continue;
 
-                        if (_log.IsInfoEnabled)
+                        if (_log.IsDebugEnabled)
                         {
-                            _log.Info($"Starting force sync with {_envsToSync.Count:#,#} items to sync after a period of no activity");
+                            _log.Debug($"Starting force sync with {_envsToSync.Count:#,#} items to sync after a period of no activity");
                         }
 
                         // sync after 5 seconds if no flushing occurred

@@ -262,9 +262,9 @@ namespace Raven.Server
                     requestHandlerContext.DatabaseMetrics?.Requests.UpdateDuration(requestDuration);
                 }
 
-                if (_logger.IsInfoEnabled && SkipHttpLogging == false)
+                if (_logger.IsDebugEnabled && SkipHttpLogging == false)
                 {
-                    _logger.Info($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);
+                    _logger.Debug($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);
                 }
             }
         }
