@@ -46,15 +46,15 @@ public abstract class IndexOperationBase : IDisposable
 
         if (metadata.Query.Where == null)
         {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Issuing query on index {_indexName} for all documents");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Issuing query on index {_indexName} for all documents");
 
             documentQuery = new MatchAllDocsQuery();
         }
         else
         {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Issuing query on index {_indexName} for: {metadata.Query}");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Issuing query on index {_indexName} for: {metadata.Query}");
 
             IDisposable releaseServerContext = null;
             IDisposable closeServerTransaction = null;

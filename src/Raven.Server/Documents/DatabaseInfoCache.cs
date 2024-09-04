@@ -110,8 +110,8 @@ namespace Raven.Server.Documents
         /// <param name="databaseName">The database name as a slice</param>
         private void DeleteInternal(TransactionOperationContext ctx, Slice databaseName)
         {
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Deleting database info for '{databaseName}'.");
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"Deleting database info for '{databaseName}'.");
             var table = ctx.Transaction.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
             table.DeleteByKey(databaseName);
         }

@@ -138,8 +138,8 @@ namespace Raven.Server.Documents.Revisions
 
                 Configuration = revisions;
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Revisions configuration changed");
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug("Revisions configuration changed");
             }
             catch (Exception e)
             {

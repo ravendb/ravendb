@@ -2741,7 +2741,7 @@ namespace Raven.Server.ServerWide
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void LogCommand(string type, long index, Exception exception, CommandBase commandBase = null)
         {
-            if (_parent.Log.IsInfoEnabled)
+            if (_parent.Log.IsDebugEnabled)
             {
                 LogCommandInternal(type, index, exception, commandBase);
             }
@@ -2757,7 +2757,7 @@ namespace Raven.Server.ServerWide
                 msg += $" AdditionalDebugInformation: {additionalDebugInfo}.";
             }
 
-            _parent.Log.Info(msg);
+            _parent.Log.Debug(msg);
         }
 
         private static void UpdateIndexForBackup(DatabaseRecord databaseRecord, string type, long index)

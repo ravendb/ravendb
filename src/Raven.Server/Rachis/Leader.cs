@@ -176,9 +176,9 @@ namespace Raven.Server.Rachis
                 //This only means we are been disposed so we can quit now
                 if (lockTaken == false)
                 {
-                    if (_engine.Log.IsInfoEnabled)
+                    if (_engine.Log.IsDebugEnabled)
                     {
-                        _engine.Log.Info($"{ToString()}: Skipping refreshing ambassadors because we are been disposed of");
+                        _engine.Log.Debug($"{ToString()}: Skipping refreshing ambassadors because we are been disposed of");
                     }
 
                     throw new ObjectDisposedException($"{ToString()} is being disposed.");
@@ -186,9 +186,9 @@ namespace Raven.Server.Rachis
 
                 _engine.ValidateLatestTerm(Term);
 
-                if (_engine.Log.IsInfoEnabled)
+                if (_engine.Log.IsDebugEnabled)
                 {
-                    _engine.Log.Info($"{ToString()}: Refreshing ambassadors");
+                    _engine.Log.Debug($"{ToString()}: Refreshing ambassadors");
                 }
                 var old = new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
                 foreach (var peers in new[] { _voters, _promotables, _nonVoters })

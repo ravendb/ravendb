@@ -1159,9 +1159,9 @@ namespace Raven.Server.Rachis
                 if (clusterTopology.AllNodes.Count == 1 &&
                     clusterTopology.Members.Count == 1)
                 {
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
-                        Log.Info("Trying to switch to candidate when I'm the only node in the cluster, turning into a leader, instead");
+                        Log.Debug("Trying to switch to candidate when I'm the only node in the cluster, turning into a leader, instead");
                     }
 
                     var command = new SwitchToSingleLeaderCommand(this);
