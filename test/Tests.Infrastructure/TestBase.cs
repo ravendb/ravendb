@@ -172,7 +172,6 @@ namespace FastTests
             var configuration = RavenConfiguration.CreateForTesting("Tests", ResourceType.Server);
             configuration.Initialize();
             configuration.Logs.MinLevel = LogLevel.Off;
-            configuration.Logs.MaxLevel = LogLevel.Off;
 
             RavenLogManager.Instance.ConfigureLogging(configuration);
         }
@@ -564,7 +563,6 @@ namespace FastTests
                 configuration.Initialize();
 
                 configuration.Logs.MinLevel = LogLevel.Off;
-                configuration.Logs.MaxLevel = LogLevel.Off;
                 configuration.Server.Name = ServerName;
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
                 configuration.Licensing.EulaAccepted = true;

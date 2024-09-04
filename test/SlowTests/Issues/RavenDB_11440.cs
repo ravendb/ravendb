@@ -40,30 +40,16 @@ namespace SlowTests.Issues
                         _ => throw new ArgumentOutOfRangeException()
                     };
 
-                    LogLevel newMaxLevel = configuration1.Logs.CurrentMaxLevel switch
-                    {
-                        LogLevel.Trace => LogLevel.Debug,
-                        LogLevel.Debug => LogLevel.Trace,
-                        LogLevel.Info => LogLevel.Debug,
-                        LogLevel.Warn => LogLevel.Debug,
-                        LogLevel.Error => LogLevel.Debug,
-                        LogLevel.Fatal => LogLevel.Debug,
-                        LogLevel.Off => LogLevel.Debug,
-                        _ => throw new ArgumentOutOfRangeException()
-                    };
-
                     try
                     {
                         await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(
-                            new SetLogsConfigurationOperation.LogsConfiguration(minLevel: newMinLevel, maxLevel: newMaxLevel)), cts.Token);
+                            new SetLogsConfigurationOperation.LogsConfiguration(minLevel: newMinLevel)), cts.Token);
 
                         var configuration2 = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation(), cts.Token);
 
                         Assert.Equal(newMinLevel, configuration2.Logs.CurrentMinLevel);
-                        Assert.Equal(newMaxLevel, configuration2.Logs.CurrentMaxLevel);
 
                         Assert.Equal(configuration1.Logs.MinLevel, configuration2.Logs.MinLevel);
-                        Assert.Equal(configuration1.Logs.MaxLevel, configuration2.Logs.MaxLevel);
                         Assert.Equal(configuration1.Logs.ArchiveAboveSizeInMb, configuration2.Logs.ArchiveAboveSizeInMb);
                         Assert.Equal(configuration1.Logs.EnableArchiveFileCompression, configuration2.Logs.EnableArchiveFileCompression);
                         Assert.Equal(configuration1.Logs.MaxArchiveDays, configuration2.Logs.MaxArchiveDays);
@@ -72,9 +58,7 @@ namespace SlowTests.Issues
                     }
                     finally
                     {
-                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(
-                            new SetLogsConfigurationOperation.LogsConfiguration(minLevel: configuration1.Logs.CurrentMinLevel,
-                                maxLevel: configuration1.Logs.CurrentMaxLevel)), cts.Token);
+                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.LogsConfiguration(minLevel: configuration1.Logs.CurrentMinLevel)), cts.Token);
                     }
                 }
             }

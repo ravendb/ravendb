@@ -50,7 +50,6 @@ public class RavenDB_20925 : RavenTestBase
             var configurationResult = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation());
 
             Assert.Equal(LogLevel.Debug, configurationResult.Logs.CurrentMinLevel);
-            Assert.Equal(LogLevel.Fatal, configurationResult.Logs.CurrentMaxLevel);
             Assert.Equal(333, configurationResult.Logs.ArchiveAboveSizeInMb);
             Assert.Equal(10, configurationResult.Logs.MaxArchiveDays);
         }
