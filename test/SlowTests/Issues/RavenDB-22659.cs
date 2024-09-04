@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
@@ -203,11 +204,17 @@ namespace SlowTests.Issues
                     Assert.Equal(2, topology.AllNodes.Count);
                 }
 
-                var deleteException = await Assert.ThrowsAsync<RavenException>(async () =>
+                using (var store2 = new DocumentStore { Database = db, Urls = new[] { revivedNode.WebUrl }, Conventions = new DocumentConventions { DisableTopologyUpdates = true } }.Initialize())
                 {
-                    await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: revivedNode.ServerStore.NodeTag));
-                });
-                Assert.Contains("doesn't reside on node", deleteException.Message);
+                    var val = await WaitForValueAsync(async () => await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName)) != null, true);
+                    Assert.True(val);
+
+                    var deleteException = await Assert.ThrowsAsync<RavenException>(async () =>
+                    {
+                        await store2.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true));
+                    });
+                    Assert.Contains("In order to delete the database, you can cancel the restore task from node", deleteException.Message);
+                }
             }
         }
 
