@@ -1749,8 +1749,8 @@ namespace Raven.Server.Documents.Indexes
                 if (startIndex)
                     index.Start();
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Started {index.Name} from {indexPath}");
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Started {index.Name} from {indexPath}");
 
                 _indexes.Add(index);
             }

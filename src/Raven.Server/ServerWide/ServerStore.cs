@@ -1043,9 +1043,9 @@ namespace Raven.Server.ServerWide
         {
             var msg = $"{DateTime.UtcNow}, State changed: {state.From} -> {state.To} in term {state.CurrentTerm}, because {state.Reason}";
 
-            if (Engine.Log.IsInfoEnabled)
+            if (Engine.Log.IsDebugEnabled)
             {
-                Engine.Log.Info(msg);
+                Engine.Log.Debug(msg);
             }
             Engine.InMemoryDebug.StateChangeTracking.LimitedSizeEnqueue(msg, 10);
 
