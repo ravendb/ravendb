@@ -55,15 +55,11 @@ namespace Raven.Client.ServerWide.Operations.Logs
 
         public LogLevel CurrentMinLevel { get; set; }
 
-        public LogLevel CurrentMaxLevel { get; set; }
-
         public List<LogFilter> CurrentFilters { get; set; } = new();
 
         public LogFilterAction CurrentLogFilterDefaultAction { get; set; }
 
         public LogLevel MinLevel { get; set; }
-
-        public LogLevel MaxLevel { get; set; }
 
         public long ArchiveAboveSizeInMb { get; set; }
 
@@ -79,9 +75,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
             {
                 [nameof(Path)] = Path,
                 [nameof(CurrentMinLevel)] = CurrentMinLevel,
-                [nameof(CurrentMaxLevel)] = CurrentMaxLevel,
                 [nameof(MinLevel)] = MinLevel,
-                [nameof(MaxLevel)] = MaxLevel,
                 [nameof(ArchiveAboveSizeInMb)] = ArchiveAboveSizeInMb,
                 [nameof(MaxArchiveDays)] = MaxArchiveDays,
                 [nameof(MaxArchiveFiles)] = MaxArchiveFiles,
@@ -140,8 +134,6 @@ namespace Raven.Client.ServerWide.Operations.Logs
     {
         public LogLevel CurrentMinLevel { get; set; }
 
-        public LogLevel CurrentMaxLevel { get; set; }
-
         public List<LogFilter> CurrentFilters { get; set; } = new();
 
         public LogFilterAction CurrentLogFilterDefaultAction { get; set; }
@@ -151,7 +143,6 @@ namespace Raven.Client.ServerWide.Operations.Logs
             return new DynamicJsonValue
             {
                 [nameof(CurrentMinLevel)] = CurrentMinLevel,
-                [nameof(CurrentMaxLevel)] = CurrentMaxLevel,
                 [nameof(CurrentFilters)] = new DynamicJsonArray(CurrentFilters.Select(x => x.ToJson())),
                 [nameof(CurrentLogFilterDefaultAction)] = CurrentLogFilterDefaultAction
             };

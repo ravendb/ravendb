@@ -94,7 +94,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                         if (configuration.Logs != null)
                         {
                             jsonFileModifier.SetOrRemoveIfDefault(configuration.Logs.MinLevel, c => c.Logs.MinLevel);
-                            jsonFileModifier.SetOrRemoveIfDefault(configuration.Logs.MaxLevel, c => c.Logs.MaxLevel);
                         }
 
                         if (configuration.MicrosoftLogs != null)

@@ -19,15 +19,12 @@ namespace Raven.Client.ServerWide.Operations.Logs
             {
             }
 
-            public LogsConfiguration(LogLevel minLevel, LogLevel maxLevel)
+            public LogsConfiguration(LogLevel minLevel)
             {
                 MinLevel = minLevel;
-                MaxLevel = maxLevel;
             }
 
             public LogLevel MinLevel { get; set; }
-
-            public LogLevel MaxLevel { get; set; }
 
             public List<LogFilter> Filters { get; set; } = new();
 
@@ -54,15 +51,12 @@ namespace Raven.Client.ServerWide.Operations.Logs
             {
             }
 
-            public AdminLogsConfiguration(LogLevel minLevel, LogLevel maxLevel)
+            public AdminLogsConfiguration(LogLevel minLevel)
             {
                 MinLevel = minLevel;
-                MaxLevel = maxLevel;
             }
 
             public LogLevel MinLevel { get; set; }
-
-            public LogLevel MaxLevel { get; set; }
 
             public List<LogFilter> Filters { get; set; } = new();
 

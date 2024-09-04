@@ -130,7 +130,7 @@ namespace Raven.Server
             });
 
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Logging to {configuration.Logs.Path} set to [{configuration.Logs.MinLevel}, {configuration.Logs.MaxLevel}] level.");
+                Logger.Info($"Logging to {configuration.Logs.Path} set to [{configuration.Logs.MinLevel}, {configuration.Logs.MinLevel.ToNLogMaxLogLevel()}] level.");
 
             InitializeThreadPoolThreads(configuration);
 

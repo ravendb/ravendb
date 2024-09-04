@@ -242,7 +242,7 @@ internal static class RavenLogManagerServerExtensions
         {
             AssertNotFileConfig();
 
-            DefaultRule.SetLoggingLevels(parameters.Logs.MinLevel.ToNLogLogLevel(), parameters.Logs.MaxLevel.ToNLogLogLevel());
+            DefaultRule.SetLoggingLevels(parameters.Logs.MinLevel.ToNLogLogLevel(), parameters.Logs.MinLevel.ToNLogMaxLogLevel());
             DefaultRule.FilterDefaultAction = parameters.Logs.LogFilterDefaultAction.ToNLogFilterResult();
 
             ApplyFilters(parameters.Logs.Filters, DefaultRule);
@@ -250,7 +250,7 @@ internal static class RavenLogManagerServerExtensions
 
         if (parameters.AdminLogs != null)
         {
-            AdminLogsRule.SetLoggingLevels(parameters.AdminLogs.MinLevel.ToNLogLogLevel(), parameters.AdminLogs.MaxLevel.ToNLogLogLevel());
+            AdminLogsRule.SetLoggingLevels(parameters.AdminLogs.MinLevel.ToNLogLogLevel(), parameters.AdminLogs.MinLevel.ToNLogMaxLogLevel());
             AdminLogsRule.FilterDefaultAction = parameters.AdminLogs.LogFilterDefaultAction.ToNLogFilterResult();
 
             ApplyFilters(parameters.AdminLogs.Filters, AdminLogsRule);
@@ -287,17 +287,15 @@ internal static class RavenLogManagerServerExtensions
         SystemRule.FinalMinLevel = MicrosoftRule.FinalMinLevel = configuration.Logs.MicrosoftMinLevel.ToNLogFinalMinLogLevel();
 
         var minLevel = configuration.Logs.MinLevel;
-        var maxLevel = configuration.Logs.MaxLevel;
         var archiveAboveSize = configuration.Logs.ArchiveAboveSize;
         var enableArchiveFileCompression = configuration.Logs.EnableArchiveFileCompression;
         var maxArchiveDays = configuration.Logs.MaxArchiveDays;
         var maxArchiveFiles = configuration.Logs.MaxArchiveFiles;
 
 #if !RVN
-        if (TryGetLegacyLogLevel(configuration, out var legacyMinLevel, out var legacyMaxLevel))
+        if (TryGetLegacyLogLevel(configuration, out var legacyMinLevel))
         {
             minLevel = legacyMinLevel;
-            maxLevel = legacyMaxLevel;
         }
 
         if (TryGetLegacyArchiveAboveSize(configuration, out var legacyArchiveAboveSize))
@@ -334,7 +332,7 @@ internal static class RavenLogManagerServerExtensions
 
         var fileTargetAsyncWrapper = new AsyncTargetWrapper(nameof(AsyncTargetWrapper), fileTarget);
 
-        DefaultRule = new LoggingRule("*", minLevel.ToNLogLogLevel(), maxLevel.ToNLogLogLevel(), fileTargetAsyncWrapper)
+        DefaultRule = new LoggingRule("*", minLevel.ToNLogLogLevel(), minLevel.ToNLogMaxLogLevel(), fileTargetAsyncWrapper)
         {
             RuleName = Constants.Logging.Names.DefaultRuleName
         };
@@ -356,7 +354,7 @@ internal static class RavenLogManagerServerExtensions
         LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
 
 #if !RVN
-        static bool TryGetLegacyLogLevel(RavenConfiguration configuration, out Sparrow.Logging.LogLevel legacyMinLevel, out Sparrow.Logging.LogLevel legacyMaxLevel)
+        static bool TryGetLegacyLogLevel(RavenConfiguration configuration, out Sparrow.Logging.LogLevel legacyMinLevel)
         {
             var logsMode = configuration.GetSetting("Logs.Mode");
             switch (logsMode)
@@ -364,20 +362,16 @@ internal static class RavenLogManagerServerExtensions
 
                 case "None":
                     legacyMinLevel = Sparrow.Logging.LogLevel.Off;
-                    legacyMaxLevel = Sparrow.Logging.LogLevel.Off;
                     return true;
                 case "Information":
                     legacyMinLevel = Sparrow.Logging.LogLevel.Debug;
-                    legacyMaxLevel = Sparrow.Logging.LogLevel.Fatal;
                     return true;
                 case "Operations":
                     legacyMinLevel = Sparrow.Logging.LogLevel.Info;
-                    legacyMaxLevel = Sparrow.Logging.LogLevel.Fatal;
                     return true;
             }
 
             legacyMinLevel = Sparrow.Logging.LogLevel.Off;
-            legacyMaxLevel = Sparrow.Logging.LogLevel.Off;
             return false;
         }
 #endif
@@ -538,14 +532,12 @@ internal static class RavenLogManagerServerExtensions
         return new LogsConfiguration
         {
             MinLevel = server.Configuration.Logs.MinLevel,
-            MaxLevel = server.Configuration.Logs.MaxLevel,
             MaxArchiveFiles = server.Configuration.Logs.MaxArchiveFiles,
             EnableArchiveFileCompression = server.Configuration.Logs.EnableArchiveFileCompression,
             MaxArchiveDays = maxArchiveDays,
             ArchiveAboveSizeInMb = archiveAboveSize.GetValue(SizeUnit.Megabytes),
             Path = server.Configuration.Logs.Path.FullPath,
             CurrentMinLevel = currentMinLevel.FromNLogLogLevel(),
-            CurrentMaxLevel = currentMaxLevel.FromNLogLogLevel(),
             CurrentFilters = GetFilters(defaultRule),
             CurrentLogFilterDefaultAction = defaultRule.FilterDefaultAction.ToLogFilterAction()
         };
@@ -587,12 +579,10 @@ internal static class RavenLogManagerServerExtensions
     {
         var webSocketRule = AdminLogsRule;
         var currentMinLevel = webSocketRule.Levels.FirstOrDefault() ?? LogLevel.Off;
-        var currentMaxLevel = webSocketRule.Levels.LastOrDefault() ?? LogLevel.Off;
 
         return new AdminLogsConfiguration
         {
             CurrentMinLevel = currentMinLevel.FromNLogLogLevel(),
-            CurrentMaxLevel = currentMaxLevel.FromNLogLogLevel(),
             CurrentFilters = GetFilters(webSocketRule),
             CurrentLogFilterDefaultAction = webSocketRule.FilterDefaultAction.ToLogFilterAction()
         };

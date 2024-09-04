@@ -159,7 +159,7 @@ public class ModifyConfigurationTests : RavenTestBase
     [RavenFact(RavenTestCategory.Logging)]
     public async Task PersistLogConfiguration()
     {
-        var newParams = new SetLogsConfigurationOperation.LogsConfiguration(minLevel: LogLevel.Debug, maxLevel: LogLevel.Error);
+        var newParams = new SetLogsConfigurationOperation.LogsConfiguration(minLevel: LogLevel.Debug);
 
         var settingsJsonPath = Path.GetTempFileName();
         var options = await CreateSettingsJsonFile(settingsJsonPath);
@@ -177,9 +177,6 @@ public class ModifyConfigurationTests : RavenTestBase
 
                 Assert.True(configuration.TryGet(RavenConfiguration.GetKey(x => x.Logs.MinLevel), out LogLevel mode));
                 Assert.Equal(newParams.MinLevel, mode);
-
-                Assert.True(configuration.TryGet(RavenConfiguration.GetKey(x => x.Logs.MaxLevel), out mode));
-                Assert.Equal(newParams.MaxLevel, mode);
             }
         }
 
@@ -190,7 +187,6 @@ public class ModifyConfigurationTests : RavenTestBase
             var configurationResult = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation());
 
             Assert.Equal(newParams.MinLevel, configurationResult.Logs.MinLevel);
-            Assert.Equal(newParams.MaxLevel, configurationResult.Logs.MaxLevel);
         }
     }
 

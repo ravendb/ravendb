@@ -22,10 +22,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Logs.MinLevel", ConfigurationEntryScope.ServerWideOnly)]
         public LogLevel MinLevel { get; set; }
 
-        [DefaultValue(LogLevel.Fatal)]
-        [ConfigurationEntry("Logs.MaxLevel", ConfigurationEntryScope.ServerWideOnly)]
-        public LogLevel MaxLevel { get; set; }
-
         [DefaultValue(null)]
         [ConfigurationEntry("Logs.NLog.Path", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NLogInternalPath { get; set; }

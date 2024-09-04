@@ -94,6 +94,24 @@ namespace Sparrow.Logging
             }
         }
 
+        public static NLog.LogLevel ToNLogMaxLogLevel(this LogLevel logLevel)
+        {
+            switch (logLevel)
+            {
+                case LogLevel.Trace:
+                case LogLevel.Debug:
+                case LogLevel.Info:
+                case LogLevel.Warn:
+                case LogLevel.Error:
+                case LogLevel.Fatal:
+                    return NLog.LogLevel.Fatal;
+                case LogLevel.Off:
+                    return NLog.LogLevel.Off;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(logLevel), logLevel, null);
+            }
+        }
+
         public static NLog.LogLevel ToNLogFinalMinLogLevel(this LogLevel logLevel)
         {
             switch (logLevel)
