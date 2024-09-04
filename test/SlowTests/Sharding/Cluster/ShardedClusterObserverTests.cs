@@ -541,8 +541,9 @@ namespace SlowTests.Sharding.Cluster
             {
                 Database = database,
                 Urls = new string[] { leader.WebUrl }
-            }.Initialize())
+            })
             {
+                store.Initialize();
                 var user = new User
                 {
                     Name = "🤡"
@@ -572,7 +573,11 @@ namespace SlowTests.Sharding.Cluster
                 shardToCX[0] = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(shard0User, user, 0));
                 shardToCX[1] = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(shard1User, user, 0));
                 shardToCX[2] = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(shard2User, user, 0));
-                
+
+                //put backup configuration and wait for responsible node to be chosen by observer before we suspend it
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 * *");
+                var backupTaskId = await Sharding.Backup.UpdateConfigAsync(leader, config, store);
+
                 //suspend observer to stall tombstone cleaning
                 leader.ServerStore.Observer.Suspended = true;
 
@@ -594,9 +599,8 @@ namespace SlowTests.Sharding.Cluster
                 await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 3, nodes);
 
                 //run periodic backup on leader
-                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 * *");
-                var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(leader, store, config, isFullBackup: false);
-                
+                await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, new List<RavenServer>(){ leader });
+
                 //wait for periodic backup to finish running
                 var done = await WaitForValueAsync(() =>
                 {
