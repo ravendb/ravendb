@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
@@ -306,8 +307,7 @@ namespace RachisTests.DatabaseCluster
                 long taskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, opStatus: OperationStatus.InProgress);
 
                 // call StartBackupOperation - this will not start a new backup task for that id since we already have one running
-                var error = await Assert.ThrowsAnyAsync<RavenException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
-                Assert.Contains("BackupAlreadyRunningException", error.Message);
+                await Assert.ThrowsAnyAsync<BackupAlreadyRunningException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
             }
         }
 
@@ -356,8 +356,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 // call StartBackupOperation - this should throw since we the backup is still running on shard 0
-                var error = await Assert.ThrowsAnyAsync<RavenException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
-                Assert.Contains("BackupAlreadyRunningException", error.Message);
+                await Assert.ThrowsAnyAsync<BackupAlreadyRunningException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
             }
         }
 
