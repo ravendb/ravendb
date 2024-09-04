@@ -201,7 +201,8 @@ namespace SlowTests.Voron.Streams
 
                 using (Slice.From(tx.Allocator, "test", out var fileName))
                 {
-                    Assert.Equal(tree.State.Header.OverflowPages + tree.State.Header.BranchPages + tree.State.Header.LeafPages, tree.AllPages().Count);
+                    var header = tree.ReadHeader();
+                    Assert.Equal(header.OverflowPages + header.BranchPages + header.LeafPages, tree.AllPages().Count);
                 }
             }
         }

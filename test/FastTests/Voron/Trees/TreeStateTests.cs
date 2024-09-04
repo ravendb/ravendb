@@ -47,7 +47,7 @@ namespace FastTests.Voron.Trees
 
                 tx.Commit();
 
-                ref readonly var treeState = ref tree.State.Header;
+                ref readonly var treeState = ref tree.ReadHeader();
 
                 Assert.True(treeState.PageCount > 0);
                 Assert.Equal(treeState.PageCount, treeState.BranchPages + treeState.LeafPages + treeState.OverflowPages);
@@ -64,7 +64,7 @@ namespace FastTests.Voron.Trees
             var largeValue = new byte[Constants.Storage.PageSize * 2];
             var overflowKey = "overflow" + new string('-', 128);
 
-            TreeMutableState old;
+            TreeRootHeader old;
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
@@ -89,7 +89,7 @@ namespace FastTests.Voron.Trees
 
                 tx.Commit();
 
-                old = tree.State.Clone();
+                old = tree.ReadHeader();
             }
 
             using (var tx = Env.WriteTransaction())
@@ -105,14 +105,12 @@ namespace FastTests.Voron.Trees
                 tx.Commit();
 
                 
-                ref readonly var state = ref tree.State.Header;
-                ref readonly var oldState = ref old.Header;
-
-                Assert.True(oldState.PageCount > state.PageCount);
-                Assert.True(oldState.LeafPages > state.LeafPages);
-                Assert.True(oldState.BranchPages >= state.BranchPages);
-                Assert.True(oldState.OverflowPages > state.OverflowPages);
-                Assert.True(oldState.Depth >= state.Depth);
+                ref readonly var state = ref tree.ReadHeader();
+                Assert.True(old.PageCount > state.PageCount);
+                Assert.True(old.LeafPages > state.LeafPages);
+                Assert.True(old.BranchPages >= state.BranchPages);
+                Assert.True(old.OverflowPages > state.OverflowPages);
+                Assert.True(old.Depth >= state.Depth);
             }
         }
 
@@ -120,7 +118,7 @@ namespace FastTests.Voron.Trees
         public void HasReducedTreeDepthValueAfterRemovingEntries()
         {
             int numberOfItems = 0;
-            TreeMutableState old;
+            TreeRootHeader old;
             var key = "test" + new string('-', 256);
             using (var tx = Env.WriteTransaction())
             {
@@ -136,7 +134,8 @@ namespace FastTests.Voron.Trees
                     tree.Add(s, value);
                     size += Tree.CalcSizeOfEmbeddedEntry(s.Length, 256);
                 }
-                old = tree.State.Clone();
+
+                old = tree.ReadHeader();
 
                 tx.Commit();
             }
@@ -149,7 +148,7 @@ namespace FastTests.Voron.Trees
                 {
                     tree.Delete(key + i);
                 }
-                Assert.True(old.Header.Depth >= tree.State.Header.Depth);
+                Assert.True(old.Depth >= tree.ReadHeader().Depth);
 
                 tx.Commit();
             }
@@ -163,7 +162,7 @@ namespace FastTests.Voron.Trees
                     tree.Delete(key + i);
                 }
 
-                Assert.Equal(1, tree.State.Header.Depth);
+                Assert.Equal(1, tree.ReadHeader().Depth);
             }
         }
 
@@ -212,8 +211,8 @@ namespace FastTests.Voron.Trees
                     tree.MultiDelete("key2", "items/" + i + "/" + new string('p', i));
                 }
 
-                Assert.True(tree.State.Header.PageCount >= 0);
-                Assert.Equal(tree.AllPages().Count, tree.State.Header.PageCount);
+                Assert.True(tree.ReadHeader().PageCount >= 0);
+                Assert.Equal(tree.AllPages().Count, tree.ReadHeader().PageCount);
             }
         }
     }

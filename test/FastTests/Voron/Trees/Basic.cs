@@ -35,7 +35,7 @@ namespace FastTests.Voron.Trees
             {
                 var tree = tx.ReadTree("foo");
 
-                ref readonly var state = ref tree.State.Header;
+                ref readonly var state = ref tree.ReadHeader();
                 Assert.Equal(state.PageCount, allPages.Count);
                 Assert.Equal(4, state.PageCount);
                 Assert.Equal(3, state.OverflowPages);
@@ -86,8 +86,8 @@ namespace FastTests.Voron.Trees
 
                 tx.Commit();
 
-                Assert.Equal(1, tree.State.Header.PageCount);
-                Assert.Equal(1, tree.State.Header.LeafPages);
+                Assert.Equal(1, tree.ReadHeader().PageCount);
+                Assert.Equal(1, tree.ReadHeader().LeafPages);
             }
         }
 
@@ -111,10 +111,10 @@ namespace FastTests.Voron.Trees
                 tx.Commit();
 
 
-                Assert.Equal(4, tree.State.Header.PageCount);
-                Assert.Equal(3, tree.State.Header.LeafPages);
-                Assert.Equal(1, tree.State.Header.BranchPages);
-                Assert.Equal(2, tree.State.Header.Depth);
+                Assert.Equal(4, tree.ReadHeader().PageCount);
+                Assert.Equal(3, tree.ReadHeader().LeafPages);
+                Assert.Equal(1, tree.ReadHeader().BranchPages);
+                Assert.Equal(2, tree.ReadHeader().Depth);
 
             }
         }

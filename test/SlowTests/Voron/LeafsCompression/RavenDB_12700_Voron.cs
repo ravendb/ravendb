@@ -24,7 +24,7 @@ namespace SlowTests.Voron.LeafsCompression
             {
                 var tree = tx.CreateTree("tree", flags: TreeFlags.LeafsCompressed);
 
-                Page modifyPage = tx.LowLevelTransaction.ModifyPage(tree.State.Header.RootPageNumber);
+                Page modifyPage = tx.LowLevelTransaction.ModifyPage(tree.ReadHeader().RootPageNumber);
 
                 // it's a special page which after decompression could not be compressed back
                 // it contains 2 uncompressed nodes and 201 nodes in compressed part
@@ -48,7 +48,7 @@ namespace SlowTests.Voron.LeafsCompression
                     Memory.Copy(modifyPage.Pointer, dataPtr, data.Length);
                 }
 
-                modifyPage.PageNumber = tree.State.Header.RootPageNumber; // set the original page number
+                modifyPage.PageNumber = tree.ReadHeader().RootPageNumber; // set the original page number
 
                 var readValues = new List<(Slice, byte[])>();
 

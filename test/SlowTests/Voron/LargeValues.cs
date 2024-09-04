@@ -83,7 +83,7 @@ namespace SlowTests.Voron
                         }
                         while (iterator.MoveNext());
 
-                        Assert.Equal(ids.Count, tree.State.Header.NumberOfEntries);
+                        Assert.Equal(ids.Count, tree.ReadHeader().NumberOfEntries);
                         Assert.Equal(ids.Count, count);
                         Assert.Equal(ids.Count, keys.Count);
                     }

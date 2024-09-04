@@ -33,7 +33,7 @@ namespace SlowTests.Voron.Bugs
                     size += Tree.CalcSizeOfEmbeddedEntry(s.Length, 256);
                 }
 
-                Assert.Equal(3, tree.State.Header.Depth);
+                Assert.Equal(3, tree.ReadHeader().Depth);
 
                 var allPages = tree.AllPages();
 
@@ -42,7 +42,7 @@ namespace SlowTests.Voron.Bugs
                 foreach (var pageNumber in allPages)
                 {
                     var treePage = tree.GetReadOnlyTreePage(pageNumber);
-                    if (pageNumber != tree.State.Header.RootPageNumber && treePage.TreeFlags == TreePageFlags.Branch)
+                    if (pageNumber != tree.ReadHeader().RootPageNumber && treePage.TreeFlags == TreePageFlags.Branch)
                     {
                         branchPageNumber = pageNumber;
                         break;
@@ -55,7 +55,7 @@ namespace SlowTests.Voron.Bugs
 
                 var parent = tree.GetParentPageOf(branchPage);
 
-                Assert.Equal(tree.State.Header.RootPageNumber, parent);
+                Assert.Equal(tree.ReadHeader().RootPageNumber, parent);
 
                 using (branchPage.GetNodeKey(tx.LowLevelTransaction, 1, out var nodeKey))
                 {
@@ -64,7 +64,7 @@ namespace SlowTests.Voron.Bugs
 
                 parent = tree.GetParentPageOf(branchPage);
 
-                Assert.Equal(tree.State.Header.RootPageNumber, parent);
+                Assert.Equal(tree.ReadHeader().RootPageNumber, parent);
             }
         }
     }

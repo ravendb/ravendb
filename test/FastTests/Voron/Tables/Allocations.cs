@@ -41,7 +41,7 @@ namespace FastTests.Voron.Tables
                 foreach (var index in DocsSchema.Indexes)
                 {
                     var tree = docs.GetTree(index.Value);
-                    Assert.NotEqual(1, tree.State.Header.Depth);
+                    Assert.NotEqual(1, tree.ReadHeader().Depth);
                     var pages = tree.AllPages();
                     var minPage = pages.Min();
                     var maxPage = pages.Max();
@@ -80,7 +80,7 @@ namespace FastTests.Voron.Tables
                 foreach (var index in DocsSchema.Indexes)
                 {
                     var tree = docs.GetTree(index.Value);
-                    Assert.NotEqual(1, tree.State.Header.Depth);
+                    Assert.NotEqual(1, tree.ReadHeader().Depth);
                     var pages = tree.AllPages();
                     var minPage = pages.Min();
                     var maxPage = pages.Max();
