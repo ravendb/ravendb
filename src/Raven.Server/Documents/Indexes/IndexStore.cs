@@ -1572,8 +1572,8 @@ namespace Raven.Server.Documents.Indexes
         {
             var path = _documentDatabase.Configuration.Indexing.StoragePath;
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info("Starting to load indexes from record");
+            if (Logger.IsDebugEnabled)
+                Logger.Debug("Starting to load indexes from record");
 
             List<Exception> exceptions = null;
             if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexCannotBeOpened)
@@ -1607,8 +1607,8 @@ namespace Raven.Server.Documents.Indexes
                     addToInitLog(LogLevel.Debug, $"Initializing static index: `{name}`");
                     OpenIndex(path, indexPath, exceptions, name, startIndex, definition);
 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Initialized static index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Initialized static index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
                 }
             }
 

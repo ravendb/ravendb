@@ -153,7 +153,7 @@ namespace Raven.Server.Rachis
         {
             return _persistentState.TryGetClientState(out ClusterStateRecord csr) ? csr.State : RachisState.Passive;
         }
-        
+
         public (RachisState State, DateTime When) CurrentPublishedStateAndTimestamp()
         {
             if (_persistentState.TryGetClientState(out ClusterStateRecord r))
@@ -171,12 +171,12 @@ namespace Raven.Server.Rachis
                 When = DateTime.UtcNow
             });
         }
-        
+
         public void UpdateTermIn(ClusterOperationContext ctx, long term)
         {
             if (ctx.Transaction.InnerTransaction.LowLevelTransaction.TryGetClientState(out ClusterStateRecord cur) is false)
                 cur = ClusterStateRecord.Empty;
-            ctx.Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState(cur with {Term = term});
+            ctx.Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState(cur with { Term = term });
         }
 
         public string LastStateChangeReason
@@ -393,7 +393,7 @@ namespace Raven.Server.Rachis
                         State = state,
                         Term = currentTerm
                     });
-                   
+
                     tx.Commit();
                 }
 
@@ -401,7 +401,7 @@ namespace Raven.Server.Rachis
                 RandomizeTimeout();
 
                 if (CurrentCommittedState.State != RachisState.Passive)
-                Timeout.Start(SwitchToCandidateStateOnTimeout);
+                    Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
             catch (Exception)
             {
@@ -467,11 +467,11 @@ namespace Raven.Server.Rachis
             Follower = null;
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
-                if (tx.Committed == false) 
+                if (tx.Committed == false)
                     return;
-                
-                    CommandsVersionManager.SetClusterVersion(ClusterCommandsVersionManager.MyCommandsVersion);
-                    leader.Start();
+
+                CommandsVersionManager.SetClusterVersion(ClusterCommandsVersionManager.MyCommandsVersion);
+                leader.Start();
             };
         }
 
@@ -847,8 +847,8 @@ namespace Raven.Server.Rachis
             UpdateStateIn(context, rachisState);
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += llt =>
                 {
-                if (!llt.Committed) 
-                    return;
+                    if (!llt.Committed)
+                        return;
 
                     try
                     {
@@ -878,9 +878,9 @@ namespace Raven.Server.Rachis
                     {
                         TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                         {
-                            if (Log.IsInfoEnabled)
+                            if (Log.IsDebugEnabled)
                             {
-                                Log.Info($"Initiate disposing the term _prior_ to {expectedTerm:#,#;;0} with {toDispose.Count} things to dispose.");
+                                Log.Debug($"Initiate disposing the term _prior_ to {expectedTerm:#,#;;0} with {toDispose.Count} things to dispose.");
                             }
 
                             ParallelDispose(toDispose);
@@ -900,7 +900,7 @@ namespace Raven.Server.Rachis
                             Log.Warn($"Took way too much time ({elapsed}) to change the state to {rachisState} in term {expectedTerm:#,#;;0}. (Election timeout:{ElectionTimeout})");
                         }
                     }
-            };
+                };
         }
 
         private void ParallelDispose(List<IDisposable> toDispose)
@@ -935,13 +935,13 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction.InnerTransaction.IsWriteTransaction);
 
             if (CurrentStateIn(context) != RachisState.LeaderElect)
-                return ;
+                return;
 
             UpdateStateIn(context, RachisState.Leader);
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx.Committed)
-            TaskExecutor.CompleteAndReplace(ref _stateChanged);
+                    TaskExecutor.CompleteAndReplace(ref _stateChanged);
             };
         }
 
@@ -2010,7 +2010,7 @@ namespace Raven.Server.Rachis
                 throw new RachisConcurrencyException($"The term was changed from {term:#,#;;0} to {current:#,#;;0}");
             }
         }
-        public void ValidateTermIn(ClusterOperationContext ctx,long term)
+        public void ValidateTermIn(ClusterOperationContext ctx, long term)
         {
             long current = CurrentTermIn(ctx);
             if (term != current)
@@ -2032,8 +2032,8 @@ namespace Raven.Server.Rachis
                 *(long*)ptr = term;
             }
 
-            if (Log.IsInfoEnabled)
-                Log.Info($"Casting vote for {votedFor ?? "<???>"} in {term:#,#;;0} because: {reason}");
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Casting vote for {votedFor ?? "<???>"} in {term:#,#;;0} because: {reason}");
 
             votedFor = votedFor ?? string.Empty;
 

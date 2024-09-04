@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.TransactionMerger
                                     {
                                         var llt = ctx.Transaction.InnerTransaction.LowLevelTransaction;
                                         var waj = ctx.Environment.Options.Encryption.WriteAheadJournal;
-                                        
+
                                         waj.ZeroCompressionBuffer(ref llt.PagerTransactionState);
                                     }
                                 }
@@ -493,8 +493,8 @@ namespace Raven.Server.Documents.TransactionMerger
             {
                 while (true)
                 {
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"BeginAsyncCommit on {previous.Transaction.InnerTransaction.LowLevelTransaction.Id} with {_operations.Count} additional operations pending");
+                    if (_log.IsDebugEnabled)
+                        _log.Debug($"BeginAsyncCommit on {previous.Transaction.InnerTransaction.LowLevelTransaction.Id} with {_operations.Count} additional operations pending");
 
                     currentReturnContext = _contextPool.AllocateOperationContext(out current);
 
@@ -650,8 +650,8 @@ namespace Raven.Server.Documents.TransactionMerger
                 _recording.State?.TryRecord(context, TxInstruction.EndAsyncCommit);
                 previous.EndAsyncCommit();
 
-                if (_log.IsInfoEnabled)
-                    _log.Info($"EndAsyncCommit on {previous.InnerTransaction.LowLevelTransaction.Id}");
+                if (_log.IsDebugEnabled)
+                    _log.Debug($"EndAsyncCommit on {previous.InnerTransaction.LowLevelTransaction.Id}");
                 NotifyOnThreadPool(previousPendingOps);
             }
             catch (Exception e)

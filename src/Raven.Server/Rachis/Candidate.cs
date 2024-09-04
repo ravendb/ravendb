@@ -257,9 +257,9 @@ namespace Raven.Server.Rachis
             _engine.TxMerger.EnqueueSync(command);
             RunRealElectionAtTerm = ElectionTerm = electionTerm;
 
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"Candidate {_engine.Tag}: casting vote for self ElectionTerm={electionTerm} RunRealElectionAtTerm={RunRealElectionAtTerm}");
+                _engine.Log.Debug($"Candidate {_engine.Tag}: casting vote for self ElectionTerm={electionTerm} RunRealElectionAtTerm={RunRealElectionAtTerm}");
             }
 
             if (setStateChange)

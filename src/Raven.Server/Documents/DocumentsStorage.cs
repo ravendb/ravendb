@@ -154,9 +154,9 @@ namespace Raven.Server.Documents
 
         public void Initialize(bool generateNewDatabaseId = false)
         {
-            if (_logger.IsInfoEnabled)
+            if (_logger.IsDebugEnabled)
             {
-                _logger.Info
+                _logger.Debug
                 ("Starting to open document storage for " + (DocumentDatabase.Configuration.Core.RunInMemory
                      ? "<memory>"
                      : DocumentDatabase.Configuration.Core.DataDirectory.FullPath));

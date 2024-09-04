@@ -675,11 +675,11 @@ namespace Raven.Server.Documents
             Stopwatch stopwatch = null;
             try
             {
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
                     stopwatch = Stopwatch.StartNew();
                     //_nextClusterCommand refers to each individual put/delete while batch size refers to number of transaction (each contains multiple commands)
-                    _logger.Info($"Read {batchCollector.Count:#,#;;0} cluster transaction commands - fromCount: {_nextClusterCommand}, take: {batchSize}");
+                    _logger.Debug($"Read {batchCollector.Count:#,#;;0} cluster transaction commands - fromCount: {_nextClusterCommand}, take: {batchSize}");
                 }
 
                 if (batchCollector.Count == 0)
