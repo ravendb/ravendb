@@ -708,7 +708,7 @@ namespace Raven.Server.Web.System
                     $"Database restore: {restoreBackupTask.RestoreFromConfiguration.DatabaseName}",
                     Documents.Operations.Operations.OperationType.DatabaseRestore,
                     taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
-                    id: operationId, token: cancelToken);
+                    id: operationId, token: cancelToken, databaseName: restoreBackupTask.RestoreFromConfiguration.DatabaseName);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -776,9 +776,12 @@ namespace Raven.Server.Web.System
                                 continue;
 
                             if (rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
-                                throw new InvalidOperationException($"Can't delete database '{databaseName}' while the restore " +
-                                                                    $"process is in progress. In order to delete the database, " +
-                                                                    $"you can cancel the restore task from node {rawRecord.Topology.Members[0]}");
+                            {
+                                if (CanDeleteDatabase(databaseName) == false)
+                                    throw new InvalidOperationException($"Can't delete database '{databaseName}' while the restore " +
+                                                                        $"process is in progress. In order to delete the database, " +
+                                                                        $"you can cancel the restore task from node {rawRecord.Topology.Members[0]}");
+                            }
 
                             switch (rawRecord.LockMode)
                             {
@@ -922,6 +925,25 @@ namespace Raven.Server.Web.System
                     });
                 }
             }
+        }
+
+        private bool CanDeleteDatabase(string databaseName)
+        {
+            var operations = ServerStore.Operations.GetActive();
+
+            if (operations == null || operations.Count == 0)
+                return true;
+
+            foreach (var operation in operations)
+            {
+                if (operation.Description.TaskType == Documents.Operations.Operations.OperationType.DatabaseRestore &&
+                    operation.DatabaseName == databaseName &&
+                    operation.IsCompleted() == false)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         [RavenAction("/admin/databases/disable", "POST", AuthorizationStatus.Operator)]
