@@ -37,6 +37,8 @@ internal static class RavenLogManagerServerExtensions
 {
     private const string DateOnlyFormat = "yyyy-MM-dd";
 
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<RavenLogManager>();
+
     private static readonly NullTarget NullTarget = new(nameof(NullTarget));
 
     private static readonly ConcurrentDictionary<string, Assembly> LoadedAssemblies = new(StringComparer.OrdinalIgnoreCase);
@@ -353,6 +355,9 @@ internal static class RavenLogManagerServerExtensions
         LogManager.Setup(x => x.LoadConfiguration(config));
         LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
 
+        if (Logger.IsInfoEnabled)
+            Logger.Info($"Logging to '{configuration.Logs.Path}' set to [{minLevel}, {minLevel.ToNLogMaxLogLevel()}] level.");
+
 #if !RVN
         static bool TryGetLegacyLogLevel(RavenConfiguration configuration, out Sparrow.Logging.LogLevel legacyMinLevel)
         {
@@ -406,6 +411,9 @@ internal static class RavenLogManagerServerExtensions
 
             LogManager.Setup(x => x.LoadConfiguration(c));
             LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Logging configured from '{configuration.Logs.ConfigPath}' configuration file and set to [{DefaultRule.Levels.FirstOrDefault() ?? LogLevel.Off}, {DefaultRule.Levels.LastOrDefault() ?? LogLevel.Off}] level.");
 
             return true;
         }
