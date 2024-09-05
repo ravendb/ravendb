@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (backupType.HasValue)
             {
-                description = GetBackupDescription(backupType.Value, _isFullBackup);
+                description = GetBackupDescription();
             }
             else
             {

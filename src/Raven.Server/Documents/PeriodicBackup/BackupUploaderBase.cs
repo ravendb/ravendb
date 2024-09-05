@@ -5,6 +5,7 @@ using System.Threading;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Extensions;
+using Raven.Server.Dashboard;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
@@ -64,10 +65,10 @@ public abstract class BackupUploaderBase
         return $"{prefix}{folderName}/{fileName}";
     }
 
-    public virtual string GetBackupDescription(BackupType? backupType, bool isFullBackup)
+    public virtual string GetBackupDescription()
     {
-        var fullBackupText = backupType == BackupType.Backup ? "Full backup" : "A snapshot";
-        return isFullBackup ? fullBackupText : "Incremental backup";
+        var fullBackupText = _settings.BackupType == BackupType.Backup ? "Full backup" : "A snapshot";
+        return _isFullBackup ? fullBackupText : "Incremental backup";
     }
 
     protected void AddInfo(string message)
@@ -99,12 +100,20 @@ public abstract class BackupUploaderBase
         if (BackupConfiguration.CanBackupUsing(settings) == false)
             return;
 
-        var threadName = $"Delete backup file of database '{_settings.DatabaseName}' from {targetName} (task: '{_settings.TaskName}')";
+        var threadInfo = ThreadNames.ForDeleteBackupFile($"Delete backup file of database '{_settings.DatabaseName}' from {targetName} (task: '{_settings.TaskName}')", _settings.DatabaseName, targetName, _settings.TaskName);
+        PoolOfThreads.LongRunningWork thread = CreateLongRunningDeleteThread(settings, deleteFromServer, targetName, folderName, fileName, threadInfo);
+
+        _threads.Add(thread);
+    }
+
+    protected PoolOfThreads.LongRunningWork CreateLongRunningDeleteThread<T>(T settings, Action<T, string, string> deleteFromServer, string targetName, string folderName, string fileName,
+        ThreadNames.ThreadInfo threadInfo) where T : BackupSettings
+    {
         var thread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
         {
             try
             {
-                ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, _logger);
+                ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadInfo.FullName, _logger);
                 NativeMemory.EnsureRegistered();
 
                 AddInfo($"Starting the delete of backup file from {targetName}.");
@@ -123,9 +132,8 @@ public abstract class BackupUploaderBase
 
                 _exceptions.Add(exception ?? new InvalidOperationException(error, e));
             }
-        }, null, ThreadNames.ForDeleteBackupFile(threadName, _settings.DatabaseName, targetName, _settings.TaskName));
-
-        _threads.Add(thread);
+        }, null, threadInfo);
+        return thread;
     }
 
     protected void DeleteFromS3(S3Settings settings, string folderName, string fileName)

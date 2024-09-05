@@ -389,7 +389,6 @@ namespace Raven.Server.Documents
                                                     {
                                                         // we cannot delete from cloud since PurgeOnDelete is false
                                                         DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingAttachmentFlags, existingRetireAtTicks, collectionName.Name, storageOnly: true);
-
                                                     }
                                                     else
                                                     {
@@ -398,7 +397,7 @@ namespace Raven.Server.Documents
                                                 }
                                                 else
                                                 {
-                                                    DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingAttachmentFlags, existingRetireAtTicks, collectionName.Name, storageOnly: false);
+                                                    DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingAttachmentFlags, existingRetireAtTicks, collectionName.Name, storageOnly: true);
                                                 }
                                             }
                                             else
@@ -529,13 +528,6 @@ namespace Raven.Server.Documents
                 }
 
                 RetiredAttachmentsStorage.PutDelete(context, keySlice, DateTime.UtcNow.Ticks, collection);
-
-                // I think it should be user responsibility to make sure he has same config as when he retired the attachment
-                //TODO: egor how can I know where it was uploaded ? 
-                // do I need to store blob url in attachments metadata?
-                // do I even care about it ? 
-                // THe issue is that the configuration can change after I retired the attachment and I will not know where it was uploaded
-                // also if the configuration is disabled, should I fail the operation?
             }
             else
             {
@@ -561,7 +553,6 @@ namespace Raven.Server.Documents
             }
             Debug.Assert(changeVector != null);
             DeleteTombstoneIfNeeded(context, key);
-            //TODO: egor check if we have @retire-at in metadata and put it in RetiredAttachmentsStorage
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
             using (table.Allocate(out TableValueBuilder tvb))
@@ -582,10 +573,13 @@ namespace Raven.Server.Documents
                 tvb.Add(collection.Content.Ptr, collection.Size);
                 table.Set(tvb);
             }
-            //TODO: egor what if we restore huge dump, all attachments have retireAt and we do putdirect, in will be stored in the storage forever if there is no configuration.
-            //I think there is nothing I can do?
-            if (isRevision == false && retireAt.HasValue)
-                RetiredAttachmentsStorage.Put(context, key, retireAt.Value.GetDefaultRavenFormat());
+
+            if (isRevision == false)
+            {
+                // TODO: egor do I need to check for retired config here ?
+                if (flags.Contain(AttachmentFlags.Retired) == false && retireAt.HasValue)
+                    RetiredAttachmentsStorage.Put(context, key, retireAt.Value.GetDefaultRavenFormat());
+            }
 
             _documentDatabase.Metrics.Attachments.PutsPerSec.MarkSingleThreaded(1);
         }
@@ -1352,7 +1346,7 @@ namespace Raven.Server.Documents
             var attachment = GetAttachment(context, sourceDocumentId, sourceName, AttachmentType.Document, changeVector, hash, contentType, usePartialKey);
             if (attachment == null)
                 AttachmentDoesNotExistException.ThrowFor(sourceDocumentId, sourceName);
-
+            //TODO: egor can I do this for retired?
             var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Flags,attachment.Size, retireAtDt: null, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
             DeleteAttachment(context, sourceDocumentId, sourceName, changeVector, out var sourceCollectionName, updateDocument, hash, contentType, usePartialKey, extractCollectionName: extractCollectionName);
 
@@ -1499,12 +1493,12 @@ namespace Raven.Server.Documents
                 }
 
                 if (attachmentFoundInResolveDocument == false)
-                    DeleteAttachmentDirect(context, lowerId, conflictName, conflictContentType, conflictHash, changeVector, collection.Name);
+                    DeleteAttachmentDirect(context, lowerId, conflictName, conflictContentType, conflictHash, changeVector);
             }
         }
 
         private void DeleteAttachmentDirect(DocumentsOperationContext context, Slice lowerId, LazyStringValue conflictName,
-            LazyStringValue conflictContentType, LazyStringValue conflictHash, string changeVector, string collection)
+            LazyStringValue conflictContentType, LazyStringValue conflictHash, string changeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, conflictName, out Slice lowerName))
             using (DocumentIdWorker.GetSliceFromId(context, conflictContentType, out Slice lowerContentType))
@@ -1514,7 +1508,7 @@ namespace Raven.Server.Documents
                 base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
             {
                 var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
+                DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks, storageOnly: true);
             }
         }
 
@@ -1674,7 +1668,6 @@ namespace Raven.Server.Documents
                     {
                         var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref before.Reader);
 
-                        //TODO: egor this will delete the attachments from cloud, do we want that ???? Maybe this should be part of the config ? I mean now we delete doc with retired attachemnt, it will delete the retire attachment from cloud!
                         var attachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref before.Reader);
                         var retireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref before.Reader);
 

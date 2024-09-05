@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        //TODO: egor do I Need a retired version of this?
+        //TODO: egor do I Need a retired version of this? this return same result as regular endpoint
         [RavenAction("/databases/*/debug/attachments/retire/hash", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetHashCount()
         {
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        //TODO: egor do I Need a retired version of this?
+        //TODO: egor do I Need a retired version of this? this return same result as regular endpoint
         [RavenAction("/databases/*/debug/attachments/retire/metadata", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetAttachmentMetadataWithCounts()
         {

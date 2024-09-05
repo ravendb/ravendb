@@ -35,14 +35,8 @@ public sealed class DirectBackupDownloader : BackupUploaderBase, IDisposable
         }
     }
 
-    public override string CombinePathAndKey(string path, string folderName, string fileName)
+    public override string GetBackupDescription()
     {
-        return base.CombinePathAndKey(path, folderName, fileName);
-    }
-
-    public override string GetBackupDescription(BackupType? backupType, bool isFullBackup)
-    {
-        // TODO: egor do I want to put some info here? Like attachment metadata? I can pass prepared string here
         return $"{nameof(DirectBackupDownloader)}";
     }
 

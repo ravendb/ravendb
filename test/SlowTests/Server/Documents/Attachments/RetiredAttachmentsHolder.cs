@@ -1099,6 +1099,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 await AssertAllRetiredAttachments(store, cloudObjects, size);
 
                 await Indexes.WaitForIndexingAsync(store);
+
                 using (var session = store.OpenSession())
                 {
                     var res = session.Advanced.RawQuery<Order>("from index 'MultipleAttachmentsIndex' as o where o.AttachmentRetiredAt != null").WaitForNonStaleResults().ToList();

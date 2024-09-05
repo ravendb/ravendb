@@ -433,34 +433,21 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     ConflictStatus.Update => attachmentTombstone.ChangeVector,
                                     _ => throw new ArgumentOutOfRangeException()
                                 };
-                                //TODO: egor add delete from retired tree as well! write test for that
-
-                                try
+                                //TODO: egor pass the flag inside the method
+                                if (attachmentTombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
                                 {
-                                    if (attachmentTombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
-                                    {
-                                      
-
-
-                                        database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                            newChangeVector,
-                                            attachmentTombstone.LastModifiedTicks, storageOnly: true);
-                                    }
-                                    else
-                                    {
-
-                                        database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                            newChangeVector,
-                                            attachmentTombstone.LastModifiedTicks, storageOnly: false);
-
-                                    }
-
+                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                        newChangeVector,
+                                        attachmentTombstone.LastModifiedTicks, storageOnly: true);
                                 }
-                                catch (Exception e)
+                                else
                                 {
-                                    Console.WriteLine(e);
-                                    throw;
+
+                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                        newChangeVector,
+                                        attachmentTombstone.LastModifiedTicks, storageOnly: false);
                                 }
+
                                 break;
 
                             case RevisionTombstoneReplicationItem revisionTombstone:

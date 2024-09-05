@@ -526,7 +526,7 @@ namespace Raven.Server.Documents.Replication
                         // delete duplicates
                         _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, collectionName: out _,
                             updateDocument: false,
-                            attachment.Hash, attachment.ContentType, usePartialKey: false);
+                            attachment.Hash, attachment.ContentType, usePartialKey: false, storageOnly: true);
                     }
                     else
                     {

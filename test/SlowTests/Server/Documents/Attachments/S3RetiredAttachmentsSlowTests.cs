@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch;
 using Orders;
+using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -25,6 +29,317 @@ namespace SlowTests.Server.Documents.Attachments
         //TODO: egor test for "now we delete doc with retired attachemnt, it will delete the retire attachment from cloud!"
         public S3RetiredAttachmentsSlowTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+
+        [RavenTheory(RavenTestCategory.Attachments)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanCrudAttachmentWhenHaveRetiredAttachment(bool purgeOnDelete)
+        {
+            var attachmentsCount = 1;
+            var size = 3;
+            await using (var holder = CreateCloudSettings())
+            {
+                using (var store = GetDocumentStore())
+                {
+                    int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+
+                    RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
+                    {
+                        config.PurgeOnDelete = purgeOnDelete;
+                    };
+
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, null);
+
+                    var data = Attachments.FirstOrDefault();
+                    Assert.NotNull(data);
+
+                    using (var profileStream = new MemoryStream(new byte[] { 3, 2, 2 }))
+                    {
+                        // retire of this attachment should happen in baseline + 40 mins
+                        var result = store.Operations.Send(new PutAttachmentOperation(data.DocumentId, "profile.png", profileStream, "image/png"));
+                        Assert.Equal("profile.png", result.Name);
+                        Assert.Equal(data.DocumentId, result.DocumentId);
+                        Assert.Equal("image/png", result.ContentType);
+                        Assert.Equal("bucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=", result.Hash);
+                        Assert.Equal(3, result.Size);
+                    }
+
+                    var names = new List<string>() { data.Name, "profile.png" }.OrderBy(x => x).ToList();
+                    using (var session = store.OpenSession())
+                    {
+                        var doc = session.Load<Order>(data.DocumentId);
+                        var metadata = session.Advanced.GetMetadataFor(doc);
+                        Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                        var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                        Assert.Equal(2, attachments.Length);
+                        foreach (var name in names)
+                        {
+                            var a = attachments.First(x => x.GetString(nameof(AttachmentName.Name)) == name);
+                            Assert.NotNull(a);
+
+                            if (name == data.Name)
+                            {
+                                Assert.Equal(3, a.GetLong(nameof(AttachmentName.Size)));
+                                Assert.Equal(data.ContentType, a.GetString(nameof(AttachmentName.ContentType)));
+                                Assert.Equal(data.Hash, a.GetString(nameof(AttachmentName.Hash)));
+                            }
+                            else
+                            {
+                                Assert.Equal(3, a.GetLong(nameof(AttachmentName.Size)));
+                                Assert.Equal("image/png", a.GetString(nameof(AttachmentName.ContentType)));
+                                Assert.Equal("bucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=", a.GetString(nameof(AttachmentName.Hash)));
+                            }
+                        }
+
+                        // this would put a Delete retired attachment task in the queue, that should happen immediately
+                        session.Advanced.Attachments.Delete(doc, data.Name);
+                        session.SaveChanges();
+                    }
+                    if (purgeOnDelete)
+                    {
+              database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                        var key = string.Empty;
+                        S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 1, infos =>
+                        {
+                            if (infos == null)
+                                return;
+
+                            key = infos.First().LowerId.ToString();
+                        });
+
+                        var expected = $"d\u001eOrders\u001eorders/0\u001ed\u001etest_0.png\u001e{data.Hash}\u001eimage/png";
+                        Assert.Equal(expected, key);
+                        await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+
+                        database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(1);
+                        await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                        await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
+                    }
+                    else
+                    {
+ database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                        var key = string.Empty;
+                        S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 1, infos =>
+                        {
+                            if (infos == null)
+                                return;
+
+                            key = infos.First().LowerId.ToString();
+                        });
+
+                        await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+
+                        Assert.Equal("p\u001eorders/0\u001ed\u001eprofile.png\u001ebucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=\u001eimage/png", key);
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        var doc = session.Load<Order>(data.DocumentId);
+                        var metadata = session.Advanced.GetMetadataFor(doc);
+                        Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                        var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                        Assert.Equal(1, attachments.Length);
+                        var a = attachments.FirstOrDefault();
+                        Assert.NotNull(a);
+                        Assert.Equal(3, a.GetLong(nameof(AttachmentName.Size)));
+                        Assert.Equal("image/png", a.GetString(nameof(AttachmentName.ContentType)));
+                        Assert.Equal("bucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=", a.GetString(nameof(AttachmentName.Hash)));
+
+
+                        session.Advanced.Attachments.Delete(doc, "profile.png");
+                        session.SaveChanges();
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        var doc = session.Load<Order>(data.DocumentId);
+                        var metadata = session.Advanced.GetMetadataFor(doc);
+                        Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Flags));
+                        Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
+                    }
+
+                    S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(await Databases.GetDocumentDatabaseInstanceFor(Server, store), 0);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task CanPutInRetiredAttachmentAndDeleteTheDocBeforeRetirement()
+        {
+            await using (var holder = CreateCloudSettings())
+            {
+                using (var store = GetDocumentStore())
+                {
+
+                    //TODO: egor test with this config will make exceptions (in _threads.exception need to add test for that !
+                    //await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
+                    //{
+                    //    S3Settings = new S3Settings() { BucketName = "testS3Bucket" },
+                    //    Disabled = false,
+                    //    RetirePeriods = new Dictionary<string, TimeSpan>() { { "Orders", TimeSpan.FromMinutes(3) }, { "Products", TimeSpan.FromMilliseconds(322228) } },
+                    //    RetireFrequencyInSec = 1000
+                    //}));
+                    await PutRetireAttachmentsConfiguration(store, Settings);
+                    var docId = "Orders/3";
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new Order { Id = docId, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/2", Company = $"Companies/2" });
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using var profileStream = new MemoryStream([1, 2, 3]);
+                    await store.Operations.SendAsync(new PutAttachmentOperation(docId, "test.png", profileStream, "image/png"));
+
+                    var res = await store.Operations.SendAsync(new GetAttachmentOperation(docId, "test.png", AttachmentType.Document, null));
+                    Assert.Equal("test.png", res.Details.Name);
+
+                    int count = 0;
+                    DocumentDatabase database = null;
+                    //Assert.Equal(1, await WaitForValueAsync(async () =>
+                    //{
+                    //  
+                    //    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+
+                    //    count += await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    //    return count;
+                    //}, 1, interval: 1000));
+
+                    var key = string.Empty;
+                    database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 1, infos =>
+                    {
+                        if (infos == null)
+                            return;
+
+                        key = infos.First().LowerId.ToString();
+                    });
+
+                    Assert.Equal("p\u001eorders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
+                       
+                    PatchOperation operation = new PatchOperation(id: docId, changeVector: null, patch: new PatchRequest
+                    {
+                        Script = @$"
+                                    del('{docId}');
+                                 "
+                    }, patchIfMissing: null);
+                    await store.Operations.SendAsync(operation);
+
+                    using (var s = store.OpenAsyncSession())
+                    {
+                        var q = await s.Query<Order>().ToListAsync();
+
+                        Assert.Equal(0, q.Count);
+                    }
+
+                    //var key = string.Empty;
+                    //S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 1, infos =>
+                    //{
+                    //    if(infos == null)
+                    //        return;
+
+                    //    key = infos.First().LowerId.ToString();
+                    //});
+
+                    //Console.WriteLine();
+
+
+                    //count = 0;
+                    //Assert.Equal(0, await WaitForValueAsync(async () =>
+                    //{
+                    //    database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    //    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+
+                    //    count += await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    //    return count;
+                    //}, 0, interval: 1000));
+                    GetToRetireAttachmentsCount(database, 0);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task CanPutInRetiredAttachmentAndDeleteTheDocBeforeRetirementInCloud()
+        {
+            var attachmentsCount = 1;
+            var size = 3;
+            var srcDb = GetDatabaseName();
+            var srcRaft = await CreateRaftCluster(3);
+            var leader = srcRaft.Leader;
+            var srcNodes = await CreateDatabaseInCluster(srcDb, 3, leader.WebUrl);
+            var mentorNode = srcNodes.Servers.First(s => s != leader);
+            using (DocumentStore store = (DocumentStore)new DocumentStore { Urls = srcNodes.Servers.Select(s => s.WebUrl).ToArray(), Database = srcDb, }.Initialize())
+            {
+                await using (var holder = CreateCloudSettings())
+                {
+                    //TODO: egor test with this config will make exceptions (in _threads.exception need to add test for that !
+                    //await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
+                    //{
+                    //    S3Settings = new S3Settings() { BucketName = "testS3Bucket" },
+                    //    Disabled = false,
+                    //    RetirePeriods = new Dictionary<string, TimeSpan>() { { "Orders", TimeSpan.FromMinutes(3) }, { "Products", TimeSpan.FromMilliseconds(322228) } },
+                    //    RetireFrequencyInSec = 1000
+                    //}));
+                    await PutRetireAttachmentsConfiguration(store, Settings);
+                    var docId = "Orders/3";
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new Order { Id = docId, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/2", Company = $"Companies/2" });
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using var profileStream = new MemoryStream([1, 2, 3]);
+                    await store.Operations.SendAsync(new PutAttachmentOperation(docId, "test.png", profileStream, "image/png"));
+
+                    var res = await store.Operations.SendAsync(new GetAttachmentOperation(docId, "test.png", AttachmentType.Document, null));
+                    Assert.Equal("test.png", res.Details.Name);
+                    Assert.Equal(true, await WaitForChangeVectorInClusterAsync(srcNodes.Servers, srcDb));
+
+                    DocumentDatabase database = null;
+                    foreach (var node in srcRaft.Nodes)
+                    {
+                        database = await Databases.GetDocumentDatabaseInstanceFor(node, store);
+
+                        var key = string.Empty;
+                        GetToRetireAttachmentsCount(database, 1, infos =>
+                        {
+                            var arr = infos?.ToArray();
+                            if (arr == null || arr.Length == 0)
+                                return;
+
+                            key = arr.First().LowerId.ToString();
+                        });
+                        Assert.Equal("p\u001eorders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
+                    }
+
+                    PatchOperation operation = new PatchOperation(id: docId, changeVector: null, patch: new PatchRequest
+                    {
+                        Script = @$"
+                                    del('{docId}');
+                                 "
+                    }, patchIfMissing: null);
+                    await store.Operations.SendAsync(operation);
+
+                    Assert.Equal(true, await WaitForChangeVectorInClusterAsync(srcNodes.Servers, srcDb));
+                    using (var s = store.OpenAsyncSession())
+                    {
+                        var q = await s.Query<Order>().ToListAsync();
+
+                        Assert.Equal(0, q.Count);
+                    }
+
+                    foreach (var node in srcRaft.Nodes)
+                    {
+                        database = await Databases.GetDocumentDatabaseInstanceFor(node, store);
+                        GetToRetireAttachmentsCount(database, 0);
+                    }
+                }
+            }
         }
 
         [RavenTheory(RavenTestCategory.Attachments)]
@@ -64,7 +379,6 @@ namespace SlowTests.Server.Documents.Attachments
                         var q = await s.Query<Order>().ToListAsync();
 
                         Assert.Equal(0, q.Count);
-
                     }
 
                     if (purgeOnDelete)
@@ -193,8 +507,8 @@ namespace SlowTests.Server.Documents.Attachments
                                 GetToRetireAttachmentsCount(database, 0);
 
                                 // nothing should happen
-                                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                                //database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                                //await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
                             }
 
                             await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
@@ -238,7 +552,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        private static void GetToRetireAttachmentsCount(DocumentDatabase database, int expected)
+        public static void GetToRetireAttachmentsCount(DocumentDatabase database, int expected, Action<Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo>> action = null)
         {
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -254,6 +568,9 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 var options = new BackgroundWorkParameters(context, DateTime.MaxValue, dbRecord, nodeTag, int.MinValue);
+                // need to sort the list so current checked node is first in topology, since only the "first topology node is checked in GetDocuments() method
+                options.DatabaseRecord.Topology.Members = options.DatabaseRecord.Topology.Members.OrderByDescending(x => x == nodeTag).ToList();
+
                 var totalCount = 0;
 
                 using (database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(context))
@@ -263,13 +580,6 @@ namespace SlowTests.Server.Documents.Attachments
 
                     Assert.Equal(expected, totalCount);
 
-                    //if (expected == 0)
-                    //{
-                    //    if (totalCount == 1)
-                    //    {
-                    //        //TODO: egor I ahve delete retired attachment....
-                    //    }
-                    //}
                     if (expected == 0)
                     {
                         Assert.Null(expired);
@@ -278,6 +588,8 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         Assert.Equal(expected, expired.Count);
                     }
+
+                    action?.Invoke(expired);
                 }
             }
         }
