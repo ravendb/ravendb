@@ -487,7 +487,8 @@ namespace Raven.Server.Commercial
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync(_serverStore.ServerShutdown).ConfigureAwait(false);
-                throw new InvalidOperationException($"Cannot activate license because we failed to update the license for Let's Encrypt {responseString}");
+                throw GenerateLicenseLimit(LimitType.InvalidLicense, 
+                    $"Failed to activate the license. The license update for Let's Encrypt encountered an issue: {responseString}");
             }
         }
 
