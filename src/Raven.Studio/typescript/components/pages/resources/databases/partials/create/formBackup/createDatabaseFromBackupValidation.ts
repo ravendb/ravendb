@@ -52,8 +52,8 @@ export const restorePointSchema = yup.object({
     isIncremental: yup.boolean().required(),
     isEncrypted: yup.boolean().required(),
     filesToRestore: yup.number().required(),
-    databaseName: yup.string().required(),
-    nodeTag: yup.string().required(),
+    databaseName: yup.string().nullable(),
+    nodeTag: yup.string().nullable(),
     backupType: yup.string().required(),
 });
 
