@@ -74,9 +74,9 @@ namespace Raven.Server.ServerWide.Tcp.Sync
 
         private static void SendTcpVersionInfo(JsonOperationContext context, BlittableJsonTextWriter writer, TcpNegotiateParameters parameters, int currentVersion)
         {
-            if (Log.IsInfoEnabled)
+            if (Log.IsDebugEnabled)
             {
-                Log.Info($"Send negotiation for {parameters.Operation} in version {currentVersion}");
+                Log.Debug($"Send negotiation for {parameters.Operation} in version {currentVersion}");
             }
 
             context.Write(writer, new DynamicJsonValue

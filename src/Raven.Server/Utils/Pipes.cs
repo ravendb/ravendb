@@ -113,9 +113,12 @@ namespace Raven.Server.Utils
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
+                if (ravenServer.Disposed)
+                    return;
+
+                if (Logger.IsDebugEnabled)
                 {
-                    Logger.Info("Got an exception trying to connect to server admin channel pipe", e);
+                    Logger.Debug("Got an exception trying to connect to server admin channel pipe", e);
                 }
             }
         }

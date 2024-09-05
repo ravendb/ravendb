@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Replication.Senders
                         }
                     }
 
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
                         if (skippedReplicationItemsInfo.SkippedItems > 0)
                         {
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Replication.Senders
                         }
                         msg += $"total size: {new Size(state.Size + encryptionSize, SizeUnit.Bytes)}";
 
-                        Log.Info(msg);
+                        Log.Debug(msg);
                     }
 
                     if (_orderedReplicaItems.Count == 0)
