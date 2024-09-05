@@ -1037,7 +1037,7 @@ namespace SlowTests.Sharding.Cluster
                 // run backup again
                 waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
 
-                await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                 var dirs = Directory.GetDirectories(backupPath);

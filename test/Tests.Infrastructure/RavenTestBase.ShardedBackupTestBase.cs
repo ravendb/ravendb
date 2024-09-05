@@ -16,6 +16,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server;
@@ -361,7 +362,7 @@ public partial class RavenTestBase
 
             WaitForResponsibleNodeUpdateInCluster(store, servers, result.TaskId);
 
-            await RunBackupAsync(store.Database, result.TaskId, isFullBackup, servers);
+            await RunBackupAsync(store, result.TaskId, isFullBackup);
 
             return result.TaskId;
         }
@@ -404,13 +405,16 @@ public partial class RavenTestBase
             }
         }
 
-        public async Task RunBackupAsync(string database, long taskId, bool isFullBackup, List<RavenServer> servers = null)
+        public async Task RunBackupAsync(IDocumentStore store, long taskId, bool isFullBackup)
         {
-            var time = SystemTime.UtcNow;
-            await foreach (var documentDatabase in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database, servers))
+            try
             {
-                var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-                periodicBackupRunner.StartBackupTask(taskId, isFullBackup, startTimeUtc: time);
+                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, taskId));
+                
+            }
+            catch (BackupAlreadyRunningException)
+            {
+                // backup may have started independently due to timer
             }
         }
 

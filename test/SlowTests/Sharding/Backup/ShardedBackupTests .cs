@@ -260,7 +260,7 @@ namespace SlowTests.Sharding.Backup
 
                     var taskId = databaseRecord.PeriodicBackups[0].TaskId;
                     if (databaseRecord.IsSharded)
-                        await Sharding.Backup.RunBackupAsync(store.Database, taskId, isFullBackup: true);
+                        await Sharding.Backup.RunBackupAsync(store, taskId, isFullBackup: true);
                     else
                         await Backup.RunBackupAsync(Server, taskId, store, isFullBackup: true);
                 }
@@ -353,7 +353,7 @@ namespace SlowTests.Sharding.Backup
 
                     var taskId = databaseRecord.PeriodicBackups[0].TaskId;
                     if (databaseRecord.IsSharded)
-                        await Sharding.Backup.RunBackupAsync(store.Database, taskId, isFullBackup: true);
+                        await Sharding.Backup.RunBackupAsync(store, taskId, isFullBackup: true);
                     else
                         await Backup.RunBackupAsync(Server, taskId, store, isFullBackup: true);
                 }

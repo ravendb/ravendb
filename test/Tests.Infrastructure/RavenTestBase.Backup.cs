@@ -9,7 +9,9 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
@@ -56,7 +58,30 @@ namespace FastTests
             {
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-                var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
+
+                long op;
+                try
+                {
+                    op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
+                }
+                catch (BackupAlreadyRunningException)
+                {
+                    var backup = periodicBackupRunner.PeriodicBackups.FirstOrDefault(x => x.Configuration.TaskId == taskId);
+                    if (backup == null)
+                        throw new InvalidOperationException($"Periodic backup for task {taskId} doesn't exist");
+
+                    var runningTask = backup.RunningTask;
+                    if (runningTask == null)
+                    {
+                        // backup finished just now
+                        // fetch the last operation id from the backup status
+                        var backupStatus = await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId));
+                        Debug.Assert(backupStatus.Status.LastOperationId != null, $"{nameof(backupStatus.Status.LastOperationId)} should be populated after getting {nameof(BackupAlreadyRunningException)}");
+                        return backupStatus.Status.LastOperationId.Value;
+                    }
+                    
+                    op = backup.RunningTask.Id;
+                }
 
                 BackupResult result = default;
                 var actual = await WaitForValueAsync(async () =>
@@ -357,7 +382,7 @@ namespace FastTests
                 else
                 {
                     var backupCompleted = await _parent.Sharding.Backup.WaitForBackupToComplete(store);
-                    await _parent.Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, servers: new List<RavenServer> { _parent.Server });
+                    await _parent.Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
                     Assert.True(WaitHandle.WaitAll(backupCompleted, TimeSpan.FromSeconds(10)));
 
                     var dirs = Directory.GetDirectories(backupPath);
@@ -704,7 +729,7 @@ namespace FastTests
                 if (databaseMode == RavenDatabaseMode.Sharded)
                 {
                     waitHandles = await _parent.Sharding.Backup.WaitForBackupsToComplete(new[] { store });
-                    await _parent.Sharding.Backup.RunBackupAsync(store.Database, taskId.Value, isFullBackup);
+                    await _parent.Sharding.Backup.RunBackupAsync(store, taskId.Value, isFullBackup);
                 }
                 else
                 {

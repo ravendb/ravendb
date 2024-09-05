@@ -599,7 +599,7 @@ namespace SlowTests.Sharding.Cluster
                 await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 3, nodes);
 
                 //run periodic backup on leader
-                await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, new List<RavenServer>(){ leader });
+                await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
 
                 //wait for periodic backup to finish running
                 var done = await WaitForValueAsync(() =>
