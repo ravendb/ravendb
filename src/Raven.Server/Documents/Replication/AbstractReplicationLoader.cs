@@ -198,9 +198,9 @@ namespace Raven.Server.Documents.Replication
                     throw new Exception(exceptionSchema.Message);
 
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
-                    _logger.Info(
+                    _logger.Debug(
                         $"GetLastEtag: {getLatestEtagMessage.SourceTag}({getLatestEtagMessage.SourceMachineName}) / {getLatestEtagMessage.SourceDatabaseName} ({getLatestEtagMessage.SourceDatabaseId}) - {getLatestEtagMessage.SourceUrl}. Type: {getLatestEtagMessage.ReplicationsType}");
                 }
             }
@@ -218,8 +218,8 @@ namespace Raven.Server.Documents.Replication
                 throw;
             }
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info(
+            if (_logger.IsDebugEnabled)
+                _logger.Debug(
                     $"Initialized document replication connection from {connectionInfo.SourceDatabaseName} located at {connectionInfo.SourceUrl}");
 
             return getLatestEtagMessage;

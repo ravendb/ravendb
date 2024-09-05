@@ -181,8 +181,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     }
 
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Will replicate to {Destination.FromString()} via {socketResult.Url}");
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Will replicate to {Destination.FromString()} via {socketResult.Url}");
 
                     _tcpConnectionOptions.TcpClient = socketResult.TcpClient;
 
@@ -388,25 +388,25 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     UpdateDestinationChangeVector(replicationBatchReply);
                     OnSuccessfulTwoWaysCommunication();
 
-                    if (Logger.IsInfoEnabled)
+                    if (Logger.IsDebugEnabled)
                     {
-                        Logger.Info(
+                        Logger.Debug(
                             $"Received reply for replication batch from {Destination.FromString()}. New destination change vector is {LastAcceptedChangeVector}");
                     }
                     break;
 
                 case ReplicationMessageReply.ReplyType.Error:
-                    if (Logger.IsInfoEnabled)
+                    if (Logger.IsErrorEnabled)
                     {
-                        Logger.Info(
+                        Logger.Error(
                             $"Received reply for replication batch from {Destination.FromString()}. There has been a failure, error string received : {replicationBatchReply.Exception}");
                     }
                     throw new InvalidOperationException(
                         $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
                 case ReplicationMessageReply.ReplyType.MissingAttachments:
-                    if (Logger.IsInfoEnabled)
+                    if (Logger.IsDebugEnabled)
                     {
-                        Logger.Info(
+                        Logger.Debug(
                             $"Received reply for replication batch from {Destination.FromString()}. Destination is reporting missing attachments.");
                     }
 
@@ -431,9 +431,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         private void RaiseAlertAndThrowMissingAttachmentException(string msg, string exceptionDetails)
         {
-            if (Logger.IsInfoEnabled)
+            if (Logger.IsErrorEnabled)
             {
-                Logger.Info(
+                Logger.Error(
                     $"Received reply for replication batch from {Destination.FromString()}. Error string received = {msg}");
             }
 

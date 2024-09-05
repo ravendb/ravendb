@@ -222,8 +222,8 @@ namespace Voron.Data.Tables
                         if (ShouldReplaceDictionary(tx, compressionDictionary) == false)
                             return;
 
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Compression dictionary '{newId}' was replaced in '{table.Name}' table.");
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug($"Compression dictionary '{newId}' was replaced in '{table.Name}' table.");
 
                         table.CurrentCompressionDictionaryId = newId;
                         compressionDictionary.ExpectedCompressionRatio = GetCompressionRatio(CompressedBuffer.Length, RawBuffer.Length);
@@ -250,10 +250,10 @@ namespace Voron.Data.Tables
                             // ****************************************
                             bool removed = llt.Environment.CompressionDictionariesHolder.Remove(newId);
 
-                            if (Logger.IsInfoEnabled == false)
+                            if (Logger.IsDebugEnabled == false)
                                 return;
 
-                            Logger.Info(
+                            Logger.Debug(
                                 removed
                                     ? $"Compression dictionary '{newId}' was removed during rollback in '{table.Name}' table."
                                     : $"Fail to remove compression dictionary '{newId}' during rollback in '{table.Name}' table.");

@@ -270,9 +270,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                 databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
                 currentLastEtagMatchingChangeVector = _database.DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction);
             }
-            if (Logger.IsInfoEnabled)
+            if (Logger.IsDebugEnabled)
             {
-                Logger.Info($"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, " +
+                Logger.Debug($"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, " +
                             $"last document change vector: {databaseChangeVector}");
             }
 

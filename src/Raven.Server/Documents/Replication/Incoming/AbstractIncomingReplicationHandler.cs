@@ -112,8 +112,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                     _databaseName, ConnectionInfo.SourceDatabaseName));
             }
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Incoming replication thread started ({FromToString})");
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"Incoming replication thread started ({FromToString})");
         }
 
         public void DoIncomingReplication()
@@ -436,9 +436,9 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected void ReceiveSingleDocumentsBatch(TOperationContext context, int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats)
         {
-            if (Logger.IsInfoEnabled)
+            if (Logger.IsDebugEnabled)
             {
-                Logger.Info($"Receiving replication batch with {replicatedItemsCount} documents starting with {lastEtag} from {ConnectionInfo}");
+                Logger.Debug($"Receiving replication batch with {replicatedItemsCount} documents starting with {lastEtag} from {ConnectionInfo}");
             }
 
             var sw = Stopwatch.StartNew();
@@ -473,9 +473,9 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                     AfterItemsReadFromStream?.Invoke(dataForReplicationCommand);
 
-                    if (Logger.IsInfoEnabled)
+                    if (Logger.IsDebugEnabled)
                     {
-                        Logger.Info(
+                        Logger.Debug(
                             $"Replication connection {FromToString}: " +
                             $"received {replicatedItemsCount:#,#;;0} items, " +
                             $"{attachmentStreamCount:#,#;;0} attachment streams, " +

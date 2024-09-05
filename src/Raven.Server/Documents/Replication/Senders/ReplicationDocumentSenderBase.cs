@@ -598,8 +598,8 @@ namespace Raven.Server.Documents.Replication.Senders
 
         private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)
         {
-            if (Log.IsInfoEnabled)
-                Log.Info($"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag:#,#;;0}");
+            if (Log.IsDebugEnabled)
+                Log.Debug($"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag:#,#;;0}");
 
             if (_parent.ForTestingPurposes?.OnMissingAttachmentStream != null &&
                 _parent.MissingAttachmentsRetries > 0)
@@ -643,8 +643,8 @@ namespace Raven.Server.Documents.Replication.Senders
             _stream.Flush();
             sw.Stop();
 
-            if (Log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
-                Log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag:#,#;;0}");
+            if (Log.IsDebugEnabled && _orderedReplicaItems.Count > 0)
+                Log.Debug($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag:#,#;;0}");
 
             var (type, _) = _parent.HandleServerResponse();
             if (type == ReplicationMessageReply.ReplyType.MissingAttachments)
