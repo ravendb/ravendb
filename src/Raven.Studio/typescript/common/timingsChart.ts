@@ -167,7 +167,7 @@ class timingsChart {
     }
     
     private convertHierarchy(name: string, data: Raven.Client.Documents.Queries.Timings.QueryTimings): graphNode {
-        const mappedTimings = Object.entries(data.Timings).map(([key, value]) => this.convertHierarchy(key, value));
+        const mappedTimings = Object.entries(data.Timings || []).map(([key, value]) => this.convertHierarchy(key, value));
         const remainingTime = data.DurationInMs - sumBy(mappedTimings, x => x.duration);
         
         let children: Array<graphNode> = null;
