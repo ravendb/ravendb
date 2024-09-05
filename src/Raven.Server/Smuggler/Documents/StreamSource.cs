@@ -709,23 +709,6 @@ namespace Raven.Server.Smuggler.Documents
                             _log.Info("Wasn't able to import the RevisionsForConflicts configuration from smuggler file. Skipping.", e);
                     }
                 }
-
-                if (reader.TryGet(nameof(databaseRecord.SupportedFeatures), out BlittableJsonReaderArray supportedFeaturesBjra) && supportedFeaturesBjra != null)
-                {
-                    try
-                    {
-                        var supportedFeatures = new List<string>();
-                        foreach (var supportedFeature in supportedFeaturesBjra)
-                            supportedFeatures.Add(supportedFeature.ToString());
-
-                        databaseRecord.SupportedFeatures = supportedFeatures;
-                    }
-                    catch (Exception e)
-                    {
-                        if (_log.IsInfoEnabled)
-                            _log.Info("Wasn't able to import the Supported Features from smuggler file. Skipping.", e);
-                    }
-                }
             });
 
             return databaseRecord;

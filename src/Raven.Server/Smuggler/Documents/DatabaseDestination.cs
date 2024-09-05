@@ -1603,7 +1603,7 @@ namespace Raven.Server.Smuggler.Documents
                                     break;
 
                                 case Tombstone.TombstoneType.Revision:
-                                    _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, tombstone.ChangeVector, tombstone.LastModified.Ticks, fromReplication: false);
+                                    _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, tombstone.ChangeVector, tombstone.LastModified.Ticks);
                                     break;
 
                                 case Tombstone.TombstoneType.Counter:

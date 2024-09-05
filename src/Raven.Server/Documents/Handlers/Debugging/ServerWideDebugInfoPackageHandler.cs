@@ -56,8 +56,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             nameof(DatabaseRecord.LockMode),
             nameof(DatabaseRecord.DocumentsCompression),
             nameof(DatabaseRecord.Analyzers),
-            nameof(DatabaseRecord.TimeSeries),
-            nameof(DatabaseRecord.SupportedFeatures)
+            nameof(DatabaseRecord.TimeSeries)
         };
 
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<ServerWideDebugInfoPackageHandler>("Server");

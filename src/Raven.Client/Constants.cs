@@ -494,21 +494,5 @@ namespace Raven.Client
 
             public const string GraphApi = "Graph API will be removed in next major version of the product.";
         }
-
-        internal class DatabaseRecord
-        {
-            private DatabaseRecord()
-            {
-            }
-
-            internal class SupportedFeatures
-            {
-                private SupportedFeatures()
-                {
-                }
-
-                public const string ThrowRevisionKeyTooBigFix = "ThrowRevisionKeyTooBigFix";
-            }
-        }
     }
 }

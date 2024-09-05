@@ -31,19 +31,19 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Server.Exceptions;
-using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron.Data.Tables;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
-using Index = Raven.Server.Documents.Indexes.Index;
 using RavenServerBackupUtils = Raven.Server.Utils.BackupUtils;
+using Index = Raven.Server.Documents.Indexes.Index;
+using Sparrow;
+using Sparrow.Server.Exceptions;
+using Sparrow.Server.Utils;
 using System.Threading;
 using Size = Sparrow.Size;
 
@@ -353,8 +353,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                         await SaveDatabaseRecordAsync(databaseName, databaseRecord, restoreSettings.DatabaseValues, result, onProgress);
                         _serverStore.ForTestingPurposes?.RestoreDatabaseAfterSavingDatabaseRecord?.Invoke();
-                   
-                        database.SupportedFeatures = new SupportedFeature(databaseRecord);
                         database.ClusterTransactionId = databaseRecord.Topology.ClusterTransactionIdBase64;
                         database.DatabaseGroupId = databaseRecord.Topology.DatabaseTopologyIdBase64;
 
@@ -837,11 +835,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.Integrations = smugglerDatabaseRecord.Integrations;
                     databaseRecord.Studio = smugglerDatabaseRecord.Studio;
                     databaseRecord.RevisionsForConflicts = smugglerDatabaseRecord.RevisionsForConflicts;
-                    databaseRecord.SupportedFeatures = smugglerDatabaseRecord.SupportedFeatures;
 
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
-                    database.SupportedFeatures = new SupportedFeature(databaseRecord);
                 });
 
             result.Files.CurrentFileName = null;

@@ -336,7 +336,7 @@ namespace Raven.Server.Documents
                         using (Slice.External(context.Allocator, conflicted.LowerId, out var key))
                         {
                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                            _documentsStorage.RevisionsStorage.DeleteRevision(context, key, conflicted.Collection, conflicted.ChangeVector, lastModifiedTicks, fromReplication: false);
+                            _documentsStorage.RevisionsStorage.DeleteRevision(context, key, conflicted.Collection, conflicted.ChangeVector, lastModifiedTicks);
                         }
                     }
                     _documentsStorage.EnsureLastEtagIsPersisted(context, conflicted.Etag);
