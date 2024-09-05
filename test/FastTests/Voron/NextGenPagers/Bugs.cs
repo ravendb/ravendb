@@ -1,4 +1,7 @@
-﻿using Voron;
+﻿using System;
+using FastTests.Voron.FixedSize;
+using Tests.Infrastructure;
+using Voron;
 using Voron.Data.BTrees;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,7 +14,7 @@ public class Bugs : StorageTest
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void SplitRootPageWhileReading()
     {
         using (var txw = Env.WriteTransaction())
@@ -31,7 +34,56 @@ public class Bugs : StorageTest
         }
     }
 
-    [Fact]
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineDataWithRandomSeed(100000)]
+    [InlineDataWithRandomSeed(200000)]
+    public void FuzzySplitRootPageWhileReading(int count = 100000, int seed = 1337)
+    {
+        var generator = new Random(seed);
+
+        int lastCommitted = -1;
+        
+        var txw = Env.WriteTransaction();
+        Tree rootObjects = txw.LowLevelTransaction.RootObjects;
+        for (int i = 0; i < count; i++)
+        {
+            rootObjects.Add(i.ToString(), i.ToString());
+
+            int action = generator.Next(100);
+            if (action == 0)
+            {
+                txw.Commit();
+                txw.Dispose();
+                lastCommitted = i;
+
+                txw = Env.WriteTransaction();
+                rootObjects = txw.LowLevelTransaction.RootObjects;
+            }
+
+            if (action > 90)
+            {
+                using (var txr = Env.ReadTransaction())
+                {
+                    for (int j = 0; j < 10; j++)
+                    {
+                        if (lastCommitted > 0)
+                        {
+                            int check = generator.Next(lastCommitted);
+                            Assert.NotNull(txr.LowLevelTransaction.RootObjects.Read(check.ToString()));
+
+                            check = generator.Next(count - lastCommitted) + lastCommitted + 1;
+                            Assert.Null(txr.LowLevelTransaction.RootObjects.Read(check.ToString()));
+                        }
+                    }
+                }
+            }
+        }
+
+        txw.Commit();
+        txw.Dispose();
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanHandleRollbackOfPageInScratches()
     {
         Options.ManualFlushing = true;

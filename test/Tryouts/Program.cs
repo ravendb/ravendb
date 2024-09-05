@@ -18,6 +18,7 @@ using SlowTests.Issues;
 using SlowTests.Server.Documents.PeriodicBackup;
 using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftAntimalwareEngine;
 using RachisTests;
+using SlowTests.SlowTests.MailingList;
 
 namespace Tryouts;
 
@@ -39,11 +40,16 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new AddNodeToClusterTests(testOutputHelper))
+                using (var test = new Jalchr3(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                    
-                    await test.AddDatabaseOnDisconnectedNode ();
+                    test.Streaming_documents_will_respect_the_sorting_order(
+                        new RavenTestParameters
+                        {
+                            DatabaseMode = RavenDatabaseMode.Single, 
+                            SearchEngine = RavenSearchEngineMode.Lucene
+                        });
                 }
             }
             catch (Exception e)

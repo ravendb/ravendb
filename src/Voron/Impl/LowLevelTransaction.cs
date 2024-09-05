@@ -207,10 +207,10 @@ namespace Voron.Impl
             var env = previous._env;
             env.Options.AssertNoCatastrophicFailure();
 
-            Debug.Assert(env.Options.Encryption.IsEnabled == false,
-                $"Async commit isn't supported in encrypted environments. We don't carry encrypted state from previous tx");
-            Debug.Assert((PlatformDetails.Is32Bits || env.Options.ForceUsing32BitsPager) == false,
-                $"Async commit isn't supported in 32bits environments. We don't carry 32 bits state from previous tx");
+            if (VoronConfiguration.FailFastForStability && env.Options.Encryption.IsEnabled)
+                VoronUnrecoverableErrorException.Raise(env, $"Async commit isn't supported in encrypted environments. We don't carry encrypted state from previous tx");
+            if (VoronConfiguration.FailFastForStability && (PlatformDetails.Is32Bits || env.Options.ForceUsing32BitsPager))
+                VoronUnrecoverableErrorException.Raise(env, $"Async commit isn't supported in 32bits environments. We don't carry 32 bits state from previous tx");
 
             // if we are rolling back *this* transaction, we do that to the one committed previously
             _scratchBuffersSnapshotToRollbackTo = previous.ModifiedPagesInTransaction;
@@ -229,7 +229,10 @@ namespace Voron.Impl
             _env = env;
             _journal = env.Journal;
             _freeSpaceHandling = previous._freeSpaceHandling;
-            Debug.Assert(persistentContext != null, $"{nameof(persistentContext)} != null");
+
+            if (VoronConfiguration.FailFastForStability && persistentContext == null)
+                VoronUnrecoverableErrorException.Raise(env, $"{nameof(persistentContext)} != null");
+
             PersistentContext = persistentContext;
 
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -331,7 +334,9 @@ namespace Voron.Impl
 
         internal void UpdateDataPagerState(Pager.State dataPagerState)
         {
-            Debug.Assert(Flags is TransactionFlags.ReadWrite, "Flags is TransactionFlags.ReadWrite");
+            if (VoronConfiguration.FailFastForStability && Flags is TransactionFlags.Read)
+                VoronUnrecoverableErrorException.Raise(this, "Flags is TransactionFlags.Read");
+
             DataPagerState = dataPagerState;
         }
 
@@ -342,8 +347,12 @@ namespace Voron.Impl
         
         internal void UpdateClientState(object state)
         {
-            Debug.Assert(_envRecord.ClientState == null || state == null || _envRecord.ClientState.GetType() == state.GetType(),
-                $"Cannot *change* the type of the client state, must always be a single type! Was {_envRecord.ClientState?.GetType()} to {state?.GetType()}");
+            if (VoronConfiguration.FailFastForStability)
+            {
+                if ((_envRecord.ClientState == null || state == null || _envRecord.ClientState.GetType() == state.GetType()) == false)
+                    VoronUnrecoverableErrorException.Raise(this, $"Cannot *change* the type of the client state, must always be a single type! Was {_envRecord.ClientState?.GetType()} to {state?.GetType()}");
+            }
+
             _envRecord = _envRecord with { ClientState = state };
         }
 
@@ -470,7 +479,9 @@ namespace Voron.Impl
                 return result;
 
             var p = GetPageInternal(pageNumber);
-            Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from data file");
+            if (VoronConfiguration.FailFastForStability && p.PageNumber != pageNumber)
+                VoronUnrecoverableErrorException.Raise(this, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from data file");
+
             TrackReadOnlyPage(p);
 
             _pageLocator.SetReadable(p);
@@ -485,10 +496,10 @@ namespace Voron.Impl
                 ThrowObjectDisposed();
 
             var p = GetPageInternal(pageNumber);
+            if (VoronConfiguration.FailFastForStability && p.PageNumber != pageNumber)
+                VoronUnrecoverableErrorException.Raise(this, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from data file");
 
-            Debug.Assert(p.PageNumber == pageNumber, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from data file");
             TrackReadOnlyPage(p);
-
             return p;
         }
 
@@ -553,7 +564,8 @@ namespace Voron.Impl
 
             DataPager.TryReleasePage(ref PagerTransactionState, pageNumber);
         }
-
+        
+        [DoesNotReturn]
         private void ThrowObjectDisposed()
         {
             if (_txStatus.HasFlag(TxStatus.Disposed))
