@@ -64,23 +64,9 @@ namespace FastTests
                 {
                     op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
                 }
-                catch (BackupAlreadyRunningException)
+                catch (BackupAlreadyRunningException alreadyRunningException)
                 {
-                    var backup = periodicBackupRunner.PeriodicBackups.FirstOrDefault(x => x.Configuration.TaskId == taskId);
-                    if (backup == null)
-                        throw new InvalidOperationException($"Periodic backup for task {taskId} doesn't exist");
-
-                    var runningTask = backup.RunningTask;
-                    if (runningTask == null)
-                    {
-                        // backup finished just now
-                        // fetch the last operation id from the backup status
-                        var backupStatus = await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId));
-                        Debug.Assert(backupStatus.Status.LastOperationId != null, $"{nameof(backupStatus.Status.LastOperationId)} should be populated after getting {nameof(BackupAlreadyRunningException)}");
-                        return backupStatus.Status.LastOperationId.Value;
-                    }
-                    
-                    op = backup.RunningTask.Id;
+                    op = alreadyRunningException.OperationId;
                 }
 
                 BackupResult result = default;

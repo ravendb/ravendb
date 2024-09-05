@@ -306,8 +306,12 @@ namespace RachisTests.DatabaseCluster
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *");
                 long taskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, opStatus: OperationStatus.InProgress);
 
+                var backup = database.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault(x => x.Configuration.TaskId == taskId);
+                Assert.NotNull(backup);
+
                 // call StartBackupOperation - this will not start a new backup task for that id since we already have one running
-                await Assert.ThrowsAnyAsync<BackupAlreadyRunningException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
+                var error = await Assert.ThrowsAnyAsync<BackupAlreadyRunningException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
+                Assert.Equal(error.OperationId, backup.RunningTask.Id);
             }
         }
 
@@ -356,7 +360,8 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 // call StartBackupOperation - this should throw since we the backup is still running on shard 0
-                await Assert.ThrowsAnyAsync<BackupAlreadyRunningException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
+                var error = await Assert.ThrowsAnyAsync<BackupAlreadyRunningException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
+                Assert.Equal(error.OperationId, backupShard0.RunningTask.Id);
             }
         }
 

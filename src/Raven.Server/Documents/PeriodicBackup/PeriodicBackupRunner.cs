@@ -332,7 +332,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _logger.Operations($"Could not start backup task '{periodicBackup.Configuration.TaskId}' because there is already a running backup '{runningTask.Id}'");
 
                     throw new BackupAlreadyRunningException(
-                        $"Could not start backup task '{periodicBackup.Configuration.TaskId}' because there is already a running backup under operation id '{runningTask.Id}'");
+                        $"Could not start backup task '{periodicBackup.Configuration.TaskId}' because there is already a running backup under operation id '{runningTask.Id}'")
+                    {
+                        OperationId = runningTask.Id,
+                        NodeTag = _serverStore.NodeTag
+                    };
                 }
 
                 BackupUtils.CheckServerHealthBeforeBackup(_serverStore, periodicBackup.Configuration.Name);

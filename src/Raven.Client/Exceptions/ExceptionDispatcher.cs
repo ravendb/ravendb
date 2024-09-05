@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Http;
@@ -131,6 +132,10 @@ namespace Raven.Client.Exceptions
                     break;
                 case RavenTimeoutException timeoutException:
                     json.TryGet(nameof(RavenTimeoutException.FailImmediately), out timeoutException.FailImmediately);
+                    break;
+                case BackupAlreadyRunningException backupAlreadyRunningException:
+                    json.TryGet(nameof(BackupAlreadyRunningException.OperationId), out backupAlreadyRunningException.OperationId);
+                    json.TryGet(nameof(BackupAlreadyRunningException.NodeTag), out backupAlreadyRunningException.NodeTag);
                     break;
             }
         }

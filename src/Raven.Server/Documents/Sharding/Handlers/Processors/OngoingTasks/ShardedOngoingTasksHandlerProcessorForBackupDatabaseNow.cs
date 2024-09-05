@@ -31,7 +31,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
                 await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(new ShardedGetOperationIdForBackupOperation(RequestHandler.HttpContext, taskId));
             
             if (shardsOperationId != Constants.Operations.InvalidOperationId)
-                throw new BackupAlreadyRunningException($"Can't start backup with taskId {taskId} because it is already running under operation id {shardsOperationId}");
+                throw new BackupAlreadyRunningException($"Can't start backup with taskId {taskId} because it is already running under operation id {shardsOperationId}")
+                {
+                    OperationId = shardsOperationId,
+                    NodeTag = ServerStore.NodeTag
+                };
             
             // backup isn't running on any shard, use the operation id we got to create a new backup task
             var startTime = SystemTime.UtcNow;

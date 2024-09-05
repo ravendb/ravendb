@@ -382,6 +382,12 @@ namespace Raven.Server
 
             if (exception is ClusterTransactionConcurrencyException { ConcurrencyViolations: { } } ctxConcurrencyException)
                 djv[nameof(ClusterTransactionConcurrencyException.ConcurrencyViolations)] = new DynamicJsonArray(ctxConcurrencyException.ConcurrencyViolations.Select(c => c.ToJson()));
+
+            if (exception is BackupAlreadyRunningException backupAlreadyRunningException)
+            {
+                djv[nameof(BackupAlreadyRunningException.OperationId)] = backupAlreadyRunningException.OperationId;
+                djv[nameof(BackupAlreadyRunningException.NodeTag)] = backupAlreadyRunningException.NodeTag;
+            }
         }
 
         private static void MaybeSetExceptionStatusCode(HttpContext httpContext, ServerStore serverStore, Exception exception)
