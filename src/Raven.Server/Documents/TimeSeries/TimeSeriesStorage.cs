@@ -364,6 +364,17 @@ namespace Raven.Server.Documents.TimeSeries
                         return null;
                 }
 
+                if (from == DateTime.MinValue && to == DateTime.MaxValue)
+                {
+                    table.DeleteByKey(slicer.TimeSeriesKeySlice);
+                    Stats.DeleteStats(context, collectionName, slicer.StatsKey);
+
+                    if (updateMetadata)
+                        RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
+
+                    return remoteChangeVector;
+                }
+
                 var baseline = GetBaseline(segmentValueReader);
                 string changeVector = null;
                 var deleted = 0;
