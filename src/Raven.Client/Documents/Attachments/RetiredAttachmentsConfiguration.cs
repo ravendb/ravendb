@@ -16,6 +16,7 @@ namespace Raven.Client.Documents.Attachments
         public long? RetireFrequencyInSec { get; set; }
         public long? MaxItemsToProcess { get; set; }
 
+        // TODO: egor we need to make those setting per collection
         /// <summary>
         /// Purge the retired attachments when the document is deleted.
         /// Default: false

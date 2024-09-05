@@ -54,7 +54,7 @@ public sealed class DirectBackupUploader : BackupUploaderBase, IDisposable
             Key = CombinePathAndKey(remoteFolderName, folderName, fileName),
             Metadata = new Dictionary<string, string>
             {
-                { "Description", GetBackupDescription(_settings.BackupType, _isFullBackup) }
+                { "Description", GetBackupDescription() }
             },
             IsFullBackup = _isFullBackup,
             RetentionPolicyParameters = _retentionPolicyParameters,
@@ -64,14 +64,8 @@ public sealed class DirectBackupUploader : BackupUploaderBase, IDisposable
         };
     }
 
-    public override string CombinePathAndKey(string path, string folderName, string fileName)
+    public override string GetBackupDescription()
     {
-        return base.CombinePathAndKey(path, folderName, fileName);
-    }
-
-    public override string GetBackupDescription(BackupType? backupType, bool isFullBackup)
-    {
-        // TODO: egor do I want to put some info here? Like attachment metadata? I can pass prepared string here
         return $"{nameof(DirectBackupUploader)}";
     }
 
@@ -80,16 +74,23 @@ public sealed class DirectBackupUploader : BackupUploaderBase, IDisposable
         switch (_destination)
         {
             case BackupConfiguration.BackupDestination.AmazonS3:
-                CreateDeletionTaskIfNeeded(_settings.S3Settings, DeleteFromS3, S3Name, folderName, fileName);
+                CreateLongRunningDeleteThread(_settings.S3Settings, DeleteFromS3, S3Name, folderName, fileName, 
+                    ThreadNames.ForDeleteRetiredAttachment(ThreadName(S3Name), _settings.DatabaseName, S3Name, _settings.TaskName));
                 break;
 
             case BackupConfiguration.BackupDestination.Azure:
-                CreateDeletionTaskIfNeeded(_settings.AzureSettings, DeleteFromAzure, AzureName, folderName, fileName);
+                var threadInfo = ThreadNames.ForDeleteRetiredAttachment(ThreadName(AzureName), _settings.DatabaseName, AzureName, _settings.TaskName);
+                CreateLongRunningDeleteThread(_settings.AzureSettings, DeleteFromAzure, AzureName, folderName, fileName, threadInfo);
                 break;
 
             default:
                 throw new ArgumentOutOfRangeException($"Missing implementation for direct upload destination '{_destination}'");
         }
+    }
+
+    private string ThreadName(string name)
+    {
+        return $"Delete retired attachment of database '{_settings.DatabaseName}' from {name} (task: '{_settings.TaskName}')";
     }
 
     public void CreateUploadTask(DocumentDatabase database, Stream attachmentStream, string folderName, string objKeyName, CancellationToken token)
@@ -122,8 +123,7 @@ public sealed class DirectBackupUploader : BackupUploaderBase, IDisposable
 
                 _exceptions.Add(exception ?? new InvalidOperationException(error, e));
             }
-            //TODO: egor create new thread names
-        }, null, ThreadNames.ForUploadBackupFile(threadName, _settings.DatabaseName, targetName, _settings.TaskName));
+        }, null, ThreadNames.ForUploadRetiredAttachment(threadName, _settings.DatabaseName, targetName, _settings.TaskName));
 
         _threads.Add(thread);
     }

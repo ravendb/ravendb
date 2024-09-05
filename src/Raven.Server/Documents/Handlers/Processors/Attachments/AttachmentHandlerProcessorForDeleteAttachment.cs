@@ -43,8 +43,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
         public static void CheckAttachmentFlagAndThrowIfNeededInternal(DocumentsOperationContext context, DatabaseRequestHandler requestHandler, string docId, string name)
         {
-            //TODO: egor I have CV, do I need to pass it here? CHeck in future (if test pass when I add it)
-            //TODO: egor shouldn't Attachment be IDisposable? it has lsv & Stream that should be disposed
             //TODO: egor sharding handler?
             var attachment = requestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, docId, name, AttachmentType.Document, changeVector: null);
             if (attachment == null)

@@ -42,7 +42,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
     private DocumentInfoHelper _documentInfoHelper;
 
-    // TODO: egor test that removes document with retired attachment
     // TODO: egor test that removes attachment from document with retired attachment
     // TODO: egor test that updates retired attachment  with regular attachment in document
 

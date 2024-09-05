@@ -12,15 +12,16 @@ namespace Raven.Client.Documents.Operations.Attachments.Retired
     public sealed class DeleteRetiredAttachmentsOperation : IOperation
     {
         private readonly IEnumerable<AttachmentRequest> _attachments;
-
-        public DeleteRetiredAttachmentsOperation(IEnumerable<AttachmentRequest> attachments)
+        private readonly bool _storageOnly;
+        public DeleteRetiredAttachmentsOperation(IEnumerable<AttachmentRequest> attachments, bool storageOnly = false)
         {
             _attachments = attachments;
+            _storageOnly = storageOnly;
         }
 
         public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new DeleteRetiredAttachmentsCommand(conventions, context, _attachments);
+            return new DeleteRetiredAttachmentsCommand(conventions, context, _attachments, _storageOnly);
         }
 
         internal sealed class DeleteRetiredAttachmentsCommand : RavenCommand
@@ -29,18 +30,26 @@ namespace Raven.Client.Documents.Operations.Attachments.Retired
             private readonly JsonOperationContext _context;
             internal IEnumerable<AttachmentRequest> Attachments { get; }
             internal List<AttachmentDetails> AttachmentsMetadata { get; } = new List<AttachmentDetails>();
+            private readonly bool _storageOnly;
 
-            public DeleteRetiredAttachmentsCommand(DocumentConventions conventions, JsonOperationContext context, IEnumerable<AttachmentRequest> attachments)
+            public DeleteRetiredAttachmentsCommand(DocumentConventions conventions, JsonOperationContext context, IEnumerable<AttachmentRequest> attachments, bool storageOnly)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _context = context;
                 Attachments = attachments;
                 ResponseType = RavenCommandResponseType.Empty;
+                _storageOnly = storageOnly;
             }
 
             public string GetUrl(ServerNode node)
             {
-                return $"{node.Url}/databases/{node.Database}/attachments/retire/bulk";
+                var url = $"{node.Url}/databases/{node.Database}/attachments/retire/bulk";
+                if (_storageOnly)
+                {
+                    url += "&storageOnly=true";
+                }
+
+                return url;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

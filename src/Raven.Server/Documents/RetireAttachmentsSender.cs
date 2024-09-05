@@ -114,20 +114,22 @@ namespace Raven.Server.Documents
                                 //Console.WriteLine("toRetire == null || toRetire.Count == 0");
                                 return totalCount;
                             }
-                            // TODO: egor this can be initilized once
+                            // TODO: egor this can be initialized once
                             // upload the attachments to cloud and update the document
                             using (DirectBackupUploader directUpload = new DirectBackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _token))
                             {
                                 var shouldUpload = true;
-
+                                var skippedIds = new HashSet<string>();
                                 foreach (var doc in toRetire)
                                 {
                                     _token.ThrowIfCancellationRequested();
+                   
                                     var key = doc.LowerId;
                                     var collection = doc.Id;
                                     if (shouldUpload == false)
                                     {
                                         // we skip the uploads or deletes of retired attachments since the can take a long time
+                                        skippedIds.Add(key.ToString());
                                         continue;
                                     }
 
@@ -137,7 +139,9 @@ namespace Raven.Server.Documents
                                         case RetiredAttachmentsStorage.AttachmentRetireType.PutRetire:
                                             if (string.IsNullOrEmpty(collection))
                                             {
-                                                //TODO: egor do I have a test for that?
+                                                if (Logger.IsInfoEnabled)
+                                                    Logger.Info($"Skipping 'PUT' of retired attachment with key: '{key.ToString()}' because it's collection IsNullOrEmpty.");
+
                                                 // document was deleted, need to remove it from retired tree
                                                 retired.Enqueue(doc);
                                                 continue;
@@ -162,10 +166,11 @@ namespace Raven.Server.Documents
                                                 }
                                                 else
                                                 {
+                                                    // threads got exceptions, token canceled or ReadTransactionMaxOpenTimeInMs is hit
                                                     _token.ThrowIfCancellationRequested();
-                                                    LogTimeoutIfNeeded("put", key, duration);
+                                                    LogTimeoutIfNeeded("put", key.ToString(), duration);
+                                                    skippedIds.Add(key.ToString());
                                                 }
-
                                             }
 
                                             if (duration.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs)
@@ -188,7 +193,7 @@ namespace Raven.Server.Documents
 
                                             if (directUpload.TryCleanFinishedThreads(duration, _token))
                                             {
-                                                using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.CleanRetiredAttachmentsKey(options.Context, key, out var keySlice))
+                                                using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.CleanRetiredAttachmentsKey(options.Context, doc.LowerId, out var keySlice))
                                                 {
                                                     string objKeyName = GetBlobDestination(keySlice, collection, out string folderName);
                                                     directUpload.AddDelete(folderName, objKeyName);
@@ -199,7 +204,8 @@ namespace Raven.Server.Documents
                                             else
                                             {
                                                 _token.ThrowIfCancellationRequested();
-                                                LogTimeoutIfNeeded("put", key, duration);
+                                                LogTimeoutIfNeeded("delete", key.ToString(), duration);
+                                                skippedIds.Add(key.ToString());
                                             }
 
                                             if (duration.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs)
@@ -217,11 +223,16 @@ namespace Raven.Server.Documents
 
                                 }
 
+                                if (skippedIds.Count > 0)
+                                {
+                                    if (Logger.IsInfoEnabled)
+                                        Logger.Info($"Skipping retiring of '{skippedIds.Count:#,#;;0}' attachments, shouldUpload: '{shouldUpload}', read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", skippedIds)}");
+                                }
+
                                 if (retired.Count == 0)
                                 {
-                                    //TODO: egor need to calc the skipped count + print their ids, etc
                                     if (Logger.IsInfoEnabled)
-                                        Logger.Info($"Skipping retiring of '{toRetire.Count:#,#;;0}' attachments, shouldUpload: '{shouldUpload}', read tx open time: '{duration.ElapsedMilliseconds}'.");
+                                        Logger.Info($"Skipping retiring whole batch of '{retired.Count:#,#;;0}' attachments, shouldUpload: '{shouldUpload}', read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => x.LowerId))}");
 
                                     continue;
                                 }
@@ -269,7 +280,7 @@ namespace Raven.Server.Documents
             return totalCount;
         }
 
-        private void LogTimeoutIfNeeded(string method, Slice key, Stopwatch sp)
+        private void LogTimeoutIfNeeded(string method, string key, Stopwatch sp)
         {
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Timed out waiting for free thread to {method} retired attachments with '{key}', ReadTransactionMaxOpenTimeInMs: {sp.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs}, IsCancellationRequested: {_token.Token.IsCancellationRequested}, the {method} will happen on next iteration.");

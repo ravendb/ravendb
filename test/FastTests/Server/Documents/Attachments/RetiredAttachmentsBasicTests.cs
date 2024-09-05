@@ -4,12 +4,17 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

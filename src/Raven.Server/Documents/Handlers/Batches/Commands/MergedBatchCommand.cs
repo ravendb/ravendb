@@ -13,6 +13,7 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Batches.Commands;
@@ -217,7 +218,9 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     break;
 
                 case CommandType.AttachmentDELETE:
-                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out var collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+
+                    bool storageOnly = Database.ReadDatabaseRecord().RetiredAttachments is not { Disabled: false, PurgeOnDelete: true };
+                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out var collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null, storageOnly: storageOnly);
 
                     if (collectionName != null)
                         ModifiedCollections?.Add(collectionName.Name);
