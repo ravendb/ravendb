@@ -661,8 +661,8 @@ namespace Raven.Server.Documents.Replication
 
                     lastEtagFromSrc = DocumentsStorage.GetLastReplicatedEtagFrom(
                         documentsContext, getLatestEtagMessage.SourceDatabaseId);
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"GetLastEtag response, last etag: {lastEtagFromSrc}");
                 }
 
                 var response = base.GetInitialRequestMessage(getLatestEtagMessage, replParams);
@@ -1258,21 +1258,21 @@ namespace Raven.Server.Documents.Replication
 
         private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd)
         {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Initializing {connectionsToAdd.Count:#,#} outgoing replications from {Database} on {_server.NodeTag}.");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Initializing {connectionsToAdd.Count:#,#} outgoing replications from {Database} on {_server.NodeTag}.");
 
             foreach (var destination in connectionsToAdd)
             {
                 if (destination.Disabled)
                     continue;
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Initialized outgoing replication for " + destination.FromString());
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug("Initialized outgoing replication for " + destination.FromString());
                 AddAndStartOutgoingReplication(destination);
             }
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info("Finished initialization of outgoing replications..");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug("Finished initialization of outgoing replications..");
         }
 
         protected void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove, List<IDisposable> instancesToDispose)

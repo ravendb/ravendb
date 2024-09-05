@@ -36,9 +36,9 @@ namespace Raven.Server.ServerWide.Maintenance
             _lastLogs[message] = iteration;
             AddToDecisionLog(database, message, iteration, e);
 
-            if (_logger.IsInfoEnabled)
+            if (_logger.IsDebugEnabled)
             {
-                _logger.Info(message, e);
+                _logger.Debug(message, e);
             }
         }
 
