@@ -1167,6 +1167,9 @@ namespace Raven.Server.Documents.Indexes
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
+            if (index.Type is IndexType.AutoMap or IndexType.AutoMapReduce)
+                throw new NotSupportedException("Side by side index reset is not supported for auto indexes.");
+
             return indexResetMode switch
             {
                 IndexResetMode.InPlace => ResetIndexInternal(index),
