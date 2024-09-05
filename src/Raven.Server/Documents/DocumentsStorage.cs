@@ -13,8 +13,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config;
 using Raven.Server.Documents.Expiration;
-using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Workers.Cleanup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
@@ -1274,75 +1272,6 @@ namespace Raven.Server.Documents
 
                 yield return TableValueToTombstone(context, ref result.Reader);
             }
-        }
-
-        public IEnumerable<TombstoneIndexItem> GetTombstoneIndexItemsFrom(DocumentsOperationContext context, long etag, long start, long take)
-        {
-            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
-
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, start))
-            {
-                if (take-- <= 0)
-                    yield break;
-
-               
-                yield return TableValueToTombstoneIndexItem(context, ref result.Reader);
-            }
-        }
-
-        public IEnumerable<TombstoneIndexItem> GetTombstoneIndexItemsFrom(DocumentsOperationContext context, string collection, long etag, long start, long take)
-        {
-            string tableName;
-
-            if (collection == AttachmentsStorage.AttachmentsTombstones ||
-                collection == RevisionsStorage.RevisionsTombstones)
-            {
-                tableName = collection;
-            }
-            else
-            {
-                var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
-                if (collectionName == null)
-                    yield break;
-
-                tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
-            }
-
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
-
-            if (table == null)
-                yield break;
-
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, start))
-            {
-                if (take-- <= 0)
-                    yield break;
-
-                yield return TableValueToTombstoneIndexItem(context, ref result.Reader);
-            }
-        }
-
-        private TombstoneIndexItem TableValueToTombstoneIndexItem(JsonOperationContext context, ref TableValueReader tvr)
-        {
-            if (tvr.Pointer == null)
-                return null;
-
-            var tableType = *(Tombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int _);
-            var type = tableType switch
-            {
-                Tombstone.TombstoneType.Document => IndexItemType.Document,
-                Tombstone.TombstoneType.Counter => IndexItemType.Counters,
-                _ => IndexItemType.None
-            };
-
-            return new TombstoneIndexItem
-            {
-                LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, ref tvr),
-                Etag = TableValueToEtag((int)TombstoneTable.Etag, ref tvr),
-                Type = type
-            };
         }
 
         public IEnumerable<Tombstone> GetTombstonesInReverseEtagOrderFrom(DocumentsOperationContext context, long etag, long start, long take)
