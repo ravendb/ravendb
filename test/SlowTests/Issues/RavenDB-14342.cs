@@ -108,7 +108,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.Documents | DatabaseItemType.Indexes | DatabaseItemType.RevisionDocuments | DatabaseItemType.Attachments));
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 await store.Maintenance.SendAsync(new DisableIndexOperation("Orders/ByCompany"));
 
                 using (var session = store.OpenSession())
@@ -120,7 +120,7 @@ namespace SlowTests.Issues
                     Assert.True(query.Count > 0);
                 }
                 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 
                 using (var commands = store.Commands())
                 {

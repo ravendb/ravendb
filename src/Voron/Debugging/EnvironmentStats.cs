@@ -8,7 +8,6 @@ namespace Voron.Debugging
         public long UsedDataFileSizeInBytes;
         public long AllocatedDataFileSizeInBytes;
         public long CommittedTransactionId;
-        public long AllocatedDiskSpaceInBytes;
     }
 
     public sealed class ActiveTransaction
