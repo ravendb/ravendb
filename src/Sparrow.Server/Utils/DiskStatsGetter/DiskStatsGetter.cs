@@ -38,9 +38,12 @@ namespace Sparrow.Server.Utils.DiskStatsGetter
                     return null;
                 }
 
-                await Task.WhenAny(cache.Task, Task.Delay(_maxWait)).ConfigureAwait(false);
                 if (cache.Task.IsCompleted == false)
-                    return cache.Value;
+                {
+                    await Task.WhenAny(cache.Task, Task.Delay(_maxWait)).ConfigureAwait(false);
+                    if (cache.Task.IsCompleted == false)
+                        return cache.Value;
+                }
 
                 var prevValue = cache.Task.Result;
                 if (prevValue == GetStatsResult.Empty)

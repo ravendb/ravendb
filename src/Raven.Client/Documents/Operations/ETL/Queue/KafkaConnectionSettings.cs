@@ -26,4 +26,15 @@ public sealed class KafkaConnectionSettings
 
         return json;
     }
+    
+    public DynamicJsonValue ToAuditJson()
+    {
+        var json = new DynamicJsonValue
+        {
+            [nameof(BootstrapServers)] = BootstrapServers,
+            [nameof(UseRavenCertificate)] = UseRavenCertificate
+        };
+        
+        return json;
+    }
 }
