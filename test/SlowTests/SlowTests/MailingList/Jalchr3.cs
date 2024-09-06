@@ -63,6 +63,8 @@ namespace SlowTests.SlowTests.MailingList
                             session.Store(user);
                         }
                         session.SaveChanges();
+                       
+                        Indexes.WaitForIndexing(store);
                     }
                 }
 
