@@ -152,6 +152,9 @@
     <EmbeddedResource Include="Data\testing.ravendbdump" />
     <EmbeddedResource Include="Data\data.txt" />
     <EmbeddedResource Include="Data\data2.txt" />
+    <EmbeddedResource Include="Data\RavenDB_21263\revisionsWithLargeChangeVector-oldDatabaseVersion.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_21263\test1111-emptySupportedFeatures.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_21263\test1111-withoutSupportedFeatures.ravendbdump" />
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
     <EmbeddedResource Include="Data\RavenDB_22200\OneDamagedBucket.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\DocumentWithRevisions.ravendbdump" />

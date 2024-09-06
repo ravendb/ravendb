@@ -15,4 +15,9 @@ public sealed class RabbitMqConnectionSettings
 
         return json;
     }
+
+    public DynamicJsonValue ToAuditJson()
+    {
+        return new DynamicJsonValue();
+    }
 }

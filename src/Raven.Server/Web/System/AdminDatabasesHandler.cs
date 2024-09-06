@@ -289,6 +289,8 @@ namespace Raven.Server.Web.System
                     }
                 }
 
+                databaseRecord.SupportedFeatures = new List<string> { Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix };
+
                 var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(databaseRecord.DatabaseName, databaseRecord, context, replicationFactor, index, raftRequestId);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;

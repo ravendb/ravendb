@@ -35,7 +35,10 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
         public virtual DynamicJsonValue ToAuditJson()
         {
-            return ToJson();
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name
+            };
         }
 
         public virtual bool IsEqual(ConnectionString connectionString)
