@@ -559,5 +559,21 @@ namespace Raven.Client
             {
             }
         }
+
+        internal class DatabaseRecord
+        {
+            private DatabaseRecord()
+            {
+            }
+
+            internal class SupportedFeatures
+            {
+                private SupportedFeatures()
+                {
+                }
+
+                public const string ThrowRevisionKeyTooBigFix = "ThrowRevisionKeyTooBigFix";
+            }
+        }
     }
 }

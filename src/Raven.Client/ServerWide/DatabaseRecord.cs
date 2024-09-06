@@ -5,9 +5,9 @@ using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
@@ -26,6 +26,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
@@ -158,6 +159,9 @@ namespace Raven.Client.ServerWide
                 yield return (DatabaseName, Topology);
             }
         }
+
+        [ForceJsonSerialization]
+        internal IReadOnlyList<string> SupportedFeatures;
 
         public void AddSorter(SorterDefinition definition)
         {

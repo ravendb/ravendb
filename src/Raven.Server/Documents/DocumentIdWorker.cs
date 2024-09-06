@@ -21,6 +21,8 @@ namespace Raven.Server.Documents
         private static JsonParserState _jsonParserState;
 
         public const int MaxIdSize = 512;
+        
+        public const int RevisionMaxKeySize = MaxIdSize * 3;
 
         static DocumentIdWorker()
         {
@@ -425,6 +427,15 @@ namespace Raven.Server.Documents
             throw new ArgumentException(
                 $"Document ID cannot exceed {MaxIdSize} bytes, but the ID was {Encoding.GetByteCount(str)} bytes. The invalid ID is '{str}'.",
                 nameof(str));
+        }
+
+        public static void ThrowRevisionKeyTooBig(string id, string changeVector, bool isTombstone)
+        {
+            var type = isTombstone ? "Revision Tombstone" : "Revision";
+            throw new ArgumentException(
+                $"{type} change vector cannot exceed {RevisionMaxKeySize} bytes, but the change vector was {Encoding.GetByteCount(changeVector)} bytes. " +
+                $"The invalid change vector for {type} '{id}' is '{changeVector}'.{Environment.NewLine}" +
+                $"For more details visit https://ravendb.net/l/28JF7X/6.0/Csharp. {Environment.NewLine}", nameof(changeVector));
         }
 
         public static ByteStringContext.InternalScope GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)

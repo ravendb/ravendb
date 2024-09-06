@@ -763,6 +763,22 @@ namespace Raven.Server.Smuggler.Documents
                         throw new InvalidDataException(errorMessage, e);
                     }
                 }
+
+                if (reader.TryGet(nameof(databaseRecord.SupportedFeatures), out BlittableJsonReaderArray supportedFeaturesBjra) && supportedFeaturesBjra != null)
+                {
+                    try
+                    {
+                        var supportedFeatures = new List<string>();
+                        foreach (var supportedFeature in supportedFeaturesBjra)
+                            supportedFeatures.Add(supportedFeature.ToString());
+                        databaseRecord.SupportedFeatures = supportedFeatures;
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the Supported Features from smuggler file. Skipping.", e);
+                    }
+                }
             });
 
             return databaseRecord;

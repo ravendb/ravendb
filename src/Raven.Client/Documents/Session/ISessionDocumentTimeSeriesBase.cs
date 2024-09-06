@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Session
         /// For details about named time series values, refer to: <inheritdoc cref="DocumentationUrls.Session.TimeSeries.NamedValues"/>.
         /// </remarks>
         /// <param name="entry">The time series arguments to append (timestamp, values, optional tag). <br/>
-        /// <typeparamref name="TimeSeriesEntry"/> is an object that aggregates the time series inputs, and <typeparamref name="T"/> indicates the value type.</param>
+        /// <see cref="TimeSeriesEntry"/> is an object that aggregates the time series inputs, and <typeparamref name="T"/> indicates the value type.</param>
         void Append(TimeSeriesEntry<T> entry);
     }
 
@@ -69,7 +69,7 @@ namespace Raven.Client.Documents.Session
         /// For details about named time series values, refer to: <inheritdoc cref="DocumentationUrls.Session.TimeSeries.NamedValues"/>.
         /// </remarks>
         /// <param name="entry">The time series arguments to append (timestamp and rollup values). <br/>
-        /// <typeparamref name="TimeSeriesRollupEntry"/> is an extension of <typeparamref name="TimeSeriesEntry"/>
+        /// <see cref="TimeSeriesRollupEntry{TValues}"/> is an extension of <see cref="TimeSeriesEntry"/>
         /// which contains the aggregated values of rollup time series [Min, Max, First, Last, Sum, Count, Average].</param>
         void Append(TimeSeriesRollupEntry<T> entry);
     }

@@ -440,7 +440,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 HandleRevisionTombstone(context, id, revisionChangeVector, out var changeVectorSlice, out var idKeySlice, toDispose);
                                 
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, idKeySlice, revisionTombstone.Collection,
-                                    changeVectorVersion, revisionTombstone.LastModifiedTicks, changeVectorSlice);
+                                    changeVectorVersion, revisionTombstone.LastModifiedTicks, changeVectorSlice, fromReplication: true);
                                 break;
 
                             case CounterReplicationItem counter:
