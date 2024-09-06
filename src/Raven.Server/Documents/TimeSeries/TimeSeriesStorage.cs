@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     do
                     {
-                        var etag = it.CurrentKey.CreateReader().ReadBigEndianInt64();
+                        var etag = it.CurrentKey.CreateReader().ReadBigEndian<long>();
                         if (etag > upto)
                         {
                             hasMore = false;

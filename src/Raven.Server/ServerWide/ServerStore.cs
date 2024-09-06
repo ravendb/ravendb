@@ -1901,7 +1901,7 @@ namespace Raven.Server.ServerWide
                 return null;
 
             var protectedData = new byte[readResult.Reader.Length];
-            readResult.Reader.Read(protectedData, 0, protectedData.Length);
+            readResult.Reader.Read(protectedData, protectedData.Length);
 
             return Secrets.Unprotect(protectedData);
         }

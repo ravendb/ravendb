@@ -1543,15 +1543,19 @@ namespace Corax.Indexing
                 {
                     Debug.Assert(sizeof(long) * 2 == sizeof((long, long)));
                     Debug.Assert(entry.Reader.Length == sizeof((long, long)));
-                    return *((long,long)*)entry.Reader.Base;
+                    return *((long, long)*)entry.Reader.Base;
                 }
 
-                long setId = Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._postingListContainerId, sizeof(PostingListState), out var setSpace);
+                long setId = Container.Allocate(_writer._transaction.LowLevelTransaction,
+                    _writer._postingListContainerId, 
+                    sizeof(PostingListState), out var setSpace);
 
                 _writer.InitializeFieldRootPage(_indexedField);
                 
-                long nullMarkerId = Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._entriesTermsContainerId,
+                long nullMarkerId = Container.Allocate(
+                    _writer._transaction.LowLevelTransaction, _writer._entriesTermsContainerId,
                     1, _indexedField.FieldRootPage, out var nullBuffer);
+                
                 nullBuffer.Clear();
                 
                 // we need to account for the size of the posting lists, once a term has been switch to a posting list

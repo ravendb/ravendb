@@ -126,7 +126,7 @@ namespace Voron.Debugging
                         do
                         {
                             ReadResult readResult = tree.Read(it.CurrentKey);
-                            RootObjectType rootObjectType = (RootObjectType)readResult.Reader.ReadByte();
+                            RootObjectType rootObjectType = (RootObjectType)readResult.Reader.Read<byte>();
                             switch (rootObjectType)
                             {
                                 case RootObjectType.Lookup:
