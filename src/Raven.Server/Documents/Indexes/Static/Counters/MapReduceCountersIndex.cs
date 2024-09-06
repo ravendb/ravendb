@@ -8,7 +8,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.MapReduce.Workers;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.Counters;
 using Raven.Server.ServerWide.Context;
@@ -141,7 +140,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             progressStats.TotalNumberOfItems += totalCount;
         }
 
-        public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
+        public override Dictionary<string, LastTombstoneInfo> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             if (tombstoneType == ITombstoneAware.TombstoneType.Documents)
             {
