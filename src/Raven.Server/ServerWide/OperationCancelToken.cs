@@ -14,6 +14,7 @@ namespace Raven.Server.ServerWide
         private readonly TimeSpan _cancelAfter;
 
         public readonly CancellationToken Token;
+        private readonly long _minimumDelayTimeInMs;
 
         public OperationCancelToken(TimeSpan cancelAfter, CancellationToken token)
         {
@@ -22,6 +23,8 @@ namespace Raven.Server.ServerWide
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             _cancelAfter = cancelAfter;
             Token = _cts.Token;
+
+            _minimumDelayTimeInMs = GetMinimumDelayTime(cancelAfter);
             _cts.CancelAfter(cancelAfter);
         }
 
@@ -32,6 +35,8 @@ namespace Raven.Server.ServerWide
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token1, token2);
             _cancelAfter = cancelAfter;
             Token = _cts.Token;
+
+            _minimumDelayTimeInMs = GetMinimumDelayTime(cancelAfter);
             _cts.CancelAfter(cancelAfter);
         }
 
@@ -70,16 +75,14 @@ namespace Raven.Server.ServerWide
             if (_cancelAfter == Timeout.InfiniteTimeSpan)
                 throw new InvalidOperationException("Cannot delay cancellation without timeout set.");
 
-            const int minimumDelayTime = 25;
-
-            if (_sw?.ElapsedMilliseconds < minimumDelayTime)
+            if (_sw?.ElapsedMilliseconds < _minimumDelayTimeInMs)
                 return;
 
             lock (this)
             {
                 if (_disposed)
                     return;
-                if (_sw?.ElapsedMilliseconds < minimumDelayTime)
+                if (_sw?.ElapsedMilliseconds < _minimumDelayTimeInMs)
                     return;
 
                 if (_sw == null)
@@ -121,6 +124,11 @@ namespace Raven.Server.ServerWide
             }
 
             _cts?.Dispose();
+        }
+
+        private static long GetMinimumDelayTime(TimeSpan timeSpan)
+        {
+            return Math.Max(250, (long)(timeSpan / 3).TotalMilliseconds);
         }
 
         private static void ValidateCancelAfter(TimeSpan cancelAfter)
