@@ -14,8 +14,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public long Increment(string key, long delta)
         {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
             {
                 return Increment(keySlice, delta);
             }
@@ -24,8 +23,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void Add(string key, Stream value)
         {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
             {
                 Add(keySlice, value);
             }
@@ -34,8 +32,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void Add(string key, byte[] value)
         {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
             {
                 Add(keySlice, value);
             }
@@ -44,10 +41,8 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void Add(string key, string value)
         {
-            Slice keySlice;
-            Slice valueSlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
-            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out valueSlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
+            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out Slice valueSlice))
             {
                 Add(keySlice, valueSlice);
             }
@@ -62,8 +57,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public DirectAddScope DirectAdd(string key, int len, TreeNodeFlags nodeType, out byte* ptr)
         {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
             {
                 return DirectAdd(keySlice, len, nodeType, out ptr);
             }
@@ -72,8 +66,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void Delete(string key)
         {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
             {
                 Delete(keySlice);
             }
@@ -82,8 +75,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public ReadResult Read(string key)
         {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
             {
                 return Read(keySlice);
             }
@@ -92,8 +84,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public bool Exists(string key)
         {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
             {
                 return Exists(keySlice);
             }
@@ -102,10 +93,8 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiAdd(string key, string value)
         {
-            Slice keySlice;
-            Slice valueSlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
-            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out valueSlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
+            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out Slice valueSlice))
             {
                 MultiAdd(keySlice, valueSlice);
             }
@@ -114,8 +103,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiAdd(string key, Slice value)
         {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
             {
                 MultiAdd(keySlice, value);
             }
@@ -124,8 +112,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiAdd(Slice key, string value)
         {
-            Slice valueSlice;
-            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out valueSlice))
+            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out Slice valueSlice))
             {
                 MultiAdd(key, valueSlice);
             }
@@ -134,10 +121,8 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiDelete(string key, string value)
         {
-            Slice keySlice;
-            Slice valueSlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
-            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out valueSlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
+            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out Slice valueSlice))
             {
                 MultiDelete(keySlice, valueSlice);
             }
@@ -146,8 +131,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiDelete(Slice key, string value)
         {
-            Slice valueSlice;
-            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out valueSlice))
+            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out Slice valueSlice))
             {
                 MultiDelete(key, valueSlice);
             }
@@ -156,8 +140,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiDelete(string key, Slice value)
         {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
             {
                 MultiDelete(keySlice, value);
             }
@@ -166,8 +149,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public IIterator MultiRead(string key)
         {
-            Slice keySlice;
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
             {
                 return MultiRead(keySlice);
             }
@@ -193,12 +175,13 @@ namespace Voron.Data.BTrees
 
         public long GetLookupRootPage(Slice name)
         {
-            var result = Read(name);
-            if (result == null)
+            if (TryRead(name, out var reader) == false)
                 return -1;
-            var header = (LookupState*)result.Reader.Base;
+            
+            var header = (LookupState*)reader.Base;
             if (header->RootObjectType != RootObjectType.Lookup)
                 return -1;
+            
             return header->RootPage;
         }
 

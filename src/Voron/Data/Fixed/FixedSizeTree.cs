@@ -1546,6 +1546,19 @@ namespace Voron.Data.Fixed
             return ptr;
         }
 
+        public bool TryRead(TVal key, out ReadOnlySpan<byte> data)
+        {
+            var ptr = ReadPtr(key, out int size);
+            if (ptr == null)
+            {
+                data = ReadOnlySpan<byte>.Empty;
+                return false;
+            }
+
+            data = new ReadOnlySpan<byte>(ptr, size);
+            return true;
+        }
+
         public ByteStringContext.ExternalScope Read(TVal key, out Slice slice)
         {
             var ptr = ReadPtr(key, out int size);

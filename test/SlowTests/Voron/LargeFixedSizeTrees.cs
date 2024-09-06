@@ -104,7 +104,7 @@ namespace SlowTests.Voron
                     Assert.True(it.Seek(long.MinValue));
                     do
                     {
-                        Assert.Equal(total++, it.CreateReaderForCurrent().ReadLittleEndianInt64());
+                        Assert.Equal(total++, it.CreateReaderForCurrent().Read<long>());
                     }
                     while (it.MoveNext());
                 }
@@ -230,7 +230,7 @@ namespace SlowTests.Voron
                         Slice read;
                         using (fst.Read(i, out read))
                         {
-                            Assert.Equal(i, read.CreateReader().ReadLittleEndianInt64());
+                            Assert.Equal(i, read.CreateReader().Read<long>());
                         }
                     }
                 }

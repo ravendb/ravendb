@@ -112,17 +112,16 @@ namespace Voron.Data.Tables
         {
             get
             {
-                if (_activeDataSmallSection == null)
-                {
-                    var readResult = _tableTree.Read(TableSchema.ActiveSectionSlice);
-                    if (readResult == null)
-                        throw new VoronErrorException($"Could not find active sections for {Name}");
+                if (_activeDataSmallSection != null) 
+                    return _activeDataSmallSection;
+                
+                if (_tableTree.TryRead(TableSchema.ActiveSectionSlice, out var reader) == false)
+                    throw new VoronErrorException($"Could not find active sections for {Name}");
 
-                    long pageNumber = readResult.Reader.ReadLittleEndianInt64();
+                long pageNumber = reader.Read<long>();
 
-                    _activeDataSmallSection = new ActiveRawDataSmallSection(_tx, pageNumber);
-                    _activeDataSmallSection.DataMoved += OnDataMoved;
-                }
+                _activeDataSmallSection = new ActiveRawDataSmallSection(_tx, pageNumber);
+                _activeDataSmallSection.DataMoved += OnDataMoved;
                 return _activeDataSmallSection;
             }
         }
@@ -214,7 +213,7 @@ namespace Voron.Data.Tables
                     return false;
                 }
 
-                var storageId = read.CreateReader().ReadLittleEndianInt64();
+                var storageId = read.CreateReader().Read<long>();
 
                 ReadById(storageId, out reader);
                 return true;
@@ -224,19 +223,23 @@ namespace Voron.Data.Tables
         public bool VerifyKeyExists(Slice key)
         {
             var pkTree = GetTree(_schema.Key);
-            var readResult = pkTree?.Read(key);
-            return readResult != null;
+            if (pkTree == null)
+                return false;
+
+            return pkTree.TryRead(key, out _);
         }
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
             id = -1;
             var pkTree = GetTree(_schema.Key);
-            var readResult = pkTree?.Read(key);
-            if (readResult == null)
+            if (pkTree == null)
                 return false;
 
-            id = readResult.Reader.ReadLittleEndianInt64();
+            if (pkTree.TryRead(key, out var reader) == false)
+                return false;
+            
+            id = reader.Read<long>();
             return true;
         }
 
@@ -830,7 +833,7 @@ namespace Voron.Data.Tables
 
                     do
                     {
-                        var id = iterator.CurrentKey.CreateReader().ReadBigEndianInt32();
+                        var id = iterator.CurrentKey.CreateReader().ReadBigEndian<int>();
                         var dict = CreateCompressionDictionary(tx, id);
                         yield return dict;
                     } while (iterator.MoveNext());
@@ -1259,13 +1262,11 @@ namespace Voron.Data.Tables
             AssertWritableTable();
 
             var pkTree = GetTree(_schema.Key);
-
-            var readResult = pkTree.Read(key);
-            if (readResult == null)
+            if (pkTree.TryRead(key, out var reader) == false)
                 return false;
 
             // This is an implementation detail. We read the absolute location pointer (absolute offset on the file)
-            var id = readResult.Reader.ReadLittleEndianInt64();
+            var id = reader.Read<long>();
 
             // And delete the element accordingly.
             Delete(id);
@@ -1684,7 +1685,7 @@ namespace Voron.Data.Tables
 
                         while (true)
                         {
-                            var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+                            var id = it.CreateReaderForCurrent().Read<long>();
                             var ptr = DirectRead(id, out int size);
 
                             tableValueHolder ??= new TableValueHolder();
@@ -2057,7 +2058,7 @@ namespace Voron.Data.Tables
 
         private void GetTableValueReader(IIterator it, out TableValueReader reader)
         {
-            var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+            var id = it.CreateReaderForCurrent().Read<long>();
             var ptr = DirectRead(id, out int size);
             reader = new TableValueReader(id, ptr, size);
         }
@@ -2107,7 +2108,7 @@ namespace Voron.Data.Tables
                     if (it.CurrentKey > value)
                         return deleted;
 
-                    Delete(it.CreateReaderForCurrent().ReadLittleEndianInt64());
+                    Delete(it.CreateReaderForCurrent().Read<long>());
                     deleted++;
                 }
             }
@@ -2147,7 +2148,7 @@ namespace Voron.Data.Tables
                 if (it.CurrentKey != value)
                     return false;
 
-                Delete(it.CreateReaderForCurrent().ReadLittleEndianInt64());
+                Delete(it.CreateReaderForCurrent().Read<long>());
                 return true;
             }
         }
@@ -2168,7 +2169,7 @@ namespace Voron.Data.Tables
                     if (it.Seek(it.RequiredPrefix) == false)
                         return deleted;
 
-                    long id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+                    long id = it.CreateReaderForCurrent().Read<long>();
 
                     if (beforeDelete != null || shouldAbort != null)
                     {
@@ -2256,7 +2257,7 @@ namespace Voron.Data.Tables
                     if (it.Seek(it.RequiredPrefix) == false)
                         return false;
 
-                    var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+                    var id = it.CreateReaderForCurrent().Read<long>();
                     var ptr = DirectRead(id, out int size);
 
                     if (tableValueHolder == null)

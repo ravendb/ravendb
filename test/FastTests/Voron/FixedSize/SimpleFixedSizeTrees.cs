@@ -268,7 +268,7 @@ namespace FastTests.Voron.FixedSize
                     {
                         Assert.True(fst.Contains(i), i.ToString());
                         using (fst.Read(i, out read))
-                            Assert.Equal(i + 10L, read.CreateReader().ReadLittleEndianInt64());
+                            Assert.Equal(i + 10L, read.CreateReader().Read<long>());
                     }
                 }
                 tx.Commit();
@@ -326,7 +326,7 @@ namespace FastTests.Voron.FixedSize
                     {
                         Assert.True(fst.Contains(i), i.ToString());
                         using (fst.Read(i, out read))
-                            Assert.Equal(i + 10L, read.CreateReader().ReadLittleEndianInt64());
+                            Assert.Equal(i + 10L, read.CreateReader().Read<long>());
                     }
                 }
                 for (int i = 30; i <= 40; i++)
@@ -341,7 +341,7 @@ namespace FastTests.Voron.FixedSize
                     {
                         Assert.True(fst.Contains(i), i.ToString());
                         using (fst.Read(i, out read))
-                            Assert.Equal(i + 10L, read.CreateReader().ReadLittleEndianInt64());
+                            Assert.Equal(i + 10L, read.CreateReader().Read<long>());
                     }
                 }
                 tx.Commit();
@@ -415,10 +415,10 @@ namespace FastTests.Voron.FixedSize
                 Slice read;
 
                 using (fst.Read(1, out read))
-                    Assert.Equal(1L, read.CreateReader().ReadLittleEndianInt64());
+                    Assert.Equal(1L, read.CreateReader().Read<long>());
 
                 using (fst.Read(2, out read))
-                    Assert.Equal(2L, read.CreateReader().ReadLittleEndianInt64());
+                    Assert.Equal(2L, read.CreateReader().Read<long>());
                 using (fst.Read(3, out read))
                     Assert.False(read.HasValue);
                 tx.Commit();
@@ -460,11 +460,11 @@ namespace FastTests.Voron.FixedSize
 
                 Slice read;
                 using (fst.Read(1, out read))
-                    Assert.Equal(1L, read.CreateReader().ReadLittleEndianInt64());
+                    Assert.Equal(1L, read.CreateReader().Read<long>());
                 using (fst.Read(2, out read))
                     Assert.False(read.HasValue);
                 using (fst.Read(3, out read))
-                    Assert.Equal(3L, read.CreateReader().ReadLittleEndianInt64());
+                    Assert.Equal(3L, read.CreateReader().Read<long>());
                 tx.Commit();
             }
         }

@@ -345,7 +345,7 @@ namespace Voron.Impl.FreeSpace
 
                 do
                 {
-                    int freePagesInSegment = it.CreateReaderForCurrent().ReadLittleEndianInt32();
+                    int freePagesInSegment = it.CreateReaderForCurrent().Read<int>();
                     if (freePagesInSegment == NumberOfPagesInSection)
                     {
                         yield return it.CurrentKey * NumberOfPagesInSection;

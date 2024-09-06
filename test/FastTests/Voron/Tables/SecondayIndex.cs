@@ -42,7 +42,7 @@ namespace FastTests.Voron.Tables
                 {
                     foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag, 0))
                     {
-                        Assert.Equal(1L, reader.Key.CreateReader().ReadBigEndianInt64());
+                        Assert.Equal(1L, reader.Key.CreateReader().ReadBigEndian<long>());
                         var handle = reader.Result.Reader;
                         int size;
                         Assert.Equal("{'Name': 'Oren'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
@@ -136,7 +136,7 @@ namespace FastTests.Voron.Tables
                 {
                     foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag, 0))
                     {
-                        Assert.Equal(2L, reader.Key.CreateReader().ReadBigEndianInt64());
+                        Assert.Equal(2L, reader.Key.CreateReader().ReadBigEndian<long>());
 
                         var handle = reader.Result;
                         int size;
