@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -14,6 +13,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -65,19 +65,26 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (input.TryGet("Indexes", out BlittableJsonReaderArray indexes) == false)
                     ThrowRequiredPropertyNameInRequest("Indexes");
                 var raftRequestId = GetRaftRequestIdFromQuery();
+
+                var clientCert = GetCurrentCertificate();
+                string source = clientCert != null ? $"{RequestIp} | {clientCert.Subject} [{clientCert.Thumbprint}]" : $"{RequestIp}";
+
+                IndexStore.IndexBatchScope batch = null;
+                if (Database.IndexStore.CanUseIndexBatch())
+                {
+                    batch = Database.IndexStore.CreateIndexBatch(onBatchSaved: tuple =>
+                    {
+                        foreach (var indexDefinition in tuple.SavedCommand.Static)
+                        {
+                            createdIndexes.Add((indexDefinition.Name, tuple.Index));
+                        }
+                    });
+                }
+
                 foreach (BlittableJsonReaderObject indexToAdd in indexes)
                 {
                     var indexDefinition = JsonDeserializationServer.IndexDefinition(indexToAdd);
                     indexDefinition.Name = indexDefinition.Name?.Trim();
-
-                    var clientCert = GetCurrentCertificate();
-                    
-                    string source;
-
-                    if (clientCert != null)
-                        source = $"{RequestIp} | {clientCert.Subject} [{clientCert.Thumbprint}]";
-                    else
-                        source = $"{RequestIp}";
                     
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
@@ -109,10 +116,22 @@ namespace Raven.Server.Documents.Handlers.Admin
                             $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                     }
 
-                    var index = await Database.IndexStore.CreateIndexInternal(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
-
-                    createdIndexes.Add((indexDefinition.Name, index));
+                    if (batch != null)
+                    {
+                        Database.IndexStore.ValidateStaticIndex(indexDefinition);
+                        batch.AddIndex(indexDefinition, source, Database.Time.GetUtcNow(), $"{raftRequestId}/{indexDefinition.Name}");
+                        await batch.SaveIfNeeded();
+                    }
+                    else
+                    {
+                        var index = await Database.IndexStore.CreateIndexInternal(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
+                        createdIndexes.Add((indexDefinition.Name, index));
+                    }
                 }
+
+                if (batch != null)
+                    await batch.SaveAsync();
+
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(indexes.ToString(), TrafficWatchChangeType.Index);
 

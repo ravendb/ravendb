@@ -36,7 +36,6 @@ using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -977,9 +976,9 @@ namespace Raven.Server.Documents.Indexes
             return ClusterCommandsVersionManager.CanPutCommand(nameof(PutIndexesCommand));
         }
 
-        public IndexBatchScope CreateIndexBatch()
+        public IndexBatchScope CreateIndexBatch(Action<(long Index, PutIndexesCommand SavedCommand)> onBatchSaved = null)
         {
-            return new IndexBatchScope(this, GetNumberOfUtilizedCores());
+            return new IndexBatchScope(this, GetNumberOfUtilizedCores(), onBatchSaved);
         }
 
         public async Task<Index> CreateIndex(IndexDefinitionBaseServerSide definition, string raftRequestId)
@@ -1027,7 +1026,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void ValidateStaticIndex(IndexDefinition definition)
+        public void ValidateStaticIndex(IndexDefinition definition)
         {
             if (IsValidIndexName(definition.Name, true, out var errorMessage) == false)
             {
@@ -2421,30 +2420,34 @@ namespace Raven.Server.Documents.Indexes
         {
             private readonly IndexStore _store;
             private readonly int _numberOfUtilizedCores;
+            private readonly Action<(long Index, PutIndexesCommand SavedCommand)> _onBatchSaved;
 
             private PutIndexesCommand _command;
             private readonly IndexDeploymentMode _defaultAutoDeploymentMode;
             private readonly IndexDeploymentMode _defaultStaticDeploymentMode;
+            private readonly int _historyRevisionsNumber;
 
-            public IndexBatchScope(IndexStore store, int numberOfUtilizedCores)
+            public IndexBatchScope(IndexStore store, int numberOfUtilizedCores, Action<(long Index, PutIndexesCommand SavedCommand)> onBatchSaved)
             {
                 _store = store;
                 _numberOfUtilizedCores = numberOfUtilizedCores;
+                _onBatchSaved = onBatchSaved;
                 _defaultAutoDeploymentMode = store._documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
                 _defaultStaticDeploymentMode = store._documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode;
+                _historyRevisionsNumber = store._documentDatabase.Configuration.Indexing.HistoryRevisionsNumber;
             }
 
-            public void AddIndex(IndexDefinitionBaseServerSide definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
+            public void AddIndex(IndexDefinitionBaseServerSide definition, string source, DateTime createdAt, string raftRequestId)
             {
                 if (_command == null)
-                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
+                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, _historyRevisionsNumber, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
 
                 if (definition == null)
                     throw new ArgumentNullException(nameof(definition));
 
                 if (definition is MapIndexDefinition indexDefinition)
                 {
-                    AddIndex(indexDefinition.IndexDefinition, source, createdAt, raftRequestId, revisionsToKeep);
+                    AddIndex(indexDefinition.IndexDefinition, source, createdAt, raftRequestId);
                     return;
                 }
 
@@ -2456,10 +2459,10 @@ namespace Raven.Server.Documents.Indexes
                 _command.Auto.Add(PutAutoIndexCommand.GetAutoIndexDefinition(autoDefinition, indexType));
             }
 
-            public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
+            public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId)
             {
                 if (_command == null)
-                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
+                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, _historyRevisionsNumber, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
 
                 _store.ValidateStaticIndex(definition);
 
@@ -2508,6 +2511,8 @@ namespace Raven.Server.Documents.Indexes
                     {
                         ThrowIndexCreationException(toe, $"Operation timed out after: {timeout}.");
                     }
+
+                    _onBatchSaved?.Invoke((index, _command));
                 }
                 finally
                 {
