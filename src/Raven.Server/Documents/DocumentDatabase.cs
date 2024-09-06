@@ -106,6 +106,7 @@ namespace Raven.Server.Documents
 
         public string DatabaseGroupId;
         public string ClusterTransactionId;
+        public SupportedFeature SupportedFeatures;
 
         private Lazy<RequestExecutor> _proxyRequestExecutor;
 
@@ -430,6 +431,8 @@ namespace Raven.Server.Documents
 
                 SetIds(record);
                 OnDatabaseRecordChanged(record);
+
+                SupportedFeatures = new SupportedFeature(record);
 
                 ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
@@ -892,6 +895,10 @@ namespace Raven.Server.Documents
                     ForTestingPurposes?.DisposeLog?.Invoke(Name, "Inserting offline database info");
                     DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
                 }
+            }
+            catch (OperationCanceledException) when (_serverStore.ServerShutdown.IsCancellationRequested)
+            {
+                // server store is being disposed
             }
             catch (Exception e)
             {
@@ -2178,5 +2185,26 @@ namespace Raven.Server.Documents
         None,
         Regular,
         Deep
+    }
+
+    public class SupportedFeature
+    {
+        public readonly SupportedFeatureTypes SupportedFeatureTypes;
+
+        public SupportedFeature(DatabaseRecord databaseRecord)
+        {
+            SupportedFeatureTypes = new SupportedFeatureTypes();
+
+            if (databaseRecord.SupportedFeatures == null)
+                return;
+
+            if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix))
+                SupportedFeatureTypes.ThrowRevisionKeyTooBigFix = true;
+        }
+    }
+
+    public class SupportedFeatureTypes
+    {
+        public bool ThrowRevisionKeyTooBigFix;
     }
 }

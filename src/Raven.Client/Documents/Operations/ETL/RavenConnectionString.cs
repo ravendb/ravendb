@@ -66,7 +66,12 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public override DynamicJsonValue ToAuditJson()
         {
-            return ToJson();
+            var json = base.ToAuditJson();
+            
+            json[nameof(Database)] = Database;
+            json[nameof(TopologyDiscoveryUrls)] = new DynamicJsonArray(TopologyDiscoveryUrls);
+            
+            return json;
         }
     }
 }
