@@ -577,12 +577,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.RevisionsForConflicts = smugglerDatabaseRecord.RevisionsForConflicts;
                     databaseRecord.DataArchival = smugglerDatabaseRecord.DataArchival;
                     databaseRecord.QueueSinks = smugglerDatabaseRecord.QueueSinks;
+                    databaseRecord.SupportedFeatures = smugglerDatabaseRecord.SupportedFeatures;
                 };
             }
 
             smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord =>
+            {
                 // need to enable revisions before import
                 database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
+                
+                database.SupportedFeatures = new SupportedFeature(smugglerDatabaseRecord);
+            };
         }
 
         private async Task OnErrorAsync(Action<IOperationProgress> onProgress, Exception e)

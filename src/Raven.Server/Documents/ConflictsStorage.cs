@@ -280,7 +280,7 @@ namespace Raven.Server.Documents
                         using (RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, conflicted.LowerId, out var changeVectorSlice))
                         {
                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                            _documentsStorage.RevisionsStorage.DeleteRevision(context, key, conflicted.Collection, conflicted.ChangeVector, lastModifiedTicks, changeVectorSlice);
+                            _documentsStorage.RevisionsStorage.DeleteRevision(context, key, conflicted.Collection, conflicted.ChangeVector, lastModifiedTicks, changeVectorSlice, fromReplication: false);
                         }
                     }
                     _documentsStorage.EnsureLastEtagIsPersisted(context, conflicted.Etag);
