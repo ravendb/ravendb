@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="FixedSizeTree.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -31,7 +31,7 @@ namespace Voron.Data.Fixed
             NewPageAllocator newPageAllocator = null)
         : FixedSizeTree<long>(tx, parent, treeName, valSize, clone, isIndexTree, newPageAllocator); 
     
-    public unsafe partial class FixedSizeTree<TVal> 
+    public unsafe partial class FixedSizeTree<TVal> : IDisposable
         where TVal: unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
     {
         internal const int BranchEntrySize = sizeof(long) + sizeof(long);
@@ -44,7 +44,10 @@ namespace Voron.Data.Fixed
         private readonly int _maxEmbeddedEntries;
 
         private NewPageAllocator _newPageAllocator;
+
+        private static readonly ObjectPool<FastStack<FixedSizeTreePage<TVal>>> CursorObjectPool = new(() => new FastStack<FixedSizeTreePage<TVal>>(8));
         private FastStack<FixedSizeTreePage<TVal>> _cursor;
+        
         private int _changes;
 
         public LowLevelTransaction Llt => _tx;
@@ -407,7 +410,7 @@ namespace Voron.Data.Fixed
             var header = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
             var page = GetReadOnlyPage(header->RootPageNumber);
             if (_cursor == null)
-                _cursor = new FastStack<FixedSizeTreePage<TVal>>();
+                _cursor = CursorObjectPool.Allocate();
             else
                 _cursor.WeakClear();
 
@@ -1787,6 +1790,18 @@ namespace Voron.Data.Fixed
             System.Diagnostics.Debug.Assert(newPageAllocator != null);
 
             _newPageAllocator = newPageAllocator;
+        }
+
+        void IDisposable.Dispose()
+        {
+            if (_cursor != null)
+            {
+                var cursor = _cursor;
+                _cursor = null;
+                
+                cursor.Clear();
+                CursorObjectPool.Free(cursor);
+            }
         }
     }
 }
