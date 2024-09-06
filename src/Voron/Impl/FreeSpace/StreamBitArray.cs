@@ -195,10 +195,20 @@ public unsafe struct StreamBitArray
                 
                 continue;
             }
-            var mask = eq.ExtractMostSignificantBits();
-            var idx = BitOperations.TrailingZeroCount(mask) + i;
-            var item = _inner[idx];
-            count += BitOperations.TrailingZeroCount(~item);
+            for (int j =  i; j < i + Vector256<uint>.Count; j--)
+            {
+                if (_inner[j] == uint.MaxValue)
+                {
+                    count += 32;
+                    if (count >= max)
+                        return true;
+
+                    continue;
+                }
+
+                count += BitOperations.TrailingZeroCount(~_inner[j]);
+                break;
+            }
             break;
         }
 
