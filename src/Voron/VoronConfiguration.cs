@@ -15,7 +15,10 @@ namespace Voron
 #if DEBUG
             FailFastForStability = true;
 #else
-            if (Environment.GetEnvironmentVariable("RAVENDB_Voron_FailFast")?.ToLowerInvariant() == "true")
+            if (bool.TryParse(Environment.GetEnvironmentVariable("RAVENDB_VORON_FAILFAST"), out var isEnabled) == false)
+                isEnabled = false;
+
+            if (isEnabled)
             {
                 // We are enabling Voron fail-fast in release mode, this is useful to analyze corruptions even in
                 // release mode. 
