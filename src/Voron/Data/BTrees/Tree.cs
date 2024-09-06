@@ -34,7 +34,6 @@ namespace Voron.Data.BTrees
         private RecentlyFoundTreePages _recentlyFoundPages;
 
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
-        private Dictionary<Slice, FixedSizeTree<double>> _fixedSizeTreesForDouble;
 
         private SliceSmallSet<IPrepareForCommit> _prepareLocator;
 
@@ -1447,31 +1446,14 @@ namespace Voron.Data.BTrees
                 }
 
                 _fixedSizeTrees[fixedTree.Name] = fixedTree;
+
+                _llt.RegisterDisposable(fixedTree);
             }
 
             // RavenDB-22261: It may happen that the FixedSizeTree requested does not exist, and if it does not
             // it would still return an instance. This is a workaround because the check in debug is correct.
             // https://issues.hibernatingrhinos.com/issue/RavenDB-22261/Inconsistency-in-Tree-external-API
             Debug.Assert(fixedTree.NumberOfEntries == 0 || _header.Flags.HasFlag(TreeFlags.FixedSizeTrees));
-
-            return fixedTree;
-        }
-
-        public FixedSizeTree<double> FixedTreeForDouble(Slice key, byte valSize = 0)
-        {
-            _fixedSizeTreesForDouble ??= new Dictionary<Slice, FixedSizeTree<double>>(SliceComparer.Instance);
-
-            if (_fixedSizeTreesForDouble.TryGetValue(key, out var fixedTree) == false)
-            {
-                fixedTree = new FixedSizeTree<double>(_llt, this, key, valSize);
-                _fixedSizeTreesForDouble[fixedTree.Name] = fixedTree;
-            }
-
-            // RavenDB-22261: It may happen that the FixedSizeTree requested does not exist, and if it does not
-            // it would still return an instance. This is a workaround because the check in debug is correct.
-            // https://issues.hibernatingrhinos.com/issue/RavenDB-22261/Inconsistency-in-Tree-external-API
-            Debug.Assert(fixedTree.NumberOfEntries == 0 || _header.Flags.HasFlag(TreeFlags.FixedSizeTrees));
-
 
             return fixedTree;
         }
@@ -1499,7 +1481,6 @@ namespace Voron.Data.BTrees
                 }
             }
             _fixedSizeTrees.Remove(key);
-            _fixedSizeTreesForDouble?.Remove(key);
             Delete(key);
 
             return numberOfEntries;
