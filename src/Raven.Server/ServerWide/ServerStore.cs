@@ -1032,7 +1032,7 @@ namespace Raven.Server.ServerWide
                 case DeferrableTimeout.Promise.Result.Deferred:
                     return;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException($"Not supported result type '{r}'");
             }
         }
 
