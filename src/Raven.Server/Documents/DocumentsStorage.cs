@@ -1709,6 +1709,10 @@ namespace Raven.Server.Documents
                 collectionName = ExtractCollectionName(context, doc.Data);
 
                 var flags = GetFlagsFromOldDocument(newFlags, doc.Flags, nonPersistentFlags);
+
+                if (doc.Flags.Contain(DocumentFlags.Artificial))
+                    flags |= DocumentFlags.Artificial;
+
                 var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName, flags), collectionName.GetTableName(CollectionTableType.Documents));
 
                 long etag;
