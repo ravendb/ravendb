@@ -632,8 +632,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             var releaser = _copiedBuffer.ReleaseBuffer;
             try
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Disposing IncomingReplicationHandler ({FromToString})");
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Disposing IncomingReplicationHandler ({FromToString})");
                 _cts.Cancel();
 
                 try

@@ -1353,16 +1353,16 @@ namespace Raven.Server.Documents.Replication
                     return null;
 
                 // will try to fetch it again later
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
                     if (e is DatabaseIdleException)
                     {
                         // this is expected, so we don't mark it as error
-                        _logger.Info($"The database is idle on the destination '{node.FromString()}', the connection will be retried later.");
+                        _logger.Debug($"The database is idle on the destination '{node.FromString()}', the connection will be retried later.");
                     }
                     else
                     {
-                        _logger.Info($"Failed to fetch tcp connection information for the destination '{node.FromString()}' , the connection will be retried later.", e);
+                        _logger.Debug($"Failed to fetch tcp connection information for the destination '{node.FromString()}' , the connection will be retried later.", e);
                     }
                 }
 
@@ -1599,8 +1599,8 @@ namespace Raven.Server.Documents.Replication
                 failureInfo.DestinationDbId = instance.DestinationDbId;
                 failureInfo.LastHeartbeatTicks = instance.LastHeartbeatTicks;
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Document replication connection ({instance.Node}) failed {failureInfo.RetriesCount} times, the connection will be retried on {failureInfo.RetryOn}.", e);
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug($"Document replication connection ({instance.Node}) failed {failureInfo.RetriesCount} times, the connection will be retried on {failureInfo.RetryOn}.", e);
 
                 _reconnectQueue.Add(failureInfo);
             }
@@ -1671,8 +1671,8 @@ namespace Raven.Server.Documents.Replication
 
                 ConflictResolver = null;
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Closing and disposing document replication connections.");
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug("Closing and disposing document replication connections.");
 
                 ForTestingPurposes?.BeforeDisposingIncomingReplicationHandlers?.Invoke();
                 foreach (var incoming in _incoming)

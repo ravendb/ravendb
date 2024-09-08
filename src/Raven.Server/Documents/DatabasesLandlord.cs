@@ -1317,10 +1317,10 @@ namespace Raven.Server.Documents
                         dueTime: idleDatabaseActivity.DueTime > 0 ? idleDatabaseActivity.DueTime : 0,
                         period: Timeout.Infinite));
 
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsDebugEnabled)
                 {
                     var msg = idleDatabaseActivity == null ? "without setting a wakeup timer." : $"wakeup timer set to: '{idleDatabaseActivity.DateTime.GetValueOrDefault()}', which will happen in '{idleDatabaseActivity.DueTime}' ms.";
-                    _logger.Info($"Unloading directly database '{databaseName}', {msg}");
+                    _logger.Debug($"Unloading directly database '{databaseName}', {msg}");
                 }
 
                 return true;
