@@ -708,7 +708,7 @@ namespace Raven.Server.Web.System
                     $"Database restore: {restoreBackupTask.RestoreFromConfiguration.DatabaseName}",
                     Documents.Operations.Operations.OperationType.DatabaseRestore,
                     taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
-                    id: operationId, token: cancelToken, databaseName: restoreBackupTask.RestoreFromConfiguration.DatabaseName);
+                    id: operationId, token: cancelToken, resourceName: restoreBackupTask.RestoreFromConfiguration.DatabaseName);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
