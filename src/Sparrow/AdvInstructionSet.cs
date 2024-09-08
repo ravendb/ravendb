@@ -33,7 +33,7 @@ namespace Sparrow
 #else
             IsAcceleratedVector512 = false;
 #endif
-            if (bool.TryParse(Environment.GetEnvironmentVariable("RAVENDB_SIMD_DISABLE"), out var isDisabled) == false)
+            if (bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_SIMD_DISABLE"), out var isDisabled) == false)
                 isDisabled = false;
 
             if (isDisabled)
@@ -47,7 +47,7 @@ namespace Sparrow
                 IsAcceleratedVector512 = false;
             }
 
-            switch (Environment.GetEnvironmentVariable("RAVENDB_SIMD_DISABLEVECTORSBIGGERTHAN")?.ToLowerInvariant())
+            switch (Environment.GetEnvironmentVariable("RAVEN_SIMD_DISABLEVECTORSBIGGERTHAN")?.ToLowerInvariant())
             {
                 case "256":
                     IsAcceleratedVector512 = false;
@@ -86,7 +86,7 @@ namespace Sparrow
                 IsSupportedAvx512 = false;
 #endif
 
-                if (bool.TryParse(Environment.GetEnvironmentVariable("RAVENDB_SIMD_DISABLE"), out var isDisabled) == false)
+                if (bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_SIMD_DISABLE"), out var isDisabled) == false)
                     isDisabled = false;
 
                 if (isDisabled)
@@ -102,7 +102,7 @@ namespace Sparrow
                 // We assume for simplicity in the testing matrix and to simplify our life that whenever AVX512 also is AVX2, etc.
                 // This allow us an easier upgrade path for our algorithms without having to rely on a highly complex architecture selector.
                 
-                switch (Environment.GetEnvironmentVariable("RAVENDB_SIMD_DISABLEINTEL")?.ToLowerInvariant())
+                switch (Environment.GetEnvironmentVariable("RAVEN_SIMD_DISABLEINTEL")?.ToLowerInvariant())
                 {
                     case "sse":
                         IsSupportedSse = false;
@@ -132,7 +132,7 @@ namespace Sparrow
                 IsSupportedArm64 = false;
 #endif
 
-                if (bool.TryParse(Environment.GetEnvironmentVariable("RAVENDB_SIMD_DISABLE"), out var isDisabled) == false)
+                if (bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_SIMD_DISABLE"), out var isDisabled) == false)
                     isDisabled = false;
 
                 if (isDisabled)
@@ -146,7 +146,7 @@ namespace Sparrow
 
                 // We assume for simplicity in the testing matrix and to simplify our life that whenever NEON is used, etc.
                 // This allow us an easier upgrade path for our algorithms without having to rely on a highly complex architecture selector.
-                switch (Environment.GetEnvironmentVariable("RAVENDB_SIMD_DISABLEARM")?.ToLowerInvariant())
+                switch (Environment.GetEnvironmentVariable("RAVEN_SIMD_DISABLEARM")?.ToLowerInvariant())
                 {
                     case "base":
                         IsSupported = false;

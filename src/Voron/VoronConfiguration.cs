@@ -15,7 +15,7 @@ namespace Voron
 #if DEBUG
             FailFastForStability = true;
 #else
-            if (bool.TryParse(Environment.GetEnvironmentVariable("RAVENDB_VORON_FAILFAST"), out var isEnabled) == false)
+            if (bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_VORON_FAILFAST"), out var isEnabled) == false)
                 isEnabled = false;
 
             if (isEnabled)
