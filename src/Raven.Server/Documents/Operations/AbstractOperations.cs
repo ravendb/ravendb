@@ -40,8 +40,8 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
         string description,
         IOperationDetailedDescription detailedDescription,
         Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
-        OperationCancelToken token = null,
-        string databaseName = null);
+        string resourceName = null,
+        OperationCancelToken token = null);
 
     protected Task<IOperationResult> AddOperationInternalAsync(AbstractOperation operation, Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory)
     {

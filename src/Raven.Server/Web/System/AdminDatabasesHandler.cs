@@ -556,7 +556,7 @@ namespace Raven.Server.Web.System
                         using var restoreBackupTask = await RestoreUtils.CreateBackupTaskAsync(ServerStore, restoreConfiguration, restoreSource, operationId, cancelToken);
                         return await restoreBackupTask.ExecuteAsync(onProgress);
                     },
-                    token: cancelToken, restoreConfiguration.DatabaseName);
+                    restoreConfiguration.DatabaseName, token: cancelToken);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
