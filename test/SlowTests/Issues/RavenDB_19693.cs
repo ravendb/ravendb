@@ -28,7 +28,7 @@ public class RavenDB_19693 : RavenTestBase
             var database = await GetDatabase(store.Database);
             var operationId = database.Operations.GetNextOperationId();
             var token = new OperationCancelToken(database.DatabaseShutdown, CancellationToken.None);
-            _ = database.Operations.AddLocalOperation(operationId, OperationType.DumpRawIndexData, "Test Operation", detailedDescription: null, onProgress => DoWorkAsync(onProgress, TimeSpan.FromSeconds(2), token.Token), token);
+            _ = database.Operations.AddLocalOperation(operationId, OperationType.DumpRawIndexData, "Test Operation", detailedDescription: null, onProgress => DoWorkAsync(onProgress, TimeSpan.FromSeconds(2), token.Token), token: token);
 
             var operation = new Operation(store.GetRequestExecutor(), () => store.Changes(store.Database, Server.ServerStore.NodeTag), store.Conventions, operationId, Server.ServerStore.NodeTag);
 
@@ -48,7 +48,7 @@ public class RavenDB_19693 : RavenTestBase
             var database = await GetDatabase(store.Database);
             var operationId = database.Operations.GetNextOperationId();
             var token = new OperationCancelToken(database.DatabaseShutdown, CancellationToken.None);
-            _ = database.Operations.AddLocalOperation(operationId, OperationType.DumpRawIndexData, "Test Operation", detailedDescription: null, onProgress => DoWorkAsync(onProgress, TimeSpan.FromSeconds(5), token.Token), token);
+            _ = database.Operations.AddLocalOperation(operationId, OperationType.DumpRawIndexData, "Test Operation", detailedDescription: null, onProgress => DoWorkAsync(onProgress, TimeSpan.FromSeconds(5), token.Token), token: token);
 
             var operation = new Operation(store.GetRequestExecutor(), () => store.Changes(store.Database, Server.ServerStore.NodeTag), store.Conventions, operationId, Server.ServerStore.NodeTag);
 

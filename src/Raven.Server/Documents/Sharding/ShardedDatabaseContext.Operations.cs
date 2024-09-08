@@ -56,8 +56,8 @@ public partial class ShardedDatabaseContext
             string description,
             IOperationDetailedDescription detailedDescription,
             Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
-            OperationCancelToken token = null,
-            string databaseName = null)
+            string resourceName = null,
+            OperationCancelToken token = null)
         {
             var operation = CreateOperationInstance(id, _context.DatabaseName, operationType, description, detailedDescription, token);
 
