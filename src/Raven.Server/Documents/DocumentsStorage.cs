@@ -1708,10 +1708,7 @@ namespace Raven.Server.Documents
 
                 collectionName = ExtractCollectionName(context, doc.Data);
 
-                var flags = GetFlagsFromOldDocument(newFlags, doc.Flags, nonPersistentFlags);
-
-                if (doc.Flags.Contain(DocumentFlags.Artificial))
-                    flags |= DocumentFlags.Artificial;
+                var flags = GetFlagsFromOldDocumentForDelete(newFlags, doc.Flags, nonPersistentFlags);
 
                 var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName, flags), collectionName.GetTableName(CollectionTableType.Documents));
 
@@ -2648,7 +2645,7 @@ namespace Raven.Server.Documents
             return ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, newEtag);
         }
 
-        public DocumentFlags GetFlagsFromOldDocument(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
+        public DocumentFlags GetFlagsFromOldDocumentForPut(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
         {
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return newFlags;
@@ -2691,6 +2688,15 @@ namespace Raven.Server.Documents
             }
 
             return newFlags;
+        }
+
+        public DocumentFlags GetFlagsFromOldDocumentForDelete(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
+        {
+            var flags = GetFlagsFromOldDocumentForPut(newFlags, oldFlags, nonPersistentFlags);
+            if (oldFlags.Contain(DocumentFlags.Artificial))
+                flags |= DocumentFlags.Artificial;
+
+            return flags;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
