@@ -114,8 +114,8 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
                     if (drive.StartsWith(name, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"{nameof(DiskCounters)} was created for \"{drive}\" (requested for path \"{path}\").");
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"{nameof(DiskCounters)} was created for \"{drive}\" (requested for path \"{path}\").");
 
                     counter = _countersPerDisk[path] = new DiskCounters(name);
                     break;

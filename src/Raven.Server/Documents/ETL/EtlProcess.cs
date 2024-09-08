@@ -821,7 +821,7 @@ namespace Raven.Server.Documents.ETL
 
                                         UpdateMetrics(startTime, stats);
 
-                                        if (Logger.IsInfoEnabled)
+                                        if (Logger.IsDebugEnabled)
                                             LogSuccessfulBatchInfo(stats);
                                     }
                                 }
@@ -1049,7 +1049,7 @@ namespace Raven.Server.Documents.ETL
             if (stats.BatchStopReason != null)
                 message.Append($" Batch stop reason: {stats.BatchStopReason}");
 
-            Logger.Info(message.ToString());
+            Logger.Debug(message.ToString());
         }
 
         public override OngoingTaskConnectionStatus GetConnectionStatus()
