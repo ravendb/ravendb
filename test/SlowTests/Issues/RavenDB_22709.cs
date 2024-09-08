@@ -27,7 +27,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Replication)]
         public async Task PullReplicationWithSinksWithSameDatabaseNameShouldWork()
         {
-            var hubCluster = await CreateRaftClusterWithSsl(3);
+            var hubCluster = await CreateRaftClusterWithSsl(3, watcherCluster: true, leaderIndex: 0);
             var hubClusterCert = RegisterClientCertificate(hubCluster);
 
             var sinkCluster = await CreateRaftClusterWithSsl(1);
@@ -36,14 +36,14 @@ namespace SlowTests.Issues
             var sinkCluster2 = await CreateRaftClusterWithSsl(1);
             var sinkClusterCert2 = RegisterClientCertificate(sinkCluster2);
 
-            using var hubStore = GetDocumentStore(new Options
+            using var hubStore = new DocumentStore
             {
-                Server = hubCluster.Leader,
-                ReplicationFactor = 3,
-                AdminCertificate = hubClusterCert,
-                ClientCertificate = hubClusterCert,
-                ModifyDatabaseName = s => "HubDB"
-            });
+                Urls = new[] { hubCluster.Leader.WebUrl },
+                Database = "HubDB",
+                Certificate = hubClusterCert,
+                Conventions = { DisableTopologyUpdates = true, DisposeCertificate = false }
+            }.Initialize();
+
             using var sinkStore1 = GetDocumentStore(new Options
             {
                 Server = sinkCluster.Leader,
@@ -60,6 +60,8 @@ namespace SlowTests.Issues
                 ModifyDatabaseName = s => "SinkDB"
             });
 
+            await CreateDatabaseInCluster(hubStore.Database, replicationFactor: 3, leadersUrl: hubCluster.Leader.WebUrl, certificate: hubClusterCert);
+
             var pullCert1 = new X509Certificate2(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
             var pullCert2 = new X509Certificate2(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate3Path), (string)null, X509KeyStorageFlags.Exportable);
 
@@ -69,7 +71,7 @@ namespace SlowTests.Issues
                 Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
                 WithFiltering = true,
                 PinToMentorNode = true,
-                MentorNode = "A"
+                MentorNode = hubCluster.Leader.ServerStore.NodeTag
             }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("both", new ReplicationHubAccess
