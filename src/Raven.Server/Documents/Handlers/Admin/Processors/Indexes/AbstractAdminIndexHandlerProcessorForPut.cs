@@ -39,17 +39,34 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
             if (input.TryGet("Indexes", out BlittableJsonReaderArray indexes) == false)
                 Web.RequestHandler.ThrowRequiredPropertyNameInRequest("Indexes");
 
+            var clientCert = RequestHandler.GetCurrentCertificate();
+            string source = clientCert != null
+                ? $"{RequestHandler.RequestIp} | {clientCert.Subject} [{clientCert.Thumbprint}]"
+                : $"{RequestHandler.RequestIp}";
+
             var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();
+            var processor = GetIndexCreateProcessor();
+
+            AbstractIndexCreateController.IndexBatchScope batch = null;
+            if (processor.CanUseIndexBatch())
+            {
+                batch = processor.CreateIndexBatch(onBatchSaved: tuple =>
+                {
+                    foreach (var indexDefinition in tuple.SavedCommand.Static)
+                    {
+                        createdIndexes.Add(new PutIndexResult
+                        {
+                            Index = indexDefinition.Name,
+                            RaftCommandIndex = tuple.Index
+                        });
+                    }
+                });
+            }
+
             foreach (BlittableJsonReaderObject indexToAdd in indexes)
             {
                 var indexDefinition = JsonDeserializationServer.IndexDefinition(indexToAdd);
                 indexDefinition.Name = indexDefinition.Name?.Trim();
-
-                var clientCert = RequestHandler.GetCurrentCertificate();
-
-                string source = clientCert != null
-                    ? $"{RequestHandler.RequestIp} | {clientCert.Subject} [{clientCert.Thumbprint}]"
-                    : $"{RequestHandler.RequestIp}";
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
@@ -73,16 +90,25 @@ internal abstract class AbstractAdminIndexHandlerProcessorForPut<TRequestHandler
                         $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                 }
 
-                var processor = GetIndexCreateProcessor();
-
-                var index = await processor.CreateIndexAsync(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
-
-                createdIndexes.Add(new PutIndexResult
+                if (batch != null)
                 {
-                    Index = indexDefinition.Name,
-                    RaftCommandIndex = index
-                });
+                    await batch.AddIndexAsync(indexDefinition, source, processor.GetDatabaseTime().GetUtcNow(), $"{raftRequestId}/{indexDefinition.Name}");
+                    await batch.SaveIfNeeded();
+                }
+                else
+                {
+                    var index = await processor.CreateIndexAsync(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
+
+                    createdIndexes.Add(new PutIndexResult
+                    {
+                        Index = indexDefinition.Name,
+                        RaftCommandIndex = index
+                    });
+                }
             }
+
+            if (batch != null)
+                await batch.SaveAsync();
 
             if (TrafficWatchManager.HasRegisteredClients)
                 RequestHandler.AddStringToHttpContext(indexes.ToString(), TrafficWatchChangeType.Index);

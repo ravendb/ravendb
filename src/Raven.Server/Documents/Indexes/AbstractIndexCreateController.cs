@@ -35,7 +35,7 @@ public abstract class AbstractIndexCreateController
 
     protected abstract string GetDatabaseName();
 
-    protected abstract SystemTime GetDatabaseTime();
+    public abstract SystemTime GetDatabaseTime();
 
     public abstract RavenConfiguration GetDatabaseConfiguration();
 
@@ -202,9 +202,9 @@ public abstract class AbstractIndexCreateController
         return ServerStore.Engine.CommandsVersionManager.CanPutCommand(nameof(PutIndexesCommand));
     }
 
-    public IndexBatchScope CreateIndexBatch()
+    public IndexBatchScope CreateIndexBatch(Action<(long Index, PutIndexesCommand SavedCommand)> onBatchSaved = null)
     {
-        return new IndexBatchScope(this, ServerStore, ServerStore.LicenseManager.GetNumberOfUtilizedCores());
+        return new IndexBatchScope(this, ServerStore, ServerStore.LicenseManager.GetNumberOfUtilizedCores(), onBatchSaved);
     }
 
     private void ValidateAnalyzers(IndexDefinition definition)
@@ -286,34 +286,38 @@ public abstract class AbstractIndexCreateController
         private readonly AbstractIndexCreateController _controller;
         private readonly ServerStore _serverStore;
         private readonly int _numberOfUtilizedCores;
+        private readonly Action<(long Index, PutIndexesCommand SavedCommand)> _onBatchSaved;
 
         private PutIndexesCommand _command;
         private readonly IndexDeploymentMode _defaultAutoDeploymentMode;
         private readonly IndexDeploymentMode _defaultStaticDeploymentMode;
+        private readonly int _historyRevisionsNumber;
 
-        public IndexBatchScope([System.Diagnostics.CodeAnalysis.NotNull] AbstractIndexCreateController controller, [NotNull] ServerStore serverStore, int numberOfUtilizedCores)
+        public IndexBatchScope([System.Diagnostics.CodeAnalysis.NotNull] AbstractIndexCreateController controller, [NotNull] ServerStore serverStore, int numberOfUtilizedCores, Action<(long Index, PutIndexesCommand SavedCommand)> onBatchSaved)
         {
             _controller = controller ?? throw new ArgumentNullException(nameof(controller));
             _serverStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
             _numberOfUtilizedCores = numberOfUtilizedCores;
+            _onBatchSaved = onBatchSaved;
 
             var configuration = controller.GetDatabaseConfiguration();
 
             _defaultAutoDeploymentMode = configuration.Indexing.AutoIndexDeploymentMode;
             _defaultStaticDeploymentMode = configuration.Indexing.StaticIndexDeploymentMode;
+            _historyRevisionsNumber = configuration.Indexing.HistoryRevisionsNumber;
         }
 
-        public async ValueTask AddIndexAsync(IndexDefinitionBaseServerSide definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
+        public async ValueTask AddIndexAsync(IndexDefinitionBaseServerSide definition, string source, DateTime createdAt, string raftRequestId)
         {
             if (_command == null)
-                _command = new PutIndexesCommand(_controller.GetDatabaseName(), source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
+                _command = new PutIndexesCommand(_controller.GetDatabaseName(), source, createdAt, raftRequestId, _historyRevisionsNumber, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
 
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
             if (definition is MapIndexDefinition indexDefinition)
             {
-                await AddIndexAsync(indexDefinition.IndexDefinition, source, createdAt, raftRequestId, revisionsToKeep);
+                await AddIndexAsync(indexDefinition.IndexDefinition, source, createdAt, raftRequestId);
                 return;
             }
 
@@ -325,10 +329,10 @@ public abstract class AbstractIndexCreateController
             _command.Auto.Add(PutAutoIndexCommand.GetAutoIndexDefinition(autoDefinition, indexType));
         }
 
-        public async ValueTask AddIndexAsync(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
+        public async ValueTask AddIndexAsync(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId)
         {
             if (_command == null)
-                _command = new PutIndexesCommand(_controller.GetDatabaseName(), source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
+                _command = new PutIndexesCommand(_controller.GetDatabaseName(), source, createdAt, raftRequestId, _historyRevisionsNumber, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
 
             await _controller.ValidateStaticIndexAsync(definition);
 
@@ -381,6 +385,8 @@ public abstract class AbstractIndexCreateController
                 {
                     ThrowIndexCreationException(toe, $". Operation timed out after: {timeout}.");
                 }
+
+                _onBatchSaved?.Invoke((index, _command));
             }
             finally
             {

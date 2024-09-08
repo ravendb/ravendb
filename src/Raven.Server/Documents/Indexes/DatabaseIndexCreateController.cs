@@ -20,7 +20,7 @@ public class DatabaseIndexCreateController : AbstractIndexCreateController
 
     protected override string GetDatabaseName() => _database.Name;
 
-    protected override SystemTime GetDatabaseTime() => _database.Time;
+    public override SystemTime GetDatabaseTime() => _database.Time;
 
     public override RavenConfiguration GetDatabaseConfiguration() => _database.Configuration;
 
