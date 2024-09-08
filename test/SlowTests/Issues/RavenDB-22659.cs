@@ -206,7 +206,7 @@ namespace SlowTests.Issues
 
                 using (var store2 = new DocumentStore { Database = db, Urls = new[] { revivedNode.WebUrl }, Conventions = new DocumentConventions { DisableTopologyUpdates = true } }.Initialize())
                 {
-                    var val = await WaitForValueAsync(async () => await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName)) != null, true);
+                    var val = await WaitForValueAsync(async () => await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName)) != null, true, 30_000);
                     Assert.True(val);
 
                     var deleteException = await Assert.ThrowsAsync<RavenException>(async () =>

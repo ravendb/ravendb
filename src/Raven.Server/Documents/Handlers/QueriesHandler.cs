@@ -570,7 +570,7 @@ namespace Raven.Server.Documents.Handlers
                 Database,
                 indexName,
                 operationType,
-                onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token);
+                onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token: token);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

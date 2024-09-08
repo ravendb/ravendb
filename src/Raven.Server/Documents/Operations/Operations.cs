@@ -101,8 +101,8 @@ namespace Raven.Server.Documents.Operations
             Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
             long id,
             IOperationDetailedDescription detailedDescription = null,
-            OperationCancelToken token = null,
-            string databaseName = null)
+            string resourceName = null,
+            OperationCancelToken token = null)
         {
             var operationState = new OperationState
             {
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Operations
                 Description = operationDescription,
                 Token = token,
                 State = operationState,
-                DatabaseName = databaseName
+                DatabaseName = resourceName
             };
 
             object locker = new object();
