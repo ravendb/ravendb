@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -26,7 +25,8 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.Replication | RavenTestCategory.TimeSeries | RavenTestCategory.ExpirationRefresh)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
         public async Task DeleteExpiredDocumentWithBigTimeSeriesShouldNotCauseReplicationToBreak(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
@@ -87,7 +87,8 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -109,7 +110,7 @@ namespace SlowTests.Issues
                 var mapIndex = new UsersTimeSeriesMapIndex();
                 await mapIndex.ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(2, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 2));
 
@@ -121,14 +122,15 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 0));
             }
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleDocuments(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -156,7 +158,7 @@ namespace SlowTests.Issues
                 var mapIndex = new UsersTimeSeriesMapIndex();
                 await mapIndex.ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(4, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 4));
 
@@ -169,14 +171,15 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(2, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 2));
             }
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleDocuments2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -204,7 +207,7 @@ namespace SlowTests.Issues
                 var mapIndex = new UsersTimeSeriesMapIndex();
                 await mapIndex.ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(4, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 4));
 
@@ -220,14 +223,15 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 0));
             }
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleDocuments3(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -255,7 +259,7 @@ namespace SlowTests.Issues
                 var mapIndex = new UsersTimeSeriesMapIndex();
                 await mapIndex.ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(4, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 4));
 
@@ -274,14 +278,15 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(1, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 1));
             }
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleSegments(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -310,7 +315,7 @@ namespace SlowTests.Issues
                 var mapIndex = new UsersTimeSeriesMapIndex();
                 await mapIndex.ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(1000, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 1000));
 
@@ -322,14 +327,15 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 0));
             }
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleSegments2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -358,7 +364,7 @@ namespace SlowTests.Issues
                 var mapIndex = new UsersTimeSeriesMapIndex();
                 await mapIndex.ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(1000, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 1000));
 
@@ -374,7 +380,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 0));
 
@@ -390,7 +396,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(1000, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 1000));
 
@@ -401,15 +407,15 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 0));
-
             }
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeriesAfterRetention(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -433,7 +439,7 @@ namespace SlowTests.Issues
                 var mapIndex = new UsersTimeSeriesMapIndex();
                 await mapIndex.ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(2, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 2));
 
@@ -460,7 +466,7 @@ namespace SlowTests.Issues
                     Assert.Null(entries);
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(mapIndex.IndexName)).EntriesCount, 0));
             }
@@ -475,7 +481,8 @@ namespace SlowTests.Issues
                 const string id = "users/1";
                 const string timeSeriesName = "Count";
 
-                await new UsersTimeSeriesMapReduceIndex().ExecuteAsync(store);
+                var index = new UsersTimeSeriesMapReduceIndex();
+                await index.ExecuteAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -488,7 +495,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -498,8 +505,6 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.Advanced.WaitForIndexesAfterSaveChanges();
-
                     session.TimeSeriesFor(id, timeSeriesName).Delete();
                     await session.SaveChangesAsync();
                 }
@@ -507,15 +512,14 @@ namespace SlowTests.Issues
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 await database.TombstoneCleaner.ExecuteCleanup();
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
                     var entries = await session.TimeSeriesFor(id, timeSeriesName).GetAsync();
                     Assert.Null(entries);
 
-                    var usersCount = await session.Query<User, UsersTimeSeriesMapReduceIndex>().CountAsync();
-                    Assert.Equal(0, usersCount);
+                    Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, 0));
                 }
             }
         }
@@ -532,7 +536,8 @@ namespace SlowTests.Issues
                 var now1 = RavenTestHelper.UtcToday;
                 var now2 = now1.AddMinutes(1);
 
-                await new UsersTimeSeriesMapReduceIndex().ExecuteAsync(store);
+                var index = new UsersTimeSeriesMapReduceIndex();
+                await index.ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -544,7 +549,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -575,16 +580,9 @@ namespace SlowTests.Issues
                     Assert.Null(entries);
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    var entries = await session.TimeSeriesFor(id, tsName).GetAsync();
-                    Assert.Null(entries);
-
-                    var usersCount = await session.Query<User, UsersTimeSeriesMapReduceIndex>().CountAsync();
-                    Assert.Equal(0, usersCount);
-                }
+                Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, 0));
             }
         }
 
