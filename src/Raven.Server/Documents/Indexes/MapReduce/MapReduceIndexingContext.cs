@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public Dictionary<ulong, MapReduceResultsStore> StoreByReduceKeyHash = new();
         public Dictionary<string, long> ProcessedDocEtags = new();
         public Dictionary<string, long> ProcessedTombstoneEtags = new();
+        public Dictionary<string, long> ProcessedTimeSeriesDeletedRangeEtags = new();
         public readonly HashSet<long> FreedPages = new();
 
         public long NextMapResultId;
@@ -43,6 +44,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             ReducePhaseTree = null;
             ProcessedDocEtags.Clear();
             ProcessedTombstoneEtags.Clear();
+            ProcessedTimeSeriesDeletedRangeEtags.Clear();
             StoreByReduceKeyHash.Clear();
             FreedPages.Clear();
         }

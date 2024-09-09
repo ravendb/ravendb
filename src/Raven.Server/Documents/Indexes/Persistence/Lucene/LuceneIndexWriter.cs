@@ -64,6 +64,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexWriter.DeleteDocuments(term, state);
         }
 
+        public void DeleteTimeSeries(Term term, IState state)
+        {
+            using var reader = _indexWriter.GetReader(state);
+            using var termsEnumerator = reader.Terms(term, state);
+            
+            while (termsEnumerator.Term != null)
+            {
+                if (termsEnumerator.Term.Text.Contains(term.Text, StringComparison.OrdinalIgnoreCase) == false)
+                    return;
+
+                // found by prefix
+                _indexWriter.DeleteDocuments(termsEnumerator.Term, state);
+
+                if (termsEnumerator.Next(state) == false)
+                    return;
+            }
+        }
+
         public int EntriesCount(IState state)
         {
             return _indexWriter.NumDocs(state);
