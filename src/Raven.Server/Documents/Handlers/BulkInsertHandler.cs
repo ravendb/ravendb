@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Handlers
 
                                     if (commandData.Type == CommandType.AttachmentPUT)
                                     {
-                                        commandData.AttachmentStream = await WriteAttachment(commandData.ContentLength, parser.GetBlob(commandData.ContentLength));
+                                        commandData.AttachmentStream = await WriteAttachment(commandData.ContentLength, parser.GetBlob(commandData.ContentLength), token);
                                     }
 
                                     (long size, int opsCount) = GetSizeAndOperationsCount(commandData);
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Handlers
 
         private List<StreamsTempFile> _streamsTempFiles;
 
-        private async Task<BatchHandler.MergedBatchCommand.AttachmentStream> WriteAttachment(long size, Stream stream)
+        private async Task<BatchHandler.MergedBatchCommand.AttachmentStream> WriteAttachment(long size, Stream stream, CancellationToken token)
         {
             var attachmentStream = new BatchHandler.MergedBatchCommand.AttachmentStream();
 
@@ -238,8 +238,8 @@ namespace Raven.Server.Documents.Handlers
 
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             {
-                attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(ctx, stream, attachmentStream.Stream, Database.DatabaseShutdown);
-                await attachmentStream.Stream.FlushAsync();
+                attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(ctx, stream, attachmentStream.Stream, token);
+                await attachmentStream.Stream.FlushAsync(token);
             }
 
             return attachmentStream;
