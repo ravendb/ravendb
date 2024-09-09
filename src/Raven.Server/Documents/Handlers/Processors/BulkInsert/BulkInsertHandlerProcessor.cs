@@ -54,11 +54,11 @@ internal sealed class BulkInsertHandlerProcessor: AbstractBulkInsertHandlerProce
         return _database.DocumentsStorage.AttachmentsStorage.GetTempFile("bulk-insert");
     }
 
-    protected override async ValueTask<string> CopyAttachmentStream(Stream sourceStream, Stream attachmentStream)
+    protected override async ValueTask<string> CopyAttachmentStreamAsync(Stream sourceStream, Stream attachmentStream, CancellationToken token)
     {
         using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
         {
-            var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(ctx, sourceStream, attachmentStream, _database.DatabaseShutdown);
+            var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(ctx, sourceStream, attachmentStream, token);
             return hash;
         }
     }
