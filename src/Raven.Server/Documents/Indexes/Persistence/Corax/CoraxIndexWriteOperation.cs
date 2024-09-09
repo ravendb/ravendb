@@ -170,7 +170,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using (Stats.DeleteStats.Start())
                 _indexWriter.TryDeleteEntry(key.AsReadOnlySpan());
         }
-        
+
+        public override void DeleteTimeSeries(LazyStringValue docId, LazyStringValue key, IndexingStatsScope stats)
+        {
+            // Lucene method
+        }
+
         /// <summary>
         /// Should be called to delete whole entry or entires, not only one field.
         /// </summary>

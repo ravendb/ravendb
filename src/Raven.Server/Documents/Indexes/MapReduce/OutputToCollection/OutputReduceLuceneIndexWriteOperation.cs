@@ -46,6 +46,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 _outputScope.Delete(key, stats);
         }
 
+        public override void DeleteTimeSeries(LazyStringValue docId, LazyStringValue key, IndexingStatsScope stats)
+        {
+            if (_outputScope.IsActive)
+                base.DeleteTimeSeries(docId, key, stats);
+            else
+                _outputScope.Delete(key, stats);
+        }
+
         public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
         {
             if (_outputScope.IsActive)
