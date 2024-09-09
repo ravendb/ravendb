@@ -2187,6 +2187,9 @@ namespace Raven.Server.Documents
 
             if (tombstoneKey[tombstoneKey.Size - ConflictedTombstoneOverhead] == SpecialChars.RecordSeparator)
             {
+                if (tombstoneKey.Size - ConflictedTombstoneOverhead != lowerId.Size)
+                    return false;
+
                 return Memory.CompareInline(tombstoneKey.Content.Ptr, lowerId.Content.Ptr, lowerId.Size) == 0;
             }
 
