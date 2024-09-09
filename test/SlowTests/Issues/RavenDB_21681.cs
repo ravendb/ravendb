@@ -475,7 +475,8 @@ namespace SlowTests.Issues
                 const string id = "users/1";
                 const string timeSeriesName = "Count";
 
-                await new UsersTimeSeriesMapReduceIndex().ExecuteAsync(store);
+                var index = new UsersTimeSeriesMapReduceIndex();
+                await index.ExecuteAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -498,8 +499,6 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.Advanced.WaitForIndexesAfterSaveChanges();
-
                     session.TimeSeriesFor(id, timeSeriesName).Delete();
                     await session.SaveChangesAsync();
                 }
@@ -514,8 +513,7 @@ namespace SlowTests.Issues
                     var entries = await session.TimeSeriesFor(id, timeSeriesName).GetAsync();
                     Assert.Null(entries);
 
-                    var usersCount = await session.Query<User, UsersTimeSeriesMapReduceIndex>().CountAsync();
-                    Assert.Equal(0, usersCount);
+                    Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, 0));
                 }
             }
         }
@@ -532,7 +530,8 @@ namespace SlowTests.Issues
                 var now1 = RavenTestHelper.UtcToday;
                 var now2 = now1.AddMinutes(1);
 
-                await new UsersTimeSeriesMapReduceIndex().ExecuteAsync(store);
+                var index = new UsersTimeSeriesMapReduceIndex();
+                await index.ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -569,12 +568,6 @@ namespace SlowTests.Issues
 
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    var entries = await session.TimeSeriesFor(id, tsName).GetAsync();
-                    Assert.Null(entries);
-                }
-
                 Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
@@ -582,8 +575,7 @@ namespace SlowTests.Issues
                     var entries = await session.TimeSeriesFor(id, tsName).GetAsync();
                     Assert.Null(entries);
 
-                    var usersCount = await session.Query<User, UsersTimeSeriesMapReduceIndex>().CountAsync();
-                    Assert.Equal(0, usersCount);
+                    Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, 0));
                 }
             }
         }
