@@ -1106,14 +1106,39 @@ namespace Raven.Server.ServerWide
             if (state.From == RachisState.Passive || state.To == RachisState.Passive ||
                 state.From == RachisState.Candidate || state.To == RachisState.Candidate)
             {
-                ThreadPool.QueueUserWorkItem(async _ =>
-                {
-                    await RefreshOutgoingTasksAsync();
-                }, null);
+                // a special case when we have a transition of candidate -> candidate, we should skip the refresh
+                if (state.From == RachisState.Candidate && state.To == RachisState.Candidate)
+                    return;
+
+                Task.Run(RefreshOutgoingTasksAsync, ServerShutdown);
             }
         }
 
+        private readonly DeferrableTimeout.Promise _current = new DeferrableTimeout.Promise(TimeSpan.FromSeconds(15));
         private async Task RefreshOutgoingTasksAsync()
+        {
+            var r = _current.ScheduleOrDefer(out var task);
+            switch (r)
+            {
+                case DeferrableTimeout.Promise.Result.Scheduled:
+                    try
+                    {
+                        await task;
+                        await RefreshOutgoingTasksAsyncInternal();
+                    }
+                    finally
+                    {
+                        _current.Reset();
+                    }
+                    break;
+                case DeferrableTimeout.Promise.Result.Deferred:
+                    return;
+                default:
+                    throw new ArgumentOutOfRangeException($"Not supported result type '{r}'");
+            }
+        }
+
+        private async Task RefreshOutgoingTasksAsyncInternal()
         {
             var tasks = new Dictionary<string, Task<DocumentDatabase>>();
             foreach (var db in DatabasesLandlord.DatabasesCache)
@@ -1146,6 +1171,7 @@ namespace Raven.Server.ServerWide
                     }
                 }
             }
+
         }
 
         public Dictionary<string, NodeStatus> GetNodesStatuses()

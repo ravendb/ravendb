@@ -334,6 +334,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         LastProcessedTombstoneEtag = IndexStorage.ReadLastEtag(tx,
                             IndexStorage.IndexSchema.EtagsTombstoneTree,
                             collectionSlice
+                        ),
+                        LastProcessedTimeSeriesDeletedRangeEtag = IndexStorage.ReadLastEtag(tx,
+                            IndexStorage.IndexSchema.EtagsTimeSeriesDeletedRangeTree,
+                            collectionSlice
                         )
                     };
 

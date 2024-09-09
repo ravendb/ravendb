@@ -10,12 +10,14 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Indexes.Workers.Cleanup;
 using Raven.Server.Documents.Indexes.Workers.TimeSeries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.TimeSeries;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -91,8 +93,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         {
             var workers = new List<IIndexingWork>
             {
-                new CleanupDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
-            };
+                new CleanupDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null),
+                new CleanupTimeSeries(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
+        };
 
             if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
                 workers.Add(_handleCompareExchangeReferences = new HandleCompareExchangeTimeSeriesReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
@@ -181,12 +184,23 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return result;
         }
 
+        public override long ReadLastProcessedTombstoneEtag(RavenTransaction transaction, string collection) =>
+            _indexStorage.ReadLastProcessedTimeSeriesDeletedRangeEtag(transaction, collection);
+
         public override long GetLastItemEtagInCollection(QueryOperationContext queryContext, string collection)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
                 return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(queryContext.Documents);
 
             return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(queryContext.Documents, collection);
+        }
+
+        public override long GetLastTombstoneEtagInCollection(QueryOperationContext queryContext, string collection)
+        {
+            if (collection == Constants.Documents.Collections.AllDocumentsCollection)
+                return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesDeletedRangesEtag(queryContext.Documents);
+
+            return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesDeletedRangesEtag(queryContext.Documents, collection);
         }
 
         public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
@@ -201,6 +215,15 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             return new StaticIndexItemEnumerator<DynamicTimeSeriesSegment>(items, filter: null, _compiled.Maps[collection], collection, stats, type);
+        }
+
+        protected override IndexItem GetTombstoneByEtag(QueryOperationContext queryContext, long etag)
+        {
+            var tombstone = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesDeletedRange(queryContext.Documents, etag);
+            if (tombstone == null)
+                return default;
+
+            return new TimeSeriesDeletedRangeIndexItem(tombstone.Key, tombstone.DocId, tombstone.Etag, tombstone.Name, sizeof(long) * 2, tombstone);
         }
 
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
@@ -281,8 +304,14 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         {
             progressStats.NumberOfItemsToProcess +=
                 DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount,overallDuration);
+                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount, overallDuration);
             progressStats.TotalNumberOfItems += totalCount;
+
+
+            progressStats.NumberOfTimeSeriesDeletedRangesToProcess +=
+                DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(queryContext.Documents, collectionName,
+                    progressStats.LastProcessedTimeSeriesDeletedRangeEtag, out totalCount, overallDuration);
+            progressStats.TotalNumberOfTimeSeriesDeletedRanges += totalCount;
         }
     }
 }

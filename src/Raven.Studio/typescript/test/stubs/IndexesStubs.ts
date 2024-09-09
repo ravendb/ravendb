@@ -81,6 +81,9 @@ export class IndexesStubs {
                 NumberOfTombstonesToProcess: 2000,
                 TotalNumberOfItems: 3000,
                 TotalNumberOfTombstones: 5000,
+                LastProcessedTimeSeriesDeletedRangeEtag: 5,
+                NumberOfTimeSeriesDeletedRangesToProcess: 10,
+                TotalNumberOfTimeSeriesDeletedRanges: 20,
             },
             SecondCollection: {
                 LastProcessedItemEtag: 5,
@@ -89,6 +92,9 @@ export class IndexesStubs {
                 NumberOfTombstonesToProcess: 300,
                 TotalNumberOfItems: 3000,
                 TotalNumberOfTombstones: 5000,
+                LastProcessedTimeSeriesDeletedRangeEtag: 5,
+                NumberOfTimeSeriesDeletedRangesToProcess: 10,
+                TotalNumberOfTimeSeriesDeletedRanges: 20,
             },
         };
     }

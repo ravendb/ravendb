@@ -1708,7 +1708,8 @@ namespace Raven.Server.Documents
 
                 collectionName = ExtractCollectionName(context, doc.Data);
 
-                var flags = GetFlagsFromOldDocument(newFlags, doc.Flags, nonPersistentFlags);
+                var flags = GetFlagsFromOldDocumentForDelete(newFlags, doc.Flags, nonPersistentFlags);
+
                 var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName, flags), collectionName.GetTableName(CollectionTableType.Documents));
 
                 long etag;
@@ -2145,6 +2146,9 @@ namespace Raven.Server.Documents
 
             if (tombstoneKey[tombstoneKey.Size - ConflictedTombstoneOverhead] == SpecialChars.RecordSeparator)
             {
+                if (tombstoneKey.Size - ConflictedTombstoneOverhead != lowerId.Size)
+                    return false;
+
                 return Memory.CompareInline(tombstoneKey.Content.Ptr, lowerId.Content.Ptr, lowerId.Size) == 0;
             }
 
@@ -2644,7 +2648,7 @@ namespace Raven.Server.Documents
             return ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, newEtag);
         }
 
-        public DocumentFlags GetFlagsFromOldDocument(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
+        public DocumentFlags GetFlagsFromOldDocumentForPut(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
         {
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return newFlags;
@@ -2687,6 +2691,15 @@ namespace Raven.Server.Documents
             }
 
             return newFlags;
+        }
+
+        public DocumentFlags GetFlagsFromOldDocumentForDelete(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
+        {
+            var flags = GetFlagsFromOldDocumentForPut(newFlags, oldFlags, nonPersistentFlags);
+            if (oldFlags.Contain(DocumentFlags.Artificial))
+                flags |= DocumentFlags.Artificial;
+
+            return flags;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

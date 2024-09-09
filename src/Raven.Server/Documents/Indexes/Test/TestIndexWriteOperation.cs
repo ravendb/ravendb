@@ -73,6 +73,11 @@ public sealed class TestIndexWriteOperation : IndexWriteOperationBase
         _inner.Delete(key, stats);
     }
 
+    public override void DeleteTimeSeries(LazyStringValue docId, LazyStringValue key, IndexingStatsScope stats)
+    {
+        _inner.DeleteTimeSeries(docId, key, stats);
+    }
+
     public override void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats)
     {
         _inner.DeleteBySourceDocument(sourceDocumentId, stats);
