@@ -574,15 +574,15 @@ namespace SlowTests.Issues
 
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
+                await Indexes.WaitForIndexingAsync(store);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var entries = await session.TimeSeriesFor(id, tsName).GetAsync();
                     Assert.Null(entries);
+
+                    Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, 0));
                 }
-
-                await Indexes.WaitForIndexingAsync(store);
-
-                Assert.Equal(0, await WaitForValueAsync(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, 0));
             }
         }
 
