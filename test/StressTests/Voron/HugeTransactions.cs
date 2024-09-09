@@ -241,7 +241,7 @@ namespace StressTests.Voron
             pager.EnsureContinuous(ref state, 0, bufferSizeInPages);
 
             Console.WriteLine($"AcquirePagePointer. Name: {scratchName}");
-            buffer = pager.AcquirePagePointer(state, ref txState, 0);
+            buffer = state.WriteAddress;
 
             return (pager, state);
         }
