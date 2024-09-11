@@ -440,9 +440,42 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
 
                 // since endpoint returns information about subscription from (orchestrator <-> target node) point of view
                 // we only update subscriptions info when data comes from non-sharded db or sharded db but at node level
+                if (!sharded || (sharded && incomingLocation.shardNumber != null)) {
+                    const tasksWithoutSubscriptions = newTasks.filter((x) => x.shared.taskType !== "Subscription");
 
-                if (!sharded || (sharded && incomingLocation.shardNumber != null))
-                    draft.tasks = newTasks.filter((x) => x.shared.taskType !== "Subscription");
+                    tasksWithoutSubscriptions.forEach((task) => {
+                        const draftTaskIdx = draft.tasks.findIndex((x) => x.shared.taskId === task.shared.taskId);
+
+                        if (draftTaskIdx !== -1) {
+                            const draftNodeInfoIdx = draft.tasks[draftTaskIdx].nodesInfo.findIndex((x) =>
+                                databaseLocationComparator(x.location, incomingLocation)
+                            );
+                            const nodeInfoIdx = task.nodesInfo.findIndex((x) =>
+                                databaseLocationComparator(x.location, incomingLocation)
+                            );
+
+                            if (draftNodeInfoIdx !== -1 && nodeInfoIdx !== -1) {
+                                // The task is already in the state so we update the node info
+                                draft.tasks[draftTaskIdx].nodesInfo[draftNodeInfoIdx] = task.nodesInfo[nodeInfoIdx];
+                            }
+                        } else {
+                            // The task is not in the state so we add it
+                            draft.tasks.push(task);
+                        }
+                    });
+
+                    // Clean deleted tasks
+                    draft.tasks.forEach((task) => {
+                        if (
+                            !newTasks.some((x) => x.shared.taskId === task.shared.taskId) &&
+                            task.nodesInfo.find((x) => databaseLocationComparator(x.location, incomingLocation))
+                                .status !== "idle"
+                        ) {
+                            const draftTaskIdx = draft.tasks.findIndex((x) => x.shared.taskId === task.shared.taskId);
+                            draft.tasks.splice(draftTaskIdx, 1);
+                        }
+                    });
+                }
 
                 if (!sharded || (sharded && incomingLocation.shardNumber == null)) {
                     draft.subscriptions = newTasks.filter(
