@@ -1,6 +1,8 @@
 <div class="flex-vertical absolute-fill content-margin admin-logs">
     <div class="form-inline flex-vertical gap-4">
         <div class="flex-horizontal">
+            <div data-bind="react: configButton"></div>
+
             <div class="btn-group-label" data-label="Log on this view" role="group">
             <button class="btn btn-primary" data-bind="click: pauseLogs, visible: liveClient">
                 <i class="icon-pause"></i> <span>Pause</span>
@@ -97,11 +99,6 @@
                                             <span class="sr-only">Toggle Dropdown</span>
                                         </button>
                                         <ul class="dropdown-menu" role="menu">
-                                            <!-- ko foreach: possibleLogModes -->
-                                            <li class="flex-horizontal">
-                                                <a class="flex-grow" href="#" data-bind="text: $data, click: _.partial($root.setAdminLogMode, $data)"></a>
-                                            </li>
-                                            <!-- /ko -->
                                             <li class="divider"></li>
                                             <li><a data-bind="click: _.partial($root.setAdminLogMode, 'None')" href="#">None</a></li>
                                         </ul>
@@ -129,17 +126,6 @@
                                         <span class="text-default" data-bind="visible: !$root.trafficWatchEnabled()">Disabled</span>
                                     </div>
                                 </div>
-                                    <div class="flex-vertical">
-                                        <label class="small-label">Microsoft logs</label>
-                                        <div class="d-flex align-items-center gap-1">
-                                            <button type="button" class="btn btn-default btn-sm close-panel" data-bind="click: $root.configureMicrosoftLogs">
-                                                <i class="icon-settings"></i>
-                                                <span>Configure</span>
-                                            </button>
-                                            <span class="text-success" data-bind="visible: $root.isMicrosoftLogsEnabled()">Active</span>
-                                            <span class="text-default" data-bind="visible: !$root.isMicrosoftLogsEnabled()">Disabled</span>
-                                        </div>
-                                    </div>
                                     <div>
                                         <label class="small-label">Event Listener</label>
                                         <div class="d-flex align-items-center gap-1">
