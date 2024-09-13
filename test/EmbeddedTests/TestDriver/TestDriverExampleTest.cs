@@ -35,13 +35,13 @@ namespace EmbeddedTests.TestDriver
                 throw new InvalidOperationException($"Could not find '{testDllFile.FullName}'.");
 
 #if DEBUG
-            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Debug/net6.0";
+            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Debug/net8.0";
             if (Directory.Exists(serverDirectory) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                serverDirectory = @"../../../../../src/Raven.Server/bin/Debug/net6.0";
+                serverDirectory = @"../../../../../src/Raven.Server/bin/Debug/net8.0";
 #else
-            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Release/net6.0";
+            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Release/net8.0";
             if (Directory.Exists(serverDirectory) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                serverDirectory = @"../../../../../src/Raven.Server/bin/Release/net6.0";
+                serverDirectory = @"../../../../../src/Raven.Server/bin/Release/net8.0";
 #endif
 
             var path = Path.Combine(testDllFile.DirectoryName, serverDirectory);

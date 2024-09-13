@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/runtime-deps:7.0-jammy-arm32v7
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-jammy-arm32v7
 
 RUN apt-get update \
     && apt-get install -y \
