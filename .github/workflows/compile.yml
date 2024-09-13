@@ -9,18 +9,18 @@ jobs:
     name: Compile Server & Studio
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Grep .Net version
         run: |
           dotnet_version=$(grep '<TargetFramework>' < src/Raven.Server/Raven.Server.csproj | tr -cd [:digit:].)
           echo "DOTNET_VERSION=${dotnet_version}.x" >> $GITHUB_ENV
       - name: Install 3.1 sdk
         if: startsWith( env.DOTNET_VERSION, '3' )
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 3.1.x
       - name: Setup .NET 8
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
       - name: Restore
@@ -38,13 +38,13 @@ jobs:
 
       - name: Upload artifact status_server
         if: always()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           name: pass_status_server
           path: status_server.txt
 
       - name: Setup nodejs
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: '14'
       - name: Restore
@@ -60,7 +60,7 @@ jobs:
         working-directory: src/Raven.Studio
 
       - name: Upload artifact status_studio
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           name: pass_status_studio
           path: src/Raven.Studio/status_studio.txt
@@ -72,15 +72,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Download artifacts 1
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v4
         with:
           name: pass_status_server
 
       - name: Download artifacts 2
         if: needs.job1.result == 'success'
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v4
         with:
           name: pass_status_studio
         
@@ -93,7 +93,7 @@ jobs:
           PRTITLE: ${{ github.event.pull_request.title }}
       
       - name: Upload artifact slack_message
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           name: notification
           path: notificationMessage.txt
