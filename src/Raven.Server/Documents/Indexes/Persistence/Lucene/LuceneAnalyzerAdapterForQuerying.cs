@@ -1,15 +1,31 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using Corax.Pipeline;
+using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
+using Raven.Server.Json;
 using Analyzer = Corax.Analyzers.Analyzer;
 using LuceneAnalyzer = Lucene.Net.Analysis.Analyzer;
+using Token = Corax.Pipeline.Token;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene;
 
 internal sealed unsafe class LuceneAnalyzerAdapterForQuerying : LuceneAnalyzerAdapter
 {
+    [ThreadStatic]
+    private static LazyStringReader LazyStringReader;
+
+    [ThreadStatic]
+    private static TokenStream Stream;
+
+    [ThreadStatic]
+    private static IOffsetAttribute Offset;
+
+    [ThreadStatic]
+    private static ITermAttribute Term;
+    
     private LuceneAnalyzerAdapterForQuerying(LuceneAnalyzer analyzer,
         delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8,
         delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> functionUtf16) : base(analyzer, functionUtf8, functionUtf16)
@@ -18,26 +34,35 @@ internal sealed unsafe class LuceneAnalyzerAdapterForQuerying : LuceneAnalyzerAd
 
     private static void Run(Analyzer adapter, ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens, ref byte[] buffer)
     {
-        var @this = (LuceneAnalyzerAdapterForQuerying)adapter;
-        var analyzer = @this.Analyzer;
+        var self = (LuceneAnalyzerAdapterForQuerying)adapter;
+        LazyStringReader ??= new();
+        var analyzer = self.Analyzer;
+        var term = Term;
+        var offset = Offset;
 
-        var data = Encoding.UTF8.GetString(source);
-        using (var reader = new StringReader(data))
+        fixed (byte* pText = source)
         {
+            TextReader reader = LazyStringReader.GetTextReader(pText, source.Length);
+
             int currentOutputIdx = 0;
             var currentTokenIdx = 0;
 
             var stream = analyzer.ReusableTokenStream(null, reader);
+            if (ReferenceEquals(stream, Stream) == false)
+            {
+                Stream = stream;
+                Offset = offset = stream.GetAttribute<IOffsetAttribute>();
+                Term = term = stream.GetAttribute<ITermAttribute>();
+            }
             do
             {
-                var offset = stream.GetAttribute<IOffsetAttribute>();
                 int start = offset.StartOffset;
                 int length = offset.EndOffset - start;
                 if (length == 0)
                     continue; // We skip any empty token. 
 
-                var term = stream.GetAttribute<ITermAttribute>();
-                int outputLength = Encoding.UTF8.GetBytes(term.Term, output.Slice(currentOutputIdx));
+                ReadOnlySpan<char> termChars = term.TermBuffer();
+                int outputLength = Encoding.UTF8.GetBytes(termChars[..term.TermLength()], output[currentOutputIdx..]);
 
                 ref var token = ref tokens[currentTokenIdx];
                 token.Offset = currentOutputIdx;
@@ -49,8 +74,8 @@ internal sealed unsafe class LuceneAnalyzerAdapterForQuerying : LuceneAnalyzerAd
                 currentTokenIdx++;
             } while (stream.IncrementToken());
 
-            output = output.Slice(0, currentOutputIdx);
-            tokens = tokens.Slice(0, currentTokenIdx);
+            output = output[..currentOutputIdx];
+            tokens = tokens[..currentTokenIdx];
         }
     }
 
