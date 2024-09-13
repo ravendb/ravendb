@@ -3,12 +3,12 @@
     <Description>rvn is a CLI utility for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <RuntimeFrameworkVersion>6.0.25</RuntimeFrameworkVersion>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeFrameworkVersion>8.0.8</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageTags>database;nosql;doc db</PackageTags>
     <PackageProjectUrl>https://ravendb.net</PackageProjectUrl>
-    <RuntimeIdentifiers>win7-x64;win8-x64;win81-x64;win10-x64;win7-x86;win8-x86;win81-x86;win10-x86;ubuntu.14.04-x64;ubuntu.16.04-x64;ubuntu.18.04-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers>win-x64;win-x86;linux-x64</RuntimeIdentifiers>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
     <DefineConstants>$(DefineConstants);RVN</DefineConstants>
     <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>

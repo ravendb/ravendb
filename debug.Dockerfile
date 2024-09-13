@@ -1,4 +1,4 @@
-﻿FROM mcr.microsoft.com/dotnet/core/sdk:7.0 AS build
+﻿FROM mcr.microsoft.com/dotnet/core/sdk:8.0 AS build
 WORKDIR /app
 
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -

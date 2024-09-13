@@ -1,7 +1,7 @@
 ﻿<Project>
   <PropertyGroup>
     <Version></Version>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>preview</LangVersion>
     <DebugType>embedded</DebugType>
     <PackageIconUrl>http://static.ravendb.net/logo-for-nuget.png</PackageIconUrl>
     <PackageIcon>icon.png</PackageIcon>
@@ -28,7 +28,7 @@
   <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1' OR '$(TargetFramework)' == 'net5.0'">
     <DefineConstants>$(DefineConstants);NETCOREAPP</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0' OR '$(TargetFramework)' == 'net7.0' OR '$(TargetFramework)' == 'net8.0'">
     <DefineConstants>$(DefineConstants);NETCOREAPP;FEATURE_DATEONLY_TIMEONLY_SUPPORT</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == ''">
