@@ -120,7 +120,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         else
         {
-            // v6.1
+            // v6.2
             // "__shardContext" can also be an object, with DocumentIds and Prefixes fields
             // now, in addition to document ids, users can also specify prefixes to query by
 

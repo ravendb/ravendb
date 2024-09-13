@@ -1,4 +1,4 @@
-FROM ravendb/ravendb:6.1-ubuntu-latest
+FROM ravendb/ravendb:6.2-ubuntu-latest
 
 EXPOSE 22 8080 38888
 
