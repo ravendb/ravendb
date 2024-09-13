@@ -63,7 +63,7 @@ public class RavenDB_22534 : RavenTestBase
                 Console.WriteLine(e);
                 throw;
             }
-            Assert.Contains("https://ravendb.net/l/OB9XW4/6.1", indexErrors[0].Errors[0].Error);
+            Assert.Contains("https://ravendb.net/l/OB9XW4/", indexErrors[0].Errors[0].Error);
             Assert.Equal(0, indexErrors[1].Errors.Length);
 
             // force skipping indexing of complex fields
