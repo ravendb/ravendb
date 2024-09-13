@@ -271,10 +271,10 @@ namespace Raven.Server.Web.System
 
                 if (databaseRecord.IsSharded && databaseRecord.Sharding.Prefixed.Count > 0)
                 {
-                    if (ServerStore.Engine.CommandsVersionManager.CurrentClusterMinimalVersion < 61_000)
+                    if (ServerStore.Engine.CommandsVersionManager.CurrentClusterMinimalVersion < 62_000)
                         throw new InvalidOperationException($"Cannot enable Prefixed Sharding for database '{databaseRecord.DatabaseName}'. " +
                                                             $"Some nodes in the cluster are running older versions of RavenDB that do not support the Prefixed Sharding feature. " +
-                                                            $"To use Prefixed Sharding, all cluster nodes must be running version 6.1 or later.");
+                                                            $"To use Prefixed Sharding, all cluster nodes must be running version 6.2 or later.");
                 }
 
                 using (var raw = new RawDatabaseRecord(context, json))
