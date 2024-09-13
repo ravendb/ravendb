@@ -8,7 +8,7 @@
     - based on Windows Nanoserver image (run using Windows containers). 
 
 ### What's new
-RavenDB `v6.1` docker image has been adjusted to run under **a non-root user**, providing far better security.
+RavenDB `v6.2` docker image has been adjusted to run under **a non-root user**, providing far better security.
 Containers are now using RavenDB *.deb package*. More information about how to deal with the breaking changes in the [**migration from 5.4 image**](#what-migration-process-from-54-image-looks-like) section.
 
 
@@ -61,9 +61,9 @@ Optionally *nightly* images can be found at [ravendb/ravendb-nightly](https://hu
 
 You can run RavenDB docker container manually by invoking `docker run`, yet if you don't feel that docker-savvy we recommend using our scripts:
 
-Run Ubuntu-based image: [run-linux.ps1](https://github.com/ravendb/ravendb/blob/v6.1/docker/run-linux.ps1)
+Run Ubuntu-based image: [run-linux.ps1](https://github.com/ravendb/ravendb/blob/v6.2/docker/run-linux.ps1)
 
-Run Windows-based image: [run-nanoserver.ps1](https://github.com/ravendb/ravendb/blob/v6.1/docker/run-nanoserver.ps1)
+Run Windows-based image: [run-nanoserver.ps1](https://github.com/ravendb/ravendb/blob/v6.2/docker/run-nanoserver.ps1)
 
 Above mentioned Powershell scripts are simplifying usage of our images allowing you to pass various switches and options to configure RavenDB inside the container:
 
@@ -123,9 +123,9 @@ to disable RavenDB Setup Wizard.
 
 Dockerfiles that are used to build the images and their assets can be found at the following locations:
 
-- [Ubuntu image](https://github.com/ravendb/ravendb/tree/v6.1/docker/ravendb-ubuntu)
+- [Ubuntu image](https://github.com/ravendb/ravendb/tree/v6.2/docker/ravendb-ubuntu)
 
-- [Windows image](https://github.com/ravendb/ravendb/tree/v6.1/docker/ravendb-nanoserver)
+- [Windows image](https://github.com/ravendb/ravendb/tree/v6.2/docker/ravendb-nanoserver)
 
 #### FAQ
 

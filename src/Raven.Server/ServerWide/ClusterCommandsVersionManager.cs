@@ -185,9 +185,9 @@ namespace Raven.Server.ServerWide
             [nameof(EditDataArchivalCommand)] = 60_000,
 
             [nameof(UpdateResponsibleNodeForTasksCommand)] = UpdateResponsibleNodeForTasksCommand.CommandVersion,
-            [nameof(AddPrefixedShardingSettingCommand)] = 61_000,
-            [nameof(DeletePrefixedShardingSettingCommand)] = 61_000,
-            [nameof(UpdatePrefixedShardingSettingCommand)] = 61_000
+            [nameof(AddPrefixedShardingSettingCommand)] = 62_000,
+            [nameof(DeletePrefixedShardingSettingCommand)] = 62_000,
+            [nameof(UpdatePrefixedShardingSettingCommand)] = 62_000
 
         };
 
