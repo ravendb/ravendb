@@ -3,11 +3,11 @@ name: tests/studio
 on:
   push:
     branches:
-        - v6.2
+        - v7.0
 
   pull_request:
     branches:
-        - v6.2
+        - v7.0
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -28,11 +28,11 @@ namespace Raven.Server.ServerWide
         public static string ReleaseDate =>
             _releaseDate ?? (_releaseDate = RavenVersionAttribute.Instance.ReleaseDateString);
 
-        public const int DevBuildNumber = 62;
+        public const int DevBuildNumber = 70;
 
         public static bool IsNightlyOrDev(long buildVersion)
         {
-            return buildVersion >= 60 && buildVersion < 70;
+            return buildVersion >= 70 && buildVersion < 80;
         }
     }
 }
