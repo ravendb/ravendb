@@ -254,7 +254,7 @@ namespace Raven.Server.NotificationCenter
         {
             return AlertRaised.Create(_notificationCenter.Database, $"Complex field in Corax auto index", $"We have detected a complex field in an auto index. " +
                     $"To avoid higher resources usage when processing JSON objects, the values of these fields will be replaced with 'JSON_VALUE'. " +
-                    $"Please consider querying on individual fields of that object or using a static index. Read more at: https://ravendb.net/l/OB9XW4/6.1", AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning, Source, complexFieldsWarning);
+                    $"Please consider querying on individual fields of that object or using a static index. Read more at: https://ravendb.net/l/OB9XW4/6.2", AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning, Source, complexFieldsWarning);
         }
 
         private AlertRaised GetCpuCreditsExhaustionAlert(CpuCreditsExhaustionWarning cpuCreditsExhaustionWarning)
