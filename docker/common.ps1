@@ -36,7 +36,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
         "x64" { 
             return @(
 #                "$($repo):ubuntu-latest",
-                "$($repo):6.2-ubuntu-latest",
+                "$($repo):7.0-ubuntu-latest",
                 "$($repo):$($version)-ubuntu.22.04-x64"
             )
             break;
@@ -44,7 +44,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
         "arm32v7" {
             return @(
 #                "$($repo):ubuntu-arm32v7-latest",
-                "$($repo):6.2-ubuntu-arm32v7-latest",
+                "$($repo):7.0-ubuntu-arm32v7-latest",
                 "$($repo):$($version)-ubuntu.22.04-arm32v7"
             )
             break;
@@ -52,7 +52,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
         "arm64v8" {
             return @(
 #                "$($repo):ubuntu-arm64v8-latest",
-                "$($repo):6.2-ubuntu-arm64v8-latest",
+                "$($repo):7.0-ubuntu-arm64v8-latest",
                 "$($repo):$($version)-ubuntu.22.04-arm64v8"
                 )
                 break;
@@ -70,7 +70,7 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
             return @(
                 "$($repo):$($version)-windows-1809",
 #                "$($repo):windows-1809-latest",
-                "$($repo):6.2-windows-1809-latest"
+                "$($repo):7.0-windows-1809-latest"
             )
             break;
         }
@@ -78,7 +78,7 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
              return @(
                 "$($repo):$($version)-windows-ltsc2022",
 #                "$($repo):windows-ltsc2022-latest",
-                "$($repo):6.2-windows-ltsc2022-latest"
+                "$($repo):7.0-windows-ltsc2022-latest"
             )
             break;
         }
@@ -96,7 +96,7 @@ function GetManifestTags {
 
     return @(
 #        "${repo}:latest",
-        "${repo}:6.2-latest"
+        "${repo}:7.0-latest"
     )
 }
 
@@ -106,10 +106,10 @@ function GetImageTagsForManifest {
     )
 
     return @(
-        "${repo}:6.2-ubuntu-latest",
-        "${repo}:6.2-ubuntu-arm32v7-latest",
-        "${repo}:6.2-ubuntu-arm64v8-latest",
-        "${repo}:6.2-windows-1809-latest",
-        "${repo}:6.2-windows-ltsc2022-latest"
+        "${repo}:7.0-ubuntu-latest",
+        "${repo}:7.0-ubuntu-arm32v7-latest",
+        "${repo}:7.0-ubuntu-arm64v8-latest",
+        "${repo}:7.0-windows-1809-latest",
+        "${repo}:7.0-windows-ltsc2022-latest"
     )
 }
