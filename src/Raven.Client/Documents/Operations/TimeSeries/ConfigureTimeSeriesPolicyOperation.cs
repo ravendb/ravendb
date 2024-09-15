@@ -75,8 +75,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         }
     }
 
+    /// <inheritdoc cref="ConfigureTimeSeriesPolicyOperation"/>
     public sealed class ConfigureRawTimeSeriesPolicyOperation : ConfigureTimeSeriesPolicyOperation
     {
+        /// <inheritdoc cref="ConfigureTimeSeriesPolicyOperation(string, TimeSeriesPolicy)"/>
         public ConfigureRawTimeSeriesPolicyOperation(string collection, RawTimeSeriesPolicy config) : base(collection, config)
         {
         }
