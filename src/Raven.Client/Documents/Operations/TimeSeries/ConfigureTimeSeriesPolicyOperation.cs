@@ -9,11 +9,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
+    /// <summary>
+    /// Configure a time series policy for a specific collection.
+    /// </summary>
     public class ConfigureTimeSeriesPolicyOperation : IMaintenanceOperation<ConfigureTimeSeriesOperationResult>
     {
         private readonly string _collection;
         private readonly TimeSeriesPolicy _config;
 
+        /// <inheritdoc cref="ConfigureTimeSeriesPolicyOperation"/>
+        /// <param name="collection">The name of the collection for which the time series policy is being configured.</param>
+        /// <param name="config">The time series policy configuration to apply to the collection.</param>
         public ConfigureTimeSeriesPolicyOperation(string collection, TimeSeriesPolicy config)
         {
             _collection = collection;
