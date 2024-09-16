@@ -98,7 +98,7 @@ class connectionStringKafkaModel extends connectionStringModel {
         this.useRavenCertificate(kafkaSettings.UseRavenCertificate);
 
         if (kafkaSettings.ConnectionOptions) {
-            Object.entries(kafkaSettings.ConnectionOptions)
+            Object.entries(kafkaSettings.ConnectionOptions ?? [])
                 .forEach(([key, value]) => {
                     this.connectionOptions.push(new connectionOptionModel(key, value));
                 });

@@ -56,7 +56,7 @@ class clusterTopology {
     private mapNodes(type: clusterNodeType, dict: System.Collections.Generic.Dictionary<string, string>,
                      status: { [key: string]: Raven.Client.Http.NodeStatus; },
                      licenseDetails: { [key: string]: Raven.Server.Commercial.DetailsPerNode; }): Array<clusterNode> {
-        return Object.entries(dict).map(([k, v]) => {
+        return Object.entries(dict ?? []).map(([k, v]) => {
             // node statuses are available for all nodes except current
             const nodeStatus = status ? status[k] : null;
             const connected = nodeStatus ? nodeStatus.Connected : true;

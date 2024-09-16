@@ -90,7 +90,7 @@ abstract class database {
         
         this.indexesCount(incomingCopy.IndexesCount);
         
-        this.deletionInProgress(Object.entries(incomingCopy.DeletionInProgress).map((kv: [string, DeletionInProgressStatus]) => {
+        this.deletionInProgress(Object.entries(incomingCopy.DeletionInProgress ?? []).map((kv: [string, DeletionInProgressStatus]) => {
             return {
                 tag: kv[0],
                 status: kv[1]
