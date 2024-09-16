@@ -430,7 +430,7 @@ class editSubscriptionTask extends shardViewModelBase {
     }
     
     private onIncludesLoaded(includes: dictionary<any>) {
-        Object.entries(includes).forEach(([ id, doc]) => {
+        Object.entries(includes ?? []).forEach(([ id, doc]) => {
             const metadata = doc['@metadata'];
             const collection = (metadata ? metadata["@collection"] : null) || "@unknown";
 

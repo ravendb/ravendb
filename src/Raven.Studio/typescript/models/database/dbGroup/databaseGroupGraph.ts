@@ -690,7 +690,7 @@ class databaseGroupGraph {
             node.status = "Ok"; 
         });
         
-        Object.entries(this.databaseInfoCache.NodesTopology.Status).forEach(([tag, status]) => {
+        Object.entries(this.databaseInfoCache.NodesTopology.Status ?? []).forEach(([tag, status]) => {
             const matchingNode = this.data.databaseNodes.find(x => x.tag === tag);
             //TODO: update this logic once RavenDB-7998 will be completed
             if (matchingNode) {

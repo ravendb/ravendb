@@ -1400,7 +1400,7 @@ class query extends shardViewModelBase {
     }
     
     private onIncludesLoaded(includes: dictionary<any>): void {
-        Object.entries(includes).forEach(([id, doc]) => {
+        Object.entries(includes ?? []).forEach(([id, doc]) => {
             const metadata = doc["@metadata"];
             const collection = (metadata ? metadata["@collection"] : null) || "@unknown";
             
@@ -1435,7 +1435,7 @@ class query extends shardViewModelBase {
     }
     
     private onHighlightingsLoaded(highlightings: dictionary<dictionary<Array<string>>>): void {
-        Object.entries(highlightings).forEach(([fieldName, value]) => {
+        Object.entries(highlightings ?? []).forEach(([fieldName, value]) => {
             let existingPerFieldCache = this.highlightsCache().find(x => x.fieldName() === fieldName);
 
             if (!existingPerFieldCache) {
@@ -1444,7 +1444,7 @@ class query extends shardViewModelBase {
                 this.highlightsCache.push(existingPerFieldCache);
             }
             
-            Object.entries(value).forEach(([key, fragments]) => {
+            Object.entries(value ?? []).forEach(([key, fragments]) => {
                if (!existingPerFieldCache.data.has(key)) {
                    existingPerFieldCache.data.set(key, []);
                } 
