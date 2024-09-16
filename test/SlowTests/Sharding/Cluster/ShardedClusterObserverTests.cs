@@ -632,6 +632,9 @@ namespace SlowTests.Sharding.Cluster
 
                 //ensure no compare exchange tombstones were deleted after the tombstone cleanup
                 await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 0, nodes);
+
+                // release backups on shards so we can dispose the server
+                tcs.SetCanceled();
             }
         }
 
@@ -726,14 +729,6 @@ namespace SlowTests.Sharding.Cluster
                 //run periodic backup on all shards
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 * *");
                 var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(leader, store, config, isFullBackup: false);
-
-                var documentDatabase1 = await Cluster.GetAnyDocumentDatabaseInstanceFor(store, new List<RavenServer>() { nodes[1] }, ShardHelper.ToShardName(database, serverToShard[nodes[1]]));
-                await WaitAndAssertForValueAsync(() => documentDatabase1.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault(x => x.Configuration.TaskId == backupTaskId) != null, true);
-                documentDatabase1.PeriodicBackupRunner.StartBackupTask(backupTaskId, isFullBackup: false);
-
-                var documentDatabase2 = await Cluster.GetAnyDocumentDatabaseInstanceFor(store, new List<RavenServer>() { nodes[2] }, ShardHelper.ToShardName(database, serverToShard[nodes[2]]));
-                await WaitAndAssertForValueAsync(() => documentDatabase2.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault(x => x.Configuration.TaskId == backupTaskId) != null, true);
-                documentDatabase2.PeriodicBackupRunner.StartBackupTask(backupTaskId, isFullBackup: false);
                 
                 //wait till all shards finish backing up the 2 tombstones
                 foreach (var node in nodes)
@@ -813,6 +808,9 @@ namespace SlowTests.Sharding.Cluster
 
                 //ensure last compare exchange tombstone wasn't deleted after the tombstone cleanup
                 await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 1, nodes);
+
+                // release backups on shards so we can dispose the server
+                tcs.SetCanceled();
             }
         }
 
