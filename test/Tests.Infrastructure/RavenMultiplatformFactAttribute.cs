@@ -27,7 +27,8 @@ public enum RavenArchitecture
     AllArm = Arm | Arm64,
     AllX64 = Arm64 | X64,
     AllX86 = Arm | X86,
-    All = AllX64 | AllX86
+    All = AllX64 | AllX86,
+    All64Bits = X64 | Arm64,
 }
 
 [Flags]

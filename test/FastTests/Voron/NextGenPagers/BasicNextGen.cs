@@ -24,7 +24,7 @@ public class BasicNextGen : StorageTest
 
     private unsafe static Span<byte> AsSpan(Page p) => new Span<byte>(p.Pointer, Constants.Storage.PageSize);
 
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.All64Bits)]
     public void WithAsyncCommit()
     {
         Options.ManualFlushing = true;
@@ -70,7 +70,7 @@ public class BasicNextGen : StorageTest
     }
     
     
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.All64Bits)]
     public void WithAsyncCommit_AndRestart()
     {
         RequireFileBasedPager();
@@ -144,7 +144,7 @@ public class BasicNextGen : StorageTest
         }
     }
     
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.All64Bits)]
     public void EncryptedStorage_MultipleTransactions_WithRollback()
     {
         RequireFileBasedPager();

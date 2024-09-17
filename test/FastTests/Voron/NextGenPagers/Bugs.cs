@@ -114,7 +114,7 @@ public class Bugs : StorageTest
         txw.Dispose();
     }
 
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.All64Bits)]
     public void CanHandleRollbackOfPageInScratches()
     {
         Options.ManualFlushing = true;
