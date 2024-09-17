@@ -4,9 +4,8 @@ import { IndexSharedInfo } from "components/models/indexes";
 import IndexUtils from "components/utils/IndexUtils";
 import React from "react";
 import { UncontrolledTooltip } from "reactstrap";
-
-const jsImg = require("Content/img/javascript.svg");
-const csharpImg = require("Content/img/csharp-logo.svg");
+import { FlexGrow } from "components/common/FlexGrow";
+import "./IndexesImportExport.scss";
 
 interface IndexToMigrateTitleProps {
     index: Raven.Client.Documents.Indexes.IndexDefinition | IndexSharedInfo;
@@ -17,28 +16,36 @@ export default function IndexToMigrateTitle({ index, disabledReason }: IndexToMi
     const name = "Name" in index ? index.Name : index.name;
     const type = "Type" in index ? index.Type : index.type;
 
-    const tooltipId = useId("tooltipId-");
+    const indexDisabledReasonTooltipId = useId("indexDisabledReasonId-");
+    const indexLanguageTooltipId = useId("indexLanguageTooltipId-");
+    const indexTypeTooltipId = useId("indexTypeTooltipId-");
 
     return (
-        <div className="d-flex gap-1 align-items-center w-100">
-            {IndexUtils.isCsharpIndex(type) ? (
-                <img src={csharpImg} alt="C# Index" style={{ width: "22px", filter: "contrast(0)" }} />
-            ) : (
-                <img src={jsImg} alt="JavaScript Index" style={{ width: "22px", filter: "contrast(0)" }} />
-            )}
+        <>
             <div className="text-truncate" title={name}>
                 {name}
             </div>
+            <FlexGrow />
             {disabledReason && (
-                <>
-                    <UncontrolledTooltip target={tooltipId}>{disabledReason}</UncontrolledTooltip>
-                    <Icon icon="warning" color="warning" margin="m-0" id={tooltipId} />
-                </>
+                <div id={indexDisabledReasonTooltipId} className="pe-1">
+                    <UncontrolledTooltip target={indexDisabledReasonTooltipId}>{disabledReason}</UncontrolledTooltip>
+                    <Icon icon="warning" color="warning" margin="m-0" id={indexDisabledReasonTooltipId} />
+                </div>
             )}
-            <div className="ms-auto text-nowrap">
-                <Icon icon={IndexUtils.indexTypeIcon(type)} />
-                {IndexUtils.formatType(type)}
+            <div className="index-legend">
+                <div id={indexLanguageTooltipId}>
+                    <Icon icon={IndexUtils.isCsharpIndex(type) ? "csharp-logo" : "javascript"} margin="m-0" />
+                </div>
+                <UncontrolledTooltip target={indexLanguageTooltipId} placement="top">
+                    <span>{IndexUtils.isCsharpIndex(type) ? <span>C#</span> : <span>JavaScript</span>} index</span>
+                </UncontrolledTooltip>
+                <div id={indexTypeTooltipId}>
+                    <Icon icon={IndexUtils.indexTypeIcon(type)} margin="m-0" />
+                </div>
+                <UncontrolledTooltip target={indexTypeTooltipId} placement="top">
+                    {IndexUtils.formatType(type)}
+                </UncontrolledTooltip>
             </div>
-        </div>
+        </>
     );
 }

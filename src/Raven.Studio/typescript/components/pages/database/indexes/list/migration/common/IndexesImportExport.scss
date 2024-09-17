@@ -1,0 +1,11 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.index-legend {
+    display: flex;
+    gap: sizes.$gutter-xs;
+    border-left: 1px solid colors.$border-color-light-var;
+    padding-left: sizes.$gutter-xs;
+    padding-right: sizes.$gutter-xxs;
+    align-items: center;
+}

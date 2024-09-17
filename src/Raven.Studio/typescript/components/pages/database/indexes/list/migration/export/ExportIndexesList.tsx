@@ -19,7 +19,7 @@ export default function ExportIndexesList({
     }
 
     return (
-        <div className="vstack gap-3 overflow-auto" style={{ maxHeight: "200px" }}>
+        <div className="vstack gap-3 overflow-auto" style={{ maxHeight: "340px" }}>
             <ListGroup>
                 {availableIndexes.map((index) => (
                     <ExportIndexesListItem key={index.name} index={index} />

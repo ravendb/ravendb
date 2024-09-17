@@ -19,15 +19,17 @@ export default function ImportIndexListItem({
     return (
         <ListGroupItem key={indexDefinition.Name} disabled={!!disabledReason}>
             <Label className="d-flex gap-1 align-items-center m-0 text-truncate">
-                {!disabledReason && (
-                    <Checkbox
-                        toggleSelection={() => toggleIndexName(indexDefinition.Name)}
-                        selected={selectedIndexNames.includes(indexDefinition.Name)}
-                        size="md"
-                        color="primary"
-                    />
-                )}
-                <IndexToMigrateTitle index={indexDefinition} disabledReason={disabledReason} />
+                <div className="d-flex gap-1 align-items-center w-100">
+                    {!disabledReason && (
+                        <Checkbox
+                            toggleSelection={() => toggleIndexName(indexDefinition.Name)}
+                            selected={selectedIndexNames.includes(indexDefinition.Name)}
+                            size="md"
+                            color="primary"
+                        />
+                    )}
+                    <IndexToMigrateTitle index={indexDefinition} disabledReason={disabledReason} />
+                </div>
             </Label>
         </ListGroupItem>
     );

@@ -11,7 +11,9 @@ interface ExportIndexesListItemProps {
 export default function ExportIndexesListItem({ index, disabledReason }: ExportIndexesListItemProps) {
     return (
         <ListGroupItem key={index.name} disabled={!!disabledReason}>
-            <IndexToMigrateTitle index={index} disabledReason={disabledReason} />
+            <div className="d-flex gap-1 align-items-center m-0 text-truncate">
+                <IndexToMigrateTitle index={index} disabledReason={disabledReason} />
+            </div>
         </ListGroupItem>
     );
 }

@@ -37,7 +37,7 @@ export default function ImportIndexesList({
                 allItemsCount={availableIndexes.length}
                 selectedItemsCount={selectedIndexNames.length}
             />
-            <div className="vstack gap-3 overflow-auto" style={{ maxHeight: "200px" }}>
+            <div className="vstack gap-3 overflow-auto" style={{ maxHeight: "340px" }}>
                 <ListGroup>
                     {availableIndexes.map((definition) => (
                         <ImportIndexListItem
