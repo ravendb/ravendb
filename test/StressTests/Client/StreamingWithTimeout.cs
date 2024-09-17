@@ -57,8 +57,7 @@ namespace StressTests.Client
                                 var order = results.Current;
                                 count++;
 
-                                if (testing.DelayDocumentLoad == null)
-                                    testing.DelayDocumentLoad = new ManualResetEventSlim(false);
+                                testing.DelayDocumentLoad ??= new ManualResetEventSlim(false);
                             }
                         });
                     }
