@@ -93,17 +93,26 @@ class collectionProgress {
     name: string;
     documentsProgress: progress;
     tombstonesProgress: progress;
+    deletedTimeSeriesProgress: progress;
 
     constructor(name: string, collectionStats: Raven.Client.Documents.Indexes.IndexProgress.CollectionStats, runningStatus: Raven.Client.Documents.Indexes.IndexRunningStatus) {
         this.name = name;
+        
         this.documentsProgress = new progress(
             collectionStats.TotalNumberOfItems - collectionStats.NumberOfItemsToProcess,
             collectionStats.TotalNumberOfItems,
             collectionProgress.docsFormatter, 
             0, false, runningStatus);
+        
         this.tombstonesProgress = new progress(
             collectionStats.TotalNumberOfTombstones - collectionStats.NumberOfTombstonesToProcess,
             collectionStats.TotalNumberOfTombstones,
+            collectionProgress.docsFormatter,
+            0, false, runningStatus);
+        
+        this.deletedTimeSeriesProgress = new progress(
+            collectionStats.TotalNumberOfTimeSeriesDeletedRanges - collectionStats.NumberOfTimeSeriesDeletedRangesToProcess,
+            collectionStats.TotalNumberOfTimeSeriesDeletedRanges,
             collectionProgress.docsFormatter,
             0, false, runningStatus);
     }
@@ -217,6 +226,7 @@ class indexProgress {
         this.collections().forEach(c => {
             c.documentsProgress.markCompleted();
             c.tombstonesProgress.markCompleted();
+            c.deletedTimeSeriesProgress.markCompleted();
         });
         
         this.rollingProgress().forEach(r => r.markCompleted());
@@ -240,6 +250,7 @@ class indexProgress {
                 const newObject = incomingProgress.collections().find(x => x.name === collectionName);
                 collection.documentsProgress.updateWith(newObject.documentsProgress);
                 collection.tombstonesProgress.updateWith(newObject.tombstonesProgress);
+                collection.deletedTimeSeriesProgress.updateWith(newObject.deletedTimeSeriesProgress);
             })
         } else {
             // have we don't call updateWith on each collection to avoid animations
