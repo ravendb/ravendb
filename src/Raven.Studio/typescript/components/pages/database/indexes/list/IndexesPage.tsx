@@ -34,7 +34,7 @@ import IndexesPageAboutView from "./IndexesPageAboutView";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import DatabaseUtils from "components/utils/DatabaseUtils";
-import { ImportIndexes } from "components/pages/database/indexes/list/migration/ImportIndexes";
+import { ImportIndexes } from "components/pages/database/indexes/list/migration/import/ImportIndexes";
 
 interface IndexesPageProps {
     stale?: boolean;
@@ -98,7 +98,7 @@ export function IndexesPage(props: IndexesPageProps) {
         return resetIndexData.openConfirm(selectedIndexes, mode);
     };
 
-    const indexNames = getAllIndexes(groups, replacements).map((x) => x.name);
+    const allIndexes = getAllIndexes(groups, replacements);
 
     const allActionContexts = ActionContextUtils.getContexts(DatabaseUtils.getLocations(db));
 
@@ -253,8 +253,7 @@ export function IndexesPage(props: IndexesPageProps) {
 
                     {hasDatabaseWriteAccess && (
                         <IndexSelectActions
-                            indexNames={indexNames}
-                            groups={groups}
+                            allIndexes={allIndexes}
                             selectedIndexes={selectedIndexes}
                             replacements={replacements}
                             deleteSelectedIndexes={deleteSelectedIndexes}

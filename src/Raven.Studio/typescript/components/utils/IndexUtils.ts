@@ -1,10 +1,12 @@
 import assertUnreachable from "./assertUnreachable";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import { IndexNodeInfoDetails, IndexSharedInfo, IndexStatus } from "../models/indexes";
-import IndexType = Raven.Client.Documents.Indexes.IndexType;
 import collection from "models/database/documents/collection";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import IconName from "typings/server/icons";
+
+type IndexType = Raven.Client.Documents.Indexes.IndexType;
+type IndexDefinition = Raven.Client.Documents.Indexes.IndexDefinition;
 
 //TODO: do we want that here?
 
@@ -16,9 +18,21 @@ export default class IndexUtils {
 
     static readonly FieldsToHideOnUi = ["_", "__"];
 
-    static isAutoIndex(index: IndexSharedInfo | Raven.Client.Documents.Indexes.IndexDefinition) {
-        const type = "Type" in index ? index.Type : index.type;
-        const name = "Name" in index ? index.Name : index.name;
+    static getType(index: IndexSharedInfo | IndexDefinition | IndexType) {
+        if (typeof index === "string") {
+            return index;
+        }
+
+        return "Type" in index ? index.Type : index.type;
+    }
+
+    static getName(index: IndexSharedInfo | IndexDefinition) {
+        return "Name" in index ? index.Name : index.name;
+    }
+
+    static isAutoIndex(index: IndexSharedInfo | IndexDefinition) {
+        const type = IndexUtils.getType(index);
+        const name = IndexUtils.getName(index);
 
         switch (type) {
             case "Map":
@@ -30,6 +44,20 @@ export default class IndexUtils {
             default:
                 return name.startsWith(IndexUtils.AutoIndexPrefix);
         }
+    }
+
+    static isStaticIndex(index: IndexSharedInfo | IndexDefinition) {
+        return !IndexUtils.isAutoIndex(index);
+    }
+
+    static isJavaScriptIndex(index: IndexSharedInfo | IndexDefinition | IndexType) {
+        const type = IndexUtils.getType(index);
+
+        return type === "JavaScriptMap" || type === "JavaScriptMapReduce";
+    }
+
+    static isCsharpIndex(index: IndexSharedInfo | IndexDefinition | IndexType) {
+        return !IndexUtils.isJavaScriptIndex(index);
     }
 
     static formatLockMode(lockMode: IndexLockMode) {

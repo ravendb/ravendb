@@ -1,37 +1,24 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import messagePublisher from "common/messagePublisher";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { Checkbox } from "components/common/Checkbox";
-import CheckboxSelectAll from "components/common/CheckboxSelectAll";
 import { EmptySet } from "components/common/EmptySet";
 import FileDropzone from "components/common/FileDropzone";
 import { FormRadioToggleWithIcon, FormSelect } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { RadioToggleWithIconInputItem } from "components/common/RadioToggle";
 import { SelectOption } from "components/common/select/Select";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import useBoolean from "components/hooks/useBoolean";
 import { useCheckboxes } from "components/hooks/useCheckboxes";
 import { useServices } from "components/hooks/useServices";
+import ImportIndexesList from "components/pages/database/indexes/list/migration/import/ImportIndexesList";
 import { useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import IndexUtils from "components/utils/IndexUtils";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAsync } from "react-async-hook";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import {
-    Alert,
-    Button,
-    Form,
-    InputGroup,
-    InputGroupText,
-    Label,
-    ListGroup,
-    ListGroupItem,
-    Modal,
-    ModalBody,
-    ModalFooter,
-} from "reactstrap";
+import { Alert, Button, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
 import * as yup from "yup";
 
 type IndexDefinition = Raven.Client.Documents.Indexes.IndexDefinition;
@@ -45,13 +32,14 @@ interface ImportIndexesProps {
 export function ImportIndexes(props: ImportIndexesProps) {
     const { toggle } = props;
 
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
+
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const availableDatabaseNames = useAppSelector(databaseSelectors.allDatabases)
         .filter((x) => x.name !== activeDatabaseName && !x.isDisabled)
         .map((x) => x.name)
         .sort();
-
-    const { value: hasSomeAutoIndexes, setValue: setHasSomeAutoIndexes } = useBoolean(false);
 
     const databaseOptions: SelectOption[] = availableDatabaseNames.map((x) => ({ label: x, value: x }));
 
@@ -66,7 +54,35 @@ export function ImportIndexes(props: ImportIndexesProps) {
     });
     const { importMode, selectedDatabaseName, selectedIndexNames } = useWatch({ control });
 
+    const [disabledReason, setDisabledReason] = useState<string>();
+
     const [indexDefinitions, setIndexDefinitions] = useState<IndexDefinition[]>([]);
+    const filteredIndexes = useMemo(() => {
+        const sortedIndexes = [...indexDefinitions].sort((a, b) => a.Name.localeCompare(b.Name));
+
+        const isAnyAutoIndex = sortedIndexes.some((x) => IndexUtils.isAutoIndex(x));
+        const staticIndexes = sortedIndexes.filter((x) => IndexUtils.isStaticIndex(x));
+
+        let availableIndexes = staticIndexes;
+        let unavailableIndexes: IndexDefinition[] = [];
+
+        if (!hasDatabaseAdminAccess) {
+            availableIndexes = staticIndexes.filter((x) => !IndexUtils.isCsharpIndex(x));
+            unavailableIndexes = staticIndexes.filter((x) => IndexUtils.isCsharpIndex(x));
+            setDisabledReason("Creating a C# index requires database administrator access");
+        }
+
+        setValue(
+            "selectedIndexNames",
+            availableIndexes.map((x) => x.Name)
+        );
+
+        return {
+            availableIndexes,
+            unavailableIndexes,
+            isAnyAutoIndex,
+        };
+    }, [hasDatabaseAdminAccess, indexDefinitions, setValue]);
 
     const clearIndexes = useCallback(() => {
         setIndexDefinitions([]);
@@ -84,7 +100,7 @@ export function ImportIndexes(props: ImportIndexesProps) {
         toggleOne: toggleIndexName,
         toggleAll: toggleAllIndexNames,
     } = useCheckboxes({
-        allItems: indexDefinitions.map((x) => x.Name),
+        allItems: filteredIndexes.availableIndexes.map((x) => x.Name),
         selectedItems: selectedIndexNames,
         setValue: (x) => setValue("selectedIndexNames", x),
     });
@@ -99,15 +115,8 @@ export function ImportIndexes(props: ImportIndexesProps) {
             }
 
             const result = await indexesService.getDefinitions(selectedDatabaseName);
-
             const staticIndexes = result.filter((x) => !IndexUtils.isAutoIndex(x));
-
-            setHasSomeAutoIndexes(staticIndexes.some((x) => IndexUtils.isAutoIndex(x)));
             setIndexDefinitions(staticIndexes);
-            setValue(
-                "selectedIndexNames",
-                staticIndexes.map((x) => x.Name)
-            );
         },
         [selectedDatabaseName],
         {
@@ -132,10 +141,6 @@ export function ImportIndexes(props: ImportIndexesProps) {
             try {
                 const fileContent = indexDefinitionsSchema.validateSync(JSON.parse(textResult));
                 setIndexDefinitions(fileContent.Indexes as IndexDefinition[]);
-                setValue(
-                    "selectedIndexNames",
-                    fileContent.Indexes.map((x) => x.Name)
-                );
             } catch (e) {
                 clearIndexes();
                 messagePublisher.reportError("Failed to load file", e.message);
@@ -153,7 +158,16 @@ export function ImportIndexes(props: ImportIndexesProps) {
     const handleImport: SubmitHandler<FormData> = async () => {
         return tryHandleSubmit(async () => {
             const selectedIndexDefinitions = indexDefinitions.filter((x) => selectedIndexNames.includes(x.Name));
-            await indexesService.saveDefinitions(activeDatabaseName, selectedIndexDefinitions);
+
+            const csharpIndexes = selectedIndexDefinitions.filter((x) => IndexUtils.isCsharpIndex(x.Type));
+            const jsIndexes = selectedIndexDefinitions.filter((x) => IndexUtils.isJavaScriptIndex(x.Type));
+
+            if (hasDatabaseAdminAccess && csharpIndexes.length > 0) {
+                await indexesService.saveDefinitions(csharpIndexes, false, activeDatabaseName);
+            }
+            if (hasDatabaseWriteAccess && jsIndexes.length > 0) {
+                await indexesService.saveDefinitions(jsIndexes, true, activeDatabaseName);
+            }
 
             toggle();
         });
@@ -201,33 +215,15 @@ export function ImportIndexes(props: ImportIndexesProps) {
                         <FileDropzone onChange={handleFileChange} validExtensions={["json"]} maxFiles={1} />
                     )}
 
-                    {indexDefinitions.length > 0 && (
-                        <div>
-                            <CheckboxSelectAll
-                                selectionState={selectionState}
-                                toggleAll={toggleAllIndexNames}
-                                allItemsCount={indexDefinitions.length}
-                                selectedItemsCount={selectedIndexNames.length}
-                            />
-                            <div className="vstack gap-3 overflow-auto" style={{ maxHeight: "200px" }}>
-                                <ListGroup>
-                                    {indexDefinitions.map((definition) => (
-                                        <ListGroupItem key={definition.Name}>
-                                            <Label className="d-flex gap-1 align-items-center m-0 text-truncate">
-                                                <Checkbox
-                                                    toggleSelection={() => toggleIndexName(definition.Name)}
-                                                    selected={selectedIndexNames.includes(definition.Name)}
-                                                    size="md"
-                                                    color="primary"
-                                                />
-                                                {definition.Name}
-                                            </Label>
-                                        </ListGroupItem>
-                                    ))}
-                                </ListGroup>
-                            </div>
-                        </div>
-                    )}
+                    <ImportIndexesList
+                        availableIndexes={filteredIndexes.availableIndexes}
+                        unavailableIndexes={filteredIndexes.unavailableIndexes}
+                        disabledReason={disabledReason}
+                        selectionState={selectionState}
+                        selectedIndexNames={selectedIndexNames}
+                        toggleAllIndexNames={toggleAllIndexNames}
+                        toggleIndexName={toggleIndexName}
+                    />
 
                     {!indexDefinitions?.length && (
                         <EmptySet compact className="text-muted">
@@ -244,7 +240,7 @@ export function ImportIndexes(props: ImportIndexesProps) {
                     )}
 
                     <div className="vstack gap-2">
-                        {selectedDatabaseName && importMode === "database" && hasSomeAutoIndexes && (
+                        {selectedDatabaseName && importMode === "database" && filteredIndexes.isAnyAutoIndex && (
                             <Alert color="info" className="text-left">
                                 <Icon icon="info" />
                                 All Auto-indexes will be skipped

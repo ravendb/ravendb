@@ -17,8 +17,8 @@ import forceIndexReplace from "commands/database/index/forceIndexReplace";
 import toggleDisableIndexingCommand from "commands/database/index/toggleDisableIndexingCommand";
 import getIndexMergeSuggestionsCommand = require("commands/database/index/getIndexMergeSuggestionsCommand");
 import deleteIndexCommand = require("commands/database/index/deleteIndexCommand");
-import saveIndexesDefinitionsCommand = require("commands/database/index/saveIndexesDefinitionsCommand");
 import getIndexesDefinitionsCommand = require("commands/database/index/getIndexesDefinitionsCommand");
+import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionsCommand");
 
 export default class IndexesService {
     async getProgress(databaseName: string, location: databaseLocationSpecifier) {
@@ -41,8 +41,8 @@ export default class IndexesService {
         return new getIndexesDefinitionsCommand(...args).execute();
     }
 
-    async saveDefinitions(...args: ConstructorParameters<typeof saveIndexesDefinitionsCommand>) {
-        return new saveIndexesDefinitionsCommand(...args).execute();
+    async saveDefinitions(...args: ConstructorParameters<typeof saveIndexDefinitionCommand>) {
+        return new saveIndexDefinitionCommand(...args).execute();
     }
 
     async resetIndex(...args: ConstructorParameters<typeof resetIndexCommand>) {

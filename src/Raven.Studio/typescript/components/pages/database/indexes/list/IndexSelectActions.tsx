@@ -6,13 +6,12 @@ import { Checkbox } from "components/common/Checkbox";
 import { SelectionActions } from "components/common/SelectionActions";
 import genUtils = require("common/generalUtils");
 import ResetIndexesButton from "components/pages/database/indexes/list/partials/ResetIndexesButton";
-import { IndexGroup, IndexSharedInfo } from "components/models/indexes";
-import { ExportIndexes } from "components/pages/database/indexes/list/migration/ExportIndexes";
+import { IndexSharedInfo } from "components/models/indexes";
+import { ExportIndexes } from "components/pages/database/indexes/list/migration/export/ExportIndexes";
 import useBoolean from "components/hooks/useBoolean";
 
 interface IndexSelectActionProps {
-    indexNames: string[];
-    groups: IndexGroup[];
+    allIndexes: IndexSharedInfo[];
     selectedIndexes: string[];
     replacements: IndexSharedInfo[];
     deleteSelectedIndexes: () => Promise<void>;
@@ -27,8 +26,7 @@ interface IndexSelectActionProps {
 
 export default function IndexSelectAction(props: IndexSelectActionProps) {
     const {
-        indexNames,
-        groups,
+        allIndexes,
         selectedIndexes,
         replacements,
         deleteSelectedIndexes,
@@ -46,6 +44,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
 
     const { value: isExportIndexModalOpen, toggle: toggleIsExportIndexModalOpen } = useBoolean(false);
 
+    const indexNames = allIndexes.map((x) => x.name);
     const selectionState = genUtils.getSelectionState(indexNames, selectedIndexes);
 
     const isResetDropdownVisible = !replacements.some((x) => selectedIndexes.includes(x.name));
@@ -82,7 +81,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                         {isExportIndexModalOpen && (
                             <ExportIndexes
                                 toggle={toggleIsExportIndexModalOpen}
-                                groups={groups}
+                                indexes={allIndexes}
                                 selectedNames={selectedIndexes}
                             />
                         )}

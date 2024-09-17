@@ -9,44 +9,28 @@ import { SelectOption } from "components/common/select/Select";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useServices } from "components/hooks/useServices";
-import { IndexGroup } from "components/models/indexes";
-import { getAllIndexes } from "components/pages/database/indexes/list/useIndexesPage";
+import { IndexSharedInfo } from "components/models/indexes";
+import ExportIndexesList from "components/pages/database/indexes/list/migration/export/ExportIndexesList";
 import { useAppSelector } from "components/store";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { tryHandleSubmit } from "components/utils/common";
 import IndexUtils from "components/utils/IndexUtils";
 import moment from "moment";
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import {
-    Alert,
-    Button,
-    Form,
-    InputGroup,
-    InputGroupText,
-    ListGroup,
-    ListGroupItem,
-    ListGroupItemHeading,
-    Modal,
-    ModalBody,
-    ModalFooter,
-} from "reactstrap";
+import { Alert, Button, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
 import * as yup from "yup";
 
 type ExportMode = "database" | "file";
 
 interface ExportIndexesProps {
-    groups?: IndexGroup[];
+    indexes?: IndexSharedInfo[];
     selectedNames: string[];
     toggle: () => void;
 }
 
 export function ExportIndexes(props: ExportIndexesProps) {
-    const { toggle, groups, selectedNames } = props;
-
-    const selectedIndexes = getAllIndexes(groups, []).filter((x) => selectedNames.includes(x.name));
-    const selectedStaticIndexNames = selectedIndexes.filter((x) => !IndexUtils.isAutoIndex(x)).map((x) => x.name);
-    const isAnyAutoIndexSelected = selectedIndexes.some((x) => IndexUtils.isAutoIndex(x));
+    const { toggle, indexes, selectedNames } = props;
 
     const getHasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess);
 
@@ -58,7 +42,7 @@ export function ExportIndexes(props: ExportIndexesProps) {
 
     const databaseOptions: SelectOption[] = availableDatabaseNames.map((x) => ({ label: x, value: x }));
 
-    const { control, formState, handleSubmit } = useForm<FormData>({
+    const { control, formState, handleSubmit, setValue } = useForm<FormData>({
         defaultValues: {
             databaseName: "",
             exportMode: availableDatabaseNames.length > 0 ? "database" : "file",
@@ -66,19 +50,62 @@ export function ExportIndexes(props: ExportIndexesProps) {
         resolver: yupResolver(schema),
     });
 
-    const { exportMode } = useWatch({ control });
+    const { exportMode, databaseName } = useWatch({ control });
+
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)(databaseName);
+    const hasDatabaseWriteAccess = getHasDatabaseWriteAccess(databaseName);
+
+    const [disabledReason, setDisabledReason] = useState<string>();
+
+    const filteredIndexes = useMemo(() => {
+        const selectedIndexes = indexes.filter((x) => selectedNames.includes(x.name));
+        const isAnyAutoIndexSelected = selectedIndexes.some((x) => IndexUtils.isAutoIndex(x));
+        const selectedStaticIndexes = selectedIndexes.filter((x) => IndexUtils.isStaticIndex(x));
+
+        let availableIndexes = selectedStaticIndexes;
+        let unavailableIndexes: IndexSharedInfo[] = [];
+
+        if (exportMode === "database" && !!databaseName && !hasDatabaseAdminAccess) {
+            availableIndexes = selectedStaticIndexes.filter((x) => !IndexUtils.isCsharpIndex(x));
+            unavailableIndexes = selectedStaticIndexes.filter((x) => IndexUtils.isCsharpIndex(x));
+            setDisabledReason("Creating a C# index requires database administrator access");
+        }
+
+        return {
+            availableIndexes,
+            unavailableIndexes,
+            isAnyAutoIndexSelected,
+        };
+    }, [databaseName, exportMode, hasDatabaseAdminAccess, indexes, selectedNames]);
+
+    // Clear state on mode change
+    useEffect(() => {
+        setValue("databaseName", "");
+    }, [exportMode, setValue]);
 
     const { indexesService } = useServices();
 
     const handleExport: SubmitHandler<FormData> = async ({ databaseName, exportMode }) => {
         return tryHandleSubmit(async () => {
-            const indexDefinitions = await indexesService.getDefinitions(activeDatabaseName, {
-                indexNames: selectedStaticIndexNames,
-            });
+            const indexNames = filteredIndexes.availableIndexes.map((x) => x.name);
+            if (indexNames.length === 0) {
+                toggle();
+                return;
+            }
+
+            const indexDefinitions = await indexesService.getDefinitions(activeDatabaseName, { indexNames });
 
             switch (exportMode) {
                 case "database": {
-                    await indexesService.saveDefinitions(databaseName, indexDefinitions);
+                    const csharpIndexes = indexDefinitions.filter((x) => IndexUtils.isCsharpIndex(x.Type));
+                    const jsIndexes = indexDefinitions.filter((x) => IndexUtils.isJavaScriptIndex(x.Type));
+
+                    if (hasDatabaseAdminAccess && csharpIndexes.length > 0) {
+                        await indexesService.saveDefinitions(csharpIndexes, false, databaseName);
+                    }
+                    if (hasDatabaseWriteAccess && jsIndexes.length > 0) {
+                        await indexesService.saveDefinitions(jsIndexes, true, databaseName);
+                    }
                     break;
                 }
                 case "file": {
@@ -112,8 +139,8 @@ export function ExportIndexes(props: ExportIndexesProps) {
                     <Icon icon="index-import" color="primary" className="text-center fs-1" margin="m-0" />
                     <div className="lead text-center">
                         You&apos;re about to <span className="fw-bold">export</span> selected{" "}
-                        <span className="fw-bold">({selectedStaticIndexNames.length})</span>{" "}
-                        {pluralizeHelpers.pluralize(selectedStaticIndexNames.length, "index", "indexes", true)}
+                        <span className="fw-bold">({filteredIndexes.availableIndexes.length})</span>{" "}
+                        {pluralizeHelpers.pluralize(filteredIndexes.availableIndexes.length, "index", "indexes", true)}
                     </div>
                     <div className="mx-auto">
                         <FormRadioToggleWithIcon
@@ -136,24 +163,15 @@ export function ExportIndexes(props: ExportIndexesProps) {
                             />
                         </InputGroup>
                     )}
-                    <div className="vstack gap-3 overflow-auto" style={{ maxHeight: "200px" }}>
-                        {groups.map((group) => (
-                            <div key={group.name}>
-                                <ListGroupItemHeading className="mb-1 small-label">{group.name}</ListGroupItemHeading>
-                                <ListGroup>
-                                    {group.indexes
-                                        .filter((index) => selectedStaticIndexNames.includes(index.name))
-                                        .map((index) => (
-                                            <ListGroupItem key={index.name} className="text-truncate">
-                                                {index.name}
-                                            </ListGroupItem>
-                                        ))}
-                                </ListGroup>
-                            </div>
-                        ))}
-                    </div>
+
+                    <ExportIndexesList
+                        availableIndexes={filteredIndexes.availableIndexes}
+                        unavailableIndexes={filteredIndexes.unavailableIndexes}
+                        disabledReason={disabledReason}
+                    />
+
                     <div className="vstack gap-2">
-                        {isAnyAutoIndexSelected && (
+                        {filteredIndexes.isAnyAutoIndexSelected && (
                             <Alert color="info" className="text-left">
                                 <Icon icon="info" />
                                 All selected Auto-indexes are skipped
@@ -161,6 +179,7 @@ export function ExportIndexes(props: ExportIndexesProps) {
                         )}
                         {exportMode === "database" && (
                             <Alert color="info" className="text-left">
+                                <Icon icon="info" />
                                 All conflicting indexes in the destination database will be overwritten after the export
                                 is completed
                             </Alert>

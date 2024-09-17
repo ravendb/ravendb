@@ -99,12 +99,12 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
     const { value: isImportIndexModalOpen, setValue: setIsImportIndexModalOpen } = useBoolean(isImportOpen);
 
     const toggleIsImportIndexModalOpen = () => {
+        setIsImportIndexModalOpen(!isImportIndexModalOpen);
+
         if (isImportIndexModalOpen) {
             const urlWithoutImport = window.location.hash.replace("&isImportOpen=true", "");
             router.navigate(urlWithoutImport);
         }
-
-        setIsImportIndexModalOpen(!isImportIndexModalOpen);
     };
 
     const confirm = useConfirm();

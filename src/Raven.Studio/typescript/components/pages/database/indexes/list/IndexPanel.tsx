@@ -42,7 +42,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import ResetIndexesButton from "components/pages/database/indexes/list/partials/ResetIndexesButton";
-import { ExportIndexes } from "components/pages/database/indexes/list/migration/ExportIndexes";
+import { ExportIndexes } from "components/pages/database/indexes/list/migration/export/ExportIndexes";
 
 export interface IndexPanelProps {
     index: IndexSharedInfo;
@@ -374,7 +374,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 </Button>
                                 {isExportIndexModalOpen && (
                                     <ExportIndexes
-                                        groups={[{ name: "", indexes: [index] }]}
+                                        indexes={[index]}
                                         selectedNames={[index.name]}
                                         toggle={toggleIsExportIndexModalOpen}
                                     />
