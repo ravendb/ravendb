@@ -678,6 +678,7 @@ namespace Raven.Server.Documents.TransactionMerger
             _alreadyListeningToPreviousOperationEnd = false;
             context.TransactionMarkerOffset = 1;  // ensure that we are consistent here and don't use old values
             var sp = Stopwatch.StartNew();
+            var sp2 = Stopwatch.StartNew();
 
             do
             {
@@ -714,7 +715,12 @@ namespace Raven.Server.Documents.TransactionMerger
                 }
 
                 meter.IncrementCounter(1);
+                
+                sp2.Restart();
                 meter.IncrementCommands(op.Execute(context, _recording.State));
+                if(sp2.Elapsed.TotalMilliseconds > 1000 && _log.IsInfoEnabled)
+                    _log.Info($"One operation took {sp.Elapsed:c}");
+
                 if (op.UpdateAccessTime)
                     UpdateLastAccessTime(_time.GetUtcNow());
 

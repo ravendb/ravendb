@@ -60,8 +60,13 @@ namespace Raven.Server.Documents.Patch
             _returnDocument = returnDocument;
         }
 
+        public List<string> _operationsMsgs = new List<string>();
+        
         protected PatchResult ExecuteOnDocument(DocumentsOperationContext context, string id, LazyStringValue expectedChangeVector, ScriptRunner.SingleRun run, ScriptRunner.SingleRun runIfMissing)
         {
+            var sp = Stopwatch.StartNew();
+            var sp2 = Stopwatch.StartNew();
+            
             _database = context.DocumentDatabase;
             run.DebugMode = _debugMode;
             if (runIfMissing != null)
@@ -72,7 +77,9 @@ namespace Raven.Server.Documents.Patch
                 _database.DocumentsStorage.ValidateId(context, lowerId, type: DocumentChangeTypes.Put);
             }
 
-            var originalDocument = GetCurrentDocument(context, id);
+            
+            AddOperationToLog(id, sp, sp2,  "Validate document");
+            var originalDocument = GetCurrentDocument(context, id, sp, sp2);
 
             if (expectedChangeVector != null)
             {
@@ -137,7 +144,9 @@ namespace Raven.Server.Documents.Patch
                 id = originalDocument.Id; // we want to use the original Id casing
                 if (originalDocument.Data != null)
                 {
+                    sp2.Restart();
                     documentInstance = (BlittableObjectInstance)run.Translate(context, originalDocument).AsObject();
+                    AddOperationToLog(id, sp, sp2,  "Translate document");
                 }
             }
 
@@ -156,7 +165,9 @@ namespace Raven.Server.Documents.Patch
                     patchContext = _externalContext;
                 }
 
+                sp2.Restart();
                 var modifiedDoc = ExecuteScript(context, id, run, patchContext, documentInstance, args);
+                AddOperationToLog(id, sp, sp2,  "ExecuteScript on document");
 
                 var result = new PatchResult
                 {
@@ -174,7 +185,7 @@ namespace Raven.Server.Documents.Patch
                 if (run?.RefreshOriginalDocument == true)
                 {
                     originalDocument?.Dispose();
-                    originalDocument = GetCurrentDocument(context, id);
+                    originalDocument = GetCurrentDocument(context, id, sp, sp2, "RefreshOriginalDocument");
                 }
 
                 var nonPersistentFlags = HandleMetadataUpdates(context, id, run);
@@ -253,19 +264,31 @@ namespace Raven.Server.Documents.Patch
                     DebugActions = run.DebugActions.GetDebugActions();
 
                 originalDocument?.Dispose();
+                
+                AddOperationToLog(id, sp, sp,  "Executed Command Finished");
             }
         }
 
-        protected virtual Document GetCurrentDocument(DocumentsOperationContext context, string id)
+        private void AddOperationToLog(string id, Stopwatch sp, Stopwatch sp2, string addition)
         {
+            if(sp2.Elapsed.TotalMilliseconds > 100)
+                _operationsMsgs.Add($"{sp.Elapsed:c} {sp2.Elapsed:c} {id} {addition}");
+        }
+
+        protected virtual Document GetCurrentDocument(DocumentsOperationContext context, string id, Stopwatch sp, Stopwatch sp2, string refreshoriginaldocument = null)
+        {
+            sp2.Restart();
             var originalDocument = _database.DocumentsStorage.Get(context, id);
+            AddOperationToLog(id, sp, sp,  $"{refreshoriginaldocument} Validate document");
 
             if (originalDocument != null)
             {
                 using (var oldData = originalDocument.Data)
                 {
+                    sp2.Restart();
                     // we clone it, to keep it safe from defrag due to the patch modifications
                     originalDocument.Data = originalDocument.Data?.CloneOnTheSameContext();
+                    AddOperationToLog(id, sp, sp,  $"{refreshoriginaldocument} Clone document");
                 }
             }
 

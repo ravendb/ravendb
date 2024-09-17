@@ -1,6 +1,7 @@
 ﻿using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using System;
+using System.Diagnostics;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.QueueSink.Test;
@@ -15,7 +16,7 @@ public sealed class TestQueueMessageCommand : PatchDocumentCommand
         _message = message;
     }
 
-    protected override Document GetCurrentDocument(DocumentsOperationContext context, string id)
+    protected override Document GetCurrentDocument(DocumentsOperationContext context, string id, Stopwatch stopwatch, Stopwatch sp, string refreshoriginaldocument)
     {
         return new Document
         {

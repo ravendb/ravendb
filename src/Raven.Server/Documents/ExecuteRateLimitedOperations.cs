@@ -1,16 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using Raven.Client.Util.RateLimiting;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
     public sealed class ExecuteRateLimitedOperations<T> : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", "ExecuteRateLimitedOperations");
+        
         private readonly Queue<T> _documentIds;
         private readonly Func<T, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> _commandToExecute;
         private readonly RateGate _rateGate;
@@ -39,6 +45,9 @@ namespace Raven.Server.Documents
 
         public override long Execute(DocumentsOperationContext context, AbstractTransactionOperationsMerger<DocumentsOperationContext, DocumentsTransaction>.RecordingState recording)
         {
+            var sp = Stopwatch.StartNew();
+            var operationsMsgs = new List<string>(); 
+            
             var count = 0;
             foreach (T id in _documentIds)
             {
@@ -56,7 +65,12 @@ namespace Raven.Server.Documents
                 var command = _commandToExecute(id);
                 try
                 {
-                    Processed += command?.Execute(context, recording) ?? 0;
+                    if (command != null)
+                    {
+                        Processed += command.Execute(context, recording);
+                        if (command is PatchDocumentCommand patchDocumentCommand)
+                            operationsMsgs.AddRange(patchDocumentCommand._operationsMsgs);
+                    }
                 }
                 finally
                 {
@@ -73,6 +87,14 @@ namespace Raven.Server.Documents
                 if (context.CachedProperties.NeedClearPropertiesCache())
                 {
                     context.CachedProperties.ClearRenew();
+                }
+            }
+            
+            if (sp.ElapsedMilliseconds > 1000 && operationsMsgs.Count != 0 && Logger.IsInfoEnabled)
+            {
+                foreach (var msg in operationsMsgs)
+                {
+                    Logger.Info(msg);
                 }
             }
 
