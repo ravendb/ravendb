@@ -43,6 +43,7 @@ export interface IndexCollectionProgress {
     name: string;
     documents: IndexingProgress;
     tombstones: IndexingProgress;
+    deletedTimeSeries: IndexingProgress;
 }
 
 export interface IndexingProgress extends Progress {

@@ -17,6 +17,10 @@
         text-transform: uppercase;
         letter-spacing: 0.15em;
 
+        .progress-label {
+            white-space: nowrap;
+        }
+
         .progress-percentage {
             font-size: 11px;
         }
