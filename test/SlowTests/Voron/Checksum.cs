@@ -14,6 +14,7 @@ using Voron;
 using Xunit;
 using Voron.Impl.Paging;
 using Xunit.Abstractions;
+using Voron.Global;
 
 namespace SlowTests.Voron
 {
@@ -65,16 +66,11 @@ namespace SlowTests.Voron
             }
 
             // Lets corrupt something
-            using (var options = StorageEnvironmentOptions.ForPath(DataDir))
+            using (var f = File.OpenWrite(Path.Combine(DataDir, "Raven.Voron")))
             {
-                var (pager, state) = Pager.Create(options,  Path.Combine(DataDir, "Raven.Voron"),0, Pal.OpenFileFlags.WritableMap);
-                using var _ = pager;
-                Pager.PagerTransactionState txState = default;
-                var writePtr = pager.MakeWritable(state, pager.AcquirePagePointer(state, ref txState, 2)) + PageHeader.SizeOf + 43; // just some random place on page #2
-                for (byte i = 0; i < 8; i++)
-                {
-                    writePtr[i] = i;
-                }
+                // just some random place on page #2
+                f.Seek(2 * Constants.Storage.PageSize + PageHeader.SizeOf + 43, SeekOrigin.Begin);
+                f.Write([0,1,2,3,4,5,6,7]);
             }
 
             // Now lets try to read it all back and hope we get an exception
