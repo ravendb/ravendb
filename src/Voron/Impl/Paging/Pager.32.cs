@@ -36,7 +36,7 @@ public unsafe partial class Pager
 
             if (pagerTxState.LoadedPages.TryGetValue(allocationStartPosition, out var page))
             {
-                if (distanceFromStart + numberOfPages < page.NumberOfPages)
+                if (distanceFromStart + numberOfPages <= page.NumberOfPages)
                     return false; // already mapped large enough here
             }
 
