@@ -11,7 +11,7 @@ import messagePublisher = require("common/messagePublisher");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
 import indexAceAutoCompleteProvider = require("models/database/index/indexAceAutoCompleteProvider");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
-import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
+import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionsCommand");
 import detectIndexTypeCommand = require("commands/database/index/detectIndexTypeCommand");
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import getIndexFieldsFromMapCommand = require("commands/database/index/getIndexFieldsFromMapCommand");
@@ -1083,7 +1083,7 @@ class editIndex extends shardViewModelBase {
             .execute()
             .then((typeInfo) => {
                 indexDto.SourceType = typeInfo.IndexSourceType;
-                return new saveIndexDefinitionCommand(indexDto, typeInfo.IndexType === "JavaScriptMap" || typeInfo.IndexType === "JavaScriptMapReduce", db)
+                return new saveIndexDefinitionCommand([indexDto], IndexUtils.isJavaScriptIndex(typeInfo.IndexType), db)
                     .execute()
                     .done(() => {
                         this.resetDirtyFlag();

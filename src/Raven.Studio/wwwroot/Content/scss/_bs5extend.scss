@@ -615,3 +615,12 @@ $filtering-input-bg: $toggle-bg !default;
     filter: $hover-filter-var;
     transition: $global-easing-in-out;
 }
+
+.list-group-item {
+    &.disabled {
+        cursor: unset;
+        pointer-events: unset;
+        background-color: $panel-bg-1-var;
+        color: $text-muted-var;
+    }
+}
