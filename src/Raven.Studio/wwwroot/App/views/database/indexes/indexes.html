@@ -522,6 +522,18 @@
                         </div>
                     </div>
                 </div>
+                <div class="deletedTimeSeries" data-bind="visible: $parents[1].sourceType() === 'TimeSeries'">
+                    <div class="clearfix" data-bind="with: deletedTimeSeriesProgress">
+                        <small class="name">Deleted Time Series</small>
+                        <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
+                    </div>
+                    <div class="progress" data-bind="with: deletedTimeSeriesProgress">
+                        <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                             class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                            <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
             <!-- /ko -->
         </div>
