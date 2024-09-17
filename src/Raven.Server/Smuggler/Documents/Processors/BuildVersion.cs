@@ -1,3 +1,4 @@
+
 namespace Raven.Server.Smuggler.Documents.Processors
 {
     public static class BuildVersion
@@ -6,7 +7,8 @@ namespace Raven.Server.Smuggler.Documents.Processors
         {
             return buildVersion switch
             {
-                >= 70 and < 1000 => BuildVersionType.GreaterThanCurrent,
+                >= 80 and < 1000 => BuildVersionType.GreaterThanCurrent,
+                >= 70 and < 80 => BuildVersionType.V7,
                 >= 60 and < 70 => BuildVersionType.V6,
                 >= 50 and < 60 => BuildVersionType.V5,
                 >= 40 and < 50 => BuildVersionType.V4,
@@ -26,6 +28,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
         V4,
         V5,
         V6,
+        V7,
         GreaterThanCurrent
     }
 }
