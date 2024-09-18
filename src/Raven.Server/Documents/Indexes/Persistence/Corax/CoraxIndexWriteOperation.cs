@@ -171,9 +171,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _indexWriter.TryDeleteEntry(key.AsReadOnlySpan());
         }
 
-        public override void DeleteTimeSeries(LazyStringValue docId, LazyStringValue key, IndexingStatsScope stats)
+        public override void DeleteByPrefix(LazyStringValue key, IndexingStatsScope stats)
         {
-            // Lucene method
+            EnsureValidStats(stats);
+
+            using (Stats.DeleteStats.Start())
+                _indexWriter.DeleteByPrefix(key.ToString(CultureInfo.InvariantCulture));
         }
 
         /// <summary>

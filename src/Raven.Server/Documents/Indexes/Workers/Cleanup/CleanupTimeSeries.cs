@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
         protected virtual void HandleTimeSeriesDelete(TombstoneIndexItem tombstone, string collection, Lazy<IndexWriteOperationBase> writer,
             QueryOperationContext queryContext, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            writer.Value.DeleteTimeSeries(tombstone.LowerId, tombstone.LuceneKey, stats);
+            writer.Value.DeleteByPrefix(tombstone.LuceneKey, stats);
         }
 
         protected override void ClearStatsIfNeeded()

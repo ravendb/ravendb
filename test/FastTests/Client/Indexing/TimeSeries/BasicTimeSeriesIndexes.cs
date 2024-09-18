@@ -811,8 +811,7 @@ namespace FastTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void MapIndexWithCaseInsensitiveTimeSeriesNames(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1085,8 +1084,7 @@ namespace FastTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllTimeSeriesFromCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1262,8 +1260,7 @@ namespace FastTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllTimeSeries(Options options)
         {
             using (var store = GetDocumentStore(options))

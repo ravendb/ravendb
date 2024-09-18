@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             
             while (termsEnumerator.Term != null)
             {
-                if (termsEnumerator.Term.Text.Contains(term.Text, StringComparison.OrdinalIgnoreCase) == false)
+                if (termsEnumerator.Term.Text.StartsWith(term.Text) == false)
                     return;
 
                 // found by prefix
