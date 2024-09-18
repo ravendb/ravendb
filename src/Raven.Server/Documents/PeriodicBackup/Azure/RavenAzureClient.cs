@@ -213,9 +213,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         {
             result.List = page.Values
                 .Where(x => listFolders || x.IsBlob)
-                .Select(x => listFolders ? RestorePointsBase.GetDirectoryName(x.IsPrefix ? x.Prefix : x.Blob.Name) : x.Blob.Name)
+                .Select(x =>
+                {
+                    if (listFolders)
+                        return new RavenStorageClient.BlobProperties
+                        {
+                            Name = RestorePointsBase.GetDirectoryName(x.IsPrefix ? x.Prefix : x.Blob.Name), LastModified = x.Blob?.Properties.LastModified
+                        };
+                    else
+                        return new RavenStorageClient.BlobProperties { Name = x.Blob.Name, LastModified = x.Blob.Properties.LastModified };
+                })
                 .Distinct()
-                .Select(x => new RavenStorageClient.BlobProperties { Name = x })
                 .ToList();
 
             if (string.IsNullOrWhiteSpace(page.ContinuationToken) == false)

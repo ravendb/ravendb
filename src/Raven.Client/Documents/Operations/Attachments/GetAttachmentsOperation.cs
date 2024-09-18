@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -33,7 +34,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new GetAttachmentsCommand(conventions, context, _attachments, _type);
         }
 
-        internal sealed class GetAttachmentsCommand : RavenCommand<IEnumerator<AttachmentEnumeratorResult>>
+        internal class GetAttachmentsCommand : RavenCommand<IEnumerator<AttachmentEnumeratorResult>>
         {
             private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;
@@ -50,9 +51,15 @@ namespace Raven.Client.Documents.Operations.Attachments
                 ResponseType = RavenCommandResponseType.Empty;
             }
 
+            protected virtual string GetUrl(ServerNode node)
+            {
+                return $"{node.Url}/databases/{node.Database}/attachments/bulk";
+            }
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/attachments/bulk";
+         
+                url = GetUrl(node);
 
                 var request = new HttpRequestMessage
                 {

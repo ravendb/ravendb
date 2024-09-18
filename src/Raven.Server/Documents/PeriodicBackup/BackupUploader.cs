@@ -12,11 +12,11 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Retention;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Metrics;
 using Sparrow;
-using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -25,41 +25,12 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public sealed class BackupUploader
+    public sealed class BackupUploader : BackupUploaderBase
     {
-        private readonly UploaderSettings _settings;
-        private readonly List<PoolOfThreads.LongRunningWork> _threads;
-        private readonly ConcurrentSet<Exception> _exceptions;
-
-        private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
-
-        private readonly bool _isFullBackup;
-
-        public readonly OperationCancelToken TaskCancelToken;
-
-        private readonly Logger _logger;
-        private readonly BackupResult _backupResult;
-        private readonly Action<IOperationProgress> _onProgress;
-
-        private const string AzureName = "Azure";
-        private const string S3Name = "S3";
-        private const string GlacierName = "Glacier";
-        private const string GoogleCloudName = "Google Cloud";
-        private const string FtpName = "FTP";
-
-        public BackupUploader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
+        public BackupUploader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken) :
+            base(settings, retentionPolicyParameters, logger, backupResult, onProgress, taskCancelToken)
         {
-            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _threads = new List<PoolOfThreads.LongRunningWork>();
-            _exceptions = new ConcurrentSet<Exception>();
-
-            _retentionPolicyParameters = retentionPolicyParameters;
-            _isFullBackup = retentionPolicyParameters?.IsFullBackup ?? false;
-
-            TaskCancelToken = taskCancelToken;
-            _logger = logger;
-            _backupResult = backupResult;
-            _onProgress = onProgress;
+   
         }
 
         public bool AnyUploads => BackupConfiguration.CanBackupUsing(_settings.S3Settings)
@@ -79,27 +50,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             Execute();
         }
 
-        private void Execute()
-        {
-            _threads.ForEach(x => x.Join(int.MaxValue));
-
-            if (_exceptions.IsEmpty == false)
-            {
-                if (_exceptions.Count == 1)
-                    throw _exceptions.First();
-
-                if (_exceptions.All(x => x is OperationCanceledException))
-                    throw _exceptions.First();
-
-                throw new AggregateException(_exceptions);
-            }
-        }
 
         public void ExecuteDelete()
         {
-            CreateDeletionTaskIfNeeded(_settings.S3Settings, DeleteFromS3, S3Name);
-            CreateDeletionTaskIfNeeded(_settings.AzureSettings, DeleteFromAzure, AzureName);
-            CreateDeletionTaskIfNeeded(_settings.GoogleCloudSettings, DeleteFromGoogleCloud, GoogleCloudName);
+            CreateDeletionTaskIfNeeded(_settings.S3Settings, DeleteFromS3, S3Name, _settings.FolderName, _settings.FileName);
+            CreateDeletionTaskIfNeeded(_settings.AzureSettings, DeleteFromAzure, AzureName, _settings.FolderName, _settings.FileName);
+            CreateDeletionTaskIfNeeded(_settings.GoogleCloudSettings, DeleteFromGoogleCloud, GoogleCloudName, _settings.FolderName, _settings.FileName);
 
             // deletion from Glacier and FTP destinations is not supported
 
@@ -203,55 +159,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private void DeleteFromS3(S3Settings settings)
-        {
-            using (var client = new RavenAwsS3Client(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
-            {
-                var key = CombinePathAndKey(settings.RemoteFolderName);
-                client.DeleteObject(key);
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"{ReportDeletion(S3Name)} bucket named: {settings.BucketName}, with key: {key}");
-            }
-        }
-
-        private void DeleteFromAzure(AzureSettings settings)
-        {
-            using (var client = RavenAzureClient.Create(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
-            {
-                var key = CombinePathAndKey(settings.RemoteFolderName);
-                client.DeleteBlobs(new List<string> { key });
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"{ReportDeletion(AzureName)} container: {settings.StorageContainer}, with key: {key}");
-            }
-        }
-
-        private void DeleteFromGoogleCloud(GoogleCloudSettings settings)
-        {
-            using (var client = new RavenGoogleCloudClient(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
-            {
-                var key = CombinePathAndKey(settings.RemoteFolderName);
-                client.DeleteObject(key);
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"{ReportDeletion(GoogleCloudName)} storage bucket: {settings.BucketName}");
-            }
-        }
-
         private string CombinePathAndKey(string path)
         {
             return CombinePathAndKey(path, _settings.FolderName, _settings.FileName);
-        }
-
-        public static string CombinePathAndKey(string path, string folderName, string fileName)
-        {
-            if (path?.EndsWith('/') == true)
-                path = path[..^1];
-
-            var prefix = string.IsNullOrWhiteSpace(path) == false ? $"{path}/" : string.Empty;
-
-            return $"{prefix}{folderName}/{fileName}";
         }
 
         private void CreateUploadTaskIfNeeded<S, T>(S settings, Action<S, FileStream, Progress> uploadToServer, T uploadStatus, string targetName)
@@ -318,47 +228,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             _threads.Add(thread);
         }
 
-        private void CreateDeletionTaskIfNeeded<T>(T settings, Action<T> deleteFromServer, string targetName)
-            where T : BackupSettings
-        {
-            if (BackupConfiguration.CanBackupUsing(settings) == false)
-                return;
-
-            var threadName = $"Delete backup file of database '{_settings.DatabaseName}' from {targetName} (task: '{_settings.TaskName}')";
-            var thread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
-            {
-                try
-                {
-                    ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, _logger);
-                    NativeMemory.EnsureRegistered();
-
-                    AddInfo($"Starting the delete of backup file from {targetName}.");
-                    deleteFromServer(settings);
-                }
-                catch (Exception e)
-                {
-                    var extracted = e.ExtractSingleInnerException();
-                    var error = $"Failed to delete the backup file from {targetName}.";
-                    Exception exception = null;
-                    if (extracted is OperationCanceledException)
-                    {
-                        // shutting down or HttpClient timeout
-                        exception = TaskCancelToken.Token.IsCancellationRequested ? extracted : new TimeoutException(error, e);
-                    }
-
-                    _exceptions.Add(exception ?? new InvalidOperationException(error, e));
-                }
-            }, null, ThreadNames.ForDeleteBackupFile(threadName, _settings.DatabaseName, targetName, _settings.TaskName));
-
-            _threads.Add(thread);
-        }
-
-        private void AddInfo(string message)
-        {
-            _backupResult.AddInfo(message);
-            _onProgress.Invoke(_backupResult.Progress);
-        }
-
         private string GetArchiveDescription()
         {
             var backupType = _settings.BackupType;
@@ -366,7 +235,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (backupType.HasValue)
             {
-                description = GetBackupDescription(backupType.Value, _isFullBackup);
+                description = GetBackupDescription();
             }
             else
             {
@@ -374,12 +243,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             return $"{description} for db {_settings.DatabaseName} at {SystemTime.UtcNow}";
-        }
-
-        public static string GetBackupDescription(BackupType backupType, bool isFullBackup)
-        {
-            var fullBackupText = backupType == BackupType.Backup ? "Full backup" : "A snapshot";
-            return isFullBackup ? fullBackupText : "Incremental backup";
         }
 
         private static string MsToHumanReadableString(long milliseconds)
@@ -432,11 +295,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             return $"Successfully uploaded backup file '{_settings.FileName}' to {name}";
         }
-
-        private string ReportDeletion(string name)
-        {
-            return $"Successfully deleted backup file '{_settings.FileName}' to {name}";
-        }
     }
 
     public sealed class UploaderSettings
@@ -461,5 +319,70 @@ namespace Raven.Server.Documents.PeriodicBackup
         public string TaskName;
 
         public BackupType? BackupType;
+        public Action OnBackupException;
+        internal BackupConfiguration.BackupDestination Destination;
+
+        public static UploaderSettings GenerateUploaderSetting(DocumentDatabase database, string taskName, S3Settings s3Settings, AzureSettings azureSettings, GlacierSettings glacierSettings, GoogleCloudSettings googleCloudSettings, FtpSettings ftpSettings)
+        {
+            return new UploaderSettings(database.Configuration.Backup)
+            {
+                S3Settings = BackupTask.GetBackupConfigurationFromScript(s3Settings, x => JsonDeserializationServer.S3Settings(x),
+                    database, updateServerWideSettingsFunc: null, serverWide: false),
+                AzureSettings = BackupTask.GetBackupConfigurationFromScript(azureSettings, x => JsonDeserializationServer.AzureSettings(x),
+                    database, updateServerWideSettingsFunc: null, serverWide: false),
+                GlacierSettings = BackupTask.GetBackupConfigurationFromScript(glacierSettings, x => JsonDeserializationServer.GlacierSettings(x),
+                    database, updateServerWideSettingsFunc: null, serverWide: false),
+                GoogleCloudSettings = BackupTask.GetBackupConfigurationFromScript(googleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x),
+                    database, updateServerWideSettingsFunc: null, serverWide: false),
+                FtpSettings = BackupTask.GetBackupConfigurationFromScript(ftpSettings, x => JsonDeserializationServer.FtpSettings(x),
+                    database, updateServerWideSettingsFunc: null, serverWide: false),
+                DatabaseName = database.Name,
+                TaskName = taskName
+            };
+        }
+
+        public static UploaderSettings GenerateDirectUploaderSetting(DocumentDatabase database, string taskName, S3Settings s3Settings, AzureSettings azureSettings, GlacierSettings glacierSettings, GoogleCloudSettings googleCloudSettings, FtpSettings ftpSettings)
+        {
+            var destination = BackupConfigurationHelper.DestinationForDirectUpload(database.Configuration.Backup, s3Settings, azureSettings, glacierSettings, googleCloudSettings, ftpSettings);
+            return new UploaderSettings(database.Configuration.Backup)
+            {
+                S3Settings = BackupTask.GetBackupConfigurationFromScript(s3Settings, x => JsonDeserializationServer.S3Settings(x),
+                    database, updateServerWideSettingsFunc: null, serverWide: false),
+                AzureSettings = BackupTask.GetBackupConfigurationFromScript(azureSettings, x => JsonDeserializationServer.AzureSettings(x),
+                    database, updateServerWideSettingsFunc: null, serverWide: false),
+                GlacierSettings = BackupTask.GetBackupConfigurationFromScript(glacierSettings, x => JsonDeserializationServer.GlacierSettings(x),
+                    database, updateServerWideSettingsFunc: null, serverWide: false),
+                GoogleCloudSettings = BackupTask.GetBackupConfigurationFromScript(googleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x),
+                    database, updateServerWideSettingsFunc: null, serverWide: false),
+                FtpSettings = BackupTask.GetBackupConfigurationFromScript(ftpSettings, x => JsonDeserializationServer.FtpSettings(x),
+                    database, updateServerWideSettingsFunc: null, serverWide: false),
+                DatabaseName = database.Name,
+                TaskName = taskName,
+                Destination = destination
+            };
+        }
+        public static UploaderSettings GenerateUploaderSettingForBackup(DocumentDatabase database, BackupConfiguration configuration, string taskName, bool isServerWide, bool backupToLocalFolder,
+            Action backupException)
+        {
+            var destination = BackupConfigurationHelper.GetBackupDestinationForDirectUpload(backupToLocalFolder, configuration, database.Configuration.Backup);
+            return new UploaderSettings(database.Configuration.Backup)
+            {
+                S3Settings = BackupTask.GetBackupConfigurationFromScript(configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x),
+                    database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(configuration.S3Settings, database.Name), isServerWide),
+                AzureSettings = BackupTask.GetBackupConfigurationFromScript(configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x),
+                    database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(configuration.AzureSettings, database.Name), isServerWide),
+                GlacierSettings = BackupTask.GetBackupConfigurationFromScript(configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x),
+                    database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGlacier(configuration.GlacierSettings, database.Name), isServerWide),
+                GoogleCloudSettings = BackupTask.GetBackupConfigurationFromScript(configuration.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x),
+                    database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGoogleCloud(configuration.GoogleCloudSettings, database.Name), isServerWide),
+                FtpSettings = BackupTask.GetBackupConfigurationFromScript(configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x),
+                    database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForFtp(configuration.FtpSettings, database.Name), isServerWide),
+                DatabaseName = database.Name,
+                TaskName = taskName,
+                BackupType = configuration.BackupType,
+                Destination = destination,
+                OnBackupException = backupException
+            };
+        }
     }
 }

@@ -25,10 +25,10 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new DeleteAttachmentCommand(_documentId, _name, _changeVector);
         }
 
-        internal sealed class DeleteAttachmentCommand : RavenCommand
+        internal class DeleteAttachmentCommand : RavenCommand
         {
-            private readonly string _documentId;
-            private readonly string _name;
+            protected readonly string _documentId;
+            protected readonly string _name;
             private readonly string _changeVector;
 
             public DeleteAttachmentCommand(string documentId, string name, string changeVector)
@@ -45,13 +45,18 @@ namespace Raven.Client.Documents.Operations.Attachments
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
+                url = GetUrl(node);
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Delete
                 };
                 AddChangeVectorIfNotNull(_changeVector, request);
                 return request;
+            }
+
+            protected virtual string GetUrl(ServerNode node)
+            {
+                return $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
             }
         }
     }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
@@ -7,13 +8,14 @@ using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
@@ -29,7 +31,6 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.Smuggler;
@@ -188,7 +189,9 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, DeleteDatabaseResult> DeleteDatabaseResult = GenerateJsonDeserializationRoutine<DeleteDatabaseResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureExpirationOperationResult> ConfigureExpirationOperationResult = GenerateJsonDeserializationRoutine<ConfigureExpirationOperationResult>();
-        
+        internal static readonly Func<BlittableJsonReaderObject, ConfigureRetireAttachmentsOperationResult> ConfigureRetireAttachmentsOperationResult = GenerateJsonDeserializationRoutine<ConfigureRetireAttachmentsOperationResult>();
+        internal static readonly Func<BlittableJsonReaderObject, RetiredAttachmentsConfiguration> RetiredAttachmentsConfiguration = GenerateJsonDeserializationRoutine<RetiredAttachmentsConfiguration>();
+
         internal static readonly Func<BlittableJsonReaderObject, ConfigureDataArchivalOperationResult> ConfigureDataArchivalOperationResult = GenerateJsonDeserializationRoutine<ConfigureDataArchivalOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, DocumentCompressionConfigurationResult> DocumentCompressionConfigurationOperationResult = GenerateJsonDeserializationRoutine<DocumentCompressionConfigurationResult>();

@@ -23,6 +23,9 @@ public class AzureDirectUploadStream : DirectUploadStream<IRavenAzureClient>
         {
             base.Dispose(disposing);
 
+            if (_retentionPolicyParameters == null)
+                return;
+
             var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, Client);
             runner.Execute();
         }

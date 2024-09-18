@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Refresh
         private const string DocumentsByRefresh = "DocumentsByRefresh";
 
         public RefreshStorage(DocumentDatabase database, Transaction tx) 
-            : base(tx, database, DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
+            : base(tx, database,DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
         {
         }
 
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Refresh
 
         protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
         {
-            if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
+            if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
                 return;
 
             (bool allExpired, string id) = GetConflictedExpiration(options.Context, options.CurrentTime, clonedId);

@@ -76,18 +76,18 @@ namespace SlowTests.Server.Documents.DataArchival
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-
-                    DatabaseTopology topology;
+                    DatabaseRecord dbRecord;
                     string nodeTag;
 
                     using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                     using (serverContext.OpenReadTransaction())
                     {
-                        topology = database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, database.Name);
+                        dbRecord = database.ServerStore.Cluster.ReadDatabase(serverContext, database.Name);
+
                         nodeTag = database.ServerStore.NodeTag;
                     }
 
-                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
+                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), dbRecord, nodeTag, 10);
                     var totalCount = 0;
 
                     var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
@@ -277,13 +277,13 @@ namespace SlowTests.Server.Documents.DataArchival
 
                 await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config, database.Name);
 
-                DatabaseTopology topology;
+                DatabaseRecord dbRecord;
                 string nodeTag;
 
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 using (serverContext.OpenReadTransaction())
                 {
-                    topology = database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, database.Name);
+                    dbRecord = database.ServerStore.Cluster.ReadDatabase(serverContext, database.Name);
                     nodeTag = database.ServerStore.NodeTag;
                 }
 
@@ -291,7 +291,7 @@ namespace SlowTests.Server.Documents.DataArchival
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
-                    var archiveOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
+                    var archiveOptions = new BackgroundWorkParameters(context, time, dbRecord, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
                     var totalCount = 0;
                     var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(archiveOptions, ref totalCount, out _, CancellationToken.None);
                     Assert.Equal(10, totalCount);
@@ -303,7 +303,7 @@ namespace SlowTests.Server.Documents.DataArchival
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
-                    var archiveOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
+                    var archiveOptions = new BackgroundWorkParameters(context, time, dbRecord, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
                     var totalCount = 0;
                     var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(archiveOptions, ref totalCount, out _, CancellationToken.None);
                     Assert.Equal(1, totalCount);

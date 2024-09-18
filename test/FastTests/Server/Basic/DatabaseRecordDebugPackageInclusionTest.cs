@@ -35,6 +35,7 @@ namespace FastTests.Server.Basic
                 nameof(DatabaseRecord.QueueConnectionStrings),
                 nameof(DatabaseRecord.QueueEtls),
                 nameof(DatabaseRecord.QueueSinks),
+                nameof(DatabaseRecord.RetiredAttachments)
             };
             
             foreach (var safe in ServerWideDebugInfoPackageHandler.FieldsThatShouldBeExposedForDebug)

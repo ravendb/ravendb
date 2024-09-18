@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations;
@@ -318,6 +319,13 @@ namespace Raven.Server.Smuggler.Documents
                     WriteDataArchival(databaseRecord.DataArchival);
                 }
 
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.RetireAttachments))
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.RetiredAttachments));
+                    WriteTaskConfiguration(databaseRecord.RetiredAttachments);
+                }
+                
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Refresh))
                 {
                     _writer.WriteComma();
@@ -926,6 +934,16 @@ namespace Raven.Server.Smuggler.Documents
                 _context.Write(_writer, dataArchival.ToJson());
             }
 
+            private void WriteTaskConfiguration(IDynamicJson config)
+            {
+                if (config == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+
+                _context.Write(_writer, config.ToJson());
+            }
             private void WriteRefresh(RefreshConfiguration refresh)
             {
                 if (refresh == null)
@@ -1552,19 +1570,27 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     progress.Attachments.ReadCount++;
-
-                    if (_attachmentStreamsAlreadyExported.Add(hash))
+                    if (attachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false || flags == AttachmentFlags.None)
                     {
-                        await using (var stream = _source.GetAttachmentStream(hash, out string tag))
+                        if (_attachmentStreamsAlreadyExported.Add(hash))
                         {
-                            if (stream == null)
+                            await using (var stream = _source.GetAttachmentStream(hash, out string tag))
                             {
-                                progress.Attachments.ErroredCount++;
-                                throw new ArgumentException($"Document {document.Id} seems to have an attachment hash: {hash}, but no correlating hash was found in the storage.");
+                                if (stream == null)
+                                {
+                                    progress.Attachments.ErroredCount++;
+                                    throw new ArgumentException($"Document {document.Id} seems to have an attachment hash: {hash}, but no correlating hash was found in the storage.");
+                                }
+                                await WriteAttachmentStreamAsync(hash, stream, tag);
                             }
-                            await WriteAttachmentStreamAsync(hash, stream, tag);
                         }
                     }
+                    else if(flags.Contain(AttachmentFlags.Retired))
+                    {
+                        
+                    }
+
+
                 }
             }
 

@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
                 stats.CountOfIdentities = RequestHandler.ServerStore.Cluster.GetNumberOfIdentities(context.Server, RequestHandler.Database.Name);
                 stats.CountOfCompareExchange = RequestHandler.ServerStore.Cluster.GetNumberOfCompareExchange(context.Server, RequestHandler.Database.Name);
                 stats.CountOfCompareExchangeTombstones = RequestHandler.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context.Server, RequestHandler.Database.Name);
-
+                //TODO: egor stats.CountOfRetiredAttachments = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetNumberOfRetiredAttachments(context.Documents);
                 return WriteResultAsync(stats);
             }
         }

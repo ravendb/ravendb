@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using Raven.Client.Documents.Attachments;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
@@ -19,6 +21,10 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public Slice Key;
         public Slice Base64Hash;
         public Stream Stream;
+        public long AttachmentSize;
+        public AttachmentFlags Flags;
+        public DateTime? RetiredAtUtc;
+        public LazyStringValue Collection;
 
         public override long Size => base.Size + // common
 
@@ -32,7 +38,15 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                                      ContentType.Size +
 
                                      sizeof(byte) + // size of Base64Hash
-                                     Base64Hash.Size;
+                                     Base64Hash.Size
+
+                                     + sizeof(long)
+                                     + sizeof(int)
+                                     + (RetiredAtUtc == null ? 0 : sizeof(long))
+                                     + sizeof(int)
+                                     + Collection.Size
+                              ;
+      
 
         public long StreamSize => sizeof(byte) + // type
 
@@ -49,6 +63,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             djv[nameof(ContentType)] = ContentType.ToString(CultureInfo.InvariantCulture);
             djv[nameof(Base64Hash)] = Base64Hash.ToString();
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
+            djv[nameof(Flags)] = Flags.ToString();
+            djv[nameof(RetiredAtUtc)] = RetiredAtUtc;
+            djv[nameof(Collection)] = Collection.ToString();
             return djv;
         }
 
@@ -63,7 +80,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 ContentType = attachment.ContentType,
                 Base64Hash = attachment.Base64Hash,
                 Stream = attachment.Stream,
-                TransactionMarker = attachment.TransactionMarker
+                TransactionMarker = attachment.TransactionMarker,
+                AttachmentSize = attachment.Size,
+                Flags = attachment.Flags,
+                RetiredAtUtc = attachment.RetiredAt,
+                Collection = attachment.Collection
             };
 
             // although the key is LSV but is treated as slice and doesn't respect escaping
@@ -101,6 +122,30 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Base64Hash.CopyTo(pTemp + tempBufferPos);
                 tempBufferPos += Base64Hash.Size;
 
+                *(long*)(pTemp + tempBufferPos) = AttachmentSize;
+                tempBufferPos += sizeof(long);
+                if (RetiredAtUtc.HasValue)
+                {
+                    *(long*)(pTemp + tempBufferPos) = RetiredAtUtc.Value.Ticks;
+                    tempBufferPos += sizeof(long);
+                }
+                else
+                {
+                    *(long*)(pTemp + tempBufferPos) = -1L;
+                    tempBufferPos += sizeof(long);
+                }
+
+                *(AttachmentFlags*)(pTemp + tempBufferPos) = Flags;
+                tempBufferPos += sizeof(AttachmentFlags);
+
+
+                *(int*)(pTemp + tempBufferPos) = Collection.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, Collection.Buffer, Collection.Size);
+                tempBufferPos += Collection.Size;
+
+
+
                 stream.Write(tempBuffer, 0, tempBufferPos);
                 stats.RecordAttachmentOutput(Size);
             }
@@ -118,6 +163,15 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                 var base64HashSize = *Reader.ReadExactly(sizeof(byte));
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
+
+                AttachmentSize = *(long*)Reader.ReadExactly(sizeof(long));
+                var ticks = *(long*)Reader.ReadExactly(sizeof(long));
+                if (ticks != -1)
+                    RetiredAtUtc = new DateTime(ticks, DateTimeKind.Utc);
+
+                Flags = *(AttachmentFlags*)Reader.ReadExactly(sizeof(AttachmentFlags)) | AttachmentFlags.None;
+                SetLazyStringValueFromString(context, out Collection);
+
 
                 stats.RecordAttachmentRead(Size);
             }
@@ -145,6 +199,10 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             item.Base64Hash = Base64Hash.Clone(allocator);
             item.Key = Key.Clone(allocator);
 
+            item.AttachmentSize = AttachmentSize;
+            item.RetiredAtUtc = RetiredAtUtc;
+            item.Flags = Flags;
+            item.Collection = Collection.Clone(context);
             item.ToDispose(new DisposableAction(() =>
             {
                 item.Base64Hash.Release(allocator);
@@ -214,6 +272,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             Name?.Dispose();
             ContentType?.Dispose();
             Stream?.Dispose();
+            Collection?.Dispose();
         }
     }
 }

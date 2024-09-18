@@ -51,8 +51,12 @@ namespace Raven.Server.Documents
         public bool TryGetMetadata(out BlittableJsonReaderObject metadata) =>
             Data.TryGet(Constants.Documents.Metadata.Key, out metadata);
 
-        
-        
+        public bool TryGetCollection(out string collectionStr)
+        {
+            collectionStr = null;
+            return TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out collectionStr);
+        }
+
         public void EnsureDocumentId()
         {
             if (_metadataEnsured)

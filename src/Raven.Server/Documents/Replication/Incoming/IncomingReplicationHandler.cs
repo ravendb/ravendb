@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using NetTopologySuite.Utilities;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Replication.Messages;
@@ -377,11 +379,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                             case AttachmentReplicationItem attachment:
 
                                 var result = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachment.Key);
+                                var isRevision = AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) == AttachmentType.Revision;
                                 if (_replicationInfo.ReplicatedAttachmentStreams?.TryGetValue(attachment.Base64Hash, out var attachmentStream) == true)
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                     {
-                                        Debug.Assert(result.Attachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
+                                        Debug.Assert(result.Attachment == null || isRevision == false,
                                             "the stream should have been written when the revision was added by the document");
                                         database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
                                     }
@@ -391,6 +394,8 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
+                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Collection, out _, out Slice collectionSlice));
+
 
                                 var local = context.GetChangeVector(result.ChangeVector);
                                 var newChangeVector = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local) switch
@@ -405,7 +410,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 if (newChangeVector != null)
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, newChangeVector);
+                                        contentType, attachment.Base64Hash, attachment.RetiredAtUtc, collectionSlice, attachment.Flags, attachment.AttachmentSize,isRevision, newChangeVector);
                                 }
 
                                 break;
@@ -428,10 +433,21 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     ConflictStatus.Update => attachmentTombstone.ChangeVector,
                                     _ => throw new ArgumentOutOfRangeException()
                                 };
+                                //TODO: egor pass the flag inside the method
+                                if (attachmentTombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
+                                {
+                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                        newChangeVector,
+                                        attachmentTombstone.LastModifiedTicks, storageOnly: true);
+                                }
+                                else
+                                {
 
-                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    newChangeVector,
-                                    attachmentTombstone.LastModifiedTicks);
+                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                        newChangeVector,
+                                        attachmentTombstone.LastModifiedTicks, storageOnly: false);
+                                }
+
                                 break;
 
                             case RevisionTombstoneReplicationItem revisionTombstone:

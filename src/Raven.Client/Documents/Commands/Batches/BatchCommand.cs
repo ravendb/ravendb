@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -57,6 +58,9 @@ namespace Raven.Client.Documents.Commands.Batches
             {
                 if (command is PutAttachmentCommandData putAttachmentCommandData)
                 {
+                    if(putAttachmentCommandData.Flags.Contain(AttachmentFlags.Retired))
+                        continue;
+
                     if (_attachmentStreams == null)
                     {
                         _attachmentStreams = new List<Stream>();

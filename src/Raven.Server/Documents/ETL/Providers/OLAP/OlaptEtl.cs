@@ -15,7 +15,6 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -42,39 +41,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             Metrics = OlapMetrics;
             _operationCancelToken = new OperationCancelToken(Database.DatabaseShutdown, CancellationToken);
-            
-            _uploaderSettings = GenerateUploaderSetting(database.Configuration.Backup);
+
+            _uploaderSettings = UploaderSettings.GenerateUploaderSetting(database, Name, Configuration.Connection.S3Settings, Configuration.Connection.AzureSettings, Configuration.Connection.GlacierSettings, Configuration.Connection.GoogleCloudSettings, Configuration.Connection.FtpSettings);
 
             UpdateTimer(LastProcessState.LastBatchTime);
-        }
-
-        private UploaderSettings GenerateUploaderSetting(Config.Categories.BackupConfiguration configuration)
-        {
-            var s3Settings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
-                Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            var azureSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.AzureSettings, x => JsonDeserializationServer.AzureSettings(x),
-                Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            var glacierSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x),
-                Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            var googleCloudSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x),
-                Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            var ftpSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.FtpSettings, x => JsonDeserializationServer.FtpSettings(x),
-                Database, updateServerWideSettingsFunc: null, serverWide: false);
-
-            return new UploaderSettings(configuration)
-            {
-                S3Settings = s3Settings, 
-                AzureSettings = azureSettings, 
-                GlacierSettings = glacierSettings,
-                GoogleCloudSettings = googleCloudSettings,
-                FtpSettings = ftpSettings,
-                DatabaseName = Database.Name, 
-                TaskName = Name
-            };
         }
 
         public override EtlType EtlType => EtlType.Olap;
@@ -294,35 +264,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        private static BackupResult GenerateUploadResult()
-        {
-            return new BackupResult
-            {
-                // Skipped will be set later, if needed
-                S3Backup = new UploadToS3
-                {
-                    Skipped = true
-                },
-                AzureBackup = new UploadToAzure
-                {
-                    Skipped = true
-                },
-                GoogleCloudBackup = new UploadToGoogleCloud
-                {
-                    Skipped = true
-                },
-                GlacierBackup = new UploadToGlacier
-                {
-                    Skipped = true
-                },
-                FtpBackup = new UploadToFtp
-                {
-                    Skipped = true
-                }
-            };
-        }
-
-
         private void UploadToRemoteDestinations(string localPath, UploadInfo uploadInfo, OlapEtlStatsScope scope)
         {
             CancellationToken.ThrowIfCancellationRequested();
@@ -331,7 +272,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _uploaderSettings.FileName = uploadInfo.FileName;
             _uploaderSettings.FolderName = uploadInfo.FolderName;
             
-            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
+            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
 
             try
             {
@@ -364,7 +305,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _uploaderSettings.FileName = uploadInfo.FileName;
             _uploaderSettings.FolderName = uploadInfo.FolderName;
 
-            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
+            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
 
             try
             {

@@ -487,11 +487,14 @@ namespace Raven.Server.Documents.Replication.Senders
 
             if (item is AttachmentReplicationItem attachment)
             {
-                if (ShouldSendAttachmentStream(attachment))
-                    _replicaAttachmentStreams[attachment.Base64Hash] = attachment;
+                if (attachment.Flags.Contain(AttachmentFlags.Retired) == false)
+                {
+                    if (ShouldSendAttachmentStream(attachment))
+                        _replicaAttachmentStreams[attachment.Base64Hash] = attachment;
 
-                if (MissingAttachmentsInLastBatch)
-                    state.MissingAttachmentBase64Hashes?.Remove(attachment.Base64Hash);
+                    if (MissingAttachmentsInLastBatch)
+                        state.MissingAttachmentBase64Hashes?.Remove(attachment.Base64Hash);
+                }
             }
 
             _orderedReplicaItems.Add(item.Etag, item);

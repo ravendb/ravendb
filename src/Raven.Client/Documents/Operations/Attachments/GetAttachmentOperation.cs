@@ -33,12 +33,13 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new GetAttachmentCommand(conventions, context, _documentId, _name, _type, _changeVector);
         }
 
-        internal sealed class GetAttachmentCommand : RavenCommand<AttachmentResult>
+        internal class GetAttachmentCommand : RavenCommand<AttachmentResult>
         {
+            protected readonly string _documentId;
+            protected readonly string _name;
+
             private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;
-            private readonly string _documentId;
-            private readonly string _name;
             private readonly AttachmentType _type;
             private readonly string _changeVector;
 
@@ -62,9 +63,14 @@ namespace Raven.Client.Documents.Operations.Attachments
                 ResponseType = RavenCommandResponseType.Empty;
             }
 
+            protected virtual string GetUrl(ServerNode node)
+            {
+                return $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
+            }
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
+                url = GetUrl(node);
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Get
@@ -97,37 +103,55 @@ namespace Raven.Client.Documents.Operations.Attachments
 
             public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
+                Result = await AttachmentResult(response, _name, _documentId).ConfigureAwait(false);
+                return ResponseDisposeHandling.Manually;
+            }
+
+            public override bool IsReadRequest => true;
+
+            internal static async Task<AttachmentResult> AttachmentResult(HttpResponseMessage response, string name, string documentId)
+            {
                 var contentType = response.Content.Headers.TryGetValues(Constants.Headers.ContentType, out IEnumerable<string> contentTypeVale) ? contentTypeVale.First() : null;
                 var changeVector = response.GetEtagHeader();
                 var hash = response.Headers.TryGetValues("Attachment-Hash", out IEnumerable<string> hashVal) ? hashVal.First() : null;
                 long size = 0;
                 if (response.Headers.TryGetValues("Attachment-Size", out IEnumerable<string> sizeVal))
                     long.TryParse(sizeVal.First(), out size);
-
+                DateTime? attachmentRetireAt = null;
+                if (response.Headers.TryGetValues(Constants.Headers.AttachmentRetireAt, out IEnumerable<string> dt))
+                {
+                    if (DateTime.TryParse(dt.First(), out var retireAt))
+                    {
+                        attachmentRetireAt = retireAt;
+                    }
+                }
+                int flags = 0;
+                if (response.Headers.TryGetValues(Constants.Headers.AttachmentFlags, out IEnumerable<string> flagsVal))
+                    int.TryParse(flagsVal.First(), out flags);
+         //       var collection = response.Headers.TryGetValues(Constants.Headers.AttachmentCollection, out IEnumerable<string> collectionVal) ? collectionVal.First() : null;
                 var attachmentDetails = new AttachmentDetails
                 {
                     ContentType = contentType,
-                    Name = _name,
+                    Name = name,
                     Hash = hash,
                     Size = size,
                     ChangeVector = changeVector,
-                    DocumentId = _documentId
+                    DocumentId = documentId,
+                    RetireAt = attachmentRetireAt,
+                    Flags = (AttachmentFlags)flags,
+            //        Collection = collection
                 };
 
                 var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
                 var streamReader = new StreamWithTimeout(responseStream);
                 var stream = new AttachmentStream(response, streamReader);
-
-                Result = new AttachmentResult
+                var result = new AttachmentResult
                 {
                     Stream = stream,
                     Details = attachmentDetails
                 };
-
-                return ResponseDisposeHandling.Manually;
+                return result;
             }
-
-            public override bool IsReadRequest => true;
         }
     }
 }

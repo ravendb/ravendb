@@ -599,6 +599,21 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
+                if (current is Dictionary<string, TimeSpan> dsts)
+                {
+                    var dja = new DynamicJsonArray();
+                    foreach (var item in dsts)
+                    {
+                        var djv = new DynamicJsonValue
+                        {
+                            [item.Key] = item.Value.ToString("c")
+                    };
+                        dja.Add(djv);
+                    }
+                    current = dja;
+                    continue;
+                }
+
                 if (current == null)
                 {
                     _state.CurrentTokenType = JsonParserToken.Null;

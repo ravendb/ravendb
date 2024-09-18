@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -7,10 +8,20 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments;
 
-internal sealed class AttachmentHandlerProcessorForHeadAttachment : AbstractAttachmentHandlerProcessorForHeadAttachment<DatabaseRequestHandler, DocumentsOperationContext>
+internal class AttachmentHandlerProcessorForHeadAttachment : AbstractAttachmentHandlerProcessorForHeadAttachment<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public AttachmentHandlerProcessorForHeadAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
+    }
+
+    public virtual string CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
+    {
+        if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+        {
+            throw new InvalidOperationException($"Cannot get attachment '{name}' on document '{documentId}' because it is retired. Please use dedicated API.");
+        }
+
+        return null;
     }
 
     protected override ValueTask HandleHeadAttachmentAsync(string documentId, string name, string changeVector)
@@ -24,6 +35,8 @@ internal sealed class AttachmentHandlerProcessorForHeadAttachment : AbstractAtta
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return ValueTask.CompletedTask;
             }
+
+            CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(context, attachment, documentId, name);
 
             if (changeVector == attachment.ChangeVector)
             {

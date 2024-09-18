@@ -23,7 +23,6 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Tests.Infrastructure.ConnectionString;
@@ -32,9 +31,11 @@ using Xunit;
 using Raven.Server.Documents;
 using System.Text;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server;
 using Tests.Infrastructure;
+using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
 namespace FastTests
 {
@@ -381,6 +382,52 @@ namespace FastTests
                     // ignored
                 }
             }
+
+            public S3Settings GetS3Settings(string remoteFolderName, [CallerMemberName] string caller = null)
+            {
+                var s3Settings = AmazonS3RetryFactAttribute.S3Settings;
+                if (s3Settings == null)
+                    return null;
+
+                if (string.IsNullOrEmpty(caller) == false)
+                    remoteFolderName = $"{remoteFolderName}/{caller}";
+
+                if (string.IsNullOrEmpty(s3Settings.RemoteFolderName) == false)
+                    remoteFolderName = $"{s3Settings.RemoteFolderName}/{remoteFolderName}";
+
+
+                return new S3Settings
+                {
+                    BucketName = s3Settings.BucketName,
+                    RemoteFolderName = remoteFolderName,
+                    AwsAccessKey = s3Settings.AwsAccessKey,
+                    AwsSecretKey = s3Settings.AwsSecretKey,
+                    AwsRegionName = s3Settings.AwsRegionName
+                };
+            }
+
+            public AzureSettings GetAzureSettings(string remoteFolderName, [CallerMemberName] string caller = null)
+            {
+                var settings = AzureRetryFactAttribute.AzureSettings;
+                if (settings == null)
+                    return null;
+
+                if (string.IsNullOrEmpty(caller) == false)
+                    remoteFolderName = $"{remoteFolderName}/{caller}";
+
+                if (string.IsNullOrEmpty(settings.RemoteFolderName) == false)
+                    remoteFolderName = $"{settings.RemoteFolderName}/{remoteFolderName}";
+
+                return new AzureSettings
+                {
+                    RemoteFolderName = remoteFolderName,
+                    AccountName = settings.AccountName,
+                    StorageContainer = settings.StorageContainer,
+                    AccountKey = settings.AccountKey,
+                    SasToken = settings.SasToken
+                };
+            }
+
         }
     }
 }

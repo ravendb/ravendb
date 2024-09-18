@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Expiration
 
         protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
         {
-            if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
+            if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
                 return;
 
             (bool allExpired, string id) = GetConflictedExpiration(options.Context, options.CurrentTime, clonedId);

@@ -216,6 +216,22 @@ public static class ThreadNames
         };
     }
 
+    public static ThreadInfo ForUploadRetiredAttachment(string threadName, string dbName, string targetName, string taskName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.UploadRetiredAttachment(dbName, targetName)
+        };
+    }
+
+    public static ThreadInfo ForDeleteRetiredAttachment(string threadName, string dbName, string targetName, string taskName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.DeleteRetiredAttachment(dbName, targetName)
+        };
+    }
+
     public sealed class ThreadDetails
     {
         public interface IThreadDetails
@@ -617,6 +633,41 @@ public static class ThreadNames
                 return $"ClstrTx {_db}";
             }
         }
+
+        public sealed class UploadRetiredAttachment : IThreadDetails
+        {
+            private readonly string _dbName;
+            private readonly string _targetName;
+
+            public UploadRetiredAttachment(string dbName, string targetName)
+            {
+                _dbName = dbName;
+                _targetName = targetName;
+            }
+
+            public string GetShortName()
+            {
+                return $"UpRetAtt {_dbName} to {_targetName}";
+            }
+        }
+
+        public sealed class DeleteRetiredAttachment : IThreadDetails
+        {
+            private readonly string _dbName;
+            private readonly string _targetName;
+
+            public DeleteRetiredAttachment(string dbName, string targetName)
+            {
+                _dbName = dbName;
+                _targetName = targetName;
+            }
+
+            public string GetShortName()
+            {
+                return $"DelRetAtt {_dbName} to {_targetName}";
+            }
+        }
+
     }
 
     public sealed class ThreadInfo

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -63,6 +64,28 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        public DateTime? RetiredAt
+        {
+            get
+            {
+                if (_attachment.RetiredAt.HasValue == false)
+                {
+                    return null;
+                    // TODO: egor can I return simply null here? or return DynamicNullObject.Null; ? (also in GetContentAsStream)
+                }
+
+                return _attachment.RetiredAt.Value;
+            }
+        }
+
+        public AttachmentFlags Flags
+        {
+            get
+            {
+                return _attachment.Flags;
+            }
+        }
+
         public string GetContentAsString()
         {
             return GetContentAsString(Encoding.UTF8);
@@ -70,6 +93,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public string GetContentAsString(Encoding encoding)
         {
+            if (_attachment.Flags.Contain(AttachmentFlags.Retired))
+                return DynamicNullObject.Null;
+
             if (_contentAsString == null)
             {
                 _attachment.Stream.Position = 0;
@@ -83,6 +109,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public Stream GetContentAsStream()
         {
+            if (_attachment.Flags.Contain(AttachmentFlags.Retired))
+                return null;
+
             _attachment.Stream.Position = 0;
 
             return _attachment.Stream;

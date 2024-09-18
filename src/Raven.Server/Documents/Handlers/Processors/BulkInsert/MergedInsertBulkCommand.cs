@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.TransactionMerger.Commands;
@@ -117,7 +118,7 @@ public sealed class MergedInsertBulkCommand : DocumentMergedTransactionCommand
                         using (cmd.AttachmentStream.Stream)
                         {
                             Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
-                                cmd.ContentType ?? "", cmd.AttachmentStream.Hash, cmd.ChangeVector, cmd.AttachmentStream.Stream, updateDocument: false);
+                                cmd.ContentType ?? "", cmd.AttachmentStream.Hash, flags: AttachmentFlags.None, cmd.AttachmentStream.Stream.Length, retireAtDt: null, cmd.ChangeVector, cmd.AttachmentStream.Stream, updateDocument: false);
                         }
 
                         var updates = GetDocumentUpdates(cmd.Id);

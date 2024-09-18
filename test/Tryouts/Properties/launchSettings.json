@@ -1,7 +1,8 @@
 {
   "profiles": {
     "Tryouts": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "hotReloadEnabled": false
     }
   }
 }

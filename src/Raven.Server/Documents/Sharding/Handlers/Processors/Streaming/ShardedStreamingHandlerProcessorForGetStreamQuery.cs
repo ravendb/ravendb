@@ -143,7 +143,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
                     {
                         var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, indexDefinitionRaftIndex: null, token);
 
-                        foreach (BlittableJsonReaderObject doc in result.GetEnumerator())
+                        using IEnumerator<BlittableJsonReaderObject> enumerator = result.GetEnumerator();
+                        foreach (BlittableJsonReaderObject doc in enumerator)
                         {
                             await queryResult.AddResultAsync(doc, token.Token);
                         }
