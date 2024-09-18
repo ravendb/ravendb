@@ -259,6 +259,11 @@ namespace Raven.Server.Rachis
                             entries.Clear();
                             _engine.ValidateTerm(_term);
 
+                            if (_engine.ForTestingPurposes?.NodeTagsToDisconnect?.Contains(_tag) == true)
+                            {
+                                throw new InvalidOperationException($"Exception was thrown for disconnecting  node {_tag} - For testing purposes.");
+                            }
+
                             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                             {
                                 AppendEntries appendEntries;

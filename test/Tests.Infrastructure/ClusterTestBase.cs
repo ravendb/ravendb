@@ -471,13 +471,14 @@ namespace Tests.Infrastructure
         private async Task<bool> WaitForDocumentInClusterAsyncInternal<T>(string docId, Func<T, bool> predicate, TimeSpan timeout, List<DocumentStore> stores)
         {
             var tasks = new List<Task<bool>>();
-
             foreach (var store in stores)
                 tasks.Add(Task.Run(() => WaitForDocument(store, docId, predicate, (int)timeout.TotalMilliseconds)));
 
             await Task.WhenAll(tasks);
 
-            return tasks.All(x => x.Result);
+            var r = tasks.All(x => x.Result);
+            Assert.True(r, $"Document {docId} is missing on some nodes");
+            return true;
         }
 
         private List<DocumentStore> GetDocumentStores(IEnumerable<ServerNode> nodes, bool disableTopologyUpdates, X509Certificate2 certificate = null)

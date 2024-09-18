@@ -11,5 +11,7 @@ namespace Raven.Server.Web
         public RouteMatch RouteMatch;
         public DocumentDatabase Database;
         public bool CheckForChanges = true;
+
+        public string ClusterTransactionId => Database?.ClusterTransactionId;
     }
 }
