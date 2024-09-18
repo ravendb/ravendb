@@ -192,7 +192,9 @@ class editSqlEtlTask extends viewModelBase {
     editedSqlTableSandbox = ko.observable<ongoingTaskSqlEtlTableModel>();
 
     possibleMentors = ko.observableArray<string>([]);
-    sqlEtlConnectionStringsNames = ko.observableArray<string>([]);
+    sqlEtlConnectionStrings = ko.observable<Record<string, Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString>>({});
+    sqlEtlConnectionStringsNames = ko.pureComputed(() => _.sortBy(Object.keys(this.sqlEtlConnectionStrings() ?? {}), (x: string) => x.toUpperCase()));
+    selectedConnectionStringFactoryName = ko.pureComputed(() => this.sqlEtlConnectionStrings()[this.editedSqlEtl().connectionStringName()]?.FactoryName);
 
     connectionStringDefined: KnockoutComputed<boolean>;
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
@@ -295,8 +297,7 @@ class editSqlEtlTask extends viewModelBase {
         return new getConnectionStringsCommand(this.activeDatabase())
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-                const connectionStringsNames = Object.keys(result.SqlConnectionStrings);
-                this.sqlEtlConnectionStringsNames(_.sortBy(connectionStringsNames, x => x.toUpperCase()));
+                this.sqlEtlConnectionStrings(result.SqlConnectionStrings);
             });
     }
 
