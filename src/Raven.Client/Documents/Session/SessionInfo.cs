@@ -42,6 +42,8 @@ namespace Raven.Client.Documents.Session
 
         public bool NoCaching { get; set; }
 
+        internal string ClusterTransactionId { get; set; }
+
         internal SessionInfo(InMemoryDocumentSessionOperations session, SessionOptions options, DocumentStoreBase documentStore, bool asyncCommandRunning)
         {
             if (documentStore is null)
