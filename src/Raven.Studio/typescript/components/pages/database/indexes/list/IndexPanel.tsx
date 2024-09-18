@@ -366,7 +366,10 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         )}
                         {hasDatabaseWriteAccess && (
                             <>
-                                <ResetIndexesButton resetIndex={resetIndex} isDropdownVisible={!isReplacement} />
+                                <ResetIndexesButton
+                                    resetIndex={resetIndex}
+                                    sideBySideDisabledReason={getSideBySideResetDisabledReason(index)}
+                                />
                                 <Button color="danger" onClick={deleteIndex} title="Delete the index">
                                     <Icon icon="trash" margin="m-0" />
                                 </Button>
@@ -559,3 +562,14 @@ function ReferencedCollections({ collections }: ReferencedCollectionsProps) {
 export default ReferencedCollections;
 
 const indexUniqueId = (index: IndexSharedInfo) => "index_" + index.name;
+
+function getSideBySideResetDisabledReason(index: IndexSharedInfo) {
+    if (IndexUtils.isSideBySide(index)) {
+        return "Replacement cannot be reset side by side";
+    }
+    if (IndexUtils.isAutoIndex(index)) {
+        return "Auto index cannot be reset side by side";
+    }
+
+    return null;
+}

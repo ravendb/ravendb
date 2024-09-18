@@ -48,11 +48,11 @@ type IndexEvent =
 
 export interface ResetIndexesData {
     confirmData: {
-        indexNames: string[];
-        mode?: Raven.Client.Documents.Indexes.IndexResetMode;
+        indexes: IndexSharedInfo[];
+        mode: Raven.Client.Documents.Indexes.IndexResetMode;
     };
-    onConfirm: (contexts: DatabaseActionContexts[]) => Promise<void>;
-    openConfirm: (indexNames: string[], mode?: Raven.Client.Documents.Indexes.IndexResetMode) => void;
+    onConfirm: (indexNames: string[], contexts: DatabaseActionContexts[]) => Promise<void>;
+    openConfirm: (indexes: IndexSharedInfo[], mode: Raven.Client.Documents.Indexes.IndexResetMode) => void;
     closeConfirm: () => void;
 }
 
@@ -83,11 +83,8 @@ export function useIndexesPage(stale: boolean) {
 
     const [resetIndexesConfirmData, setResetIndexesConfirmData] = useState<ResetIndexesData["confirmData"]>(null);
 
-    const openResetIndexConfirm = (indexNames: string[], mode?: Raven.Client.Documents.Indexes.IndexResetMode) => {
-        setResetIndexesConfirmData({
-            indexNames,
-            mode,
-        });
+    const openResetIndexConfirm = (indexes: IndexSharedInfo[], mode: Raven.Client.Documents.Indexes.IndexResetMode) => {
+        setResetIndexesConfirmData({ indexes, mode });
     };
 
     const closeResetIndexConfirm = () => {
@@ -564,12 +561,12 @@ export function useIndexesPage(stale: boolean) {
         }
     };
 
-    const onResetIndexConfirm = async (contexts: DatabaseActionContexts[]) => {
+    const onResetIndexConfirm = async (indexNames: string[], contexts: DatabaseActionContexts[]) => {
         eventsCollector.reportEvent("indexes", "reset");
         const resetRequests: Promise<void>[] = [];
         setResettingIndex(true);
 
-        for (const indexName of resetIndexesConfirmData.indexNames) {
+        for (const indexName of indexNames) {
             try {
                 for (const { nodeTag, shardNumbers } of contexts) {
                     const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
@@ -734,6 +731,7 @@ export function useIndexesPage(stale: boolean) {
         swapNowProgress,
         highlightCallback,
         confirmSetLockModeSelectedIndexes,
+        allIndexes: stats.indexes,
         allIndexesCount: stats.indexes.length,
         setIndexPriority,
         getSelectedIndexes,
