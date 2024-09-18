@@ -2470,7 +2470,18 @@ namespace Raven.Server.Documents
         {
             skipValidation = false;
             var originalStatus = ChangeVectorUtils.GetConflictStatus(remote, local);
-            if (originalStatus == ConflictStatus.Conflict && HasUnusedDatabaseIds())
+
+            // conflicts for document with cluster tx have a special treatment in case of conflict
+            // because in some cases newer document in a normal tx can be conflicted with an older document/tombstone that was created in cluster tx
+            // so we should pick the newer version
+
+            // our local change vector is           RAFT:2, TRXN:10
+            // case 1: incoming change vector A:10, RAFT:3          -> update    (although it is a conflict) 
+            // case 2: incoming change vector A:10, RAFT:2          -> update    (although it is a conflict)
+            // case 3: incoming change vector A:10, RAFT:1          -> already merged
+            var partOfClusterTx = remote.Contains(DocumentDatabase.ClusterTransactionId) || local.Contains(DocumentDatabase.ClusterTransactionId);
+
+            if (originalStatus == ConflictStatus.Conflict && (HasUnusedDatabaseIds() || partOfClusterTx))
             {
                 // We need to distinguish between few cases here
                 // let's assume that node C was removed
@@ -2487,8 +2498,6 @@ namespace Raven.Server.Documents
                 // case 3: incoming change vector A:11, B:10, C:10 -> update                (original: update, after: already merged)
                 // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
 
-                var original = ChangeVectorUtils.GetConflictStatus(remote, local);
-                
                 remote = remote.StripTrxnTags();
                 local = local.StripTrxnTags();
 
@@ -2497,7 +2506,7 @@ namespace Raven.Server.Documents
                 var after = ChangeVectorUtils.GetConflictStatus(remote, local);
 
                 if (after == ConflictStatus.AlreadyMerged)
-                    return original;
+                    return ConflictStatus.Conflict;
                 return after;
             }
 
