@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.Retention;
@@ -17,7 +18,7 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
-public sealed class DirectBackupUploader : BackupUploaderBase, IDisposable
+public sealed class DirectBackupUploader : BackupUploaderBase
 {
     private readonly BackupConfiguration.BackupDestination _destination;
 
@@ -106,6 +107,7 @@ public sealed class DirectBackupUploader : BackupUploaderBase, IDisposable
 
                 AddInfo($"Starting the upload of retired attachment '{objKeyName}'.");
 
+                using (attachmentStream)
                 using (var stream = StreamForBackupDestination(database, folderName, objKeyName))
                     attachmentStream.CopyTo(stream);
 
@@ -162,13 +164,13 @@ public sealed class DirectBackupUploader : BackupUploaderBase, IDisposable
             return false;
         }
 
+
         return true;
     }
 
-    public void Dispose()
+    public IDisposable Initialize()
     {
-        Execute();
-        _threads.Clear();
+        return new DisposableAction(Reset);
     }
 
     public void Reset()
@@ -176,5 +178,4 @@ public sealed class DirectBackupUploader : BackupUploaderBase, IDisposable
         Execute();
         _threads.Clear();
     }
-
 }
