@@ -28,7 +28,6 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
     const {
         allIndexes,
         selectedIndexes,
-        replacements,
         deleteSelectedIndexes,
         startSelectedIndexes,
         disableSelectedIndexes,
@@ -46,8 +45,6 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
 
     const indexNames = allIndexes.map((x) => x.name);
     const selectionState = genUtils.getSelectionState(indexNames, selectedIndexes);
-
-    const isResetDropdownVisible = !replacements.some((x) => selectedIndexes.includes(x.name));
 
     return (
         <div className="position-relative">
@@ -146,13 +143,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                                 </DropdownItem>
                             </DropdownMenu>
                         </UncontrolledDropdown>
-
-                        <ResetIndexesButton
-                            resetIndex={resetSelectedIndexes}
-                            isDropdownVisible={isResetDropdownVisible}
-                            isRounded
-                        />
-
+                        <ResetIndexesButton isRounded resetIndex={resetSelectedIndexes} />
                         <Button
                             color="danger"
                             disabled={selectedIndexes.length === 0}

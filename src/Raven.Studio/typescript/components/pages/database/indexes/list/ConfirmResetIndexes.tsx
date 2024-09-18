@@ -6,22 +6,66 @@ import {
     MultipleDatabaseLocationSelector,
 } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
+import { IndexSharedInfo } from "components/models/indexes";
+import IndexUtils from "components/utils/IndexUtils";
 
 interface ConfirmResetIndexesProps {
-    indexNames: string[];
+    indexes: IndexSharedInfo[];
     allActionContexts: DatabaseActionContexts[];
-    mode?: Raven.Client.Documents.Indexes.IndexResetMode;
+    mode: Raven.Client.Documents.Indexes.IndexResetMode;
     closeConfirm: () => void;
-    onConfirm: (contexts: DatabaseActionContexts[]) => void;
+    onConfirm: (indexNames: string[], contexts: DatabaseActionContexts[]) => void;
 }
 
 export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
-    const { indexNames, mode, allActionContexts, onConfirm, closeConfirm } = props;
+    const { indexes, mode, allActionContexts, onConfirm, closeConfirm } = props;
+
+    const hasAutoIndexes = indexes.some(IndexUtils.isAutoIndex);
+    const hasReplacements = indexes.some(IndexUtils.isSideBySide);
+
+    const getIndexNamesToReset = (): string[] => {
+        let indexesToReset = [...indexes];
+
+        if (hasAutoIndexes && mode === "SideBySide") {
+            indexesToReset = indexesToReset.filter((x) => !IndexUtils.isAutoIndex(x));
+        }
+        if (hasReplacements && mode === "SideBySide") {
+            indexesToReset = indexesToReset.filter((x) => !IndexUtils.isSideBySide(x));
+        }
+
+        return indexesToReset.map((x) => x.name);
+    };
+
+    const getSideBySideWarning = (): string => {
+        if (mode !== "SideBySide") {
+            return null;
+        }
+
+        let prefix = "";
+
+        if (hasAutoIndexes && !hasReplacements) {
+            prefix = "Auto indexes";
+        }
+        if (hasReplacements && !hasAutoIndexes) {
+            prefix = "Replacements";
+        }
+        if (hasAutoIndexes && hasReplacements) {
+            prefix = "Auto indexes and replacements";
+        }
+        if (prefix === "") {
+            return null;
+        }
+
+        return prefix + " cannot be reset Side by side so they will be skipped.";
+    };
+
+    const sideBySideWarning = getSideBySideWarning();
+    const indexNamesToReset = getIndexNamesToReset();
 
     const [selectedActionContexts, setSelectedActionContexts] = useState<DatabaseActionContexts[]>(allActionContexts);
 
     const onSubmit = () => {
-        onConfirm(selectedActionContexts);
+        onConfirm(indexNamesToReset, selectedActionContexts);
         closeConfirm();
     };
 
@@ -36,32 +80,38 @@ export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
                 </div>
                 <div className="text-center lead">
                     You&apos;re about to <span className="text-warning">reset</span> following{" "}
-                    {indexNames.length === 1 ? "index" : `indexs`}
+                    {indexNamesToReset.length === 1 ? "index" : `indexes`}
                 </div>
                 <ul className="overflow-auto" style={{ maxHeight: "200px" }}>
-                    {indexNames.map((indexName) => (
+                    {indexNamesToReset.map((indexName) => (
                         <li key={indexName}>{indexName}</li>
                     ))}
                 </ul>
-                <Alert color="warning">
-                    <small>
+                {sideBySideWarning && (
+                    <Alert color="warning" className="d-flex align-items-center">
+                        <Icon icon="warning" color="warning" />
+                        {sideBySideWarning}
+                    </Alert>
+                )}
+                <Alert color="warning" className="d-flex align-items-center">
+                    <Icon icon="warning" color="warning" />
+                    <div>
                         <strong>Reset</strong> will remove all existing indexed data
                         {ActionContextUtils.showContextSelector(allActionContexts) ? (
                             <span> from the selected context.</span>
                         ) : (
                             <span> from node {allActionContexts[0].nodeTag}.</span>
                         )}
-                    </small>
-                    <br />
-                    <small>All items matched by the index definition will be re-indexed.</small>
+                        <br />
+                        All items matched by the index definition will be re-indexed.
+                    </div>
                 </Alert>
-                {mode && (
-                    <Alert color="info">
-                        <strong>Reset mode: </strong>
-                        {mode === "InPlace" && <span>In place</span>}
-                        {mode === "SideBySide" && <span>Side by side</span>}
-                    </Alert>
-                )}
+                <Alert color="info">
+                    <Icon icon="info" color="info" />
+                    <strong>Reset mode: </strong>
+                    {mode === "InPlace" && <span>In place</span>}
+                    {mode === "SideBySide" && <span>Side by side</span>}
+                </Alert>
                 {ActionContextUtils.showContextSelector(allActionContexts) && (
                     <div>
                         <h4>Select context</h4>

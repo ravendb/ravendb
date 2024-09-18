@@ -71,6 +71,7 @@ export function IndexesPage(props: IndexesPageProps) {
         replacements,
         highlightCallback,
         confirmSetLockModeSelectedIndexes,
+        allIndexes,
         allIndexesCount,
         setIndexPriority,
         startIndexes,
@@ -95,7 +96,10 @@ export function IndexesPage(props: IndexesPageProps) {
     const disableSelectedIndexes = () => disableIndexes(getSelectedIndexes());
     const pauseSelectedIndexes = () => pauseIndexes(getSelectedIndexes());
     const resetSelectedIndexes = (mode?: Raven.Client.Documents.Indexes.IndexResetMode) => {
-        return resetIndexData.openConfirm(selectedIndexes, mode);
+        return resetIndexData.openConfirm(
+            allIndexes.filter((x) => selectedIndexes.includes(x.name)),
+            mode
+        );
     };
 
     const allIndexes = getAllIndexes(groups, replacements);
