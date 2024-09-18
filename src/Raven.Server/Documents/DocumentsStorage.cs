@@ -2479,7 +2479,7 @@ namespace Raven.Server.Documents
             // case 1: incoming change vector A:10, RAFT:3          -> update    (although it is a conflict) 
             // case 2: incoming change vector A:10, RAFT:2          -> update    (although it is a conflict)
             // case 3: incoming change vector A:10, RAFT:1          -> already merged
-            var partOfClusterTx = remote.Contains(DocumentDatabase.ClusterTransactionId) || local.Contains(DocumentDatabase.ClusterTransactionId);
+            var partOfClusterTx = remote?.Contains(DocumentDatabase.ClusterTransactionId) == true || local?.Contains(DocumentDatabase.ClusterTransactionId) == true;
 
             if (originalStatus == ConflictStatus.Conflict && (HasUnusedDatabaseIds() || partOfClusterTx))
             {
