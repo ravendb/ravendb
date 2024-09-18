@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _writer.DeleteDocuments(_documentId.CreateTerm(key), _state);
         }
 
-        public override void DeleteTimeSeries(LazyStringValue docId, LazyStringValue key, IndexingStatsScope stats)
+        public override void DeleteByPrefix(LazyStringValue key, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 

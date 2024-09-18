@@ -629,7 +629,23 @@ namespace Corax.Indexing
             FlushBatch();
             return TryDeleteEntry(termSlice, out entryId);
         }
-        
+
+        public void DeleteByPrefix(string term)
+        {
+            var fieldsTree = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(Constants.IndexWriter.PrimaryKeyFieldId).FieldName);
+
+            var iterator = fieldsTree.Iterate();
+            iterator.Seek(term);
+
+            while (iterator.MoveNext(out var key, out var id, out _))
+            {
+                if (key.ToString().StartsWith(term) == false)
+                    continue;
+
+                RecordDeletion(id, out _, out _);
+            }
+        }
+
         private void FlushBatch()
         {
             // We cannot actually handles modifications to the same entry in the same batch, so we cheat
