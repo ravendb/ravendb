@@ -5,7 +5,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
@@ -27,7 +26,6 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Attachments;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents;
 
@@ -42,8 +40,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
     private DocumentInfoHelper _documentInfoHelper;
 
-    // TODO: egor test that removes attachment from document with retired attachment
-    // TODO: egor test that updates retired attachment  with regular attachment in document
 
     public IDisposable Initialize(DocumentsOperationContext context)
     {
@@ -90,7 +86,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
             using (var doc = Database.DocumentsStorage.Get(context, lowerDocId, DocumentFields.Data | DocumentFields.Id, throwOnConflict: true))
             {
-                // TODO: egor if I just return here, need to delete the attachment from cloud storage?
                 if (doc == null || doc.TryGetMetadata(out var metadata) == false)
                     return;
 
@@ -129,6 +124,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
     private void ProcessDocumentForDeleteRetire(DocumentsOperationContext context, Slice outSlice, string id, DateTime currentTime)
     {
         //TODO: egor do we want to do here anything?
+        // here we already deleted the attachment metadata from document, and put a del value to retiretree, now when we are here it means we deleted the attachment from cloud as well.
     }
 
     protected override DocumentExpirationInfo GetDocumentAndIdOrCollection(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
@@ -162,8 +158,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             // doc was deleted
             if (document == null)
             {
-                // TODO: egor I ahve a case when the doc is deleted, and it also deletes the retired attachment,
-                // now here its null I need to decide what to do ? maybe save the Collection in the storage, or dynamic idnex???
                 return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
             }
 
@@ -197,8 +191,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             // doc was deleted
             if (document == null)
             {
-                // TODO: egor I ahve a case when the doc is deleted, and it also deletes the retired attachment,
-                // now here its null I need to decide what to do ? maybe save the Collection in the storage, or dynamic idnex???
+                // TODO: Do I need to check PurgeOnDelete again? 
                 return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionSlice.ToString());
             }
 
@@ -490,7 +483,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
     public DirectBackupDownloader GetDownloader(DocumentsOperationContext context, OperationCancelToken tcs)
     {
-        // TODO: egor maybe instead of allocating it each time, I can make it a field in the class? but then I need to handle config changes :(
         var config = Database.ServerStore.Cluster.ReadRetireAttachmentsConfiguration(Database.Name);
         if (config == null)
             throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetiredAttachmentsConfiguration)} is not configured on {Database.Name}.");
@@ -516,10 +508,9 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
     public async Task<Stream> StreamForDownloadDestinationInternal(DirectBackupDownloader downloader, Attachment attachment, string collection)
     {
         var keyStr = attachment.Key.ToString();
-        var objKeyName = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(keyStr));
+        var objKeyName = Convert.ToBase64String(Encoding.UTF8.GetBytes(keyStr));
         var folderName = $"{collection}";
 
-        //TODO: egor in case the blob doesnt exists need to throw a custom exception ?
         return await downloader.StreamForDownloadDestination(Database, folderName, objKeyName);
     }
 

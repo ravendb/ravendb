@@ -8,16 +8,20 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
+using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Voron;
+using Voron.Global;
 using static Raven.Server.Documents.AbstractBackgroundWorkStorage;
+using static Raven.Server.Documents.RetiredAttachmentsStorage;
 
 namespace Raven.Server.Documents
 {
@@ -25,11 +29,9 @@ namespace Raven.Server.Documents
     {
         public const int DefaultRetireFrequencyInSec = 60;
         public static int ReadTransactionMaxOpenTimeInMs = 60_000;
-        //TODO: egor actually make sure to limit the batch size
-        internal static int BatchSizeInMb = PlatformDetails.Is32Bits == false
-            ? 1024
-            : 8;
-        internal static int DefaultMaxItemsToProcessInSingleRun = int.MaxValue;
+        internal static long BatchSizeInBytes = PlatformDetails.Is32Bits == false ? 1024 * Constants.Size.Megabyte : 4 * Constants.Size.Megabyte;
+        internal static Size BatchSizeUnit = new Size(BatchSizeInBytes, SizeUnit.Bytes);
+        internal static int BatchSize = PlatformDetails.Is32Bits == false ? 36 : 8;
 
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _retirePeriod;
@@ -57,11 +59,10 @@ namespace Raven.Server.Documents
 
             var t = Task.Run(async () =>
             {
-                //TODO: egor does it even can change ?
                 while (Configuration.Disabled == false)
                 {
                     await WaitOrThrowOperationCanceled(_retirePeriod);
-                    await RetireAttachments(BatchSizeInMb, Configuration.MaxItemsToProcess ?? DefaultMaxItemsToProcessInSingleRun);
+                    await RetireAttachments(BatchSize, Configuration.MaxItemsToProcess ?? ExpiredDocumentsCleaner.DefaultMaxItemsToProcessInSingleRun);
                 }
             });
             return t;
@@ -78,22 +79,14 @@ namespace Raven.Server.Documents
             }
 
             var totalCount = 0;
+            var totalUploaded = 0L;
 
             var currentTime = _database.Time.GetUtcNow();
-            //var myCounter = new List<string>();
-            //var myCounter2 = new HashSet<string>();
+
             try
             {
-                DatabaseRecord dbRecord;
-                string nodeTag;
-                //TODO: egor move this inside loop?
-                using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-                using (serverContext.OpenReadTransaction())
-                {
-                    dbRecord = _database.ServerStore.Cluster.ReadDatabase(serverContext, _database.Name);
-                    nodeTag = _database.ServerStore.NodeTag;
-                }
-
+                var directUpload = new DirectBackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger,
+                    BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _token);
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     while (totalCount < maxItemsToProcess)
@@ -105,179 +98,166 @@ namespace Raven.Server.Documents
                         var retired = new Queue<DocumentExpirationInfo>();
                         using (context.OpenReadTransaction())
                         using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(context))
+                        using (directUpload.Initialize())
                         {
-                            var options = new BackgroundWorkParameters(context, currentTime, dbRecord, nodeTag, batchSize);
+                            DatabaseRecord dbRecord;
+                            using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                            using (serverContext.OpenReadTransaction())
+                            {
+                                dbRecord = _database.ServerStore.Cluster.ReadDatabase(serverContext, _database.Name);
+                            }
+
+                            var options = new BackgroundWorkParameters(context, currentTime, dbRecord, _database.ServerStore.NodeTag, batchSize, maxItemsToProcess);
 
                             Queue<DocumentExpirationInfo> toRetire = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(options, ref totalCount, out duration, CancellationToken);
                             if (toRetire == null || toRetire.Count == 0)
                             {
-                                //Console.WriteLine("toRetire == null || toRetire.Count == 0");
                                 return totalCount;
                             }
-                            // TODO: egor this can be initialized once
+
                             // upload the attachments to cloud and update the document
-                            using (DirectBackupUploader directUpload = new DirectBackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _token))
+                            foreach (var doc in toRetire)
                             {
-                                var shouldUpload = true;
-                                var skippedIds = new HashSet<string>();
-                                foreach (var doc in toRetire)
+                                _token.ThrowIfCancellationRequested();
+
+                                var key = doc.LowerId.ToString();
+                                var collection = doc.Id;
+
+                                if (CanContinueBatch(Logger, duration, totalUploaded) == false)
                                 {
-                                    _token.ThrowIfCancellationRequested();
-                   
-                                    var key = doc.LowerId;
-                                    var collection = doc.Id;
-                                    if (shouldUpload == false)
-                                    {
-                                        // we skip the uploads or deletes of retired attachments since the can take a long time
-                                        skippedIds.Add(key.ToString());
-                                        continue;
-                                    }
+                                    break;
+                                }
 
-                                    var type = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetRetireType(key);
-                                    switch (type)
-                                    {
-                                        case RetiredAttachmentsStorage.AttachmentRetireType.PutRetire:
-                                            if (string.IsNullOrEmpty(collection))
+                                var type = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetRetireType(doc.LowerId);
+                                switch (type)
+                                {
+                                    case AttachmentRetireType.PutRetire:
+                                        if (string.IsNullOrEmpty(collection))
+                                        {
+                                            if (Logger.IsInfoEnabled)
+                                                Logger.Info($"Skipping '{nameof(AttachmentRetireType.PutRetire)}' of retired attachment with key: '{key}' because it's collection '{collection}' IsNullOrEmpty.");
+
+                                            // document was deleted, need to remove it from retired tree
+                                            retired.Enqueue(doc);
+                                            continue;
+                                        }
+                       
+                                        using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.CleanRetiredAttachmentsKey(options.Context, doc.LowerId, out var keySlice))
+                                        {
+                                            // the attachment stream is disposed by the directUpload
+                                            var attachmentStream = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamByKey(context, keySlice);
+                                            if (attachmentStream == null)
                                             {
-                                                if (Logger.IsInfoEnabled)
-                                                    Logger.Info($"Skipping 'PUT' of retired attachment with key: '{key.ToString()}' because it's collection IsNullOrEmpty.");
-
-                                                // document was deleted, need to remove it from retired tree
+                                                // attachment was deleted, need to remote it from retired tree
                                                 retired.Enqueue(doc);
                                                 continue;
                                             }
-
-                                            using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.CleanRetiredAttachmentsKey(options.Context, key, out var keySlice))
-                                            await using (var attachmentStream = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamByKey(context, keySlice))
-                                            {
-                                                if (attachmentStream == null)
-                                                {
-                                                    // attachment was deleted, need to remote it from retired tree
-                                                    retired.Enqueue(doc);
-                                                    continue;
-                                                }
-
-                                                if (directUpload.TryCleanFinishedThreads(duration, _token))
-                                                {
-                                                    string objKeyName = GetBlobDestination(keySlice, collection, out string folderName);
-                                                    directUpload.CreateUploadTask(_database, attachmentStream, folderName, objKeyName, CancellationToken);
-                                                  
-                                                    retired.Enqueue(doc);
-                                                }
-                                                else
-                                                {
-                                                    // threads got exceptions, token canceled or ReadTransactionMaxOpenTimeInMs is hit
-                                                    _token.ThrowIfCancellationRequested();
-                                                    LogTimeoutIfNeeded("put", key.ToString(), duration);
-                                                    skippedIds.Add(key.ToString());
-                                                }
-                                            }
-
-                                            if (duration.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs)
-                                            {
-                                                if (Logger.IsInfoEnabled)
-                                                    Logger.Info($"Stop handling retired attachments to cloud due to long read tx open time: '{duration.ElapsedMilliseconds}'.");
-
-                                                shouldUpload = false;
-                                            }
-
-                                            break;
-                                        case RetiredAttachmentsStorage.AttachmentRetireType.DeleteRetire:
-                                            if (string.IsNullOrEmpty(collection))
-                                            {
-                                                // configuration was changed, need to remove it from retired tree
-                                                retired.Enqueue(doc);
-                                                continue;
-                                            }
-
 
                                             if (directUpload.TryCleanFinishedThreads(duration, _token))
                                             {
-                                                using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.CleanRetiredAttachmentsKey(options.Context, doc.LowerId, out var keySlice))
-                                                {
-                                                    string objKeyName = GetBlobDestination(keySlice, collection, out string folderName);
-                                                    directUpload.AddDelete(folderName, objKeyName);
-                                                }
+                                                string objKeyName = GetBlobDestination(keySlice, collection, out string folderName);
+                                                directUpload.CreateUploadTask(_database, attachmentStream, folderName, objKeyName, CancellationToken);
 
+                                                totalUploaded += attachmentStream.Length;
                                                 retired.Enqueue(doc);
                                             }
                                             else
                                             {
-                                                _token.ThrowIfCancellationRequested();
-                                                LogTimeoutIfNeeded("delete", key.ToString(), duration);
-                                                skippedIds.Add(key.ToString());
+                                                LogTimeoutIfNeeded(nameof(AttachmentRetireType.PutRetire), key, duration);
                                             }
+                                        }
 
-                                            if (duration.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs)
+                                        break;
+                                    case AttachmentRetireType.DeleteRetire:
+                                        if (string.IsNullOrEmpty(collection))
+                                        {
+                                            if (Logger.IsInfoEnabled)
+                                                Logger.Info($"Skipping '{nameof(AttachmentRetireType.DeleteRetire)}' of retired attachment with key: '{key}' because it's collection '{collection}' IsNullOrEmpty.");
+
+                                            // configuration was changed, need to remove it from retired tree
+                                            retired.Enqueue(doc);
+                                            continue;
+                                        }
+
+                                        if (directUpload.TryCleanFinishedThreads(duration, _token))
+                                        {
+                                            using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.CleanRetiredAttachmentsKey(options.Context, doc.LowerId, out var keySlice))
                                             {
-                                                if (Logger.IsInfoEnabled)
-                                                    Logger.Info($"Stop handling retired attachments to cloud due to long read tx open time: '{duration.ElapsedMilliseconds}'.");
-
-                                                shouldUpload = false;
+                                                string objKeyName = GetBlobDestination(keySlice, collection, out string folderName);
+                                                directUpload.AddDelete(folderName, objKeyName);
                                             }
 
-                                            break;
-                                        default:
-                                            throw new ArgumentOutOfRangeException(nameof(type));
-                                    }
+                                            retired.Enqueue(doc);
+                                        }
+                                        else
+                                        {
+                                            LogTimeoutIfNeeded(nameof(AttachmentRetireType.DeleteRetire), key, duration);
+                                        }
 
-                                }
-
-                                if (skippedIds.Count > 0)
-                                {
-                                    if (Logger.IsInfoEnabled)
-                                        Logger.Info($"Skipping retiring of '{skippedIds.Count:#,#;;0}' attachments, shouldUpload: '{shouldUpload}', read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", skippedIds)}");
-                                }
-
-                                if (retired.Count == 0)
-                                {
-                                    if (Logger.IsInfoEnabled)
-                                        Logger.Info($"Skipping retiring whole batch of '{retired.Count:#,#;;0}' attachments, shouldUpload: '{shouldUpload}', read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => x.LowerId))}");
-
-                                    continue;
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException(nameof(type));
                                 }
                             }
 
-                            //foreach (var x in retired)
-                            //{
-                            //    //Console.WriteLine($"retired: {x.LowerId}");
-                            //}
+                            if (toRetire.Count != retired.Count)
+                            {
+                                // we had skipped items
+                                if (Logger.IsInfoEnabled)
+                                    Logger.Info($"Skipping retiring of '{toRetire.Count - retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, " +
+                                                $"read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
+                            }
 
-                            //Console.WriteLine("---------");
-                            //myCounter.AddRange(retired.Select(x=>x.LowerId.ToString()));
-                            //foreach (string s in retired.Select(x => x.LowerId.ToString()))
-                            //{
-                            //    if (myCounter2.Add(s) == false)
-                            //    {
-                            //        Console.WriteLine($"Duplicate {s}");
-                            //    }
+                            if (retired.Count == 0)
+                            {
+                                if (Logger.IsInfoEnabled)
+                                    Logger.Info($"Skipping retiring whole batch of '{retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, " +
+                                                $"read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
 
-                            //}
-                            //Console.WriteLine($"Sending Command, totalCount: {totalCount} | retired.Count: {retired.Count} | myCounter: {myCounter2.Count}");
+                                continue;
+                            }
                         }
 
                         var command = new UpdateRetiredAttachmentsCommand(retired, _database, currentTime);
-                            await _database.TxMerger.Enqueue(command);
+                        await _database.TxMerger.Enqueue(command);
 
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info($"Successfully retired '{command.RetiredCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms.");
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Successfully retired '{command.RetiredCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms.");
                     }
                 }
             }
-            catch (OperationCanceledException ee)
+            catch (OperationCanceledException)
             {
-                //Console.WriteLine($"RetireAttachmentsSender: " + ee);
-
                 // this will stop processing
                 throw;
             }
             catch (Exception e)
             {
-                //Console.WriteLine($"RetireAttachmentsSender: "+e);
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Failed to retire attachments on '{_database.Name}' which are older than '{currentTime}'.", e);
             }
             return totalCount;
+        }
+
+        private static bool CanContinueBatch(Logger logger, Stopwatch duration, long totalUploaded)
+        {
+            if (duration.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs)
+            {
+                if (logger.IsInfoEnabled)
+                    logger.Info($"Stop handling retired attachments to cloud due to long read tx open time: '{duration.ElapsedMilliseconds}'.");
+
+                return false;
+
+            }
+            if (totalUploaded >= BatchSizeInBytes)
+            {
+                if (logger.IsInfoEnabled)
+                    logger.Info($"Stop handling retired attachments to cloud due to high batch size, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)} / Allowed: {BatchSizeUnit}.");
+
+                return false;
+            }
+
+            return true;
         }
 
         private void LogTimeoutIfNeeded(string method, string key, Stopwatch sp)
@@ -296,7 +276,6 @@ namespace Raven.Server.Documents
                throw new ArgumentException($"Collection is empty for key: {keyStr}");
             }
 
-            //  folderName = $"{_database.Name}/{collection}";
             folderName = $"{collection}";
             return objKeyName;
         }
@@ -305,6 +284,7 @@ namespace Raven.Server.Documents
         {
 
         }
+
         internal sealed class UpdateRetiredAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly Queue<DocumentExpirationInfo> _retired;
