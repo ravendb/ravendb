@@ -217,7 +217,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     };
     const onCompactDatabase = async () => {
         reportEvent("databases", "compact");
-        dispatch(compactDatabase(db));
+        dispatch(compactDatabase(db, null));
     };
 
     const onToggleDatabase = async () => {
