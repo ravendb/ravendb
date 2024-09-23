@@ -632,14 +632,16 @@ namespace Corax.Indexing
 
         public void DeleteByPrefix(string term)
         {
+            using var __ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
+
             var fieldsTree = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(Constants.IndexWriter.PrimaryKeyFieldId).FieldName);
 
             var iterator = fieldsTree.Iterate();
-            iterator.Seek(term);
+            iterator.Seek(termSlice);
 
             while (iterator.MoveNext(out var key, out var id, out _))
             {
-                if (key.ToString().StartsWith(term) == false)
+                if (key.Decoded().StartsWith(termSlice) == false)
                     continue;
 
                 RecordDeletion(id, out _, out _);
