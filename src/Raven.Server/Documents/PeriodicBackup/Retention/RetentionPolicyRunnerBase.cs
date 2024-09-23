@@ -116,8 +116,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             {
                 // failure to delete backups shouldn't result in backup failure
 
-                var message = $"Failed to run Retention Policy for {Name}";
-                _onProgress.Invoke($"{message}. Error: {e.Message}");
+                _onProgress.Invoke($"Failed to run Retention Policy for {Name}. Exception: {e}");
 
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to run Retention Policy for {Name}", e);
