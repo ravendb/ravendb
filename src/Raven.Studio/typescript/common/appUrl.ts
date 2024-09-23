@@ -227,11 +227,14 @@ class appUrl {
         return "#admin/settings/serverWideCustomSorters";
     }
 
-    static forDatabases(databasesUrlAction?: "compact" | "restore", databaseToCompact?: string): string {
+    static forDatabases(databasesUrlAction?: "compact" | "restore", databaseToCompact?: string, shardToCompact?: number): string {
         let actionPart = "";
         
         if (databasesUrlAction === "compact" && databaseToCompact) {
             actionPart = "?compact=" + encodeURIComponent(databaseToCompact);
+            if (shardToCompact != null) {
+                actionPart += "&shard=" + shardToCompact;
+            }
         } else if (databasesUrlAction === "restore") {
             actionPart = "?restore=true";
         }
