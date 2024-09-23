@@ -18,7 +18,7 @@ import { LoadingView } from "components/common/LoadingView";
 import { StickyHeader } from "components/common/StickyHeader";
 import { BulkIndexOperationConfirm } from "components/pages/database/indexes/list/BulkIndexOperationConfirm";
 import { ConfirmResetIndexes } from "components/pages/database/indexes/list/ConfirmResetIndexes";
-import { getAllIndexes, useIndexesPage } from "components/pages/database/indexes/list/useIndexesPage";
+import { useIndexesPage } from "components/pages/database/indexes/list/useIndexesPage";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { NoIndexes } from "components/pages/database/indexes/list/partials/NoIndexes";
 import { Icon } from "components/common/Icon";
@@ -101,8 +101,6 @@ export function IndexesPage(props: IndexesPageProps) {
             mode
         );
     };
-
-    const allIndexes = getAllIndexes(groups, replacements);
 
     const allActionContexts = ActionContextUtils.getContexts(DatabaseUtils.getLocations(db));
 

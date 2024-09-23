@@ -744,7 +744,7 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         swapNowProgress,
         highlightCallback,
         confirmSetLockModeSelectedIndexes,
-        allIndexes: stats.indexes,
+        allIndexes: getAllIndexes(groups, replacements),
         allIndexesCount: stats.indexes.length,
         setIndexPriority,
         getSelectedIndexes,
@@ -784,7 +784,7 @@ export const defaultFilterCriteria: IndexFilterCriteria = {
     groupBy: "Collection",
 };
 
-export function getAllIndexes(groups: IndexGroup[], replacements: IndexSharedInfo[]) {
+function getAllIndexes(groups: IndexGroup[], replacements: IndexSharedInfo[]) {
     const allIndexes: IndexSharedInfo[] = [];
 
     for (const index of groups.map((x) => x.indexes).flat()) {
