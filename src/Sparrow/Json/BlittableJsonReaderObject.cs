@@ -1423,6 +1423,21 @@ namespace Sparrow.Json
             return true;
         }
 
+        public  bool TryGetPropertyType(StringSegment name, out BlittableJsonToken jsonToken)
+        {
+            var comparer = _context.GetLazyStringForFieldWithCaching(name);
+            var index = GetPropertyIndex(comparer);
+            if (index == -1)
+            {
+                jsonToken = BlittableJsonToken.Null;
+                return false;
+            }
+            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+            GetPropertyTypeAndPosition(index, metadataSize, out var token, out var _, out var _);
+            jsonToken = token;
+            return true;
+        }
+        
         private int _hashCode;
 
         [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
