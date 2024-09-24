@@ -124,3 +124,5 @@ export const availableS3Regions: SelectOption<string>[] = sortBy(
 export type OmitIndexSignature<T> = {
     [K in keyof T as string extends K ? never : K]: T[K];
 };
+
+export type StringWithAutocomplete<T> = T | (string & NonNullable<unknown>);

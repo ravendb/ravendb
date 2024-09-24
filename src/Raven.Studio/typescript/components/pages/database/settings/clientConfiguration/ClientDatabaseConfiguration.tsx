@@ -48,7 +48,7 @@ export default function ClientDatabaseConfiguration() {
     useDirtyFlag(formState.isDirty);
 
     const loadBalancingLink = useRavenLink({ hash: "GYJ8JA" });
-    const clientConfigurationLink = useRavenLink({ hash: "TS7SGF" });
+    const clientConfigurationLink = useRavenLink({ hash: "XYJ3B3" });
 
     const hasClientConfiguration = useAppSelector(licenseSelectors.statusValue("HasClientConfiguration"));
     const featureAvailability = useLimitedFeatureAvailability({

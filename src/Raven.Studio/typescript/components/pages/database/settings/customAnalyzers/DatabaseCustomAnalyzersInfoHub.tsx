@@ -14,7 +14,7 @@ interface DatabaseCustomAnalyzersInfoHubProps {
 }
 
 export function DatabaseCustomAnalyzersInfoHub({ databaseAnalyzersCount }: DatabaseCustomAnalyzersInfoHubProps) {
-    const customAnalyzersDocsLink = useRavenLink({ hash: "VWCQPI", isDocs: false });
+    const customAnalyzersDocsLink = useRavenLink({ hash: "VWCQPI" });
     const licenseClusterLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerCluster"));
     const licenseDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfCustomAnalyzersPerDatabase"));
     const numberOfCustomAnalyzersInCluster = useAppSelector(licenseSelectors.limitsUsage).NumberOfAnalyzersInCluster;

@@ -23,7 +23,10 @@ export const HelpAndResourcesStory: StoryObj<HelpAndResourcesStoryArgs> = {
     name: "Help and resources",
     render: (args) => {
         const { licenseService } = mockServices;
-        const { license } = mockStore;
+        const { license, cluster } = mockStore;
+
+        cluster.with_ClientVersion();
+        cluster.with_ServerVersion();
 
         license.with_License({
             IsCloud: args.isCloud,

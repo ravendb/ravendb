@@ -1,21 +1,15 @@
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
-import { AsyncState } from "react-async-hook";
-import { aboutPageUrls, ConnectivityStatus } from "components/pages/resources/about/partials/common";
+import { useAsync } from "react-async-hook";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import licenseModel from "models/auth/licenseModel";
 import classNames from "classnames";
-import { useAboutPage } from "components/pages/resources/about/useAboutPage";
 import { useRavenLink } from "hooks/useRavenLink";
-import { linkTo } from "@storybook/addon-links";
+import { useServices } from "components/hooks/useServices";
 
-interface ContactSupportContentProps {
-    asyncCheckLicenseServerConnectivity: AsyncState<ConnectivityStatus>;
-}
-
-export function ContactSupportContent(props: ContactSupportContentProps) {
+export function ContactSupportContent() {
     const license = useAppSelector(licenseSelectors.status);
     const licenseId = useAppSelector(licenseSelectors.statusValue("Id"));
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
@@ -23,28 +17,27 @@ export function ContactSupportContent(props: ContactSupportContentProps) {
     const supportType = licenseModel.supportLabelProvider(license, support);
     const isPaidSupport = ["Professional", "Production", "Partial"].includes(supportType);
 
-    const { asyncCheckLicenseServerConnectivity } = useAboutPage();
-
-    const hideSupportStatus =
-        asyncCheckLicenseServerConnectivity.status === "error" ||
-        (asyncCheckLicenseServerConnectivity.status === "success" &&
-            !asyncCheckLicenseServerConnectivity.result.connected);
+    const { licenseService } = useServices();
+    const asyncLicenseConnectivity = useAsync(licenseService.checkLicenseServerConnectivity, []);
+    const isSupportStatusHidden =
+        asyncLicenseConnectivity.status === "error" ||
+        (asyncLicenseConnectivity.status === "success" && !asyncLicenseConnectivity.result.connected);
 
     const supportPlansUrl = useRavenLink({ hash: "2DW5F4" });
     const cloudTermsUrl = useRavenLink({ hash: "75DJRY" });
     const onPremiseTermsUrl = useRavenLink({ hash: "R1OFBF" });
     const gitHubCommunityUrl = useRavenLink({ hash: "ITXUEA" });
-    const cloudRequestSupport = useRavenLink({ hash: "2YGOL1" });
-    const onPremiseRequestSupport = "https://ravendb.net/support/supportrequest?licenseId=" + licenseId;
+    const cloudRequestSupportUrl = useRavenLink({ hash: "2YGOL1" });
+    const onPremiseRequestSupportUrl = "https://ravendb.net/support/supportrequest?licenseId=" + licenseId;
 
-    const requestSupportUrl = isCloud ? cloudRequestSupport : onPremiseRequestSupport;
+    const requestSupportUrl = isCloud ? cloudRequestSupportUrl : onPremiseRequestSupportUrl;
     const termsUrl = isCloud ? cloudTermsUrl : onPremiseTermsUrl;
 
     return (
         <>
             <ul className="action-menu__list">
                 <p className="m-0">
-                    {hideSupportStatus ? (
+                    {isSupportStatusHidden ? (
                         <span className="text-warning">
                             <Icon icon="warning" />
                             <small>
@@ -67,7 +60,7 @@ export function ContactSupportContent(props: ContactSupportContentProps) {
                         </span>
                     )}
                 </p>
-                {isPaidSupport && !hideSupportStatus ? (
+                {isPaidSupport && !isSupportStatusHidden ? (
                     <>
                         {(supportType === "Professional" || supportType === "Production") && (
                             <div className="d-flex align-items-center gap-1">
@@ -113,6 +106,7 @@ export function ContactSupportContent(props: ContactSupportContentProps) {
                             className="action-menu__list-item action-menu__list-item--primary mt-1"
                             role="button"
                             title="Go to GitHub discussions"
+                            onClick={() => window.open(gitHubCommunityUrl, "_blank")}
                         >
                             <Icon icon="github" margin="m-0" />
                             GitHub Discussions
@@ -130,7 +124,7 @@ export function ContactSupportContent(props: ContactSupportContentProps) {
                         support plans
                     </a>
                 </small>
-                {isPaidSupport && !hideSupportStatus && (
+                {isPaidSupport && !isSupportStatusHidden && (
                     <small className="text-muted lh-1 mt-1">
                         <Icon icon="github" />
                         Join our{" "}

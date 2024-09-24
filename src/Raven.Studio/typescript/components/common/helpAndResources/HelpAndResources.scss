@@ -20,7 +20,7 @@ $btn-default-dimension: 36px;
 .bottom-right-tools-container {
     position: fixed;
     right: sizes.$gutter-sm;
-    bottom: sizes.$gutter-sm;
+    bottom: 31px + sizes.$gutter-sm; // height of the footer + gutter-sm
 
     .btn-help-widget,
     .btn-hide-widget {
@@ -124,12 +124,9 @@ $btn-default-dimension: 36px;
             &--highlight {
                 border: 1px solid transparent;
                 animation: 6s rotate linear infinite;
-                background: linear-gradient(colors.$panel-header-bg-var, colors.$panel-header-bg-var) padding-box, linear-gradient(
-                        var(--angle),
-                        colors.$color-5-1,
-                        colors.$color-1-2,
-                        colors.$color-2-1
-                ) border-box;
+                background:
+                    linear-gradient(colors.$panel-header-bg-var, colors.$panel-header-bg-var) padding-box,
+                    linear-gradient(var(--angle), colors.$color-5-1, colors.$color-1-2, colors.$color-2-1) border-box;
             }
 
             &--primary {
