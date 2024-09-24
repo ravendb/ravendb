@@ -582,12 +582,13 @@ select {
     display: inline !important;
 }
 
-//Classes for different panel colors
+// Classes for different panel colors
 $panels: (
     1: --panel-bg-1,
     2: --panel-bg-2,
     3: --panel-bg-3,
 );
+
 @each $key, $color in $panels {
     .panel-bg-#{$key} {
         background-color: var(#{$color});
@@ -633,5 +634,21 @@ $filtering-input-bg: $toggle-bg !default;
         pointer-events: unset;
         background-color: $panel-bg-1-var;
         color: $text-muted-var;
+    }
+}
+
+// Classes for bg-striped-*
+@each $key, $value in $theme-colors {
+    $striped-bg: repeating-linear-gradient(
+        45deg,
+        $value,
+        $value $gutter-xs,
+        shade-color($value, 10%) $gutter-xs,
+        shade-color($value, 10%) $gutter-sm
+    );
+
+    .bg-striped-#{$key} {
+        @extend .bg-#{$key};
+        background: #{$striped-bg};
     }
 }
