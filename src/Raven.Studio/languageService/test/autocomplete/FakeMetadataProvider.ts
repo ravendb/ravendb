@@ -59,12 +59,12 @@ export class FakeMetadataProvider implements queryCompleterProviders {
     
     public constructor(overrides?: { indexes?: Record<string, string[]>, collections?: Record<string, Record<string, Record<string, string>>> }) {
         if (overrides?.indexes) {
-            this.indexStubs = new Map<string, string[]>(Object.entries(overrides.indexes));
+            this.indexStubs = new Map<string, string[]>(Object.entries(overrides.indexes ?? []));
         }
         if (overrides?.collections) {
             const map = new Map<string, Map<string, dictionary<string>>>();
-            for (const [key, value] of Object.entries(overrides.collections)) {
-                map.set(key, new Map<string, dictionary<string>>(Object.entries(value)));
+            for (const [key, value] of Object.entries(overrides.collections ?? [])) {
+                map.set(key, new Map<string, dictionary<string>>(Object.entries(value ?? [])));
             }
             this.collectionStubs = map;
         }

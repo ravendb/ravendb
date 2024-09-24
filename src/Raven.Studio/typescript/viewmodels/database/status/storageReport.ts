@@ -680,7 +680,7 @@ class storageReport extends shardViewModelBase {
     }
 
     compactDatabase() {
-        router.navigate(appUrl.forDatabases("compact", this.db.name));
+        router.navigate(appUrl.forDatabases("compact", this.db.name, this.location?.shardNumber));
     }
 }
 

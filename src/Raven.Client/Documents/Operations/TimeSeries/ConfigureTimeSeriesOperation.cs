@@ -9,10 +9,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
+    /// <summary>
+    /// Configures time series settings (policies) for the database.
+    /// This operation allows you to configure multiple time series policies 
+    /// for various collections within the database.
+    /// </summary>
     public sealed class ConfigureTimeSeriesOperation : IMaintenanceOperation<ConfigureTimeSeriesOperationResult>
     {
         private readonly TimeSeriesConfiguration _configuration;
 
+        /// <inheritdoc cref="ConfigureTimeSeriesOperation"/>
+        /// <param name="configuration">The time series configuration to apply to the database. If null, an empty configuration will be used.</param>
         public ConfigureTimeSeriesOperation(TimeSeriesConfiguration configuration)
         {
             _configuration = configuration ?? new TimeSeriesConfiguration();

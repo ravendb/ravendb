@@ -29,6 +29,7 @@ interface DatabasesPageProps {
 
 interface DatabasesPageProps {
     compact?: string;
+    shard?: number;
     restore?: boolean;
 }
 
@@ -92,7 +93,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
         if (props.compact) {
             const toCompact = databases.find((x) => x.name === props.compact);
             if (toCompact) {
-                dispatch(compactDatabase(toCompact));
+                dispatch(compactDatabase(toCompact, props.shard));
             }
         }
         if (props.restore) {

@@ -23,7 +23,7 @@ export function ConditionalPopover(props: ConditionalPopoverProps) {
 
     return (
         <>
-            <div id={containerId} className="d-flex">
+            <div id={containerId} className="d-flex w-fit-content">
                 {children}
             </div>
 

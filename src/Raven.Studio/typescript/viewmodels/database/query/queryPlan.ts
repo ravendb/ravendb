@@ -284,7 +284,7 @@ class executionInfo {
             }
         }
 
-        this.parameters.push(...Object.entries(remainingParams).map(x => ({ label: x[0] + ": " + x[1] })));
+        this.parameters.push(...Object.entries(remainingParams ?? []).map(x => ({ label: x[0] + ": " + x[1] })));
     }
     
     private static mapDirection(source: string): "corax-forward" | "corax-backward" {

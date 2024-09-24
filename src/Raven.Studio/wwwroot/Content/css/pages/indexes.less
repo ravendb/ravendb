@@ -231,7 +231,6 @@
             }
         }
 
-        @collection-progress-width: 410px;
 
         .collections-container {
             display: flex;
@@ -243,7 +242,6 @@
             color: @text-color;
 
             .collection-progress {
-                width: @collection-progress-width;
                 margin-left: @grid-gutter-width / 4;
                 margin-bottom: @grid-gutter-width / 4;
                 display: flex;
@@ -262,7 +260,7 @@
                     font-size: 11px;
                 }
 
-                .documents, .tombstones {
+                .documents, .tombstones, .deletedTimeSeries {
                     margin-left: @grid-gutter-width/2;
                     line-height: 12px;
                     width: 115px;
@@ -287,6 +285,10 @@
                         margin-top: @grid-gutter-width/4;
                         margin-bottom: 0;
                     }
+                }
+
+                .deletedTimeSeries {
+                    width: 145px;
                 }
             }
         }

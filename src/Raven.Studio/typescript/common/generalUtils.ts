@@ -3,10 +3,9 @@ import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import moment = require("moment");
 import { MouseEvent } from "react";
 import { isBoolean } from "common/typeUtils";
+import { SelectionState } from "components/models/common";
 
 type AtLeastOne<T> = [T, ...T[]];
-
-type SelectionState = "AllSelected" | "SomeSelected" | "Empty";
 
 class genUtils {
     

@@ -16,7 +16,7 @@ interface computedAppUrls {
     patch: KnockoutComputed<string>;
     cmpXchg: KnockoutComputed<string>;
     identities: KnockoutComputed<string>;
-    indexes: KnockoutComputed<string>;
+    indexes: (indexName?: string, staleOnly?: boolean, isImportOpen?: boolean) => KnockoutComputed<string>;
     newIndex: KnockoutComputed<string>;
     newDoc: KnockoutComputed<string>;
     newCmpXchg: KnockoutComputed<string>;

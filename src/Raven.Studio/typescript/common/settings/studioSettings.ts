@@ -71,7 +71,7 @@ class studioSettings {
     }
 
     private onSettingsChanged(container: abstractSettings, settingsDto: any) {
-        Object.entries(settingsDto).forEach(([key, value]) => {
+        Object.entries(settingsDto ?? []).forEach(([key, value]) => {
             const setting = (container as any)[key];
             if (setting && setting instanceof studioSetting && setting.prepareValueForSave() !== value) {
                 setting.loadUsingValue(value);

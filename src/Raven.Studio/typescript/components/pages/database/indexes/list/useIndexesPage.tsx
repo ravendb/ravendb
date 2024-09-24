@@ -41,6 +41,8 @@ import DeleteIndexesConfirmBody, { DeleteIndexesConfirmBodyProps } from "../shar
 import assertUnreachable from "components/utils/assertUnreachable";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import useBoolean from "components/hooks/useBoolean";
+import router from "plugins/router";
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
@@ -48,11 +50,11 @@ type IndexEvent =
 
 export interface ResetIndexesData {
     confirmData: {
-        indexNames: string[];
-        mode?: Raven.Client.Documents.Indexes.IndexResetMode;
+        indexes: IndexSharedInfo[];
+        mode: Raven.Client.Documents.Indexes.IndexResetMode;
     };
-    onConfirm: (contexts: DatabaseActionContexts[]) => Promise<void>;
-    openConfirm: (indexNames: string[], mode?: Raven.Client.Documents.Indexes.IndexResetMode) => void;
+    onConfirm: (indexNames: string[], contexts: DatabaseActionContexts[]) => Promise<void>;
+    openConfirm: (indexes: IndexSharedInfo[], mode: Raven.Client.Documents.Indexes.IndexResetMode) => void;
     closeConfirm: () => void;
 }
 
@@ -63,7 +65,7 @@ export interface SwapSideBySideData {
     inProgress: (indexName: string) => boolean;
 }
 
-export function useIndexesPage(stale: boolean) {
+export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
     const autoDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfAutoIndexesPerDatabase"));
     const staticDatabaseLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfStaticIndexesPerDatabase"));
 
@@ -83,15 +85,23 @@ export function useIndexesPage(stale: boolean) {
 
     const [resetIndexesConfirmData, setResetIndexesConfirmData] = useState<ResetIndexesData["confirmData"]>(null);
 
-    const openResetIndexConfirm = (indexNames: string[], mode?: Raven.Client.Documents.Indexes.IndexResetMode) => {
-        setResetIndexesConfirmData({
-            indexNames,
-            mode,
-        });
+    const openResetIndexConfirm = (indexes: IndexSharedInfo[], mode: Raven.Client.Documents.Indexes.IndexResetMode) => {
+        setResetIndexesConfirmData({ indexes, mode });
     };
 
     const closeResetIndexConfirm = () => {
         setResetIndexesConfirmData(null);
+    };
+
+    const { value: isImportIndexModalOpen, setValue: setIsImportIndexModalOpen } = useBoolean(isImportOpen);
+
+    const toggleIsImportIndexModalOpen = () => {
+        setIsImportIndexModalOpen(!isImportIndexModalOpen);
+
+        if (isImportIndexModalOpen) {
+            const urlWithoutImport = window.location.hash.replace("&isImportOpen=true", "");
+            router.navigate(urlWithoutImport);
+        }
     };
 
     const confirm = useConfirm();
@@ -564,12 +574,12 @@ export function useIndexesPage(stale: boolean) {
         }
     };
 
-    const onResetIndexConfirm = async (contexts: DatabaseActionContexts[]) => {
+    const onResetIndexConfirm = async (indexNames: string[], contexts: DatabaseActionContexts[]) => {
         eventsCollector.reportEvent("indexes", "reset");
         const resetRequests: Promise<void>[] = [];
         setResettingIndex(true);
 
-        for (const indexName of resetIndexesConfirmData.indexNames) {
+        for (const indexName of indexNames) {
             try {
                 for (const { nodeTag, shardNumbers } of contexts) {
                     const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
@@ -734,6 +744,7 @@ export function useIndexesPage(stale: boolean) {
         swapNowProgress,
         highlightCallback,
         confirmSetLockModeSelectedIndexes,
+        allIndexes: getAllIndexes(groups, replacements),
         allIndexesCount: stats.indexes.length,
         setIndexPriority,
         getSelectedIndexes,
@@ -757,6 +768,8 @@ export function useIndexesPage(stale: boolean) {
         openFaulty,
         confirmDeleteIndexes,
         globalIndexingStatus,
+        isImportIndexModalOpen,
+        toggleIsImportIndexModalOpen,
     };
 }
 
@@ -771,7 +784,7 @@ export const defaultFilterCriteria: IndexFilterCriteria = {
     groupBy: "Collection",
 };
 
-export function getAllIndexes(groups: IndexGroup[], replacements: IndexSharedInfo[]) {
+function getAllIndexes(groups: IndexGroup[], replacements: IndexSharedInfo[]) {
     const allIndexes: IndexSharedInfo[] = [];
 
     for (const index of groups.map((x) => x.indexes).flat()) {
