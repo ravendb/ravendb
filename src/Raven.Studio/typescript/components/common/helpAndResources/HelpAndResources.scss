@@ -32,6 +32,10 @@ $btn-default-dimension: 36px;
         border-radius: $btn-default-dimension;
         transition: bs5variables.$transition-base;
 
+        i {
+            left: 0.75px;
+        }
+
         &:hover {
             filter: colors.$hover-filter-var;
         }

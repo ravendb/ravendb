@@ -89,23 +89,23 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
     return (
         <Form onSubmit={handleSubmit(handleSendFeedback)}>
             <ul className="action-menu__list">
-                <FormGroup>
+                <FormGroup noMargin>
                     <FormInput placeholder="Your name" type="text" control={control} name="name" />
                 </FormGroup>
-                <FormGroup>
+                <FormGroup noMargin>
                     <FormInput placeholder="Your email" type="email" control={control} name="email" />
                 </FormGroup>
-                <FormGroup>
+                <FormGroup noMargin>
                     <FormInput placeholder="Message" type="textarea" rows={8} control={control} name="message" />
                 </FormGroup>
-                <FormGroup>
+                <FormGroup noMargin>
                     <FormCheckbox control={control} name="isFeatureSpecific">
                         <span className="fw-normal">
                             Is your feedback related to the <strong>{moduleTitle}</strong> feature?
                         </span>
                     </FormCheckbox>
                 </FormGroup>
-                <div className="d-flex">
+                <div className="d-flex align-items-center">
                     <Collapse isOpen={isFeatureSpecific}>
                         <div className="d-flex gap-1">
                             <Button
@@ -117,7 +117,7 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
                                 })}
                                 onClick={() => changeFeatureImpression("positive")}
                             >
-                                <Icon icon="thumb-up" margin="m-0" />
+                                <Icon icon="thumb-up" margin="m-0" title="Positive" />
                             </Button>
                             <Button
                                 color="link"
@@ -128,7 +128,7 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
                                 })}
                                 onClick={() => changeFeatureImpression("negative")}
                             >
-                                <Icon icon="thumb-down" margin="m-0" />
+                                <Icon icon="thumb-down" margin="m-0" title="Negative" />
                             </Button>
                         </div>
                     </Collapse>

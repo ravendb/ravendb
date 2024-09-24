@@ -17,7 +17,7 @@ export function AskCommunityContent({ openFeedbackForm }: AskCommunityContentPro
                     Get fast and comprehensive help from fellow RavenDB users and developers in our community forum.
                 </p>
                 <li
-                    className="mt-1 action-menu__list-item action-menu__list-item--primary"
+                    className="action-menu__list-item action-menu__list-item--primary mt-1"
                     role="button"
                     title="Go to GitHub discussions"
                     onClick={() => window.open(gitHubCommunityUrl, "_blank")}
@@ -34,7 +34,7 @@ export function AskCommunityContent({ openFeedbackForm }: AskCommunityContentPro
                     You can also submit feedback{" "}
                     <span
                         role="link"
-                        className="text-decoration-underline hover-filter cursor-pointer"
+                        className="text-decoration-underline hover-filter cursor-pointer m-0"
                         onClick={openFeedbackForm}
                     >
                         using form

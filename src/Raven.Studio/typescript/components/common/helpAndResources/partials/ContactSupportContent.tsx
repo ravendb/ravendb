@@ -119,7 +119,7 @@ export function ContactSupportContent() {
             <div className="action-menu__footer">
                 <small className="text-muted lh-1">
                     <Icon icon="support" />
-                    Get more information about our{" "}
+                    Get more details on our{" "}
                     <a href={supportPlansUrl} target="_blank">
                         support plans
                     </a>

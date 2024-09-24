@@ -76,7 +76,7 @@ export function HelpAndResourcesWidget() {
                             </ul>
                             <div className="action-menu__footer">
                                 <div className="d-flex flex-row align-items-center">
-                                    <small className="text-muted lh-1 mb-1">See our project on GitHub</small>
+                                    <small className="text-muted lh-1">See our project on GitHub</small>
                                     <FlexGrow />
                                     <GithubButtonWithStars />
                                 </div>
