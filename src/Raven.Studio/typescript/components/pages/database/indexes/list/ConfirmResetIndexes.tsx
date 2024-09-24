@@ -1,5 +1,5 @@
 ﻿import React, { useState } from "react";
-import { Alert, Button, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { Button, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import {
     DatabaseActionContexts,
@@ -8,6 +8,7 @@ import {
 import ActionContextUtils from "components/utils/actionContextUtils";
 import { IndexSharedInfo } from "components/models/indexes";
 import IndexUtils from "components/utils/IndexUtils";
+import RichAlert from "components/common/RichAlert";
 
 interface ConfirmResetIndexesProps {
     indexes: IndexSharedInfo[];
@@ -87,14 +88,8 @@ export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
                         <li key={indexName}>{indexName}</li>
                     ))}
                 </ul>
-                {sideBySideWarning && (
-                    <Alert color="warning" className="d-flex align-items-center">
-                        <Icon icon="warning" color="warning" />
-                        {sideBySideWarning}
-                    </Alert>
-                )}
-                <Alert color="warning" className="d-flex align-items-center">
-                    <Icon icon="warning" color="warning" />
+                {sideBySideWarning && <RichAlert color="warning">{sideBySideWarning}</RichAlert>}
+                <RichAlert variant="warning">
                     <div>
                         <strong>Reset</strong> will remove all existing indexed data
                         {ActionContextUtils.showContextSelector(allActionContexts) ? (
@@ -105,13 +100,12 @@ export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
                         <br />
                         All items matched by the index definition will be re-indexed.
                     </div>
-                </Alert>
-                <Alert color="info">
-                    <Icon icon="info" color="info" />
+                </RichAlert>
+                <RichAlert variant="info">
                     <strong>Reset mode: </strong>
                     {mode === "InPlace" && <span>In place</span>}
                     {mode === "SideBySide" && <span>Side by side</span>}
-                </Alert>
+                </RichAlert>
                 {ActionContextUtils.showContextSelector(allActionContexts) && (
                     <div>
                         <h4>Select context</h4>

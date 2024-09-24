@@ -21,13 +21,14 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { SubscriptionTaskDistribution } from "./SubscriptionTaskDistribution";
 import genUtils from "common/generalUtils";
 import moment from "moment";
-import { Alert, Button, Collapse, Input } from "reactstrap";
+import { Button, Collapse, Input } from "reactstrap";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
 import { SubscriptionConnectionsDetailsWithId } from "../OngoingTasksReducer";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import RichAlert from "components/common/RichAlert";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo> & {
     refreshSubscriptionInfo: () => void;
@@ -160,7 +161,7 @@ function ConnectedClients(props: ConnectedClientsProps) {
     }
 
     if (connections.LoadError) {
-        return <Alert color="warning">{connections.LoadError}</Alert>;
+        return <RichAlert variant="warning">{connections.LoadError}</RichAlert>;
     }
 
     const disconnectSubscription = async (workerId: string) => {

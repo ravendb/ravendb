@@ -1,4 +1,4 @@
-﻿import { Alert, Badge, Form, Label } from "reactstrap";
+﻿import { Badge, Form, Label } from "reactstrap";
 import { FormInput, FormSelect } from "components/common/Form";
 import React, { useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
@@ -18,6 +18,7 @@ import { yupObjectSchema } from "components/utils/yupUtils";
 import { FlexGrow } from "components/common/FlexGrow";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import RichAlert from "components/common/RichAlert";
 
 type FormData = ConnectionFormData<SqlConnection>;
 
@@ -94,18 +95,16 @@ export default function SqlConnectionString({
                     components={{ Option: OptionWithWarning }}
                 />
                 {formValues.factoryName === "MySql.Data.MySqlClient" && (
-                    <Alert color="warning mt-1">
-                        <Icon icon="warning" color="warning" />
+                    <RichAlert variant="warning" className="mt-1">
                         This connector is deprecated. MySqlConnector will be used instead. Please update Factory to:
                         MySqlConnector.MySqlConnectorFactory.
-                    </Alert>
+                    </RichAlert>
                 )}
                 {formValues.factoryName === "System.Data.SqlClient" && (
-                    <Alert color="warning mt-1">
-                        <Icon icon="warning" color="warning" />
+                    <RichAlert variant="warning" className="mt-1">
                         This connector is deprecated. Microsoft SqlClient will be used instead. Please update Factory
                         to: Microsoft.Data.SqlClient.
-                    </Alert>
+                    </RichAlert>
                 )}
             </div>
             <div className="mb-2">

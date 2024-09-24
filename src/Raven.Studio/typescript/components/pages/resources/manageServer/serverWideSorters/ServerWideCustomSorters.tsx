@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Alert, Button, Col, Row } from "reactstrap";
+import { Button, Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -11,6 +11,7 @@ import ServerWideCustomSortersList from "./ServerWideCustomSortersList";
 import FeatureNotAvailableInYourLicensePopover from "components/common/FeatureNotAvailableInYourLicensePopover";
 import { useCustomSorters } from "components/common/customSorters/useCustomSorters";
 import ServerWideCustomSortersInfoHub from "components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSortersInfoHub";
+import RichAlert from "components/common/RichAlert";
 
 export default function ServerWideCustomSorters() {
     const { sorters, setSorters, addNewSorter, removeSorter, mapFromDto } = useCustomSorters();
@@ -45,10 +46,9 @@ export default function ServerWideCustomSorters() {
                             licenseBadgeText={hasServerWideCustomSorters ? null : "Professional +"}
                         />
                         {sorters.length > 0 && (
-                            <Alert color="info">
-                                <Icon icon="info" />
+                            <RichAlert variant="info">
                                 To test server-wide sorters, go to the Custom Sorters view in a database
-                            </Alert>
+                            </RichAlert>
                         )}
                         <div id="newServerWideCustomSorter" className="w-fit-content mt-4">
                             <Button
