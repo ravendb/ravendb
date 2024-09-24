@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
     {
         public IndexItemType Type;
         public LazyStringValue LowerId;
-        public LazyStringValue LuceneKey;
+        public LazyStringValue PrefixKey;
         public LazyStringValue Name;
         public long Etag;
         public DateTime From;
@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
             return new DynamicJsonValue
             {
                 [nameof(LowerId)] = LowerId?.ToString(),
-                [nameof(LuceneKey)] = LuceneKey?.ToString(),
+                [nameof(PrefixKey)] = PrefixKey?.ToString(),
                 [nameof(Name)] = Name?.ToString(),
                 [nameof(Etag)] = Etag,
                 [nameof(Type)] = Type.GetDescription(),
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
         public void Dispose()
         {
             LowerId?.Dispose();
-            LuceneKey?.Dispose();
+            PrefixKey?.Dispose();
             Name?.Dispose();
         }
     }

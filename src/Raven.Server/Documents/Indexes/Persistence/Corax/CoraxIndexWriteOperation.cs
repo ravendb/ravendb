@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             EnsureValidStats(stats);
 
             using (Stats.DeleteStats.Start())
-                _indexWriter.DeleteByPrefix(key.ToString(CultureInfo.InvariantCulture));
+                _indexWriter.DeleteByPrefix(key.AsReadOnlySpan());
         }
 
         /// <summary>

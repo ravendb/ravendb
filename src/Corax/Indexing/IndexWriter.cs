@@ -630,21 +630,29 @@ namespace Corax.Indexing
             return TryDeleteEntry(termSlice, out entryId);
         }
 
-        public void DeleteByPrefix(string term)
+        public void DeleteByPrefix(ReadOnlySpan<byte> term)
         {
             using var __ = Slice.From(_transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
 
-            var fieldsTree = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(Constants.IndexWriter.PrimaryKeyFieldId).FieldName);
-
-            var iterator = fieldsTree.Iterate();
-            iterator.Seek(termSlice);
-
-            while (iterator.MoveNext(out var key, out var id, out _))
+            if (_indexedEntries.Any(id => SliceComparer.StartWith(id, termSlice)) == false)
             {
-                if (key.Decoded().StartsWith(termSlice) == false)
-                    continue;
+                  var fieldsTree = _fieldsTree.CompactTreeFor(_fieldsMapping.GetByFieldId(Constants.IndexWriter.PrimaryKeyFieldId).FieldName);
 
-                RecordDeletion(id, out _, out _);
+                var iterator = fieldsTree.Iterate();
+                iterator.Seek(termSlice);
+
+                while (iterator.MoveNext(out var key, out var id, out _))
+                {
+                    if (key.Decoded().StartsWith(termSlice) == false)
+                        continue;
+
+                    RecordDeletion(id, out _, out _);
+                }
+            }
+            else
+            {
+                FlushBatch();
+                DeleteByPrefix(term);
             }
         }
 
