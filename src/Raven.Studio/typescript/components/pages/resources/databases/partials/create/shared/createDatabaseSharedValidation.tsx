@@ -51,3 +51,14 @@ export const encryptionStepSchema = yup.object({
 });
 
 export type Encryption = yup.InferType<typeof encryptionStepSchema>;
+
+export const databaseNameSchema = yup
+    .string()
+    .trim()
+    .strict()
+    .required()
+    .test("db-exists", "Database already exists", (value, ctx) => {
+        return !ctx.options.context.usedDatabaseNames.some(
+            (name: string) => name.toLowerCase() === value.toLowerCase()
+        );
+    });
