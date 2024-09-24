@@ -1062,9 +1062,10 @@ namespace Raven.Server.Web.Authentication
                         }
 
                         // Ensure we'll be able to load the certificate
+                        X509Certificate2 newCertificate;
                         try
                         {
-                            var _ = CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForExport);
+                            newCertificate = CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
                         }
                         catch (Exception e)
                         {
@@ -1079,7 +1080,7 @@ namespace Raven.Server.Web.Authentication
                         {
                             Logger.Operations("Initiating the replacement of the certificate upon explicit request - '/admin/certificates/replace-cluster-cert'.");
                         }
-                        var replicationTask = Server.StartCertificateReplicationAsync(certBytes, replaceImmediately, GetRaftRequestIdFromQuery());
+                        var replicationTask = Server.StartCertificateReplicationAsync(newCertificate, replaceImmediately, GetRaftRequestIdFromQuery());
 
                         await Task.WhenAny(replicationTask, timeoutTask);
                         if (replicationTask.IsCompleted == false)

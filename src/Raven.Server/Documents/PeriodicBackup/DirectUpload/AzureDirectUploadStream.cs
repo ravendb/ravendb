@@ -17,14 +17,9 @@ public class AzureDirectUploadStream : DirectUploadStream<IRavenAzureClient>
         MinOnePartUploadSizeInBytes = Client.MaxSingleBlockSize.GetValue(SizeUnit.Bytes);
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void OnCompleteUpload()
     {
-        using (Client)
-        {
-            base.Dispose(disposing);
-
-            var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, Client);
-            runner.Execute();
-        }
+        var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, Client);
+        runner.Execute();
     }
 }
