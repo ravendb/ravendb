@@ -2,6 +2,7 @@ import { LazyLoad } from "components/common/LazyLoad";
 import React from "react";
 import { useAsync } from "react-async-hook";
 import * as yup from "yup";
+import { Icon } from "components/common/Icon";
 
 export default function GithubButtonWithStars() {
     return (
@@ -9,14 +10,16 @@ export default function GithubButtonWithStars() {
             href="https://github.com/ravendb/ravendb"
             target="_blank"
             title="Star ravendb on GitHub"
-            className="bg-dark bg-gradient d-flex align-items-center p-1 m-0 border border-dark-subtle rounded-1 gap-1 small text-white"
+            className="bg-dark d-flex align-items-center p-1 m-0 border border-dark-subtle rounded-1 gap-1 small no-decor lh-1"
         >
             <div>
-                <i className="icon-github"></i>
+                <Icon icon="github" />
                 Star
             </div>
             <div className="border-start ps-1">
-                <StarsCount />
+                <strong>
+                    <StarsCount />
+                </strong>
             </div>
         </a>
     );
