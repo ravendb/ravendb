@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             using (Stats.DeleteStats.Start())
             {
                 var term = _documentId.CreateTerm(key);
-                _writer.DeleteTimeSeries(term, _state);
+                _writer.DeleteByPrefix(term, _state);
             }
         }
 

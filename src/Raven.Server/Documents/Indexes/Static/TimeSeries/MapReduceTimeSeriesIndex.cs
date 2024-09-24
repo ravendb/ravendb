@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         internal void HandleTimeSeriesDelete(TombstoneIndexItem tombstone, TransactionOperationContext indexContext)
         {
             var toDelete = new List<Slice>();
-            using (Slice.External(indexContext.Allocator, tombstone.LuceneKey, out var prefixKey))
+            using (Slice.External(indexContext.Allocator, tombstone.PrefixKey, out var prefixKey))
             {
                 using (var it = MapReduceWorkContext.MapPhaseTree.Iterate(prefetch: true))
                 {

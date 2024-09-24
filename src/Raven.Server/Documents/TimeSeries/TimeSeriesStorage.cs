@@ -2465,7 +2465,6 @@ namespace Raven.Server.Documents.TimeSeries
                 return new TimeSeriesDeletedRangeEntry
                 {
                     Key = new LazyStringValue(null, keyPtr, keySize, context),
-                    LuceneKey = GetTimeSeriesDeletedRangeLuceneKey(context, docId, name),
                     DocId = docId,
                     Name = name,
                     Etag = Bits.SwapBytes(etag)
@@ -2522,7 +2521,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             return new TombstoneIndexItem
             {
-                LuceneKey = GetTimeSeriesDeletedRangeLuceneKey(context, docId, name),
+                PrefixKey = GetTimeSeriesDeletedRangePrefixKey(context, docId, name),
                 LowerId = docId,
                 Name = name,
                 Etag = Bits.SwapBytes(etag),
@@ -2699,7 +2698,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static LazyStringValue GetTimeSeriesDeletedRangeLuceneKey(DocumentsOperationContext context, LazyStringValue documentId, LazyStringValue name)
+        private static LazyStringValue GetTimeSeriesDeletedRangePrefixKey(DocumentsOperationContext context, LazyStringValue documentId, LazyStringValue name)
         {
             var size = documentId.Size
                        + 1 // Lucene separator

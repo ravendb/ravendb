@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexWriter.DeleteDocuments(term, state);
         }
 
-        public void DeleteTimeSeries(Term term, IState state)
+        public void DeleteByPrefix(Term term, IState state)
         {
             using var reader = _indexWriter.GetReader(state);
             using var termsEnumerator = reader.Terms(term, state);
