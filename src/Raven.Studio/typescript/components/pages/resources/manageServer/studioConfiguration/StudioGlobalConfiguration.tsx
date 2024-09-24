@@ -46,7 +46,7 @@ export default function StudioGlobalConfiguration() {
 
     useDirtyFlag(formState.isDirty);
 
-    const clientConfigurationDocsLink = useRavenLink({ hash: "TS7SGF" });
+    const clientConfigurationDocsLink = useRavenLink({ hash: "HIR1VP" });
     const { reportEvent } = useEventsCollector();
 
     const hasStudioConfiguration = useAppSelector(licenseSelectors.statusValue("HasStudioConfiguration"));

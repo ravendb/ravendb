@@ -1,13 +1,14 @@
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 interface AskCommunityContentProps {
-    selectTab: (tab: string) => void;
+    openFeedbackForm: () => void;
 }
 
-export function AskCommunityContent({ selectTab }: AskCommunityContentProps) {
-    const gitHubCommunityUrl = "https://github.com/ravendb/ravendb/discussions";
+export function AskCommunityContent({ openFeedbackForm }: AskCommunityContentProps) {
+    const gitHubCommunityUrl = useRavenLink({ hash: "ITXUEA" });
 
     return (
         <>
@@ -34,7 +35,7 @@ export function AskCommunityContent({ selectTab }: AskCommunityContentProps) {
                     <span
                         role="link"
                         className="text-decoration-underline hover-filter cursor-pointer"
-                        onClick={() => selectTab("feedbackForm")}
+                        onClick={openFeedbackForm}
                     >
                         using form
                     </span>

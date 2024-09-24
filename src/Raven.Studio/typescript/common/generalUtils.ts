@@ -790,6 +790,14 @@ class genUtils {
         const isDevBuildNumber = (num: number) => num >= 40 && num < 90;
         return !isDevBuildNumber(latestVersion.BuildNumber) && latestVersion.BuildNumber > serverVersion.BuildVersion;
     }
+
+    static getSingleRoute(route: string | string[]): string {
+        if (!route) {
+            return null;
+        }
+        
+        return Array.isArray(route) ? route.filter((x) => x)[0] : route;
+    }
 } 
 
 export = genUtils;
