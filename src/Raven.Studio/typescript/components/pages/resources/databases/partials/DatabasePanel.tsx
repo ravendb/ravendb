@@ -74,6 +74,8 @@ function getStatusColor(db: DatabaseSharedInfo, localInfo: locationAwareLoadable
             return "secondary";
         case "Disabled":
             return "warning";
+        case "Partially Online":
+            return "striped-success";
         default:
             return "success";
     }
