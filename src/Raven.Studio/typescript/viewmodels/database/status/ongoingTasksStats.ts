@@ -2281,20 +2281,20 @@ class ongoingTasksStats extends shardViewModelBase {
                     const baseElement = context.rootStats as EtlPerformanceBaseWithCache;
                     switch (context.item.Name) {
                         case "Extract":
-                            Object.entries(baseElement.NumberOfExtractedItems).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
+                            Object.entries(baseElement.NumberOfExtractedItems ?? []).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
                                 if (value) {
                                     tooltipHtml += `<div class="tooltip-li">Extracted <div class="value">${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()} </div></div>`;
                                 }
                             });
 
-                            Object.entries(baseElement.LastFilteredOutEtags).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
+                            Object.entries(baseElement.LastFilteredOutEtags ?? []).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
                                 if (value) {
                                     tooltipHtml += `<div class="tooltip-li">Last filtered out Etag for ${key}: <div class="value">${value} </div></div>`;
                                 }
                             });
                             break;
                         case "Transform":
-                            Object.entries(baseElement.NumberOfTransformedItems).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
+                            Object.entries(baseElement.NumberOfTransformedItems ?? []).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
                                 if (value) {
                                     tooltipHtml += `<div class="tooltip-li">Transformed ${ongoingTasksStats.etlItemTypeToUi(key)}: <div class="value">${value.toLocaleString()} </div></div>`;
                                     
@@ -2305,7 +2305,7 @@ class ongoingTasksStats extends shardViewModelBase {
                                 }
                             });
 
-                            Object.entries(baseElement.NumberOfTransformedTombstones).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
+                            Object.entries(baseElement.NumberOfTransformedTombstones ?? []).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
                                 if (value) {
                                     tooltipHtml += `<div class="tooltip-li">Transformed ${ongoingTasksStats.etlItemTypeToUi(key)} tombstones: <div class="value">${value.toLocaleString()} </div></div>`;
                                 }
@@ -2315,7 +2315,7 @@ class ongoingTasksStats extends shardViewModelBase {
                                 tooltipHtml += `<div class="tooltip-li">Transformation error count: <div class="value">${baseElement.TransformationErrorCount.toLocaleString()} </div></div>`;
                             }
 
-                            Object.entries(baseElement.LastTransformedEtags).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
+                            Object.entries(baseElement.LastTransformedEtags ?? []).forEach(([key, value]: [Raven.Server.Documents.ETL.EtlItemType, number]) => {
                                 if (value) {
                                     tooltipHtml += `<div class="tooltip-li">Last transformed Etag for ${key}: <div class="value">${value} </div></div>`;
                                 }

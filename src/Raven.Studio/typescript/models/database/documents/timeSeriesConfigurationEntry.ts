@@ -42,7 +42,7 @@ class timeSeriesConfigurationEntry {
     }
     
     withNamedValues(dto: System.Collections.Generic.Dictionary<string, string[]>) {
-        this.namedValues(Object.entries(dto).map(([tsName, configuration]) => {
+        this.namedValues(Object.entries(dto ?? []).map(([tsName, configuration]) => {
             return new timeSeriesNamedValues(tsName, configuration);
         }))
     }

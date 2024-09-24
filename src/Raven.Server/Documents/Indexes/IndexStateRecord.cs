@@ -38,6 +38,7 @@ public record IndexStateRecord(
     public sealed record CollectionEtags(
         long LastIndexedEtag,
         long LastProcessedTombstoneEtag,
+        long LastProcessedTimeSeriesDeletedRangeEtag,
         ReferenceCollectionEtags LastReferencedEtagsForCompareExchange,
         ImmutableDictionary<string, ReferenceCollectionEtags> LastReferencedEtags);
 }

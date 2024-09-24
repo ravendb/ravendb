@@ -113,7 +113,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.Equal(2, staleness.StalenessReasons.Count); // one for time series update and one for time series deleted range
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
                 store.Maintenance.Send(new StartIndexingOperation());
@@ -751,7 +751,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
         public void CanMapAllTimeSeriesFromCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -839,7 +840,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.Equal(2, staleness.StalenessReasons.Count); // one for time series update and one for time series deleted range
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
                 store.Maintenance.Send(new StartIndexingOperation());
@@ -907,7 +908,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
         public void CanMapAllTimeSeries(Options options)
         {
             using (var store = GetDocumentStore(options))

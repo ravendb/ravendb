@@ -141,6 +141,7 @@ namespace Raven.Server.Documents.Indexes
 
                 tx.InnerTransaction.CreateTree(IndexSchema.EtagsTree);
                 tx.InnerTransaction.CreateTree(IndexSchema.EtagsTombstoneTree);
+                tx.InnerTransaction.CreateTree(IndexSchema.EtagsTimeSeriesDeletedRangeTree);
                 tx.InnerTransaction.CreateTree(IndexSchema.References);
                 tx.InnerTransaction.CreateTree(IndexSchema.ReferencesForCompareExchange);
 
@@ -224,7 +225,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         if (configurationTree.Read(configurationKey) != null)
                             return; // do not overwrite default value if it exists already
-                        
+
                         configurationTree.Add(configurationKey, defaultBehavior.ToString());
                     }
                 }
@@ -515,7 +516,7 @@ namespace Raven.Server.Documents.Indexes
 
             return 0;
         }
-        
+
         public ArchivedDataProcessingBehavior ReadArchivedDataProcessingBehavior(RavenTransaction tx)
         {
             var configurationTree = tx.InnerTransaction.ReadTree(IndexSchema.ConfigurationTree);
@@ -534,7 +535,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 throw new InvalidOperationException($"Index does not contain valid {nameof(ArchivedDataProcessingBehavior)} property. It contains: {result.Reader.ToStringValue()}.");
             }
-            
+
             return persistedArchivedDataProcessingBehavior;
         }
 
@@ -830,12 +831,28 @@ namespace Raven.Server.Documents.Indexes
             if (txi.IsWriteTransaction == false && txi.LowLevelTransaction.TryGetClientState(out IndexStateRecord cache))
             {
                 if (cache.Collections.TryGetValue(collection, out var val))
-                        return val.LastProcessedTombstoneEtag;
+                    return val.LastProcessedTombstoneEtag;
             }
 
             using (Slice.From(txi.Allocator, collection, out Slice collectionSlice))
             {
                 return ReadLastEtag(txi, IndexSchema.EtagsTombstoneTree, collectionSlice);
+            }
+        }
+
+        public long ReadLastProcessedTimeSeriesDeletedRangeEtag(RavenTransaction tx, string collection)
+        {
+            var txi = tx.InnerTransaction;
+
+            if (txi.IsWriteTransaction == false && txi.LowLevelTransaction.TryGetClientState(out IndexStateRecord cache))
+            {
+                if (cache.Collections.TryGetValue(collection, out var val))
+                    return val.LastProcessedTimeSeriesDeletedRangeEtag;
+            }
+
+            using (Slice.From(txi.Allocator, collection, out Slice collectionSlice))
+            {
+                return ReadLastEtag(txi, IndexSchema.EtagsTimeSeriesDeletedRangeTree, collectionSlice);
             }
         }
 
@@ -845,7 +862,7 @@ namespace Raven.Server.Documents.Indexes
             if (txi.IsWriteTransaction == false && txi.LowLevelTransaction.TryGetClientState(out IndexStateRecord cache))
             {
                 if (cache.Collections.TryGetValue(collection, out var val))
-                        return val.LastIndexedEtag;
+                    return val.LastIndexedEtag;
             }
 
             using (Slice.From(txi.Allocator, collection, out Slice collectionSlice))
@@ -859,6 +876,14 @@ namespace Raven.Server.Documents.Indexes
             using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
             {
                 WriteLastEtag(tx, IndexSchema.EtagsTombstoneTree, collectionSlice, etag);
+            }
+        }
+
+        public void WriteLastTimeSeriesDeletedRangeEtag(RavenTransaction tx, string collection, long etag)
+        {
+            using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
+            {
+                WriteLastEtag(tx, IndexSchema.EtagsTimeSeriesDeletedRangeTree, collectionSlice, etag);
             }
         }
 
@@ -1184,6 +1209,8 @@ namespace Raven.Server.Documents.Indexes
 
             public const string EtagsTombstoneTree = "Etags.Tombstone";
 
+            public const string EtagsTimeSeriesDeletedRangeTree = "Etags.TimeSeriesDeletedRange";
+
             public const string References = "References";
 
             public const string ReferencesForCompareExchange = "ReferencesForCompareExchange";
@@ -1195,7 +1222,7 @@ namespace Raven.Server.Documents.Indexes
             public static readonly Slice DatabaseIdSlice;
 
             public static readonly Slice SourceTypeSlice;
-            
+
             public static readonly Slice ArchivedDataProcessingBehaviorSlice;
 
             public static readonly Slice CreatedTimestampSlice;

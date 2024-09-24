@@ -1,0 +1,22 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.table-display-settings {
+    .dropdown-menu {
+        width: max-content;
+    }
+
+    .column-list {
+        max-height: 300px;
+        overflow: auto;
+    }
+
+    .column-list-item {
+        padding: sizes.$gutter-xxs sizes.$gutter-sm;
+        background-color: colors.$well-bg-var;
+
+        &:hover {
+            filter: colors.$hover-filter-var;
+        }
+    }
+}

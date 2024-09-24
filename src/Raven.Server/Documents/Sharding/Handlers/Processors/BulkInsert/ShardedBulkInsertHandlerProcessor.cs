@@ -18,15 +18,13 @@ internal sealed class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHand
     private const string SampleChangeVector = "A:2568-F9I6Egqwm0Kz+K0oFVIR9Q";
 
     private readonly ShardedBulkInsertOperation _operation;
-    private readonly CancellationTokenSource _cts;
 
     public ShardedBulkInsertHandlerProcessor([NotNull] ShardedBulkInsertHandler requestHandler, ShardedDatabaseContext databaseContext,
-        long operationId, bool skipOverwriteIfUnchanged, CancellationToken token) :
-        base(requestHandler, null, skipOverwriteIfUnchanged, token)
+        long operationId, bool skipOverwriteIfUnchanged, CancellationToken token) 
+        : base(requestHandler, null, skipOverwriteIfUnchanged, token)
     {
         _databaseContext = databaseContext;
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(token, requestHandler.AbortRequestToken);
-        _operation = new ShardedBulkInsertOperation(operationId, skipOverwriteIfUnchanged, requestHandler, databaseContext, requestHandler.ContextPool, _cts.Token);
+        _operation = new ShardedBulkInsertOperation(operationId, skipOverwriteIfUnchanged, requestHandler, databaseContext, requestHandler.ContextPool, CancellationToken);
     }
 
     protected override AbstractBulkInsertBatchCommandsReader<ShardedBatchCommandData> GetCommandsReader(JsonOperationContext context, Stream requestBodyStream, JsonOperationContext.MemoryBuffer buffer, CancellationToken token)
@@ -52,9 +50,9 @@ internal sealed class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHand
         return RequestHandler.ServerStore.GetTempFile("attachment", "sharded-bulk-insert", _databaseContext.Encrypted);
     }
 
-    protected override async ValueTask<string> CopyAttachmentStream(Stream stream, Stream attachmentStream)
+    protected override async ValueTask<string> CopyAttachmentStreamAsync(Stream stream, Stream attachmentStream, CancellationToken token)
     {
-        await stream.CopyToAsync(attachmentStream, _cts.Token);
+        await stream.CopyToAsync(attachmentStream, token);
         return null;
     }
 
@@ -73,7 +71,5 @@ internal sealed class ShardedBulkInsertHandlerProcessor : AbstractBulkInsertHand
         base.Dispose();
 
         await _operation.DisposeAsync();
-
-        _cts.Dispose();
     }
 }

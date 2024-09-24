@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         [ThreadStatic]
         private static IState _currentIndexState;
-        
+
         private IndexSearcher CreateIndexSearcher()
         {
             lock (_readersLock)
@@ -246,7 +246,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 InitializeMainIndexStorage(tx, environment);
                 InitializeSuggestionsIndexStorage(tx, environment);
-                
+
                 tx.LowLevelTransaction.UpdateClientState(UpdateIndexCache(tx));
 
                 // force tx commit so it will bump tx counter and just created searcher holder will have valid tx id
@@ -277,15 +277,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 dirs[name] = GetLuceneFilesChunks(tx, name);
             }
 
-            if(tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord rec) is false)
+            if (tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord rec) is false)
                 rec = IndexStateRecord.Empty;
 
             return rec with { Collections = GetCollectionEtags(tx), DirectoriesByName = dirs.ToImmutable() };
         }
-        
-        private  ImmutableDictionary<string, IndexStateRecord.CollectionEtags> GetCollectionEtags(Transaction tx)
+
+        private ImmutableDictionary<string, IndexStateRecord.CollectionEtags> GetCollectionEtags(Transaction tx)
         {
-            var builder = ImmutableDictionary.CreateBuilder<string, IndexStateRecord.CollectionEtags>(); 
+            var builder = ImmutableDictionary.CreateBuilder<string, IndexStateRecord.CollectionEtags>();
             AbstractStaticIndexBase compiled = null;
 
             if (_index.Type.IsStatic())
@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         : null;
 
                     var lastReferenceEtags = ImmutableDictionary.CreateBuilder<string, IndexStateRecord.ReferenceCollectionEtags>();
-                    if (referencedCollections?.TryGetValue(collection, out var collectionNames) ==true && collectionNames.Count > 0)
+                    if (referencedCollections?.TryGetValue(collection, out var collectionNames) == true && collectionNames.Count > 0)
                     {
                         foreach (var collectionName in collectionNames)
                         {
@@ -344,9 +344,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             IndexStorage.IndexSchema.EtagsTombstoneTree,
                             collectionSlice
                         ),
+                        IndexStorage.ReadLastEtag(tx,
+                            IndexStorage.IndexSchema.EtagsTimeSeriesDeletedRangeTree,
+                            collectionSlice
+                        ),
                         collectionEtags,
                         lastReferenceEtags.ToImmutable());
-
 
                     builder[collection] = etags;
                 }
@@ -377,7 +380,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             return builder.ToImmutable();
         }
-        
+
         private void InitializeSuggestionsIndexStorage(Transaction tx, StorageEnvironment environment)
         {
             var dic = ImmutableDictionary<string, LuceneIndexState>.Empty.ToBuilder();
@@ -393,7 +396,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     CreateIndexStructure(directory, state);
                 }
-                
+
                 var dir = _suggestionsDirectories[field.Key];
                 dic.Add(field.Key, CreateSuggestions(dir));
             }
@@ -469,7 +472,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (readTransaction.LowLevelTransaction.TryGetClientState(out IndexStateRecord stateRecord) is false)
                 throw new InvalidOperationException("Unable to find index ClientState, should not be possible");
-            if (!_suggestionsDirectories.TryGetValue(field, out LuceneVoronDirectory directory) || 
+            if (!_suggestionsDirectories.TryGetValue(field, out LuceneVoronDirectory directory) ||
                 !stateRecord.LuceneSuggestionStates.TryGetValue(field, out var state))
                 throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
             IndexSearcher indexSearcherValue;
@@ -614,12 +617,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override void AssertCanOptimize()
         {
-            
+
         }
-        
+
         public override void AssertCanDump()
         {
-            
+
         }
 
         public IndexSearcher GetSearcher(Transaction tx, IState state)

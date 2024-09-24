@@ -5,7 +5,7 @@ on:
   push:
 
 jobs:
-  job1:
+  compile:
     name: Compile Server & Studio
     runs-on: ubuntu-latest
     steps:
@@ -31,17 +31,6 @@ jobs:
       - name: Build Server
         run: |
           dotnet build
-          echo "true" > status_server.txt
-      - name: Server Failed
-        if: failure()
-        run: echo "false" > status_server.txt
-
-      - name: Upload artifact status_server
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pass_status_server
-          path: status_server.txt
 
       - name: Setup nodejs
         uses: actions/setup-node@v4
@@ -56,44 +45,5 @@ jobs:
       - name: Compile Studio
         run: |
           npm run compile
-          echo "true" > status_studio.txt
         working-directory: src/Raven.Studio
 
-      - name: Upload artifact status_studio
-        uses: actions/upload-artifact@v4
-        with:
-          name: pass_status_studio
-          path: src/Raven.Studio/status_studio.txt
-  
-  job2:
-    if: always()
-    needs: job1
-    name: Generate Slack notification message
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download artifacts 1
-        uses: actions/download-artifact@v4
-        with:
-          name: pass_status_server
-
-      - name: Download artifacts 2
-        if: needs.job1.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: pass_status_studio
-        
-      - name: Generate message
-        run: ./scripts/githubActions/CompileGenerateMessage.sh
-        env:
-          PRLINK: ${{ github.event.pull_request.html_url }}
-          PRTARGETBRANCH: ${{ github.event.pull_request.base.ref }}
-          PRNUMBER: ${{ github.event.pull_request.number }}
-          PRTITLE: ${{ github.event.pull_request.title }}
-      
-      - name: Upload artifact slack_message
-        uses: actions/upload-artifact@v4
-        with:
-          name: notification
-          path: notificationMessage.txt

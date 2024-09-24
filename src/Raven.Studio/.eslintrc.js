@@ -23,7 +23,8 @@ module.exports = {
     "@typescript-eslint/no-explicit-any": "off",
     "react/jsx-key": "off",
     "@typescript-eslint/prefer-namespace-keyword": "off",
-    "@typescript-eslint/no-unused-vars": "warn"
+    "@typescript-eslint/no-unused-vars": "warn",
+    "react/react-in-jsx-scope": "off"
   },
   "settings": {
     "react": {

@@ -8,6 +8,7 @@
     display: grid;
     grid-template-columns: auto 1fr;
     z-index: 1000;
+    min-width: 350px;
 
     .location-specific-details-location {
         display: flex;

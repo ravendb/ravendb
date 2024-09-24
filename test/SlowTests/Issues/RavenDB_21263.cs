@@ -330,6 +330,12 @@ namespace SlowTests.Issues
                             // send the unused IDs to the server to reduce the change vector size
                             await store3.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(store3.Database, unusedDatabaseIds));
 
+                            await AssertWaitForValueAsync(async () =>
+                            {
+                                var record = await store3.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store3.Database));
+                                return record.UnusedDatabaseIds.Count;
+                            }, unusedDatabaseIds.Count);
+
                             // now, the same operation should not throw an error
                             using (var session = store3.OpenAsyncSession())
                             {

@@ -85,7 +85,7 @@ class indexingDetails extends abstractPerformanceHintDetails {
     }
 
     private mapItems(details: Raven.Server.NotificationCenter.Notifications.Details.WarnIndexOutputsPerDocument): indexingDetailsItemDto[] {
-        return Object.entries(details.Warnings).flatMap(([key, value]) => {
+        return Object.entries(details.Warnings ?? []).flatMap(([key, value]) => {
             return value.map(item => ({ IndexName: key, ...item }));
         });
     }

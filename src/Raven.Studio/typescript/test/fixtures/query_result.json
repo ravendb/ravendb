@@ -1,0 +1,4573 @@
+{
+    "TotalResults": 830,
+    "ScannedResults": 0,
+    "SkippedResults": 0,
+    "DurationInMs": 4,
+    "IncludedPaths": null,
+    "IndexName": "collection/Orders",
+    "Results": [
+        {
+            "Company": "companies/85-A",
+            "Freight": 32.38,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.0,
+                    "Product": "products/11-A",
+                    "ProductName": "Queso Cabrales",
+                    "Quantity": 12
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 9.8,
+                    "Product": "products/42-A",
+                    "ProductName": "Singaporean Hokkien Fried Mee",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 34.8000,
+                    "Product": "products/72-A",
+                    "ProductName": "Mozzarella di Giovanni",
+                    "Quantity": 5
+                }
+            ],
+            "HasLink": true,
+            "SomeLink": "https://google.pl",
+            "OrderedAt": "1996-07-04T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Reims",
+                "Country": "France",
+                "Line1": "59 rue de l'Abbaye",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 49.255958199999988,
+                    "Longitude": 4.1547448
+                },
+                "PostalCode": "51100",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:81-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/1-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0447651Z",
+                "shardNumber": 1
+            }
+        },
+        {
+            "Company": "companies/79-A",
+            "Freight": 11.61,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 18.6,
+                    "Product": "products/14-A",
+                    "ProductName": "Tofu",
+                    "Quantity": 9
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 42.4000,
+                    "Product": "products/51-A",
+                    "ProductName": "Manjimup Dried Apples",
+                    "Quantity": 40
+                }
+            ],
+            "HasLink": false,
+            "SomeLink": null,
+            "OrderedAt": "1996-07-05T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Münster",
+                "Country": "Germany",
+                "Line1": "Luisenstr. 48",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 51.6566,
+                    "Longitude": 7.09044
+                },
+                "PostalCode": "44087",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:83-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/2-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0451613Z"
+            }
+        },
+        {
+            "Company": "companies/34-A",
+            "Freight": 65.83,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 7.7,
+                    "Product": "products/41-A",
+                    "ProductName": "Jack's New England Clam Chowder",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 42.4,
+                    "Product": "products/51-A",
+                    "ProductName": "Manjimup Dried Apples",
+                    "Quantity": 35
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 16.8000,
+                    "Product": "products/65-A",
+                    "ProductName": "Louisiana Fiery Hot Pepper Sauce",
+                    "Quantity": 15
+                }
+            ],
+            "OrderedAt": "1996-07-08T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Rio de Janeiro",
+                "Country": "Brazil",
+                "Line1": "Rua do Paço, 67",
+                "Line2": null,
+                "Location": {
+                    "Latitude": -22.9306303,
+                    "Longitude": -43.358808200000013
+                },
+                "PostalCode": "05454-876",
+                "Region": "RJ"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:85-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/3-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0453379Z"
+            }
+        },
+        {
+            "Company": "companies/84-A",
+            "Freight": 41.34,
+            "Lines": [
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 16.8,
+                    "Product": "products/22-A",
+                    "ProductName": "Gustaf's Knäckebröd",
+                    "Quantity": 6
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 15.6,
+                    "Product": "products/57-A",
+                    "ProductName": "Ravioli Angelo",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 16.8000,
+                    "Product": "products/65-A",
+                    "ProductName": "Louisiana Fiery Hot Pepper Sauce",
+                    "Quantity": 20
+                }
+            ],
+            "OrderedAt": "1996-07-08T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Lyon",
+                "Country": "France",
+                "Line1": "2, rue du Commerce",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 45.7850099,
+                    "Longitude": 4.8123691
+                },
+                "PostalCode": "69004",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:87-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/4-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0454703Z"
+            }
+        },
+        {
+            "Company": "companies/76-A",
+            "Freight": 51.3,
+            "Lines": [
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 64.8,
+                    "Product": "products/20-A",
+                    "ProductName": "Sir Rodney's Marmalade",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 2.0,
+                    "Product": "products/33-A",
+                    "ProductName": "Geitost",
+                    "Quantity": 25
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 27.2000,
+                    "Product": "products/60-A",
+                    "ProductName": "Camembert Pierrot",
+                    "Quantity": 40
+                }
+            ],
+            "OrderedAt": "1996-07-09T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Charleroi",
+                "Country": "Belgium",
+                "Line1": "Boulevard Tirou, 255",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 50.4062634,
+                    "Longitude": 4.4470125
+                },
+                "PostalCode": "B-6000",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:89-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/5-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0456146Z"
+            }
+        },
+        {
+            "Company": "companies/34-A",
+            "Freight": 58.17,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 10.0,
+                    "Product": "products/31-A",
+                    "ProductName": "Gorgonzola Telino",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4,
+                    "Product": "products/39-A",
+                    "ProductName": "Chartreuse verte",
+                    "Quantity": 42
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 16.0000,
+                    "Product": "products/49-A",
+                    "ProductName": "Maxilaku",
+                    "Quantity": 40
+                }
+            ],
+            "OrderedAt": "1996-07-10T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Rio de Janeiro",
+                "Country": "Brazil",
+                "Line1": "Rua do Paço, 67",
+                "Line2": null,
+                "Location": {
+                    "Latitude": -22.9306303,
+                    "Longitude": -43.358808200000013
+                },
+                "PostalCode": "05454-876",
+                "Region": "RJ"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:91-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/6-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0458177Z"
+            }
+        },
+        {
+            "Company": "companies/14-A",
+            "Freight": 22.98,
+            "Lines": [
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 3.6,
+                    "Product": "products/24-A",
+                    "ProductName": "Guaraná Fantástica",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 19.2,
+                    "Product": "products/55-A",
+                    "ProductName": "Pâté chinois",
+                    "Quantity": 21
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 8.0000,
+                    "Product": "products/74-A",
+                    "ProductName": "Longlife Tofu",
+                    "Quantity": 21
+                }
+            ],
+            "OrderedAt": "1996-07-11T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Bern",
+                "Country": "Switzerland",
+                "Line1": "Hauptstr. 31",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 47.081629,
+                    "Longitude": 7.2768843999999993
+                },
+                "PostalCode": "3012",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:93-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/7-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0459721Z"
+            }
+        },
+        {
+            "Company": "companies/68-A",
+            "Freight": 148.33,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 15.2,
+                    "Product": "products/2-A",
+                    "ProductName": "Chang",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 13.9,
+                    "Product": "products/16-A",
+                    "ProductName": "Pavlova",
+                    "Quantity": 35
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 15.2,
+                    "Product": "products/36-A",
+                    "ProductName": "Inlagd Sill",
+                    "Quantity": 25
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 44.0000,
+                    "Product": "products/59-A",
+                    "ProductName": "Raclette Courdavault",
+                    "Quantity": 30
+                }
+            ],
+            "OrderedAt": "1996-07-12T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Genève",
+                "Country": "Switzerland",
+                "Line1": "Starenweg 5",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "1204",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:95-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/8-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0462219Z"
+            }
+        },
+        {
+            "Company": "companies/88-A",
+            "Freight": 13.97,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 26.2,
+                    "Product": "products/53-A",
+                    "ProductName": "Perth Pasties",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 10.4000,
+                    "Product": "products/77-A",
+                    "ProductName": "Original Frankfurter grüne Soße",
+                    "Quantity": 12
+                }
+            ],
+            "OrderedAt": "1996-07-15T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Resende",
+                "Country": "Brazil",
+                "Line1": "Rua do Mercado, 12",
+                "Line2": null,
+                "Location": {
+                    "Latitude": -22.4804531,
+                    "Longitude": -44.494895199999988
+                },
+                "PostalCode": "08737-363",
+                "Region": "SP"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:97-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/9-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0463529Z"
+            }
+        },
+        {
+            "Company": "companies/35-A",
+            "Freight": 81.91,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 35.1,
+                    "Product": "products/27-A",
+                    "ProductName": "Schoggi Schokolade",
+                    "Quantity": 25
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4,
+                    "Product": "products/39-A",
+                    "ProductName": "Chartreuse verte",
+                    "Quantity": 6
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 10.4000,
+                    "Product": "products/77-A",
+                    "ProductName": "Original Frankfurter grüne Soße",
+                    "Quantity": 15
+                }
+            ],
+            "OrderedAt": "1996-07-16T00:00:00.0000000",
+            "ShipTo": {
+                "City": "San Cristóbal",
+                "Country": "Venezuela",
+                "Line1": "Carrera 22 con Ave. Carlos Soublette #8-35",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "5022",
+                "Region": "Táchira"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:99-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/10-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0464672Z"
+            }
+        },
+        {
+            "Company": "companies/20-A",
+            "Freight": 140.51,
+            "Lines": [
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 15.2,
+                    "Product": "products/2-A",
+                    "ProductName": "Chang",
+                    "Quantity": 50
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 17.0,
+                    "Product": "products/5-A",
+                    "ProductName": "Chef Anton's Gumbo Mix",
+                    "Quantity": 65
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 25.6000,
+                    "Product": "products/32-A",
+                    "ProductName": "Mascarpone Fabioli",
+                    "Quantity": 6
+                }
+            ],
+            "OrderedAt": "1996-07-17T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Graz",
+                "Country": "Austria",
+                "Line1": "Kirchgasse 6",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 47.1071401,
+                    "Longitude": 15.490906
+                },
+                "PostalCode": "8010",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:101-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/11-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0465909Z"
+            }
+        },
+        {
+            "Company": "companies/13-A",
+            "Freight": 3.25,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 8.0,
+                    "Product": "products/21-A",
+                    "ProductName": "Sir Rodney's Scones",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 20.8000,
+                    "Product": "products/37-A",
+                    "ProductName": "Gravad lax",
+                    "Quantity": 1
+                }
+            ],
+            "OrderedAt": "1996-07-18T00:00:00.0000000",
+            "ShipTo": {
+                "City": "México D.F.",
+                "Country": "Mexico",
+                "Line1": "Sierras de Granada 9993",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 19.3267508,
+                    "Longitude": -99.1028578
+                },
+                "PostalCode": "05022",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:103-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/12-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0467472Z"
+            }
+        },
+        {
+            "Company": "companies/56-A",
+            "Freight": 55.09,
+            "Lines": [
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 7.7,
+                    "Product": "products/41-A",
+                    "ProductName": "Jack's New England Clam Chowder",
+                    "Quantity": 16
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 15.6,
+                    "Product": "products/57-A",
+                    "ProductName": "Ravioli Angelo",
+                    "Quantity": 50
+                },
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 39.4,
+                    "Product": "products/62-A",
+                    "ProductName": "Tarte au sucre",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 12.0000,
+                    "Product": "products/70-A",
+                    "ProductName": "Outback Lager",
+                    "Quantity": 21
+                }
+            ],
+            "OrderedAt": "1996-07-19T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Köln",
+                "Country": "Germany",
+                "Line1": "Mehrheimerstr. 369",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 50.9734206,
+                    "Longitude": 6.9460086
+                },
+                "PostalCode": "50739",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:105-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/13-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0468891Z"
+            }
+        },
+        {
+            "Company": "companies/61-A",
+            "Freight": 3.05,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 8.0,
+                    "Product": "products/21-A",
+                    "ProductName": "Sir Rodney's Scones",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4000,
+                    "Product": "products/35-A",
+                    "ProductName": "Steeleye Stout",
+                    "Quantity": 20
+                }
+            ],
+            "OrderedAt": "1996-07-19T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Rio de Janeiro",
+                "Country": "Brazil",
+                "Line1": "Rua da Panificadora, 12",
+                "Line2": null,
+                "Location": {
+                    "Latitude": -21.9026459,
+                    "Longitude": -40.9879013
+                },
+                "PostalCode": "02389-673",
+                "Region": "RJ"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:107-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/14-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0469980Z"
+            }
+        },
+        {
+            "Company": "companies/65-A",
+            "Freight": 48.29,
+            "Lines": [
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 17.0,
+                    "Product": "products/5-A",
+                    "ProductName": "Chef Anton's Gumbo Mix",
+                    "Quantity": 12
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 24.0,
+                    "Product": "products/7-A",
+                    "ProductName": "Uncle Bob's Organic Dried Pears",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 30.4000,
+                    "Product": "products/56-A",
+                    "ProductName": "Gnocchi di nonna Alice",
+                    "Quantity": 2
+                }
+            ],
+            "OrderedAt": "1996-07-22T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Albuquerque",
+                "Country": "USA",
+                "Line1": "2817 Milton Dr.",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 35.1154322,
+                    "Longitude": -106.6710792
+                },
+                "PostalCode": "87110",
+                "Region": "NM"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:109-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/15-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0471221Z"
+            }
+        },
+        {
+            "Company": "companies/20-A",
+            "Freight": 146.06,
+            "Lines": [
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 13.9,
+                    "Product": "products/16-A",
+                    "ProductName": "Pavlova",
+                    "Quantity": 60
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 3.6,
+                    "Product": "products/24-A",
+                    "ProductName": "Guaraná Fantástica",
+                    "Quantity": 28
+                },
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 20.7,
+                    "Product": "products/30-A",
+                    "ProductName": "Nord-Ost Matjeshering",
+                    "Quantity": 60
+                },
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 8.0000,
+                    "Product": "products/74-A",
+                    "ProductName": "Longlife Tofu",
+                    "Quantity": 36
+                }
+            ],
+            "OrderedAt": "1996-07-23T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Graz",
+                "Country": "Austria",
+                "Line1": "Kirchgasse 6",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 47.1071401,
+                    "Longitude": 15.490906
+                },
+                "PostalCode": "8010",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:111-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/16-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0472647Z"
+            }
+        },
+        {
+            "Company": "companies/24-A",
+            "Freight": 3.67,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 15.2,
+                    "Product": "products/2-A",
+                    "ProductName": "Chang",
+                    "Quantity": 35
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 7.7000,
+                    "Product": "products/41-A",
+                    "ProductName": "Jack's New England Clam Chowder",
+                    "Quantity": 25
+                }
+            ],
+            "OrderedAt": "1996-07-24T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Bräcke",
+                "Country": "Sweden",
+                "Line1": "Åkergatan 24",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 57.716318099999988,
+                    "Longitude": 11.9254352
+                },
+                "PostalCode": "S-844 67",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:113-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/17-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0473976Z"
+            }
+        },
+        {
+            "Company": "companies/7-A",
+            "Freight": 55.28,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 31.2,
+                    "Product": "products/17-A",
+                    "ProductName": "Alice Mutton",
+                    "Quantity": 30
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 12.0000,
+                    "Product": "products/70-A",
+                    "ProductName": "Outback Lager",
+                    "Quantity": 20
+                }
+            ],
+            "OrderedAt": "1996-07-25T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Strasbourg",
+                "Country": "France",
+                "Line1": "24, place Kléber",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 48.5834375,
+                    "Longitude": 7.7448033
+                },
+                "PostalCode": "67000",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:115-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/18-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0475058Z"
+            }
+        },
+        {
+            "Company": "companies/87-A",
+            "Freight": 25.73,
+            "Lines": [
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 30.4000,
+                    "Product": "products/12-A",
+                    "ProductName": "Queso Manchego La Pastora",
+                    "Quantity": 12
+                }
+            ],
+            "OrderedAt": "1996-07-26T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Oulu",
+                "Country": "Finland",
+                "Line1": "Torikatu 38",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 65.010279,
+                    "Longitude": 25.4650189
+                },
+                "PostalCode": "90110",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:117-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/19-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0476121Z"
+            }
+        },
+        {
+            "Company": "companies/25-A",
+            "Freight": 208.58,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.7,
+                    "Product": "products/40-A",
+                    "ProductName": "Boston Crab Meat",
+                    "Quantity": 50
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 44.0,
+                    "Product": "products/59-A",
+                    "ProductName": "Raclette Courdavault",
+                    "Quantity": 70
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 14.4000,
+                    "Product": "products/76-A",
+                    "ProductName": "Lakkalikööri",
+                    "Quantity": 15
+                }
+            ],
+            "OrderedAt": "1996-07-29T00:00:00.0000000",
+            "ShipTo": {
+                "City": "München",
+                "Country": "Germany",
+                "Line1": "Berliner Platz 43",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 48.1730861,
+                    "Longitude": 11.5879194
+                },
+                "PostalCode": "80805",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:119-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/20-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0477354Z"
+            }
+        },
+        {
+            "Company": "companies/33-A",
+            "Freight": 66.29,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 99.0,
+                    "Product": "products/29-A",
+                    "ProductName": "Thüringer Rostbratwurst",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 27.8000,
+                    "Product": "products/72-A",
+                    "ProductName": "Mozzarella di Giovanni",
+                    "Quantity": 4
+                }
+            ],
+            "OrderedAt": "1996-07-30T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Caracas",
+                "Country": "Venezuela",
+                "Line1": "5ª Ave. Los Palos Grandes",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "1081",
+                "Region": "DF"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:121-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/21-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0478418Z"
+            }
+        },
+        {
+            "Company": "companies/89-A",
+            "Freight": 4.56,
+            "Lines": [
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 2.0,
+                    "Product": "products/33-A",
+                    "ProductName": "Geitost",
+                    "Quantity": 60
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 27.8000,
+                    "Product": "products/72-A",
+                    "ProductName": "Mozzarella di Giovanni",
+                    "Quantity": 20
+                }
+            ],
+            "OrderedAt": "1996-07-31T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Seattle",
+                "Country": "USA",
+                "Line1": "1029 - 12th Ave. S.",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 47.595079899999988,
+                    "Longitude": -122.3172333
+                },
+                "PostalCode": "98124",
+                "Region": "WA"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:123-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/22-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0479480Z"
+            }
+        },
+        {
+            "Company": "companies/87-A",
+            "Freight": 136.54,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 15.2,
+                    "Product": "products/36-A",
+                    "ProductName": "Inlagd Sill",
+                    "Quantity": 30
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 36.8000,
+                    "Product": "products/43-A",
+                    "ProductName": "Ipoh Coffee",
+                    "Quantity": 25
+                }
+            ],
+            "OrderedAt": "1996-08-01T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Oulu",
+                "Country": "Finland",
+                "Line1": "Torikatu 38",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 65.010279,
+                    "Longitude": 25.4650189
+                },
+                "PostalCode": "90110",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:125-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/23-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0480543Z"
+            }
+        },
+        {
+            "Company": "companies/75-A",
+            "Freight": 4.54,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 2.0000,
+                    "Product": "products/33-A",
+                    "ProductName": "Geitost",
+                    "Quantity": 24
+                }
+            ],
+            "OrderedAt": "1996-08-01T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Lander",
+                "Country": "USA",
+                "Line1": "P.O. Box 555",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 42.833014,
+                    "Longitude": -108.7306725
+                },
+                "PostalCode": "82520",
+                "Region": "WY"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:127-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/24-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0481579Z"
+            }
+        },
+        {
+            "Company": "companies/65-A",
+            "Freight": 98.03,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 64.8,
+                    "Product": "products/20-A",
+                    "ProductName": "Sir Rodney's Marmalade",
+                    "Quantity": 6
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 10.0,
+                    "Product": "products/31-A",
+                    "ProductName": "Gorgonzola Telino",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 27.8000,
+                    "Product": "products/72-A",
+                    "ProductName": "Mozzarella di Giovanni",
+                    "Quantity": 24
+                }
+            ],
+            "OrderedAt": "1996-08-02T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Albuquerque",
+                "Country": "USA",
+                "Line1": "2817 Milton Dr.",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 35.1154322,
+                    "Longitude": -106.6710792
+                },
+                "PostalCode": "87110",
+                "Region": "NM"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:129-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/25-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0483333Z"
+            }
+        },
+        {
+            "Company": "companies/63-A",
+            "Freight": 76.07,
+            "Lines": [
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 24.8,
+                    "Product": "products/10-A",
+                    "ProductName": "Ikura",
+                    "Quantity": 24
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 10.0,
+                    "Product": "products/31-A",
+                    "ProductName": "Gorgonzola Telino",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 2.0,
+                    "Product": "products/33-A",
+                    "ProductName": "Geitost",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 14.7,
+                    "Product": "products/40-A",
+                    "ProductName": "Boston Crab Meat",
+                    "Quantity": 60
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 14.4000,
+                    "Product": "products/76-A",
+                    "ProductName": "Lakkalikööri",
+                    "Quantity": 33
+                }
+            ],
+            "OrderedAt": "1996-08-05T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Cunewalde",
+                "Country": "Germany",
+                "Line1": "Taucherstraße 10",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "01307",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:131-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/26-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0484714Z"
+            }
+        },
+        {
+            "Company": "companies/85-A",
+            "Freight": 6.01,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 17.2,
+                    "Product": "products/71-A",
+                    "ProductName": "Flotemysost",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 27.8000,
+                    "Product": "products/72-A",
+                    "ProductName": "Mozzarella di Giovanni",
+                    "Quantity": 7
+                }
+            ],
+            "OrderedAt": "1996-08-06T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Reims",
+                "Country": "France",
+                "Line1": "59 rue de l'Abbaye",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 49.255958199999988,
+                    "Longitude": 4.1547448
+                },
+                "PostalCode": "51100",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:133-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/27-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0485856Z"
+            }
+        },
+        {
+            "Company": "companies/49-A",
+            "Freight": 26.93,
+            "Lines": [
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 3.6,
+                    "Product": "products/24-A",
+                    "ProductName": "Guaraná Fantástica",
+                    "Quantity": 12
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 44.0000,
+                    "Product": "products/59-A",
+                    "ProductName": "Raclette Courdavault",
+                    "Quantity": 6
+                }
+            ],
+            "OrderedAt": "1996-08-07T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Bergamo",
+                "Country": "Italy",
+                "Line1": "Via Ludovico il Moro 22",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 45.6859599,
+                    "Longitude": 9.667315799999999
+                },
+                "PostalCode": "24100",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:135-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/28-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0486912Z"
+            }
+        },
+        {
+            "Company": "companies/80-A",
+            "Freight": 13.84,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 24.8,
+                    "Product": "products/10-A",
+                    "ProductName": "Ikura",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 4.8000,
+                    "Product": "products/13-A",
+                    "ProductName": "Konbu",
+                    "Quantity": 10
+                }
+            ],
+            "OrderedAt": "1996-08-08T00:00:00.0000000",
+            "ShipTo": {
+                "City": "México D.F.",
+                "Country": "Mexico",
+                "Line1": "Avda. Azteca 123",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 19.3333978,
+                    "Longitude": -99.151688900000011
+                },
+                "PostalCode": "05033",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:137-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/29-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0488003Z"
+            }
+        },
+        {
+            "Company": "companies/52-A",
+            "Freight": 125.77,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 36.4,
+                    "Product": "products/28-A",
+                    "ProductName": "Rössle Sauerkraut",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 39.4000,
+                    "Product": "products/62-A",
+                    "ProductName": "Tarte au sucre",
+                    "Quantity": 12
+                }
+            ],
+            "OrderedAt": "1996-08-09T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Leipzig",
+                "Country": "Germany",
+                "Line1": "Heerstr. 22",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 51.2200438,
+                    "Longitude": 12.1401173
+                },
+                "PostalCode": "04179",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:139-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/30-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0508918Z"
+            }
+        },
+        {
+            "Company": "companies/5-A",
+            "Freight": 92.69,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 15.5,
+                    "Product": "products/44-A",
+                    "ProductName": "Gula Malacca",
+                    "Quantity": 16
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 44.0,
+                    "Product": "products/59-A",
+                    "ProductName": "Raclette Courdavault",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 35.1,
+                    "Product": "products/63-A",
+                    "ProductName": "Vegie-spread",
+                    "Quantity": 8
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 12.0000,
+                    "Product": "products/73-A",
+                    "ProductName": "Röd Kaviar",
+                    "Quantity": 25
+                }
+            ],
+            "OrderedAt": "1996-08-12T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Luleå",
+                "Country": "Sweden",
+                "Line1": "Berguvsvägen  8",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "S-958 22",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:141-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/31-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0510273Z"
+            }
+        },
+        {
+            "Company": "companies/44-A",
+            "Freight": 25.83,
+            "Lines": [
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 31.2000,
+                    "Product": "products/17-A",
+                    "ProductName": "Alice Mutton",
+                    "Quantity": 15
+                }
+            ],
+            "OrderedAt": "1996-08-13T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Frankfurt a.M.",
+                "Country": "Germany",
+                "Line1": "Magazinweg 7",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 52.502065599999987,
+                    "Longitude": 13.6479345
+                },
+                "PostalCode": "60528",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:143-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/32-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0511288Z"
+            }
+        },
+        {
+            "Company": "companies/5-A",
+            "Freight": 8.98,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 3.6,
+                    "Product": "products/24-A",
+                    "ProductName": "Guaraná Fantástica",
+                    "Quantity": 12
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 19.2,
+                    "Product": "products/55-A",
+                    "ProductName": "Pâté chinois",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 6.2000,
+                    "Product": "products/75-A",
+                    "ProductName": "Rhönbräu Klosterbier",
+                    "Quantity": 30
+                }
+            ],
+            "OrderedAt": "1996-08-14T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Luleå",
+                "Country": "Sweden",
+                "Line1": "Berguvsvägen  8",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "S-958 22",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:145-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/33-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0512706Z"
+            }
+        },
+        {
+            "Company": "companies/69-A",
+            "Freight": 2.94,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 7.3,
+                    "Product": "products/19-A",
+                    "ProductName": "Teatime Chocolate Biscuits",
+                    "Quantity": 1
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 3.6,
+                    "Product": "products/24-A",
+                    "ProductName": "Guaraná Fantástica",
+                    "Quantity": 6
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4000,
+                    "Product": "products/35-A",
+                    "ProductName": "Steeleye Stout",
+                    "Quantity": 4
+                }
+            ],
+            "OrderedAt": "1996-08-14T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Madrid",
+                "Country": "Spain",
+                "Line1": "Gran Vía, 1",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 40.4192332,
+                    "Longitude": -3.6981981999999989
+                },
+                "PostalCode": "28001",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:147-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/34-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0514131Z"
+            }
+        },
+        {
+            "Company": "companies/69-A",
+            "Freight": 12.69,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 20.7,
+                    "Product": "products/30-A",
+                    "ProductName": "Nord-Ost Matjeshering",
+                    "Quantity": 6
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 15.6000,
+                    "Product": "products/57-A",
+                    "ProductName": "Ravioli Angelo",
+                    "Quantity": 2
+                }
+            ],
+            "OrderedAt": "1996-08-15T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Madrid",
+                "Country": "Spain",
+                "Line1": "Gran Vía, 1",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 40.4192332,
+                    "Longitude": -3.6981981999999989
+                },
+                "PostalCode": "28001",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:149-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/35-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0515986Z"
+            }
+        },
+        {
+            "Company": "companies/46-A",
+            "Freight": 84.81,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 12.4,
+                    "Product": "products/15-A",
+                    "ProductName": "Genen Shouyu",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 7.3,
+                    "Product": "products/19-A",
+                    "ProductName": "Teatime Chocolate Biscuits",
+                    "Quantity": 18
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 27.2,
+                    "Product": "products/60-A",
+                    "ProductName": "Camembert Pierrot",
+                    "Quantity": 35
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 27.8000,
+                    "Product": "products/72-A",
+                    "ProductName": "Mozzarella di Giovanni",
+                    "Quantity": 3
+                }
+            ],
+            "OrderedAt": "1996-08-16T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Barquisimeto",
+                "Country": "Venezuela",
+                "Line1": "Carrera 52 con Ave. Bolívar #65-98 Llano Largo",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "3508",
+                "Region": "Lara"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:151-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/36-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0517406Z"
+            }
+        },
+        {
+            "Company": "companies/44-A",
+            "Freight": 76.56,
+            "Lines": [
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 35.1,
+                    "Product": "products/27-A",
+                    "ProductName": "Schoggi Schokolade",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 15.5,
+                    "Product": "products/44-A",
+                    "ProductName": "Gula Malacca",
+                    "Quantity": 21
+                },
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 27.2,
+                    "Product": "products/60-A",
+                    "ProductName": "Camembert Pierrot",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 11.2000,
+                    "Product": "products/67-A",
+                    "ProductName": "Laughing Lumberjack Lager",
+                    "Quantity": 5
+                }
+            ],
+            "OrderedAt": "1996-08-19T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Frankfurt a.M.",
+                "Country": "Germany",
+                "Line1": "Magazinweg 7",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 52.502065599999987,
+                    "Longitude": 13.6479345
+                },
+                "PostalCode": "60528",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:153-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/37-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0522848Z"
+            }
+        },
+        {
+            "Company": "companies/63-A",
+            "Freight": 76.83,
+            "Lines": [
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 14.4,
+                    "Product": "products/1-A",
+                    "ProductName": "Chai",
+                    "Quantity": 45
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 14.7,
+                    "Product": "products/40-A",
+                    "ProductName": "Boston Crab Meat",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 26.2000,
+                    "Product": "products/53-A",
+                    "ProductName": "Perth Pasties",
+                    "Quantity": 36
+                }
+            ],
+            "OrderedAt": "1996-08-20T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Cunewalde",
+                "Country": "Germany",
+                "Line1": "Taucherstraße 10",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "01307",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:155-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/38-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0528395Z"
+            }
+        },
+        {
+            "Company": "companies/63-A",
+            "Freight": 229.24,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4,
+                    "Product": "products/35-A",
+                    "ProductName": "Steeleye Stout",
+                    "Quantity": 100
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 39.4000,
+                    "Product": "products/62-A",
+                    "ProductName": "Tarte au sucre",
+                    "Quantity": 40
+                }
+            ],
+            "OrderedAt": "1996-08-21T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Cunewalde",
+                "Country": "Germany",
+                "Line1": "Taucherstraße 10",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "01307",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:157-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/39-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0530456Z"
+            }
+        },
+        {
+            "Company": "companies/67-A",
+            "Freight": 12.76,
+            "Lines": [
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 13.9,
+                    "Product": "products/16-A",
+                    "ProductName": "Pavlova",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 11.2,
+                    "Product": "products/34-A",
+                    "ProductName": "Sasquatch Ale",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 9.6000,
+                    "Product": "products/46-A",
+                    "ProductName": "Spegesild",
+                    "Quantity": 15
+                }
+            ],
+            "OrderedAt": "1996-08-22T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Rio de Janeiro",
+                "Country": "Brazil",
+                "Line1": "Av. Copacabana, 267",
+                "Line2": null,
+                "Location": {
+                    "Latitude": -22.9664216,
+                    "Longitude": -43.1785378
+                },
+                "PostalCode": "02389-890",
+                "Region": "RJ"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:159-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/40-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0536676Z"
+            }
+        },
+        {
+            "Company": "companies/66-A",
+            "Freight": 7.45,
+            "Lines": [
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 5.9,
+                    "Product": "products/54-A",
+                    "ProductName": "Tourtière",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 10.0000,
+                    "Product": "products/68-A",
+                    "ProductName": "Scottish Longbreads",
+                    "Quantity": 3
+                }
+            ],
+            "OrderedAt": "1996-08-23T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Reggio Emilia",
+                "Country": "Italy",
+                "Line1": "Strada Provinciale 124",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 44.7468092,
+                    "Longitude": 10.6052759
+                },
+                "PostalCode": "42100",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:161-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/41-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0540148Z"
+            }
+        },
+        {
+            "Company": "companies/11-A",
+            "Freight": 22.77,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 8.0,
+                    "Product": "products/3-A",
+                    "ProductName": "Aniseed Syrup",
+                    "Quantity": 30
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 26.6000,
+                    "Product": "products/64-A",
+                    "ProductName": "Wimmers gute Semmelknödel",
+                    "Quantity": 9
+                }
+            ],
+            "OrderedAt": "1996-08-26T00:00:00.0000000",
+            "ShipTo": {
+                "City": "London",
+                "Country": "UK",
+                "Line1": "Fauntleroy Circus",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "EC2 5NT",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:163-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/42-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0542361Z"
+            }
+        },
+        {
+            "Company": "companies/15-A",
+            "Freight": 79.7,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 17.0,
+                    "Product": "products/5-A",
+                    "ProductName": "Chef Anton's Gumbo Mix",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 99.0,
+                    "Product": "products/29-A",
+                    "ProductName": "Thüringer Rostbratwurst",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 16.0,
+                    "Product": "products/49-A",
+                    "ProductName": "Maxilaku",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 10.4000,
+                    "Product": "products/77-A",
+                    "ProductName": "Original Frankfurter grüne Soße",
+                    "Quantity": 10
+                }
+            ],
+            "OrderedAt": "1996-08-27T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Sao Paulo",
+                "Country": "Brazil",
+                "Line1": "Av. dos Lusíadas, 23",
+                "Line2": null,
+                "Location": {
+                    "Latitude": -22.8893065,
+                    "Longitude": -47.0822882
+                },
+                "PostalCode": "05432-043",
+                "Region": "SP"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:165-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/43-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0545771Z"
+            }
+        },
+        {
+            "Company": "companies/61-A",
+            "Freight": 6.4,
+            "Lines": [
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 4.8,
+                    "Product": "products/13-A",
+                    "ProductName": "Konbu",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 15.5,
+                    "Product": "products/44-A",
+                    "ProductName": "Gula Malacca",
+                    "Quantity": 24
+                },
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 42.4000,
+                    "Product": "products/51-A",
+                    "ProductName": "Manjimup Dried Apples",
+                    "Quantity": 2
+                }
+            ],
+            "OrderedAt": "1996-08-27T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Rio de Janeiro",
+                "Country": "Brazil",
+                "Line1": "Rua da Panificadora, 12",
+                "Line2": null,
+                "Location": {
+                    "Latitude": -21.9026459,
+                    "Longitude": -40.9879013
+                },
+                "PostalCode": "02389-673",
+                "Region": "RJ"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:167-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/44-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0551167Z"
+            }
+        },
+        {
+            "Company": "companies/81-A",
+            "Freight": 1.35,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 64.8000,
+                    "Product": "products/20-A",
+                    "ProductName": "Sir Rodney's Marmalade",
+                    "Quantity": 20
+                }
+            ],
+            "OrderedAt": "1996-08-28T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Sao Paulo",
+                "Country": "Brazil",
+                "Line1": "Av. Inês de Castro, 414",
+                "Line2": null,
+                "Location": {
+                    "Latitude": -22.8812813,
+                    "Longitude": -47.0616099
+                },
+                "PostalCode": "05634-030",
+                "Region": "SP"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:169-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/45-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0552931Z"
+            }
+        },
+        {
+            "Company": "companies/80-A",
+            "Freight": 21.18,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 50.0,
+                    "Product": "products/18-A",
+                    "ProductName": "Carnarvon Tigers",
+                    "Quantity": 12
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 3.6,
+                    "Product": "products/24-A",
+                    "ProductName": "Guaraná Fantástica",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 35.1,
+                    "Product": "products/63-A",
+                    "ProductName": "Vegie-spread",
+                    "Quantity": 5
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 6.2000,
+                    "Product": "products/75-A",
+                    "ProductName": "Rhönbräu Klosterbier",
+                    "Quantity": 6
+                }
+            ],
+            "OrderedAt": "1996-08-29T00:00:00.0000000",
+            "ShipTo": {
+                "City": "México D.F.",
+                "Country": "Mexico",
+                "Line1": "Avda. Azteca 123",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 19.3333978,
+                    "Longitude": -99.151688900000011
+                },
+                "PostalCode": "05033",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:171-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/46-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0554464Z"
+            }
+        },
+        {
+            "Company": "companies/65-A",
+            "Freight": 147.26,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4,
+                    "Product": "products/1-A",
+                    "ProductName": "Chai",
+                    "Quantity": 18
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 31.2,
+                    "Product": "products/17-A",
+                    "ProductName": "Alice Mutton",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 36.8,
+                    "Product": "products/43-A",
+                    "ProductName": "Ipoh Coffee",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 27.2,
+                    "Product": "products/60-A",
+                    "ProductName": "Camembert Pierrot",
+                    "Quantity": 21
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 6.2000,
+                    "Product": "products/75-A",
+                    "ProductName": "Rhönbräu Klosterbier",
+                    "Quantity": 6
+                }
+            ],
+            "OrderedAt": "1996-08-30T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Albuquerque",
+                "Country": "USA",
+                "Line1": "2817 Milton Dr.",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 35.1154322,
+                    "Longitude": -106.6710792
+                },
+                "PostalCode": "87110",
+                "Region": "NM"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:173-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/47-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0556062Z"
+            }
+        },
+        {
+            "Company": "companies/85-A",
+            "Freight": 1.15,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 30.4000,
+                    "Product": "products/56-A",
+                    "ProductName": "Gnocchi di nonna Alice",
+                    "Quantity": 4
+                }
+            ],
+            "OrderedAt": "1996-09-02T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Reims",
+                "Country": "France",
+                "Line1": "59 rue de l'Abbaye",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 49.255958199999988,
+                    "Longitude": 4.1547448
+                },
+                "PostalCode": "51100",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:175-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/48-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0557106Z"
+            }
+        },
+        {
+            "Company": "companies/46-A",
+            "Freight": 0.12,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 16.8,
+                    "Product": "products/11-A",
+                    "ProductName": "Queso Cabrales",
+                    "Quantity": 12
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 13.9,
+                    "Product": "products/16-A",
+                    "ProductName": "Pavlova",
+                    "Quantity": 30
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 28.8000,
+                    "Product": "products/69-A",
+                    "ProductName": "Gudbrandsdalsost",
+                    "Quantity": 15
+                }
+            ],
+            "OrderedAt": "1996-09-03T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Barquisimeto",
+                "Country": "Venezuela",
+                "Line1": "Carrera 52 con Ave. Bolívar #65-98 Llano Largo",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "3508",
+                "Region": "Lara"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:177-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/49-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0558277Z"
+            }
+        },
+        {
+            "Company": "companies/7-A",
+            "Freight": 5.74,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4,
+                    "Product": "products/39-A",
+                    "ProductName": "Chartreuse verte",
+                    "Quantity": 60
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 27.8000,
+                    "Product": "products/72-A",
+                    "ProductName": "Mozzarella di Giovanni",
+                    "Quantity": 20
+                }
+            ],
+            "OrderedAt": "1996-09-04T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Strasbourg",
+                "Country": "France",
+                "Line1": "24, place Kléber",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 48.5834375,
+                    "Longitude": 7.7448033
+                },
+                "PostalCode": "67000",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:179-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/50-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0560288Z"
+            }
+        },
+        {
+            "Company": "companies/37-A",
+            "Freight": 168.22,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 15.2,
+                    "Product": "products/2-A",
+                    "ProductName": "Chang",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 15.2,
+                    "Product": "products/36-A",
+                    "ProductName": "Inlagd Sill",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 44.0,
+                    "Product": "products/59-A",
+                    "ProductName": "Raclette Courdavault",
+                    "Quantity": 30
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 39.4000,
+                    "Product": "products/62-A",
+                    "ProductName": "Tarte au sucre",
+                    "Quantity": 15
+                }
+            ],
+            "OrderedAt": "1996-09-05T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Cork",
+                "Country": "Ireland",
+                "Line1": "8 Johnstown Road",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 51.9126151,
+                    "Longitude": -8.3223801
+                },
+                "PostalCode": null,
+                "Region": "Co. Cork"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:181-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/51-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0561697Z"
+            }
+        },
+        {
+            "Company": "companies/67-A",
+            "Freight": 29.76,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 7.3,
+                    "Product": "products/19-A",
+                    "ProductName": "Teatime Chocolate Biscuits",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 12.0000,
+                    "Product": "products/70-A",
+                    "ProductName": "Outback Lager",
+                    "Quantity": 20
+                }
+            ],
+            "OrderedAt": "1996-09-06T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Rio de Janeiro",
+                "Country": "Brazil",
+                "Line1": "Av. Copacabana, 267",
+                "Line2": null,
+                "Location": {
+                    "Latitude": -22.9664216,
+                    "Longitude": -43.1785378
+                },
+                "PostalCode": "02389-890",
+                "Region": "RJ"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:183-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/52-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0563523Z"
+            }
+        },
+        {
+            "Company": "companies/49-A",
+            "Freight": 17.68,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 13.6,
+                    "Product": "products/66-A",
+                    "ProductName": "Louisiana Hot Spiced Okra",
+                    "Quantity": 30
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 10.0000,
+                    "Product": "products/68-A",
+                    "ProductName": "Scottish Longbreads",
+                    "Quantity": 20
+                }
+            ],
+            "OrderedAt": "1996-09-09T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Bergamo",
+                "Country": "Italy",
+                "Line1": "Via Ludovico il Moro 22",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 45.6859599,
+                    "Longitude": 9.667315799999999
+                },
+                "PostalCode": "24100",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:185-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/53-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0565142Z"
+            }
+        },
+        {
+            "Company": "companies/86-A",
+            "Freight": 45.08,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.7,
+                    "Product": "products/40-A",
+                    "ProductName": "Boston Crab Meat",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 30.4000,
+                    "Product": "products/56-A",
+                    "ProductName": "Gnocchi di nonna Alice",
+                    "Quantity": 20
+                }
+            ],
+            "OrderedAt": "1996-09-09T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Stuttgart",
+                "Country": "Germany",
+                "Line1": "Adenauerallee 900",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 48.7794494,
+                    "Longitude": 9.1852878
+                },
+                "PostalCode": "70563",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:187-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/54-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0567023Z"
+            }
+        },
+        {
+            "Company": "companies/76-A",
+            "Freight": 6.27,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 31.2,
+                    "Product": "products/17-A",
+                    "ProductName": "Alice Mutton",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 36.4,
+                    "Product": "products/28-A",
+                    "ProductName": "Rössle Sauerkraut",
+                    "Quantity": 28
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 36.8000,
+                    "Product": "products/43-A",
+                    "ProductName": "Ipoh Coffee",
+                    "Quantity": 12
+                }
+            ],
+            "OrderedAt": "1996-09-10T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Charleroi",
+                "Country": "Belgium",
+                "Line1": "Boulevard Tirou, 255",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 50.4062634,
+                    "Longitude": 4.4470125
+                },
+                "PostalCode": "B-6000",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:189-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/55-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0568340Z"
+            }
+        },
+        {
+            "Company": "companies/30-A",
+            "Freight": 107.83,
+            "Lines": [
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 14.7,
+                    "Product": "products/40-A",
+                    "ProductName": "Boston Crab Meat",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 16.8,
+                    "Product": "products/65-A",
+                    "ProductName": "Louisiana Fiery Hot Pepper Sauce",
+                    "Quantity": 30
+                },
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 10.0000,
+                    "Product": "products/68-A",
+                    "ProductName": "Scottish Longbreads",
+                    "Quantity": 15
+                }
+            ],
+            "OrderedAt": "1996-09-11T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Sevilla",
+                "Country": "Spain",
+                "Line1": "C/ Romero, 33",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 37.4076213,
+                    "Longitude": -5.972254
+                },
+                "PostalCode": "41101",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:191-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/56-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0569662Z"
+            }
+        },
+        {
+            "Company": "companies/80-A",
+            "Freight": 63.79,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 16.0,
+                    "Product": "products/49-A",
+                    "ProductName": "Maxilaku",
+                    "Quantity": 30
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 44.0,
+                    "Product": "products/59-A",
+                    "ProductName": "Raclette Courdavault",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 17.2000,
+                    "Product": "products/71-A",
+                    "ProductName": "Flotemysost",
+                    "Quantity": 2
+                }
+            ],
+            "OrderedAt": "1996-09-12T00:00:00.0000000",
+            "ShipTo": {
+                "City": "México D.F.",
+                "Country": "Mexico",
+                "Line1": "Avda. Azteca 123",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 19.3333978,
+                    "Longitude": -99.151688900000011
+                },
+                "PostalCode": "05033",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:193-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/57-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0570934Z"
+            }
+        },
+        {
+            "Company": "companies/55-A",
+            "Freight": 257.62,
+            "Lines": [
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 50.0,
+                    "Product": "products/18-A",
+                    "ProductName": "Carnarvon Tigers",
+                    "Quantity": 25
+                },
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 99.0,
+                    "Product": "products/29-A",
+                    "ProductName": "Thüringer Rostbratwurst",
+                    "Quantity": 25
+                },
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 14.4000,
+                    "Product": "products/39-A",
+                    "ProductName": "Chartreuse verte",
+                    "Quantity": 30
+                }
+            ],
+            "OrderedAt": "1996-09-13T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Anchorage",
+                "Country": "USA",
+                "Line1": "2743 Bering St.",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 61.1952839,
+                    "Longitude": -149.895994
+                },
+                "PostalCode": "99508",
+                "Region": "AK"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:195-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/58-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0572635Z"
+            }
+        },
+        {
+            "Company": "companies/69-A",
+            "Freight": 7.56,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 20.7,
+                    "Product": "products/30-A",
+                    "ProductName": "Nord-Ost Matjeshering",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 26.2,
+                    "Product": "products/53-A",
+                    "ProductName": "Perth Pasties",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 5.9000,
+                    "Product": "products/54-A",
+                    "ProductName": "Tourtière",
+                    "Quantity": 5
+                }
+            ],
+            "OrderedAt": "1996-09-16T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Madrid",
+                "Country": "Spain",
+                "Line1": "Gran Vía, 1",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 40.4192332,
+                    "Longitude": -3.6981981999999989
+                },
+                "PostalCode": "28001",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:197-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/59-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0574111Z"
+            }
+        },
+        {
+            "Company": "companies/48-A",
+            "Freight": 0.56,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 39.4,
+                    "Product": "products/62-A",
+                    "ProductName": "Tarte au sucre",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 10.0000,
+                    "Product": "products/68-A",
+                    "ProductName": "Scottish Longbreads",
+                    "Quantity": 3
+                }
+            ],
+            "OrderedAt": "1996-09-17T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Portland",
+                "Country": "USA",
+                "Line1": "89 Chiaroscuro Rd.",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "97219",
+                "Region": "OR"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:199-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/60-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0575479Z"
+            }
+        },
+        {
+            "Company": "companies/2-A",
+            "Freight": 1.61,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 28.8,
+                    "Product": "products/69-A",
+                    "ProductName": "Gudbrandsdalsost",
+                    "Quantity": 1
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 12.0000,
+                    "Product": "products/70-A",
+                    "ProductName": "Outback Lager",
+                    "Quantity": 5
+                }
+            ],
+            "OrderedAt": "1996-09-18T00:00:00.0000000",
+            "ShipTo": {
+                "City": "México D.F.",
+                "Country": "Mexico",
+                "Line1": "Avda. de la Constitución 2222",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 19.2816823,
+                    "Longitude": -99.2112956
+                },
+                "PostalCode": "05021",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:201-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/61-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0576588Z"
+            }
+        },
+        {
+            "Company": "companies/37-A",
+            "Freight": 47.3,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 17.6,
+                    "Product": "products/4-A",
+                    "ProductName": "Chef Anton's Cajun Seasoning",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 20.0,
+                    "Product": "products/6-A",
+                    "ProductName": "Grandma's Boysenberry Spread",
+                    "Quantity": 30
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 11.2,
+                    "Product": "products/42-A",
+                    "ProductName": "Singaporean Hokkien Fried Mee",
+                    "Quantity": 2
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 36.8,
+                    "Product": "products/43-A",
+                    "ProductName": "Ipoh Coffee",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 17.2000,
+                    "Product": "products/71-A",
+                    "ProductName": "Flotemysost",
+                    "Quantity": 3
+                }
+            ],
+            "OrderedAt": "1996-09-19T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Cork",
+                "Country": "Ireland",
+                "Line1": "8 Johnstown Road",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 51.9126151,
+                    "Longitude": -8.3223801
+                },
+                "PostalCode": null,
+                "Region": "Co. Cork"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:203-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/62-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0578096Z"
+            }
+        },
+        {
+            "Company": "companies/77-A",
+            "Freight": 17.52,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 13.9,
+                    "Product": "products/16-A",
+                    "ProductName": "Pavlova",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 39.4000,
+                    "Product": "products/62-A",
+                    "ProductName": "Tarte au sucre",
+                    "Quantity": 5
+                }
+            ],
+            "OrderedAt": "1996-09-20T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Portland",
+                "Country": "USA",
+                "Line1": "89 Jefferson Way Suite 2",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 45.5137863,
+                    "Longitude": -122.675375
+                },
+                "PostalCode": "97201",
+                "Region": "OR"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:205-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/63-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0579242Z"
+            }
+        },
+        {
+            "Company": "companies/18-A",
+            "Freight": 24.69,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 11.2,
+                    "Product": "products/42-A",
+                    "ProductName": "Singaporean Hokkien Fried Mee",
+                    "Quantity": 6
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 28.8000,
+                    "Product": "products/69-A",
+                    "ProductName": "Gudbrandsdalsost",
+                    "Quantity": 7
+                }
+            ],
+            "OrderedAt": "1996-09-20T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Nantes",
+                "Country": "France",
+                "Line1": "67, rue des Cinquante Otages",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 47.2185896,
+                    "Longitude": -1.5570996
+                },
+                "PostalCode": "44000",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:207-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/64-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0580372Z"
+            }
+        },
+        {
+            "Company": "companies/86-A",
+            "Freight": 40.26,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 36.4,
+                    "Product": "products/28-A",
+                    "ProductName": "Rössle Sauerkraut",
+                    "Quantity": 4
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 36.8,
+                    "Product": "products/43-A",
+                    "ProductName": "Ipoh Coffee",
+                    "Quantity": 24
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 26.2,
+                    "Product": "products/53-A",
+                    "ProductName": "Perth Pasties",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 6.2000,
+                    "Product": "products/75-A",
+                    "ProductName": "Rhönbräu Klosterbier",
+                    "Quantity": 10
+                }
+            ],
+            "OrderedAt": "1996-09-23T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Stuttgart",
+                "Country": "Germany",
+                "Line1": "Adenauerallee 900",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 48.7794494,
+                    "Longitude": 9.1852878
+                },
+                "PostalCode": "70563",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:209-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/65-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0581945Z"
+            }
+        },
+        {
+            "Company": "companies/63-A",
+            "Freight": 1.96,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 15.2000,
+                    "Product": "products/36-A",
+                    "ProductName": "Inlagd Sill",
+                    "Quantity": 12
+                }
+            ],
+            "OrderedAt": "1996-09-24T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Cunewalde",
+                "Country": "Germany",
+                "Line1": "Taucherstraße 10",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "01307",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:211-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/66-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0583449Z"
+            }
+        },
+        {
+            "Company": "companies/65-A",
+            "Freight": 74.16,
+            "Lines": [
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 25.6,
+                    "Product": "products/32-A",
+                    "ProductName": "Mascarpone Fabioli",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 10.6,
+                    "Product": "products/58-A",
+                    "ProductName": "Escargots de Bourgogne",
+                    "Quantity": 30
+                },
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 39.4000,
+                    "Product": "products/62-A",
+                    "ProductName": "Tarte au sucre",
+                    "Quantity": 25
+                }
+            ],
+            "OrderedAt": "1996-09-25T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Albuquerque",
+                "Country": "USA",
+                "Line1": "2817 Milton Dr.",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 35.1154322,
+                    "Longitude": -106.6710792
+                },
+                "PostalCode": "87110",
+                "Region": "NM"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:213-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/67-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0585604Z"
+            }
+        },
+        {
+            "Company": "companies/38-A",
+            "Freight": 41.76,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 11.2,
+                    "Product": "products/34-A",
+                    "ProductName": "Sasquatch Ale",
+                    "Quantity": 14
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 12.0000,
+                    "Product": "products/70-A",
+                    "ProductName": "Outback Lager",
+                    "Quantity": 30
+                }
+            ],
+            "OrderedAt": "1996-09-26T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Cowes",
+                "Country": "UK",
+                "Line1": "Garden House Crowther Way",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "PO31 7PJ",
+                "Region": "Isle of Wight"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:215-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/68-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0586797Z"
+            }
+        },
+        {
+            "Company": "companies/65-A",
+            "Freight": 150.15,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 7.7,
+                    "Product": "products/41-A",
+                    "ProductName": "Jack's New England Clam Chowder",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 39.4000,
+                    "Product": "products/62-A",
+                    "ProductName": "Tarte au sucre",
+                    "Quantity": 70
+                }
+            ],
+            "OrderedAt": "1996-09-27T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Albuquerque",
+                "Country": "USA",
+                "Line1": "2817 Milton Dr.",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 35.1154322,
+                    "Longitude": -106.6710792
+                },
+                "PostalCode": "87110",
+                "Region": "NM"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:217-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/69-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0587950Z"
+            }
+        },
+        {
+            "Company": "companies/48-A",
+            "Freight": 12.69,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4000,
+                    "Product": "products/1-A",
+                    "ProductName": "Chai",
+                    "Quantity": 20
+                }
+            ],
+            "OrderedAt": "1996-09-30T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Portland",
+                "Country": "USA",
+                "Line1": "89 Chiaroscuro Rd.",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "97219",
+                "Region": "OR"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:219-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/70-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0588923Z"
+            }
+        },
+        {
+            "Company": "companies/38-A",
+            "Freight": 4.73,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 7.7,
+                    "Product": "products/41-A",
+                    "ProductName": "Jack's New England Clam Chowder",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4000,
+                    "Product": "products/76-A",
+                    "ProductName": "Lakkalikööri",
+                    "Quantity": 6
+                }
+            ],
+            "OrderedAt": "1996-10-01T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Cowes",
+                "Country": "UK",
+                "Line1": "Garden House Crowther Way",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "PO31 7PJ",
+                "Region": "Isle of Wight"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:221-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/71-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0589941Z"
+            }
+        },
+        {
+            "Company": "companies/80-A",
+            "Freight": 64.5,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 31.2,
+                    "Product": "products/17-A",
+                    "ProductName": "Alice Mutton",
+                    "Quantity": 8
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 36.4,
+                    "Product": "products/28-A",
+                    "ProductName": "Rössle Sauerkraut",
+                    "Quantity": 14
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4000,
+                    "Product": "products/76-A",
+                    "ProductName": "Lakkalikööri",
+                    "Quantity": 30
+                }
+            ],
+            "OrderedAt": "1996-10-02T00:00:00.0000000",
+            "ShipTo": {
+                "City": "México D.F.",
+                "Country": "Mexico",
+                "Line1": "Avda. Azteca 123",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 19.3333978,
+                    "Longitude": -99.151688900000011
+                },
+                "PostalCode": "05033",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:223-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/72-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0591219Z"
+            }
+        },
+        {
+            "Company": "companies/87-A",
+            "Freight": 34.57,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 17.2000,
+                    "Product": "products/71-A",
+                    "ProductName": "Flotemysost",
+                    "Quantity": 30
+                }
+            ],
+            "OrderedAt": "1996-10-03T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Oulu",
+                "Country": "Finland",
+                "Line1": "Torikatu 38",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 65.010279,
+                    "Longitude": 25.4650189
+                },
+                "PostalCode": "90110",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:225-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/73-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0593425Z"
+            }
+        },
+        {
+            "Company": "companies/38-A",
+            "Freight": 3.43,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4000,
+                    "Product": "products/35-A",
+                    "ProductName": "Steeleye Stout",
+                    "Quantity": 10
+                }
+            ],
+            "OrderedAt": "1996-10-03T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Cowes",
+                "Country": "UK",
+                "Line1": "Garden House Crowther Way",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "PO31 7PJ",
+                "Region": "Isle of Wight"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:227-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/74-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0594716Z"
+            }
+        },
+        {
+            "Company": "companies/58-A",
+            "Freight": 0.4,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 5.6000,
+                    "Product": "products/52-A",
+                    "ProductName": "Filo Mix",
+                    "Quantity": 20
+                }
+            ],
+            "OrderedAt": "1996-10-04T00:00:00.0000000",
+            "ShipTo": {
+                "City": "México D.F.",
+                "Country": "Mexico",
+                "Line1": "Calle Dr. Jorge Cash 321",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 26.1239528,
+                    "Longitude": -97.6357883
+                },
+                "PostalCode": "05033",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:229-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/75-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0597719Z"
+            }
+        },
+        {
+            "Company": "companies/39-A",
+            "Freight": 4.88,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 12.4,
+                    "Product": "products/15-A",
+                    "ProductName": "Genen Shouyu",
+                    "Quantity": 5
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 11.2,
+                    "Product": "products/25-A",
+                    "ProductName": "NuNuCa Nuß-Nougat-Creme",
+                    "Quantity": 4
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4000,
+                    "Product": "products/39-A",
+                    "ProductName": "Chartreuse verte",
+                    "Quantity": 4
+                }
+            ],
+            "OrderedAt": "1996-10-07T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Brandenburg",
+                "Country": "Germany",
+                "Line1": "Maubelstr. 90",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "14776",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:231-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/76-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0600016Z"
+            }
+        },
+        {
+            "Company": "companies/71-A",
+            "Freight": 214.27,
+            "Lines": [
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 13.9,
+                    "Product": "products/16-A",
+                    "ProductName": "Pavlova",
+                    "Quantity": 21
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 14.4,
+                    "Product": "products/35-A",
+                    "ProductName": "Steeleye Stout",
+                    "Quantity": 70
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 9.6,
+                    "Product": "products/46-A",
+                    "ProductName": "Spegesild",
+                    "Quantity": 30
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 44.0,
+                    "Product": "products/59-A",
+                    "ProductName": "Raclette Courdavault",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 35.1000,
+                    "Product": "products/63-A",
+                    "ProductName": "Vegie-spread",
+                    "Quantity": 80
+                }
+            ],
+            "OrderedAt": "1996-10-08T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Boise",
+                "Country": "USA",
+                "Line1": "187 Suffolk Ln.",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 43.5771053,
+                    "Longitude": -116.3382107
+                },
+                "PostalCode": "83720",
+                "Region": "ID"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:233-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/77-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0601963Z"
+            }
+        },
+        {
+            "Company": "companies/39-A",
+            "Freight": 64.86,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 20.0,
+                    "Product": "products/6-A",
+                    "ProductName": "Grandma's Boysenberry Spread",
+                    "Quantity": 6
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 4.8,
+                    "Product": "products/13-A",
+                    "ProductName": "Konbu",
+                    "Quantity": 12
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 18.6,
+                    "Product": "products/14-A",
+                    "ProductName": "Tofu",
+                    "Quantity": 9
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 10.0,
+                    "Product": "products/31-A",
+                    "ProductName": "Gorgonzola Telino",
+                    "Quantity": 4
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 27.8000,
+                    "Product": "products/72-A",
+                    "ProductName": "Mozzarella di Giovanni",
+                    "Quantity": 40
+                }
+            ],
+            "OrderedAt": "1996-10-09T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Brandenburg",
+                "Country": "Germany",
+                "Line1": "Maubelstr. 90",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "14776",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:235-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/78-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0605429Z"
+            }
+        },
+        {
+            "Company": "companies/8-A",
+            "Freight": 77.92,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 17.6,
+                    "Product": "products/4-A",
+                    "ProductName": "Chef Anton's Cajun Seasoning",
+                    "Quantity": 24
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 15.6,
+                    "Product": "products/57-A",
+                    "ProductName": "Ravioli Angelo",
+                    "Quantity": 16
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 6.2000,
+                    "Product": "products/75-A",
+                    "ProductName": "Rhönbräu Klosterbier",
+                    "Quantity": 50
+                }
+            ],
+            "OrderedAt": "1996-10-10T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Madrid",
+                "Country": "Spain",
+                "Line1": "C/ Araquil, 67",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 40.4604766,
+                    "Longitude": -3.7798419
+                },
+                "PostalCode": "28023",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:237-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/79-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0606835Z"
+            }
+        },
+        {
+            "Company": "companies/24-A",
+            "Freight": 63.36,
+            "Lines": [
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 15.2,
+                    "Product": "products/2-A",
+                    "ProductName": "Chang",
+                    "Quantity": 25
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 16.8,
+                    "Product": "products/11-A",
+                    "ProductName": "Queso Cabrales",
+                    "Quantity": 50
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 20.7,
+                    "Product": "products/30-A",
+                    "ProductName": "Nord-Ost Matjeshering",
+                    "Quantity": 35
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 10.6000,
+                    "Product": "products/58-A",
+                    "ProductName": "Escargots de Bourgogne",
+                    "Quantity": 30
+                }
+            ],
+            "OrderedAt": "1996-10-11T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Bräcke",
+                "Country": "Sweden",
+                "Line1": "Åkergatan 24",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 57.716318099999988,
+                    "Longitude": 11.9254352
+                },
+                "PostalCode": "S-844 67",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:239-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/80-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0609767Z"
+            }
+        },
+        {
+            "Company": "companies/28-A",
+            "Freight": 87.03,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 44.0,
+                    "Product": "products/59-A",
+                    "ProductName": "Raclette Courdavault",
+                    "Quantity": 9
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 16.8,
+                    "Product": "products/65-A",
+                    "ProductName": "Louisiana Fiery Hot Pepper Sauce",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 10.0000,
+                    "Product": "products/68-A",
+                    "ProductName": "Scottish Longbreads",
+                    "Quantity": 10
+                }
+            ],
+            "OrderedAt": "1996-10-14T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Lisboa",
+                "Country": "Portugal",
+                "Line1": "Jardim das rosas n. 32",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 38.7639293,
+                    "Longitude": -9.1995367999999988
+                },
+                "PostalCode": "1675",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:241-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/81-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0611549Z"
+            }
+        },
+        {
+            "Company": "companies/75-A",
+            "Freight": 191.67,
+            "Lines": [
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 7.3,
+                    "Product": "products/19-A",
+                    "ProductName": "Teatime Chocolate Biscuits",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 20.7,
+                    "Product": "products/30-A",
+                    "ProductName": "Nord-Ost Matjeshering",
+                    "Quantity": 8
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 210.8,
+                    "Product": "products/38-A",
+                    "ProductName": "Côte de Blaye",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 30.4000,
+                    "Product": "products/56-A",
+                    "ProductName": "Gnocchi di nonna Alice",
+                    "Quantity": 12
+                }
+            ],
+            "OrderedAt": "1996-10-15T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Lander",
+                "Country": "USA",
+                "Line1": "P.O. Box 555",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 42.833014,
+                    "Longitude": -108.7306725
+                },
+                "PostalCode": "82520",
+                "Region": "WY"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:243-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/82-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0613146Z"
+            }
+        },
+        {
+            "Company": "companies/46-A",
+            "Freight": 12.75,
+            "Lines": [
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 24.9,
+                    "Product": "products/26-A",
+                    "ProductName": "Gumbär Gummibärchen",
+                    "Quantity": 50
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 27.8000,
+                    "Product": "products/72-A",
+                    "ProductName": "Mozzarella di Giovanni",
+                    "Quantity": 25
+                }
+            ],
+            "OrderedAt": "1996-10-16T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Barquisimeto",
+                "Country": "Venezuela",
+                "Line1": "Carrera 52 con Ave. Bolívar #65-98 Llano Largo",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "3508",
+                "Region": "Lara"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:245-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/83-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0614593Z"
+            }
+        },
+        {
+            "Company": "companies/9-A",
+            "Freight": 10.19,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 5.9000,
+                    "Product": "products/54-A",
+                    "ProductName": "Tourtière",
+                    "Quantity": 15
+                }
+            ],
+            "OrderedAt": "1996-10-16T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Marseille",
+                "Country": "France",
+                "Line1": "12, rue des Bouchers",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 43.2611295,
+                    "Longitude": 5.3886613
+                },
+                "PostalCode": "13008",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:247-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/84-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0615600Z"
+            }
+        },
+        {
+            "Company": "companies/51-A",
+            "Freight": 52.84,
+            "Lines": [
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 50.0,
+                    "Product": "products/18-A",
+                    "ProductName": "Carnarvon Tigers",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 11.2,
+                    "Product": "products/42-A",
+                    "ProductName": "Singaporean Hokkien Fried Mee",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 7.6000,
+                    "Product": "products/47-A",
+                    "ProductName": "Zaanse koeken",
+                    "Quantity": 16
+                }
+            ],
+            "OrderedAt": "1996-10-17T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Montréal",
+                "Country": "Canada",
+                "Line1": "43 rue St. Laurent",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "H1J 1C3",
+                "Region": "Québec"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:249-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/85-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0616759Z"
+            }
+        },
+        {
+            "Company": "companies/87-A",
+            "Freight": 0.59,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 18.6,
+                    "Product": "products/14-A",
+                    "ProductName": "Tofu",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 8.0,
+                    "Product": "products/21-A",
+                    "ProductName": "Sir Rodney's Scones",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 17.2000,
+                    "Product": "products/71-A",
+                    "ProductName": "Flotemysost",
+                    "Quantity": 40
+                }
+            ],
+            "OrderedAt": "1996-10-18T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Oulu",
+                "Country": "Finland",
+                "Line1": "Torikatu 38",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 65.010279,
+                    "Longitude": 25.4650189
+                },
+                "PostalCode": "90110",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:251-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/86-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0618051Z"
+            }
+        },
+        {
+            "Company": "companies/84-A",
+            "Freight": 8.56,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 5.6,
+                    "Product": "products/52-A",
+                    "ProductName": "Filo Mix",
+                    "Quantity": 8
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 10.0000,
+                    "Product": "products/68-A",
+                    "ProductName": "Scottish Longbreads",
+                    "Quantity": 10
+                }
+            ],
+            "OrderedAt": "1996-10-21T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Lyon",
+                "Country": "France",
+                "Line1": "2, rue du Commerce",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 45.7850099,
+                    "Longitude": 4.8123691
+                },
+                "PostalCode": "69004",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:253-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/87-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0619386Z"
+            }
+        },
+        {
+            "Company": "companies/37-A",
+            "Freight": 42.11,
+            "Lines": [
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 15.2,
+                    "Product": "products/2-A",
+                    "ProductName": "Chang",
+                    "Quantity": 7
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 10.0,
+                    "Product": "products/31-A",
+                    "ProductName": "Gorgonzola Telino",
+                    "Quantity": 25
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 25.6,
+                    "Product": "products/32-A",
+                    "ProductName": "Mascarpone Fabioli",
+                    "Quantity": 6
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 42.4000,
+                    "Product": "products/51-A",
+                    "ProductName": "Manjimup Dried Apples",
+                    "Quantity": 48
+                }
+            ],
+            "OrderedAt": "1996-10-22T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Cork",
+                "Country": "Ireland",
+                "Line1": "8 Johnstown Road",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 51.9126151,
+                    "Longitude": -8.3223801
+                },
+                "PostalCode": null,
+                "Region": "Co. Cork"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:255-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/88-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0620833Z"
+            }
+        },
+        {
+            "Company": "companies/60-A",
+            "Freight": 15.51,
+            "Lines": [
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 17.6000,
+                    "Product": "products/4-A",
+                    "ProductName": "Chef Anton's Cajun Seasoning",
+                    "Quantity": 18
+                }
+            ],
+            "OrderedAt": "1996-10-23T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Lisboa",
+                "Country": "Portugal",
+                "Line1": "Estrada da saúde n. 58",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 38.6947065,
+                    "Longitude": -9.2140453
+                },
+                "PostalCode": "1756",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:257-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/89-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0621885Z"
+            }
+        },
+        {
+            "Company": "companies/25-A",
+            "Freight": 108.26,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 7.2,
+                    "Product": "products/23-A",
+                    "ProductName": "Tunnbröd",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 24.9,
+                    "Product": "products/26-A",
+                    "ProductName": "Gumbär Gummibärchen",
+                    "Quantity": 24
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 15.2,
+                    "Product": "products/36-A",
+                    "ProductName": "Inlagd Sill",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 20.8,
+                    "Product": "products/37-A",
+                    "ProductName": "Gravad lax",
+                    "Quantity": 28
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 27.8000,
+                    "Product": "products/72-A",
+                    "ProductName": "Mozzarella di Giovanni",
+                    "Quantity": 25
+                }
+            ],
+            "OrderedAt": "1996-10-24T00:00:00.0000000",
+            "ShipTo": {
+                "City": "München",
+                "Country": "Germany",
+                "Line1": "Berliner Platz 43",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 48.1730861,
+                    "Longitude": 11.5879194
+                },
+                "PostalCode": "80805",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:259-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/90-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0624292Z"
+            }
+        },
+        {
+            "Company": "companies/55-A",
+            "Freight": 84.21,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 31.2,
+                    "Product": "products/17-A",
+                    "ProductName": "Alice Mutton",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 20.7000,
+                    "Product": "products/30-A",
+                    "ProductName": "Nord-Ost Matjeshering",
+                    "Quantity": 15
+                }
+            ],
+            "OrderedAt": "1996-10-25T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Anchorage",
+                "Country": "USA",
+                "Line1": "2743 Bering St.",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 61.1952839,
+                    "Longitude": -149.895994
+                },
+                "PostalCode": "99508",
+                "Region": "AK"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:261-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/91-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0625470Z"
+            }
+        },
+        {
+            "Company": "companies/51-A",
+            "Freight": 15.66,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 17.6,
+                    "Product": "products/4-A",
+                    "ProductName": "Chef Anton's Cajun Seasoning",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 31.2,
+                    "Product": "products/17-A",
+                    "ProductName": "Alice Mutton",
+                    "Quantity": 70
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 39.4000,
+                    "Product": "products/62-A",
+                    "ProductName": "Tarte au sucre",
+                    "Quantity": 28
+                }
+            ],
+            "OrderedAt": "1996-10-28T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Montréal",
+                "Country": "Canada",
+                "Line1": "43 rue St. Laurent",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "H1J 1C3",
+                "Region": "Québec"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:263-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/92-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0626630Z"
+            }
+        },
+        {
+            "Company": "companies/9-A",
+            "Freight": 166.31,
+            "Lines": [
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 50.0,
+                    "Product": "products/18-A",
+                    "ProductName": "Carnarvon Tigers",
+                    "Quantity": 20
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 7.7,
+                    "Product": "products/41-A",
+                    "ProductName": "Jack's New England Clam Chowder",
+                    "Quantity": 12
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 36.8000,
+                    "Product": "products/43-A",
+                    "ProductName": "Ipoh Coffee",
+                    "Quantity": 40
+                }
+            ],
+            "OrderedAt": "1996-10-29T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Marseille",
+                "Country": "France",
+                "Line1": "12, rue des Bouchers",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 43.2611295,
+                    "Longitude": 5.3886613
+                },
+                "PostalCode": "13008",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:265-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/93-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0628032Z"
+            }
+        },
+        {
+            "Company": "companies/73-A",
+            "Freight": 26.78,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 2.0,
+                    "Product": "products/33-A",
+                    "ProductName": "Geitost",
+                    "Quantity": 8
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 44.0000,
+                    "Product": "products/59-A",
+                    "ProductName": "Raclette Courdavault",
+                    "Quantity": 9
+                }
+            ],
+            "OrderedAt": "1996-10-29T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Kobenhavn",
+                "Country": "Denmark",
+                "Line1": "Vinbæltet 34",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "1734",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:267-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/94-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0629545Z"
+            }
+        },
+        {
+            "Company": "companies/25-A",
+            "Freight": 54.83,
+            "Lines": [
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 15.2,
+                    "Product": "products/2-A",
+                    "ProductName": "Chang",
+                    "Quantity": 24
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 10.0,
+                    "Product": "products/31-A",
+                    "ProductName": "Gorgonzola Telino",
+                    "Quantity": 56
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 15.2,
+                    "Product": "products/36-A",
+                    "ProductName": "Inlagd Sill",
+                    "Quantity": 40
+                },
+                {
+                    "Discount": 0.2,
+                    "PricePerUnit": 19.2000,
+                    "Product": "products/55-A",
+                    "ProductName": "Pâté chinois",
+                    "Quantity": 40
+                }
+            ],
+            "OrderedAt": "1996-10-30T00:00:00.0000000",
+            "ShipTo": {
+                "City": "München",
+                "Country": "Germany",
+                "Line1": "Berliner Platz 43",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 48.1730861,
+                    "Longitude": 11.5879194
+                },
+                "PostalCode": "80805",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:269-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/95-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0631572Z"
+            }
+        },
+        {
+            "Company": "companies/44-A",
+            "Freight": 110.37,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 26.6,
+                    "Product": "products/64-A",
+                    "ProductName": "Wimmers gute Semmelknödel",
+                    "Quantity": 50
+                },
+                {
+                    "Discount": 0.05,
+                    "PricePerUnit": 10.0,
+                    "Product": "products/68-A",
+                    "ProductName": "Scottish Longbreads",
+                    "Quantity": 4
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.4000,
+                    "Product": "products/76-A",
+                    "ProductName": "Lakkalikööri",
+                    "Quantity": 15
+                }
+            ],
+            "OrderedAt": "1996-10-31T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Frankfurt a.M.",
+                "Country": "Germany",
+                "Line1": "Magazinweg 7",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 52.502065599999987,
+                    "Longitude": 13.6479345
+                },
+                "PostalCode": "60528",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:271-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/96-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0633574Z"
+            }
+        },
+        {
+            "Company": "companies/89-A",
+            "Freight": 23.29,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 17.6,
+                    "Product": "products/4-A",
+                    "ProductName": "Chef Anton's Cajun Seasoning",
+                    "Quantity": 35
+                },
+                {
+                    "Discount": 0.25,
+                    "PricePerUnit": 32.0000,
+                    "Product": "products/8-A",
+                    "ProductName": "Northwoods Cranberry Sauce",
+                    "Quantity": 70
+                }
+            ],
+            "OrderedAt": "1996-11-01T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Seattle",
+                "Country": "USA",
+                "Line1": "1029 - 12th Ave. S.",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 47.595079899999988,
+                    "Longitude": -122.3172333
+                },
+                "PostalCode": "98124",
+                "Region": "WA"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:273-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/97-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0634789Z"
+            }
+        },
+        {
+            "Company": "companies/63-A",
+            "Freight": 249.06,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 32.0,
+                    "Product": "products/8-A",
+                    "ProductName": "Northwoods Cranberry Sauce",
+                    "Quantity": 70
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 7.3,
+                    "Product": "products/19-A",
+                    "ProductName": "Teatime Chocolate Biscuits",
+                    "Quantity": 80
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 11.2000,
+                    "Product": "products/42-A",
+                    "ProductName": "Singaporean Hokkien Fried Mee",
+                    "Quantity": 9
+                }
+            ],
+            "OrderedAt": "1996-11-04T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Cunewalde",
+                "Country": "Germany",
+                "Line1": "Taucherstraße 10",
+                "Line2": null,
+                "Location": null,
+                "PostalCode": "01307",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:275-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/98-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0636436Z"
+            }
+        },
+        {
+            "Company": "companies/65-A",
+            "Freight": 142.08,
+            "Lines": [
+                {
+                    "Discount": 0.1,
+                    "PricePerUnit": 31.2,
+                    "Product": "products/17-A",
+                    "ProductName": "Alice Mutton",
+                    "Quantity": 36
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 30.4000,
+                    "Product": "products/56-A",
+                    "ProductName": "Gnocchi di nonna Alice",
+                    "Quantity": 20
+                }
+            ],
+            "OrderedAt": "1996-11-05T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Albuquerque",
+                "Country": "USA",
+                "Line1": "2817 Milton Dr.",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 35.1154322,
+                    "Longitude": -106.6710792
+                },
+                "PostalCode": "87110",
+                "Region": "NM"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:277-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/99-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0637578Z"
+            }
+        },
+        {
+            "Company": "companies/21-A",
+            "Freight": 3.1,
+            "Lines": [
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 11.2,
+                    "Product": "products/25-A",
+                    "ProductName": "NuNuCa Nuß-Nougat-Creme",
+                    "Quantity": 10
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 14.4,
+                    "Product": "products/39-A",
+                    "ProductName": "Chartreuse verte",
+                    "Quantity": 50
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 14.7,
+                    "Product": "products/40-A",
+                    "ProductName": "Boston Crab Meat",
+                    "Quantity": 4
+                },
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 6.2000,
+                    "Product": "products/75-A",
+                    "ProductName": "Rhönbräu Klosterbier",
+                    "Quantity": 6
+                }
+            ],
+            "OrderedAt": "1996-11-06T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Sao Paulo",
+                "Country": "Brazil",
+                "Line1": "Rua Orós, 92",
+                "Line2": null,
+                "Location": {
+                    "Latitude": -23.5438333,
+                    "Longitude": -46.6981117
+                },
+                "PostalCode": "05442-030",
+                "Region": "SP"
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:279-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/100-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0639348Z"
+            }
+        },
+        {
+            "Company": "companies/86-A",
+            "Freight": 0.78,
+            "Lines": [
+                {
+                    "Discount": 0.15,
+                    "PricePerUnit": 14.4,
+                    "Product": "products/1-A",
+                    "ProductName": "Chai",
+                    "Quantity": 15
+                },
+                {
+                    "Discount": 0.0,
+                    "PricePerUnit": 7.2000,
+                    "Product": "products/23-A",
+                    "ProductName": "Tunnbröd",
+                    "Quantity": 25
+                }
+            ],
+            "OrderedAt": "1996-11-07T00:00:00.0000000",
+            "ShipTo": {
+                "City": "Stuttgart",
+                "Country": "Germany",
+                "Line1": "Adenauerallee 900",
+                "Line2": null,
+                "Location": {
+                    "Latitude": 48.7794494,
+                    "Longitude": 9.1852878
+                },
+                "PostalCode": "70563",
+                "Region": null
+            },
+            "@metadata": {
+                "@projection": true,
+                "@change-vector": "A:281-/TWGGFnVAUy3XWoFMsl+dA",
+                "@flags": "HasRevisions",
+                "@id": "orders/101-A",
+                "@index-score": 0,
+                "@last-modified": "2018-07-27T12:11:53.0640820Z"
+            }
+        }
+    ],
+    "Includes": {},
+    "IndexTimestamp": "0001-01-01T00:00:00.0000000",
+    "LastQueryTime": "0001-01-01T00:00:00.0000000",
+    "IsStale": false,
+    "ResultEtag": -6587522102906164250,
+    "NodeTag": "A"
+}

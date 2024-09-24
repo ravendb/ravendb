@@ -150,6 +150,7 @@ function markProgressAsCompleted(progress: Draft<IndexProgressInfo>) {
     progress.collections.forEach((c) => {
         c.documents.processed = c.documents.total;
         c.tombstones.processed = c.tombstones.total;
+        c.deletedTimeSeries.processed = c.deletedTimeSeries.total;
     });
 }
 
@@ -173,12 +174,17 @@ function mapProgress(progress: IndexProgress): IndexProgressInfo {
                 total: stats.TotalNumberOfTombstones,
                 processed: stats.TotalNumberOfTombstones - stats.NumberOfTombstonesToProcess,
             },
+            deletedTimeSeries: {
+                processedPerSecond: 0,
+                total: stats.TotalNumberOfTimeSeriesDeletedRanges,
+                processed: stats.TotalNumberOfTimeSeriesDeletedRanges - stats.NumberOfTimeSeriesDeletedRangesToProcess,
+            },
         };
     });
 
     mappedCollections.forEach((c) => {
-        grandTotal += c.documents.total + c.tombstones.total;
-        grandProcessed += c.documents.processed + c.tombstones.processed;
+        grandTotal += c.documents.total + c.tombstones.total + c.deletedTimeSeries.total;
+        grandProcessed += c.documents.processed + c.tombstones.processed + c.deletedTimeSeries.processed;
     });
 
     return {
