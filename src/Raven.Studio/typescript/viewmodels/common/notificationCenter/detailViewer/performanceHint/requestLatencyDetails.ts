@@ -73,7 +73,7 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
     }
 
     private mapItems(details: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyDetail): Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo[] {
-        return Object.entries(details.RequestLatencies).flatMap(([key, value]) => {
+        return Object.entries(details.RequestLatencies ?? []).flatMap(([key, value]) => {
             return (value as any).map((item: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo) =>
                 ({
                     Action: key,

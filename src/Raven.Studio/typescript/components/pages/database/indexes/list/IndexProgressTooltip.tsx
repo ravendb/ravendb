@@ -66,7 +66,11 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
     }
 
     return (
-        <PopoverWithHover target={target} placement="top">
+        <PopoverWithHover
+            target={target}
+            placement="top"
+            style={{ width: index.sourceType === "TimeSeries" ? "460px" : undefined }}
+        >
             <LocationSpecificDetails location={nodeInfo.location}>
                 <LocationSpecificDetailsItemsContainer>
                     <LocationSpecificDetailsItem>
@@ -115,6 +119,11 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                             <NamedProgress name={collection.name} key={collection.name}>
                                 <NamedProgressItem progress={collection.documents}>documents</NamedProgressItem>
                                 <NamedProgressItem progress={collection.tombstones}>tombstones</NamedProgressItem>
+                                {index.sourceType === "TimeSeries" && (
+                                    <NamedProgressItem progress={collection.deletedTimeSeries}>
+                                        deleted time series
+                                    </NamedProgressItem>
+                                )}
                             </NamedProgress>
                         );
                     })}

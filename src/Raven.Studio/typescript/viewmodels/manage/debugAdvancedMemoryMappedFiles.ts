@@ -138,7 +138,7 @@ class memoryMappedFiles extends viewModelBase {
             .done(response => {
                 
                 const mappedResults: memoryMappingItem[] = response.Mappings.flatMap(m => {
-                    return Object.entries(m.Details).map(([fileName, details]) => {
+                    return Object.entries(m.Details ?? []).map(([fileName, details]) => {
                         return {
                             Directory: m.Directory,
                             FileName: fileName,

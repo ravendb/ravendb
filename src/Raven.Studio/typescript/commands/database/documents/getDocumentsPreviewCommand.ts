@@ -29,7 +29,7 @@ class getDocumentsPreviewCommand extends commandBase {
     static readonly ArrayStubsKey = "$a";
     static readonly TrimmedValueKey = "$t";
 
-    constructor(private database: database, private skip: number, private take: number, private collectionName: string,
+    constructor(private database: database | string, private skip: number, private take: number, private collectionName: string,
                 private previewBindings?: string[], private fullBindings?: string[], private continuationToken?: string) {
         super();
     }

@@ -67,3 +67,5 @@ export interface RestorePoint {
     nodeTag?: string;
     backupType?: string;
 }
+
+export type SelectionState = "AllSelected" | "SomeSelected" | "Empty";

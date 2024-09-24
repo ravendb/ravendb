@@ -24,7 +24,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             route: "databases/indexes",
             moduleId: bridgeToReact(IndexesPage, "shardedView"),
             css: 'icon-list-of-indexes',
-            dynamicHash: appUrls.indexes,
+            dynamicHash: appUrls.indexes(null, false, false),
             search: {
                 innerActions: [
                     { name: "Set priority", alternativeNames: ["Set low priority", "Set normal priority", "Set high priority"] },
@@ -127,6 +127,6 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
     ];
 
     return new intermediateMenuItem("Indexes", indexesItems, 'icon-indexing', {
-        dynamicHash: appUrls.indexes
+        dynamicHash: appUrls.indexes(null, false, false)
     });
 }

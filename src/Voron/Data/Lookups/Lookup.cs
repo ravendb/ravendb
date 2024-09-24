@@ -588,7 +588,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         var child = src;
         while (child->IsBranch)
         {
-            DecodeEntry(src, 0, out _, out var pg);
+            DecodeEntry(child, 0, out _, out var pg);
             var childPage = _llt.GetPage(pg);
             child = (LookupPageHeader*)childPage.Pointer;
         }

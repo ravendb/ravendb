@@ -97,7 +97,7 @@ class timeSeries extends shardViewModelBase {
         if (data) {
             this.policyCheckFrequency(generalUtils.timeSpanToSeconds(data.PolicyCheckFrequency));
             if (data.Collections) {
-                this.perCollectionConfigurations(Object.entries(data.Collections).map(([collection, configuration]) => {
+                this.perCollectionConfigurations(Object.entries(data.Collections ?? []).map(([collection, configuration]) => {
                     const entry = new timeSeriesConfigurationEntry(collection);
                     entry.withRetention(configuration);
                     return entry;

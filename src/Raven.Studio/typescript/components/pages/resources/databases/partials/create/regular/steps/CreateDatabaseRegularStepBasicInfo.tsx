@@ -83,7 +83,7 @@ function IsEncryptedField() {
                         message: <AuthenticationOffMessage />,
                     },
                 ]}
-                popoverPlacement="left"
+                popoverPlacement="top"
             >
                 <FormSwitch
                     color="primary"

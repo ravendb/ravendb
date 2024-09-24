@@ -25,8 +25,8 @@ To manage service you can use Stop-Service and Start-Service cmdlets (requires a
 
 * Setup
 Open browser, if not opened automatically, at url printed in "Server available on: <url>"
-Follow the web setup instructions at: https://ravendb.net/docs/article-page/6.1/csharp/start/installation/setup-wizard
+Follow the web setup instructions at: https://ravendb.net/docs/article-page/6.2/csharp/start/installation/setup-wizard
 
 * Upgrading to a New Version
-Follow the upgrade instructions available at: https://ravendb.net/docs/article-page/6.1/csharp/start/installation/upgrading-to-new-version
+Follow the upgrade instructions available at: https://ravendb.net/docs/article-page/6.2/csharp/start/installation/upgrading-to-new-version
 

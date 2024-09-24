@@ -97,7 +97,7 @@ class timeSeriesEntryModel {
         this.isCreatingNewTimeSeries(!timeSeriesName);
         
         if (timeSeriesName && timeSeriesEntryModel.isIncrementalName(timeSeriesName)) {
-            const details = Object.entries(dto.NodeValues).map(([nodeDetails, valuesList]) => {
+            const details = Object.entries(dto.NodeValues ?? []).map(([nodeDetails, valuesList]) => {
                 const [tag, dbId] = nodeDetails.split('-');
                 return {
                     nodeTag: tag,

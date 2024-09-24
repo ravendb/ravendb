@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 }
                 result.Message = $"Finished resharding to shard {toShard} buckets [{fromBucket}-{toBucket}]";
                 return result;
-            }, token);
+            }, token: token);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

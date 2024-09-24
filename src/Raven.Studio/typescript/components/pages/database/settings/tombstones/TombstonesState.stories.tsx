@@ -1,4 +1,3 @@
-import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import TombstonesState from "./TombstonesState";
@@ -7,11 +6,10 @@ import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
     title: "Pages/Database/Settings",
-    component: TombstonesState,
     decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta<typeof TombstonesState>;
+} satisfies Meta;
 
-export const Tombstones: StoryObj<typeof TombstonesState> = {
+export const Tombstones: StoryObj = {
     render: () => {
         const { databasesService } = mockServices;
         const { databases } = mockStore;

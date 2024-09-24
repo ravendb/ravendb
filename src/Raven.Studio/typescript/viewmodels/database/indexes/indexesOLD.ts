@@ -170,6 +170,7 @@ class indexProgress {
                 const newObject = incomingProgress.collections().find(x => x.name === collectionName);
                 collection.documentsProgress.updateWith(newObject.documentsProgress);
                 collection.tombstonesProgress.updateWith(newObject.tombstonesProgress);
+                collection.deletedTimeSeriesProgress.updateWith(newObject.deletedTimeSeriesProgress);
             })
         } else {
             // have we don't call updateWith on each collection to avoid animations

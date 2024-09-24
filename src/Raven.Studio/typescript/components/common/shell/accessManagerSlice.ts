@@ -31,7 +31,7 @@ export const accessManagerSlice = createSlice({
     name: "accessManager",
     reducers: {
         onDatabaseAccessLoaded: (state, action: PayloadAction<dictionary<databaseAccessLevel>>) => {
-            const items: DatabaseAccessInfo[] = Object.entries(action.payload).map((value) => {
+            const items: DatabaseAccessInfo[] = Object.entries(action.payload ?? []).map((value) => {
                 return {
                     level: value[1],
                     databaseName: value[0],

@@ -47,6 +47,16 @@ const Template = (args: { withProgress: boolean; shardedLocation: boolean }) => 
                         <NamedProgressItem progress={{ processed: 0, total: 100 }}>subitem #2</NamedProgressItem>
                     </NamedProgress>
                 )}
+
+                {args.withProgress && (
+                    <NamedProgress name="Progress #3">
+                        <NamedProgressItem progress={{ processed: 100, total: 100 }}>subitem #1</NamedProgressItem>
+                        <NamedProgressItem progress={{ processed: 75, total: 100 }}>subitem #2</NamedProgressItem>
+                        <NamedProgressItem progress={{ processed: 25, total: 100 }}>
+                            subitem with long name #3
+                        </NamedProgressItem>
+                    </NamedProgress>
+                )}
             </LocationSpecificDetails>
         </div>
     );
