@@ -1,0 +1,29 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.file-dropzone {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: sizes.$gutter-sm 0;
+    background-color: colors.$well-bg-var;
+    border: 2px dashed colors.$border-color-light-var;
+    border-radius: sizes.$border-radius-md;
+    color: colors.$text-muted-var;
+    cursor: pointer;
+
+    &.isDragging {
+        border-color: colors.$border-color-var;
+        background-color: colors.$panel-bg-1-var;
+    }
+
+    .drop-area {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        z-index: 9999;
+    }
+}

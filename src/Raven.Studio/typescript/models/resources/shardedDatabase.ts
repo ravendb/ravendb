@@ -60,7 +60,7 @@ class shardedDatabase extends database {
         const nodeTag = this.clusterNodeTag();
         this.relevant(nodes.some(x => x.tag === nodeTag));
 
-        const shards = Object.entries(incomingCopy.Sharding.Shards).map((kv) => {
+        const shards = Object.entries(incomingCopy.Sharding.Shards ?? []).map((kv) => {
             const [shardNumber, shardTopology] = kv;
 
             const shardNumberAsNumber = parseInt(shardNumber, 10);
@@ -78,7 +78,7 @@ class shardedDatabase extends database {
     }
     
     private static extractDeletionInProgress(rawDto: Record<string, DeletionInProgressStatus>, shardNumber: number): Array<{ tag: string, status: DeletionInProgressStatus}> {
-        const shardStatus = Object.entries(rawDto).filter(x => x[0].endsWith("$" + shardNumber));
+        const shardStatus = Object.entries(rawDto ?? []).filter(x => x[0].endsWith("$" + shardNumber));
         
         return shardStatus.map(x => ({
             tag: x[0].split("$")[0],

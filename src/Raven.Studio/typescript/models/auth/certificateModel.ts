@@ -158,7 +158,7 @@ class certificateModel {
                 dbAccessInfo = certificateDefinition.Permissions;
         }
         
-        const dbAccessArray = Object.entries(dbAccessInfo).map(([dbName, accessLevel]) => 
+        const dbAccessArray = Object.entries(dbAccessInfo ?? []).map(([dbName, accessLevel]) => 
             ({ accessLevel: `Database${accessLevel}` as databaseAccessLevel,  dbName: dbName }));
         
         return sortBy(dbAccessArray, x => x.dbName.toLowerCase());
@@ -278,7 +278,7 @@ class certificateModel {
         model.thumbprints(dto.Thumbprints);
         model.hasTwoFactor(dto.HasTwoFactor);
         
-        model.permissions(dto.Permissions ? Object.entries(dto.Permissions).map(([databaseName, access]) => {
+        model.permissions(dto.Permissions ? Object.entries(dto.Permissions ?? []).map(([databaseName, access]) => {
             const permission = new certificatePermissionModel();
             permission.accessLevel(access);
             permission.databaseName(databaseName);

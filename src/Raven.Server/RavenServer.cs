@@ -49,6 +49,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Exceptions;
 using Raven.Server.Https;
 using Raven.Server.Integrations.PostgreSQL;
 using Raven.Server.Json;
@@ -112,7 +113,7 @@ namespace Raven.Server
         internal readonly JsonContextPool _tcpContextPool;
 
         public TwoFactor TwoFactor;
-        
+
 
         public event Action AfterDisposal;
 
@@ -1116,9 +1117,9 @@ namespace Raven.Server
             return false;
         }
 
-        private Task _currentRefreshTask = Task.CompletedTask;
+        private Task<Task> _currentRefreshTask = Task.FromResult(Task.CompletedTask);
 
-        public Task RefreshTask => _currentRefreshTask;
+        public Task RefreshTask => _currentRefreshTask.Result;
 
         public void RefreshClusterCertificateTimerCallback(object state)
         {
@@ -1156,18 +1157,26 @@ namespace Raven.Server
             var forceRenew = state as bool? ?? false;
 
             var currentRefreshTask = _currentRefreshTask;
-            if (currentRefreshTask.IsCompleted == false)
+            // it's fine to wait synchronously here, the parent task is short
+            if (currentRefreshTask.Result.IsCompleted == false)
             {
                 _refreshClusterCertificate?.Change(TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
                 return false;
             }
 
-            var refreshCertificate = new Task(async () => { await DoActualCertificateRefresh(currentCertificate, raftRequestId, forceRenew: forceRenew); });
-            if (Interlocked.CompareExchange(ref _currentRefreshTask, currentRefreshTask, refreshCertificate) != currentRefreshTask)
+            var tcs = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
+            if (Interlocked.CompareExchange(ref _currentRefreshTask, tcs.Task, currentRefreshTask) != currentRefreshTask)
                 return false;
 
-            refreshCertificate.Start();
-
+            try
+            {
+                var task = DoActualCertificateRefresh(currentCertificate, raftRequestId, forceRenew: forceRenew);
+                tcs.SetResult(task);
+            }
+            catch (Exception e)
+            {
+                tcs.SetException(e);
+            }
             return true;
         }
 
@@ -1202,7 +1211,7 @@ namespace Raven.Server
                 if (newCertificate.Certificate.Thumbprint != currentCertificate.Certificate.Thumbprint)
                 {
                     HttpsConnectionMiddleware.EnsureCertificateIsAllowedForServerAuth(newCertificate.Certificate);
-                    
+
                     if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
                         ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
 
@@ -1212,15 +1221,15 @@ namespace Raven.Server
                 if (ServerStore.IsLeader() == false)
                     return;
 
-                byte[] newCertBytes;
+                X509Certificate2 newCert;
 
                 if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
                 {
-                    newCertBytes = await RefreshViaLetsEncrypt(currentCertificate, forceRenew);
+                    newCert = await RefreshViaLetsEncrypt(currentCertificate, forceRenew);
                 }
                 else if (string.IsNullOrEmpty(Configuration.Security.CertificateRenewExec) == false)
                 {
-                    newCertBytes = RefreshViaExecutable();
+                    newCert = RefreshViaExecutable();
                 }
                 else
                 {
@@ -1229,7 +1238,7 @@ namespace Raven.Server
                 }
 
                 // One of the prerequisites for the refresh has failed and it has been logged. Nothing to do anymore.
-                if (newCertBytes == null)
+                if (newCert == null)
                     return;
 
                 if (Logger.IsOperationsEnabled)
@@ -1237,8 +1246,8 @@ namespace Raven.Server
                     var source = Configuration.Core.SetupMode == SetupMode.LetsEncrypt ? "Let's Encrypt" : $"executable configured by ({RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)})";
                     Logger.Operations($"Got new certificate from {source}. Starting certificate replication.");
                 }
-                
-                await StartCertificateReplicationAsync(newCertBytes, false, raftRequestId);
+
+                await StartCertificateReplicationAsync(newCert, false, raftRequestId);
             }
             catch (Exception e)
             {
@@ -1256,7 +1265,7 @@ namespace Raven.Server
             }
         }
 
-        private byte[] RefreshViaExecutable()
+        private X509Certificate2 RefreshViaExecutable()
         {
             try
             {
@@ -1266,7 +1275,7 @@ namespace Raven.Server
                     ServerStore.GetLicenseType(),
                     ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
-                return certHolder.Certificate.Export(X509ContentType.Pfx); // With the private key
+                return CertificateLoaderUtil.CreateCertificate(certHolder.Certificate.Export(X509ContentType.Pfx), flags: CertificateLoaderUtil.FlagsForPersist);
             }
             catch (Exception e)
             {
@@ -1274,7 +1283,9 @@ namespace Raven.Server
             }
         }
 
-        private async Task<byte[]> RefreshViaLetsEncrypt(CertificateUtils.CertificateHolder currentCertificate, bool forceRenew)
+        private (DateTime At, X509Certificate2 Certificate) _tempLetsEncryptRefreshCertificate = default;
+
+        private async Task<X509Certificate2> RefreshViaLetsEncrypt(CertificateUtils.CertificateHolder currentCertificate, bool forceRenew)
         {
             byte[] newCertBytes;
             if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(nameof(ConfirmServerCertificateReplacedCommand), out var commandVersion) == false)
@@ -1349,6 +1360,16 @@ namespace Raven.Server
                 return null;
             }
 
+            if (_tempLetsEncryptRefreshCertificate.At == renewalDate) // reuse
+            {
+                return _tempLetsEncryptRefreshCertificate.Certificate;
+            }
+
+            using (_tempLetsEncryptRefreshCertificate.Certificate)
+            {
+                _tempLetsEncryptRefreshCertificate = default;
+            }
+
             try
             {
                 newCertBytes = await RenewLetsEncryptCertificate(currentCertificate);
@@ -1358,7 +1379,22 @@ namespace Raven.Server
                 throw new InvalidOperationException("Failed to update certificate from Lets Encrypt", e);
             }
 
-            return newCertBytes;
+            X509Certificate2 refreshedCertificate;
+            try
+            {
+                refreshedCertificate = CertificateLoaderUtil.CreateCertificate(newCertBytes, flags: CertificateLoaderUtil.FlagsForPersist);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to load (and validate) the new certificate which was received during the refresh process.", e);
+            }
+
+            _tempLetsEncryptRefreshCertificate = (renewalDate, refreshedCertificate);
+
+            if (_forTestingPurposes?.ThrowExceptionAfterLetsEncryptRefresh == true)
+                throw new InvalidOperationException("We refreshed the Let's encrypt certificate, but fail to redistribute it.");
+
+            return refreshedCertificate;
         }
 
         public (bool ShouldRenew, DateTime RenewalDate) CalculateRenewalDate(CertificateUtils.CertificateHolder currentCertificate, bool forceRenew)
@@ -1367,12 +1403,12 @@ namespace Raven.Server
             // but if we have less than 20 days or user asked to force-renew, we'll try anyway.
 
             if (forceRenew)
-                return (true, DateTime.UtcNow);
+                return (true, DateTime.UtcNow.Date);
 
             var remainingDays = (currentCertificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
             if (remainingDays <= 20)
             {
-                return (true, DateTime.UtcNow);
+                return (true, DateTime.UtcNow.Date);
             }
 
             var firstPossibleDate = currentCertificate.Certificate.NotAfter.ToUniversalTime().AddDays(-30);
@@ -1381,13 +1417,13 @@ namespace Raven.Server
             var daysUntilSaturday = DayOfWeek.Saturday - firstPossibleDate.DayOfWeek;
             var firstPossibleSaturday = firstPossibleDate.AddDays(daysUntilSaturday);
 
-            if (firstPossibleSaturday.Date == DateTime.Today)
-                return (true, firstPossibleSaturday);
+            if (firstPossibleSaturday.Date == DateTime.UtcNow.Date)
+                return (true, firstPossibleSaturday.Date);
 
-            return (false, firstPossibleSaturday);
+            return (false, firstPossibleSaturday.Date);
         }
 
-        public async Task StartCertificateReplicationAsync(byte[] certBytes, bool replaceImmediately, string raftRequestId)
+        public async Task StartCertificateReplicationAsync(X509Certificate2 newCertificate, bool replaceImmediately, string raftRequestId)
         {
             // We assume that at this point, the password was already stripped out of the certificate.
 
@@ -1399,16 +1435,6 @@ namespace Raven.Server
 
             try
             {
-                X509Certificate2 newCertificate;
-                try
-                {
-                    newCertificate = CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException("Failed to load (and validate) the new certificate which was received during the refresh process.", e);
-                }
-
                 if (Certificate.Certificate.Thumbprint == newCertificate.Thumbprint)
                 {
                     if (Logger.IsOperationsEnabled)
@@ -1417,17 +1443,17 @@ namespace Raven.Server
                     }
                     return;
                 }
-                
+
                 if (Logger.IsOperationsEnabled)
                 {
                     Logger.Operations($"Starting certificate replication. current:'{Certificate.Certificate.GetBasicCertificateInfo()}', new:'{newCertificate.GetBasicCertificateInfo()}'");
                 }
-                
+
                 // During replacement of a cluster certificate, we must have both the new and the old server certificates registered in the server store.
                 // This is needed for trust in the case where a node replaced its own certificate while another node still runs with the old certificate.
                 // Since both nodes use different certificates, they will only trust each other if the certs are registered in the server store.
                 // When the certificate replacement is finished throughout the cluster, we will delete both these entries.
-                await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(newCertificate.Thumbprint,
+                await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Certificate.Certificate.Thumbprint,
                     new CertificateDefinition
                     {
                         Certificate = Convert.ToBase64String(Certificate.Certificate.Export(X509ContentType.Cert)),
@@ -1453,8 +1479,13 @@ namespace Raven.Server
 
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
-                await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand(Convert.ToBase64String(certBytes), replaceImmediately,
+                await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand(Convert.ToBase64String(newCertificate.Export(X509ContentType.Pfx)), replaceImmediately,
                     $"{raftRequestId}/install-new-certificate"));
+
+                using (_tempLetsEncryptRefreshCertificate.Certificate)
+                {
+                    _tempLetsEncryptRefreshCertificate = default;
+                }
             }
             catch (Exception e)
             {
@@ -1658,13 +1689,13 @@ namespace Raven.Server
         {
             public bool RequiresTwoFactor;
             private TwoFactor _twoFactor;
-            
+
             public Dictionary<string, DatabaseAccess> AuthorizedDatabases = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
             private Dictionary<string, DatabaseAccess> _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>();
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
-            
+
             public readonly DateTime CreatedAt = SystemTime.UtcNow;
 
             public AuthenticateConnection(TwoFactor twoFactor)
@@ -1728,8 +1759,8 @@ namespace Raven.Server
 
             public AuthenticationStatus StatusForAudit => _status;
 
-            public TwoFactor.TwoFactorAuthRegistration TwoFactorAuthRegistration => _twoFactor.GetAuthRegistration(Certificate.Thumbprint); 
-            
+            public TwoFactor.TwoFactorAuthRegistration TwoFactorAuthRegistration => _twoFactor.GetAuthRegistration(Certificate.Thumbprint);
+
             public void WaitingForTwoFactorAuthentication()
             {
                 _statusAfterTwoFactorAuth = _status;
@@ -1740,13 +1771,13 @@ namespace Raven.Server
             {
                 // _statusAfterTwoFactorAuth is nullable
                 // when we override existing configuration we skip WaitingForTwoFactorAuthentication stage
-                
+
                 if (_statusAfterTwoFactorAuth.HasValue)
                     _status = _statusAfterTwoFactorAuth.Value;
 
                 _statusAfterTwoFactorAuth = null;
             }
-            
+
             public AuthenticationStatus Status
             {
                 get
@@ -1884,7 +1915,7 @@ namespace Raven.Server
                         var hasTwoFactorKey = cert.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _);
 
                         authenticationStatus.RequiresTwoFactor = hasTwoFactorKey;
-                        
+
                         if (authenticationStatus.RequiresTwoFactor && TwoFactor.ValidateTwoFactorConnectionLimits(certificate.Thumbprint) == false)
                         {
                             authenticationStatus.WaitingForTwoFactorAuthentication();
@@ -2561,7 +2592,7 @@ namespace Raven.Server
                         ["Exception"] = e.ToString(),
                         ["Message"] = e.Message
                     });
-                    
+
                     await errorWriter.FlushAsync().ConfigureAwait(false);
                 }
 
@@ -2593,7 +2624,7 @@ namespace Raven.Server
         {
             var certificateHolder = Certificate;
             var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password, ServerStore.GetLicenseType(), true);
-            
+
             HttpsConnectionMiddleware.EnsureCertificateIsAllowedForServerAuth(certificate);
 
             if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
@@ -3027,7 +3058,7 @@ namespace Raven.Server
                 {
                     try
                     {
-                        _currentRefreshTask?.Wait();
+                        RefreshTask.Wait();
                     }
                     catch (OperationCanceledException)
                     {
@@ -3105,6 +3136,7 @@ namespace Raven.Server
             internal bool ThrowExceptionInListenToNewTcpConnection = false;
             internal bool ThrowExceptionInTrafficWatchTcp = false;
             internal bool GatherVerboseDatabaseDisposeInformation = false;
+            internal bool ThrowExceptionAfterLetsEncryptRefresh = false;
 
             internal DebugPackageTestingStuff DebugPackage = new DebugPackageTestingStuff();
             internal sealed class DebugPackageTestingStuff

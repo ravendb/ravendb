@@ -159,7 +159,7 @@ function IsEncryptedField({ isRestorePointSnapshot, isRestorePointEncrypted }: I
                     ),
                 },
             ]}
-            popoverPlacement="left"
+            popoverPlacement="top"
         >
             <FormSwitch color="primary" control={control} name="sourceStep.isEncrypted" disabled={isEncryptionDisabled}>
                 <Icon icon="encryption" />

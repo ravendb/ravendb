@@ -297,7 +297,10 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 }
 
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
-                result.push(this.mapToExportListItem("Time Series Deleted Ranges", status.TimeSeriesDeletedRanges));
+
+                if (status.TimeSeriesDeletedRanges) {
+                    result.push(this.mapToExportListItem("Time Series Deleted Ranges", status.TimeSeriesDeletedRanges));
+                }
             }
 
             const currentlyProcessingItems = smugglerDatabaseDetails.findCurrentlyProcessingItems(result);

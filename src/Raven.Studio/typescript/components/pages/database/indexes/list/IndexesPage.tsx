@@ -4,12 +4,21 @@ import IndexSelectActions from "./IndexSelectActions";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { useAppUrls } from "hooks/useAppUrls";
 import "./IndexesPage.scss";
-import { Button, Col, Row, UncontrolledPopover } from "reactstrap";
+import {
+    Button,
+    Col,
+    DropdownItem,
+    DropdownMenu,
+    DropdownToggle,
+    Row,
+    UncontrolledDropdown,
+    UncontrolledPopover,
+} from "reactstrap";
 import { LoadingView } from "components/common/LoadingView";
 import { StickyHeader } from "components/common/StickyHeader";
 import { BulkIndexOperationConfirm } from "components/pages/database/indexes/list/BulkIndexOperationConfirm";
 import { ConfirmResetIndexes } from "components/pages/database/indexes/list/ConfirmResetIndexes";
-import { getAllIndexes, useIndexesPage } from "components/pages/database/indexes/list/useIndexesPage";
+import { useIndexesPage } from "components/pages/database/indexes/list/useIndexesPage";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { NoIndexes } from "components/pages/database/indexes/list/partials/NoIndexes";
 import { Icon } from "components/common/Icon";
@@ -25,14 +34,16 @@ import IndexesPageAboutView from "./IndexesPageAboutView";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import { ImportIndexes } from "components/pages/database/indexes/list/migration/import/ImportIndexes";
 
 interface IndexesPageProps {
     stale?: boolean;
     indexName?: string;
+    isImportOpen?: boolean;
 }
 
 export function IndexesPage(props: IndexesPageProps) {
-    const { stale, indexName: indexToHighlight } = props;
+    const { stale, indexName: indexToHighlight, isImportOpen = false } = props;
 
     const db = useAppSelector(databaseSelectors.activeDatabase);
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
@@ -60,6 +71,7 @@ export function IndexesPage(props: IndexesPageProps) {
         replacements,
         highlightCallback,
         confirmSetLockModeSelectedIndexes,
+        allIndexes,
         allIndexesCount,
         setIndexPriority,
         startIndexes,
@@ -71,7 +83,9 @@ export function IndexesPage(props: IndexesPageProps) {
         getSelectedIndexes,
         confirmDeleteIndexes,
         globalIndexingStatus,
-    } = useIndexesPage(stale);
+        isImportIndexModalOpen,
+        toggleIsImportIndexModalOpen,
+    } = useIndexesPage(stale, isImportOpen);
 
     const deleteSelectedIndexes = () => {
         reportEvent("indexes", "delete-selected");
@@ -82,10 +96,11 @@ export function IndexesPage(props: IndexesPageProps) {
     const disableSelectedIndexes = () => disableIndexes(getSelectedIndexes());
     const pauseSelectedIndexes = () => pauseIndexes(getSelectedIndexes());
     const resetSelectedIndexes = (mode?: Raven.Client.Documents.Indexes.IndexResetMode) => {
-        return resetIndexData.openConfirm(selectedIndexes, mode);
+        return resetIndexData.openConfirm(
+            allIndexes.filter((x) => selectedIndexes.includes(x.name)),
+            mode
+        );
     };
-
-    const indexNames = getAllIndexes(groups, replacements).map((x) => x.name);
 
     const allActionContexts = ActionContextUtils.getContexts(DatabaseUtils.getLocations(db));
 
@@ -116,7 +131,12 @@ export function IndexesPage(props: IndexesPageProps) {
     }
 
     if (stats.indexes.length === 0) {
-        return <NoIndexes />;
+        return (
+            <>
+                <NoIndexes />
+                {isImportIndexModalOpen && <ImportIndexes toggle={toggleIsImportIndexModalOpen} />}
+            </>
+        );
     }
 
     const indexesPageListCommonProps: Omit<IndexesPageListProps, "indexes"> = {
@@ -159,17 +179,34 @@ export function IndexesPage(props: IndexesPageProps) {
                 <StickyHeader>
                     <Row>
                         <Col className="hstack">
-                            <div id="NewIndexButton">
-                                <Button
-                                    color="primary"
-                                    href={newIndexUrl}
-                                    disabled={isNewIndexDisabled}
-                                    className="rounded-pill px-3 pe-auto"
-                                >
-                                    <Icon icon="index" addon="plus" />
-                                    <span>New index</span>
-                                </Button>
-                            </div>
+                            {hasDatabaseWriteAccess && (
+                                <div id="NewIndexButton">
+                                    <UncontrolledDropdown group className="button-dropdown-pill">
+                                        <Button
+                                            color="primary"
+                                            href={newIndexUrl}
+                                            disabled={isNewIndexDisabled}
+                                            className="button-dropdown-btn"
+                                        >
+                                            <Icon icon="index" addon="plus" />
+                                            <span>New index</span>
+                                        </Button>
+                                        <DropdownToggle
+                                            className="dropdown-toggle button-dropdown-toggle"
+                                            color="primary"
+                                        />
+                                        <DropdownMenu>
+                                            <DropdownItem
+                                                onClick={toggleIsImportIndexModalOpen}
+                                                title="Import indexes from a file"
+                                            >
+                                                <Icon icon="index-import" />
+                                                <span>Import indexes</span>
+                                            </DropdownItem>
+                                        </DropdownMenu>
+                                    </UncontrolledDropdown>
+                                </div>
+                            )}
 
                             {isNewIndexDisabled && (
                                 <UncontrolledPopover
@@ -218,7 +255,7 @@ export function IndexesPage(props: IndexesPageProps) {
 
                     {hasDatabaseWriteAccess && (
                         <IndexSelectActions
-                            indexNames={indexNames}
+                            allIndexes={allIndexes}
                             selectedIndexes={selectedIndexes}
                             replacements={replacements}
                             deleteSelectedIndexes={deleteSelectedIndexes}
@@ -271,6 +308,7 @@ export function IndexesPage(props: IndexesPageProps) {
                     allActionContexts={allActionContexts}
                 />
             )}
+            {isImportIndexModalOpen && <ImportIndexes toggle={toggleIsImportIndexModalOpen} />}
         </div>
     );
 }

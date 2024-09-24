@@ -45,6 +45,14 @@ export class MockCollectionsTracker {
                     sizeClass: "",
                     lastDocumentChangeVector: null,
                 },
+                {
+                    name: "Orders",
+                    countPrefix: "128",
+                    documentCount: 128,
+                    hasBounceClass: false,
+                    sizeClass: "",
+                    lastDocumentChangeVector: null,
+                },
             ])
         );
     }

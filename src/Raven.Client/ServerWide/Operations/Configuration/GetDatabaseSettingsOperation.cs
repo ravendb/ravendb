@@ -8,10 +8,16 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
+    /// <summary>
+    /// Retrieves settings from the database record, including: Database topology, Ongoing task configurations, Index information, Revision settings, 
+    /// and other relevant database configurations.
+    /// </summary>
     public sealed class GetDatabaseSettingsOperation : IMaintenanceOperation<DatabaseSettings>
     {
         private readonly string _databaseName;
 
+        /// <inheritdoc cref="GetDatabaseSettingsOperation"/>
+        /// <param name="databaseName">The name of the database whose settings will be retrieved. Cannot be null.</param>
         public GetDatabaseSettingsOperation(string databaseName)
         {
             _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));

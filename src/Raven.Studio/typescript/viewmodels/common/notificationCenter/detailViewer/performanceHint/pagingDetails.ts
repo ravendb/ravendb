@@ -91,7 +91,7 @@ class pagingDetails extends abstractPerformanceHintDetails {
     }
 
     private mapItems(details: Raven.Server.NotificationCenter.Notifications.Details.PagingPerformanceDetails): pagingDetailsItemDto[] {
-        return Object.entries(details.Actions).flatMap(([key, value]) => {
+        return Object.entries(details.Actions ?? []).flatMap(([key, value]) => {
             return value.map(item => 
                 ({
                     Action: key,
