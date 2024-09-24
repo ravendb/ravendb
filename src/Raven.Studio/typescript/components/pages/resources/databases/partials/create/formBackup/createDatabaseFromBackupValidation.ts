@@ -1,18 +1,12 @@
 import {
     encryptionStepSchema,
     dataDirectoryStepSchema,
+    databaseNameSchema,
 } from "components/pages/resources/databases/partials/create/shared/createDatabaseSharedValidation";
 import * as yup from "yup";
 
 const basicInfoStepSchema = yup.object({
-    databaseName: yup
-        .string()
-        .trim()
-        .strict()
-        .required()
-        .when("$usedDatabaseNames", ([usedDatabaseNames], schema) =>
-            schema.notOneOf(usedDatabaseNames, "Database already exists")
-        ),
+    databaseName: databaseNameSchema,
     isSharded: yup.boolean(),
 });
 
