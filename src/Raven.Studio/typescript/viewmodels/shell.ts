@@ -32,7 +32,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import footer = require("common/shell/footer");
-import feedback = require("viewmodels/shell/feedback");
 import chooseTheme = require("viewmodels/shell/chooseTheme");
 import continueTest = require("common/shell/continueTest");
 import globalSettings = require("common/settings/globalSettings");
@@ -62,7 +61,6 @@ import serverSettings from "common/settings/serverSettings";
 import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
 import StudioSearchWithDatabaseSwitcher from "components/shell/studioSearchWithDatabaseSelector/StudioSearchWithDatabaseSwitcher";
 import { HelpAndResourcesWidget } from "components/common/helpAndResources/HelpAndResourcesWidget";
-import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 
 class shell extends viewModelBase {
 
@@ -633,11 +631,6 @@ class shell extends viewModelBase {
         studioSettings.default.registerOnSettingChangedHandler(
             name => name === "sendUsageStats",
             (name, track: simpleStudioSetting<boolean>) => eventsCollector.default.enabled = track.getValue() && eventsCollector.gaDefined());
-    }
-
-    static openFeedbackForm() {
-        const dialog = new feedback(shell.clientVersion(), buildInfo.serverBuildVersion().FullVersion);
-        app.showBootstrapDialog(dialog);
     }
     
     static chooseTheme() {
