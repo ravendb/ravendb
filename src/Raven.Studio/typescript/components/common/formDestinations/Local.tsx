@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Alert, Card, CardBody, Collapse, Label, Spinner } from "reactstrap";
+import { Card, CardBody, Collapse, Label, Spinner } from "reactstrap";
 import { FormSwitch, FormPathSelector } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import OverrideConfiguration from "./OverrideConfiguration";
@@ -8,6 +8,7 @@ import { useServices } from "components/hooks/useServices";
 import { UseAsyncReturn, useAsync } from "react-async-hook";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import RichAlert from "components/common/RichAlert";
 
 export default function Local() {
     const { control } = useFormContext<FormDestinations>();
@@ -84,15 +85,15 @@ function PathInfo({
 
     if (asyncGetBackupLocation.status === "loading") {
         return (
-            <Alert color="info" className="mt-2">
+            <RichAlert variant="info" className="mt-2">
                 <Spinner />
-            </Alert>
+            </RichAlert>
         );
     }
 
     if (asyncGetBackupLocation.status === "success" && asyncGetBackupLocation.result?.List?.length > 0) {
         return (
-            <Alert color="info" className="mt-2">
+            <RichAlert variant="info" className="mt-2">
                 {asyncGetBackupLocation.result.List.map((location) => (
                     <div key={location.FullPath}>
                         <small>
@@ -127,7 +128,7 @@ function PathInfo({
                         </small>
                     </div>
                 ))}
-            </Alert>
+            </RichAlert>
         );
     }
 }

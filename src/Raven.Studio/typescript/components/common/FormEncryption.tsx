@@ -2,13 +2,14 @@ import { FormCheckbox, FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import React, { useEffect, useRef, useState, ElementRef, PropsWithChildren } from "react";
 import { FieldPath, FieldValues, Control } from "react-hook-form";
-import { Row, Col, InputGroup, Button, Alert, UncontrolledPopover, PopoverBody } from "reactstrap";
+import { Row, Col, InputGroup, Button, UncontrolledPopover, PopoverBody } from "reactstrap";
 import { useServices } from "components/hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { QRCode } from "qrcodejs";
 import copyToClipboard from "common/copyToClipboard";
 import fileDownloader from "common/fileDownloader";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import RichAlert from "components/common/RichAlert";
 
 const encryptionImg = require("Content/img/createDatabase/encryption.svg");
 
@@ -165,13 +166,12 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                             </ActionButton>
                         </Col>
                     </Row>
-                    <Alert color="warning" className="d-flex align-items-center mb-4">
-                        <Icon icon="warning" margin="me-2" className="fs-2" />
+                    <RichAlert variant="warning" className="mb-4">
                         <div>
                             Save the key in a safe place. It will not be available again. If you lose this key you could
                             lose access to your data
                         </div>
-                    </Alert>
+                    </RichAlert>
                 </Col>
                 <Col className="text-center">
                     <div ref={qrContainerRef} className="qrcode" />

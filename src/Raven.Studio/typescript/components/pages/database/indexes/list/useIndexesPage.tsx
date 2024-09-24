@@ -36,13 +36,13 @@ import { useAppSelector } from "components/store";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 import useConfirm from "components/common/ConfirmDialog";
 import React from "react";
-import { Alert } from "reactstrap";
 import DeleteIndexesConfirmBody, { DeleteIndexesConfirmBodyProps } from "../shared/DeleteIndexesConfirmBody";
 import assertUnreachable from "components/utils/assertUnreachable";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useBoolean from "components/hooks/useBoolean";
 import router from "plugins/router";
+import RichAlert from "components/common/RichAlert";
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
@@ -482,9 +482,9 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
                                 <li key={x.name}>{x.name}</li>
                             ))}
                         </ul>
-                        <Alert color="info">
+                        <RichAlert variant="info">
                             Static-indexes only will be set, &apos;Lock Mode&apos; is not relevant for auto-indexes.
-                        </Alert>
+                        </RichAlert>
                     </div>
                 ),
             });

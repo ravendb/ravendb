@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Alert, CardHeader, CardBody, Row, Col, Form } from "reactstrap";
+import { Card, CardHeader, CardBody, Row, Col, Form } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import AceEditor from "components/common/AceEditor";
@@ -23,6 +23,7 @@ import "./AdminJsConsole.scss";
 import RunScriptButton from "components/common/RunScriptButton";
 import useBoolean from "components/hooks/useBoolean";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import RichAlert from "components/common/RichAlert";
 
 const serverTargetValue = "Server";
 
@@ -82,16 +83,13 @@ export default function AdminJSConsole() {
                     <Col>
                         <AboutViewHeading title="Admin JS Console" icon="administrator-js-console" />
                         <Col>
-                            <Alert color="warning hstack gap-4 mb-3">
-                                <div className="flex-shrink-0">
-                                    <Icon icon="warning" /> WARNING
-                                </div>
+                            <RichAlert variant="warning" title="Warning" className="mb-3">
                                 <div>
                                     Do not use the console unless you are sure about what you&apos;re doing. Running a
                                     script in the Admin Console could cause your server to crash, cause loss of data, or
                                     other irreversible harm.
                                 </div>
-                            </Alert>
+                            </RichAlert>
 
                             <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                                 <Card>

@@ -1,7 +1,7 @@
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import React from "react";
-import { Alert } from "reactstrap";
+import RichAlert from "components/common/RichAlert";
 
 interface IntegrationsAlertsProps {
     isLicenseUpgradeRequired: boolean;
@@ -16,28 +16,27 @@ export default function IntegrationsAlerts(props: IntegrationsAlertsProps) {
 
     if (isLicenseUpgradeRequired) {
         return (
-            <Alert color="warning" className="text-center">
-                <Icon icon="warning" />
+            <RichAlert variant="warning">
                 <span>
                     To use this feature, your license must include either of the following features: PostgreSQL
                     integration or Power BI.
                 </span>
 
-                <div className="text-center mt-1">
-                    <a href={buyLink} target="_blank" className="btn btn-primary btn-xs rounded-pill">
+                <div className="mt-1">
+                    <a href={buyLink} target="_blank" className="btn btn-primary rounded-pill">
                         Licensing options <Icon icon="newtab" margin="ms-1" />
                     </a>
                 </div>
-            </Alert>
+            </RichAlert>
         );
     }
 
     if (!isLicenseUpgradeRequired && !isPostgreSqlSupportEnabled) {
         return (
-            <Alert color="warning" className="mt-3">
+            <RichAlert variant="warning" className="mt-3">
                 PostgreSQL support must be explicitly enabled in your <code>settings.json</code> file. Learn more{" "}
                 <a href={postgreSqlDocsLink}>here</a>.
-            </Alert>
+            </RichAlert>
         );
     }
 

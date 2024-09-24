@@ -18,8 +18,9 @@ import IndexUtils from "components/utils/IndexUtils";
 import moment from "moment";
 import React, { useEffect, useMemo, useState } from "react";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { Alert, Button, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { Button, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
 import * as yup from "yup";
+import RichAlert from "components/common/RichAlert";
 
 type ExportMode = "database" | "file";
 
@@ -172,17 +173,13 @@ export function ExportIndexes(props: ExportIndexesProps) {
 
                     <div className="vstack gap-2">
                         {filteredIndexes.isAnyAutoIndexSelected && (
-                            <Alert color="info" className="text-left">
-                                <Icon icon="info" />
-                                All selected Auto-indexes are skipped
-                            </Alert>
+                            <RichAlert variant="info">All selected Auto-indexes are skipped</RichAlert>
                         )}
                         {exportMode === "database" && (
-                            <Alert color="info" className="text-left">
-                                <Icon icon="info" />
+                            <RichAlert variant="info">
                                 All conflicting indexes in the destination database will be overwritten after the export
                                 is completed
-                            </Alert>
+                            </RichAlert>
                         )}
                     </div>
                 </ModalBody>

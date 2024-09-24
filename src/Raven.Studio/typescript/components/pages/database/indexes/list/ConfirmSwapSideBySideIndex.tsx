@@ -1,11 +1,12 @@
 ﻿import React, { useState } from "react";
-import { Alert, Button, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { Button, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import {
     DatabaseActionContexts,
     MultipleDatabaseLocationSelector,
 } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
+import RichAlert from "components/common/RichAlert";
 
 interface ConfirmSwapSideBySideIndexProps {
     indexName: string;
@@ -40,12 +41,10 @@ export function ConfirmSwapSideBySideIndex(props: ConfirmSwapSideBySideIndexProp
                     <Icon icon="index" />
                     {indexName}
                 </span>
-                <Alert color="warning">
-                    <small>
-                        Clicking <strong>Swap Now</strong> will immediately replace the current index definition with
-                        the replacement index.
-                    </small>
-                </Alert>
+                <RichAlert variant="warning">
+                    Clicking <strong>Swap Now</strong> will immediately replace the current index definition with the
+                    replacement index.
+                </RichAlert>
                 {ActionContextUtils.showContextSelector(allActionContexts) && (
                     <div>
                         <h4>Select context</h4>

@@ -1,7 +1,7 @@
 import { Icon } from "components/common/Icon";
 import { LicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import React from "react";
-import { Alert } from "reactstrap";
+import RichAlert from "components/common/RichAlert";
 
 interface IndexesPageLicenseLimitsProps {
     staticClusterLimitStatus: LicenseLimitReachStatus;
@@ -37,83 +37,87 @@ export default function IndexesPageLicenseLimits({
     return (
         <>
             {staticClusterLimitStatus !== "notReached" && (
-                <Alert
-                    color={staticClusterLimitStatus === "limitReached" ? "danger" : "warning"}
-                    className="text-center mb-3"
+                <RichAlert
+                    variant={staticClusterLimitStatus === "limitReached" ? "danger" : "warning"}
+                    icon="cluster"
+                    iconAddon="warning"
+                    className="mb-3"
                 >
-                    <Icon icon="cluster" />
                     Cluster {staticClusterLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
                     <strong>maximum number of static indexes</strong> allowed per cluster by your license{" "}
                     <strong>
                         ({staticClusterCount}/{staticClusterLimit})
                     </strong>
-                    <br /> Delete unused indexes or{" "}
+                    . Delete unused indexes or{" "}
                     <strong>
-                        <a href={upgradeLicenseLink} target="_blank">
+                        <a href={upgradeLicenseLink} target="_blank" className="no-decor">
                             upgrade your license
                         </a>
                     </strong>
-                </Alert>
+                </RichAlert>
             )}
 
             {autoClusterLimitStatus !== "notReached" && (
-                <Alert
-                    color={autoClusterLimitStatus === "limitReached" ? "danger" : "warning"}
-                    className="text-center mb-3"
+                <RichAlert
+                    variant={autoClusterLimitStatus === "limitReached" ? "danger" : "warning"}
+                    icon="cluster"
+                    iconAddon="warning"
+                    className="mb-3"
                 >
-                    <Icon icon="cluster" />
                     Cluster {autoClusterLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
                     <strong>maximum number of auto indexes</strong> allowed per cluster by your license{" "}
                     <strong>
                         ({autoClusterCount}/{autoClusterLimit})
                     </strong>
-                    <br /> Delete unused indexes or{" "}
+                    . Delete unused indexes or{" "}
                     <strong>
-                        <a href={upgradeLicenseLink} target="_blank">
+                        <a href={upgradeLicenseLink} target="_blank" className="no-decor">
                             upgrade your license
                         </a>
                     </strong>
-                </Alert>
+                </RichAlert>
             )}
 
             {staticDatabaseLimitStatus !== "notReached" && (
-                <Alert
-                    color={staticDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
-                    className="text-center mb-3"
+                <RichAlert
+                    variant={staticDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
+                    icon="database"
+                    iconAddon="warning"
+                    className="mb-3"
                 >
-                    <Icon icon="database" />
                     Database {staticDatabaseLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
                     <strong>maximum number of static indexes</strong> allowed per database by your license{" "}
                     <strong>
                         ({staticDatabaseCount}/{staticDatabaseLimit})
                     </strong>
-                    <br /> Delete unused indexes or{" "}
+                    . Delete unused indexes or{" "}
                     <strong>
-                        <a href={upgradeLicenseLink} target="_blank">
+                        <a href={upgradeLicenseLink} target="_blank" className="no-decor">
                             upgrade your license
                         </a>
                     </strong>
-                </Alert>
+                </RichAlert>
             )}
 
             {autoDatabaseLimitStatus !== "notReached" && (
-                <Alert
-                    color={autoDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
-                    className="text-center mb-3"
+                <RichAlert
+                    variant={autoDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
+                    icon="database"
+                    iconAddon="warning"
+                    className="mb-3"
                 >
-                    <Icon icon="database" />
                     Database {autoDatabaseLimitStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
                     <strong>maximum number of auto indexes</strong> allowed per database by your license{" "}
                     <strong>
                         ({autoDatabaseCount}/{autoDatabaseLimit})
                     </strong>
-                    <br /> Delete unused indexes or{" "}
+                    . Delete unused indexes or{" "}
                     <strong>
-                        <a href={upgradeLicenseLink} target="_blank">
+                        <a href={upgradeLicenseLink} target="_blank" className="no-decor">
                             upgrade your license
                         </a>
                     </strong>
-                </Alert>
+                </RichAlert>
             )}
         </>
     );
