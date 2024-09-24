@@ -16,6 +16,7 @@ import { FormCheckbox, FormInput } from "components/common/Form";
 import router from "plugins/router";
 import classNames from "classnames";
 import genUtils from "common/generalUtils";
+import studioSettings from "common/settings/studioSettings";
 
 type FeatureImpression = "positive" | "negative";
 
@@ -40,12 +41,17 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
 
     const { control, formState, handleSubmit, reset, setValue } = useForm<FormData>({
         resolver: yupResolver(schema),
-        defaultValues: {
-            name: "",
-            email: "",
-            message: "",
-            isFeatureSpecific: false,
-            featureImpression: null,
+        defaultValues: async () => {
+            const globalSettings = await studioSettings.default.globalSettings();
+            const feedbackValue = globalSettings.feedback.getValue();
+
+            return {
+                name: feedbackValue?.Name ?? "",
+                email: feedbackValue?.Email ?? "",
+                message: "",
+                isFeatureSpecific: false,
+                featureImpression: null,
+            };
         },
     });
 
@@ -79,6 +85,12 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
                     UserAgent: navigator.userAgent,
                 },
             };
+
+            const globalSettings = await studioSettings.default.globalSettings();
+            globalSettings.feedback.setValue({
+                Email: dto.User.Email,
+                Name: dto.User.Name,
+            });
 
             await resourcesService.sendFeedback(dto);
             reset();
