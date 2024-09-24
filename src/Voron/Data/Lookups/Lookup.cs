@@ -272,7 +272,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         }
         else
         {
-            header = *(LookupState*)reader.Base;
+            header = reader.Read<LookupState>();
         }
 
         if (header.RootObjectType != RootObjectType.Lookup)

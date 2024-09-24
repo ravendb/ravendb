@@ -401,13 +401,13 @@ public sealed unsafe class CompactKey : IDisposable
     
     public void Dispose()
     {
-        if (_storage is null)
+        if (_storage is not null)
         {
             StoragePool.Return(_storage);
             _storage = null;
         }
 
-        if (_keyMappingCache is null)
+        if (_keyMappingCache is not null)
         {
             KeyMappingPool.Return(_keyMappingCache);
             _keyMappingCache = null;

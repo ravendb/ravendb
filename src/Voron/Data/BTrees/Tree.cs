@@ -226,7 +226,7 @@ namespace Voron.Data.BTrees
             long currentValue = 0;
 
             if (TryRead(key, out var reader))
-                currentValue = *(long*)reader.Base;
+                currentValue = reader.Read<long>();
 
             var value = currentValue + delta;
             using (DirectAdd(key, sizeof(long), out byte* ptr))

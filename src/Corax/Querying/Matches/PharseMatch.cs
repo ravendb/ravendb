@@ -150,7 +150,7 @@ public struct PhraseMatch<TInner> : IQueryMatch
     {
         var p = default(Page);
         
-        _indexSearcher.GetEntryTermsReader(documentId, ref p, out var entryTermsReader);
+        using var _ = _indexSearcher.GetEntryTermsReader(documentId, ref p, out var entryTermsReader);
         
         if (entryTermsReader.FindNextStored(_vectorRootPage) == false)
             return "NO PHRASE QUERY";
