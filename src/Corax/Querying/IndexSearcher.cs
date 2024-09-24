@@ -121,8 +121,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
-    public void GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader, CompactKey existingKey = null)
+    public void GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader, CompactKey existingKey)
     {
+        PortableExceptions.ThrowIfNullOnDebug(existingKey);
+        
         if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
 
@@ -130,6 +132,22 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
         reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, existingKey);
+    }
+
+    public LowLevelTransaction.CompactKeyScope GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader)
+    {
+        if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
+            throw new InvalidOperationException("Unable to find entry id: " + id);
+
+        InitializeSpecialTermsMarkers();
+
+        var llt = _transaction.LowLevelTransaction;
+        var scope = llt.AcquireCompactKey(out var key);
+        
+        var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
+        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, key);
+        
+        return scope;
     }
 
     internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref ContextBoundNativeList<Slice> terms)
@@ -339,7 +357,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (_fieldsTree != null && _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var fieldTree))
             termAmount += fieldTree.NumberOfEntries;
 
-        if (!TryGetPostingListForNull(field, out var nullPostingListId)) 
+        if (TryGetPostingListForNull(field, out var nullPostingListId) == false) 
             return termAmount;
         
         var nullPostingList = GetPostingList(nullPostingListId);
@@ -571,11 +589,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private void InitNullPostingList()
     {
-        if (_nullPostingListsTreeLoaded == false)
-        {
-            _nullPostingListsTreeLoaded = true;
-            _nullPostingListsTree = _transaction.ReadTree(Constants.IndexWriter.NullPostingLists);
-        }
+        if (_nullPostingListsTreeLoaded) 
+            return;
+        
+        _nullPostingListsTreeLoaded = true;
+        _nullPostingListsTree = _transaction.ReadTree(Constants.IndexWriter.NullPostingLists);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

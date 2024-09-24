@@ -73,7 +73,7 @@ namespace Corax.Utils;
 ///In cases where TermId is divisible by PageSize, we have a suspicion that we could have a NULL value.
 ///To ensure that, we pass a list with all possible root pages, since all lowest bits are already in use.
 /// </summary>
-public unsafe struct EntryTermsReader : IDisposable
+public unsafe struct EntryTermsReader
 {
     private readonly LowLevelTransaction _llt;
     private readonly HashSet<long> _nullTermsMarkers;
@@ -100,7 +100,7 @@ public unsafe struct EntryTermsReader : IDisposable
     public bool IsNonExisting;
 
     //rootPages has to be sorted.
-    public EntryTermsReader(LowLevelTransaction llt, HashSet<long> nullTermsMarkers, HashSet<long> nonExistingTermsMarkers, byte* cur, int size, long dicId, CompactKey existingKey = null)
+    public EntryTermsReader(LowLevelTransaction llt, HashSet<long> nullTermsMarkers, HashSet<long> nonExistingTermsMarkers, byte* cur, int size, long dicId, CompactKey key)
     {
         _llt = llt;
         _nullTermsMarkers = nullTermsMarkers;
@@ -112,8 +112,8 @@ public unsafe struct EntryTermsReader : IDisposable
         _end = cur + size;
         _prevTerm = 0;
         _prevLong = 0;
-
-        Current = existingKey ?? llt.AcquireCompactKey();
+        
+        Current = key;
         Current.Initialize(llt);
     }
 
@@ -425,11 +425,6 @@ public unsafe struct EntryTermsReader : IDisposable
         }
 
         return sb.ToString();
-    }
-
-    public void Dispose()
-    {
-        _llt.ReleaseCompactKey(ref Current);
     }
 }
 

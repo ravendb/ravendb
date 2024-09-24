@@ -199,26 +199,23 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         Dictionary<string, int> termFreqMap = new();
         Page p = default;
         
-        indexSearcher.GetEntryTermsReader(documentId, ref p, out var indexEntry);
+        using var _ = indexSearcher.GetEntryTermsReader(documentId, ref p, out var indexEntry);
 
         var fields = _fieldNames.Select(x => indexSearcher.FieldCache.GetLookupRootPage(x)).ToHashSet();
 
-        using (indexEntry)
+        while (indexEntry.MoveNext())
         {
-            while (indexEntry.MoveNext())
-            {
-                if (fields.Contains(indexEntry.FieldRootPage) == false)
-                    continue;
-            
-                if (indexEntry.IsNonExisting)
-                    continue;            
+            if (fields.Contains(indexEntry.FieldRootPage) == false)
+                continue;
+
+            if (indexEntry.IsNonExisting)
+                continue;
 
 
-                var key = indexEntry.IsNull
-                    ? null
-                    : indexEntry.Current.Decoded();
-                InsertTerm(key, indexEntry.Frequency); 
-            }
+            var key = indexEntry.IsNull
+                ? null
+                : indexEntry.Current.Decoded();
+            InsertTerm(key, indexEntry.Frequency);
         }
 
         return CreateQueue(termFreqMap);
@@ -233,7 +230,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
             if (IsNoiseWord(termAsString)) // TODO optimize
                 return;
 
-            ref var counter = ref CollectionsMarshal.GetValueRefOrAddDefault(termFreqMap, termAsString, out _);
+            ref var counter = ref CollectionsMarshal.GetValueRefOrAddDefault(termFreqMap, termAsString, out var __);
             counter += freq;
         }
     }

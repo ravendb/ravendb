@@ -448,7 +448,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         var key = _documentIdReader.GetTermFor(id);
                         var retrieverInput = new RetrieverInput(_searcher, _fieldsMapping, reader, key, _index.IndexFieldsPersistence.HasTimeValues);
                         var result = retriever.Get(ref retrieverInput, token);
-                        
+
                         if (result.Document != null)
                         {
                             if (result.Document.Data.Count > 0)
@@ -591,6 +591,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 take = CoraxConstants.IndexSearcher.TakeAll;
             }
 
+            using var scope = documentsContext.Transaction.InnerTransaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
+
             THasProjection hasProjections = default;
             THighlighting highlightings = default;
             highlightings.Initialize(query, queryTimings);
@@ -669,8 +671,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             break;
                     }
                 }
-
-                using var scope = documentsContext.Transaction.InnerTransaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
 
                 // We don't need to do any processing for the query beyond counting if we are getting a count.
                 while (query.IsCountQuery == false || typeof(TDistinct) == typeof(HasDistinct))
@@ -1310,7 +1310,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         continue;
                     }
 
-                    IndexSearcher.GetEntryTermsReader(hit, ref page, out var termsReader);
+                    IndexSearcher.GetEntryTermsReader(hit, ref page, out var termsReader, existingKey);
                     var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues);
                     var result = retriever.Get(ref retrieverInput, token);
                     
