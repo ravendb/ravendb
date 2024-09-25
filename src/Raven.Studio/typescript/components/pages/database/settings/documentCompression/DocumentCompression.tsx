@@ -153,7 +153,7 @@ export default function DocumentCompression() {
                                     isReadOnly={!hasDatabaseAdminAccess}
                                 />
                                 <Collapse isOpen={CompressAllCollections || Collections.length > 0}>
-                                    <RichAlert color="info" icon="documents-compression" className="mt-4">
+                                    <RichAlert variant="info" icon="documents-compression" className="mt-4">
                                         <div>
                                             Documents that will be compressed:
                                             <ul className="m-0">

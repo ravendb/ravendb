@@ -88,7 +88,7 @@ export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
                         <li key={indexName}>{indexName}</li>
                     ))}
                 </ul>
-                {sideBySideWarning && <RichAlert color="warning">{sideBySideWarning}</RichAlert>}
+                {sideBySideWarning && <RichAlert variant="warning">{sideBySideWarning}</RichAlert>}
                 <RichAlert variant="warning">
                     <div>
                         <strong>Reset</strong> will remove all existing indexed data

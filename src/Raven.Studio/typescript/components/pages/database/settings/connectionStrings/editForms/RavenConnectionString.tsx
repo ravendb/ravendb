@@ -174,7 +174,7 @@ function DiscoveryUrl({ idx, control, isDeleteButtonVisible, trigger, watch, onD
 
 function AboutError({ isHTTPSuccess }: { isHTTPSuccess: boolean }) {
     return (
-        <RichAlert color="info" title="About this error">
+        <RichAlert variant="info" title="About this error">
             <p>
                 Each RavenDB server has both HTTP and TCP endpoints. While the first one is used for system management
                 and client-server rest request, the second is used for inter-server and advanced client-server
