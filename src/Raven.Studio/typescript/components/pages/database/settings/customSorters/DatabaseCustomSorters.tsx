@@ -1,4 +1,4 @@
-﻿import { Alert, Button, Col, Row, UncontrolledPopover } from "reactstrap";
+﻿import { Button, Col, Row, UncontrolledPopover } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";

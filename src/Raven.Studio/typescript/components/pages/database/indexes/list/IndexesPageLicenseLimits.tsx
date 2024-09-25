@@ -1,6 +1,4 @@
-import { Icon } from "components/common/Icon";
 import { LicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
-import React from "react";
 import RichAlert from "components/common/RichAlert";
 
 interface IndexesPageLicenseLimitsProps {
