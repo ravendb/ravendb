@@ -1,4 +1,4 @@
-import * as React from "react";
+/* eslint-disable local-rules/no-reactstrap-alert */
 import classNames from "classnames";
 import { Alert, AlertProps } from "reactstrap";
 import { Icon } from "components/common/Icon";

@@ -319,7 +319,8 @@ select {
         --#{$prefix}alert-bg: #{$bg};
         --#{$prefix}alert-border-color: #{$border-color};
 
-        > h3, .title-icon {
+        > h3,
+        .title-icon {
             color: $title-color;
         }
 
