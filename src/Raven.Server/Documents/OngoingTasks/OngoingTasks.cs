@@ -135,22 +135,25 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
         return connectionStatus;
     }
 
-    protected override (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, T replication,
-        Dictionary<string, RavenConnectionString> connectionStrings, out string responsibleNodeTag, out RavenConnectionString connection)
+    protected override (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, T replication, 
+        Dictionary<string, RavenConnectionString> connectionStrings, out ExternalReplicationState replicationState, out string responsibleNodeTag, out RavenConnectionString connection)
     {
         connectionStrings.TryGetValue(replication.ConnectionStringName, out connection);
         replication.Database = connection?.Database;
         replication.ConnectionString = connection;
 
-        var taskStatus = ReplicationLoader.GetExternalReplicationState(_server, _database.Name, replication.TaskId);
-        responsibleNodeTag = OngoingTasksUtils.WhoseTaskIsIt(_server, databaseTopology, replication, taskStatus, _database.NotificationCenter);
+        replicationState = ReplicationLoader.GetExternalReplicationState(_server, _database.Name, replication.TaskId);
+        responsibleNodeTag = OngoingTasksUtils.WhoseTaskIsIt(_server, databaseTopology, replication, replicationState, _database.NotificationCenter);
 
         (string Url, OngoingTaskConnectionStatus Status) result = (null, OngoingTaskConnectionStatus.None);
 
         if (replication is ExternalReplication)
         {
             if (responsibleNodeTag == _server.NodeTag)
-                result = _database.ReplicationLoader.GetExternalReplicationDestination(replication.TaskId);
+            {
+                result = _database.ReplicationLoader.GetExternalReplicationDestination(replication.TaskId, out var fromToString);
+                replicationState.FromToString = fromToString;
+            }
             else
                 result.Status = OngoingTaskConnectionStatus.NotOnThisNode;
         }

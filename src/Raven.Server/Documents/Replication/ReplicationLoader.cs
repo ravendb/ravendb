@@ -1529,13 +1529,18 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public (string Url, OngoingTaskConnectionStatus Status) GetExternalReplicationDestination(long taskId)
+        public (string Url, OngoingTaskConnectionStatus Status) GetExternalReplicationDestination(long taskId, out string fromToString)
         {
-            foreach (var outgoing in OutgoingConnections)
+            foreach (var outgoingHandler in OutgoingHandlers)
             {
-                if (outgoing is ExternalReplication ex && ex.TaskId == taskId)
+                if (outgoingHandler.Destination is ExternalReplication ex && ex.TaskId == taskId)
+                {
+                    fromToString = outgoingHandler.FromToString;
                     return (ex.Url, OngoingTaskConnectionStatus.Active);
+                }
             }
+
+            fromToString = string.Empty;
             foreach (var reconnect in ReconnectQueue)
             {
                 if (reconnect is ExternalReplication ex && ex.TaskId == taskId)
