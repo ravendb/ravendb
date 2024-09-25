@@ -703,6 +703,15 @@ namespace Raven.Server.Documents.TimeSeries
                 return false;
             }
 
+            if (Stats.GetStats(context, documentId, name) == default &&
+                SegmentAlreadyDeleted(context, documentId, name, changeVector, collectionName, segment, baseline))
+            {
+                // if we reach this point, it means the entire time series was deleted,
+                // and the deletion has a newer change vector than this segment.
+                // since the deletion is more recent, we are up-to-date and can safely return
+                return true;
+            }
+
             return TryPutSegmentDirectly(context, key, documentId, name, collectionName, changeVector, segment, baseline);
         }
 
@@ -880,6 +889,30 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        private bool SegmentAlreadyDeleted(DocumentsOperationContext context, string documentId, string name, string changeVector, 
+            CollectionName collectionName, TimeSeriesValuesSegment segment, DateTime baseline)
+        {
+            var hash = (long)Hashing.XXHash64.Calculate(changeVector, Encoding.UTF8);
+            using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name).WithChangeVectorHash(hash))
+            {
+                var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
+                if (table == null || table.NumberOfEntries == 0)
+                    return false;
+
+                foreach (var (_, tableValueHolder) in table.SeekByPrimaryKeyPrefix(sliceHolder.TimeSeriesPrefixSlice, Slices.Empty, skip: 0))
+                {
+                    var item = CreateDeletedRangeItem(context, ref tableValueHolder.Reader);
+                    
+                    if (item.From > baseline || item.To < segment.GetLastTimestamp(baseline))
+                        continue;
+
+                    if (ChangeVectorUtils.GetConflictStatus(changeVector, item.ChangeVector) == ConflictStatus.AlreadyMerged)
+                        return true;
+                }
+
+                return false;
+            }
+        }
 
         public class SegmentSummary
         {
