@@ -81,6 +81,53 @@ namespace FastTests.Voron.Trees
                 Assert.Equal(FreeSpaceHandling.NumberOfPagesInSection + 1, Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, 1));
             }
         }
+        
+        [RavenFact(RavenTestCategory.Voron)]
+        public void FindConsecutiveRange()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 20);
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 21);
+                // 22 is used
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 23);
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 24);
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 25);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                Assert.Equal(23 , Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, 3));
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.Voron)]
+        public void FindConsecutiveRange2()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                for (int i = 0; i < 48; i++)
+                {
+                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 250 + i);
+                }
+                
+                for (int i = 0; i < 50; i++)
+                {
+                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 510 + i);
+                }
+
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                Assert.Equal(510 , Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, 50));
+            }
+        }
+
 
         [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(400, 10, 3)]

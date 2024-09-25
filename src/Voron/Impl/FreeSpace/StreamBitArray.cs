@@ -84,20 +84,31 @@ public unsafe struct StreamBitArray
         h.StoreUnsafe(ref ints[57]);
     }
 
+    public int NextUnsetBits(int start)
+    {
+        return FirstSetBit<Inverse>(start);
+    }
+
     public int FirstSetBit(int bitsToStart)
+    {
+        return FirstSetBit<Nothing>(bitsToStart);
+    }
+    
+    private  int FirstSetBit<TModify>(int bitsToStart)
+        where TModify: struct, IModifyBuffer
     {
         int vectorStart = (bitsToStart / 256) * Vector256<int>.Count;
         var scalarSearch = bitsToStart % 256;
         if (scalarSearch != 0)
         {
-            if (TryScalarSearch(scalarSearch, vectorStart, out int trailingZeroCount)) 
+            if (TryScalarSearch<TModify>(scalarSearch, vectorStart, out int trailingZeroCount)) 
                 return trailingZeroCount;
 
             vectorStart += Vector256<int>.Count;
         }
         for (int i = vectorStart; i < CountOfItems; i += Vector256<int>.Count)
         {
-            var a = Vector256.LoadUnsafe(ref _inner[i]);
+            var a = default(TModify).Modify(Vector256.LoadUnsafe(ref _inner[i]));
             var gt = Vector256.GreaterThan(a, Vector256<uint>.Zero);
             if (gt == Vector256<uint>.Zero)
             {
@@ -105,30 +116,49 @@ public unsafe struct StreamBitArray
             }
             var mask = gt.ExtractMostSignificantBits();
             var idx = BitOperations.TrailingZeroCount(mask) + i;
-            var item = _inner[idx];
+            var item = default(TModify).Modify(_inner[idx]);
             return idx * 32 + BitOperations.TrailingZeroCount(item);
         }
         return -1;
     }
 
-    private bool TryScalarSearch(int scalarSearch, int vectorStart, out int trailingZeroCount)
+    private bool TryScalarSearch<TModify>(int scalarSearch, int vectorStart, out int trailingZeroCount)
+        where TModify: struct, IModifyBuffer
     {
         for (int i = scalarSearch / 32; i < Vector256<int>.Count; i++)
         {
             var bitsToZero = scalarSearch % 32;
             scalarSearch = 0;
-            var bits = _inner[vectorStart + i] & (-1 << bitsToZero);
+            var bits = default(TModify).Modify(_inner[vectorStart + i]) & (-1 << bitsToZero);
             if (bits != 0)
             {
-                {
-                    trailingZeroCount = (vectorStart+i) * 32 + BitOperations.TrailingZeroCount(bits);
-                    return true;
-                }
+                trailingZeroCount = (vectorStart+i) * 32 + BitOperations.TrailingZeroCount(bits);
+                return true;
             }
         }
 
         trailingZeroCount = -1;
         return false;
+    }
+    
+    private struct Nothing : IModifyBuffer
+    {
+        public uint Modify(uint i) => i;
+
+        public Vector256<uint> Modify(Vector256<uint> v) => v;
+    }
+    
+    private struct Inverse : IModifyBuffer
+    {
+        public uint Modify(uint i) => ~i;
+
+        public Vector256<uint> Modify(Vector256<uint> v) => ~v;
+    }
+
+    private interface IModifyBuffer
+    {
+        uint Modify(uint i);
+        Vector256<uint> Modify(Vector256<uint> v);
     }
 
     public bool Get(int index)

@@ -190,7 +190,7 @@ namespace Voron.Impl.FreeSpace
                 var current = new StreamBitArray(it.CreateReaderForCurrent().Base);
 
                 if (current.SetCount >= num &&
-                    TryFindContinuousRange(tx, freeSpaceTree, it, num, current, it.CurrentKey, out long? page))
+                    TryFindContinuousRange(freeSpaceTree, it, num, current, it.CurrentKey, out long? page))
                     return page;
 
                 //could not find a continuous so trying to merge
@@ -202,34 +202,31 @@ namespace Voron.Impl.FreeSpace
             return null;
         }
 
-        private bool TryFindContinuousRange(LowLevelTransaction tx, FixedSizeTree freeSpaceTree, FixedSizeTree.IFixedSizeIterator it, int num,
+        private bool TryFindContinuousRange(FixedSizeTree freeSpaceTree, FixedSizeTree.IFixedSizeIterator it, int num,
             StreamBitArray current, long currentSectionId, out long? page)
         {
             page = -1;
             var start = -1;
-            var count = 0;
             while(true)
             {
-                StartSearch:
                 start = current.FirstSetBit(start + 1);
-                if (start == -1)
+                if (start == -1 || 
+                    start + num > NumberOfPagesInSection)
                     return false;
-                
-                count = 1;
-                for (int i = 1; i < num; i++)
+
+                if (num > 1)
                 {
-                    int idx = i + start;
-                    if (idx >= NumberOfPagesInSection ||
-                        current.Get(start +i) is false)
-                        goto StartSearch;
-                    count++;
-                }
+                    var nextUnsetBit = current.NextUnsetBits(start + 1);
+                    if (nextUnsetBit != -1 && (nextUnsetBit - start) < num )
+                    {
+                        start = nextUnsetBit;
+                        continue;
+                    }
+                }                
+                
                 page = currentSectionId * NumberOfPagesInSection + start;
                 break;
             }
-
-            if (count != num)
-                return false;
 
             if (current.SetCount == num)
             {
