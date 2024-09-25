@@ -13,7 +13,7 @@ module.exports = {
     },
     "ecmaVersion": "latest"
   },
-  "plugins": ["react", "jest", "@typescript-eslint"],
+  "plugins": ["react", "jest", "@typescript-eslint", "local-rules"],
   "ignorePatterns": ["typescript/transitions/**/*.ts", "typescript/widgets/**/*.ts"],
   "rules": {
     "react/prop-types": "off",
@@ -24,7 +24,8 @@ module.exports = {
     "react/jsx-key": "off",
     "@typescript-eslint/prefer-namespace-keyword": "off",
     "@typescript-eslint/no-unused-vars": "warn",
-    "react/react-in-jsx-scope": "off"
+    "react/react-in-jsx-scope": "off",
+    "local-rules/no-reactstrap-alert": "warn"
   },
   "settings": {
     "react": {
