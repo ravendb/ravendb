@@ -8,6 +8,7 @@ interface RichAlertProps extends AlertProps {
     icon?: IconName;
     iconAddon?: IconName;
     title?: string;
+    color?: never;
 }
 
 const defaultIcons: { [key: string]: IconName } = {
