@@ -1623,8 +1623,8 @@ namespace Raven.Server.Documents
                             }
                             catch (Exception e)
                             {
-                                if (state.Logger.IsDebugEnabled)
-                                    state.Logger.Debug($"Failed to log long held cluster lock: {sp.Elapsed} in database {state.Name}", e);
+                                if (state.Logger.IsWarnEnabled)
+                                    state.Logger.Warn($"Failed to log long held cluster lock: {sp.Elapsed} in database {state.Name}", e);
                             }
                         }
                     }

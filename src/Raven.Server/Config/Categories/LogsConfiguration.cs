@@ -23,19 +23,19 @@ namespace Raven.Server.Config.Categories
         public LogLevel MinLevel { get; set; }
 
         [DefaultValue(null)]
-        [ConfigurationEntry("Logs.NLog.Path", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.Path", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NLogInternalPath { get; set; }
 
         [DefaultValue(LogLevel.Info)]
-        [ConfigurationEntry("Logs.NLog.Level", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.Level", ConfigurationEntryScope.ServerWideOnly)]
         public LogLevel NLogInternalLevel { get; set; }
 
         [DefaultValue(false)]
-        [ConfigurationEntry("Logs.NLog.LogToConsole", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.LogToConsole", ConfigurationEntryScope.ServerWideOnly)]
         public bool NLogLogToConsole { get; set; }
 
         [DefaultValue(false)]
-        [ConfigurationEntry("Logs.NLog.LogToConsoleError", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.LogToConsoleError", ConfigurationEntryScope.ServerWideOnly)]
         public bool NLogLogToConsoleError { get; set; }
 
         [DefaultValue(128)]

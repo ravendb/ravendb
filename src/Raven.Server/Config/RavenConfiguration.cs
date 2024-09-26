@@ -263,7 +263,7 @@ namespace Raven.Server.Config
                 if (_logger.IsFatalEnabled)
                     _logger.Fatal("Invalid security configuration. Stopping RavenDB server startup", e);
 
-                Thread.Sleep(3000); // using async version to wait and ensure that we'll wait for the log to be written to disk since we're gonna break the service startup
+                Thread.Sleep(3000);
 
                 throw;
             }
