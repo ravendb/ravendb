@@ -1630,19 +1630,12 @@ namespace Raven.Server
 
             public void WaitingForTwoFactorAuthentication()
             {
-                _statusAfterTwoFactorAuth = _status;
                 _status = AuthenticationStatus.TwoFactorAuthNotProvided;
             }
 
             public void SuccessfulTwoFactorAuthentication()
             {
-                // _statusAfterTwoFactorAuth is nullable
-                // when we override existing configuration we skip WaitingForTwoFactorAuthentication stage
-
-                if (_statusAfterTwoFactorAuth.HasValue)
-                    _status = _statusAfterTwoFactorAuth.Value;
-
-                _statusAfterTwoFactorAuth = null;
+                _status = _statusAfterTwoFactorAuth.Value;
             }
 
             public AuthenticationStatus Status
@@ -1717,6 +1710,8 @@ namespace Raven.Server
                         AuthorizedDatabases.Add(kvp.Key, kvp.Value);
                     }
                 }
+
+                _statusAfterTwoFactorAuth = Status;
             }
         }
 
