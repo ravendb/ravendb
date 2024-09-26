@@ -663,6 +663,34 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> queriedTextFactory, float minimumSimilarity)
+        {
+            var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
+            var valueBuilder = new VectorEmbeddingValueFactory();
+
+            textFieldFactory.Invoke(fieldBuilder);
+            queriedTextFactory.Invoke(valueBuilder);
+            
+            VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity);
+            
+            return this;
+        }
+        
+        /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> queriedEmbeddingFactory, float minimumSimilarity)
+        {
+            var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
+            var valueBuilder = new VectorEmbeddingValueFactory();
+
+            embeddingFieldFactory.Invoke(fieldBuilder);
+            queriedEmbeddingFactory.Invoke(valueBuilder);
+
+            VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity);
+            
+            return this;
+        }
+  
+        /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.AndAlso()
         {
             AndAlso();

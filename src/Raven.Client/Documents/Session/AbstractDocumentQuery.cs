@@ -1513,6 +1513,45 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             return propertyName;
         }
 
+        internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorEmbeddingValueFactory queriedEmbeddingFactory,
+            float minimumSimilarity)
+        {
+            var fieldName = embeddingFieldFactory.FieldName;
+            var sourceQuantizationType = embeddingFieldFactory.SourceQuantizationType;
+            var targetQuantizationType = embeddingFieldFactory.DestinationQuantizationType;
+            var isSourceBase64Encoded = embeddingFieldFactory.IsBase64Encoded;
+            
+            var queriedVectorQuantizationType = queriedEmbeddingFactory.EmbeddingQuantizationType;
+            
+            string queryParameterName;
+            var isVectorBase64Encoded = false;
+            
+            if (queriedEmbeddingFactory.Text != null)
+            {
+                queryParameterName = AddQueryParameter(queriedEmbeddingFactory.Text);
+            }
+
+            else if (queriedEmbeddingFactory.Embedding != null)
+            {
+                queryParameterName = AddQueryParameter(queriedEmbeddingFactory.Embedding);
+            }
+
+            else
+            {
+                queryParameterName = AddQueryParameter(queriedEmbeddingFactory.Base64Embedding);
+                isVectorBase64Encoded = true;
+            }
+            
+            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, queriedVectorQuantizationType, isSourceBase64Encoded, isVectorBase64Encoded, minimumSimilarity);
+
+            WhereTokens.AddLast(vectorSearchToken);
+        }
+
+        public void VectorSearch(IVectorFieldFactory<T> fieldFactory, IVectorEmbeddingFieldValueFactoryBase valueFactory, float minimumSimilarity)
+        {
+            VectorSearch((VectorEmbeddingFieldFactory<T>)fieldFactory, (VectorEmbeddingValueFactory)valueFactory, minimumSimilarity);
+        }
+
         public void Distinct()
         {
             if (IsDistinct)

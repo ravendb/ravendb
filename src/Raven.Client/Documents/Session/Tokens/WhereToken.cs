@@ -32,17 +32,17 @@ namespace Raven.Client.Documents.Session.Tokens
         
         public sealed class WhereOptions
         {
-            public SearchOperator? SearchOperator{ get; private set; }
-            public string FromParameterName{ get; private set; }
-            public string ToParameterName{ get; private set; }
+            public SearchOperator? SearchOperator { get; private set; }
+            public string FromParameterName { get; private set; }
+            public string ToParameterName { get; private set; }
             public decimal? Boost { get; set; }
-            public decimal? Fuzzy{ get; set; }
-            public int? Proximity{ get; set; }
-            public bool Exact{ get; private set; }
+            public decimal? Fuzzy { get; set; }
+            public int? Proximity { get; set; }
+            public bool Exact { get; private set; }
             public WhereMethodCall Method { get; private set; }
-            public ShapeToken WhereShape{ get; private set; }
-            public double DistanceErrorPct{ get; private set; }
-
+            public ShapeToken WhereShape { get; private set; }
+            public double DistanceErrorPct { get; private set; }
+            
             private WhereOptions(){}
 
             public static WhereOptions Default() => new WhereOptions();
@@ -83,11 +83,10 @@ namespace Raven.Client.Documents.Session.Tokens
             }
         }
 
-        public string FieldName { get; private set; }
+        public string FieldName { get; protected set; }
         public WhereOperator WhereOperator { get; private set; }
-        public string ParameterName { get; private set; }
+        public string ParameterName { get; protected set; }
         public WhereOptions Options;
-        
         
         public static WhereToken Create(WhereOperator op, string fieldName, string parameterName, WhereOptions options = null)
         {
@@ -191,6 +190,9 @@ namespace Raven.Client.Documents.Session.Tokens
                     break;
                 case WhereOperator.Regex:
                     writer.Append("regex(");
+                    break;
+                case WhereOperator.Vector_Search:
+                    writer.Append("vector.search(");
                     break;
             }
 

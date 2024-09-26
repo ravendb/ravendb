@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -619,7 +621,7 @@ public static class CoraxQueryBuilder
     }
 
     
-    private static IQueryMatch HandleVectorSearch(Parameters builderParameters, MethodExpression me)
+    private static IQueryMatch HandleVector(Parameters builderParameters, MethodExpression me)
     {
         var metadata = builderParameters.Metadata;
         var (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[1], allowObjectsInParameters: false, allowArraysInParameters: true);
