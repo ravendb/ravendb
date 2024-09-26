@@ -178,6 +178,22 @@ namespace Raven.Client.Documents.Indexes
         }
         
         /// <summary>
+        /// Generates a vector field in the index, generating embeddings from the provided value
+        /// </summary>
+        /// <param name="value">Source of text to generate tokens</param>
+        public object VectorSearch(string value)
+        {
+            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        }
+
+        /// <inheritdoc cref="VectorSearch(string)"/>
+        /// <param name="values">Enumerable of text to generate tokens</param>
+        public object VectorSearch(IEnumerable<string> values)
+        {
+            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        }
+        
+        /// <summary>
         /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
         /// </summary>
         /// <param name="lat">Latitude</param>

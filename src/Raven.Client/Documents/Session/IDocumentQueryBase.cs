@@ -440,6 +440,10 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc cref="MoreLikeThisBase"/>
         /// <param name="moreLikeThis">Specified MoreLikeThisQuery.</param>
         TSelf MoreLikeThis(MoreLikeThisBase moreLikeThis);
+        
+        TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory, float minimumSimilarity = 0.8f);
+
+        TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> embeddingValueFactory, float minimumSimilarity = 0.8f);
     }
 
     public interface IGroupByDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>
