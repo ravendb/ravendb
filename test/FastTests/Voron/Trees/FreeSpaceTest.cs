@@ -128,6 +128,30 @@ namespace FastTests.Voron.Trees
             }
         }
 
+        [RavenFact(RavenTestCategory.Voron)]
+        public void FindConsecutiveRange_AcrossSections()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                for (int i = 0; i < 48; i++)
+                {
+                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 250 + i);
+                }
+                
+                for (int i = 0; i < 50; i++)
+                {
+                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 2040 + i);
+                }
+
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                Assert.Equal(2040 , Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, 50));
+            }
+        }
 
         [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(400, 10, 3)]

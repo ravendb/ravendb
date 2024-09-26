@@ -212,36 +212,9 @@ public unsafe struct StreamBitArray
 
     public bool HasStartRangeCount(int max)
     {
-        int count = 0;
-        for (int i = 0; i < CountOfItems; i += Vector256<int>.Count)
-        {
-            var a = Vector256.LoadUnsafe(ref _inner[i]);
-            var eq = Vector256.Equals(a, Vector256<uint>.AllBitsSet);
-            if (eq == Vector256<uint>.AllBitsSet)
-            {
-                count += 256;
-                if (count >= max)
-                    return true;
-                
-                continue;
-            }
-            for (int j =  i; j < i + Vector256<uint>.Count; j--)
-            {
-                if (_inner[j] == uint.MaxValue)
-                {
-                    count += 32;
-                    if (count >= max)
-                        return true;
-
-                    continue;
-                }
-
-                count += BitOperations.TrailingZeroCount(~_inner[j]);
-                break;
-            }
-            break;
-        }
-
-        return count >= max;
+        Debug.Assert(max <= 2048, "max <= 2048 - maximum range inside the bit array");
+        
+        var next = NextUnsetBits(0);
+        return next == -1 || next >= max;
     }
 }
