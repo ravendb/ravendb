@@ -126,5 +126,13 @@ namespace Raven.Server.Documents.Handlers
                 });
             }
         }
+
+
+        [RavenAction("/databases/*/replication/progress", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task GetReplicationProgress()
+        {
+            using (var processor = new ReplicationHandlerProcessorForProgress(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

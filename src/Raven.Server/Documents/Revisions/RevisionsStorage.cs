@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Revisions
         {
             var tableName = collection.GetTableName(CollectionTableType.Revisions);
 
-            if (_tableCreated.Contains(collection.Name) == false)
+            if (tx.IsWriteTransaction && _tableCreated.Contains(collection.Name) == false)
             {
                 // RavenDB-11705: It is possible that this will revert if the transaction
                 // aborts, so we must record this only after the transaction has been committed
@@ -2743,5 +2743,31 @@ namespace Raven.Server.Documents.Revisions
             return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
         }
 
+        public long GetNumberOfRevisionsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount, Stopwatch overallDuration)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null || collectionName.IsHiLo)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName, RevisionsSchema);
+
+            if (table == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var indexDef = RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice];
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
+        }
+
+        public long GetNumberOfRevisionTombstones(DocumentsOperationContext context)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, RevisionsTombstones);
+            return table?.NumberOfEntries ?? 0;
+        }
     }
 }

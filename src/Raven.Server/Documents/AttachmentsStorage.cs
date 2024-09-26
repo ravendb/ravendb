@@ -1415,5 +1415,25 @@ namespace Raven.Server.Documents
                 DeleteAttachmentStream(context, hash, 0);
             }
         }
+
+        public long GetNumberOfAttachmentsToProcess(DocumentsOperationContext context, long afterEtag, out long totalCount, Stopwatch overallDuration)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+
+            if (table == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var indexDef = AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice];
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
+        }
+
+        public long GetNumberOfAttachmentTombstones(DocumentsOperationContext context)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, AttachmentsTombstones);
+            return table?.NumberOfEntries ?? 0;
+        }
     }
 }

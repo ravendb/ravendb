@@ -31,6 +31,7 @@ using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Commands.ETL;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.Commands.OngoingTasks;
+using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Commands.Revisions;
 using Raven.Server.Documents.Commands.Tombstones;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
@@ -46,12 +47,15 @@ using Raven.Server.Documents.Indexes.Test;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.EventListener;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
@@ -68,12 +72,9 @@ using Raven.Server.Web.Studio.Processors;
 using Raven.Server.Web.System;
 using Raven.Server.Web.System.Processors.Studio;
 using Sparrow.Json;
-using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
-using Raven.Server.EventListener;
-using Raven.Server.NotificationCenter;
-using Raven.Server.Documents.QueueSink.Test;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 using DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
+using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
@@ -292,6 +293,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, TermsQueryResultServerSide> TermsQueryResult = GenerateJsonDeserializationRoutine<TermsQueryResultServerSide>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetEtlTaskProgressCommand.EtlTaskProgressResponse> EtlTaskProgressResponse = GenerateJsonDeserializationRoutine<GetEtlTaskProgressCommand.EtlTaskProgressResponse>();
+        
+        internal static readonly Func<BlittableJsonReaderObject, GetReplicationOngoingTasksProgressCommand.ReplicationTaskProgressResponse> ReplicationTaskProgressResponse = GenerateJsonDeserializationRoutine<GetReplicationOngoingTasksProgressCommand.ReplicationTaskProgressResponse>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse> GetPeriodicBackupTimersCommandResponse = GenerateJsonDeserializationRoutine<GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse>();
 
