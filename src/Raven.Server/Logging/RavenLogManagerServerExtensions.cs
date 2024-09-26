@@ -446,7 +446,7 @@ internal static class RavenLogManagerServerExtensions
         if (configuration.Security.AuthenticationEnabled == false)
         {
             if (logger.IsErrorEnabled)
-                logger.Error("The audit log configuration 'Security.AuditLog.FolderPath' was specified, but the server is not running in a secured mode. Audit log disabled!");
+                logger.Error($"The audit log configuration '{RavenConfiguration.GetKey(x => x.Security.AuditLogPath)}' was specified, but the server is not running in a secured mode. Audit log disabled!");
             return;
         }
 
