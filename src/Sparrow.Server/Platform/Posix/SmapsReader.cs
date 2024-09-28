@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -18,7 +18,7 @@ namespace Sparrow.Platform.Posix
         public long PrivateDirty;
         public long Swap;
     }
-    
+
     internal interface ISmapsReaderResultAction
     {
         void Add(SmapsReaderResults results);
@@ -56,16 +56,71 @@ namespace Sparrow.Platform.Posix
             return _dja;
         }
     }
-    
+
     internal struct SmapsReaderNoAllocResults : ISmapsReaderResultAction
     {
         public void Add(SmapsReaderResults results)
         {
-        // currently we do not use these results with SmapsReaderNoAllocResults so we do not store them
+            // currently we do not use these results with SmapsReaderNoAllocResults so we do not store them
         }
     }
-    
-    internal class SmapsReader
+
+    internal class SmapsReader : AbstractSmapsReader
+    {
+        public SmapsReader(byte[][] smapsBuffer)
+            : base(smapsBuffer)
+        {
+        }
+
+        protected override string GetSmapsPath(int processId)
+        {
+            return $"/proc/{processId}/smaps";
+        }
+
+        protected override bool TryHandleRss(SearchState state)
+        {
+            if (state != SearchState.Size)
+                return false; // found Rss but not after rw-s - irrelevant
+
+            return true;
+        }
+
+        protected override bool ShouldSkipPath(string resultString)
+        {
+            if (resultString.EndsWith(".voron") == false && resultString.EndsWith(".buffers") == false)
+                return true;
+
+            return false;
+        }
+    }
+
+    internal class SmapsRollupReader : AbstractSmapsReader
+    {
+        public SmapsRollupReader(byte[][] smapsBuffer)
+            : base(smapsBuffer)
+        {
+        }
+
+        protected override string GetSmapsPath(int processId)
+        {
+            return $"/proc/{processId}/smaps_rollup";
+        }
+
+        protected override bool TryHandleRss(SearchState state)
+        {
+            if (state != SearchState.Rws)
+                return false; // found Rss but not after rw-s - irrelevant
+
+            return true;
+        }
+
+        protected override bool ShouldSkipPath(string resultString)
+        {
+            return false;
+        }
+    }
+
+    internal abstract class AbstractSmapsReader
     {
         // this /proc/self/smaps reader assumes the format of smaps will always be with the following order:
         // - filename line (where we count rw-s) where with white-spaces delimeters - rw-s is second word in line and filename is last word
@@ -78,6 +133,7 @@ namespace Sparrow.Platform.Posix
         private readonly SmapsReaderResults _smapsReaderResults = new SmapsReaderResults();
 
         private readonly byte[] _rwsBytes = Encoding.UTF8.GetBytes("rw-s");
+        private readonly byte[] _pBytes = Encoding.UTF8.GetBytes("---p");
         private readonly byte[] _sizeBytes = Encoding.UTF8.GetBytes("Size:");
         private readonly byte[] _swapBytes = Encoding.UTF8.GetBytes("Swap:");
         private readonly byte[] _rssBytes = Encoding.UTF8.GetBytes("Rss:");
@@ -89,10 +145,10 @@ namespace Sparrow.Platform.Posix
         private readonly byte[] _lockedBytes = Encoding.UTF8.GetBytes("Locked:");
         private readonly byte[] _tempBufferBytes = new byte[256];
 
-        private readonly int[] _endOfBuffer = {0, 0};
+        private readonly int[] _endOfBuffer = { 0, 0 };
         private int _currentBuffer;
 
-        private enum SearchState
+        internal enum SearchState
         {
             None,
             Rws,
@@ -105,11 +161,11 @@ namespace Sparrow.Platform.Posix
             Swap
         }
 
-        public SmapsReader(byte[][] smapsBuffer)
+        protected AbstractSmapsReader(byte[][] smapsBuffer)
         {
             _smapsBuffer = smapsBuffer;
         }
-        
+
         private int ReadFromFile(Stream fileStream, int bufferIndex)
         {
             var read = fileStream.Read(_smapsBuffer[bufferIndex], 0, _smapsBuffer[bufferIndex].Length);
@@ -117,11 +173,7 @@ namespace Sparrow.Platform.Posix
             return read;
         }
 
-
-        public static string GetSmapsPath(int pid)
-        {
-            return $"/proc/{pid}/smaps";
-        }
+        protected abstract string GetSmapsPath(int processId);
 
         public struct SmapsReadResult<T> where T : struct, ISmapsReaderResultAction
         {
@@ -132,7 +184,7 @@ namespace Sparrow.Platform.Posix
             public long Swap;
             public T SmapsResults;
         }
-        
+
         public SmapsReadResult<T> CalculateMemUsageFromSmaps<T>() where T : struct, ISmapsReaderResultAction
         {
             using (var currentProcess = Process.GetCurrentProcess())
@@ -150,7 +202,7 @@ namespace Sparrow.Platform.Posix
             _endOfBuffer[0] = 0;
             _endOfBuffer[1] = 0;
             _currentBuffer = 0;
-            
+
             var state = SearchState.None;
             var smapResultsObject = new T();
 
@@ -180,6 +232,8 @@ namespace Sparrow.Platform.Posix
                     var offset = 0;
                     if (_smapsBuffer[_currentBuffer][i] == 'r')
                         term = _rwsBytes;
+                    else if (_smapsBuffer[_currentBuffer][i] == '-')
+                        term = _pBytes;
                     else if (_smapsBuffer[_currentBuffer][i] == 'R')
                         term = _rssBytes;
                     else if (_smapsBuffer[_currentBuffer][i] == 'S')
@@ -235,7 +289,7 @@ namespace Sparrow.Platform.Posix
                                 if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
                                     continue;
                             }
-                            
+
                             if (term == _swapBytes) // didn't find Size - try to find Swap
                             {
                                 // Shared_X is longer than Swap or Size so we're putting it in between
@@ -250,7 +304,7 @@ namespace Sparrow.Platform.Posix
                                 if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
                                     continue;
                             }
-                            
+
                             hasMatch = false;
                             break;
                         }
@@ -289,7 +343,7 @@ namespace Sparrow.Platform.Posix
 
                         var currentChar = _smapsBuffer[searchedBuffer][valueSearchPosition];
 
-                        if (term == _rwsBytes) // value is filename which comes after last white-space and before '\n'
+                        if (term == _rwsBytes || term == _pBytes) // value is filename which comes after last white-space and before '\n'
                         {
                             // zero previous entries
                             if (posInTempBuf == 0)
@@ -305,7 +359,7 @@ namespace Sparrow.Platform.Posix
                             }
 
                             //TODO what if there's a space in the file path?
-                            if (currentChar == ' ' || currentChar == '\t') 
+                            if (currentChar == ' ' || currentChar == '\t')
                                 posInTempBuf = 0;
                             else if (currentChar == '\n')
                                 break;
@@ -333,7 +387,7 @@ namespace Sparrow.Platform.Posix
                         ++bytesSearched;
                     }
 
-                    if (term != _rwsBytes)
+                    if (term != _rwsBytes && term != _pBytes)
                     {
                         if (foundValue == false)
                             ThrowNotContainsValidValue(term, pid);
@@ -346,7 +400,7 @@ namespace Sparrow.Platform.Posix
                             ThrowNotContainsKbValue(term, pid, additionalInfo);
                         }
                     }
-                    
+
                     i += term.Length + bytesSearched;
                     if (i >= _smapsBuffer[_currentBuffer].Length)
                         offsetForNextBuffer = _smapsBuffer[_currentBuffer].Length - i;
@@ -355,7 +409,7 @@ namespace Sparrow.Platform.Posix
 
 
                     long resultLong = 0;
-                    if (term != _rwsBytes)
+                    if (term != _rwsBytes && term != _pBytes)
                     {
                         var multiplier = 1;
                         for (var j = posInTempBuf - 1; j >= 0; j--)
@@ -371,7 +425,7 @@ namespace Sparrow.Platform.Posix
                         resultString = posInTempBuf > 0 ? Encoding.UTF8.GetString(_tempBufferBytes, 0, posInTempBuf) : "";
                     }
 
-                    if (term == _rwsBytes)
+                    if (term == _rwsBytes || term == _pBytes)
                     {
                         if (state != SearchState.None)
                             ThrowNotRwsTermAfterLockedTerm(state, term, pid);
@@ -386,8 +440,9 @@ namespace Sparrow.Platform.Posix
                     }
                     else if (term == _rssBytes)
                     {
-                        if (state != SearchState.Size)
-                            continue; // found Rss but not after rw-s - irrelevant
+                        if (TryHandleRss(state) == false)
+                            continue;
+
                         state = SearchState.Rss;
                         tmpRss += resultLong;
                         valRss = resultLong;
@@ -443,8 +498,7 @@ namespace Sparrow.Platform.Posix
                         if (resultString == null)
                             ThrowOnNullString();
 
-                        if (resultString.EndsWith(".voron") == false &&
-                            resultString.EndsWith(".buffers") == false)
+                        if (ShouldSkipPath(resultString))
                             continue;
 
                         _smapsReaderResults.ResultString = resultString;
@@ -463,7 +517,6 @@ namespace Sparrow.Platform.Posix
                         throw new InvalidOperationException($"Reached unknown unhandled term: '{Encoding.UTF8.GetString(term)}'");
                     }
                 }
-
 
                 _currentBuffer = (_currentBuffer + 1) % 2;
                 if (switchBuffer == false)
@@ -484,6 +537,10 @@ namespace Sparrow.Platform.Posix
                 SmapsResults = smapResultsObject
             };
         }
+
+        protected abstract bool TryHandleRss(SearchState state);
+
+        protected abstract bool ShouldSkipPath(string resultString);
 
         private static void ThrowOnNullString()
         {
