@@ -323,7 +323,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-        private static bool GetFromProcMemInfo(SmapsReader smapsReader, ref ProcMemInfoResults procMemInfoResults)
+        private static bool GetFromProcMemInfo(AbstractSmapsReader smapsReader, ref ProcMemInfoResults procMemInfoResults)
         {
             const string path = "/proc/meminfo";
 
@@ -387,7 +387,7 @@ namespace Sparrow.LowMemory
             return true;
         }
 
-        internal static MemoryInfoResult GetMemoryInfo(SmapsReader smapsReader = null, bool extended = false)
+        internal static MemoryInfoResult GetMemoryInfo(AbstractSmapsReader smapsReader = null, bool extended = false)
         {
             if (_failedToGetAvailablePhysicalMemory)
             {
@@ -434,7 +434,7 @@ namespace Sparrow.LowMemory
             return totalScratchAllocated;
         }
 
-        private static MemoryInfoResult GetMemoryInfoLinux(SmapsReader smapsReader, bool extended)
+        private static MemoryInfoResult GetMemoryInfoLinux(AbstractSmapsReader smapsReader, bool extended)
         {
             var fromProcMemInfo = new ProcMemInfoResults();
             GetFromProcMemInfo(smapsReader, ref fromProcMemInfo);
