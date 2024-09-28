@@ -182,6 +182,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Available memory for processing (in MB)")]
             public const string AvailableMemoryForProcessing = "1.6.13";
 
+            [Description("Available memory for processing (in MB) alt")]
+            public const string AvailableMemoryForProcessingAlt = "1.6.14";
+
             [Description("Number of concurrent requests")]
             public const string ConcurrentRequests = "1.7.1";
 

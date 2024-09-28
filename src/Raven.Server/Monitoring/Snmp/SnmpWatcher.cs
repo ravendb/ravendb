@@ -413,6 +413,7 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerEncryptionBuffersMemoryInUse());
             store.Add(new ServerEncryptionBuffersMemoryInPool());
             store.Add(new ServerAvailableMemoryForProcessing(server.MetricCacher));
+            store.Add(new ServerAvailableMemoryForProcessingAlt(server.MetricCacher));
 
             ServerMemInfo.Register(store, server.MetricCacher);
 

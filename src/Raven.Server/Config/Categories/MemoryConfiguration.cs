@@ -77,5 +77,15 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(0.25f)]
         [ConfigurationEntry("Memory.GC.LargeObjectHeapCompactionThresholdPercentage", ConfigurationEntryScope.ServerWideOnly)]
         public float LargeObjectHeapCompactionThresholdPercentage { get; set; }
+
+        [DefaultValue(5)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Memory.ExtendedMemoryInformationRefreshRate5InSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting ExtendedMemoryInformationRefreshRate5 { get; set; }
+
+        [DefaultValue(15)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Memory.ExtendedMemoryInformationRefreshRate15InSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting ExtendedMemoryInformationRefreshRate15{ get; set; }
     }
 }

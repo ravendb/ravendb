@@ -28,6 +28,8 @@ namespace Raven.Server.Utils
 
                 public class MemoryInfoExtended
                 {
+                    public const string RefreshRate15SecondsAlt = "MemoryInfoExtended/RefreshRate15Seconds/Alt";
+
                     public const string RefreshRate15Seconds = "MemoryInfoExtended/RefreshRate15Seconds";
 
                     public const string RefreshRate5Seconds = "MemoryInfoExtended/RefreshRate5Seconds";
