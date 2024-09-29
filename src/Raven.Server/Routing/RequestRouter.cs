@@ -404,9 +404,15 @@ namespace Raven.Server.Routing
                             && long.TryParse(value, out var index)
                             && index > reqCtx.Database.ClusterWideTransactionIndexWaiter.LastIndex)
                         {
-                            var sp = Stopwatch.StartNew();
-                            await reqCtx.Database.ClusterWideTransactionIndexWaiter.WaitAsync(index, context.RequestAborted);
+                            Stopwatch sp = null;
                             if (RequestLogger.IsInfoEnabled)
+                            {
+                                sp = Stopwatch.StartNew();
+                            }
+
+                            await reqCtx.Database.ClusterWideTransactionIndexWaiter.WaitAsync(index, context.RequestAborted);
+                            
+                            if (RequestLogger.IsInfoEnabled && sp != null)
                             {
                                 RequestLogger.Info($"Took {sp} to wait for cluster transaction {index} (connId: {context.Connection.Id})");
                             }
