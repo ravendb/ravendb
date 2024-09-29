@@ -96,6 +96,22 @@ namespace Sparrow.Server
         }
     }
 
+    public class ByteStringContentComparer : IEqualityComparer<ByteString>
+    {
+        public static ByteStringContentComparer Instance = new();
+
+        public bool Equals(ByteString x, ByteString y)
+        {
+            return x.Match(y);
+
+        }
+
+        public int GetHashCode([DisallowNull] ByteString obj)
+        {
+            return obj.GetHashCode();
+        }
+    }
+
     public unsafe struct ByteString : IEquatable<ByteString>
     {
         internal ByteStringStorage* _pointer;
@@ -321,7 +337,7 @@ namespace Sparrow.Server
 
             EnsureIsNotBadPointer();
 
-            return UTF8Encoding.UTF8.GetString(_pointer->Ptr, _pointer->Length);
+            return Encoding.UTF8.GetString(_pointer->Ptr, _pointer->Length);
         }
 
         public string ToString(UTF8Encoding encoding)
@@ -907,7 +923,10 @@ namespace Sparrow.Server
         public int GrowAllocation(ref ByteString str, ref InternalScope scope, int additionalSize)
         {
             var newScope = Allocate(str.Length + additionalSize, out var newStr);
-            Memory.Copy(newStr.Ptr, str.Ptr, str.Length);
+            if (str.HasValue)
+            {
+                Memory.Copy(newStr.Ptr, str.Ptr, str.Length);
+            }
             scope.Dispose();
             str = newStr;
             scope = newScope;

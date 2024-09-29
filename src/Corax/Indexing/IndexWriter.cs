@@ -1710,7 +1710,7 @@ namespace Corax.Indexing
             int capacity = Math.Max(256, count + entries.Additions.Count + entries.Removals.Count);
             _entriesToTermsBuffer.EnsureCapacityFor(capacity);
             _pforDecoder.Init(item.Address + offset, item.Length - offset);
-            Debug.Assert(_entriesToTermsBuffer.Capacity > 0 && _entriesToTermsBuffer.Capacity % 256 ==0, "The buffer must be multiple of 256 for PForDecoder.REad");
+            Debug.Assert(_entriesToTermsBuffer.Capacity > 0 && _entriesToTermsBuffer.Capacity % 256 ==0, "The buffer must be multiple of 256 for PForDecoder.Read");
             _entriesToTermsBuffer.Count = _pforDecoder.Read(_entriesToTermsBuffer.RawItems, _entriesToTermsBuffer.Capacity);
             entries.GetEncodedAdditionsAndRemovals(_entriesAllocator, out long* additions, out long* removals);
 

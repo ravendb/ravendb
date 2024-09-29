@@ -284,19 +284,6 @@ public sealed partial class CompactTree : IPrepareForCommit
         Add(scope.Key, value);
     }
 
-    public long AddAfterTryGetNext(ref CompactKeyLookup lookup, long value)
-    {
-        CompactTreeDumper.WriteAddition(this, ref lookup, value);
-
-        _inner.AddAfterTryGetNext(ref lookup, value);
-        return lookup.ContainerId;
-    }
-    
-    public void SetAfterTryGetNext(ref CompactKeyLookup lookup, long value)
-    {
-        _inner.SetAfterTryGetNext(ref lookup, value);
-    }
-
 
     public long Add(CompactKey key, long value)
     {

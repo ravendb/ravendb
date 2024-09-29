@@ -23,6 +23,8 @@ public unsafe struct NativeList<T>
 
     public T* RawItems => Capacity > 0 ? (T*)_storage.Ptr : null;
 
+    public Span<T> Items => new Span<T>(_storage.Ptr, Count);
+
     public int Capacity => _storage.Length / sizeof(T);
     public int Count;
 
@@ -255,4 +257,27 @@ public unsafe struct NativeList<T>
 #if CORAX_MEMORY_WATCHER
     public (long BytesUsed, long BytesAllocated) Allocations => (Count * sizeof(T), Capacity * sizeof(T));
 #endif
+    
+    public void Reverse()
+    {
+        ToSpan().Reverse();
+    }
+    
+    public void SetCapacity(ByteStringContext allocator, int size)
+    {
+        if (Count >= size)
+            return;
+        
+        EnsureCapacityFor(allocator, size);
+        for (int i = Count; i < size; i++)
+        {
+            RawItems[i] = default;
+        }
+        Count = size;
+    }
+
+    internal Span<T> ToFullCapacitySpan()
+    {
+        return new Span<T>(_storage.Ptr, Capacity);
+    }
 }

@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Raven.Server.Utils;
@@ -12,6 +14,7 @@ using FastTests.Sparrow;
 using FastTests.Voron.FixedSize;
 using FastTests.Client.Indexing;
 using FastTests;
+using FastTests.Voron.Graphs;
 using Sparrow.Server.Platform;
 using SlowTests.Authentication;
 using SlowTests.Issues;
@@ -34,19 +37,21 @@ public static class Program
     public static async Task Main(string[] args)
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
-
-        for (int i = 0; i < 1; i++)
+        var sources = EventSource.GetSources();
+        var runtime = sources.FirstOrDefault(x => x.Name == "System.Runtime");
+        runtime?.Dispose();
+        for (int i = 0; i < 1000; i++)
         {
             Console.WriteLine($"Starting to run {i}");
 
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new RecordingTransactionOperationsMergerTests(testOutputHelper))
+                using (var test = new BasicGraphs(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    //test.CanRoundTripSmallContainer("GreaterThan42B");
-                    await test.RecordingDeleteRevisionsCommand();
+                   
+                    test.AddItems();
                 }
             }
             catch (Exception e)
