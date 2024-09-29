@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Raven.Server.Utils;
@@ -12,6 +14,7 @@ using FastTests.Sparrow;
 using FastTests.Voron.FixedSize;
 using FastTests.Client.Indexing;
 using FastTests;
+using FastTests.Voron.Graphs;
 using Sparrow.Server.Platform;
 using SlowTests.Authentication;
 using SlowTests.Issues;
@@ -33,7 +36,9 @@ public static class Program
     public static async Task Main(string[] args)
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
-
+        var sources = EventSource.GetSources();
+        var runtime = sources.FirstOrDefault(x => x.Name == "System.Runtime");
+        runtime?.Dispose();
         for (int i = 0; i < 1000; i++)
         {
             Console.WriteLine($"Starting to run {i}");
@@ -41,16 +46,11 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new Jalchr3(testOutputHelper))
+                using (var test = new BasicGraphs(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                    
-                    test.Streaming_documents_will_respect_the_sorting_order(
-                        new RavenTestParameters
-                        {
-                            DatabaseMode = RavenDatabaseMode.Single, 
-                            SearchEngine = RavenSearchEngineMode.Lucene
-                        });
+                    test.AddItems();
                 }
             }
             catch (Exception e)
