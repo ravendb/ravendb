@@ -5,13 +5,14 @@ using Raven.Server.Utils;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.ServerWide
 {
     public class ServerMetricCacher : MetricCacher
     {
-        private readonly AbstractSmapsReader _smapsReader;
+        private readonly ISmapsReader _smapsReader;
         private readonly RavenServer _server;
 
         public const int DefaultCpuRefreshRateInMs = 1000;
@@ -21,7 +22,7 @@ namespace Raven.Server.ServerWide
             _server = server;
 
             if (PlatformDetails.RunningOnLinux)
-                _smapsReader = AbstractSmapsReader.CreateSmapsReader([new byte[AbstractSmapsReader.BufferSize], new byte[AbstractSmapsReader.BufferSize]]);
+                _smapsReader = SmapsFactory.CreateSmapsReader([new byte[SmapsFactory.BufferSize], new byte[SmapsFactory.BufferSize]]);
         }
 
         public void Initialize()

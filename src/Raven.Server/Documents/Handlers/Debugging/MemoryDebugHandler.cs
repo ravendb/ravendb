@@ -14,6 +14,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
 using Sparrow.Utils;
 using Voron.Impl;
@@ -215,12 +216,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 var buffers = new[]
                 {
-                    ArrayPool<byte>.Shared.Rent(AbstractSmapsReader.BufferSize),
-                    ArrayPool<byte>.Shared.Rent(AbstractSmapsReader.BufferSize)
+                    ArrayPool<byte>.Shared.Rent(SmapsFactory.BufferSize),
+                    ArrayPool<byte>.Shared.Rent(SmapsFactory.BufferSize)
                 };
                 try
                 {
-                    var result = AbstractSmapsReader.CreateSmapsReader(buffers).CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
+                    var result = SmapsFactory.CreateSmapsReader(buffers).CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
                     var procStatus = MemoryInformation.GetMemoryUsageFromProcStatus();
                     var djv = new DynamicJsonValue
                     {
