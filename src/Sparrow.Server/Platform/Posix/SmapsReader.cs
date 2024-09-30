@@ -67,15 +67,14 @@ namespace Sparrow.Platform.Posix
 
     internal class SmapsReader : AbstractSmapsReader
     {
-        public SmapsReader(byte[][] smapsBuffer)
+        public static string GetFilePath(int processId) => $"/proc/{processId}/smaps";
+
+        private SmapsReader(byte[][] smapsBuffer)
             : base(smapsBuffer)
         {
         }
 
-        protected override string GetSmapsPath(int processId)
-        {
-            return $"/proc/{processId}/smaps";
-        }
+        protected override string GetSmapsPath(int processId) => GetFilePath(processId);
 
         protected override bool TryHandleRss(SearchState state)
         {
@@ -92,19 +91,20 @@ namespace Sparrow.Platform.Posix
 
             return false;
         }
+
+        public static SmapsReader CreateNew(byte[][] smapsBuffer) => new(smapsBuffer);
     }
 
     internal class SmapsRollupReader : AbstractSmapsReader
     {
-        public SmapsRollupReader(byte[][] smapsBuffer)
+        public static string GetFilePath(int processId) => $"/proc/{processId}/smaps_rollup";
+
+        private SmapsRollupReader(byte[][] smapsBuffer)
             : base(smapsBuffer)
         {
         }
 
-        protected override string GetSmapsPath(int processId)
-        {
-            return $"/proc/{processId}/smaps_rollup";
-        }
+        protected override string GetSmapsPath(int processId) => GetFilePath(processId);
 
         protected override bool TryHandleRss(SearchState state)
         {
@@ -118,10 +118,58 @@ namespace Sparrow.Platform.Posix
         {
             return false;
         }
+
+        public static SmapsRollupReader CreateNew(byte[][] smapsBuffer) => new(smapsBuffer);
+    }
+
+    internal enum SmapsReaderType
+    {
+        Smaps,
+        SmapsRollup
     }
 
     internal abstract class AbstractSmapsReader
     {
+        public static SmapsReaderType DefaultSmapsReaderType = SmapsReaderType.Smaps;
+
+        static AbstractSmapsReader()
+        {
+            var envSmapsReaderType = Environment.GetEnvironmentVariable("RAVEN_SMAPS_READER_TYPE");
+
+            if (PlatformDetails.RunningOnPosix == false)
+                return;
+
+            if (string.IsNullOrWhiteSpace(envSmapsReaderType) == false && Enum.TryParse<SmapsReaderType>(envSmapsReaderType, ignoreCase: true, out var smapsReaderType))
+            {
+                DefaultSmapsReaderType = smapsReaderType;
+                return;
+            }
+
+            using (var process = Process.GetCurrentProcess())
+            {
+                if (File.Exists(SmapsRollupReader.GetFilePath(process.Id)))
+                    DefaultSmapsReaderType = SmapsReaderType.SmapsRollup;
+            }
+        }
+
+        public static AbstractSmapsReader CreateSmapsReader(byte[][] smapsBuffer)
+        {
+            return CreateSmapsReader(DefaultSmapsReaderType, smapsBuffer);
+        }
+
+        public static AbstractSmapsReader CreateSmapsReader(SmapsReaderType type, byte[][] smapsBuffer)
+        {
+            switch (type)
+            {
+                case SmapsReaderType.Smaps:
+                    return SmapsReader.CreateNew(smapsBuffer);
+                case SmapsReaderType.SmapsRollup:
+                    return SmapsRollupReader.CreateNew(smapsBuffer);
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
         // this /proc/self/smaps reader assumes the format of smaps will always be with the following order:
         // - filename line (where we count rw-s) where with white-spaces delimeters - rw-s is second word in line and filename is last word
         // after that, in the following order :
