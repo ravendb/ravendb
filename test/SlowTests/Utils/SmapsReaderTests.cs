@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 using FastTests;
+using Sparrow;
 using Sparrow.Platform.Posix;
 using Xunit;
 using Xunit.Abstractions;
@@ -53,6 +54,16 @@ Locked:                0 kB
             }
 
             Assert.Single(result.SmapsResults.Entries);
+
+            var totalDirty = new Size(0, SizeUnit.Bytes);
+            totalDirty.Add(543892, SizeUnit.Kilobytes);
+            totalDirty.Add(32, SizeUnit.Kilobytes);
+
+            Assert.Equal(new Size(843564, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes), result.Rss);
+            Assert.Equal(new Size(61696, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes), result.SharedClean);
+            Assert.Equal(new Size(237944, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes), result.PrivateClean);
+            Assert.Equal(new Size(0, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes), result.Swap);
+            Assert.Equal(totalDirty.GetValue(SizeUnit.Bytes), result.TotalDirty);
         }
 
         [Fact]
