@@ -354,10 +354,14 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             if (reader.IsNonExisting)
                 continue;
             
+            
             var key = reader.IsNull
                 ? Constants.ProjectionNullValueSlice
                 : reader.Current.Decoded();
 
+            if (key.SequenceEqual(Constants.EmptyStringByteSpan))
+                key = Constants.ProjectionEmptyStringSlice;
+            
             InsertTerm(key, ref cloned, facetValues, result, legacy, needToApplyAggregation, token);
         }
     }
