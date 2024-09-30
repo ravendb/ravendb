@@ -11,8 +11,7 @@ namespace Raven.Server.ServerWide
 {
     public class ServerMetricCacher : MetricCacher
     {
-        private readonly SmapsReader _smapsReader;
-        private readonly SmapsRollupReader _smapsRollupReader;
+        private readonly AbstractSmapsReader _smapsReader;
         private readonly RavenServer _server;
 
         public const int DefaultCpuRefreshRateInMs = 1000;
@@ -22,19 +21,15 @@ namespace Raven.Server.ServerWide
             _server = server;
 
             if (PlatformDetails.RunningOnLinux)
-            {
-                _smapsReader = new SmapsReader(new[] { new byte[AbstractSmapsReader.BufferSize], new byte[AbstractSmapsReader.BufferSize] });
-                _smapsRollupReader = new SmapsRollupReader(new[] { new byte[AbstractSmapsReader.BufferSize], new byte[AbstractSmapsReader.BufferSize] });
-            }
+                _smapsReader = AbstractSmapsReader.CreateSmapsReader([new byte[AbstractSmapsReader.BufferSize], new byte[AbstractSmapsReader.BufferSize]]);
         }
 
         public void Initialize()
         {
             Register(MetricCacher.Keys.Server.CpuUsage, TimeSpan.FromMilliseconds(DefaultCpuRefreshRateInMs), _server.CpuUsageCalculator.Calculate, asyncRefresh: false);
             Register(MetricCacher.Keys.Server.MemoryInfo, TimeSpan.FromSeconds(1), CalculateMemoryInfo);
-            Register(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate15SecondsAlt, _server.Configuration.Memory.ExtendedMemoryInformationRefreshRate15.AsTimeSpan, CalculateMemoryInfoExtendedAlt);
-            Register(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate15Seconds, _server.Configuration.Memory.ExtendedMemoryInformationRefreshRate15.AsTimeSpan, CalculateMemoryInfoExtended);
-            Register(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate5Seconds, _server.Configuration.Memory.ExtendedMemoryInformationRefreshRate5.AsTimeSpan, CalculateMemoryInfoExtended);
+            Register(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate15Seconds, TimeSpan.FromSeconds(15), CalculateMemoryInfoExtended);
+            Register(MetricCacher.Keys.Server.MemoryInfoExtended.RefreshRate5Seconds, TimeSpan.FromSeconds(5), CalculateMemoryInfoExtended);
             Register(MetricCacher.Keys.Server.DiskSpaceInfo, TimeSpan.FromSeconds(15), CalculateDiskSpaceInfo);
             Register(MetricCacher.Keys.Server.MemInfo, TimeSpan.FromSeconds(15), CalculateMemInfo);
             Register(MetricCacher.Keys.Server.MaxServerLimits, TimeSpan.FromHours(1), CalculateMaxServerLimits);
@@ -53,11 +48,6 @@ namespace Raven.Server.ServerWide
         private object CalculateMemoryInfoExtended()
         {
             return MemoryInformation.GetMemoryInfo(_smapsReader, extended: true);
-        }
-
-        private object CalculateMemoryInfoExtendedAlt()
-        {
-            return MemoryInformation.GetMemoryInfo(_smapsRollupReader, extended: true);
         }
 
         private object CalculateDiskSpaceInfo()
