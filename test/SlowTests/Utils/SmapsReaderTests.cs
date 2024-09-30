@@ -6,6 +6,7 @@ using System.Text;
 using FastTests;
 using Sparrow;
 using Sparrow.Platform.Posix;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -42,7 +43,7 @@ Locked:                0 kB
 ";
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Linux | RavenTestCategory.Memory)]
         public void ParsesSmapsProperlyFromRollup()
         {
             var smapsReader = SmapsRollupReader.CreateNew([new byte[AbstractSmapsReader.BufferSize], new byte[AbstractSmapsReader.BufferSize]]);
