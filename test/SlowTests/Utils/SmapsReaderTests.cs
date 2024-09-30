@@ -6,6 +6,7 @@ using System.Text;
 using FastTests;
 using Sparrow;
 using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -46,8 +47,8 @@ Locked:                0 kB
         [RavenFact(RavenTestCategory.Linux | RavenTestCategory.Memory)]
         public void ParsesSmapsProperlyFromRollup()
         {
-            var smapsReader = SmapsRollupReader.CreateNew([new byte[AbstractSmapsReader.BufferSize], new byte[AbstractSmapsReader.BufferSize]]);
-            AbstractSmapsReader.SmapsReadResult<SmapsTestResult> result;
+            var smapsReader = new SmapsRollupReader([new byte[SmapsFactory.BufferSize], new byte[SmapsFactory.BufferSize]]);
+            SmapsReadResult<SmapsTestResult> result;
             using (var smapsStream = new FakeProcSmapsEntriesStream(new MemoryStream(Encoding.UTF8.GetBytes(SmapsRollup))))
             {
                 result = smapsReader
@@ -71,9 +72,9 @@ Locked:                0 kB
         public void ParsesSmapsProperly()
         {
             var assembly = typeof(SmapsReaderTests).Assembly;
-            var smapsReader = SmapsReader.CreateNew([new byte[AbstractSmapsReader.BufferSize], new byte[AbstractSmapsReader.BufferSize]]);
+            var smapsReader = new SmapsReader([new byte[SmapsFactory.BufferSize], new byte[SmapsFactory.BufferSize]]);
 
-            AbstractSmapsReader.SmapsReadResult<SmapsTestResult> result;
+            SmapsReadResult<SmapsTestResult> result;
 
             using (var fs =
                 assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_15159.12119.smaps.gz"))
