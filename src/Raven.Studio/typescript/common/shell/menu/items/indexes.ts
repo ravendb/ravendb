@@ -33,8 +33,22 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
                     { name: "Delete index", alternativeNames: ["Remove index"] },
                     { name: "Edit index" },
                     { name: "Reset index (rebuild)", alternativeNames: ["Reset in place", "Reset side by side"] }, 
+                    { name: "Export indexes" }
                 ],
             },
+        }),
+        new leafMenuItem({
+            title: "List of Indexes",
+            nav: false,
+            shardingMode: "allShards",
+            route: "databases/indexes",
+            moduleId: bridgeToReact(IndexesPage, "shardedView"),
+            css: 'icon-index-import',
+            itemRouteToHighlight: 'databases/indexes',
+            dynamicHash: appUrls.indexes(null, false, true),
+            search: {
+                overrideTitle: "Import indexes",
+            }
         }),
         new leafMenuItem({
             route: 'databases/indexes/performance',
