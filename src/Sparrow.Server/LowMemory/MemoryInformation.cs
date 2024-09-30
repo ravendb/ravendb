@@ -299,16 +299,16 @@ namespace Sparrow.LowMemory
 
         public static MemoryInfoResult GetMemoryInformationUsingOneTimeSmapsReader()
         {
-            AbstractSmapsReader smapsReader = null;
+            ISmapsReader smapsReader = null;
             byte[][] buffers = null;
             try
             {
                 if (PlatformDetails.RunningOnLinux)
                 {
-                    var buffer1 = ArrayPool<byte>.Shared.Rent(AbstractSmapsReader.BufferSize);
-                    var buffer2 = ArrayPool<byte>.Shared.Rent(AbstractSmapsReader.BufferSize);
+                    var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsFactory.BufferSize);
+                    var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsFactory.BufferSize);
                     buffers = new[] { buffer1, buffer2 };
-                    smapsReader = AbstractSmapsReader.CreateSmapsReader(new[] { buffer1, buffer2 });
+                    smapsReader = SmapsFactory.CreateSmapsReader(new[] { buffer1, buffer2 });
                 }
 
                 return GetMemoryInfo(smapsReader, extended: true);
@@ -323,7 +323,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-        private static bool GetFromProcMemInfo(AbstractSmapsReader smapsReader, ref ProcMemInfoResults procMemInfoResults)
+        private static bool GetFromProcMemInfo(ISmapsReader smapsReader, ref ProcMemInfoResults procMemInfoResults)
         {
             const string path = "/proc/meminfo";
 
@@ -387,7 +387,7 @@ namespace Sparrow.LowMemory
             return true;
         }
 
-        internal static MemoryInfoResult GetMemoryInfo(AbstractSmapsReader smapsReader = null, bool extended = false)
+        internal static MemoryInfoResult GetMemoryInfo(ISmapsReader smapsReader = null, bool extended = false)
         {
             if (_failedToGetAvailablePhysicalMemory)
             {
@@ -434,7 +434,7 @@ namespace Sparrow.LowMemory
             return totalScratchAllocated;
         }
 
-        private static MemoryInfoResult GetMemoryInfoLinux(AbstractSmapsReader smapsReader, bool extended)
+        private static MemoryInfoResult GetMemoryInfoLinux(ISmapsReader smapsReader, bool extended)
         {
             var fromProcMemInfo = new ProcMemInfoResults();
             GetFromProcMemInfo(smapsReader, ref fromProcMemInfo);
