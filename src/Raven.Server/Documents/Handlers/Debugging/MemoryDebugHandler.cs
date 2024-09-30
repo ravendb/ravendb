@@ -215,12 +215,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 var buffers = new[]
                 {
-                    ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize),
-                    ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize)
+                    ArrayPool<byte>.Shared.Rent(AbstractSmapsReader.BufferSize),
+                    ArrayPool<byte>.Shared.Rent(AbstractSmapsReader.BufferSize)
                 };
                 try
                 {
-                    var result = new SmapsReader(buffers).CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
+                    var result = AbstractSmapsReader.CreateSmapsReader(buffers).CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
                     var procStatus = MemoryInformation.GetMemoryUsageFromProcStatus();
                     var djv = new DynamicJsonValue
                     {

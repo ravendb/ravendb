@@ -7,7 +7,7 @@ namespace Sparrow.Server.LowMemory
 {
     public class LowMemoryMonitor : AbstractLowMemoryMonitor
     {
-        private readonly SmapsReader _smapsReader;
+        private readonly AbstractSmapsReader _smapsReader;
 
         private byte[][] _buffers;
 
@@ -15,10 +15,10 @@ namespace Sparrow.Server.LowMemory
         {
             if (PlatformDetails.RunningOnLinux)
             {
-                var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
-                var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                var buffer1 = ArrayPool<byte>.Shared.Rent(AbstractSmapsReader.BufferSize);
+                var buffer2 = ArrayPool<byte>.Shared.Rent(AbstractSmapsReader.BufferSize);
                 _buffers = new[] { buffer1, buffer2 };
-                _smapsReader = new SmapsReader(_buffers);
+                _smapsReader = AbstractSmapsReader.CreateSmapsReader(_buffers);
             }
         }
 

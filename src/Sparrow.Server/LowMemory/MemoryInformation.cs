@@ -299,7 +299,7 @@ namespace Sparrow.LowMemory
 
         public static MemoryInfoResult GetMemoryInformationUsingOneTimeSmapsReader()
         {
-            SmapsReader smapsReader = null;
+            AbstractSmapsReader smapsReader = null;
             byte[][] buffers = null;
             try
             {
@@ -308,7 +308,7 @@ namespace Sparrow.LowMemory
                     var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
                     var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
                     buffers = new[] { buffer1, buffer2 };
-                    smapsReader = new SmapsReader(new[] { buffer1, buffer2 });
+                    smapsReader = AbstractSmapsReader.CreateSmapsReader(new[] { buffer1, buffer2 });
                 }
 
                 return GetMemoryInfo(smapsReader, extended: true);
