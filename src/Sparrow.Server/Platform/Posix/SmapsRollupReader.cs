@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
+using Sparrow.Json.Parsing;
+using Sparrow.Platform.Posix;
+using Sparrow.Utils;
 
-namespace Sparrow.Platform.Posix
+namespace Sparrow.Server.Platform.Posix
 {
-    internal class SmapsReader : ISmapsReader
+    internal sealed class SmapsRollupReader : ISmapsReader
     {
         // this /proc/self/smaps reader assumes the format of smaps will always be with the following order:
         // - filename line (where we count rw-s) where with white-spaces delimeters - rw-s is second word in line and filename is last word
@@ -13,10 +17,12 @@ namespace Sparrow.Platform.Posix
         // Size, Rss, Shared_Clean, Private_Clean, Shared_Dirty, Private_Dirty and in order to finish reading a file data : Locked
         // Each must have with white-space delimiters a value, delimiter, "kB"
 
+        public const int BufferSize = 4096;
         private readonly byte[][] _smapsBuffer;
         private readonly SmapsReaderResults _smapsReaderResults = new SmapsReaderResults();
 
         private readonly byte[] _rwsBytes = Encoding.UTF8.GetBytes("rw-s");
+        private readonly byte[] _pBytes = Encoding.UTF8.GetBytes("---p");
         private readonly byte[] _sizeBytes = Encoding.UTF8.GetBytes("Size:");
         private readonly byte[] _swapBytes = Encoding.UTF8.GetBytes("Swap:");
         private readonly byte[] _rssBytes = Encoding.UTF8.GetBytes("Rss:");
@@ -44,7 +50,7 @@ namespace Sparrow.Platform.Posix
             Swap
         }
 
-        public SmapsReader(byte[][] smapsBuffer)
+        public SmapsRollupReader(byte[][] smapsBuffer)
         {
             _smapsBuffer = smapsBuffer;
         }
@@ -59,7 +65,7 @@ namespace Sparrow.Platform.Posix
 
         public static string GetSmapsPath(int pid)
         {
-            return $"/proc/{pid}/smaps";
+            return $"/proc/{pid}/smaps_rollup";
         }
 
         public SmapsReadResult<T> CalculateMemUsageFromSmaps<T>() where T : struct, ISmapsReaderResultAction
@@ -109,6 +115,8 @@ namespace Sparrow.Platform.Posix
                     var offset = 0;
                     if (_smapsBuffer[_currentBuffer][i] == 'r')
                         term = _rwsBytes;
+                    else if (_smapsBuffer[_currentBuffer][i] == '-')
+                        term = _pBytes;
                     else if (_smapsBuffer[_currentBuffer][i] == 'R')
                         term = _rssBytes;
                     else if (_smapsBuffer[_currentBuffer][i] == 'S')
@@ -218,7 +226,7 @@ namespace Sparrow.Platform.Posix
 
                         var currentChar = _smapsBuffer[searchedBuffer][valueSearchPosition];
 
-                        if (term == _rwsBytes) // value is filename which comes after last white-space and before '\n'
+                        if (term == _rwsBytes || term == _pBytes) // value is filename which comes after last white-space and before '\n'
                         {
                             // zero previous entries
                             if (posInTempBuf == 0)
@@ -262,7 +270,7 @@ namespace Sparrow.Platform.Posix
                         ++bytesSearched;
                     }
 
-                    if (term != _rwsBytes)
+                    if (term != _rwsBytes && term != _pBytes)
                     {
                         if (foundValue == false)
                             ThrowNotContainsValidValue(term, pid);
@@ -284,7 +292,7 @@ namespace Sparrow.Platform.Posix
 
 
                     long resultLong = 0;
-                    if (term != _rwsBytes)
+                    if (term != _rwsBytes && term != _pBytes)
                     {
                         var multiplier = 1;
                         for (var j = posInTempBuf - 1; j >= 0; j--)
@@ -300,7 +308,7 @@ namespace Sparrow.Platform.Posix
                         resultString = posInTempBuf > 0 ? Encoding.UTF8.GetString(_tempBufferBytes, 0, posInTempBuf) : "";
                     }
 
-                    if (term == _rwsBytes)
+                    if (term == _rwsBytes || term == _pBytes)
                     {
                         if (state != SearchState.None)
                             ThrowNotRwsTermAfterLockedTerm(state, term, pid);
@@ -315,7 +323,7 @@ namespace Sparrow.Platform.Posix
                     }
                     else if (term == _rssBytes)
                     {
-                        if (state != SearchState.Size)
+                        if (state != SearchState.Rws)
                             continue; // found Rss but not after rw-s - irrelevant
                         state = SearchState.Rss;
                         tmpRss += resultLong;
@@ -372,9 +380,9 @@ namespace Sparrow.Platform.Posix
                         if (resultString == null)
                             ThrowOnNullString();
 
-                        if (resultString.EndsWith(".voron") == false &&
-                            resultString.EndsWith(".buffers") == false)
-                            continue;
+                        //if (resultString.EndsWith(".voron") == false &&
+                        //    resultString.EndsWith(".buffers") == false)
+                        //    continue;
 
                         _smapsReaderResults.ResultString = resultString;
                         _smapsReaderResults.Size = valSize;
@@ -414,22 +422,26 @@ namespace Sparrow.Platform.Posix
             };
         }
 
+        [DoesNotReturn]
         private static void ThrowOnNullString()
         {
             throw new InvalidDataException("Got term 'Locked' (end of single mapping data) with no filename (in 'resultString') after rw-s");
         }
 
+        [DoesNotReturn]
         private void ThrowNotRwsTermAfterLockedTerm(SearchState state, byte[] term, int processId)
         {
             throw new InvalidDataException(
                 $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but previous search did not end with '{Encoding.UTF8.GetString(_lockedBytes)}' (instead got {state})");
         }
 
+        [DoesNotReturn]
         private void ThrowNotContainsValidValue(byte[] term, int processId)
         {
             throw new InvalidDataException($"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but no value");
         }
 
+        [DoesNotReturn]
         private void ThrowNotContainsKbValue(byte[] term, int processId, string addtionalInfo)
         {
             throw new InvalidDataException(
