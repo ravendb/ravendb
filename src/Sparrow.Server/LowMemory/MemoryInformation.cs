@@ -305,8 +305,8 @@ namespace Sparrow.LowMemory
             {
                 if (PlatformDetails.RunningOnLinux)
                 {
-                    var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
-                    var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                    var buffer1 = ArrayPool<byte>.Shared.Rent(AbstractSmapsReader.BufferSize);
+                    var buffer2 = ArrayPool<byte>.Shared.Rent(AbstractSmapsReader.BufferSize);
                     buffers = new[] { buffer1, buffer2 };
                     smapsReader = AbstractSmapsReader.CreateSmapsReader(new[] { buffer1, buffer2 });
                 }
