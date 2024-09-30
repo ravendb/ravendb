@@ -44,7 +44,7 @@ Locked:                0 kB
         [Fact]
         public void ParsesSmapsProperlyFromRollup()
         {
-            var smapsReader = new SmapsRollupReader(new[] { new byte[AbstractSmapsReader.BufferSize], new byte[AbstractSmapsReader.BufferSize] });
+            var smapsReader = SmapsRollupReader.CreateNew([new byte[AbstractSmapsReader.BufferSize], new byte[AbstractSmapsReader.BufferSize]]);
             AbstractSmapsReader.SmapsReadResult<SmapsTestResult> result;
             using (var smapsStream = new FakeProcSmapsEntriesStream(new MemoryStream(Encoding.UTF8.GetBytes(SmapsRollup))))
             {
@@ -59,10 +59,7 @@ Locked:                0 kB
         public void ParsesSmapsProperly()
         {
             var assembly = typeof(SmapsReaderTests).Assembly;
-            var smapsReader = new SmapsReader(new[]
-            {
-                new byte[AbstractSmapsReader.BufferSize], new byte[AbstractSmapsReader.BufferSize]
-            });
+            var smapsReader = SmapsReader.CreateNew([new byte[AbstractSmapsReader.BufferSize], new byte[AbstractSmapsReader.BufferSize]]);
 
             AbstractSmapsReader.SmapsReadResult<SmapsTestResult> result;
 
