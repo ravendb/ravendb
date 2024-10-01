@@ -19,17 +19,29 @@ public class RavenDB_22937 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Querying)]
-    public void StaticIndexStandardAnalyzerCanSearchForWildcardsInSearch()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+    public void StaticIndexStandardAnalyzerCanSearchForWildcardsInSearch(RavenTestParameters parameters)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Lucene));
+        using var store = GetDocumentStore(parameters.Options);
         new StandardIndex().Execute(store);
         IRavenQueryable<Dto> QueryFactory(IDocumentSession session) => session.Query<Dto, StandardIndex>().Customize(x => x.WaitForNonStaleResults());
-        StandardAnalyzerCanSearchForWildcardsInSearch(store, QueryFactory, nameof(Dto.Name));
+        switch (parameters.SearchEngine)
+        {
+            case RavenSearchEngineMode.Lucene:
+                StandardAnalyzerCanSearchForWildcardsInSearch(store, QueryFactory, nameof(Dto.Name));
+                break;
+            case RavenSearchEngineMode.Corax:
+                StandardAnalyzerCanSearchForWildcardsInSearchCorax(store, QueryFactory, nameof(Dto.Name));
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(parameters.SearchEngine), parameters.SearchEngine, null);
+        }
     }
 
-    [RavenFact(RavenTestCategory.Querying)]
-    public void StaticIndexWithCustomSearchAnalyzerCanSearchForWildcardsInSearchWhenAnalyzerDoesntRemoveAsterisks()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+    public void StaticIndexWithCustomSearchAnalyzerCanSearchForWildcardsInSearchWhenAnalyzerDoesntRemoveAsterisks(RavenTestParameters parameters)
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Lucene));
         store.Maintenance.Send(new PutAnalyzersOperation(new AnalyzerDefinition()
@@ -39,19 +51,70 @@ public class RavenDB_22937 : RavenTestBase
         }));
         
         new FullTextSearchWithoutRemovingAsteriskIndex(nameof(FullTextSearchWithoutRemovingAsterisk)).Execute(store);
-        IRavenQueryable<Dto> QueryFactory(IDocumentSession session) => session.Query<Dto, FullTextSearchWithoutRemovingAsteriskIndex>().Customize(x => x.WaitForNonStaleResults());
-        StandardAnalyzerCanSearchForWildcardsInSearch(store, QueryFactory, nameof(Dto.Name));
+        IRavenQueryable<Dto> QueryFactory(IDocumentSession session) => session
+            .Query<Dto, FullTextSearchWithoutRemovingAsteriskIndex>()
+            .Customize(x => x.WaitForNonStaleResults());
+
+        switch (parameters.SearchEngine)
+        {
+            case RavenSearchEngineMode.Lucene:
+                StandardAnalyzerCanSearchForWildcardsInSearch(store, QueryFactory, nameof(Dto.Name));
+                break;
+            case RavenSearchEngineMode.Corax:
+                StandardAnalyzerCanSearchForWildcardsInSearchCorax(store, QueryFactory);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(parameters.SearchEngine), parameters.SearchEngine, null);
+        }
     }
 
-    [RavenFact(RavenTestCategory.Querying)]
-    public void AutoIndexStandardAnalyzerCanSearchForWildcardsInSearch()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+    public void AutoIndexStandardAnalyzerCanSearchForWildcardsInSearch(RavenTestParameters parameters)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Lucene));
+        using var store = GetDocumentStore(parameters.Options);
         IRavenQueryable<Dto> QueryFactory(IDocumentSession session) => session.Query<Dto>().Customize(x => x.WaitForNonStaleResults());
-        StandardAnalyzerCanSearchForWildcardsInSearch(store, QueryFactory, $"search({nameof(Dto.Name)})");
+        switch (parameters.SearchEngine)
+        {
+            case RavenSearchEngineMode.Lucene:
+                StandardAnalyzerCanSearchForWildcardsInSearch(store, QueryFactory, $"search({nameof(Dto.Name)})");
+                break;
+            case RavenSearchEngineMode.Corax:
+                StandardAnalyzerCanSearchForWildcardsInSearchCorax(store, QueryFactory, $"search({nameof(Dto.Name)})");
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(parameters.SearchEngine), parameters.SearchEngine, null);
+        }
     }
     
-    
+    // No support for explanations inside Corax, so different assertions
+    private void StandardAnalyzerCanSearchForWildcardsInSearchCorax(IDocumentStore store, Func<IDocumentSession, IRavenQueryable<Dto>> createQuery, string indexFieldName)
+    {
+        using var session = store.OpenSession();
+        session.Advanced.WaitForIndexesAfterSaveChanges();
+        session.Store(new Dto("MacCOMMONiej"));
+        session.Store(new Dto("RavCOMMONenDB"));
+        session.SaveChanges();
+
+        //startsWith:
+        var result = createQuery(session)
+            .Search(x => x.Name, "Mac*")
+            .First();
+        Assert.Equal("MacCOMMONiej", result.Name);
+
+        //endsWith
+        result = createQuery(session)
+            .Search(x => x.Name, "*db")
+            .First();
+        Assert.Equal("RavCOMMONenDB", result.Name);
+
+        //contains
+        var results = createQuery(session)
+            .Search(x => x.Name, "*COMMON*")
+            .ToList();
+
+        Assert.Equal(2, results.Count);
+    }
 
     private void StandardAnalyzerCanSearchForWildcardsInSearch(IDocumentStore store, Func<IDocumentSession, IRavenQueryable<Dto>> createQuery, string indexFieldName)
     {
@@ -94,9 +157,36 @@ public class RavenDB_22937 : RavenTestBase
         Assert.Contains($"{indexFieldName}:*common*", explanations.GetExplanations(results[1].Id)[0]);
     }
 
+    private void StandardAnalyzerCanSearchForWildcardsInSearchCorax(IDocumentStore store, Func<IDocumentSession, IRavenQueryable<Dto>> createQuery)
+    {
+        using var session = store.OpenSession();
+        session.Advanced.WaitForIndexesAfterSaveChanges();
+        session.Store(new Dto("MacCOMMONiej"));
+        session.Store(new Dto("RavCOMMONenDB"));
+        session.SaveChanges();
+
+        //startsWith:
+        var result = createQuery(session)
+            .Search(x => x.Name, "Mac*")
+            .First();
+        Assert.Equal("MacCOMMONiej", result.Name);
+
+        //endsWith
+        result = createQuery(session)
+            .Search(x => x.Name, "*db")
+            .First();
+        Assert.Equal("RavCOMMONenDB", result.Name);
+
+        //contains
+        var results = createQuery(session)
+            .Search(x => x.Name, "*COMMON*")
+            .ToList();
+
+        Assert.Equal(2, results.Count);
+    }
 
     [RavenFact(RavenTestCategory.Querying)]
-    public void CustomStandardAnalyzerSearchWillNotRestoreAsterisks()
+    public void CustomStandardAnalyzerSearchWillNotRestoreAsterisksLucene()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Lucene));
         store.Maintenance.Send(new PutAnalyzersOperation(new AnalyzerDefinition()
@@ -143,6 +233,44 @@ public class RavenDB_22937 : RavenTestBase
 
         Assert.Equal(1, results.Count);
         Assert.Contains($"Name:maciej", explanations.GetExplanations(results[0].Id)[0]);
+    }
+    
+    [RavenFact(RavenTestCategory.Querying)]
+    public void CustomStandardAnalyzerSearchWillNotRestoreAsterisksCorax()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        store.Maintenance.Send(new PutAnalyzersOperation(new AnalyzerDefinition()
+        {
+            Name = nameof(StandardAnalyzerWrapperAnalyzer), 
+            Code = StandardAnalyzerWrapperAnalyzer
+        }));
+        
+        new FullTextSearchWithoutRemovingAsteriskIndex(nameof(StandardAnalyzerWrapperAnalyzer)).Execute(store);
+        
+        using var session = store.OpenSession();
+        session.Advanced.WaitForIndexesAfterSaveChanges();
+        session.Store(new Dto("Maciej"));
+        session.Store(new Dto("RavenDB"));
+        session.SaveChanges();
+
+        //startsWith:
+        var result = session.Query<Dto, FullTextSearchWithoutRemovingAsteriskIndex>()
+            .Search(x => x.Name, "mac*")
+            .FirstOrDefault();
+        Assert.Null(result);
+
+        //endsWith
+        result = session.Query<Dto, FullTextSearchWithoutRemovingAsteriskIndex>()
+            .Search(x => x.Name, "*avendb")
+            .FirstOrDefault();
+        Assert.Null(result);
+
+
+        //contains
+        result = session.Query<Dto, FullTextSearchWithoutRemovingAsteriskIndex>()
+            .Search(x => x.Name, "*ven*")
+            .FirstOrDefault();
+        Assert.Null(result);   
     }
     
     private class StandardIndex : AbstractIndexCreationTask<Dto>

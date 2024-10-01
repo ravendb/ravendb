@@ -36,7 +36,7 @@ public class RavenDB_21689 : StorageTest
     public void NotAcceleratedAndWithInsideSetTermMatchWillNotHaveInfinityLoop()
     {
         const int docsSize = 64 * 1000;
-        
+        using var defaultAnalyzer = global::Corax.Analyzers.Analyzer.CreateLowercaseAnalyzer(_bsc);
         using (var indexWriter = new IndexWriter(Env, _fieldsMapping, SupportedFeatures.All))
         {
             for (var docIdx = 0; docIdx < docsSize; ++docIdx)
@@ -53,7 +53,7 @@ public class RavenDB_21689 : StorageTest
         
         using (var indexSearcher = new IndexSearcher(Env, _fieldsMapping){ForceNonAccelerated = true})
         {
-            var searchQuery = indexSearcher.SearchQuery(_fieldsMapping.GetByFieldId(2).Metadata, new[] {"abc10*"}, Constants.Search.Operator.Or);
+            var searchQuery = indexSearcher.SearchQuery(_fieldsMapping.GetByFieldId(2).Metadata.ChangeAnalyzer(FieldIndexingMode.Search, defaultAnalyzer), new[] {"abc10*"}, Constants.Search.Operator.Or);
             var termQuery = indexSearcher.TermQuery(_fieldsMapping.GetByFieldId(1).Metadata, "false");
             
             var searchIds = new long[docsSize];
