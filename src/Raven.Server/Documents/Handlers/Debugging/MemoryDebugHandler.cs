@@ -225,6 +225,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     var procStatus = MemoryInformation.GetMemoryUsageFromProcStatus();
                     var djv = new DynamicJsonValue
                     {
+                        ["Type"] = SmapsFactory.DefaultSmapsReaderType,
                         ["Totals"] = new DynamicJsonValue
                         {
                             ["WorkingSet"] = result.Rss,
