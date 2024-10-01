@@ -7,6 +7,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using Sparrow;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Platform;
@@ -130,6 +131,7 @@ namespace Voron.Platform.Posix
             dirsToCreate.ForEach(x => Directory.CreateDirectory(x));
         }
 
+        [UnsupportedOSPlatform("windows")]
         public static void EnsureRWPermissionsForOwnerAndGroup(string filePath)
         {
             var fileMode = File.GetUnixFileMode(filePath);
