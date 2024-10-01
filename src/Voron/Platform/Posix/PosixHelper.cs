@@ -7,7 +7,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using Mono.Unix;
 using Sparrow;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Platform;
@@ -133,8 +132,8 @@ namespace Voron.Platform.Posix
 
         public static void EnsureRWPermissionsForOwnerAndGroup(string filePath)
         {
-            var fileInfo = new UnixFileInfo(filePath);
-            fileInfo.FileAccessPermissions = fileInfo.FileAccessPermissions | FileAccessPermissions.UserRead | FileAccessPermissions.UserWrite | FileAccessPermissions.GroupRead | FileAccessPermissions.GroupWrite;
+            var fileMode = File.GetUnixFileMode(filePath);
+            File.SetUnixFileMode(filePath, fileMode | UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.GroupWrite);
         }
     }
 }
