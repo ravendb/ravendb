@@ -112,6 +112,13 @@ public class RavenDB_19938 : RavenTestBase
 
         record = CreateDatabaseRecord(builder => builder
             .Regular("DB1")
+            .ConfigureRevisionsBin(new RevisionsBinConfiguration { MinimumEntriesAgeToKeepInMin = 5})
+        );
+
+        Assert.Equal(5, record.RevisionsBin.MinimumEntriesAgeToKeepInMin);
+
+        record = CreateDatabaseRecord(builder => builder
+            .Regular("DB1")
             .ConfigureStudio(new StudioConfiguration { Environment = StudioConfiguration.StudioEnvironment.Production })
         );
 

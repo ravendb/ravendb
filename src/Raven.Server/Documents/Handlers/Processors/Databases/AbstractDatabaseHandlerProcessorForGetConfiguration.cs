@@ -1,25 +1,26 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.Expiration;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Handlers.Processors.Expiration
+namespace Raven.Server.Documents.Handlers.Processors.Databases
 {
-    internal abstract class AbstractExpirationHandlerProcessorForGet<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
-        where TOperationContext : JsonOperationContext 
+    internal abstract class AbstractDatabaseHandlerProcessorForGetConfiguration<TRequestHandler, TOperationContext, TConfiguration> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+        where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
+        where TConfiguration : IDynamicJson
     {
-        protected AbstractExpirationHandlerProcessorForGet([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+        protected AbstractDatabaseHandlerProcessorForGetConfiguration([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
-        protected abstract ExpirationConfiguration GetExpirationConfiguration();
+        protected abstract TConfiguration GetConfiguration();
 
         public override async ValueTask ExecuteAsync()
         {
-            var expirationConfig = GetExpirationConfiguration();
+            var expirationConfig = GetConfiguration();
 
             using (RequestHandler.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {

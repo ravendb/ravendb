@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 
         protected override ValueTask OnAfterUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
-            RequestHandler.LogTaskToAudit(RevisionsHandler.ConflictedRevisionsConfigTag, Index, configuration);
+            RequestHandler.LogTaskToAudit(Web.RequestHandler.ConflictedRevisionsConfigTag, Index, configuration);
             return ValueTask.CompletedTask;
         }
     }

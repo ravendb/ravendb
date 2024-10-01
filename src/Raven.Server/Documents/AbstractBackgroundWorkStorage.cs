@@ -152,7 +152,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
     protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount);
 
-    protected static bool ShouldHandleWorkOnCurrentNode(DatabaseTopology topology, string nodeTag)
+    public static bool ShouldHandleWorkOnCurrentNode(DatabaseTopology topology, string nodeTag)
     {
         var isFirstInTopology = string.Equals(topology.AllNodes.FirstOrDefault(), nodeTag, StringComparison.OrdinalIgnoreCase);
         if (isFirstInTopology == false)

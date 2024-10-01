@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -80,7 +81,8 @@ namespace Raven.Server.Documents
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
         private static readonly Slice LastCompletedClusterTransactionIndexSlice;
-        private static readonly Slice GlobalTreeSlice;
+        public static readonly Slice RevisionsBinCleanerLastEtag;
+        public static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
         private readonly Action<LogMode, string> _addToInitLog;
@@ -107,6 +109,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
                 Slice.From(ctx, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
                 Slice.From(ctx, "LastCompletedClusterTransactionIndex", ByteStringType.Immutable, out LastCompletedClusterTransactionIndexSlice);
+                Slice.From(ctx, "LastRevisionsBinCleanerState", ByteStringType.Immutable, out RevisionsBinCleanerLastEtag);
                 Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
                 Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
                 Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
@@ -2752,11 +2755,8 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope GetEtagAsSlice(DocumentsOperationContext context, long etag, out Slice slice)
         {
-            var scope = context.Allocator.Allocate(sizeof(long), out var keyMem);
-            var swapped = Bits.SwapBytes(etag);
-            Memory.Copy(keyMem.Ptr, (byte*)&swapped, sizeof(long));
-            slice = new Slice(SliceOptions.Key, keyMem);
-            return scope;
+            Span<long> swapped = [Bits.SwapBytes(etag)];
+            return Slice.From(context.Allocator, MemoryMarshal.AsBytes(swapped), out slice);
         }
 
         [DoesNotReturn]

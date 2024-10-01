@@ -347,6 +347,12 @@ public sealed class DatabaseRecordBuilder :
         _databaseRecord.Revisions = configuration ?? throw new ArgumentNullException(nameof(configuration));
         return this;
     }
+    
+    IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.ConfigureRevisionsBin(RevisionsBinConfiguration configuration)
+    {
+        _databaseRecord.RevisionsBin = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        return this;
+    }
 
     IDatabaseRecordBuilderBase IDatabaseRecordBuilderBase.WithEtls(Action<IEtlConfigurationBuilder> builder)
     {
@@ -586,6 +592,8 @@ public interface IDatabaseRecordBuilderBase
     IDatabaseRecordBuilderBase WithSettings(Action<Dictionary<string, string>> builder);
 
     IDatabaseRecordBuilderBase ConfigureRevisions(RevisionsConfiguration configuration);
+
+    IDatabaseRecordBuilderBase ConfigureRevisionsBin(RevisionsBinConfiguration configuration);
 
     IDatabaseRecordBuilderBase WithEtls(Action<IEtlConfigurationBuilder> builder);
 

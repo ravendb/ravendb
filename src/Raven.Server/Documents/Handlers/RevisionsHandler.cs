@@ -20,9 +20,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public sealed class RevisionsHandler : DatabaseRequestHandler
     {
-        public const string ReadRevisionsConfigTag = "read-revisions-config";
-        public const string ConflictedRevisionsConfigTag = "conflicted-revisions-config";
-
         [RavenAction("/databases/*/revisions/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsConfiguration()
         {
