@@ -80,6 +80,7 @@ namespace Raven.Server.Documents
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
         private static readonly Slice LastCompletedClusterTransactionIndexSlice;
+        private static readonly Slice RevisionsBinCleanerLastEtag;
         private static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
@@ -105,6 +106,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
                 Slice.From(ctx, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
                 Slice.From(ctx, "LastCompletedClusterTransactionIndex", ByteStringType.Immutable, out LastCompletedClusterTransactionIndexSlice);
+                Slice.From(ctx, "LastRevisionsBinCleanerState", ByteStringType.Immutable, out RevisionsBinCleanerLastEtag);
                 Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
                 Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
                 Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
@@ -647,6 +649,31 @@ namespace Raven.Server.Documents
             var tree = context.Transaction.InnerTransaction.CreateTree(GlobalTreeSlice);
             using (Slice.External(context.Allocator, (byte*)&index, sizeof(long), out Slice indexSlice))
                 tree.Add(LastCompletedClusterTransactionIndexSlice, indexSlice);
+        }
+
+        public static long ReadLastRevisionsBinCleanerState(Transaction tx)
+        {
+            if (tx == null)
+                throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
+            var tree = tx.ReadTree(GlobalTreeSlice);
+            if (tree == null)
+            {
+                return 0;
+            }
+            var readResult = tree.Read(RevisionsBinCleanerLastEtag);
+            if (readResult == null)
+            {
+                return 0;
+            }
+
+            return readResult.Reader.ReadLittleEndianInt64();
+        }
+
+        public void SetLastRevisionsBinCleanerState(DocumentsOperationContext context, long etag)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree(GlobalTreeSlice);
+            using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
+                tree.Add(RevisionsBinCleanerLastEtag, etagSlice);
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string startAfterId,

@@ -30,7 +30,7 @@ using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
-using static Raven.Server.Documents.Schemas.Collections;
+using static Raven.Server.Documents.RevisionsBinCleaner;
 using static Raven.Server.Documents.Schemas.Revisions;
 using static Voron.Data.Tables.Table;
 using Constants = Raven.Client.Constants;
@@ -2474,6 +2474,55 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 yield return TableValueToRevision(context, ref tvr.Result.Reader);
+            }
+        }
+
+        public IEnumerable<Document> GetRevisionsBinEntries(DocumentsOperationContext context, DateTime before, DocumentFields fields, RevisionsBinCleanerState state)
+        {
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+
+            var ended = false;
+            while (ended == false)
+            {
+                ended = true;
+
+                using (GetEtagAsSlice(context, state.LastEtag, out var startSlice))
+                {
+                    foreach (var seekResult in table.SeekForwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], startSlice, 0))
+                    {
+                        var tvr = seekResult.Result;
+                        var storageId = tvr.Reader.Id;
+                        var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr.Reader);
+                        if (etag == NotDeletedRevisionMarker)
+                        {
+                            context.Transaction.InnerTransaction.ForgetAbout(storageId);
+                            continue;
+                        }
+
+                        state.LastEtag = etag;
+
+                        using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr.Reader, out Slice lowerId))
+                        {
+                            if (IsRevisionsBinEntry(context, table, lowerId, etag) == false) // if its not last - continue
+                            {
+                                context.Transaction.InnerTransaction.ForgetAbout(storageId);
+                                continue;
+                            }
+                        }
+
+                        var deleteRevision = TableValueToRevision(context, ref tvr.Reader, fields);
+                        if (deleteRevision.LastModified >= before)
+                        {
+                            context.Transaction.ForgetAbout(deleteRevision);
+                            yield break;
+                        }
+
+                        yield return deleteRevision;
+                        context.Transaction.InnerTransaction.ForgetAbout(storageId);
+                        ended = false;
+                        break;
+                    }
+                }
             }
         }
 

@@ -465,6 +465,22 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private RevisionsBinConfiguration _revisionsBin;
+
+        public RevisionsBinConfiguration RevisionsBin
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.RevisionsBin;
+
+                if (_revisionsBin == null && _record.TryGet(nameof(DatabaseRecord.RevisionsBin), out BlittableJsonReaderObject config) && config != null)
+                    _revisionsBin = JsonDeserializationCluster.RevisionsBinConfiguration(config);
+
+                return _revisionsBin;
+            }
+        }
+
         private DocumentsCompressionConfiguration _documentsCompressionConfiguration;
 
         public DocumentsCompressionConfiguration DocumentsCompressionConfiguration
