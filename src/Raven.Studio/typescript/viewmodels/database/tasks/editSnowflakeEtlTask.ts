@@ -294,12 +294,6 @@ class editSnowflakeEtlTask extends shardViewModelBase {
         super.compositionComplete();
 
         $('.edit-raven-snowflake-task [data-toggle="tooltip"]').tooltip();
-        
-        popoverUtils.longWithHover($("#js-snowflake-syntax"), {
-            html: true,
-            content: () => this.newConnectionString()?.syntaxHtml() ?? "",
-            placement: "top"
-        });
     }
     
     /***************************************************/

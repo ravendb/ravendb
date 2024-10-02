@@ -152,6 +152,10 @@ loadToOrders(orderData);`;
 
     sqlEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.sqlEtlSampleText);
 
+    static readonly snowflakeEtlSampleText = transformationScriptSyntax.sqlEtlSampleText;
+
+    snowflakeEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.snowflakeEtlSampleText);
+
     static readonly elasticSearchEtlSampleText =
 `var orderData = {
     Id: id(this), // property with RavenDB document ID
