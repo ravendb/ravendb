@@ -178,11 +178,12 @@ namespace Raven.Server.Documents.Indexes
             public const long StoreOnlySupportInCoraxIndexes = 60_003; // RavenDB-22369
             public const long JavaScriptProperlyHandleDynamicFieldsIndexFields = 60_004; //RavenDB-22363
             public const long UseNonExistingPostingList = 60_005; // RavenDB-22703
+            public const long CoraxSearchWildcardAdjustment = 60_006; // RavenDB-22937
 
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = UseNonExistingPostingList;
+            public const long CurrentVersion = CoraxSearchWildcardAdjustment;
 
             public static bool IsTimeTicksInJavaScriptIndexesSupported(long indexVersion)
             {

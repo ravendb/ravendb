@@ -1027,7 +1027,12 @@ public static class CoraxQueryBuilder
         var fieldsToFetch = builderParameters.FieldsToFetch;
         var indexFieldsMapping = builderParameters.IndexFieldsMapping;
         var allocator = builderParameters.Allocator;
-        var supportsPhraseQuery = builderParameters.Index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes;
+        IndexSearcher.SearchQueryOptions searchQueryOptions = IndexSearcher.SearchQueryOptions.Legacy;
+        if (builderParameters.Index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxSearchWildcardAdjustment)
+            searchQueryOptions = IndexSearcher.SearchQueryOptions.PhraseQueryWithWildcardAdjustments;
+        else if (builderParameters.Index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes)
+            searchQueryOptions = IndexSearcher.SearchQueryOptions.PhraseQuery;
+        
         
         QueryFieldName fieldName;
         var isDocumentId = false;
@@ -1081,34 +1086,8 @@ public static class CoraxQueryBuilder
             builderParameters.DynamicFields, handleSearch: true, hasBoost: builderParameters.HasBoost);
 
         // Wildcard queries:
-        if (supportsPhraseQuery && valueAsString.Length >= 1 && (valueAsString[0] == '*' || (valueAsString.Length >= 2 && valueAsString[^1] == '*')))
-        {
-            // We need to retrieve the analyzer for the dynamic field since the field metadata is created dynamically.
-            if (fieldMetadata.IsDynamic)
-                fieldMetadata = fieldMetadata.ChangeAnalyzer(fieldMetadata.Mode, builderParameters.IndexFieldsMapping.SearchAnalyzer(fieldMetadata.FieldName.ToString()));
-
-            
-            if (fieldMetadata.Analyzer is LuceneAnalyzerAdapter laa)
-            {
-                //logic from LuceneQueryBuilder
-                var luceneAnalyzer = laa.Analyzer switch
-                {
-                    KeywordAnalyzer keywordAnalyzer => builderParameters.IndexFieldsMapping.ExactAnalyzer(fieldMetadata.FieldName.ToString()),
-                    // here we force a lower case keyword analyzer to ensure proper behavior
-                    // https://ayende.com/blog/191841-B/understanding-query-processing-and-wildcards-in-ravendb
-                    RavenStandardAnalyzer or NGramAnalyzer => builderParameters.IndexFieldsMapping.DefaultAnalyzer,
-                    LowerCaseKeywordAnalyzer or CollationAnalyzer => builderParameters.IndexFieldsMapping.DefaultAnalyzer,
-                    // if the user has a custom analyzer, we'll use that, and they can deal with any surprises
-                    // in wildcard queries
-                    _ => null
-                };
-            
-                if (luceneAnalyzer != null) 
-                    fieldMetadata = fieldMetadata.ChangeAnalyzer(FieldIndexingMode.Search, luceneAnalyzer);
-            }
-            
-            // Currently, we do not have any custom Corax analyzers, so we don't need to address them.
-        }
+        if (searchQueryOptions is IndexSearcher.SearchQueryOptions.PhraseQueryWithWildcardAdjustments && valueAsString.Length >= 1 && (valueAsString[0] == '*' || (valueAsString.Length >= 2 && valueAsString[^1] == '*')))
+            fieldMetadata = ReplaceAnalyzerForWildcardQueries(fieldMetadata);
         
         
         if (proximity.HasValue)
@@ -1132,7 +1111,7 @@ public static class CoraxQueryBuilder
                 QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, queryParameters, fieldExpression);
         }
         
-        return indexSearcher.SearchQuery(fieldMetadata, GetValues(), @operator, supportsPhraseQuery, builderParameters.Token);
+        return indexSearcher.SearchQuery(fieldMetadata, GetValues(), @operator, searchQueryOptions, builderParameters.Token);
         
         /*
          * Here we need to deal with value that comes from the user, which means that we
@@ -1228,6 +1207,37 @@ public static class CoraxQueryBuilder
             }
 
             return (count & 1) == 1;
+        }
+
+        FieldMetadata ReplaceAnalyzerForWildcardQueries(in FieldMetadata original)
+        {
+            FieldMetadata result = original;
+            // We need to retrieve the analyzer for the dynamic field since the field metadata is created dynamically.
+            if (original.IsDynamic)
+                result = fieldMetadata.ChangeAnalyzer(original.Mode, builderParameters.IndexFieldsMapping.SearchAnalyzer(original.FieldName.ToString()));
+
+            
+            if (original.Analyzer is LuceneAnalyzerAdapter laa)
+            {
+                //logic from LuceneQueryBuilder
+                var luceneAnalyzer = laa.Analyzer switch
+                {
+                    KeywordAnalyzer keywordAnalyzer => builderParameters.IndexFieldsMapping.ExactAnalyzer(original.FieldName.ToString()),
+                    // here we force a lower case keyword analyzer to ensure proper behavior
+                    // https://ayende.com/blog/191841-B/understanding-query-processing-and-wildcards-in-ravendb
+                    RavenStandardAnalyzer or NGramAnalyzer => builderParameters.IndexFieldsMapping.DefaultAnalyzer,
+                    LowerCaseKeywordAnalyzer or CollationAnalyzer => builderParameters.IndexFieldsMapping.DefaultAnalyzer,
+                    // if the user has a custom analyzer, we'll use that, and they can deal with any surprises
+                    // in wildcard queries
+                    _ => null
+                };
+            
+                if (luceneAnalyzer != null) 
+                    result = original.ChangeAnalyzer(FieldIndexingMode.Search, luceneAnalyzer);
+            }
+            
+            // Currently, we do not have any custom Corax analyzers, so we don't need to address them.
+            return result;
         }
     }
     

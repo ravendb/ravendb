@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -10,6 +11,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Analyzers;
+using Raven.Client.Documents.Operations.Backups;
 
 namespace SlowTests.Issues;
 
@@ -232,7 +234,7 @@ public class RavenDB_22937 : RavenTestBase
             .ToList();
 
         Assert.Equal(1, results.Count);
-        Assert.Contains($"Name:maciej", explanations.GetExplanations(results[0].Id)[0]);
+        Assert.Contains($"Name:maciej)", explanations.GetExplanations(results[0].Id)[0]);
     }
     
     [RavenFact(RavenTestCategory.Querying)]
@@ -252,7 +254,6 @@ public class RavenDB_22937 : RavenTestBase
         session.Store(new Dto("Maciej"));
         session.Store(new Dto("RavenDB"));
         session.SaveChanges();
-
         //startsWith:
         var result = session.Query<Dto, FullTextSearchWithoutRemovingAsteriskIndex>()
             .Search(x => x.Name, "mac*")
@@ -271,6 +272,50 @@ public class RavenDB_22937 : RavenTestBase
             .Search(x => x.Name, "*ven*")
             .FirstOrDefault();
         Assert.Null(result);   
+    }
+
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    public void BackwardCompatibilityForWildcardQueries()
+    {
+        var backupPath = NewDataPath(forceCreateDir: true);
+        var fullBackupPath = Path.Combine(backupPath, "RavenDB_22937.ravendb-snapshot");
+        ExtractFile(fullBackupPath);
+        using (var store = GetDocumentStore())
+        {
+            var databaseName = GetDatabaseName();
+
+            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = backupPath, DatabaseName = databaseName }))
+            {
+                using var session = store.OpenSession(databaseName);
+                
+                var result = session.Query<Dto, FullTextSearchWithoutRemovingAsteriskIndex>()
+                    .Search(x => x.Name, "mac*")
+                    .FirstOrDefault();
+                Assert.NotNull(result);
+
+                //endsWith
+                result = session.Query<Dto, FullTextSearchWithoutRemovingAsteriskIndex>()
+                    .Search(x => x.Name, "*avendb")
+                    .FirstOrDefault();
+                Assert.NotNull(result);
+
+
+                //contains
+                result = session.Query<Dto, FullTextSearchWithoutRemovingAsteriskIndex>()
+                    .Search(x => x.Name, "*ven*")
+                    .FirstOrDefault();
+                Assert.NotNull(result);   
+            }
+        }
+
+        void ExtractFile(string path)
+        {
+            using (var file = File.Create(path))
+            using (var stream = typeof(RavenDB_22937).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_22937.RavenDB_22937.ravendb-snapshot"))
+            {
+                stream.CopyTo(file);
+            }
+        }
     }
     
     private class StandardIndex : AbstractIndexCreationTask<Dto>
