@@ -8,7 +8,6 @@ using RabbitMQ.Client.Events;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
-using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;

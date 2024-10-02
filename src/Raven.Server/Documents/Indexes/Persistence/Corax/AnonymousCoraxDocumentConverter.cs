@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using Amazon.SimpleNotificationService.Model;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Corax;
@@ -9,9 +7,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Utils;
-using Sparrow.Binary;
 using Constants = Raven.Client.Constants;
-using Encoding = System.Text.Encoding;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 

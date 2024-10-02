@@ -1,4 +1,4 @@
-﻿import { Alert, Button, Col, Row, UncontrolledPopover } from "reactstrap";
+﻿import { Button, Col, Row, UncontrolledPopover } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
@@ -18,6 +18,7 @@ import DatabaseCustomSortersList from "components/pages/database/settings/custom
 import DatabaseCustomSortersServerWideList from "components/pages/database/settings/customSorters/DatabaseCustomSortersServerWideList";
 import { useCustomSorters } from "components/common/customSorters/useCustomSorters";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import RichAlert from "components/common/RichAlert";
 
 export default function DatabaseCustomSorters() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -155,8 +156,12 @@ function DatabaseLimitAlert(props: DatabaseLimitAlertProps) {
     }
 
     return (
-        <Alert color={databaseLimitReachStatus === "limitReached" ? "danger" : "warning"} className="text-center mb-3">
-            <Icon icon="database" />
+        <RichAlert
+            variant={databaseLimitReachStatus === "limitReached" ? "danger" : "warning"}
+            icon="database"
+            iconAddon="warning"
+            className="mb-3"
+        >
             Database {databaseLimitReachStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
             <strong>maximum number of Custom Sorters</strong> allowed per database by your license{" "}
             <strong>
@@ -168,7 +173,7 @@ function DatabaseLimitAlert(props: DatabaseLimitAlertProps) {
                     upgrade your license
                 </a>
             </strong>
-        </Alert>
+        </RichAlert>
     );
 }
 
@@ -187,8 +192,12 @@ function ClusterLimitAlert(props: ClusterLimitAlertProps) {
     }
 
     return (
-        <Alert color={clusterLimitReachStatus === "limitReached" ? "danger" : "warning"} className="text-center mb-3">
-            <Icon icon="cluster" />
+        <RichAlert
+            variant={clusterLimitReachStatus === "limitReached" ? "danger" : "warning"}
+            icon="cluster"
+            iconAddon="warning"
+            className="mb-3"
+        >
             Cluster {clusterLimitReachStatus === "limitReached" ? "has reached" : "is reaching"} the{" "}
             <strong>maximum number of Custom Sorters</strong> allowed per cluster by your license{" "}
             <strong>
@@ -200,7 +209,7 @@ function ClusterLimitAlert(props: ClusterLimitAlertProps) {
                     upgrade your license
                 </a>
             </strong>
-        </Alert>
+        </RichAlert>
     );
 }
 

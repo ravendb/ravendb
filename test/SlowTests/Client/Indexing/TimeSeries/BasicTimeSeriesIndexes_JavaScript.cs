@@ -854,8 +854,7 @@ return ({
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllTimeSeriesFromCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -1002,8 +1001,7 @@ return ({
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanMapAllTimeSeries(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -4,7 +4,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 using FastTests;
+using Sparrow;
 using Sparrow.Server.Platform.Posix;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,16 +18,62 @@ namespace SlowTests.Utils
         {
         }
 
+        private const string SmapsRollup = @"605f1bf67000-7fff4b6e2000 ---p 00000000 00:00 0                          [rollup]
+Rss:              843564 kB
+Pss:              809811 kB
+Pss_Dirty:        543903 kB
+Pss_Anon:         422104 kB
+Pss_File:         265771 kB
+Pss_Shmem:        121935 kB
+Shared_Clean:      61696 kB
+Shared_Dirty:         32 kB
+Private_Clean:    237944 kB
+Private_Dirty:    543892 kB
+Referenced:       713176 kB
+Anonymous:        422104 kB
+LazyFree:              0 kB
+AnonHugePages:         0 kB
+ShmemPmdMapped:        0 kB
+FilePmdMapped:         0 kB
+Shared_Hugetlb:        0 kB
+Private_Hugetlb:       0 kB
+Swap:                  0 kB
+SwapPss:               0 kB
+Locked:                0 kB
+";
+
+
+        [RavenFact(RavenTestCategory.Linux | RavenTestCategory.Memory)]
+        public void ParsesSmapsProperlyFromRollup()
+        {
+            var smapsReader = new SmapsRollupReader([new byte[SmapsFactory.BufferSize], new byte[SmapsFactory.BufferSize]]);
+            SmapsReadResult<SmapsTestResult> result;
+            using (var smapsStream = new FakeProcSmapsEntriesStream(new MemoryStream(Encoding.UTF8.GetBytes(SmapsRollup))))
+            {
+                result = smapsReader
+                    .CalculateMemUsageFromSmaps<SmapsTestResult>(smapsStream, pid: 1234);
+            }
+
+            Assert.Single(result.SmapsResults.Entries);
+
+            var totalDirty = new Size(0, SizeUnit.Bytes);
+            totalDirty.Add(543892, SizeUnit.Kilobytes);
+            totalDirty.Add(32, SizeUnit.Kilobytes);
+
+            Assert.Equal(new Size(843564, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes), result.Rss);
+            Assert.Equal(new Size(61696, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes), result.SharedClean);
+            Assert.Equal(new Size(237944, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes), result.PrivateClean);
+            Assert.Equal(new Size(0, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes), result.Swap);
+            Assert.Equal(totalDirty.GetValue(SizeUnit.Bytes), result.TotalDirty);
+        }
+
         [Fact]
         public void ParsesSmapsProperly()
         {
             var assembly = typeof(SmapsReaderTests).Assembly;
-            var smapsReader = new SmapsReader(new[]
-            {
-                new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]
-            });
+            var smapsReader = new SmapsReader([new byte[SmapsFactory.BufferSize], new byte[SmapsFactory.BufferSize]]);
 
-            SmapsReader.SmapsReadResult<SmapsTestResult> result;
+            SmapsReadResult<SmapsTestResult> result;
             
             using (var fs = 
                 assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_15159.12119.smaps.gz"))
@@ -73,7 +121,7 @@ namespace SlowTests.Utils
 
             private IEnumerable<string> ReadEntry()
             {
-                using (StreamReader reader = new StreamReader(_smapsSnapshotStream))
+                using (StreamReader reader = new(_smapsSnapshotStream))
                 {
                     var currentEntry = new StringBuilder();
                     string line;
@@ -88,6 +136,8 @@ namespace SlowTests.Utils
                             currentEntry = new StringBuilder();
                         }
                     }
+
+                    yield return currentEntry.ToString();
                 }
             }
             

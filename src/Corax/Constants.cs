@@ -18,6 +18,7 @@ namespace Corax
         
         public const string EmptyString = "\u0003";
         public static readonly ReadOnlyMemory<char> EmptyStringCharSpan = new(Constants.EmptyString.ToCharArray());
+        public static ReadOnlySpan<byte> EmptyStringByteSpan => "\u0003"u8;
 
         private const string NonExistingValue = "\u0001";
         
@@ -28,15 +29,17 @@ namespace Corax
         public const string IndexTimeFields = "@index_time_fields";
         public const string DocumentBoost = "@document_boost";
         public const string ProjectionNullValue = "NULL_VALUE";
+        public const string ProjectionEmptyString = "EMPTY_STRING";
         public const string JsonValue = "JSON_VALUE";
 
-        public static readonly Slice NullValueSlice, ProjectionNullValueSlice, EmptyStringSlice, IndexMetadataSlice, DocumentBoostSlice, IndexTimeFieldsSlice, NonExistingValueSlice;
+        public static readonly Slice NullValueSlice, ProjectionNullValueSlice, EmptyStringSlice, IndexMetadataSlice, DocumentBoostSlice, IndexTimeFieldsSlice, NonExistingValueSlice, ProjectionEmptyStringSlice;
 
         static Constants()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
                 Slice.From(ctx, ProjectionNullValue, ByteStringType.Immutable, out ProjectionNullValueSlice);
+                Slice.From(ctx, ProjectionEmptyString, ByteStringType.Immutable, out ProjectionEmptyStringSlice);
                 Slice.From(ctx, NullValue, ByteStringType.Immutable, out NullValueSlice);
                 Slice.From(ctx, EmptyString, ByteStringType.Immutable, out EmptyStringSlice);
                 Slice.From(ctx, IndexMetadata, ByteStringType.Immutable, out IndexMetadataSlice);

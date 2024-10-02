@@ -6,7 +6,6 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.IndexMerging;
-using Raven.Server.Web;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

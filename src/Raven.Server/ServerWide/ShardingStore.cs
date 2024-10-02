@@ -13,7 +13,6 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Server.Collections;

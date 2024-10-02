@@ -11,7 +11,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;

@@ -20,7 +20,6 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using static Raven.Server.ServerWide.Commands.ClusterTransactionCommand;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Handlers.Processors.Batches;
 

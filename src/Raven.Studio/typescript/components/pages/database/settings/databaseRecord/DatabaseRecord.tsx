@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Button, Card, CardBody, Col, InputGroup, Row } from "reactstrap";
+import { Button, Card, CardBody, Col, InputGroup, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import useConfirm from "components/common/ConfirmDialog";
@@ -20,6 +20,7 @@ import DatabaseRecordAboutView from "./DatabaseRecordAboutView";
 import ReactAce from "react-ace/lib/ace";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import RichAlert from "components/common/RichAlert";
 
 interface VisibleDocument {
     text: string;
@@ -271,10 +272,9 @@ export default function DatabaseRecord() {
 
 function EditModeRiskAlert() {
     return (
-        <Alert color="warning">
-            <Icon icon="warning" />
+        <RichAlert variant="warning">
             Tampering with the Database Record may result in unwanted behavior including loss of the database along with
             all its data.
-        </Alert>
+        </RichAlert>
     );
 }

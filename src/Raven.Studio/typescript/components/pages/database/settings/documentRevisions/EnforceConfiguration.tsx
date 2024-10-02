@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Alert, Button, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { Button, Form, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import * as yup from "yup";
@@ -8,6 +8,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 import { FormSwitch } from "components/common/Form";
+import RichAlert from "components/common/RichAlert";
 
 interface EnforceConfigurationProps {
     toggle: () => void;
@@ -72,7 +73,7 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
                         <strong>on all existing revisions</strong> in the database per collection.
                     </p>
                     <p>Revisions might be removed depending on the current configuration rules.</p>
-                    <Alert color="warning">
+                    <RichAlert variant="warning">
                         <p>For collections without a specific revision configuration:</p>
                         <ul>
                             <li>
@@ -89,7 +90,7 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
                                 <strong>all conflicting document revisions will be deleted.</strong>
                             </li>
                         </ul>
-                    </Alert>
+                    </RichAlert>
                 </ModalBody>
                 <ModalFooter>
                     <Button color="link" className="link-muted" onClick={toggle}>

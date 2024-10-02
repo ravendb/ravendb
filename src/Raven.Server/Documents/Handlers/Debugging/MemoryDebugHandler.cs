@@ -57,14 +57,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         info.GenerationInfo.ToArray().Select((x, index) => new DynamicJsonValue
                         {
                             ["GenerationName"] = index switch
-                                {
-                                    0 => "Heap Generation 0",
-                                    1 => "Heap Generation 1",
-                                    2 => "Heap Generation 2",
-                                    3 => "Large Object Heap",
-                                    4 => "Pinned Object Heap",
-                                    _ => "Unknown Generation"
-                                },
+                            {
+                                0 => "Heap Generation 0",
+                                1 => "Heap Generation 1",
+                                2 => "Heap Generation 2",
+                                3 => "Large Object Heap",
+                                4 => "Pinned Object Heap",
+                                _ => "Unknown Generation"
+                            },
                             [nameof(x.FragmentationAfterBytes)] = x.FragmentationAfterBytes,
                             ["FragmentationAfterHumane"] = Size.Humane(x.FragmentationAfterBytes),
                             [nameof(x.FragmentationBeforeBytes)] = x.FragmentationBeforeBytes,
@@ -216,15 +216,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 var buffers = new[]
                 {
-                    ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize),
-                    ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize)
+                    ArrayPool<byte>.Shared.Rent(SmapsFactory.BufferSize),
+                    ArrayPool<byte>.Shared.Rent(SmapsFactory.BufferSize)
                 };
                 try
                 {
-                    var result = new SmapsReader(buffers).CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
+                    var result = SmapsFactory.CreateSmapsReader(buffers).CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
                     var procStatus = MemoryInformation.GetMemoryUsageFromProcStatus();
                     var djv = new DynamicJsonValue
                     {
+                        ["Type"] = SmapsFactory.DefaultSmapsReaderType,
                         ["Totals"] = new DynamicJsonValue
                         {
                             ["WorkingSet"] = result.Rss,
@@ -528,7 +529,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             public string PhysicalMemory { get; set; }
             public string WorkingSet { get; set; }
-            
+
             public string Remarks { get; set; }
             public string ManagedAllocations { get; set; }
             public string UnmanagedAllocations { get; set; }

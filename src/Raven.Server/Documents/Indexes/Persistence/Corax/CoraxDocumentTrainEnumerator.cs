@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text.Unicode;
 using System.Threading;
-using Corax;
 using Corax.Analyzers;
 using Corax.Indexing;
 using Corax.Mappings;

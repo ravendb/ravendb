@@ -18,8 +18,9 @@ import IndexUtils from "components/utils/IndexUtils";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAsync } from "react-async-hook";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { Alert, Button, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { Button, Form, InputGroup, InputGroupText, Modal, ModalBody, ModalFooter } from "reactstrap";
 import * as yup from "yup";
+import RichAlert from "components/common/RichAlert";
 
 type IndexDefinition = Raven.Client.Documents.Indexes.IndexDefinition;
 
@@ -241,15 +242,11 @@ export function ImportIndexes(props: ImportIndexesProps) {
 
                     <div className="vstack gap-2">
                         {selectedDatabaseName && importMode === "database" && filteredIndexes.isAnyAutoIndex && (
-                            <Alert color="info" className="text-left">
-                                <Icon icon="info" />
-                                All Auto-indexes will be skipped
-                            </Alert>
+                            <RichAlert variant="info">All Auto-indexes will be skipped</RichAlert>
                         )}
-                        <Alert color="info" className="text-left">
-                            <Icon icon="info" />
+                        <RichAlert variant="info">
                             All conflicting indexes will be overwritten after the import is completed
-                        </Alert>
+                        </RichAlert>
                     </div>
 
                     <div className="position-absolute m-2 end-0 top-0">

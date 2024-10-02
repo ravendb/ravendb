@@ -1,6 +1,6 @@
 import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Alert, InputGroup, InputGroupText, Spinner } from "reactstrap";
+import { InputGroup, InputGroupText, Spinner } from "reactstrap";
 import { FormCheckbox, FormPathSelector } from "components/common/Form";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
@@ -10,6 +10,7 @@ import { UseAsyncReturn } from "react-async-hook";
 import { CreateDatabaseFromBackupFormData } from "components/pages/resources/databases/partials/create/formBackup/createDatabaseFromBackupValidation";
 import { CreateDatabaseRegularFormData } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularValidation";
 import { Icon } from "components/common/Icon";
+import RichAlert from "components/common/RichAlert";
 
 interface CreateDatabaseStepPathProps {
     manualSelectedNodes: string[];
@@ -115,7 +116,7 @@ function PathInfo({
                         </div>
 
                         {location.Error ? (
-                            <Alert color="danger">{location.Error}</Alert>
+                            <RichAlert variant="danger">{location.Error}</RichAlert>
                         ) : (
                             <>
                                 {location.FreeSpaceHumane ? (
@@ -137,7 +138,7 @@ function PathInfo({
                                         )}
                                     </div>
                                 ) : (
-                                    <Alert color="warning">Path is unreachable</Alert>
+                                    <RichAlert variant="warning">Path is unreachable</RichAlert>
                                 )}
                             </>
                         )}
