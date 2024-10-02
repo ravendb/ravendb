@@ -8,6 +8,7 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink |
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl |
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl |
+    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl |
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl |
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl |
     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl |
@@ -77,6 +78,10 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
     
     static forSqlEtl(db: database | string, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl>(db, "SqlEtl", null, taskId);
+    }
+
+    static forSnowflakeEtl(db: database | string, taskId: number) {
+        return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl>(db, "SnowflakeEtl", null, taskId);
     }
 
     static forOlapEtl(db: database | string, taskId: number) {

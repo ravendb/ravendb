@@ -27,6 +27,7 @@ import { ConnectionStringDto } from "components/pages/database/settings/connecti
 import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptionsCommand";
 import getBackupLocationCommand from "commands/database/tasks/getBackupLocationCommand";
 import testAzureQueueStorageServerConnectionCommand from "commands/database/cluster/testAzureQueueStorageServerConnectionCommand";
+import testSnowflakeConnectionStringCommand from "commands/database/cluster/testSnowflakeConnectionStringCommand";
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -112,6 +113,10 @@ export default class TasksService {
 
     async testSqlConnectionString(databaseName: string, connectionString: string, factoryName: string) {
         return new testSqlConnectionStringCommand(databaseName, connectionString, factoryName).execute();
+    }
+
+    async testSnowflakeConnectionString(databaseName: string, connectionString: string) {
+        return new testSnowflakeConnectionStringCommand(databaseName, connectionString).execute();
     }
 
     async testRabbitMqServerConnection(databaseName: string, connectionString: string) {

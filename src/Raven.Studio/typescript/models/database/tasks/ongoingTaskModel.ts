@@ -34,6 +34,8 @@ abstract class ongoingTaskModel {
                 return "External Replication";
             case "SqlEtl":
                 return "SQL ETL";
+            case "SnowflakeEtl":
+                return "Snowflake ETL";
             case "OlapEtl":
                 return "OLAP ETL";
             case "ElasticSearchEtl":

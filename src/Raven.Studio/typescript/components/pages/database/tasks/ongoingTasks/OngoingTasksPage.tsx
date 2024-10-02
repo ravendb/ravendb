@@ -18,6 +18,7 @@ import {
     OngoingTaskReplicationHubInfo,
     OngoingTaskReplicationSinkInfo,
     OngoingTaskSharedInfo,
+    OngoingTaskSnowflakeEtlInfo,
     OngoingTaskSqlEtlInfo,
 } from "components/models/tasks";
 import { RavenEtlPanel } from "./panels/RavenEtlPanel";
@@ -65,6 +66,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { compareSets } from "common/typeUtils";
 import RichAlert from "components/common/RichAlert";
+import { SnowflakeEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/SnowflakeEtlPanel";
 
 export function OngoingTasksPage() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -154,6 +156,7 @@ export function OngoingTasksPage() {
         externalReplications,
         ravenEtls,
         sqlEtls,
+        snowflakeEtls,
         olapEtls,
         kafkaEtls,
         rabbitMqEtls,
@@ -495,6 +498,25 @@ export function OngoingTasksPage() {
                             </div>
                         )}
 
+                        {snowflakeEtls.length > 0 && (
+                            <div key="snowflake-etls">
+                                <HrHeader className="snowflake-etl" count={snowflakeEtls.length}>
+                                    <Icon icon="snowflake-etl" />
+                                    Snowflake ETL
+                                </HrHeader>
+
+                                {snowflakeEtls.map((x) => (
+                                    <SnowflakeEtlPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
                         {olapEtls.length > 0 && (
                             <div key="olap-etls">
                                 <HrHeader className="olap-etl" count={olapEtls.length}>
@@ -814,6 +836,9 @@ function getFilteredTasks(state: OngoingTasksState, filter: OngoingTasksFilterCr
         ) as OngoingTaskExternalReplicationInfo[],
         ravenEtls: filteredTasks.filter((x) => x.shared.taskType === "RavenEtl") as OngoingTaskRavenEtlInfo[],
         sqlEtls: filteredTasks.filter((x) => x.shared.taskType === "SqlEtl") as OngoingTaskSqlEtlInfo[],
+        snowflakeEtls: filteredTasks.filter(
+            (x) => x.shared.taskType === "SnowflakeEtl"
+        ) as OngoingTaskSnowflakeEtlInfo[],
         olapEtls: filteredTasks.filter((x) => x.shared.taskType === "OlapEtl") as OngoingTaskOlapEtlInfo[],
         kafkaEtls: filteredTasks.filter((x) => x.shared.taskType === "KafkaQueueEtl") as OngoingTaskKafkaEtlInfo[],
         rabbitMqEtls: filteredTasks.filter(

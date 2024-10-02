@@ -107,6 +107,8 @@ export default class TaskUtils {
                 return "RavenEtl";
             case "Sql":
                 return "SqlEtl";
+            case "Snowflake":
+                return "SnowflakeEtl";
             case "Queue":
                 return "QueueEtl";
             default:
@@ -124,6 +126,8 @@ export default class TaskUtils {
                 return "ElasticSearch";
             case "SqlEtl":
                 return "Sql";
+            case "SnowflakeEtl":
+                return "Snowflake";
             case "QueueEtl":
                 return "Queue";
             default:
@@ -137,6 +141,8 @@ export default class TaskUtils {
                 return "RavenDB";
             case "Sql":
                 return "SQL";
+            case "Snowflake":
+                return "Snowflake";
             case "Olap":
                 return "OLAP";
             case "ElasticSearch":

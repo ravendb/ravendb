@@ -81,7 +81,21 @@
 }
 
 .destinationModal {
-    .external-replication, .sql-etl, .olap-etl, .elastic-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink, .kafka-etl, .azure-queue-storage-etl, .rabbitmq-etl, .kafka-sink, .rabbitmq-sink {
+    .external-replication, 
+    .sql-etl, 
+    .snowflake-etl, 
+    .olap-etl, 
+    .elastic-etl, 
+    .ravendb-etl, 
+    .periodic-backup, 
+    .subscription, 
+    .pull-replication-hub, 
+    .pull-replication-sink, 
+    .kafka-etl, 
+    .azure-queue-storage-etl, 
+    .rabbitmq-etl, 
+    .kafka-sink, 
+    .rabbitmq-sink {
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
@@ -113,6 +127,10 @@
 
     .sql-etl {
         .bigbtn-variant (@sql-etl-color, @sql-etl-color-dark);
+    }
+    
+    .snowflake-etl {
+        .bigbtn-variant (@snowflake-etl-color, @snowflake-etl-color-dark);
     }
 
     .olap-etl {
@@ -257,6 +275,14 @@
             background-color: @sql-etl-color;
         }
 
+        .snowflake-etl {
+            color: @snowflake-etl-color;
+        }
+
+        .task-snowflake-etl {
+            background-color: @snowflake-etl-color;
+        }
+
         .olap-etl {
             color: @olap-etl-color;
         }
@@ -382,6 +408,10 @@
         }
 
         &.sql-etl {
+            .name-variant (@brand-info, @brand-info-light);
+        }
+
+        &.snowflake-etl {
             .name-variant (@brand-info, @brand-info-light);
         }
 
@@ -511,6 +541,13 @@
     flex-shrink: 0;
 }
 
+.snowflake-tables-list {
+    min-height: 80px;
+    max-height: 500px;
+    overflow: auto;
+    flex-shrink: 0;
+}
+
 .olap-tables-list {
     min-height: 80px;
     max-height: 500px;
@@ -603,7 +640,7 @@
     margin-top: 5px;
 }
 
-.edit-raven-sql-task {
+.edit-raven-sql-task, .edit-raven-snowflake-task {
 
     overflow-x: hidden;
 
@@ -799,6 +836,10 @@
 }
 
 .js-test-sql-tooltip {
+    z-index: calc(var(--zindex-modal) + 1);
+}
+
+.js-test-snowflake-tooltip {
     z-index: calc(var(--zindex-modal) + 1);
 }
 

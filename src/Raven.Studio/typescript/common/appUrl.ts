@@ -47,6 +47,7 @@ class appUrl {
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
         editRavenEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId)),
         editSqlEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase(), taskId)),
+        editSnowflakeEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditSnowflakeEtl(appUrl.currentDatabase(), taskId)),
         editOlapEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditOlapEtl(appUrl.currentDatabase(), taskId)),
         editElasticSearchEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditElasticSearchEtl(appUrl.currentDatabase(), taskId)),
         editKafkaEtl: (taskId?: number) => ko.pureComputed(() => appUrl.forEditKafkaEtl(appUrl.currentDatabase(), taskId)),
@@ -71,6 +72,7 @@ class appUrl {
         editSubscriptionTaskUrl: ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase())),
         editRavenEtlTaskUrl: ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase())),
         editSqlEtlTaskUrl: ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase())),
+        editSnowflakeEtlTaskUrl: ko.pureComputed(() => appUrl.forEditSnowflakeEtl(appUrl.currentDatabase())),
         editOlapEtlTaskUrl: ko.pureComputed(() => appUrl.forEditOlapEtl(appUrl.currentDatabase())),
         editElasticSearchEtlTaskUrl: ko.pureComputed(() => appUrl.forEditElasticSearchEtl(appUrl.currentDatabase())),
         editKafkaEtlTaskUrl: ko.pureComputed(() => appUrl.forEditKafkaEtl(appUrl.currentDatabase())),
@@ -614,6 +616,12 @@ class appUrl {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editSqlEtlTask?" + databasePart + taskPart;
+    }
+
+    static forEditSnowflakeEtl(db: database | string, taskId?: number): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        return "#databases/tasks/editSnowflakeEtlTask?" + databasePart + taskPart;
     }
 
     static forEditOlapEtl(db: database | string, taskId?: number): string {

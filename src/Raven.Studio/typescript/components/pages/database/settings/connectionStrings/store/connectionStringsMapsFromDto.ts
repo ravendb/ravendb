@@ -8,7 +8,9 @@ import {
     AzureQueueStorageConnection,
     RavenConnection,
     SqlConnection,
+    SnowflakeConnection,
 } from "../connectionStringsTypes";
+
 import ElasticSearchConnectionStringDto = Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString;
 import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString;
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
@@ -17,6 +19,7 @@ import { mapDestinationsFromDto } from "components/common/formDestinations/utils
 import assertUnreachable from "components/utils/assertUnreachable";
 
 type SqlConnectionStringDto = SqlConnectionString;
+type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
 
 type OngoingTaskForConnection = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask & {
     ConnectionStringName?: string;
@@ -38,6 +41,9 @@ function getConnectionStringUsedTasks(
             break;
         case "Sql":
             filteredTasks = tasks.filter((task) => task.TaskType === "SqlEtl");
+            break;
+        case "Snowflake":
+            filteredTasks = tasks.filter((task) => task.TaskType === "SnowflakeEtl");
             break;
         case "Olap":
             filteredTasks = tasks.filter((task) => task.TaskType === "OlapEtl");
@@ -102,6 +108,23 @@ export function mapSqlConnectionsFromDto(
                 factoryName: connection.FactoryName,
                 usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
             }) satisfies SqlConnection
+    );
+}
+
+export function mapSnowflakeConnectionsFromDto(
+    connections: Record<string, SnowflakeConnectionStringDto>,
+    ongoingTasks: OngoingTaskForConnection[]
+): SnowflakeConnection[] {
+    const type: SnowflakeConnection["type"] = "Snowflake";
+
+    return Object.values(connections).map(
+        (connection) =>
+            ({
+                type,
+                name: connection.Name,
+                connectionString: connection.ConnectionString,
+                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
+            }) satisfies SnowflakeConnection
     );
 }
 

@@ -51,6 +51,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
                             "Create Connection String",
                             "RavenDB",
                             "SQL",
+                            "Snowflake",
                             "OLAP",
                             "ElasticSearch",
                             "Kafka",

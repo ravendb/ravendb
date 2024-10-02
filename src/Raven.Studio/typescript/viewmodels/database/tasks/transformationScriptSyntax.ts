@@ -34,6 +34,9 @@ class transformationScriptSyntax extends dialogViewModelBase {
             case "Sql":
                 sampleText = transformationScriptSyntax.sqlEtlSampleText;
                 break;
+            case "Snowflake":
+                sampleText = transformationScriptSyntax.snowflakeEtlSampleText;
+                break;
             case "ElasticSearch":
                 sampleText = transformationScriptSyntax.elasticSearchEtlSampleText;
                 break;

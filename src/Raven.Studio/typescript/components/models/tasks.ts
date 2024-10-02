@@ -132,6 +132,10 @@ export interface OngoingTaskSqlEtlSharedInfo extends OngoingTaskSharedInfo {
     connectionStringDefined: boolean;
 }
 
+export interface OngoingTaskSnowflakeEtlSharedInfo extends OngoingTaskSharedInfo {
+    connectionStringName: string;
+}
+
 export interface OngoingTaskSubscriptionSharedInfo extends OngoingTaskSharedInfo {
     changeVectorForNextBatchStartingPoint: string;
     changeVectorForNextBatchStartingPointPerShard: { [key: string]: string };
@@ -157,6 +161,8 @@ export type OngoingTaskReplicationSinkNodeInfoDetails = OngoingTaskNodeInfoDetai
 
 export type OngoingTaskSqlEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
+export type OngoingTaskSnowflakeEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
+
 export type OngoingTaskSubscriptionNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export type OngoingTaskKafkaEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
@@ -171,6 +177,7 @@ export type OngoingTaskRabbitMqSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export type AnyEtlOngoingTaskInfo =
     | OngoingTaskSqlEtlInfo
+    | OngoingTaskSnowflakeEtlInfo
     | OngoingTaskOlapEtlInfo
     | OngoingTaskElasticSearchEtlInfo
     | OngoingTaskRavenEtlInfo
@@ -226,6 +233,11 @@ export type OngoingTaskReplicationSinkInfo = OngoingTaskInfo<
 export type OngoingTaskSqlEtlInfo = OngoingTaskInfo<
     OngoingTaskSqlEtlSharedInfo,
     OngoingEtlTaskNodeInfo<OngoingTaskSqlEtlNodeInfoDetails>
+>;
+
+export type OngoingTaskSnowflakeEtlInfo = OngoingTaskInfo<
+    OngoingTaskSnowflakeEtlSharedInfo,
+    OngoingEtlTaskNodeInfo<OngoingTaskSnowflakeEtlNodeInfoDetails>
 >;
 
 export type OngoingTaskKafkaEtlInfo = OngoingTaskInfo<

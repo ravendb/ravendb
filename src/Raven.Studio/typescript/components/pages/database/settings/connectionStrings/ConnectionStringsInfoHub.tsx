@@ -13,31 +13,36 @@ export function ConnectionStringsInfoHub() {
         defaultFeatureAvailability,
         overwrites: [
             {
-                featureName: defaultFeatureAvailability[0].featureName,
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "ravendb-etl").featureName,
                 value: features.hasRavenEtl,
             },
             {
-                featureName: defaultFeatureAvailability[1].featureName,
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "sql-etl").featureName,
                 value: features.hasSqlEtl,
             },
             {
-                featureName: defaultFeatureAvailability[2].featureName,
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "snowflake-etl").featureName,
+                value: features.hasSnowflakeEtl,
+            },
+            {
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "olap-etl").featureName,
                 value: features.hasOlapEtl,
             },
             {
-                featureName: defaultFeatureAvailability[3].featureName,
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "elastic-search-etl").featureName,
                 value: features.hasElasticSearchEtl,
             },
             {
-                featureName: defaultFeatureAvailability[4].featureName,
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "kafka-etl").featureName,
                 value: features.hasQueueEtl,
             },
             {
-                featureName: defaultFeatureAvailability[5].featureName,
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "rabbitmq-etl").featureName,
                 value: features.hasQueueEtl,
             },
             {
-                featureName: defaultFeatureAvailability[6].featureName,
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "azure-queue-storage-etl")
+                    .featureName,
                 value: features.hasQueueEtl,
             },
         ],
@@ -91,6 +96,13 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         featureIcon: "sql-etl",
         community: { value: false },
         professional: { value: true },
+        enterprise: { value: true },
+    },
+    {
+        featureName: "Snowflake ETL",
+        featureIcon: "snowflake-etl",
+        community: { value: false },
+        professional: { value: false },
         enterprise: { value: true },
     },
     {

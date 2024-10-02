@@ -5,6 +5,7 @@ import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenCon
 import AzureQueueStorageConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings;
 
 type SqlConnectionStringDto = SqlConnectionString;
+type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
 import { FormDestinations } from "components/common/formDestinations/utils/formDestinationsTypes";
 
 export interface ConnectionStringUsedTask {
@@ -29,6 +30,11 @@ export interface SqlConnection extends ConnectionBase {
     type: Extract<StudioEtlType, "Sql">;
     connectionString?: string;
     factoryName?: SqlConnectionStringFactoryName;
+}
+
+export interface SnowflakeConnection extends ConnectionBase {
+    type: Extract<StudioEtlType, "Snowflake">;
+    connectionString?: string;
 }
 
 export interface OlapConnection extends ConnectionBase, FormDestinations {
@@ -90,6 +96,7 @@ export interface AzureQueueStorageConnection extends ConnectionBase {
 export type Connection =
     | RavenConnection
     | SqlConnection
+    | SnowflakeConnection
     | OlapConnection
     | ElasticSearchConnection
     | KafkaConnection
@@ -102,6 +109,7 @@ export type ConnectionStringDto = Partial<
     | QueueConnectionStringDto
     | RavenConnectionStringDto
     | SqlConnectionStringDto
+    | SnowflakeConnectionStringDto
     | AzureQueueStorageConnectionSettingsDto
 >;
 

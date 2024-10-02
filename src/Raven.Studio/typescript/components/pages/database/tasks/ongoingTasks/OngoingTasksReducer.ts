@@ -21,6 +21,7 @@ import {
     OngoingTaskReplicationSinkSharedInfo,
     OngoingTaskSharedInfo,
     OngoingTaskSqlEtlSharedInfo,
+    OngoingTaskSnowflakeEtlSharedInfo,
     OngoingTaskSubscriptionInfo,
     OngoingTaskSubscriptionSharedInfo,
 } from "components/models/tasks";
@@ -30,6 +31,7 @@ import { databaseLocationComparator } from "components/utils/common";
 import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication;
 import genUtils from "common/generalUtils";
 import OngoingTaskSqlEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl;
+import OngoingTaskSnowflakeEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl;
 import OngoingTaskRavenEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl;
 import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
 import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl;
@@ -173,6 +175,15 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 destinationDatabase: incoming.DestinationDatabase,
                 connectionStringName: incoming.ConnectionStringName,
                 connectionStringDefined: incoming.ConnectionStringDefined,
+            };
+            return result;
+        }
+        case "SnowflakeEtl": {
+            const incoming = task as OngoingTaskSnowflakeEtlListView;
+            // noinspection UnnecessaryLocalVariableJS
+            const result: OngoingTaskSnowflakeEtlSharedInfo = {
+                ...commonProps,
+                connectionStringName: incoming.ConnectionStringName,
             };
             return result;
         }

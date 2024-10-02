@@ -69,6 +69,14 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         );
     }
 
+    withTestSnowflakeConnectionString(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
+        return this.mockResolvedValue(
+            this.mocks.testSqlConnectionString,
+            dto,
+            SharedStubs.nodeConnectionTestSuccessResult()
+        );
+    }
+
     withTestKafkaServerConnection(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
         return this.mockResolvedValue(
             this.mocks.testKafkaServerConnection,

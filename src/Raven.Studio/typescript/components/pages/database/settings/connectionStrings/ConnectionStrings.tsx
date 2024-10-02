@@ -110,6 +110,7 @@ export default function ConnectionStrings(props: ConnectionStringsUrlParameters)
 const allStudioEtlTypes = exhaustiveStringTuple<StudioEtlType>()(
     "Raven",
     "Sql",
+    "Snowflake",
     "Olap",
     "ElasticSearch",
     "Kafka",

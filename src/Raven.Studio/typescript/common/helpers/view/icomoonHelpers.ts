@@ -16,6 +16,7 @@ class icomoonHelpers {
         "ravendb-etl": 0xf109,
         "external-replication": 0xf10A,
         "sql-etl": 0xf10B,
+        "snowflake-etl": 0xf152,
         "olap-etl": 0xf10C,
         "elastic-search-etl": 0xf10D,
         "subscription": 0xf10E,

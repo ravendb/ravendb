@@ -51,6 +51,7 @@ describe("ConnectionStrings", () => {
                 isEmpty
                 hasElasticSearchEtl={false}
                 hasSqlEtl={false}
+                hasSnowflakeEtl={false}
                 hasRavenEtl={false}
                 hasOlapEtl={false}
                 hasQueueEtl={false}

@@ -243,6 +243,20 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             }
         }),
         new leafMenuItem({
+            route: 'databases/tasks/editSnowflakeEtlTask',
+            moduleId: require('viewmodels/database/tasks/editSnowflakeEtlTask'),
+            shardingMode: "allShards",
+            title: 'Snowflake ETL Task',
+            nav: false,
+            css: "icon-plus",
+            dynamicHash: appUrls.editSnowflakeEtlTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks',
+            search: {
+                overrideTitle: "Add New Snowflake ETL Task",
+                alternativeTitles: ["Create Snowflake ETL Task"],
+            }
+        }),
+        new leafMenuItem({
             route: 'databases/tasks/editOlapEtlTask',
             moduleId: require('viewmodels/database/tasks/editOlapEtlTask'),
             shardingMode: "allShards",
