@@ -137,12 +137,12 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
 const connectionStringsOptions: SelectOptionWithIcon<StudioEtlType>[] = [
     { value: "Raven", label: "RavenDB", icon: "raven" },
     { value: "Sql", label: "SQL", icon: "table" },
-    { value: "Snowflake", label: "Snowflake", icon: "table" },
+    { value: "Snowflake", label: "Snowflake", icon: "snowflake" },
     { value: "Olap", label: "OLAP", icon: "olap" },
     { value: "ElasticSearch", label: "ElasticSearch", icon: "elasticsearch" },
     { value: "Kafka", label: "Kafka", icon: "kafka" },
     { value: "RabbitMQ", label: "RabbitMQ", icon: "rabbitmq" },
-    { value: "AzureQueueStorage", label: "Azure Queue Storage", icon: "azure-queue-storage-etl" },
+    { value: "AzureQueueStorage", label: "Azure Queue Storage", icon: "azure" },
 ];
 
 function getAvailableConnectionStringsOptions(
