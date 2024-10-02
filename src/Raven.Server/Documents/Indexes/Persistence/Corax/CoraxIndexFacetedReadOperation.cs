@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
 using Corax.Mappings;
-using Corax.Querying.Matches.Meta;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;

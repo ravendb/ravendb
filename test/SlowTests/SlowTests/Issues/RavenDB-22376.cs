@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
 using FastTests;
 using FastTests.Utils;
 using Raven.Client;

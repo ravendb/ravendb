@@ -3,7 +3,6 @@ using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Text;
 using Corax;
-using Corax.Querying;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Json;
