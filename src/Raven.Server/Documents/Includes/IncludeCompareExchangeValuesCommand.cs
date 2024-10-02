@@ -110,12 +110,12 @@ namespace Raven.Server.Documents.Includes
                 if (string.IsNullOrEmpty(includedKey))
                     continue;
 
-                var toAdd = TryGetCompareExchange(includedKey, maxAllowedAtomicGuardIndex, out var index, out var value)
-                    ? (index, value)
-                    : (-1, null);
-
+                if (TryGetCompareExchange(includedKey, maxAllowedAtomicGuardIndex, out var index, out var value) == false
+                    && ClusterWideTransactionHelper.IsAtomicGuardKey(includedKey))
+                    continue;  
+                
                 Results ??= new Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>>(StringComparer.OrdinalIgnoreCase);
-                Results.Add(includedKey, new CompareExchangeValue<BlittableJsonReaderObject>(includedKey, toAdd.index,  toAdd.value));
+                Results.Add(includedKey, new CompareExchangeValue<BlittableJsonReaderObject>(includedKey, index,  value));
             }
         }
 
