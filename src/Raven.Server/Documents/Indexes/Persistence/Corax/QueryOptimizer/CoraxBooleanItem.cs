@@ -1,8 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
-using Corax.Querying;
 using Corax.Mappings;
-using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
 using Raven.Server.Documents.Queries;
 using Sparrow.Binary;

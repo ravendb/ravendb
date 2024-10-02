@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
@@ -300,16 +299,16 @@ namespace Sparrow.Server.LowMemory
 
         internal static MemoryInfoResult GetMemoryInformationUsingOneTimeSmapsReader()
         {
-            SmapsReader smapsReader = null;
+            ISmapsReader smapsReader = null;
             byte[][] buffers = null;
             try
             {
                 if (PlatformDetails.RunningOnLinux)
                 {
-                    var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
-                    var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                    var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsFactory.BufferSize);
+                    var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsFactory.BufferSize);
                     buffers = new[] { buffer1, buffer2 };
-                    smapsReader = new SmapsReader(new[] { buffer1, buffer2 });
+                    smapsReader = SmapsFactory.CreateSmapsReader(new[] { buffer1, buffer2 });
                 }
 
                 return GetMemoryInfo(smapsReader, extended: true);
@@ -324,7 +323,7 @@ namespace Sparrow.Server.LowMemory
             }
         }
 
-        private static bool GetFromProcMemInfo(SmapsReader smapsReader, ref ProcMemInfoResults procMemInfoResults)
+        private static bool GetFromProcMemInfo(ISmapsReader smapsReader, ref ProcMemInfoResults procMemInfoResults)
         {
             const string path = "/proc/meminfo";
 
@@ -388,7 +387,7 @@ namespace Sparrow.Server.LowMemory
             return true;
         }
 
-        internal static MemoryInfoResult GetMemoryInfo(SmapsReader smapsReader = null, bool extended = false)
+        internal static MemoryInfoResult GetMemoryInfo(ISmapsReader smapsReader = null, bool extended = false)
         {
             if (_failedToGetAvailablePhysicalMemory)
             {
@@ -435,7 +434,7 @@ namespace Sparrow.Server.LowMemory
             return totalScratchAllocated;
         }
 
-        private static MemoryInfoResult GetMemoryInfoLinux(SmapsReader smapsReader, bool extended)
+        private static MemoryInfoResult GetMemoryInfoLinux(ISmapsReader smapsReader, bool extended)
         {
             var fromProcMemInfo = new ProcMemInfoResults();
             GetFromProcMemInfo(smapsReader, ref fromProcMemInfo);

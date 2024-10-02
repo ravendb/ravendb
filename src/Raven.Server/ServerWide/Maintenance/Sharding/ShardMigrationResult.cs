@@ -1,5 +1,4 @@
 ﻿using Raven.Client.Util;
-using Raven.Server.ServerWide.Commands.Sharding;
 using Sparrow;
 
 namespace Raven.Server.ServerWide.Maintenance.Sharding

@@ -10,14 +10,11 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Impl;
-using Voron.Impl.Paging;
-using static Raven.Server.Utils.MetricCacher.Keys;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;

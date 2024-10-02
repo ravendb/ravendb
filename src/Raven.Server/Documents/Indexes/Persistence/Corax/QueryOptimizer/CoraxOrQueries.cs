@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using Corax.Querying;
 using Corax.Mappings;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;

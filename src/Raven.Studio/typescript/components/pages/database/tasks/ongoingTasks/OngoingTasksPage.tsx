@@ -38,7 +38,7 @@ import TaskUtils from "../../../../utils/TaskUtils";
 import { KafkaEtlPanel } from "./panels/KafkaEtlPanel";
 import { RabbitMqEtlPanel } from "./panels/RabbitMqEtlPanel";
 import useInterval from "hooks/useInterval";
-import { Alert, Button, Row } from "reactstrap";
+import { Button, Row } from "reactstrap";
 import { HrHeader } from "components/common/HrHeader";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
@@ -64,6 +64,7 @@ import { AzureQueueStorageEtlPanel } from "components/pages/database/tasks/ongoi
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { compareSets } from "common/typeUtils";
+import RichAlert from "components/common/RichAlert";
 
 export function OngoingTasksPage() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -291,11 +292,12 @@ export function OngoingTasksPage() {
     return (
         <div className="content-margin">
             {subscriptionsClusterLimitStatus !== "notReached" && (
-                <Alert
-                    color={subscriptionsClusterLimitStatus === "limitReached" ? "danger" : "warning"}
-                    className="text-center mb-3"
+                <RichAlert
+                    variant={subscriptionsClusterLimitStatus === "limitReached" ? "danger" : "warning"}
+                    icon="cluster"
+                    iconAddon="warning"
+                    className="mb-3"
                 >
-                    <Icon icon="cluster" />
                     Cluster {subscriptionsClusterLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
                     <strong>maximum number of subscriptions</strong> allowed per cluster by your license{" "}
                     <strong>
@@ -308,15 +310,16 @@ export function OngoingTasksPage() {
                         </a>{" "}
                     </strong>
                     to add more
-                </Alert>
+                </RichAlert>
             )}
 
             {subscriptionsDatabaseLimitStatus !== "notReached" && (
-                <Alert
-                    color={subscriptionsDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
-                    className="text-center mb-3"
+                <RichAlert
+                    variant={subscriptionsDatabaseLimitStatus === "limitReached" ? "danger" : "warning"}
+                    icon="database"
+                    iconAddon="warning"
+                    className="mb-3"
                 >
-                    <Icon icon="database" />
                     Database {subscriptionsDatabaseLimitStatus === "limitReached" ? "reached" : "is reaching"} the{" "}
                     <strong>maximum number of subscriptions</strong> allowed per database by your license{" "}
                     <strong>
@@ -329,7 +332,7 @@ export function OngoingTasksPage() {
                         </a>{" "}
                     </strong>
                     to add more
-                </Alert>
+                </RichAlert>
             )}
 
             {progressEnabled && <OngoingTaskProgressProvider onEtlProgress={onEtlProgress} />}

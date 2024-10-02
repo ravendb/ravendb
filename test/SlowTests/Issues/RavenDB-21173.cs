@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
-using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
 

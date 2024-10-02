@@ -3,8 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.Extensions;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Rachis
 {

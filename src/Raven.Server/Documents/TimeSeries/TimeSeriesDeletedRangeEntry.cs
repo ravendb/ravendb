@@ -7,8 +7,6 @@ namespace Raven.Server.Documents.TimeSeries
     {
         public LazyStringValue Key;
 
-        public LazyStringValue LuceneKey;
-
         public LazyStringValue DocId;
 
         public LazyStringValue Name;
@@ -19,9 +17,6 @@ namespace Raven.Server.Documents.TimeSeries
         {
             if (Key != null && Key.IsDisposed == false)
                 Key.Dispose();
-
-            if (LuceneKey != null && LuceneKey.IsDisposed == false)
-                LuceneKey.Dispose();
 
             if (DocId != null && DocId.IsDisposed == false)
                 DocId.Dispose();

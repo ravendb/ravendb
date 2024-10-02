@@ -13,6 +13,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
+    /// <summary>
+    /// Represents an operation to retrieve an attachment from the database.
+    /// </summary>
     public sealed class GetAttachmentOperation : IOperation<AttachmentResult>
     {
         private readonly string _documentId;
@@ -20,6 +23,18 @@ namespace Raven.Client.Documents.Operations.Attachments
         private readonly AttachmentType _type;
         private readonly string _changeVector;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetAttachmentOperation"/> class.
+        /// </summary>
+        /// <param name="documentId">The ID of the document associated with the attachment.</param>
+        /// <param name="name">The name of the attachment to be retrieved.</param>
+        /// <param name="type">The type of the attachment.</param>
+        /// <param name="changeVector">change vector for optimistic concurrency control. If no concurrency control require this should be set to null</param>
+        /// <remarks>
+        /// This constructor sets up an operation to retrieve a specific attachment.
+        /// If the <paramref name="changeVector"/> is provided, it ensures that the operation 
+        /// corresponds to the specified version of the document.
+        /// </remarks>
         public GetAttachmentOperation(string documentId, string name, AttachmentType type, string changeVector)
         {
             _documentId = documentId;

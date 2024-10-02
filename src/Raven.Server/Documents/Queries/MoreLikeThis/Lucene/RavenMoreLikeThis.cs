@@ -5,7 +5,6 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
 using Raven.Client.Documents.Queries.MoreLikeThis;
-using LuceneProj = Lucene;
 
 namespace Raven.Server.Documents.Queries.MoreLikeThis.Lucene;
 

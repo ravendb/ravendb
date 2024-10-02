@@ -72,7 +72,6 @@ using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
 using Raven.Server.Rachis;
 using Sparrow.Server.Utils;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents
 {

@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
 using Corax.Mappings;
-using Corax.Querying.Matches.Meta;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
@@ -356,10 +355,14 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             if (reader.IsNonExisting)
                 continue;
             
+            
             var key = reader.IsNull
                 ? Constants.ProjectionNullValueSlice
                 : reader.Current.Decoded();
 
+            if (key.SequenceEqual(Constants.EmptyStringByteSpan))
+                key = Constants.ProjectionEmptyStringSlice;
+            
             InsertTerm(key, ref cloned, facetValues, result, legacy, needToApplyAggregation, token);
         }
     }

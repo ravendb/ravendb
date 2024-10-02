@@ -51,12 +51,12 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
         protected override void HandleDelete(TombstoneIndexItem tombstone, string collection, Lazy<IndexWriteOperationBase> writer,
             QueryOperationContext queryContext, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            if (_timeSeriesStats.TryGetValue(tombstone.LuceneKey, out var result) == false)
+            if (_timeSeriesStats.TryGetValue(tombstone.PrefixKey, out var result) == false)
             {
                 var tsStats = _tsStorage.Stats.GetStats(queryContext.Documents, tombstone.LowerId, tombstone.Name);
                 result.Item1 = tsStats;
                 result.Deleted = false;
-                _timeSeriesStats.Add(tombstone.LuceneKey, result);
+                _timeSeriesStats.Add(tombstone.PrefixKey, result);
             }
             
             // if the time series is not completely deleted, we can skip further processing
@@ -69,13 +69,13 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
             HandleTimeSeriesDelete(tombstone, collection, writer, queryContext, indexContext, stats);
 
             result.Deleted = true;
-            _timeSeriesStats[tombstone.LuceneKey] = result;
+            _timeSeriesStats[tombstone.PrefixKey] = result;
         }
 
         protected virtual void HandleTimeSeriesDelete(TombstoneIndexItem tombstone, string collection, Lazy<IndexWriteOperationBase> writer,
             QueryOperationContext queryContext, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            writer.Value.DeleteTimeSeries(tombstone.LowerId, tombstone.LuceneKey, stats);
+            writer.Value.DeleteByPrefix(tombstone.PrefixKey, stats);
         }
 
         protected override void ClearStatsIfNeeded()

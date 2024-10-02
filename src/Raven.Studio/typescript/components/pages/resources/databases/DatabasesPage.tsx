@@ -105,7 +105,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
             trigger: false,
             replace: true,
         });
-    }, [props.compact, props.restore, databases, dispatch]);
+    }, [props.compact, props.restore, databases, dispatch, props.shard]);
 
     const selectedDatabases = databases.filter((x) => selectedDatabaseNames.includes(x.name));
 

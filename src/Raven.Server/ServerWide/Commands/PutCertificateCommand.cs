@@ -3,7 +3,6 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron.Data.BTrees;
 
 namespace Raven.Server.ServerWide.Commands
 {

@@ -1,10 +1,7 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;

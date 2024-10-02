@@ -7,12 +7,29 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
+    /// <summary>
+    /// Represents an operation to delete an attachment from the database.
+    /// </summary>
+    /// <remarks>
+    /// This operation can be used to remove an existing attachment associated with a document.
+    /// </remarks>
     public sealed class DeleteAttachmentOperation : IOperation
     {
         private readonly string _documentId;
         private readonly string _name;
         private readonly string _changeVector;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DeleteAttachmentOperation"/> class.
+        /// </summary>
+        /// <param name="documentId">The ID of the document from which the attachment will be deleted.</param>
+        /// <param name="name">The name of the attachment to be deleted.</param>
+        /// <param name="changeVector">An optional change vector of the attachment for optimistic concurrency control.</param>
+        /// <remarks>
+        /// Use this constructor to create an operation that deletes an attachment
+        /// associated with the specified document. If the <paramref name="changeVector"/> is provided,
+        /// it ensures that the attachment is only deleted if the specified version of the attachment is the current one.
+        /// </remarks>
         public DeleteAttachmentOperation(string documentId, string name, string changeVector = null)
         {
             _documentId = documentId;
