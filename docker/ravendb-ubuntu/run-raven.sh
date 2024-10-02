@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 5.x -> 6.2 migration assistance
+# 5.x -> 6.0 migration assistance
 /usr/lib/ravendb/scripts/link-legacy-datadir.sh 
 
 COMMAND="/usr/lib/ravendb/server/Raven.Server -c /etc/ravendb/settings.json"
