@@ -5,7 +5,6 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using System.Diagnostics.CodeAnalysis;
-using Raven.Client.Exceptions.Cluster;
 using Sparrow.Json;
 using Voron.Impl;
 

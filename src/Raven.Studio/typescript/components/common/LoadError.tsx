@@ -1,7 +1,8 @@
-﻿import { Alert, Button } from "reactstrap";
+﻿import { Button } from "reactstrap";
 import React from "react";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "./Icon";
+import RichAlert from "components/common/RichAlert";
 
 interface LoadErrorProps {
     error?: string;
@@ -12,7 +13,7 @@ export function LoadError(props: LoadErrorProps) {
     const { error, refresh } = props;
 
     return (
-        <Alert color="danger">
+        <RichAlert variant="danger">
             <div className="d-flex gap-1">
                 <div>
                     <strong>Error loading data</strong>
@@ -26,6 +27,6 @@ export function LoadError(props: LoadErrorProps) {
                     </Button>
                 )}
             </div>
-        </Alert>
+        </RichAlert>
     );
 }

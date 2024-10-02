@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Commands.Subscriptions;

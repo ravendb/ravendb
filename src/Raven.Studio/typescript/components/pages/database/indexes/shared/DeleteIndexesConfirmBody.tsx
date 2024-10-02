@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert } from "reactstrap";
+import RichAlert from "components/common/RichAlert";
 
 export interface IndexInfoForDelete {
     indexName: string;
@@ -63,14 +63,14 @@ export default function DeleteIndexesConfirmBody({
             {showWarning && (
                 <>
                     <hr />
-                    <Alert color="warning">
+                    <RichAlert variant="warning">
                         Note: <br />
                         &apos;Reduce Results Collections&apos; were created by above index(es).
                         <br />
                         Clicking &apos;Delete&apos; will delete the index(es) but Not the Results Collection(s).
                         <br />
                         Go to the collection itself to manually remove documents.
-                    </Alert>
+                    </RichAlert>
                 </>
             )}
         </div>

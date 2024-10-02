@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using CsvHelper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -27,7 +26,6 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -41,7 +39,6 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Exceptions;
 using Voron.Exceptions;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server
 {

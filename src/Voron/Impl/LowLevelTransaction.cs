@@ -769,6 +769,8 @@ namespace Voron.Impl
             _disposableScope.EnsureDispose(disposable);
         }
 
+        public string CallerName { get; set; }
+
         public void Dispose()
         {
             if (IsDisposed)

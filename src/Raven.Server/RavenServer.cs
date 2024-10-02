@@ -33,13 +33,11 @@ using OpenTelemetry.Resources;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
-using Raven.Client.Properties;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -49,7 +47,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Exceptions;
 using Raven.Server.Https;
 using Raven.Server.Integrations.PostgreSQL;
 using Raven.Server.Json;
@@ -1763,19 +1760,12 @@ namespace Raven.Server
             
             public void WaitingForTwoFactorAuthentication()
             {
-                _statusAfterTwoFactorAuth = _status;
                 _status = AuthenticationStatus.TwoFactorAuthNotProvided;
             }
 
             public void SuccessfulTwoFactorAuthentication()
             {
-                // _statusAfterTwoFactorAuth is nullable
-                // when we override existing configuration we skip WaitingForTwoFactorAuthentication stage
-                
-                if (_statusAfterTwoFactorAuth.HasValue)
                     _status = _statusAfterTwoFactorAuth.Value;
-
-                _statusAfterTwoFactorAuth = null;
             }
             
             public AuthenticationStatus Status
@@ -1850,6 +1840,8 @@ namespace Raven.Server
                         AuthorizedDatabases.Add(kvp.Key, kvp.Value);
                     }
                 }
+
+                _statusAfterTwoFactorAuth = Status;
             }
         }
 

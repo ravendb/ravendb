@@ -4,7 +4,7 @@ import { CreateDatabaseRegularFormData } from "../createDatabaseRegularValidatio
 import { useAppSelector } from "components/store";
 import React, { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Alert, Col, Collapse, InputGroup, InputGroupText, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
+import { Col, Collapse, InputGroup, InputGroupText, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
@@ -13,6 +13,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import classNames from "classnames";
 import { createDatabaseRegularDataUtils } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularDataUtils";
+import RichAlert from "components/common/RichAlert";
 
 const shardingImg = require("Content/img/createDatabase/sharding.svg");
 
@@ -210,7 +211,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             </Collapse>
                         </Col>
                     </Row>
-                    <Alert color="info" className="text-center mt-4">
+                    <RichAlert variant="info" className="mt-4">
                         <Collapse isOpen={isSharded}>
                             <>
                                 Data will be divided into{" "}
@@ -232,7 +233,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         ) : (
                             <>Data won&apos;t be replicated.</>
                         )}
-                    </Alert>
+                    </RichAlert>
                 </Col>
             </Row>
 

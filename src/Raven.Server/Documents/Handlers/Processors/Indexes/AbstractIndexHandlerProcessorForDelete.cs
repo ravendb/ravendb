@@ -4,7 +4,6 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.Indexes;
 using Sparrow.Json;
 using Sparrow.Logging;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 

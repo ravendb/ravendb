@@ -1,8 +1,6 @@
 ﻿using System;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;

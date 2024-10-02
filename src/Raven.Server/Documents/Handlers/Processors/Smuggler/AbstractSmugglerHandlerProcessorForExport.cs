@@ -2,13 +2,11 @@
 using System.Globalization;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Json;
-using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;

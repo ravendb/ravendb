@@ -1252,12 +1252,12 @@ $modal-scale-transform: scale(1.02) !default;
 // Define alert colors, border radius, and padding.
 
 // scss-docs-start alert-variables
-$alert-padding-y: $spacer-xs !default;
+$alert-padding-y: $spacer-sm !default;
 $alert-padding-x: $spacer-sm !default;
 $alert-margin-bottom: 0 !default;
 $alert-border-radius: var(--#{$prefix}border-radius) !default;
-$alert-link-font-weight: $font-weight-bold !default;
-$alert-border-width: 0 !default;
+$alert-link-font-weight: $font-weight-normal !default;
+$alert-border-width: var(--#{$prefix}border-width) !default;
 $alert-dismissible-padding-r: $alert-padding-x * 3 !default; // 3x covers width of x plus default padding on either side
 // scss-docs-end alert-variables
 

@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using Lextm.SharpSnmpLib;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;

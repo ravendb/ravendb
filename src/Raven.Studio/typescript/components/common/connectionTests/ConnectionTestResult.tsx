@@ -1,6 +1,6 @@
 import React from "react";
-import { Alert } from "reactstrap";
 import ConnectionStringError from "./ConnectionTestError";
+import RichAlert from "components/common/RichAlert";
 
 interface ConnectionTestResultProps {
     testResult: Raven.Server.Web.System.NodeConnectionTestResult;
@@ -12,7 +12,7 @@ export default function ConnectionTestResult({ testResult }: ConnectionTestResul
     }
 
     return testResult.Success ? (
-        <Alert color="success">Successfully connected</Alert>
+        <RichAlert variant="success">Successfully connected</RichAlert>
     ) : (
         <ConnectionStringError message={testResult.Error} />
     );

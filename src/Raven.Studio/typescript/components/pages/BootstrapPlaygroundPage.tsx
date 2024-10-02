@@ -1,4 +1,5 @@
-﻿import React, { useState } from "react";
+﻿/* eslint-disable local-rules/no-reactstrap-alert */
+import React, { useState } from "react";
 import {
     Alert,
     Button,

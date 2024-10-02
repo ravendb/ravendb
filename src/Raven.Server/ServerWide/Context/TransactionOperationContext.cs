@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using NuGet.DependencyResolver;
+using System.Runtime.CompilerServices;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Utils;
@@ -43,10 +42,10 @@ namespace Raven.Server.ServerWide.Context
             return new RavenTransaction(Environment.WriteTransaction(PersistentContext, Allocator, timeout));
         }
 
-        public void UpdatePrefixesOfReduceOutputDocumentsToDelete(ImmutableDictionary<string,string> prefixes)
+        public void UpdatePrefixesOfReduceOutputDocumentsToDelete(ImmutableDictionary<string, string> prefixes)
         {
             var llt = Transaction.InnerTransaction.LowLevelTransaction;
-            llt.UpdateClientState(GetIndexStateFrom(llt) with {PrefixesOfReduceOutputDocumentsToDelete = prefixes});
+            llt.UpdateClientState(GetIndexStateFrom(llt) with { PrefixesOfReduceOutputDocumentsToDelete = prefixes });
         }
 
         private static IndexStateRecord GetIndexStateFrom(LowLevelTransaction llt)
@@ -74,7 +73,7 @@ namespace Raven.Server.ServerWide.Context
         {
             ModifyReferencesState(actionType, collection, referenceState);
         }
-        
+
         public void ClearReferencesStateFor(HandleReferencesBase.ActionType actionType, string collection)
         {
             ModifyReferencesState(actionType, collection, null); // clear for that collection
@@ -84,9 +83,9 @@ namespace Raven.Server.ServerWide.Context
         {
             ModifyReferencesState(actionType, null, null); // clear all collections
         }
-        
+
         private void ModifyReferencesState(HandleReferencesBase.ActionType actionType, string collection, HandleReferencesBase.ReferenceState referenceState)
-        { 
+        {
             var state = GetIndexStateFrom(Transaction.InnerTransaction.LowLevelTransaction);
             var owner = actionType switch
             {
@@ -108,7 +107,7 @@ namespace Raven.Server.ServerWide.Context
                 owner[collection] = referenceState;
             }
 
-            Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState( state with
+            Transaction.InnerTransaction.LowLevelTransaction.UpdateClientState(state with
             {
                 Documents = state.Documents with { Map = state.Documents.Owner.ToImmutable() },
                 Tombstones = state.Tombstones with { Map = state.Tombstones.Owner.ToImmutable() },
@@ -117,7 +116,7 @@ namespace Raven.Server.ServerWide.Context
 
     }
 
-    public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext, IChangeVectorOperationContext 
+    public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext, IChangeVectorOperationContext
         where TTransaction : RavenTransaction
     {
         internal const short DefaultTransactionMarker = 2;
@@ -144,12 +143,15 @@ namespace Raven.Server.ServerWide.Context
                 _allocatedChangeVectors = new FastList<ChangeVector>(256);
         }
 
-        public TTransaction OpenReadTransaction()
+        public TTransaction OpenReadTransaction([CallerMemberName] string caller = null)
         {
             if (Transaction != null && Transaction.Disposed == false)
                 ThrowTransactionAlreadyOpened();
 
             Transaction = CreateReadTransaction();
+
+            if (caller != null)
+                Transaction.InnerTransaction.LowLevelTransaction.CallerName = caller;
 
             return Transaction;
         }
@@ -209,7 +211,7 @@ namespace Raven.Server.ServerWide.Context
 
         protected abstract TTransaction CreateWriteTransaction(TimeSpan? timeout = null);
 
-        public TTransaction OpenWriteTransaction(TimeSpan? timeout = null)
+        public TTransaction OpenWriteTransaction(TimeSpan? timeout = null, [CallerMemberName] string caller = null)
         {
             if (Transaction != null && Transaction.Disposed == false)
             {
@@ -217,6 +219,9 @@ namespace Raven.Server.ServerWide.Context
             }
 
             Transaction = CreateWriteTransaction(timeout);
+
+            if (caller != null)
+                Transaction.InnerTransaction.LowLevelTransaction.CallerName = caller;
 
             return Transaction;
         }

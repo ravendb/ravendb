@@ -1,12 +1,10 @@
 ﻿using System;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
-using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Exceptions;

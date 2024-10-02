@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Cli;
-using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Patch
