@@ -264,10 +264,10 @@ export class TasksStubs {
 
     static getSnowflake(): OngoingTaskSnowflakeEtl {
         return {
-            TaskName: "SqlTask",
-            TaskId: 115,
+            TaskName: "SnowflakeTask",
+            TaskId: 116,
             TaskType: "SnowflakeEtl",
-            ConnectionStringName: "SQL-CS",
+            ConnectionStringName: "Snowflake-CS",
             ResponsibleNode: TasksStubs.getResponsibleNode(),
             TaskState: "Enabled",
             Error: null,

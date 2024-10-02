@@ -175,6 +175,81 @@ describe("OngoingTasksPage", function () {
         });
     });
 
+    describe("Snowflake", function () {
+        it("can render disabled and not completed", async () => {
+            const View = boundCopy(stories.SnowflakeTemplate, {
+                disabled: true,
+                completed: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            expect(await screen.findByText(/Snowflake ETL/)).toBeInTheDocument();
+            expect(await screen.findByText(/Disabled/)).toBeInTheDocument();
+            expect(screen.queryByText(/Enabled/)).not.toBeInTheDocument();
+
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+
+            await fireClick(detailsBtn);
+
+            const target = await screen.findByText("Snowflake-CS");
+            expect(target).toBeInTheDocument();
+
+            //wait for progress
+            await screen.findAllByText(/Disabled/i);
+        });
+
+        it("can render completed", async () => {
+            const View = boundCopy(stories.SnowflakeTemplate, {
+                completed: true,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+            await fireClick(detailsBtn);
+
+            //wait for progress
+            await screen.findAllByText(/Up to date/i);
+        });
+
+        it("can render enabled and not completed", async () => {
+            const View = boundCopy(stories.SnowflakeTemplate, {
+                completed: false,
+                disabled: false,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+            await fireClick(detailsBtn);
+
+            //wait for progress
+            await screen.findAllByText("Running");
+        });
+
+        it("can notify about empty script", async () => {
+            const View = boundCopy(stories.SnowflakeTemplate, {
+                completed: true,
+                emptyScript: true,
+            });
+
+            const Story = composeStory(View, stories.default);
+
+            const { screen, fireClick } = rtlRender(<Story />);
+            const detailsBtn = await screen.findByTitle(/Click for details/);
+            await fireClick(detailsBtn);
+
+            //wait for progress
+            await screen.findAllByText(/Up to date/i);
+
+            expect(await screen.findByText(selectors.emptyScriptText)).toBeInTheDocument();
+        });
+    });
+
     describe("OLAP", function () {
         it("can render disabled and not completed", async () => {
             const View = boundCopy(stories.OlapTemplate, {
