@@ -19,6 +19,9 @@ export function EditSnowflakeEtlInfoHub() {
         ],
     });
 
+    const snowflakeEtlDocsLink = useRavenLink({ hash: "TODO" }); //TODO: HASH
+
+    //TODO: create text
     
     return (
         <AboutViewFloating defaultOpen={hasSnowflakeEtl ? null : "licensing"}>
@@ -29,6 +32,7 @@ export function EditSnowflakeEtlInfoHub() {
                 heading="About this view"
                 description="Get additional info on this feature"
             >
+                TODO
                 <div className="small-label mb-2">useful links</div>
                 <a href={snowflakeEtlDocsLink} target="_blank">
                     <Icon icon="newtab" /> Docs - Snowflake ETL
