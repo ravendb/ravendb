@@ -3,7 +3,6 @@ using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using Corax.Querying;
 using Corax.Mappings;
 using Jint;
 using Jint.Native;

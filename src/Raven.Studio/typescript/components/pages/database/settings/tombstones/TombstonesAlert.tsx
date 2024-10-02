@@ -1,9 +1,9 @@
 ﻿import React from "react";
-import { Alert } from "reactstrap";
+import RichAlert from "components/common/RichAlert";
 
 export default function TombstonesAlert() {
     return (
-        <Alert color="info" className="mb-0">
+        <RichAlert variant="info" className="mb-0">
             <p>
                 By default, tombstones cleanup is scheduled to be carried out by the server every 5 minutes, unless
                 configured otherwise.
@@ -12,6 +12,6 @@ export default function TombstonesAlert() {
                 Upon clicking <strong>Force Cleanup</strong>, the action will be executed immediately - any tombstone
                 that can be removed will be deleted.
             </p>
-        </Alert>
+        </RichAlert>
     );
 }

@@ -1,6 +1,6 @@
 ﻿import { Icon } from "components/common/Icon";
 import React from "react";
-import { Alert, Button, Form, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
+import { Button, Form, InputGroup, Label, Modal, ModalBody, ModalFooter } from "reactstrap";
 import { FormDurationPicker, FormInput, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {
@@ -25,6 +25,7 @@ import genUtils from "common/generalUtils";
 import generalUtils from "common/generalUtils";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import moment from "moment";
+import RichAlert from "components/common/RichAlert";
 
 const revisionsDelta = 100;
 const revisionsByAgeDelta = 604800; // 7 days
@@ -147,10 +148,9 @@ export default function EditRevision(props: EditRevisionProps) {
                             {!isDefaultConflicts &&
                             revisionsToKeepLimit > 0 &&
                             formValues.minimumRevisionsToKeep > revisionsToKeepLimit ? (
-                                <Alert color="warning" className="mb-2">
-                                    <Icon icon="warning" />
+                                <RichAlert variant="warning" className="mb-2">
                                     Your license allows max {revisionsToKeepLimit} revisions to keep
-                                </Alert>
+                                </RichAlert>
                             ) : null}
                         </div>
                     )}
@@ -168,10 +168,9 @@ export default function EditRevision(props: EditRevisionProps) {
                             {!isDefaultConflicts &&
                             revisionsAgeInDaysLimit > 0 &&
                             minimumRevisionAgeToKeepDays > revisionsAgeInDaysLimit ? (
-                                <Alert color="warning" className="my-2">
-                                    <Icon icon="warning" />
+                                <RichAlert variant="warning" className="my-2">
                                     Your license allows max {revisionsAgeInDaysLimit} days retention time
-                                </Alert>
+                                </RichAlert>
                             ) : null}
                             {isRevisionsToKeepByAgeLimitWarning && (
                                 <LimitTooLowWarning
@@ -198,7 +197,7 @@ export default function EditRevision(props: EditRevisionProps) {
                         </>
                     )}
                     {isRevisionsToKeepLimitNotSetWarning && <LimitNotSetWarning />}
-                    <Alert color="info" className="mt-2">
+                    <RichAlert variant="primary" title="Summary" className="mt-2">
                         <ul className="m-0 ps-2 vstack gap-1">
                             <li>
                                 A revision will be created anytime a document is modified
@@ -253,7 +252,7 @@ export default function EditRevision(props: EditRevisionProps) {
                                 </li>
                             )}
                         </ul>
-                    </Alert>
+                    </RichAlert>
                 </ModalBody>
                 <ModalFooter>
                     <Button type="button" color="link" className="link-muted" onClick={toggle}>
@@ -275,31 +274,25 @@ interface LimitTooLowWarningProps {
 
 function LimitTooLowWarning({ limit }: LimitTooLowWarningProps) {
     return (
-        <Alert color="warning" className="d-flex mt-1">
-            <div>
-                <Icon icon="warning" />
-            </div>
+        <RichAlert variant="warning" className="mt-1">
             <div>
                 The new limit is much lower than the current value (delta &gt; {limit}).
                 <br />
                 It is advised to set the # of revisions to delete upon document update.
             </div>
-        </Alert>
+        </RichAlert>
     );
 }
 
 function LimitNotSetWarning() {
     return (
-        <Alert color="warning" className="d-flex mt-1">
-            <div>
-                <Icon icon="warning" />
-            </div>
+        <RichAlert variant="warning" className="mt-1">
             <div>
                 No limit has been set on the number of revisions to keep.
                 <br />
                 An excessive number of revisions will lead to increased storage usage and may affect system performance.
             </div>
-        </Alert>
+        </RichAlert>
     );
 }
 

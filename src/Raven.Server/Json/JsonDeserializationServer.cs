@@ -72,12 +72,10 @@ using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.EventListener;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Documents.QueueSink.Test;
-using Raven.Server.Documents.Sharding.Handlers.Processors;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 using DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
 using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
-using Raven.Server.Documents.Handlers.Processors.Stats;
 
 namespace Raven.Server.Json
 {

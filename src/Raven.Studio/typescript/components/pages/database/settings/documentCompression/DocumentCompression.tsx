@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Col, Row, Card, Collapse, Form, Alert } from "reactstrap";
+import { Col, Row, Card, Collapse, Form } from "reactstrap";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
@@ -29,6 +29,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import RichAlert from "components/common/RichAlert";
 
 export default function DocumentCompression() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -152,8 +153,7 @@ export default function DocumentCompression() {
                                     isReadOnly={!hasDatabaseAdminAccess}
                                 />
                                 <Collapse isOpen={CompressAllCollections || Collections.length > 0}>
-                                    <Alert color="info" className="hstack gap-3 p-3 mt-4">
-                                        <Icon icon="documents-compression" className="fs-1" />
+                                    <RichAlert variant="info" icon="documents-compression" className="mt-4">
                                         <div>
                                             Documents that will be compressed:
                                             <ul className="m-0">
@@ -163,7 +163,7 @@ export default function DocumentCompression() {
                                                 </li>
                                             </ul>
                                         </div>
-                                    </Alert>
+                                    </RichAlert>
                                 </Collapse>
                             </Card>
                             <Card

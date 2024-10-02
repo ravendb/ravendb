@@ -17,11 +17,23 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
+    /// <summary>
+    /// Represents an operation to retrieve multiple attachments associated with specified documents.
+    /// </summary>
+    /// <remarks>
+    /// This class implements the <see cref="IOperation{IEnumerator{AttachmentEnumeratorResult}}"/> interface,
+    /// allowing for the retrieval of attachments in a batch operation.
+    /// </remarks>
     public sealed class GetAttachmentsOperation : IOperation<IEnumerator<AttachmentEnumeratorResult>>
     {
         private readonly AttachmentType _type;
         private readonly IEnumerable<AttachmentRequest> _attachments;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetAttachmentsOperation"/> class.
+        /// </summary>
+        /// <param name="attachments">A collection of <see cref="AttachmentRequest"/> instances specifying the attachments to retrieve.</param>
+        /// <param name="type">The type of attachments to retrieve.</param>
         public GetAttachmentsOperation(IEnumerable<AttachmentRequest> attachments, AttachmentType type)
         {
             _type = type;

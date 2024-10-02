@@ -42,9 +42,12 @@ public sealed class OutputReduceCoraxIndexWriteOperation : CoraxIndexWriteOperat
             _outputScope.Delete(key, stats);
     }
     
-    public override void DeleteTimeSeries(LazyStringValue docId, LazyStringValue key, IndexingStatsScope stats)
+    public override void DeleteByPrefix(LazyStringValue key, IndexingStatsScope stats)
     {
-        // Lucene method
+         if (_outputScope.IsActive)
+             base.DeleteByPrefix(key, stats);
+         else
+             _outputScope.Delete(key, stats);
     }
 
     public override void UpdateDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)

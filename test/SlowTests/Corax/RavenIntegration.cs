@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
-using FastTests.Voron.FixedSize;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Json;

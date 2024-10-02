@@ -23,7 +23,6 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
-using Raven.Client.Extensions;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;

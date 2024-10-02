@@ -17,7 +17,6 @@ using Raven.Server.Smuggler;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
 using RavenServerBackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace Raven.Server.Documents.Handlers.Processors.Smuggler

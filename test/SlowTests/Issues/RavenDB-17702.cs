@@ -46,11 +46,13 @@ namespace SlowTests.Issues
                     }
                     using (var session = store.OpenSession())
                     {
+                        session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+
                         session.TimeSeriesFor("users/1", "Heartrate")
                             .Delete(now.AddDays(i), now.AddDays(i).AddSeconds(1));
                         session.SaveChanges();
                     }
-                    foreach (var server in Servers)
+                    foreach (var server in cluster.Nodes)
                     {
                         var database = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1", server);
                         var tss = database.DocumentsStorage.TimeSeriesStorage;

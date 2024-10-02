@@ -47,7 +47,6 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron;
-using static Raven.Server.Monitoring.Snmp.SnmpOids;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Commercial

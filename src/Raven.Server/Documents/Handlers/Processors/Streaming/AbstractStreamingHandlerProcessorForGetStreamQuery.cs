@@ -10,7 +10,6 @@ using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using HttpMethod = System.Net.Http.HttpMethod;

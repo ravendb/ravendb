@@ -32,6 +32,10 @@ $toggle-knob-hover-scale: 0.9 !default;
     color: $toggle-knob-muted-color;
     font-weight: bolder;
 
+    input:disabled {
+        opacity: 0 !important;
+    }
+
     .toggle-knob {
         align-self: center;
         display: flex;

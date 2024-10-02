@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
 using Org.BouncyCastle.Security.Certificates;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Routing;
 using Raven.Server.Smuggler.Documents.Data;
 

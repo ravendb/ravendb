@@ -1,15 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Revisions;
-using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json.Parsing;
-using static Raven.Server.Documents.TransactionMerger.Commands.AdoptOrphanedRevisionsCommand;
 
 namespace Raven.Server.Documents.TransactionMerger.Commands;
 internal class AdoptOrphanedRevisionsCommand : RevisionsScanningOperationCommand<AdoptOrphanedRevisionsResult>

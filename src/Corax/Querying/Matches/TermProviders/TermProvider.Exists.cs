@@ -167,16 +167,19 @@ namespace Corax.Querying.Matches.TermProviders
             while (_iterator.MoveNext(_compactKey, out long postingListId, out _))
             {
                 var key = _compactKey.Decoded();
+                
                 int termSize = key.Length;
                 if (key.Length > 1)
                 {
                     if (key[^1] == 0)
                         termSize--;
                 }
+
+                var term = key.SequenceEqual(Constants.EmptyStringByteSpan) 
+                    ? Constants.ProjectionEmptyString 
+                    : Encodings.Utf8.GetString(key.Slice(0, termSize));
                 
-                var term = Encodings.Utf8.GetString(key.Slice(0, termSize));
                 terms.Add(term);
-                
                 termCount[termIdx++] = postingListId;
             }
 

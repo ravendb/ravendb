@@ -32,7 +32,6 @@ using Tests.Infrastructure;
 using xRetry;
 using Xunit;
 using Xunit.Abstractions;
-using System.Linq;
 using Raven.Server.ServerWide.Context;
 
 namespace SlowTests.Authentication

@@ -25,8 +25,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.Replication | RavenTestCategory.TimeSeries | RavenTestCategory.ExpirationRefresh)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task DeleteExpiredDocumentWithBigTimeSeriesShouldNotCauseReplicationToBreak(Options options)
         {
             var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
@@ -87,8 +86,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -129,8 +127,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleDocuments(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -178,8 +175,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleDocuments2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -230,8 +226,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleDocuments3(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -285,8 +280,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleSegments(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -334,8 +328,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeries_multipleSegments2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -414,8 +407,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-22894")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task ShouldUpdateMapIndexEntriesAfterDeletingEntireTimeSeriesAfterRetention(Options options)
         {
             using (var store = GetDocumentStore(options))

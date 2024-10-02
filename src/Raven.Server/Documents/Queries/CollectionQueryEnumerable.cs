@@ -7,7 +7,6 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;

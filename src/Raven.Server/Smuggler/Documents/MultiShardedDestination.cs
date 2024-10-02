@@ -15,7 +15,6 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Actions;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;

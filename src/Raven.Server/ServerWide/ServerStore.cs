@@ -29,7 +29,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
