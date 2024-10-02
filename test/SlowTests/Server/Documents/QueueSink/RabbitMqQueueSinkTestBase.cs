@@ -2,7 +2,6 @@
 using RabbitMQ.Client;
 using System;
 using Tests.Infrastructure.ConnectionString;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using System.Collections.Generic;

@@ -7,7 +7,6 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;

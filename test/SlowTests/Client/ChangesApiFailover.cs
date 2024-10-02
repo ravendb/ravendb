@@ -17,8 +17,6 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Sharding;
-using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;

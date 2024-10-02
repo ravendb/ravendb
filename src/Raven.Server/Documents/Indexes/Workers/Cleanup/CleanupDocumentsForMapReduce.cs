@@ -4,7 +4,6 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 

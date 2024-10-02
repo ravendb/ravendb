@@ -18,7 +18,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Text;
 using Lucene.Net.Search;
 using Lucene.Net.Util;
 using Sparrow.Json;

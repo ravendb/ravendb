@@ -19,6 +19,7 @@ using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron.Platform.Posix;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
@@ -140,6 +141,11 @@ public static class SettingsZipFileHelper
                         await certFile.WriteAsync(parameters.CompleteClusterConfigurationResult.ServerCertBytes, parameters.Token)
                                       .ConfigureAwait(false);
                     } // we'll be flushing the directory when we'll write the settings.json
+
+                    if (PlatformDetails.RunningOnPosix)
+                    {
+                        PosixHelper.EnsureRWPermissionsForOwnerAndGroup(certPath);
+                    }
                 }
 
                 settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certPath ?? certificateFileName;

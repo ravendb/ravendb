@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Static;

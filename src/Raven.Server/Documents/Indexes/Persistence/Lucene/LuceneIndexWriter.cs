@@ -17,7 +17,6 @@ using Sparrow.Logging;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;
 using Voron.Exceptions;
-using Directory = Lucene.Net.Store.Directory;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {

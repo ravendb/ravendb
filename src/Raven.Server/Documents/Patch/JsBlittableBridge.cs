@@ -8,7 +8,6 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Function;
 using Jint.Native.Object;
-using Jint.Native.RegExp;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client;

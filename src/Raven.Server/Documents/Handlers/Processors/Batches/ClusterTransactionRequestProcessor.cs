@@ -4,25 +4,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.CodeAnalysis;
-using Raven.Client;
-using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
-using Raven.Server.Documents.Revisions;
-using Raven.Server.Rachis;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json.Parsing;
-using Voron;
-using static Raven.Server.Documents.TransactionMerger.Commands.JsonPatchCommand;
-using static Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged;
 using static Raven.Server.ServerWide.Commands.ClusterTransactionCommand;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Handlers.Processors.Batches
 {

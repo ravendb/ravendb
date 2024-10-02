@@ -6,7 +6,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Extensions;

@@ -828,6 +828,10 @@ namespace Raven.Server.Monitoring.Snmp
                 public const string TotalNumberOfFaultyIndexes = "5.1.7.4";
 
                 [SnmpDataType(SnmpType.Integer32)]
+                [Description("Number of indexing errors in all loaded databases")]
+                public const string TotalNumberOfIndexingErrors = "5.1.7.5";
+
+                [SnmpDataType(SnmpType.Integer32)]
                 [Description("Number of indexed documents per second for map indexes (one minute rate) in all loaded databases")]
                 public const string TotalMapIndexIndexesPerSecond = "5.1.8.1";
 

@@ -8,8 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections.Features;
@@ -25,13 +23,11 @@ using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Web;
-using Raven.Server.Web.Authentication;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using static Raven.Server.RavenServer;
 using HttpMethods = Raven.Client.Util.HttpMethods;
-using MemoryExtensions = System.MemoryExtensions;
 
 namespace Raven.Server.Routing
 {

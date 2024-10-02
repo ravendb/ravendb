@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.IO.Compression;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Options;
 using Raven.Client;

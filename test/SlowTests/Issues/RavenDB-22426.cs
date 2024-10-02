@@ -7,7 +7,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.SqlMigration;
-using SlowTests.Server.Documents.ETL;
 using SlowTests.Server.Documents.Migration;
 using Tests.Infrastructure;
 using Xunit;
