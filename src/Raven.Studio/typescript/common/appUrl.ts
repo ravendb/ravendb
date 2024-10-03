@@ -135,6 +135,10 @@ class appUrl {
         return "#admin/settings/debug/advanced/observerLog";
     }
 
+    static forDebugAdvancedClusterDebug(): string {
+        return "#admin/settings/debug/advanced/clusterDebug";
+    }
+
     static forDebugAdvancedRecordTransactionCommands(databaseToHighlight: string = undefined): string {
         const dbPart = _.isUndefined(databaseToHighlight) ? "" : "?highlight=" + encodeURIComponent(databaseToHighlight);
         return "#admin/settings/debug/advanced/recordTransactionCommands" + dbPart;
