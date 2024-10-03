@@ -26,6 +26,6 @@ internal static class RavenLogManagerVoronExtensions
         return new RavenLogger(LogManager.GetLogger(type.FullName)
             .WithProperty(Constants.Logging.Properties.Resource, options.LoggingResource)
             .WithProperty(Constants.Logging.Properties.Component, options.LoggingComponent)
-            .WithProperty(Constants.Logging.Properties.Other, filePath));
+            .WithProperty(Constants.Logging.Properties.Data, filePath));
     }
 }

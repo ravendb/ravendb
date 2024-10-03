@@ -45,6 +45,7 @@ namespace Raven.Server.Config.Categories
 
         [DefaultValue(false)]
         [ConfigurationEntry("Logs.AuditLog.EnableArchiveFileCompression", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.AuditLog.Compress", ConfigurationEntryScope.ServerWideOnly)]
         public bool AuditLogEnableArchiveFileCompression { get; set; }
 
         [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1) Path 2) Executable")]

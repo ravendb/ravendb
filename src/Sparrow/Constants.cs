@@ -19,9 +19,9 @@ namespace Sparrow.Global
             {
             }
 
-            internal const string DefaultHeaderAndFooterLayout = "Date|Level|Resource|Component|Logger|Message|Other";
+            internal const string DefaultHeaderAndFooterLayout = "Date|Level|Resource|Component|Logger|Message|Data";
 
-            internal const string DefaultLayout = "${longdate}|${level:uppercase=true}|${event-properties:item=Resource}|${event-properties:item=Component}|${logger}|${message:withexception=true}|${event-properties:item=Other}";
+            internal const string DefaultLayout = "${longdate}|${level:uppercase=true}|${event-properties:item=Resource}|${event-properties:item=Component}|${logger}|${message:withexception=true}|${event-properties:item=Data}";
 
             internal static List<JsonAttribute> DefaultAdminLogsJsonAttributes = new()
             {
@@ -31,7 +31,7 @@ namespace Sparrow.Global
                 new JsonAttribute("Component", "${event-properties:item=Component}"),
                 new JsonAttribute("Logger", "${logger}"),
                 new JsonAttribute("Message", "${message:withexception=true}"),
-                new JsonAttribute("Other", "${event-properties:item=Other}"),
+                new JsonAttribute("Other", "${event-properties:item=Data}"),
             };
 
             internal class Properties
@@ -44,7 +44,7 @@ namespace Sparrow.Global
 
                 internal const string Component = "Component";
 
-                internal const string Other = "Other";
+                internal const string Data = "Data";
             }
 
             internal class Names

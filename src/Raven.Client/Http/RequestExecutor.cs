@@ -1949,8 +1949,8 @@ namespace Raven.Client.Http
                     }
                     catch (Exception e)
                     {
-                        if (Logger.IsDebugEnabled)
-                            Logger.Debug($"{serverNode.ClusterTag} is still down", e);
+                        if (Logger.IsWarnEnabled)
+                            Logger.Warn($"{serverNode.ClusterTag} is still down", e);
 
                         if (_failedNodesTimers.TryGetValue(nodeStatus.Node, out status))
                             status.Value.UpdateTimer();
@@ -1966,8 +1966,8 @@ namespace Raven.Client.Http
             }
             catch (Exception e)
             {
-                if (Logger.IsDebugEnabled)
-                    Logger.Debug("Failed to check node topology, will ignore this node until next topology update", e);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn("Failed to check node topology, will ignore this node until next topology update", e);
             }
         }
 

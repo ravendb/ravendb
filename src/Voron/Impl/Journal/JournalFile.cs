@@ -31,15 +31,15 @@ namespace Voron.Impl.Journal
             return $"Number: {Number}";
         }
 
-        internal long GetWritePosIn4KbPosition(EnvironmentStateRecord record) => record.Journal.Current == this ? record.Journal.Last4KWritePosition : 0; 
+        internal long GetWritePosIn4KbPosition(EnvironmentStateRecord record) => record.Journal.Current == this ? record.Journal.Last4KWritePosition : 0;
 
         public long Number { get; } = journalNumber;
 
 
         public long GetAvailable4Kbs(EnvironmentStateRecord record) => (journalWriter?.NumberOfAllocated4Kb - GetWritePosIn4KbPosition(record)) ?? 0;
 
-        public Size JournalSize => new Size(journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes); 
-        
+        public Size JournalSize => new Size(journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes);
+
         internal JournalWriter JournalWriter => journalWriter;
 
         public void Release()
@@ -151,8 +151,8 @@ namespace Voron.Impl.Journal
         public void InitFrom(StorageEnvironment storageEnvironment, JournalReader journalReader, List<TransactionHeader> transactionHeaders)
         {
             storageEnvironment.UpdateJournal(this, journalReader.Next4Kb);
-            _transactionHeaders = [..transactionHeaders];
-            }
+            _transactionHeaders = [.. transactionHeaders];
+        }
 
         public bool DeleteOnClose
         {
@@ -164,5 +164,5 @@ namespace Voron.Impl.Journal
                     writer.DeleteOnClose = value;
             }
         }
-                    }
-                }
+    }
+}
