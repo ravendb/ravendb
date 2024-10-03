@@ -1,0 +1,109 @@
+<div class="flex-window stretch debug-advanced">
+    <div class="flex-window-head">
+        <div class="clearfix padding padding-sm">
+            <div class="flex-header flex-horizontal flex-noshrink margin-bottom">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary"
+                            data-bind="click: refresh, enable: !spinners.refresh(), css: { 'btn-spinner': spinners.refresh() }">
+                        <i class="icon-refresh"></i>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+                
+                <div>
+                    <div class="text-muted info-block">
+                        <div class="text-center"><small>Cluster Version:</small></div>
+                        <div class="text-center">
+                            <small><strong data-bind="text: clusterLog().CommandsVersion.Cluster"></strong></small>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted info-block">
+                        <div class="text-center"><small>Local Version:</small></div>
+                        <div class="text-center">
+                            <small><strong data-bind="text: clusterLog().CommandsVersion.Local"></strong></small>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted info-block">
+                        <div class="text-center"><small>Term:</small></div>
+                        <div class="text-center">
+                            <small><strong data-bind="text: clusterLog().Term"></strong></small>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted info-block" data-placement="bottom" data-html="true" data-bind="tooltipText: progressTooltip">
+                        <div class="text-center"><small>Progress:</small></div>
+                        <div class="text-center">
+                            <small><strong data-bind="text: progress() + '%'"></strong></small>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted info-block">
+                        <div class="text-center"><small>Queue Size:</small></div>
+                        <div class="text-center">
+                            <small><strong data-bind="text: queueLength().toLocaleString()"></strong></small>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted info-block">
+                        <div class="text-center"><small>Role:</small></div>
+                        <div class="text-center">
+                            <small><strong data-bind="text: clusterLog().Role"></strong></small>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted info-block">
+                        <div class="text-center"><small>Last Appended:</small></div>
+                        <div class="text-center" data-bind="tooltipText: clusterLog().Log.LastAppendedTime ?? 'n/a'">
+                            <small><strong data-bind="text: lastAppendedAsAgo() ?? 'n/a'"></strong></small>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted info-block">
+                        <div class="text-center"><small>Last Committed:</small></div>
+                        <div class="text-center" data-bind="tooltipText: clusterLog().Log.LastCommitedTime ?? 'n/a'">
+                            <small><strong data-bind="text: lastCommittedAsAgo() ?? 'n/a'"></strong></small>
+                        </div>
+                    </div>
+                </div>
+                <div data-bind="if: clusterLog().Role === 'Follower', visible: clusterLog().Role === 'Follower'">
+                    <div class="text-muted info-block">
+                        <div class="text-center"><small>Phase:</small></div>
+                        <div class="text-center">
+                            <small data-bind="visible: clusterLog().Phase === 'Snapshot'">
+                                 <strong>Installing </strong>
+                            </small> 
+                            <small><strong data-bind="text: clusterLog().Phase ?? 'n/a'"></strong></small>
+                            <small data-bind="visible: clusterLog().Phase === 'Snapshot'">
+                                <span class="global-spinner spinner-sm"></span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+               
+                <div class="flex-separator"></div>
+            </div>
+        </div>
+
+    </div>
+    <div class="flex-window-scroll">
+        <div class="scroll-stretch">
+            <div class="panel-body">
+                <virtual-grid class="resizable documents-grid" params="controller: gridController, emptyTemplate: 'empty-cluster-log-template'"></virtual-grid>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/html" id="empty-cluster-log-template">
+    No entries found.
+</script>
+<div class="tooltip json-preview lg js-cluster-log-tooltip" style="opacity: 0">
+</div>
