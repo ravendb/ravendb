@@ -1,0 +1,13 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+table {
+    thead {
+            th {
+                background-color: colors.$panel-header-bg-var !important;
+            }
+    }
+    td, th {
+        min-width: 250px;
+    }
+}

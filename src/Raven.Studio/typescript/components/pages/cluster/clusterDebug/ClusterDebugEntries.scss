@@ -1,0 +1,25 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+.cluster-debug-entries {
+    .nav {
+        margin-bottom: sizes.$gutter;
+        border-color: colors.$border-color-light-var;
+
+        .nav-link {
+            border: 0;
+            cursor: pointer;
+            color: colors.$base-text-muted-color;
+
+            &.active {
+                background: transparent;
+                border-bottom: 2px solid colors.$node-var;
+                color: colors.$base-text-emphasis-color
+            }
+
+            &:hover {
+                filter: colors.$hover-filter-var;
+            }
+        }
+    }
+}
