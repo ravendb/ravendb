@@ -454,6 +454,7 @@ export class DatabasesStubs {
             QueueConnectionStrings: {},
             RavenConnectionStrings: {},
             SqlConnectionStrings: {},
+            SnowflakeConnectionStrings: {},
         };
     }
 
@@ -473,6 +474,13 @@ export class DatabasesStubs {
                     Name: "sql-name",
                     ConnectionString: "some-connection-string",
                     FactoryName: "System.Data.SqlClient",
+                },
+            },
+            SnowflakeConnectionStrings: {
+                "snowflake-name": {
+                    Type: "Snowflake",
+                    Name: "snowflake-name",
+                    ConnectionString: "some-snowflake-connection-string",
                 },
             },
             OlapConnectionStrings: {
@@ -648,11 +656,13 @@ return docs[0];`,
             HubPullReplications: [],
             RavenConnectionStrings: {},
             SqlConnectionStrings: {},
+            SnowflakeConnectionStrings: {},
             OlapConnectionStrings: {},
             ElasticSearchConnectionStrings: {},
             QueueConnectionStrings: {},
             RavenEtls: [],
             SqlEtls: [],
+            SnowflakeEtls: [],
             ElasticSearchEtls: [],
             OlapEtls: [],
             QueueEtls: [],

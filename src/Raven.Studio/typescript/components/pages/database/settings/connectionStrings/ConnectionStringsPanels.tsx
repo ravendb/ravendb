@@ -72,6 +72,8 @@ function getIcon(type: StudioEtlType): IconName {
             return "raven";
         case "Sql":
             return "table";
+        case "Snowflake":
+            return "snowflake";
         case "Olap":
             return "olap";
         case "ElasticSearch":
@@ -81,7 +83,7 @@ function getIcon(type: StudioEtlType): IconName {
         case "RabbitMQ":
             return "rabbitmq";
         case "AzureQueueStorage":
-            return "azure-queue-storage";
+            return "azure";
         default:
             return null;
     }

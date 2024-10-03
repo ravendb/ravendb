@@ -31,6 +31,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     const hasElasticSearchEtl = useAppSelector(licenseSelectors.statusValue("HasElasticSearchEtl"));
     const hasKafkaEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasSqlEtl = useAppSelector(licenseSelectors.statusValue("HasSqlEtl"));
+    const hasSnowflakeEtl = useAppSelector(licenseSelectors.statusValue("HasSnowflakeEtl"));
     const hasOlapEtl = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));
     const hasRabbitMqEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasAzureQueueStorageEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
@@ -215,6 +216,17 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         <Icon icon="sql-etl" />
                         <h4 className="mt-1 mb-0">SQL ETL</h4>
                         {!hasSqlEtl && <LicenseRestrictedBadge licenseRequired="Professional +" />}
+                    </TaskItem>
+
+                    <TaskItem
+                        title="Create new Snowflake ETL task"
+                        href={appUrl.forEditSnowflakeEtl(db.name)}
+                        className="snowflake-etl"
+                        target="SnowflakeETL"
+                    >
+                        <Icon icon="snowflake-etl" />
+                        <h4 className="mt-1 mb-0">Snowflake ETL</h4>
+                        {!hasSnowflakeEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
 
                     <TaskItem

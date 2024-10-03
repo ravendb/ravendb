@@ -10,6 +10,7 @@ import {
     AzureQueueStorageConnection,
     OlapConnection,
     ConnectionFormData,
+    SnowflakeConnection,
 } from "../connectionStringsTypes";
 import assertUnreachable from "components/utils/assertUnreachable";
 import ApiKeyAuthentication = Raven.Client.Documents.Operations.ETL.ElasticSearch.ApiKeyAuthentication;
@@ -28,6 +29,14 @@ export function mapSqlConnectionStringToDto(connection: SqlConnection): Connecti
         Type: "Sql",
         Name: connection.name,
         FactoryName: connection.factoryName,
+        ConnectionString: connection.connectionString,
+    };
+}
+
+export function mapSnowflakeConnectionStringToDto(connection: SnowflakeConnection): ConnectionStringDto {
+    return {
+        Type: "Snowflake",
+        Name: connection.name,
         ConnectionString: connection.connectionString,
     };
 }
@@ -104,7 +113,6 @@ export function mapRabbitMqStringToDto(connection: RabbitMqConnection): Connecti
         },
     };
 }
-//TODO: map azure
 
 export function mapAzureQueueStorageConnectionStringSettingsToDto(
     connection: Omit<AzureQueueStorageConnection, "type" | "usedByTasks">
@@ -167,6 +175,8 @@ export function mapConnectionStringToDto(connection: Connection): ConnectionStri
             return mapRavenConnectionStringToDto(connection);
         case "Sql":
             return mapSqlConnectionStringToDto(connection);
+        case "Snowflake":
+            return mapSnowflakeConnectionStringToDto(connection);
         case "Olap":
             return mapOlapConnectionStringToDto(connection);
         case "ElasticSearch":

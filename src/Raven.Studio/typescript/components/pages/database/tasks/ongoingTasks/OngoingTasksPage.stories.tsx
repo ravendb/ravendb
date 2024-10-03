@@ -8,6 +8,7 @@ import { TasksStubs } from "test/stubs/TasksStubs";
 import { boundCopy } from "components/utils/common";
 import OngoingTaskRavenEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl;
 import OngoingTaskSqlEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl;
+import OngoingTaskSnowflakeEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl;
 import MockTasksService from "../../../../../test/mocks/services/MockTasksService";
 import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl;
 import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
@@ -251,6 +252,45 @@ export const SqlCompleted = boundCopy(SqlTemplate, {
 });
 
 export const SqlEmptyScript = boundCopy(SqlTemplate, {
+    completed: true,
+    emptyScript: true,
+});
+
+export const SnowflakeTemplate = (args: {
+    disabled?: boolean;
+    completed?: boolean;
+    emptyScript?: boolean;
+    customizeTask?: (x: OngoingTaskSnowflakeEtlListView) => void;
+}) => {
+    commonInit();
+
+    const { tasksService } = mockServices;
+
+    tasksService.withGetTasks((x) => {
+        const snowflakeEtl = TasksStubs.getSnowflake();
+        if (args.disabled) {
+            snowflakeEtl.TaskState = "Disabled";
+        }
+        args.customizeTask?.(snowflakeEtl);
+        x.OngoingTasks = [snowflakeEtl];
+        x.PullReplications = [];
+        x.SubscriptionsCount = 0;
+    });
+
+    mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
+
+    return <OngoingTasksPage />;
+};
+
+export const SnowflakeDisabled = boundCopy(SnowflakeTemplate, {
+    disabled: true,
+});
+
+export const SnowflakeCompleted = boundCopy(SnowflakeTemplate, {
+    completed: true,
+});
+
+export const SnowflakeEmptyScript = boundCopy(SnowflakeTemplate, {
     completed: true,
     emptyScript: true,
 });

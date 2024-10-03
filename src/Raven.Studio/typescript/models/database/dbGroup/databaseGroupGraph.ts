@@ -564,6 +564,8 @@ class databaseGroupGraph {
                     return icomoonHelpers.getCodePointForCanvas("external-replication");
                 case "SqlEtl":
                     return icomoonHelpers.getCodePointForCanvas("sql-etl");
+                case "SnowflakeEtl":
+                    return icomoonHelpers.getCodePointForCanvas("snowflake-etl");
                 case "OlapEtl":
                     return icomoonHelpers.getCodePointForCanvas("olap-etl");
                 case "ElasticSearchEtl":

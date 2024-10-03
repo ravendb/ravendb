@@ -28,6 +28,7 @@ interface computedAppUrls {
     editSubscription: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRavenEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editSqlEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
+    editSnowflakeEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editOlapEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editElasticSearchEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editKafkaEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
@@ -52,6 +53,7 @@ interface computedAppUrls {
     editSubscriptionTaskUrl: KnockoutComputed<string>;
     editRavenEtlTaskUrl: KnockoutComputed<string>;
     editSqlEtlTaskUrl: KnockoutComputed<string>;
+    editSnowflakeEtlTaskUrl: KnockoutComputed<string>;
     editOlapEtlTaskUrl: KnockoutComputed<string>;
     editElasticSearchEtlTaskUrl: KnockoutComputed<string>;
     editKafkaEtlTaskUrl: KnockoutComputed<string>;

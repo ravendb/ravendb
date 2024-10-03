@@ -36,7 +36,8 @@ public class RavenDB_21412 : RavenTestBase
             OngoingTaskType.Replication,
             OngoingTaskType.SqlEtl,
             OngoingTaskType.Subscription,
-            OngoingTaskType.QueueSink
+            OngoingTaskType.QueueSink,
+            OngoingTaskType.SnowflakeEtl
         };
 
         foreach (var enumValue in Enum.GetValues<OngoingTaskType>())

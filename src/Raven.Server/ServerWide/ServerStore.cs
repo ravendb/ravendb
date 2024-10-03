@@ -2241,6 +2241,17 @@ namespace Raven.Server.ServerWide
 
                         command = new AddQueueEtlCommand(queueEtl, databaseName, raftRequestId);
                         break;
+                    
+                    case EtlType.Snowflake:
+                        var snowflakeEtl = JsonDeserializationCluster.SnowflakeEtlConfiguration(etlConfiguration);
+                        snowflakeEtl.Validate(out var snowflakeEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, snowflakeEtl.ConnectionStringName, snowflakeEtl.EtlType) == false)
+                            snowflakeEtlErr.Add($"Could not find connection string named '{snowflakeEtl.ConnectionStringName}'. Please supply an existing connection string.");
+
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, snowflakeEtlErr);
+
+                        command = new AddSnowflakeEtlCommand(snowflakeEtl, databaseName, raftRequestId);
+                        break;
 
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
@@ -2366,6 +2377,9 @@ namespace Raven.Server.ServerWide
                 case EtlType.Queue:
                     var queueConnectionString = databaseRecord.QueueConnectionStrings;
                     return queueConnectionString != null && queueConnectionString.TryGetValue(connectionStringName, out _);
+                case EtlType.Snowflake:
+                    var snowflakeConnectionString = databaseRecord.SnowflakeConnectionStrings;
+                    return snowflakeConnectionString != null && snowflakeConnectionString.TryGetValue(connectionStringName, out _);
                 default:
                     throw new NotSupportedException($"Unknown ETL type. Type: {etlType}");
             }
@@ -2429,6 +2443,17 @@ namespace Raven.Server.ServerWide
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, queueEtlErr);
 
                         command = new UpdateQueueEtlCommand(id, queueEtl, databaseName, raftRequestId);
+                        break;
+
+                    case EtlType.Snowflake:
+                        var snowflakeEtl = JsonDeserializationCluster.SnowflakeEtlConfiguration(etlConfiguration);
+                        snowflakeEtl.Validate(out var snowflakeEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, snowflakeEtl.ConnectionStringName, snowflakeEtl.EtlType) == false)
+                            snowflakeEtlErr.Add($"Could not find connection string named '{snowflakeEtl.ConnectionStringName}'. Please supply an existing connection string.");
+
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, snowflakeEtlErr);
+
+                        command = new UpdateSnowflakeEtlCommand(id, snowflakeEtl, databaseName, raftRequestId);
                         break;
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
@@ -2498,7 +2523,10 @@ namespace Raven.Server.ServerWide
                 case ConnectionStringType.Queue:
                     command = new PutQueueConnectionStringCommand(JsonDeserializationCluster.QueueConnectionString(connectionString), databaseName, raftRequestId);
                     break;
-
+                case ConnectionStringType.Snowflake:
+                    command = new PutSnowflakeConnectionStringCommand(JsonDeserializationCluster.SnowflakeConnectionString(connectionString), databaseName,
+                        raftRequestId);
+                    break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
@@ -2627,6 +2655,25 @@ namespace Raven.Server.ServerWide
                         }
 
                         command = new RemoveQueueConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
+                        break;
+                    
+                    case ConnectionStringType.Snowflake:
+
+                        var snowflakeEtls = rawRecord.SnowflakeEtls;
+
+                        // Don't delete the connection string if used by tasks types: Snowflake Etl
+                        if (snowflakeEtls != null)
+                        {
+                            foreach (var snowflakeETlTask in snowflakeEtls)
+                            {
+                                if (snowflakeETlTask.ConnectionStringName == connectionStringName)
+                                {
+                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {snowflakeETlTask.Name}");
+                                }
+                            }
+                        }
+
+                        command = new RemoveSnowflakeConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
                         break;
 
                     default:

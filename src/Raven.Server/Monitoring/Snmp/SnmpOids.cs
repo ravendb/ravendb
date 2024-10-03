@@ -979,6 +979,14 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Number of active Queue Sink tasks for all databases")]
                 public const string TotalNumberOfActiveQueueSinkTasks = "5.1.11.22";
                 
+                [SnmpDataType(SnmpType.Integer32)]
+                [Description("Number of enabled Snowflake ETL tasks for all databases")]
+                public const string TotalNumberOfSnowflakeEtlTasks = "5.1.11.23";
+                
+                [SnmpDataType(SnmpType.Integer32)]
+                [Description("Number of active Snowflake ETL tasks for all databases")]
+                public const string TotalNumberOfActiveSnowflakeEtlTasks = "5.1.11.24";
+                
                 internal static Dictionary<string, string> CreateMapping()
                 {
                     var dictionary = new Dictionary<string, string>();

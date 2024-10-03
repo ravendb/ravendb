@@ -4,6 +4,7 @@ import endpoints = require("endpoints");
 
 class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration | 
                                    Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration |
+                                   Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeEtlConfiguration |
                                    Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration |
                                    Raven.Client.Documents.Operations.ETL.Queue.QueueEtlConfiguration |
                                    Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration > extends commandBase {
@@ -40,6 +41,10 @@ class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEt
 
     static forSqlEtl(db: database | string, payload: Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration, scriptsToReset?: string[]) {
         return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration>(db, payload, scriptsToReset);
+    }
+
+    static forSnowflakeEtl(db: database | string, payload: Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeEtlConfiguration, scriptsToReset?: string[]) {
+        return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeEtlConfiguration>(db, payload, scriptsToReset);
     }
 
     static forOlapEtl(db: database | string, payload: Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration, scriptsToReset?: string[]) {

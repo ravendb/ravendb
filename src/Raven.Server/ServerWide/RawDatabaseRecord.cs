@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.QueueSink;
@@ -845,6 +846,30 @@ namespace Raven.Server.ServerWide
                 return _queueEtls;
             }
         }
+        
+        
+        private List<SnowflakeEtlConfiguration> _snowflakeEtls;
+
+        public List<SnowflakeEtlConfiguration> SnowflakeEtls
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.SnowflakeEtls;
+
+                if (_snowflakeEtls == null)
+                {
+                    _snowflakeEtls = new List<SnowflakeEtlConfiguration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.SnowflakeEtls), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        foreach (BlittableJsonReaderObject element in bjra)
+                            _snowflakeEtls.Add(JsonDeserializationCluster.SnowflakeEtlConfiguration(element));
+                    }
+                }
+
+                return _snowflakeEtls;
+            }
+        }
 
         private List<QueueSinkConfiguration> _queueSinks;
 
@@ -1417,6 +1442,39 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _queueConnectionStrings;
+            }
+        }
+        
+        
+        private Dictionary<string, SnowflakeConnectionString> _snowflakeConnectionStrings;
+
+        public Dictionary<string, SnowflakeConnectionString> SnowflakeConnectionStrings
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.SnowflakeConnectionStrings;
+
+                if (_snowflakeConnectionStrings == null)
+                {
+                    _snowflakeConnectionStrings = new Dictionary<string, SnowflakeConnectionString>();
+                    if (_record.TryGet(nameof(DatabaseRecord.SnowflakeConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject bjro)
+                                _snowflakeConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.SnowflakeConnectionString(bjro);
+                        }
+                    }
+                }
+
+                return _snowflakeConnectionStrings;
             }
         }
 

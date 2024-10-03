@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Replication;
@@ -30,6 +31,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         OlapEtl,
         ElasticSearchEtl,
         QueueEtl,
+        SnowflakeEtl,
         Backup,
         Subscription,
         PullReplicationAsHub,
@@ -359,6 +361,32 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(BrokerType)] = BrokerType;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(Url)] = Url;
+            json[nameof(Configuration)] = Configuration?.ToJson();
+
+            return json;
+        }
+    }
+    
+    
+    public sealed class OngoingTaskSnowflakeEtl : OngoingTask
+    {
+        public OngoingTaskSnowflakeEtl()
+        {
+            TaskType = OngoingTaskType.SnowflakeEtl;
+        }
+
+        public string ConnectionStringName { get; set; }
+        
+        public string ConnectionString { get; set; }
+
+        public SnowflakeEtlConfiguration Configuration { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+
+            json[nameof(ConnectionStringName)] = ConnectionStringName;
+            json[nameof(ConnectionString)] = ConnectionString;
             json[nameof(Configuration)] = Configuration?.ToJson();
 
             return json;

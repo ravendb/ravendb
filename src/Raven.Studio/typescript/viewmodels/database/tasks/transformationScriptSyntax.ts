@@ -34,6 +34,9 @@ class transformationScriptSyntax extends dialogViewModelBase {
             case "Sql":
                 sampleText = transformationScriptSyntax.sqlEtlSampleText;
                 break;
+            case "Snowflake":
+                sampleText = transformationScriptSyntax.snowflakeEtlSampleText;
+                break;
             case "ElasticSearch":
                 sampleText = transformationScriptSyntax.elasticSearchEtlSampleText;
                 break;
@@ -148,6 +151,10 @@ orderData.TotalCost = Math.round(orderData.TotalCost * 100) / 100;
 loadToOrders(orderData);`;
 
     sqlEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.sqlEtlSampleText);
+
+    static readonly snowflakeEtlSampleText = transformationScriptSyntax.sqlEtlSampleText;
+
+    snowflakeEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.snowflakeEtlSampleText);
 
     static readonly elasticSearchEtlSampleText =
 `var orderData = {

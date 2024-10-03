@@ -3,7 +3,6 @@ using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.ETL.Providers.Raven;
-using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications;
@@ -34,6 +33,8 @@ using System.Text;
 using Newtonsoft.Json;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
 using Tests.Infrastructure;
 
 namespace FastTests
@@ -250,6 +251,8 @@ namespace FastTests
                     tag = OlapEtl.OlaptEtlTag;
                 else if (typeof(T) == typeof(QueueConnectionString))
                     tag = QueueEtl<QueueItem>.QueueEtlTag;
+                else if (typeof(T) == typeof(SnowflakeConnectionString))
+                    tag = SnowflakeEtl.SnowflakeEtlTag;
                 else
                     throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
 
@@ -290,6 +293,8 @@ namespace FastTests
                     tag = OlapEtl.OlaptEtlTag;
                 else if (typeof(T) == typeof(QueueConnectionString))
                     tag = QueueEtl<QueueItem>.QueueEtlTag;
+                else if (typeof(T) == typeof(SnowflakeConnectionString))
+                    tag = SnowflakeEtl.SnowflakeEtlTag;
                 else
                     throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
 

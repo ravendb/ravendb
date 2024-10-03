@@ -69,6 +69,8 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
                         return getUrlFromProvider(appUrl.forEditElasticSearchEtl);
                     case "SqlEtl":
                         return getUrlFromProvider(appUrl.forEditSqlEtl);
+                    case "SnowflakeEtl":
+                        return getUrlFromProvider(appUrl.forEditSnowflakeEtl);
                     case "RavenEtl":
                         return getUrlFromProvider(appUrl.forEditRavenEtl);
                     case "Subscription":

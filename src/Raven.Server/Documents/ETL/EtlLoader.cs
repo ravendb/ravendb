@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
@@ -22,7 +23,8 @@ using Raven.Server.Documents.ETL.Providers.Queue.AzureQueueStorage;
 using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
 using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Providers.Raven;
-using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
@@ -78,6 +80,8 @@ namespace Raven.Server.Documents.ETL
         public List<ElasticSearchEtlConfiguration> ElasticSearchDestinations;
 
         public List<QueueEtlConfiguration> QueueDestinations;
+        
+        public List<SnowflakeEtlConfiguration> SnowflakeDestinations;
 
         public long GetQueueDestinationCountByBroker(QueueBrokerType brokerType)
         {
@@ -87,7 +91,7 @@ namespace Raven.Server.Documents.ETL
 
         public void Initialize(DatabaseRecord record)
         {
-            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, record.QueueEtls, toRemove: null, null, null);
+            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, record.QueueEtls, record.SnowflakeEtls, toRemove: null, null, null);
         }
 
         public event Action<EtlProcess> ProcessAdded;
@@ -110,6 +114,7 @@ namespace Raven.Server.Documents.ETL
             List<OlapEtlConfiguration> newOlapDestinations,
             List<ElasticSearchEtlConfiguration> newElasticSearchDestinations,
             List<QueueEtlConfiguration> newQueueDestinations,
+            List<SnowflakeEtlConfiguration> newSnowflakeDestinations,
             List<EtlProcess> toRemove, Dictionary<string, string> responsibleNodes,
             List<string> explanations)
         {
@@ -121,6 +126,7 @@ namespace Raven.Server.Documents.ETL
                 OlapDestinations = _databaseRecord.OlapEtls;
                 ElasticSearchDestinations = _databaseRecord.ElasticSearchEtls;
                 QueueDestinations = _databaseRecord.QueueEtls;
+                SnowflakeDestinations = _databaseRecord.SnowflakeEtls;
 
                 var processes = new List<EtlProcess>(_processes);
 
@@ -152,6 +158,9 @@ namespace Raven.Server.Documents.ETL
 
                 if (newQueueDestinations != null && newQueueDestinations.Count > 0)
                     newProcesses.AddRange(GetRelevantProcesses<QueueEtlConfiguration, QueueConnectionString>(newQueueDestinations, ensureUniqueConfigurationNames));
+                
+                if (newSnowflakeDestinations != null && newSnowflakeDestinations.Count > 0)
+                    newProcesses.AddRange(GetRelevantProcesses<SnowflakeEtlConfiguration, SnowflakeConnectionString>(newSnowflakeDestinations, ensureUniqueConfigurationNames));
 
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
@@ -236,6 +245,7 @@ namespace Raven.Server.Documents.ETL
                 OlapEtlConfiguration olapConfig = null;
                 ElasticSearchEtlConfiguration elasticSearchConfig = null;
                 QueueEtlConfiguration queueConfig = null;
+                SnowflakeEtlConfiguration snowflakeConfig = null;
 
                 var connectionStringNotFound = false;
 
@@ -258,6 +268,7 @@ namespace Raven.Server.Documents.ETL
                             connectionStringNotFound = true;
 
                         break;
+                    
                     case EtlType.Olap:
                         olapConfig = config as OlapEtlConfiguration;
                         if (_databaseRecord.OlapConnectionStrings.TryGetValue(config.ConnectionStringName, out var olapConnection))
@@ -278,6 +289,15 @@ namespace Raven.Server.Documents.ETL
                             queueConfig.Initialize(queueConnection);
                         else
                             connectionStringNotFound = true;
+                        break;
+                    
+                    case EtlType.Snowflake:
+                        snowflakeConfig = config as SnowflakeEtlConfiguration;
+                        if (_databaseRecord.SnowflakeConnectionStrings.TryGetValue(config.ConnectionStringName, out var snowflakeConnection))
+                            snowflakeConfig.Initialize(snowflakeConnection);
+                        else
+                            connectionStringNotFound = true;
+
                         break;
 
                     default:
@@ -318,7 +338,8 @@ namespace Raven.Server.Documents.ETL
                         process = new ElasticSearchEtl(transform, elasticSearchConfig, _database, _serverStore);
                     if (queueConfig != null)
                         process = QueueEtl<QueueItem>.CreateInstance(transform, queueConfig, _database, _serverStore);
-
+                    if (snowflakeConfig != null)
+                        process = new SnowflakeEtl(transform, snowflakeConfig, _database, _serverStore);
                     yield return process;
                 }
             }
@@ -485,6 +506,7 @@ namespace Raven.Server.Documents.ETL
             var myOlapEtl = new List<OlapEtlConfiguration>();
             var myElasticSearchEtl = new List<ElasticSearchEtlConfiguration>();
             var myQueueEtl = new List<QueueEtlConfiguration>();
+            var mySnowflakeEtl = new List<SnowflakeEtlConfiguration>();
 
             var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -527,6 +549,14 @@ namespace Raven.Server.Documents.ETL
                 if (IsMyEtlTask<QueueEtlConfiguration, QueueConnectionString>(record, config, ref responsibleNodes, out explanations))
                 {
                     myQueueEtl.Add(config);
+                }
+            }
+            
+            foreach (var config in record.SnowflakeEtls)
+            {
+                if (IsMyEtlTask<SnowflakeEtlConfiguration, SnowflakeConnectionString>(record, config, ref responsibleNodes, out explanations))
+                {
+                    mySnowflakeEtl.Add(config);
                 }
             }
 
@@ -697,12 +727,34 @@ namespace Raven.Server.Documents.ETL
 
                             break;
                         }
+                    
+                    case SnowflakeEtl snowflakeEtl:
+                        {
+                            SnowflakeEtlConfiguration existing = null;
+                            foreach (var config in mySnowflakeEtl)
+                            {
+                                var diff = snowflakeEtl.Configuration.Compare(config);
+
+                                if (diff == EtlConfigurationCompareDifferences.None)
+                                {
+                                    existing = config;
+                                    break;
+                                }
+                            }
+                            if (existing != null)
+                            {
+                                toRemove.Remove(processesPerConfig.Key);
+                                mySnowflakeEtl.Remove(existing);
+                            }
+
+                            break;
+                        }
                     default:
                         throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
                 }
             }
 
-            LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, toRemove.SelectMany(x => x.Value).ToList(), responsibleNodes, explanations);
+            LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, mySnowflakeEtl, toRemove.SelectMany(x => x.Value).ToList(), responsibleNodes, explanations);
 
             if (toRemove.Count == 0)
                 return;
@@ -722,7 +774,7 @@ namespace Raven.Server.Documents.ETL
 
                             using (process)
                             {
-                                string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, responsibleNodes, explanations);
+                                string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, mySnowflakeEtl, responsibleNodes, explanations);
                                 process.Stop(reason);
                             }
                         }
@@ -775,6 +827,7 @@ namespace Raven.Server.Documents.ETL
             List<OlapEtlConfiguration> myOlapEtl,
             List<ElasticSearchEtlConfiguration> myElasticSearchEtl,
             List<QueueEtlConfiguration> myQueueEtl,
+            List<SnowflakeEtlConfiguration> mySnowflakeEtl,
             Dictionary<string, string> responsibleNodes,
             List<string> explanations)
         {
@@ -831,6 +884,13 @@ namespace Raven.Server.Documents.ETL
 
                 if (existing != null)
                     differences = azureQueueStorageEtl.Configuration.Compare(existing, transformationDiffs);
+            }
+            else if (process is SnowflakeEtl snowflakeEtl)
+            {
+                var existing = mySnowflakeEtl.FirstOrDefault(x => x.Name.Equals(snowflakeEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                    differences = snowflakeEtl.Configuration.Compare(existing, transformationDiffs);
             }
             else
             {
@@ -929,6 +989,7 @@ namespace Raven.Server.Documents.ETL
             {
                 var sqlEtls = _databaseRecord.SqlEtls;
                 var elasticSearchEtls = _databaseRecord.ElasticSearchEtls;
+                var snowflakeEtls = _databaseRecord.SnowflakeEtls;
 
                 foreach (var config in ravenEtls)
                     MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);
@@ -938,6 +999,10 @@ namespace Raven.Server.Documents.ETL
 
                 foreach (var config in elasticSearchEtls)
                     MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);
+                
+                foreach (var config in snowflakeEtls)
+                    MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);
+
             }
             return lastProcessedTombstones;
         }
@@ -973,6 +1038,13 @@ namespace Raven.Server.Documents.ETL
             foreach (var config in SqlDestinations.Where(config => config.Disabled))
             {
                 var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.SqlEtl, config.Name, config.TaskId);
+                dict[source] = tombstoneCollections;
+            }
+            
+            
+            foreach (var config in SnowflakeDestinations.Where(config => config.Disabled))
+            {
+                var source = new TombstoneDeletionBlockageSource(ITombstoneAware.TombstoneDeletionBlockerType.SnowflakeEtl, config.Name, config.TaskId);
                 dict[source] = tombstoneCollections;
             }
 

@@ -100,6 +100,16 @@ namespace Raven.Server.ServerWide.Commands
                         queueEtl.Disabled = Disable;
                     }
                     break;
+                
+                
+                case OngoingTaskType.SnowflakeEtl:
+
+                    var snowflakeEtl = record?.SnowflakeEtls?.Find(x => x.TaskId == TaskId);
+                    if (snowflakeEtl != null)
+                    {
+                        snowflakeEtl.Disabled = Disable;
+                    }
+                    break;
 
                 case OngoingTaskType.PullReplicationAsHub:
                     var pullAsHub = record?.HubPullReplications?.First(x => x.TaskId == TaskId);

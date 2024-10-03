@@ -67,4 +67,5 @@ public enum LicenseAttribute
     MaxNumberOfCustomSortersPerCluster,
     MaxNumberOfCustomAnalyzersPerDatabase,
     MaxNumberOfCustomAnalyzersPerCluster,
+    SnowflakeEtl,
 }

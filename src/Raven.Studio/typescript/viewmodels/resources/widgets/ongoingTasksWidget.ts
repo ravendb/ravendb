@@ -46,6 +46,11 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             icon: "icon-sql-etl",
             colorClass: "sql-etl"
         },
+        "SnowflakeEtl": {
+            nameForUI: "Snowflake ETL",
+            icon: "icon-snowflake-etl",
+            colorClass: "snowflake-etl"
+        },
         "ElasticSearchEtl": {
             nameForUI: "Elasticsearch ETL",
             icon: "icon-elastic-search-etl",

@@ -52,6 +52,8 @@ class blockingTombstonesDetails extends abstractAlertDetails {
                 return "External Replication";
             case "SqlEtl":
                 return "SQL ETL";
+            case "SnowflakeEtl":
+                return "Snowflake ETL";
             case "OlapEtl":
                 return "OLAP ETL";
             case "ElasticSearchEtl":
@@ -91,10 +93,12 @@ class blockingTombstonesDetails extends abstractAlertDetails {
                 return appUrl.forEditReplicationSink(currentDatabase, item.blockerTaskId);
             case "SqlEtl":
                 return appUrl.forEditSqlEtl(currentDatabase, item.blockerTaskId);
+            case "SnowflakeEtl":
+                return appUrl.forEditSnowflakeEtl(currentDatabase, item.blockerTaskId);
             case "RavenEtl":
                 return appUrl.forEditRavenEtl(currentDatabase, item.blockerTaskId);
             default:
-                // we fallback to ongoing task list
+                // we fall back to ongoing task list
                 return appUrl.forOngoingTasks(currentDatabase);
         }
     }

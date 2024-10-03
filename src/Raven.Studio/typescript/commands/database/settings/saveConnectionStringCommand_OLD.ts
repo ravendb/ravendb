@@ -3,6 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import connectionStringSqlEtlModel = require("models/database/settings/connectionStringSqlEtlModel");
+import connectionStringSnowflakeEtlModel = require("models/database/settings/connectionStringSnowflakeEtlModel");
 import connectionStringOlapEtlModel = require("models/database/settings/connectionStringOlapEtlModel");
 import connectionStringElasticSearchEtlModel = require("models/database/settings/connectionStringElasticSearchEtlModel");
 import connectionStringKafkaModel from "models/database/settings/connectionStringKafkaModel";
@@ -13,6 +14,7 @@ class saveConnectionStringCommand_OLD extends commandBase {
 
     constructor(private db: database, private connectionString: connectionStringRavenEtlModel |
         connectionStringSqlEtlModel |
+        connectionStringSnowflakeEtlModel |
         connectionStringOlapEtlModel |
         connectionStringElasticSearchEtlModel |
         connectionStringKafkaModel |

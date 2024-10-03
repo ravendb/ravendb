@@ -149,6 +149,13 @@ namespace Raven.Server.ServerWide.Commands
                         record.QueueEtls.Remove(queueEtl);
                     }
                     break;
+                case OngoingTaskType.SnowflakeEtl:
+                    var snowflakeEtl = record.SnowflakeEtls?.Find(x => x.TaskId == TaskId);
+                    if (snowflakeEtl != null)
+                    {
+                        record.SnowflakeEtls.Remove(snowflakeEtl);
+                    }
+                    break;
                 case OngoingTaskType.QueueSink:
                     var queueSink = record.QueueSinks.Find(x => x.TaskId == TaskId);
                     if (queueSink != null)

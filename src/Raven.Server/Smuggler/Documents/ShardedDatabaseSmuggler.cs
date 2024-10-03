@@ -138,6 +138,15 @@ namespace Raven.Server.Smuggler.Documents
                     sqlEtl.MentorNode = null;
                 }
             }
+            
+            foreach (var snowflakeEtl in databaseRecord.SnowflakeEtls)
+            {
+                if (string.IsNullOrEmpty(snowflakeEtl.MentorNode) == false)
+                {
+                    AddMentorNodeWarning(DatabaseRecordItemType.SnowflakeEtls, snowflakeEtl.Name);
+                    snowflakeEtl.MentorNode = null;
+                }
+            }
 
             foreach (var backup in databaseRecord.PeriodicBackups)
             {

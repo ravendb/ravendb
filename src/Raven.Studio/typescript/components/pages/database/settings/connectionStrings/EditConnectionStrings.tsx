@@ -26,6 +26,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import AzureQueueStorageConnectionString from "components/pages/database/settings/connectionStrings/editForms/AzureQueueStorageConnectionString";
+import SnowflakeConnectionString from "components/pages/database/settings/connectionStrings/editForms/SnowflakeConnectionString";
 
 export interface EditConnectionStringsProps {
     initialConnection?: Connection;
@@ -136,11 +137,12 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
 const connectionStringsOptions: SelectOptionWithIcon<StudioEtlType>[] = [
     { value: "Raven", label: "RavenDB", icon: "raven" },
     { value: "Sql", label: "SQL", icon: "table" },
+    { value: "Snowflake", label: "Snowflake", icon: "snowflake" },
     { value: "Olap", label: "OLAP", icon: "olap" },
     { value: "ElasticSearch", label: "ElasticSearch", icon: "elasticsearch" },
     { value: "Kafka", label: "Kafka", icon: "kafka" },
     { value: "RabbitMQ", label: "RabbitMQ", icon: "rabbitmq" },
-    { value: "AzureQueueStorage", label: "Azure Queue Storage", icon: "azure-queue-storage-etl" },
+    { value: "AzureQueueStorage", label: "Azure Queue Storage", icon: "azure" },
 ];
 
 function getAvailableConnectionStringsOptions(
@@ -153,6 +155,8 @@ function getAvailableConnectionStringsOptions(
                 return features.hasRavenEtl;
             case "Sql":
                 return features.hasSqlEtl;
+            case "Snowflake":
+                return features.hasSnowflakeEtl;
             case "Olap":
                 return features.hasOlapEtl;
             case "ElasticSearch":
@@ -173,6 +177,8 @@ function getEditConnectionStringComponent(type: StudioEtlType): (props: EditConn
             return RavenConnectionString;
         case "Sql":
             return SqlConnectionString;
+        case "Snowflake":
+            return SnowflakeConnectionString;
         case "Olap":
             return OlapConnectionString;
         case "ElasticSearch":

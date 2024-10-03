@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Integrations.PostgreSQL;
@@ -63,7 +64,7 @@ namespace SlowTests.Smuggler
                 .Select(field => field.Name)
                 .ToList();
 
-            Assert.Equal(45, fieldNames.Count);
+            Assert.Equal(47, fieldNames.Count);
         }
 
         [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
@@ -167,9 +168,19 @@ namespace SlowTests.Smuggler
                         ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store1.Database};",
                         FactoryName = "Microsoft.Data.SqlClient"
                     };
-
+                    
                     var result2 = store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
                     Assert.NotNull(result2.RaftCommandIndex);
+                    
+                    var snowflakeConnectionString = new SnowflakeConnectionString
+                    {
+                        Name = "connection",
+                        ConnectionString = global::Tests.Infrastructure.ConnectionString.SnowflakeConnectionString.Instance.VerifiedConnectionString.Value,
+                    };
+
+                    var result3 = store1.Maintenance.Send(new PutConnectionStringOperation<SnowflakeConnectionString>(snowflakeConnectionString));
+                    Assert.NotNull(result3.RaftCommandIndex);
+                    
 
                     store1.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
                     {
@@ -194,6 +205,20 @@ namespace SlowTests.Smuggler
                             },
                         Name = "sql",
                         ParameterizeDeletes = false,
+                        MentorNode = "A",
+                        Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }
+                    }));
+                    
+                    store1.Maintenance.Send(new AddEtlOperation<SnowflakeConnectionString>(new SnowflakeEtlConfiguration()
+                    {
+                        AllowEtlOnNonEncryptedChannel = true,
+                        ConnectionStringName = "connection",
+                        SnowflakeTables =
+                            {
+                                new SnowflakeEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = false},
+                                new SnowflakeEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = false},
+                            },
+                        Name = "snowflake",
                         MentorNode = "A",
                         Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                     }));
@@ -263,6 +288,12 @@ namespace SlowTests.Smuggler
                     Assert.Equal("connection", record.SqlEtls.First().ConnectionStringName);
                     Assert.Equal(true, record.SqlEtls.First().AllowEtlOnNonEncryptedChannel);
                     Assert.Equal(true, record.SqlEtls.First().Disabled);
+                    
+                    Assert.Equal(1, record.SnowflakeEtls.Count);
+                    Assert.Equal("snowflake", record.SnowflakeEtls.First().Name);
+                    Assert.Equal("connection", record.SnowflakeEtls.First().ConnectionStringName);
+                    Assert.Equal(true, record.SnowflakeEtls.First().AllowEtlOnNonEncryptedChannel);
+                    Assert.Equal(true, record.SnowflakeEtls.First().Disabled);
                 }
             }
             finally
@@ -1128,6 +1159,16 @@ namespace SlowTests.Smuggler
 
                 var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
                 Assert.NotNull(result2.RaftCommandIndex);
+
+                var snowflakeConnectionString = new SnowflakeConnectionString
+                {
+                    Name = "connection",
+                    ConnectionString = global::Tests.Infrastructure.ConnectionString.SnowflakeConnectionString.Instance.VerifiedConnectionString.Value,
+                };
+
+                var result3 = store.Maintenance.Send(new PutConnectionStringOperation<SnowflakeConnectionString>(snowflakeConnectionString));
+                Assert.NotNull(result3.RaftCommandIndex);
+
                 store.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
                 {
                     AllowEtlOnNonEncryptedChannel = true,
@@ -1151,6 +1192,20 @@ namespace SlowTests.Smuggler
                             },
                     Name = "sql",
                     ParameterizeDeletes = false,
+                    MentorNode = "A",
+                    Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }
+                }));
+
+                store.Maintenance.Send(new AddEtlOperation<SnowflakeConnectionString>(new SnowflakeEtlConfiguration()
+                {
+                    AllowEtlOnNonEncryptedChannel = true,
+                    ConnectionStringName = "connection",
+                    SnowflakeTables =
+                            {
+                                new SnowflakeEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = false},
+                                new SnowflakeEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = false},
+                            },
+                    Name = "snowflake",
                     MentorNode = "A",
                     Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                 }));
@@ -1284,6 +1339,12 @@ namespace SlowTests.Smuggler
                     Assert.Equal("connection", record.SqlEtls.First().ConnectionStringName);
                     Assert.Equal(true, record.SqlEtls.First().AllowEtlOnNonEncryptedChannel);
                     Assert.Equal(false, record.SqlEtls.First().Disabled);
+                    
+                    Assert.Equal(1, record.SnowflakeEtls.Count);
+                    Assert.Equal("snowflake", record.SnowflakeEtls.First().Name);
+                    Assert.Equal("connection", record.SnowflakeEtls.First().ConnectionStringName);
+                    Assert.Equal(true, record.SnowflakeEtls.First().AllowEtlOnNonEncryptedChannel);
+                    Assert.Equal(false, record.SnowflakeEtls.First().Disabled);
 
                     Assert.NotNull(record.Refresh);
                     Assert.False(record.Refresh.Disabled);

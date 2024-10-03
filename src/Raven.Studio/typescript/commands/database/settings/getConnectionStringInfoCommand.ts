@@ -29,6 +29,10 @@ class getConnectionStringInfoCommand extends commandBase {
         return new getConnectionStringInfoCommand(db, "Sql", connectionStringName);
     }
 
+    static forSnowflakeEtl(db: database | string, connectionStringName: string) {
+        return new getConnectionStringInfoCommand(db, "Snowflake", connectionStringName);
+    }
+
     static forOlapEtl(db: database | string, connectionStringName: string) {
         return new getConnectionStringInfoCommand(db, "Olap", connectionStringName);
     }

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.QueueSink;
@@ -95,6 +96,15 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         foreach (var queueEtl in databaseRecord.QueueEtls)
             yield return CreateQueueEtlTaskInfo(clusterTopology, databaseRecord, queueEtl);
     }
+    
+    private IEnumerable<OngoingTaskSnowflakeEtl> GetSnowflakeEtlTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        if (databaseRecord.SnowflakeEtls == null || databaseRecord.SnowflakeEtls.Count == 0)
+            yield break;
+
+        foreach (var snowflakeEtl in databaseRecord.SnowflakeEtls)
+            yield return CreateSnowflakeEtlTaskInfo(clusterTopology, databaseRecord, snowflakeEtl);
+    }
 
     private IEnumerable<OngoingTaskPullReplicationAsSink> GetPullReplicationAsSinkTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
@@ -146,6 +156,9 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return task;
 
         foreach (var task in GetQueueEtlTasks(clusterTopology, databaseRecord))
+            yield return task;
+        
+        foreach (var task in GetSnowflakeEtlTasks(clusterTopology, databaseRecord))
             yield return task;
 
         foreach (var task in GetPullReplicationAsSinkTasks(clusterTopology, databaseRecord))
@@ -251,6 +264,18 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
                     return null;
 
                 return CreateElasticSearchEtlTaskInfo(clusterTopology, databaseRecord, elasticSearchEtl);
+            
+            
+            case OngoingTaskType.SnowflakeEtl:
+
+                var snowflakeEtl = taskName != null ?
+                    databaseRecord.SnowflakeEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.SnowflakeEtls?.Find(x => x.TaskId == taskId);
+
+                if (snowflakeEtl == null)
+                    return null;
+
+                return CreateSnowflakeEtlTaskInfo(clusterTopology, databaseRecord, snowflakeEtl);
 
             case OngoingTaskType.Subscription:
 
@@ -477,6 +502,36 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             Url = connection?.GetUrl(),
             Error = error,
             Configuration = queueEtl
+        };
+    }
+    
+    
+    private OngoingTaskSnowflakeEtl CreateSnowflakeEtlTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, SnowflakeEtlConfiguration snowflakeEtl)
+    {
+        string connectionString = null;
+
+        if (databaseRecord.SnowflakeConnectionStrings.TryGetValue(snowflakeEtl.ConnectionStringName, out var snowflakeConnection))
+        {
+            connectionString = snowflakeConnection.ConnectionString;
+        }
+
+        var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, snowflakeEtl, out var tag, out var error);
+
+        var taskState = OngoingTasksHandler.GetEtlTaskState(snowflakeEtl);
+
+        return new OngoingTaskSnowflakeEtl
+        {
+            TaskId = snowflakeEtl.TaskId,
+            TaskName = snowflakeEtl.Name,
+            TaskConnectionStatus = connectionStatus,
+            TaskState = taskState,
+            MentorNode = snowflakeEtl.MentorNode,
+            PinToMentorNode = snowflakeEtl.PinToMentorNode,
+            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
+            ConnectionStringName = snowflakeEtl.ConnectionStringName,
+            ConnectionString = connectionString,
+            Error = error,
+            Configuration = snowflakeEtl
         };
     }
 

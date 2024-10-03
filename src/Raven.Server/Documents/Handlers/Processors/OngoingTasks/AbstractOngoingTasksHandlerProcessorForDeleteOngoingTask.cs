@@ -111,6 +111,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                             if (queueSink != null)
                                 _deletingQueueSink = (queueSink.Name, queueSink.Scripts.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
                             break;
+                        case OngoingTaskType.SnowflakeEtl:
+                            var snowflakeEtls = rawRecord.SnowflakeEtls;
+                            var snowflakeEtl = snowflakeEtls?.Find(x => x.TaskId == id);
+                            if (snowflakeEtl != null)
+                                _deletingEtl = (snowflakeEtl.Name, snowflakeEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                            break;
                     }
                 }
             }

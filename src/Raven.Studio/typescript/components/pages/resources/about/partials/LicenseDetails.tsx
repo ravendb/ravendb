@@ -707,6 +707,14 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "HasSqlEtl",
             },
             {
+                name: "Snowflake ETL",
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: true },
+                developer: { value: true },
+                fieldInLicense: "HasSnowflakeEtl",
+            },
+            {
                 name: "OLAP ETL",
                 community: { value: false },
                 professional: { value: false },

@@ -12,6 +12,7 @@ import {
     mapAzureQueueStorageConnectionsFromDto,
     mapRavenConnectionsFromDto,
     mapSqlConnectionsFromDto,
+    mapSnowflakeConnectionsFromDto,
 } from "./connectionStringsMapsFromDto";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import DatabaseUtils from "components/utils/DatabaseUtils";
@@ -29,6 +30,7 @@ const initialState: ConnectionStringsState = {
     connections: {
         Raven: [],
         Sql: [],
+        Snowflake: [],
         Olap: [],
         ElasticSearch: [],
         Kafka: [],
@@ -42,7 +44,15 @@ const initialState: ConnectionStringsState = {
     initialEditConnection: null,
 };
 
-type StudioEtlType = "Raven" | "Sql" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage";
+type StudioEtlType =
+    | "Raven"
+    | "Sql"
+    | "Snowflake"
+    | "Olap"
+    | "ElasticSearch"
+    | "Kafka"
+    | "RabbitMQ"
+    | "AzureQueueStorage";
 
 export const connectionStringsSlice = createSlice({
     name: "connectionStrings",
@@ -92,6 +102,10 @@ export const connectionStringsSlice = createSlice({
                 const { connections, urlParameters } = state;
 
                 connections.Sql = mapSqlConnectionsFromDto(connectionStringsDto.SqlConnectionStrings, ongoingTasks);
+                connections.Snowflake = mapSnowflakeConnectionsFromDto(
+                    connectionStringsDto.SnowflakeConnectionStrings,
+                    ongoingTasks
+                );
                 connections.Olap = mapOlapConnectionsFromDto(connectionStringsDto.OlapConnectionStrings, ongoingTasks);
 
                 connections.Raven = mapRavenConnectionsFromDto(

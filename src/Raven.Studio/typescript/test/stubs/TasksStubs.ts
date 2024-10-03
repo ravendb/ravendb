@@ -18,6 +18,7 @@ import OngoingTaskElasticSearchEtl = Raven.Client.Documents.Operations.OngoingTa
 import collectionsStats = require("models/database/documents/collectionsStats");
 import collection = require("models/database/documents/collection");
 import OngoingTaskQueueSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
+import OngoingTaskSnowflakeEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -29,6 +30,7 @@ export class TasksStubs {
             OngoingTasks: [
                 TasksStubs.getRavenEtl(),
                 TasksStubs.getSql(),
+                TasksStubs.getSnowflake(),
                 TasksStubs.getOlap(),
                 TasksStubs.getElasticSearch(),
                 TasksStubs.getPeriodicBackupListItem(),
@@ -52,6 +54,7 @@ export class TasksStubs {
             Results: [
                 TasksStubs.getRavenEtlProgress(),
                 TasksStubs.getSqlProgress(),
+                TasksStubs.getSnowflakeProgress(),
                 TasksStubs.getOlapProgress(),
                 TasksStubs.getElasticsearchProgress(),
                 TasksStubs.getKafkaProgress(),
@@ -140,6 +143,11 @@ export class TasksStubs {
     static getSqlProgress(): EtlTaskProgress {
         const taskName = TasksStubs.getSql().TaskName;
         return TasksStubs.getEtlProgress(taskName, "Sql");
+    }
+
+    static getSnowflakeProgress(): EtlTaskProgress {
+        const taskName = TasksStubs.getSnowflake().TaskName;
+        return TasksStubs.getEtlProgress(taskName, "Snowflake");
     }
 
     static getOlapProgress(): EtlTaskProgress {
@@ -249,6 +257,23 @@ export class TasksStubs {
             MentorNode: null,
             TaskConnectionStatus: "Active",
             ConnectionStringDefined: true,
+            PinToMentorNode: false,
+            Configuration: null,
+        };
+    }
+
+    static getSnowflake(): OngoingTaskSnowflakeEtl {
+        return {
+            TaskName: "SnowflakeTask",
+            TaskId: 116,
+            TaskType: "SnowflakeEtl",
+            ConnectionStringName: "Snowflake-CS",
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskState: "Enabled",
+            Error: null,
+            MentorNode: null,
+            TaskConnectionStatus: "Active",
+            ConnectionString: "SNOWFLAKE-CS",
             PinToMentorNode: false,
             Configuration: null,
         };
