@@ -182,8 +182,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (Logger.IsDebugEnabled && _serverStore.IsPassive() == false)
-                    Logger.Debug("Failed to put my node info, will try again later", e);
+                if (Logger.IsWarnEnabled && _serverStore.IsPassive() == false)
+                    Logger.Warn("Failed to put my node info, will try again later", e);
             }
             finally
             {

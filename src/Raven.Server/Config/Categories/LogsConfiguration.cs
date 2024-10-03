@@ -23,7 +23,7 @@ namespace Raven.Server.Config.Categories
         public LogLevel MinLevel { get; set; }
 
         [DefaultValue(null)]
-        [ConfigurationEntry("Logs.Path", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.InternalPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NLogInternalPath { get; set; }
 
         [DefaultValue(LogLevel.Info)]
@@ -55,6 +55,7 @@ namespace Raven.Server.Config.Categories
 
         [DefaultValue(false)]
         [ConfigurationEntry("Logs.EnableArchiveFileCompression", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.Compress", ConfigurationEntryScope.ServerWideOnly)]
         public bool EnableArchiveFileCompression { get; set; }
 
         [DefaultValue(LogLevel.Error)]

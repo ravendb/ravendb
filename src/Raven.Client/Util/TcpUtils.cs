@@ -69,8 +69,8 @@ namespace Raven.Client.Util
             }
             catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
-                if (log.IsDebugEnabled)
-                    log.Debug(
+                if (log.IsWarnEnabled)
+                    log.Warn(
                         $"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {((SocketException)ae.InnerException).SocketErrorCode}",
                         ae.InnerException);
                 throw;
