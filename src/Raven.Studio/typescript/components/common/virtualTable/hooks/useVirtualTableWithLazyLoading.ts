@@ -2,73 +2,52 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { virtualTableConstants } from "../utils/virtualTableConstants";
 
-interface UseVirtualTableWithLazyLoadingProps<T> {
-    fetchData: (count: number, elementNumber: number) => Promise<pagedResult<T>>;
+// Use it along with VirtualTableWithLazyLoading component
+
+type FetchData<T extends pagedResult<unknown>> = (skip: number, take: number) => Promise<T>;
+
+interface UseVirtualTableWithLazyLoadingProps<T extends pagedResult<unknown>> {
+    fetchData: FetchData<T>;
     overscan?: number;
-    debounceInMs?: number;
+    tableHeightInPx?: number;
 }
 
-export function useVirtualTableWithLazyLoading<T>({
+export function useVirtualTableWithLazyLoading<T extends pagedResult<unknown>>({
     fetchData,
     overscan = 50,
-    debounceInMs = 200,
+    tableHeightInPx = window.innerHeight,
 }: UseVirtualTableWithLazyLoadingProps<T>) {
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
-    const initialItemsCount = Math.ceil(window.innerHeight / defaultRowHeightInPx) + overscan;
-
-    const [dataArray, setDataArray] = useState<any[]>([]);
+    const [dataPreview, setDataPreview] = useState<T["items"]>([]);
     const [totalResultCount, setTotalResultCount] = useState<number>(0);
+    const [isOnBottom, setIsOnBottom] = useState(false);
+    const [lastSkipAfterLoad, setLastSkipAfterLoad] = useState(0);
 
+    const initialItemsCount = Math.ceil(tableHeightInPx / defaultRowHeightInPx) + overscan;
     const scalar = useMemo(() => getScalar(totalResultCount), [totalResultCount]);
 
-    const [scrollTopAfterLoad, setScrollTopAfterLoad] = useState(0);
-    const [visibleElementsCount, setVisibleElementsCount] = useState(0);
-    const [isOnBottom, setIsOnBottom] = useState(false);
+    const dataStartIndex = useRef(0);
+    const dataEndIndex = useRef(initialItemsCount);
 
-    const [lastSkip, setLastSkip] = useState<number>(0);
-    const [lastTake, setLastTake] = useState<number>(initialItemsCount);
+    const bodyHeightInPx = Math.floor((totalResultCount * defaultRowHeightInPx) / scalar);
 
     const asyncLoadInitialData = useAsync(async () => {
         const result = await fetchData(0, initialItemsCount);
-
-        setDataArray(result.items);
         setTotalResultCount(result.totalResultCount);
+        setDataPreview(result.items);
     }, []);
 
     const asyncLoadData = useAsyncCallback(async (skip: number, take: number) => {
-        if (skip + take > totalResultCount) {
-            skip = totalResultCount - take;
-        }
-
-        if (skip < 0) {
-            skip = 0;
-        }
-
-        if (skip === lastSkip && take === lastTake) {
-            return;
-        }
-
-        setLastSkip(skip);
-        setLastTake(take);
-
         const result = await fetchData(skip, take);
-        setDataArray(result.items);
+        setTotalResultCount(result.totalResultCount);
+        setDataPreview(result.items);
 
-        setTimeout(() => {
-            setScrollTopAfterLoad(tableContainerRef.current.scrollTop);
-        }, debounceInMs);
+        setLastSkipAfterLoad(skip);
+        setIsOnBottom(skip + take === totalResultCount);
     });
 
-    const debouncedLoadData = useMemo(
-        () =>
-            _.debounce(async (skip: number, take: number) => {
-                await asyncLoadData.execute(skip, take);
-            }, debounceInMs),
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        []
-    );
-
+    // Handle scroll
     useEffect(() => {
         if (!tableContainerRef.current) {
             return;
@@ -77,27 +56,42 @@ export function useVirtualTableWithLazyLoading<T>({
         const handleScroll = (e: Event) => {
             const target = e.target as HTMLDivElement;
 
-            const scrollTop = target.scrollTop;
-            const scaledScrollTop = scrollTop * scalar;
-
-            const startElementIndex = Math.floor(scaledScrollTop / defaultRowHeightInPx);
+            const scaledScrollTop = target.scrollTop * scalar;
+            const startIndex = Math.floor(scaledScrollTop / defaultRowHeightInPx);
             const visibleElementsCount = Math.floor((target.clientHeight - headerHeightInPx) / defaultRowHeightInPx);
+            const isOnBottom = target.scrollTop + target.clientHeight >= bodyHeightInPx;
 
-            let start = 0;
+            let safeStartIndex = dataStartIndex.current;
+            let safeEndIndex = dataEndIndex.current;
 
-            const adjustedScrollOnBottom =
-                (target.scrollHeight - (visibleElementsCount + overscan) * defaultRowHeightInPx) * scalar;
+            const halfOverscan = overscan / 2;
 
-            if (scaledScrollTop >= adjustedScrollOnBottom) {
-                start = totalResultCount;
-            } else {
-                start = startElementIndex - overscan;
+            if (safeStartIndex > halfOverscan) {
+                safeStartIndex += halfOverscan;
+            }
+            if (totalResultCount - safeEndIndex > halfOverscan) {
+                safeEndIndex -= halfOverscan;
             }
 
-            setVisibleElementsCount(visibleElementsCount);
-            setIsOnBottom(start === totalResultCount);
+            // the field over which you can scroll without fetching new data
+            if (startIndex >= safeStartIndex && startIndex + visibleElementsCount <= safeEndIndex) {
+                return;
+            }
 
-            debouncedLoadData(start, overscan + visibleElementsCount + overscan);
+            let skip = startIndex - overscan;
+            const take = visibleElementsCount + overscan * 2;
+
+            if (isOnBottom || skip + take > totalResultCount) {
+                skip = totalResultCount - take;
+            }
+
+            if (skip < 0) {
+                skip = 0;
+            }
+
+            dataStartIndex.current = skip;
+            dataEndIndex.current = skip + take;
+            asyncLoadData.execute(skip, take);
         };
 
         const current = tableContainerRef.current;
@@ -106,27 +100,19 @@ export function useVirtualTableWithLazyLoading<T>({
         return () => {
             current.removeEventListener("scroll", handleScroll);
         };
-    }, [totalResultCount, overscan, scalar, tableContainerRef, debouncedLoadData]);
+    }, [asyncLoadData, bodyHeightInPx, overscan, scalar, totalResultCount]);
 
     const getRowPositionY = (index: number) => {
-        if (scrollTopAfterLoad === 0) {
-            return index * defaultRowHeightInPx;
-        }
-
         if (isOnBottom) {
-            const x = dataArray.length - visibleElementsCount;
-            const r = scrollTopAfterLoad + (index - x) * defaultRowHeightInPx;
-
-            return r;
+            // last element is always at the end of the table
+            return bodyHeightInPx - (dataPreview.length - index) * defaultRowHeightInPx;
         }
 
-        return scrollTopAfterLoad + index * defaultRowHeightInPx - overscan * defaultRowHeightInPx;
+        return (lastSkipAfterLoad * defaultRowHeightInPx) / scalar + index * defaultRowHeightInPx;
     };
 
-    const bodyHeightInPx = Math.floor((totalResultCount * defaultRowHeightInPx) / scalar);
-
     return {
-        dataArray,
+        dataPreview,
         componentProps: {
             tableContainerRef,
             isLoading: asyncLoadInitialData.loading || asyncLoadData.loading,

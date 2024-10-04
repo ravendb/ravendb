@@ -109,12 +109,14 @@
             position: absolute;
             display: flex;
             width: 100%;
+            background-color: colors.$row-even-bg-var;
 
             td {
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
                 border-right: 1px solid colors.$border-color-light-var;
+                background-color: colors.$row-even-bg-var;
 
                 * {
                     overflow: hidden;
@@ -140,19 +142,11 @@
                 }
             }
 
-            &:nth-child(odd) {
+            &.is-odd {
                 background-color: colors.$row-bg-var;
 
                 td {
                     background-color: colors.$row-bg-var;
-                }
-            }
-
-            &:nth-child(even) {
-                background-color: colors.$row-even-bg-var;
-
-                td {
-                    background-color: colors.$row-even-bg-var;
                 }
             }
 

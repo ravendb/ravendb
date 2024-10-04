@@ -3,10 +3,11 @@ import { virtualTableConstants } from "components/common/virtualTable/utils/virt
 interface TableBodyWidthOptions {
     isWithoutTablePadding?: boolean;
     isWithoutTableScrollbar?: boolean;
+    isWithRightSpace?: boolean;
 }
 
 function getTableBodyWidth(containerWidth = 0, options: TableBodyWidthOptions = {}) {
-    const { isWithoutTablePadding = true, isWithoutTableScrollbar = true } = options;
+    const { isWithoutTablePadding = true, isWithoutTableScrollbar = true, isWithRightSpace = true } = options;
 
     if (containerWidth === 0) {
         containerWidth = $(".react-container")[0]?.clientWidth ?? window.innerWidth;
@@ -18,6 +19,9 @@ function getTableBodyWidth(containerWidth = 0, options: TableBodyWidthOptions = 
     }
     if (isWithoutTableScrollbar) {
         containerWidth -= virtualTableConstants.scrollbarWidthInPx;
+    }
+    if (isWithRightSpace) {
+        containerWidth -= 20; // some space to avoid horizontal scroll
     }
 
     return containerWidth;
