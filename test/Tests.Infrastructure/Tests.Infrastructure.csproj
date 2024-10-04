@@ -24,10 +24,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="JunitXml.TestLogger" Version="4.0.254" />
-    <PackageReference Include="MongoDB.Driver" Version="2.28.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.29.0" />
     <PackageReference Include="xRetry" Version="1.9.0" />
-    <PackageReference Include="xunit" Version="2.9.0" />
-    <PackageReference Include="xunit.runner.utility" Version="2.9.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.utility" Version="2.9.2" />
     <PackageReference Include="XunitLogger" Version="4.0.991" />
   </ItemGroup>
   <ItemGroup>
