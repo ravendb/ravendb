@@ -31,7 +31,7 @@ namespace Sparrow.Global
                 new JsonAttribute("Component", "${event-properties:item=Component}"),
                 new JsonAttribute("Logger", "${logger}"),
                 new JsonAttribute("Message", "${message:withexception=true}"),
-                new JsonAttribute("Other", "${event-properties:item=Data}"),
+                new JsonAttribute("Data", "${event-properties:item=Data}"),
             };
 
             internal class Properties
