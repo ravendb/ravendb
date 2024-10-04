@@ -132,29 +132,6 @@ namespace Lucene.Net.Search.Vectorhighlight
             return fragment.ToString();
         }
 
-        /*
-        [Obsolete]
-        protected String MakeFragment(StringBuilder buffer, int[] index, String[] values, WeightedFragInfo fragInfo)
-        {
-            StringBuilder fragment = new StringBuilder();
-            int s = fragInfo.startOffset;
-            String src = GetFragmentSource(buffer, index, values, s, fragInfo.endOffset);
-            int srcIndex = 0;
-            foreach (SubInfo subInfo in fragInfo.subInfos)
-            {
-                foreach (Toffs to in subInfo.termsOffsets)
-                {
-                    fragment.Append(src.Substring(srcIndex, to.startOffset - s - srcIndex)).Append(GetPreTag(subInfo.seqnum))
-                      .Append(src.Substring(to.startOffset - s, to.endOffset - s - (to.startOffset - s))).Append(GetPostTag(subInfo.seqnum));
-                    srcIndex = to.endOffset - s;
-                }
-            }
-            fragment.Append(src.Substring(srcIndex));
-            return fragment.ToString();
-        }
-        */
-
-
         private string GetFragmentSource(StringBuilder buffer, int[] index, Field[] values, WeightedFragInfo weightedFragInfo, out int startOffset, IState state)
         {
             while (buffer.Length < weightedFragInfo.endOffset && index[0] < values.Length)

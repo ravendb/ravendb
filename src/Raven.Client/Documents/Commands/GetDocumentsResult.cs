@@ -16,8 +16,5 @@ namespace Raven.Client.Documents.Commands
         public BlittableJsonReaderObject TimeSeriesIncludes { get; set; }
 
         public BlittableJsonReaderObject CompareExchangeValueIncludes { get; set; }
-
-        [Obsolete("Will be removed in next major version of the product.")]
-        public int NextPageStart { get; set; }
     }
 }
