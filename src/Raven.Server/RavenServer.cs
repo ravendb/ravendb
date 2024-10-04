@@ -269,8 +269,6 @@ namespace Raven.Server
                     }
                 }
 
-                // TODO [ppekrol]
-
                 var webHostBuilder = new WebHostBuilder()
                     .UseNLog(new NLogAspNetCoreOptions
                     {

@@ -67,11 +67,15 @@ public class RavenLogger
     public void Fatal(string message)
     {
         _logger.Fatal(message);
+
+        Console.Error.WriteLine(message);
     }
 
     public void Fatal(string message, Exception exception)
     {
         _logger.Fatal(exception, message);
+
+        Console.Error.WriteLine(message + Environment.NewLine + exception);
     }
 
     public void Trace(string message)

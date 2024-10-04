@@ -277,7 +277,7 @@ internal static class RavenLogManagerServerExtensions
 
     public static void ConfigureLogging(this RavenLogManager logManager, RavenConfiguration configuration)
     {
-        LogManager.ThrowExceptions = configuration.Logs.ThrowExceptions;
+        LogManager.ThrowConfigExceptions = configuration.Logs.ThrowConfigExceptions;
 
         ConsoleRule.DisableLoggingForLevels(LogLevel.Trace, LogLevel.Fatal);
 #if !RVN
