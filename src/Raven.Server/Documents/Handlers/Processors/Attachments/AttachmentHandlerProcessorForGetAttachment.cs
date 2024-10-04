@@ -63,16 +63,46 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 HttpContext.Response.Headers[Constants.Headers.AttachmentSize] = attachment.Size.ToString();
                 HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
 
+                var (sendBody, start, bytesRemaining) = RangeHelper.SetRangeHeaders(HttpContext, attachment.Size);
+                if (!sendBody)
+                    return;
+
                 using (context.GetMemoryBuffer(out var buffer))
                 await using (var stream = attachment.Stream)
                 {
-                    var responseStream = RequestHandler.ResponseBodyStream();
-                    var count = stream.Read(buffer.Memory.Memory.Span); // can never wait, so no need for async
-                    while (count > 0)
+                    if (start > 0)
                     {
-                        await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, count), token);
-                        // we know that this can never wait, so no need to do async i/o here
-                        count = stream.Read(buffer.Memory.Memory.Span);
+                        stream.Seek(start, SeekOrigin.Begin);
+                    }
+
+                    var responseStream = RequestHandler.ResponseBodyStream();
+                    while (true)
+                    {
+                        if (bytesRemaining is <= 0)
+                        {
+                            return;
+                        }
+
+                        var readLength = buffer.Size;
+                        if (bytesRemaining.HasValue)
+                        {
+                            readLength = (int)Math.Min(bytesRemaining.Value, readLength);
+                        }
+
+                        var read = stream.Read(buffer.Memory.Memory.Span.Slice(0, readLength)); // can never wait, so no need for async
+
+                        if (bytesRemaining.HasValue)
+                        {
+                            bytesRemaining -= read;
+                        }
+
+                        // End of the source stream.
+                        if (read == 0)
+                        {
+                            return;
+                        }
+
+                        await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, read), token);
                     }
                 }
             }
