@@ -63,11 +63,11 @@ namespace Raven.Server.Config.Categories
         public LogLevel MicrosoftMinLevel { get; set; }
 
         [DefaultValue(false)]
-        [ConfigurationEntry("Logs.ThrowExceptions", ConfigurationEntryScope.ServerWideOnly)]
-        public bool ThrowExceptions { get; set; }
+        [ConfigurationEntry("Logs.ThrowConfigExceptions", ConfigurationEntryScope.ServerWideOnly)]
+        public bool ThrowConfigExceptions { get; set; }
 
         [Description("Location of NuGet packages cache")]
-        [DefaultValue("Logs/NuGet")]
+        [DefaultValue("Packages/NuGet/Logging")]
         [ConfigurationEntry("Logs.NuGetPackagesPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NuGetPackagesPath { get; set; }
 

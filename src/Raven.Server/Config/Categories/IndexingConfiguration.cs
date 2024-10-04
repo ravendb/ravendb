@@ -410,7 +410,7 @@ namespace Raven.Server.Config.Categories
         public int? MaxNumberOfConcurrentlyRunningIndexes { get; set; }
 
         [Description("Location of NuGet packages cache")]
-        [DefaultValue("Packages/NuGet")]
+        [DefaultValue("Packages/NuGet/Indexing")]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetPackagesPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NuGetPackagesPath { get; set; }
