@@ -47,7 +47,7 @@ namespace Sparrow.Json
 
             AssertContextNotDisposed();
 
-            using (var memoryStream = new MemoryStream())
+            using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 var tw = new AsyncBlittableJsonTextWriter(_context, memoryStream);
                 try

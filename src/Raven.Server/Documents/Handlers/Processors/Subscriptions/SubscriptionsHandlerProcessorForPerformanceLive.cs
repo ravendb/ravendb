@@ -6,6 +6,7 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 
 namespace Raven.Server.Documents.Handlers.Processors.Subscriptions;
 
@@ -22,7 +23,7 @@ internal sealed class SubscriptionsHandlerProcessorForPerformanceLive : Abstract
         var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
         var receive = webSocket.ReceiveAsync(receiveBuffer, token.Token);
 
-        using (var ms = new MemoryStream())
+        using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
         using (var collector = new LiveSubscriptionPerformanceCollector(RequestHandler.Database))
         {
             // 1. Send data to webSocket without making UI wait upon opening webSocket

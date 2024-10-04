@@ -89,7 +89,7 @@ namespace Raven.Server.Web.System
         {
             var serverMetrics = provider.CollectServerMetrics();
 
-            using (var ms = new MemoryStream())
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 await using (var writer = PrometheusWriter(ms))
                 {
@@ -206,7 +206,7 @@ namespace Raven.Server.Web.System
 
             var cachedTags = metrics.Select(x => SerializeTags(new Dictionary<string, string> {{"database_name", x.DatabaseName}})).ToList();
 
-            using (var ms = new MemoryStream())
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 await using (var writer = PrometheusWriter(ms))
                 {
@@ -304,7 +304,7 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            using (var ms = new MemoryStream())
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 await using (var writer = PrometheusWriter(ms))
                 {
@@ -353,7 +353,7 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            using (var ms = new MemoryStream())
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 await using (var writer = PrometheusWriter(ms))
                 {

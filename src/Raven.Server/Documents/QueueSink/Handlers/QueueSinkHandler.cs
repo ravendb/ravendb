@@ -8,6 +8,7 @@ using Sparrow.Json;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
+using Sparrow;
 
 namespace Raven.Server.Documents.QueueSink.Handlers;
 
@@ -40,7 +41,7 @@ public class QueueSinkHandler : DatabaseRequestHandler
             var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
             var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
 
-            await using (var ms = new MemoryStream())
+            await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
             using (var collector = new LiveQueueSinkPerformanceCollector(Database, sinks))
             {
                 // 1. Send data to webSocket without making UI wait upon opening webSocket

@@ -906,7 +906,7 @@ namespace Raven.Server
                 throw new InvalidOperationException($"Unable to get cpu credits by executing {command} {arguments}. Failed to start process.", e);
             }
 
-            using (var ms = new MemoryStream())
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 var readErrors = process.StandardError.ReadToEndAsync();
                 var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);

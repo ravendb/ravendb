@@ -28,6 +28,7 @@ using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -54,7 +55,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var command = CommandBase.CreateFrom(commandJson);
                     if (command is IBlittableResultCommand blittableResultCommand)
                         blittableResultCommand.ContextToWriteResult = context;
-                    
+
                     if (TrafficWatchManager.HasRegisteredClients)
                         AddStringToHttpContext(commandJson.ToString(), TrafficWatchChangeType.ClusterCommands);
 
@@ -63,8 +64,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     var (etag, result) = await ServerStore.Engine.PutToLeaderAsync(command);
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                    var ms = context.CheckoutMemoryStream();
-                    try
+                    using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                     {
                         await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
                         {
@@ -78,10 +78,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                         // now that we know that we properly serialized it
                         ms.Position = 0;
                         await ms.CopyToAsync(ResponseBodyStream());
-                    }
-                    finally
-                    {
-                        context.ReturnMemoryStream(ms);
                     }
                 }
                 catch (TermValidationException)
@@ -157,7 +153,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/log", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetLogs()
         {
-            using (var processor = new RachisAdminHandlerProcessorForGetClusterLogs(this)) 
+            using (var processor = new RachisAdminHandlerProcessorForGetClusterLogs(this))
                 await processor.ExecuteAsync();
         }
 

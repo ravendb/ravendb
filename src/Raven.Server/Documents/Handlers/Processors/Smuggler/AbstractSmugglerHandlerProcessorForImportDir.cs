@@ -7,6 +7,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Smuggler.Documents.Data;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -83,10 +84,10 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportDir<TRequestHan
         {
             ((IOperationResult)importResult).MergeWith(finalResult);
         }
-        
+
         using (ContextPool.AllocateOperationContext(out JsonOperationContext finalContext))
+        using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
         {
-            var memoryStream = new MemoryStream();
             await WriteSmugglerResultAsync(finalContext, finalResult, memoryStream);
             memoryStream.Position = 0;
             try

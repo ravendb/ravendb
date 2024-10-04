@@ -49,7 +49,7 @@ namespace Raven.Server.TrafficWatch
 
                         try
                         {
-                            await using (var ms = new MemoryStream())
+                            await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                             {
                                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
                                 {

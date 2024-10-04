@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
@@ -43,7 +44,7 @@ internal sealed class IndexHandlerProcessorForPerformanceLive : AbstractIndexHan
         var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
         var receive = webSocket.ReceiveAsync(receiveBuffer, token.Token);
 
-        await using (var ms = new MemoryStream())
+        await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
         using (var collector = new LiveIndexingPerformanceCollector(RequestHandler.Database, indexNames))
         {
             // 1. Send data to webSocket without making UI wait upon opening webSocket

@@ -20,6 +20,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
+using Sparrow;
 using Sparrow.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -74,7 +75,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
             {
-                await using (var ms = new MemoryStream())
+                await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
@@ -126,7 +127,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 async _ =>
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
-                await using (var ms = new MemoryStream())
+                await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
@@ -193,7 +194,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 async _ =>
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                await using (var ms = new MemoryStream())
+                await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {

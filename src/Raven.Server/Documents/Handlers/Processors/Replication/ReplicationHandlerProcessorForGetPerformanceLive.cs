@@ -6,6 +6,7 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
             var receive = webSocket.ReceiveAsync(receiveBuffer, RequestHandler.Database.DatabaseShutdown);
 
-            await using (var ms = new MemoryStream())
+            await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
             using (var collector = new LiveReplicationPerformanceCollector(RequestHandler.Database))
             {
                 // 1. Send data to webSocket without making UI wait upon opening webSocket
