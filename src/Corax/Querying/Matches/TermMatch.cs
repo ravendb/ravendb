@@ -33,7 +33,7 @@ namespace Corax.Querying.Matches
         private ByteStringContext _ctx;
         public bool IsBoosting => _scoreFunc != null;
         public long Count => _totalResults;
-        
+
 #if DEBUG
         public string Term;
 #endif
@@ -89,7 +89,7 @@ namespace Corax.Querying.Matches
                     parameters: new Dictionary<string, string>()
                     {
                         { Constants.QueryInspectionNode.IsBoosting, term.IsBoosting.ToString() },
-                        { Constants.QueryInspectionNode.Count, term.Count.ToString()},
+                        { Constants.QueryInspectionNode.Count, term.Count.ToString() },
                         { Constants.QueryInspectionNode.CountConfidence, term.Confidence.ToString() },
                     });
             }
@@ -101,7 +101,7 @@ namespace Corax.Querying.Matches
 #endif
             };
         }
-        
+
         public static TermMatch YieldOnce(IndexSearcher indexSearcher, ByteStringContext ctx, long value, double termRatioToWholeCollection, bool isBoosting)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -153,7 +153,7 @@ namespace Corax.Querying.Matches
                     parameters: new Dictionary<string, string>()
                     {
                         { Constants.QueryInspectionNode.IsBoosting, term.IsBoosting.ToString() },
-                        { Constants.QueryInspectionNode.Count, term.Count.ToString()},
+                        { Constants.QueryInspectionNode.Count, term.Count.ToString() },
                         { Constants.QueryInspectionNode.CountConfidence, term.Confidence.ToString() },
                     });
             }
@@ -169,14 +169,15 @@ namespace Corax.Querying.Matches
             return new TermMatch(indexSearcher, ctx, 1, &FillFunc, &AndWithFunc, scoreFunc: isBoosting ? &ScoreFunc : null, inspectFunc: &InspectFunc)
             {
                 _current = bm25Relevance is not null
-                    ? current 
-                    : EntryIdEncodings.DecodeAndDiscardFrequency(value), 
+                    ? current
+                    : EntryIdEncodings.DecodeAndDiscardFrequency(value),
                 _bm25Relevance = bm25Relevance,
                 _returnedValue = false
             };
         }
 
-        public static TermMatch YieldSmall(IndexSearcher indexSearcher, ByteStringContext ctx, Container.Item containerItem, double termRatioToWholeCollection, bool isBoosting)
+        public static TermMatch YieldSmall(IndexSearcher indexSearcher, ByteStringContext ctx, Container.Item containerItem, double termRatioToWholeCollection,
+            bool isBoosting)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc<TBoostingMode>(ref TermMatch term, Span<long> matches) where TBoostingMode : IBoostingMarker
@@ -192,7 +193,7 @@ namespace Corax.Querying.Matches
                     term._containerReader.Dispose();
                     return 0;
                 }
-                
+
                 //Save the frequencies
                 if (typeof(TBoostingMode) == typeof(HasBoosting))
                 {
@@ -231,10 +232,10 @@ namespace Corax.Querying.Matches
                     for (int decodedIndex = 0; decodedIndex < read && bufferIndex < matches; decodedIndex++)
                     {
                         long current = decodedMatches[decodedIndex];
-                        long decodedEntryId = typeof(TBoostingMode) == typeof(HasBoosting) ? 
-                            term._bm25Relevance.Add(current) : 
-                            EntryIdEncodings.DecodeAndDiscardFrequency(current);
-                        
+                        long decodedEntryId = typeof(TBoostingMode) == typeof(HasBoosting)
+                            ? term._bm25Relevance.Add(current)
+                            : EntryIdEncodings.DecodeAndDiscardFrequency(current);
+
                         while (buffer[bufferIndex] < decodedEntryId)
                         {
                             bufferIndex++;
@@ -245,21 +246,21 @@ namespace Corax.Querying.Matches
                                     //no match, we should discard last item.
                                     term._bm25Relevance.Remove();
                                 }
-                            
+
 
                                 goto End;
                             }
-                            
                         }
+
                         // If there is a match we advance. 
                         if (buffer[bufferIndex] == decodedEntryId)
                         {
                             buffer[matchedIndex++] = decodedEntryId;
                             bufferIndex++;
                         }
-
                     }
                 }
+
                 reader.Dispose();
                 End:
                 return matchedIndex;
@@ -277,109 +278,96 @@ namespace Corax.Querying.Matches
                     parameters: new Dictionary<string, string>()
                     {
                         { Constants.QueryInspectionNode.IsBoosting, term.IsBoosting.ToString() },
-                        { Constants.QueryInspectionNode.Count, term.Count.ToString()},
+                        { Constants.QueryInspectionNode.Count, term.Count.ToString() },
                         { Constants.QueryInspectionNode.CountConfidence, term.Confidence.ToString() },
                     });
             }
 
             var itemsCount = VariableSizeEncoding.Read<int>(containerItem.Address, out var offset);
             var reader = new FastPForBufferedReader(ctx, containerItem.Address + offset, containerItem.Length - offset);
-            return new TermMatch(indexSearcher, ctx, itemsCount, isBoosting? &FillFunc<HasBoosting> : &FillFunc<NoBoosting>, isBoosting ? &AndWithFunc<HasBoosting> : &AndWithFunc<NoBoosting>, inspectFunc: &InspectFunc, scoreFunc: isBoosting ? &ScoreFunc : null)
+            return new TermMatch(indexSearcher, ctx, itemsCount, isBoosting ? &FillFunc<HasBoosting> : &FillFunc<NoBoosting>,
+                isBoosting ? &AndWithFunc<HasBoosting> : &AndWithFunc<NoBoosting>, inspectFunc: &InspectFunc, scoreFunc: isBoosting ? &ScoreFunc : null)
             {
-                _bm25Relevance = isBoosting 
-                    ? Bm25Relevance.Small(indexSearcher, itemsCount, ctx, itemsCount, termRatioToWholeCollection) 
+                _bm25Relevance = isBoosting
+                    ? Bm25Relevance.Small(indexSearcher, itemsCount, ctx, itemsCount, termRatioToWholeCollection)
                     : default,
                 _current = 0,
                 _containerItem = containerItem,
                 _containerReader = reader
             };
         }
-        
-        public static TermMatch YieldSet(IndexSearcher indexSearcher, ByteStringContext ctx, PostingList postingList, double termRatioToWholeCollection, bool isBoosting, bool useAccelerated = true)
+
+        public static TermMatch YieldSet(IndexSearcher indexSearcher, ByteStringContext ctx, PostingList postingList, double termRatioToWholeCollection, bool isBoosting,
+            bool useAccelerated = true)
         {
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int AndWithFunc<TBoostingMode>(ref TermMatch term, Span<long> buffer, int matchesCount) where TBoostingMode : IBoostingMarker
+            static int AndWithFunc<TBoostingMode>(ref TermMatch term, Span<long> matches, int matchesCount) where TBoostingMode : IBoostingMarker
             {
                 if (matchesCount == 0)
                     return 0;
                 
-                int resultCursor = 0;
-                int bufferCursor = 0;
-                
                 var it = term._set;
-                ref long matchesBuffer = ref MemoryMarshal.GetReference(buffer);
-
-                var matchesLowest = Unsafe.Add(ref matchesBuffer, 0);
-                var matchesHighest = Unsafe.Add(ref matchesBuffer, matchesCount - 1);
-                
-                if (it.Seek(matchesBuffer - 1) == false)
+                // There is no element equal to or greater than `min(matches)-1`. No matches possible anyway.
+                if (it.Seek(EntryIdEncodings.PrepareIdForSeekInPostingList(matches[0] - 1)) == false)
                     return 0;
 
-                Span<long> postingListItems = stackalloc long[1024];
-                ref var postingListBuffer = ref MemoryMarshal.GetReference(postingListItems);
-                
-                //Maximum value we can match.
-                var maxValidValue = Unsafe.Add(ref matchesBuffer, matchesCount - 1) + 1;
-                var currentMatchesDocument = Unsafe.Add(ref matchesBuffer, bufferCursor);
-
-                while (resultCursor < matchesCount && it.Fill(postingListItems, out var read, maxValidValue) && read > 0)
+                var maxValidValue = EntryIdEncodings.PrepareIdForPruneInPostingList(matches[^1] + 1);
+                var postingListBuffer = stackalloc long[1024];
+                fixed (long* matchesPtr = matches)
                 {
-                    var firstElementInPostingList = EntryIdEncodings.DecodeAndDiscardFrequency(postingListBuffer);
-                    var isFirstItemInsideRange = firstElementInPostingList >= matchesLowest
-                                                 && firstElementInPostingList <= matchesHighest;
+                    var resultDestination = matchesPtr;
+                    var matchesStartPtr = matchesPtr;
+                    var matchesEndPtr = matchesStartPtr + matchesCount;
                     
-                    // Match is impossible, proceed.
-                    if (read == 1 && isFirstItemInsideRange == false)
-                        continue;
-
-                    var lastElementInPostingList = EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListBuffer, read - 1));
-                    var isLastItemInsideRange = lastElementInPostingList >= matchesLowest
-                                                && lastElementInPostingList <= matchesHighest;
-                    
-                    // Since the posting list and buffer matches are sorted, it implies that no additional matches can occur in this batch.
-                    if (isLastItemInsideRange == false && isFirstItemInsideRange == false)
-                        continue; 
-                    
-                    // for each document read from posting list
-                    for (int readCursor = 0; readCursor < read; ++readCursor)
+                    while (matchesStartPtr < matchesEndPtr
+                           && it.Fill(new Span<long>(postingListBuffer, 1024), out var postingListCount, maxValidValue)
+                           && postingListCount > 0)
                     {
-                        long currentPostingListDocument = typeof(HasBoosting) == typeof(TBoostingMode) && term._bm25Relevance.IsStored 
-                            ? term._bm25Relevance.Add(Unsafe.Add(ref postingListBuffer, readCursor)) 
-                            : EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListBuffer, readCursor));
+                        var postingListMinValue = EntryIdEncodings.DecodeAndDiscardFrequency(*postingListBuffer);
+                        var postingListMaxValue = EntryIdEncodings.DecodeAndDiscardFrequency(*(postingListBuffer + postingListCount - 1));
+                        if (*(matchesEndPtr - 1) < postingListMinValue || postingListMaxValue < *matchesStartPtr)
+                            continue;
                         
-                        // When current document from posting list is bigger or equal than our current document from buffer.
-                        while (currentPostingListDocument >= currentMatchesDocument)
-                        {
-                            //If it's bigger we've to move our bufferCursor (matches passed as parameter) to find at least equal or bigger
-                            //in comparison to our document from posting list since we know there will be no lower id from posting list.
-                            if (currentPostingListDocument > currentMatchesDocument)
-                            {
-                                if (bufferCursor + 1 >= matchesCount)
-                                    return resultCursor;
-                                
-                                currentMatchesDocument = Unsafe.Add(ref matchesBuffer, ++bufferCursor);
-                                matchesLowest = currentMatchesDocument;
-                                
-                                continue;
-                            }
+                        var postingListStartPtr = postingListBuffer;
+                        var postingListEndPtr = postingListBuffer + postingListCount;
 
-                            Unsafe.Add(ref matchesBuffer, resultCursor++) = currentPostingListDocument;
-                            if (bufferCursor + 1 >= matchesCount)
-                                return resultCursor;
-                            
-                            currentMatchesDocument = Unsafe.Add(ref matchesBuffer, ++bufferCursor);
-                            matchesLowest = currentMatchesDocument;
+                        while (postingListStartPtr < postingListEndPtr && matchesStartPtr < matchesEndPtr)
+                        {
+                            var currentMatchesMin = *matchesStartPtr;
+                            var currentPostingListDocument = EntryIdEncodings.DecodeAndDiscardFrequency(*postingListStartPtr);
+
+                            if (currentMatchesMin == currentPostingListDocument)
+                            {
+                                *resultDestination = currentMatchesMin;
+                                resultDestination++;
+                                matchesStartPtr++;
+                                
+                                //Add frequency for scoring
+                                if (typeof(TBoostingMode) == typeof(HasBoosting))
+                                    term._bm25Relevance.Add(*postingListStartPtr);
+                                
+                                postingListStartPtr++;
+                            }
+                            else if (currentMatchesMin < currentPostingListDocument)
+                            {
+                                matchesStartPtr++;
+                            }
+                            else
+                            {
+                                postingListStartPtr++;
+                            }
                         }
                     }
+                    
+                    return (int)(resultDestination - matchesPtr);
                 }
-                
-                return resultCursor;
-            }
 
+            }
+            
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int AndWithVectorizedFunc<TBoostingMode>(ref TermMatch term, Span<long> buffer, int matches) where TBoostingMode : IBoostingMarker 
+            static int AndWithVectorizedFunc<TBoostingMode>(ref TermMatch term, Span<long> buffer, int matches) where TBoostingMode : IBoostingMarker
             {
                 const int BlockSize = 4096;
                 uint N = (uint)Vector256<long>.Count;
@@ -404,7 +392,8 @@ namespace Corax.Querying.Matches
                     long* dstPtr = inputStartPtr;
                     while (inputPtr < inputEndPtr)
                     {
-                        var result = term._set.Fill(blockMatches, out int read, pruneGreaterThanOptimization: EntryIdEncodings.PrepareIdForPruneInPostingList(buffer[matches - 1]));
+                        var result = term._set.Fill(blockMatches, out int read,
+                            pruneGreaterThanOptimization: EntryIdEncodings.PrepareIdForPruneInPostingList(buffer[matches - 1]));
                         if (result == false)
                             break;
 
@@ -412,7 +401,7 @@ namespace Corax.Querying.Matches
                             term._bm25Relevance.Process(blockMatches, read);
                         else
                             EntryIdEncodings.DecodeAndDiscardFrequency(blockMatches, read);
-                       
+
                         Debug.Assert(read <= BlockSize);
 
                         if (read == 0)
@@ -538,14 +527,15 @@ namespace Corax.Querying.Matches
                 set.Fill(matches, out i);
 
                 if (typeof(TBoostingMode) == typeof(HasBoosting))
-                {   if (term._bm25Relevance.IsStored == false)
+                {
+                    if (term._bm25Relevance.IsStored == false)
                         EntryIdEncodings.DecodeAndDiscardFrequency(matches, i);
                     else
                         term._bm25Relevance.Process(matches, i);
                 }
                 else
                     EntryIdEncodings.DecodeAndDiscardFrequency(matches, i);
-                
+
                 term._set = set;
                 return i;
             }
@@ -556,7 +546,7 @@ namespace Corax.Querying.Matches
                     parameters: new Dictionary<string, string>()
                     {
                         { Constants.QueryInspectionNode.IsBoosting, term.IsBoosting.ToString() },
-                        { Constants.QueryInspectionNode.Count, term.Count.ToString()},
+                        { Constants.QueryInspectionNode.Count, term.Count.ToString() },
                         { Constants.QueryInspectionNode.CountConfidence, term.Confidence.ToString() },
                     });
             }
@@ -566,7 +556,7 @@ namespace Corax.Querying.Matches
                 using (term._bm25Relevance)
                     term._bm25Relevance.Score(matches, scores, boostFactor);
             }
-            
+
             if (Vector256.IsHardwareAccelerated == false)
                 useAccelerated = false;
 
@@ -576,15 +566,15 @@ namespace Corax.Querying.Matches
                 : default;
 
             var isStored = isBoosting && bm25Relevance.IsStored;
-            
+
             // We will select the Vector256 version if supported.             
-            return new TermMatch(indexSearcher, ctx, postingList.State.NumberOfEntries, 
-                    (isBoosting, isStored) switch
-                    {
-                        (isBoosting: true, isStored: true) => &FillFunc<HasBoosting>,
-                        (isBoosting: true, isStored: false) => &FillFunc<HasBoostingNoStore>,
-                        (_, _) => &FillFunc<NoBoosting>
-                    },
+            return new TermMatch(indexSearcher, ctx, postingList.State.NumberOfEntries,
+                (isBoosting, isStored) switch
+                {
+                    (isBoosting: true, isStored: true) => &FillFunc<HasBoosting>,
+                    (isBoosting: true, isStored: false) => &FillFunc<HasBoostingNoStore>,
+                    (_, _) => &FillFunc<NoBoosting>
+                },
                 (useAccelerated, isBoosting, isStored) switch
                 {
                     (useAccelerated: true, isBoosting: true, isStored: true) => &AndWithVectorizedFunc<HasBoosting>,
@@ -595,14 +585,9 @@ namespace Corax.Querying.Matches
                     (useAccelerated: false, isBoosting: false, isStored: _) => &AndWithFunc<NoBoosting>,
                 },
                 inspectFunc: &InspectFunc,
-                scoreFunc: isBoosting ? &ScoreFunc : null)
-            {
-                _set = postingList.Iterate(), 
-                _current = long.MinValue,
-                _bm25Relevance = bm25Relevance
-            };
+                scoreFunc: isBoosting ? &ScoreFunc : null) { _set = postingList.Iterate(), _current = long.MinValue, _bm25Relevance = bm25Relevance };
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> matches)
         {
