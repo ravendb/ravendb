@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Esprima.Ast;
+using Acornima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Patch
 
             if (args[0] is ScriptFunction sfi)
             {
-                if (sfi.FunctionDeclaration.Body is StaticMemberExpression sme)    
+                if (sfi.FunctionDeclaration.Body is MemberExpression sme)    
                 {
                     if (sme.Property is Identifier identifier)
                     { 

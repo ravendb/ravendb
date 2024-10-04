@@ -1,4 +1,4 @@
-﻿using Esprima.Ast;
+﻿using Acornima.Ast;
 using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Queries
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Queries
                         {
                             if (callExpression.Arguments[0] is ArrowFunctionExpression afe)
                             {
-                                if (afe.Body is StaticMemberExpression sme)
+                                if (afe.Body is MemberExpression sme)
                                 {
                                     if (sme.Property is Identifier identifier)
                                     {
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            if (callExpression.Callee is StaticMemberExpression @static)
+            if (callExpression.Callee is MemberExpression @static)
             {
                 var staticId = @static.Object as Identifier;
                 var staticCallId = @static.Property as Identifier;
