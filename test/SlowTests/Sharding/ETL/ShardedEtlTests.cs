@@ -1279,7 +1279,7 @@ person.addCounter(loadCounter('down'));
 
                 var script = @"
 var o = {
-    RequireAt : new Date(this.RequireAt)
+    RequireAt : new Date(this.RequireAt),
     Total : 0
 };
 

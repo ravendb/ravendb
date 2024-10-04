@@ -184,7 +184,7 @@ namespace SlowTests.Issues
             {
                 return new IndexDefinition
                 {
-                    Maps = { @"map('Companies', function (c){ return { Name: getName(c.Name); };})" },
+                    Maps = { @"map('Companies', function (c){ return { Name: getName(c.Name) }})" },
                     AdditionalSources = new System.Collections.Generic.Dictionary<string, string>
                     {
                         {
@@ -209,7 +209,7 @@ namespace SlowTests.Issues
             {
                 return new IndexDefinition
                 {
-                    Maps = { @"map('Companies', function (c){ return { Name: getName(c.Name); };})" },
+                    Maps = { @"map('Companies', function (c){ return { Name: getName(c.Name) }})" },
                     AdditionalSources = new System.Collections.Generic.Dictionary<string, string>
                     {
                         {

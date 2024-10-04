@@ -124,7 +124,7 @@ return ts.Entries.map(entry => ({
                              .aggregate(g => ({
                                  HeartBeat: g.values.reduce((total, val) => val.HeartBeat + total, 0) / g.values.reduce((total, val) => val.Count + total, 0),
                                  Date: g.key.Date,
-                                 User: g.key.User
+                                 User: g.key.User,
                                  Count: g.values.reduce((total, val) => val.Count + total, 0)
                              }))";
             }
@@ -161,7 +161,7 @@ return ts.Entries.map(entry => ({
                              .aggregate(g => ({
                                  HeartBeat: g.values.reduce((total, val) => val.HeartBeat + total, 0) / g.values.reduce((total, val) => val.Count + total, 0),
                                  Date: g.key.Date,
-                                 City: g.key.City
+                                 City: g.key.City,
                                  Count: g.values.reduce((total, val) => val.Count + total, 0)
                              }))";
             }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
-using Esprima;
+using Acornima;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
@@ -350,16 +350,16 @@ function map(name, lambda) {
             return definitions;
         }
 
-        private static readonly ParserOptions DefaultParserOptions = new ParserOptions();
+        private static readonly ParserOptions DefaultParserOptions = new() { Tolerant = true };
 
         private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
         {
             _engine.ExecuteWithReset(code);
 
-            var javascriptParser = new JavaScriptParser(DefaultParserOptions);
+            var javascriptParser = new Parser(DefaultParserOptions);
             var program = javascriptParser.ParseScript(code);
 
-            var loadVisitor = new EsprimaReferencedCollectionVisitor();
+            var loadVisitor = new AcornimaReferencedCollectionVisitor();
             if (string.IsNullOrEmpty(additionalSources) == false)
                 loadVisitor.Visit(javascriptParser.ParseScript(additionalSources));
 

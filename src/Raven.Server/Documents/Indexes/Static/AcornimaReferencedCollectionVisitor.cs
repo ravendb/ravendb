@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using Esprima.Ast;
+using Acornima.Ast;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public sealed class EsprimaReferencedCollectionVisitor : EsprimaVisitor
+    public sealed class AcornimaReferencedCollectionVisitor : AcornimaVisitor
     {
         public readonly HashSet<CollectionName> ReferencedCollection = new HashSet<CollectionName>();
 
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         noTracking = false;
 
                         return true;
-                    case StaticMemberExpression sme:
+                    case MemberExpression sme:
                         {
                             if (sme.Object is Identifier { Name: JavaScriptIndex.NoTracking })
                             {

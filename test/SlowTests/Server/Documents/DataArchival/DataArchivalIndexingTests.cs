@@ -1024,7 +1024,7 @@ public class DataArchivalIndexingTests : RavenTestBase
             Reduce = @"groupBy(x => ({ Name: x.Name }))
 .aggregate(g => { 
     return {
-        Name: g.key.Name
+        Name: g.key.Name,
         Count: g.values.reduce((count, val) => val.Count + count, 0),
     };
 })";
@@ -1043,7 +1043,7 @@ public class DataArchivalIndexingTests : RavenTestBase
             Reduce = @"groupBy(x => ({ Name: x.Name }))
 .aggregate(g => { 
     return {
-        Name: g.key.Name
+        Name: g.key.Name,
         Count: g.values.reduce((count, val) => val.Count + count, 0),
     };
 })";
@@ -1063,7 +1063,7 @@ public class DataArchivalIndexingTests : RavenTestBase
             Reduce = @"groupBy(x => ({ Name: x.Name }))
 .aggregate(g => { 
     return {
-        Name: g.key.Name
+        Name: g.key.Name,
         Count: g.values.reduce((count, val) => val.Count + count, 0),
     };
 })";

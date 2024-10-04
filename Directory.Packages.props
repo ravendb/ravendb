@@ -29,7 +29,7 @@
     <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.10.0" />
     <PackageVersion Include="Hl7.Fhir.R4" Version="5.11.0" />
     <PackageVersion Include="JetBrains.Annotations" Version="2024.3.0" />
-    <PackageVersion Include="Jint" Version="3.1.6" />
+    <PackageVersion Include="Jint" Version="4.1.0" />
     <PackageVersion Include="JunitXml.TestLogger" Version="4.1.0" />
     <PackageVersion Include="Lambda2Js.Signed" Version="3.1.4" />
     <PackageVersion Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
