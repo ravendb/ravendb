@@ -8,6 +8,7 @@ on:
 
 env:
   DOTNET_VERSION: 8.0.400
+  DOTNET_INSTALL_DIR: "./.dotnet"
 
 jobs:
   release:
