@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Esprima;
+using Acornima;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
@@ -254,9 +254,9 @@ namespace Raven.Server.Documents.Queries.Parser
             throw new InvalidQueryException(message, Scanner.Input, null, e);
         }
 
-        private static Esprima.Ast.Program ValidateScript(string script)
+        private static Acornima.Ast.Program ValidateScript(string script)
         {
-            var javaScriptParser = new JavaScriptParser();
+            var javaScriptParser = new Acornima.Parser();
             return javaScriptParser.ParseScript(script);
         }
 
@@ -268,7 +268,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         internal static string AddLineAndColumnNumberToErrorMessage(Exception e, string msg)
         {
-            if (!(e is ParserException pe))
+            if (!(e is ParseErrorException pe))
                 return msg;
 
             return $"{msg}{Environment.NewLine}At Line : {pe.LineNumber}, Column : {pe.Column}";

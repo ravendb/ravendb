@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Esprima.Ast;
+using Acornima.Ast;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     public class EsprimaVisitor
     {
-        public virtual void VisitProgram(Esprima.Ast.Program program)
+        public virtual void VisitProgram(Acornima.Ast.Program program)
         {
             foreach (var statement in program.Body)
             {
@@ -22,67 +22,67 @@ namespace Raven.Server.Documents.Indexes.Static
 
             switch (statement.Type)
             {
-                case Nodes.BlockStatement:
+                case NodeType.BlockStatement:
                     VisitBlockStatement(statement.As<BlockStatement>());
                     break;
-                case Nodes.BreakStatement:
+                case NodeType.BreakStatement:
                     VisitBreakStatement(statement.As<BreakStatement>());
                     break;
-                case Nodes.ContinueStatement:
+                case NodeType.ContinueStatement:
                     VisitContinueStatement(statement.As<ContinueStatement>());
                     break;
-                case Nodes.DoWhileStatement:
+                case NodeType.DoWhileStatement:
                     VisitDoWhileStatement(statement.As<DoWhileStatement>());
                     break;
-                case Nodes.DebuggerStatement:
+                case NodeType.DebuggerStatement:
                     VisitDebuggerStatement(statement.As<DebuggerStatement>());
                     break;
-                case Nodes.EmptyStatement:
+                case NodeType.EmptyStatement:
                     VisitEmptyStatement(statement.As<EmptyStatement>());
                     break;
-                case Nodes.ExpressionStatement:
+                case NodeType.ExpressionStatement:
                     VisitExpressionStatement(statement.As<ExpressionStatement>());
                     break;
-                case Nodes.ForStatement:
+                case NodeType.ForStatement:
                     VisitForStatement(statement.As<ForStatement>());
                     break;
-                case Nodes.ForInStatement:
+                case NodeType.ForInStatement:
                     VisitForInStatement(statement.As<ForInStatement>());
                     break;
-                case Nodes.FunctionDeclaration:
+                case NodeType.FunctionDeclaration:
                     VisitFunctionDeclaration(statement.As<FunctionDeclaration>());
                     break;
-                case Nodes.IfStatement:
+                case NodeType.IfStatement:
                     VisitIfStatement(statement.As<IfStatement>());
                     break;
-                case Nodes.LabeledStatement:
+                case NodeType.LabeledStatement:
                     VisitLabeledStatement(statement.As<LabeledStatement>());
                     break;
-                case Nodes.ReturnStatement:
+                case NodeType.ReturnStatement:
                     VisitReturnStatement(statement.As<ReturnStatement>());
                     break;
-                case Nodes.SwitchStatement:
+                case NodeType.SwitchStatement:
                     VisitSwitchStatement(statement.As<SwitchStatement>());
                     break;
-                case Nodes.ThrowStatement:
+                case NodeType.ThrowStatement:
                     VisitThrowStatement(statement.As<ThrowStatement>());
                     break;
-                case Nodes.TryStatement:
+                case NodeType.TryStatement:
                     VisitTryStatement(statement.As<TryStatement>());
                     break;
-                case Nodes.VariableDeclaration:
+                case NodeType.VariableDeclaration:
                     VisitVariableDeclaration(statement.As<VariableDeclaration>());
                     break;
-                case Nodes.WhileStatement:
+                case NodeType.WhileStatement:
                     VisitWhileStatement(statement.As<WhileStatement>());
                     break;
-                case Nodes.WithStatement:
+                case NodeType.WithStatement:
                     VisitWithStatement(statement.As<WithStatement>());
                     break;
-                case Nodes.Program:
-                    VisitProgram(statement.As<Esprima.Ast.Program>());
+                case NodeType.Program:
+                    VisitProgram(statement.As<Acornima.Ast.Program>());
                     break;
-                case Nodes.CatchClause:
+                case NodeType.CatchClause:
                     VisitCatchClause(statement.As<CatchClause>());
                     break;
                 default:
@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (forStatement.Init != null)
             {
-                if (forStatement.Init.Type == Nodes.VariableDeclaration)
+                if (forStatement.Init.Type == NodeType.VariableDeclaration)
                 {
                     VisitStatement(forStatement.Init.As<Statement>());
                 }
@@ -249,7 +249,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitForInStatement(ForInStatement forInStatement)
         {
-            Identifier identifier = forInStatement.Left.Type == Nodes.VariableDeclaration
+            Identifier identifier = forInStatement.Left.Type == NodeType.VariableDeclaration
                 ? forInStatement.Left.As<VariableDeclaration>().Declarations.First().Id.As<Identifier>()
                 : forInStatement.Left.As<Identifier>();
             VisitExpression(identifier);
@@ -269,58 +269,58 @@ namespace Raven.Server.Documents.Indexes.Static
                 return;
             switch (expression.Type)
             {
-                case Nodes.AssignmentExpression:
+                case NodeType.AssignmentExpression:
                     VisitAssignmentExpression(expression.As<AssignmentExpression>());
                     break;
-                case Nodes.ArrayExpression:
+                case NodeType.ArrayExpression:
                     VisitArrayExpression(expression.As<ArrayExpression>());
                     break;
-                case Nodes.BinaryExpression:
+                case NodeType.BinaryExpression:
                     VisitBinaryExpression(expression.As<BinaryExpression>());
                     break;
-                case Nodes.CallExpression:
+                case NodeType.CallExpression:
                     VisitCallExpression(expression.As<CallExpression>());
                     break;
-                case Nodes.ConditionalExpression:
+                case NodeType.ConditionalExpression:
                     VisitConditionalExpression(expression.As<ConditionalExpression>());
                     break;
-                case Nodes.FunctionExpression:
+                case NodeType.FunctionExpression:
                     VisitFunctionExpression(expression.As<FunctionExpression>());
                     break;
-                case Nodes.Identifier:
+                case NodeType.Identifier:
                     VisitIdentifier(expression.As<Identifier>());
                     break;
-                case Nodes.Literal:
+                case NodeType.Literal:
                     VisitLiteral(expression.As<Literal>());
                     break;
-                case Nodes.LogicalExpression:
+                case NodeType.LogicalExpression:
                     VisitLogicalExpression(expression.As<BinaryExpression>());
                     break;
-                case Nodes.MemberExpression:
+                case NodeType.MemberExpression:
                     VisitMemberExpression(expression.As<MemberExpression>());
                     break;
-                case Nodes.NewExpression:
+                case NodeType.NewExpression:
                     VisitNewExpression(expression.As<NewExpression>());
                     break;
-                case Nodes.ObjectExpression:
+                case NodeType.ObjectExpression:
                     VisitObjectExpression(expression.As<ObjectExpression>());
                     break;
-                case Nodes.SequenceExpression:
+                case NodeType.SequenceExpression:
                     VisitSequenceExpression(expression.As<SequenceExpression>());
                     break;
-                case Nodes.ThisExpression:
+                case NodeType.ThisExpression:
                     VisitThisExpression(expression.As<ThisExpression>());
                     break;
-                case Nodes.UpdateExpression:
+                case NodeType.UpdateExpression:
                     VisitUpdateExpression(expression.As<UpdateExpression>());
                     break;
-                case Nodes.UnaryExpression:
+                case NodeType.UnaryExpression:
                     VisitUnaryExpression(expression.As<UnaryExpression>());
                     break;
-                case Nodes.ArrowFunctionExpression:
+                case NodeType.ArrowFunctionExpression:
                     VisitArrowFunctionExpression(expression.As<ArrowFunctionExpression>());
                     break;
-                case Nodes.SpreadElement:
+                case NodeType.SpreadElement:
                     VisitSpreadElement(expression.As<SpreadElement>());
                     break;
                 default:
@@ -334,14 +334,13 @@ namespace Raven.Server.Documents.Indexes.Static
             //Here we construct the function so if we iterate only functions we will be able to iterate ArrowFunctions too
             var statement =
                 arrowFunctionExpression.Expression
-                    ? new BlockStatement(NodeList.Create(new List<Statement> { new ReturnStatement(arrowFunctionExpression.Body.As<Expression>()) }))
-                    : arrowFunctionExpression.Body.As<BlockStatement>();
+                    ? new FunctionBody(NodeList.From(new List<Statement> { new ReturnStatement(arrowFunctionExpression.Body.As<Expression>()) }), strict: true)
+                    : arrowFunctionExpression.Body.As<FunctionBody>();
             var func = new FunctionExpression(
                 new Identifier(null),
                 arrowFunctionExpression.Params,
                 statement,
                 generator: false,
-                strict: true,
                 async: false);
             
             VisitFunctionExpression(func);
@@ -423,199 +422,199 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             switch (node.Type)
             {
-                case Nodes.AssignmentExpression:
+                case NodeType.AssignmentExpression:
                     VisitAssignmentExpression(node.As<AssignmentExpression>());
                     break;
-                case Nodes.ArrayExpression:
+                case NodeType.ArrayExpression:
                     VisitArrayExpression(node.As<ArrayExpression>());
                     break;
-                case Nodes.BlockStatement:
+                case NodeType.BlockStatement:
                     VisitBlockStatement(node.As<BlockStatement>());
                     break;
-                case Nodes.BinaryExpression:
+                case NodeType.BinaryExpression:
                     VisitBinaryExpression(node.As<BinaryExpression>());
                     break;
-                case Nodes.BreakStatement:
+                case NodeType.BreakStatement:
                     VisitBreakStatement(node.As<BreakStatement>());
                     break;
-                case Nodes.CallExpression:
+                case NodeType.CallExpression:
                     VisitCallExpression(node.As<CallExpression>());
                     break;
-                case Nodes.CatchClause:
+                case NodeType.CatchClause:
                     VisitCatchClause(node.As<CatchClause>());
                     break;
-                case Nodes.ConditionalExpression:
+                case NodeType.ConditionalExpression:
                     VisitConditionalExpression(node.As<ConditionalExpression>());
                     break;
-                case Nodes.ContinueStatement:
+                case NodeType.ContinueStatement:
                     VisitContinueStatement(node.As<ContinueStatement>());
                     break;
-                case Nodes.DoWhileStatement:
+                case NodeType.DoWhileStatement:
                     VisitDoWhileStatement(node.As<DoWhileStatement>());
                     break;
-                case Nodes.DebuggerStatement:
+                case NodeType.DebuggerStatement:
                     VisitDebuggerStatement(node.As<DebuggerStatement>());
                     break;
-                case Nodes.EmptyStatement:
+                case NodeType.EmptyStatement:
                     VisitEmptyStatement(node.As<EmptyStatement>());
                     break;
-                case Nodes.ExpressionStatement:
+                case NodeType.ExpressionStatement:
                     VisitExpressionStatement(node.As<ExpressionStatement>());
                     break;
-                case Nodes.ForStatement:
+                case NodeType.ForStatement:
                     VisitForStatement(node.As<ForStatement>());
                     break;
-                case Nodes.ForInStatement:
+                case NodeType.ForInStatement:
                     VisitForInStatement(node.As<ForInStatement>());
                     break;
-                case Nodes.FunctionDeclaration:
+                case NodeType.FunctionDeclaration:
                     VisitFunctionDeclaration(node.As<FunctionDeclaration>());
                     break;
-                case Nodes.FunctionExpression:
+                case NodeType.FunctionExpression:
                     VisitFunctionExpression(node.As<FunctionExpression>());
                     break;
-                case Nodes.Identifier:
+                case NodeType.Identifier:
                     VisitIdentifier(node.As<Identifier>());
                     break;
-                case Nodes.IfStatement:
+                case NodeType.IfStatement:
                     VisitIfStatement(node.As<IfStatement>());
                     break;
-                case Nodes.Literal:
+                case NodeType.Literal:
                     VisitLiteral(node.As<Literal>());
                     break;
-                case Nodes.LabeledStatement:
+                case NodeType.LabeledStatement:
                     VisitLabeledStatement(node.As<LabeledStatement>());
                     break;
-                case Nodes.LogicalExpression:
+                case NodeType.LogicalExpression:
                     VisitLogicalExpression(node.As<BinaryExpression>());
                     break;
-                case Nodes.MemberExpression:
+                case NodeType.MemberExpression:
                     VisitMemberExpression(node.As<MemberExpression>());
                     break;
-                case Nodes.NewExpression:
+                case NodeType.NewExpression:
                     VisitNewExpression(node.As<NewExpression>());
                     break;
-                case Nodes.ObjectExpression:
+                case NodeType.ObjectExpression:
                     VisitObjectExpression(node.As<ObjectExpression>());
                     break;
-                case Nodes.Program:
-                    VisitProgram(node.As<Esprima.Ast.Program>());
+                case NodeType.Program:
+                    VisitProgram(node.As<Acornima.Ast.Program>());
                     break;
-                case Nodes.Property:
+                case NodeType.Property:
                     VisitProperty(node.As<Property>());
                     break;
-                case Nodes.RestElement:
+                case NodeType.RestElement:
                     VisitRestElement(node.As<RestElement>());
                     break;
-                case Nodes.ReturnStatement:
+                case NodeType.ReturnStatement:
                     VisitReturnStatement(node.As<ReturnStatement>());
                     break;
-                case Nodes.SequenceExpression:
+                case NodeType.SequenceExpression:
                     VisitSequenceExpression(node.As<SequenceExpression>());
                     break;
-                case Nodes.SwitchStatement:
+                case NodeType.SwitchStatement:
                     VisitSwitchStatement(node.As<SwitchStatement>());
                     break;
-                case Nodes.SwitchCase:
+                case NodeType.SwitchCase:
                     VisitSwitchCase(node.As<SwitchCase>());
                     break;
-                case Nodes.TemplateElement:
+                case NodeType.TemplateElement:
                     VisitTemplateElement(node.As<TemplateElement>());
                     break;
-                case Nodes.TemplateLiteral:
+                case NodeType.TemplateLiteral:
                     VisitTemplateLiteral(node.As<TemplateLiteral>());
                     break;
-                case Nodes.ThisExpression:
+                case NodeType.ThisExpression:
                     VisitThisExpression(node.As<ThisExpression>());
                     break;
-                case Nodes.ThrowStatement:
+                case NodeType.ThrowStatement:
                     VisitThrowStatement(node.As<ThrowStatement>());
                     break;
-                case Nodes.TryStatement:
+                case NodeType.TryStatement:
                     VisitTryStatement(node.As<TryStatement>());
                     break;
-                case Nodes.UnaryExpression:
+                case NodeType.UnaryExpression:
                     VisitUnaryExpression(node.As<UnaryExpression>());
                     break;
-                case Nodes.UpdateExpression:
+                case NodeType.UpdateExpression:
                     VisitUpdateExpression(node.As<UpdateExpression>());
                     break;
-                case Nodes.VariableDeclaration:
+                case NodeType.VariableDeclaration:
                     VisitVariableDeclaration(node.As<VariableDeclaration>());
                     break;
-                case Nodes.VariableDeclarator:
+                case NodeType.VariableDeclarator:
                     VisitVariableDeclarator(node.As<VariableDeclarator>());
                     break;
-                case Nodes.WhileStatement:
+                case NodeType.WhileStatement:
                     VisitWhileStatement(node.As<WhileStatement>());
                     break;
-                case Nodes.WithStatement:
+                case NodeType.WithStatement:
                     VisitWithStatement(node.As<WithStatement>());
                     break;
-                case Nodes.ArrayPattern:
+                case NodeType.ArrayPattern:
                     VisitArrayPattern(node.As<ArrayPattern>());
                     break;
-                case Nodes.AssignmentPattern:
+                case NodeType.AssignmentPattern:
                     VisitAssignmentPattern(node.As<AssignmentPattern>());
                     break;
-                case Nodes.SpreadElement:
+                case NodeType.SpreadElement:
                     VisitSpreadElement(node.As<SpreadElement>());
                     break;
-                case Nodes.ObjectPattern:
+                case NodeType.ObjectPattern:
                     VisitObjectPattern(node.As<ObjectPattern>());
                     break;
-                case Nodes.MetaProperty:
+                case NodeType.MetaProperty:
                     VisitMetaProperty(node.As<MetaProperty>());
                     break;
-                case Nodes.Super:
+                case NodeType.Super:
                     VisitSuper(node.As<Super>());
                     break;
-                case Nodes.TaggedTemplateExpression:
+                case NodeType.TaggedTemplateExpression:
                     VisitTaggedTemplateExpression(node.As<TaggedTemplateExpression>());
                     break;
-                case Nodes.YieldExpression:
+                case NodeType.YieldExpression:
                     VisitYieldExpression(node.As<YieldExpression>());
                     break;
-                case Nodes.ArrowFunctionExpression:
+                case NodeType.ArrowFunctionExpression:
                     VisitArrowFunctionExpression(node.As<ArrowFunctionExpression>());
                     break;
-                case Nodes.ClassBody:
+                case NodeType.ClassBody:
                     VistClassBody(node.As<ClassBody>());
                     break;
-                case Nodes.ClassDeclaration:
+                case NodeType.ClassDeclaration:
                     VisitClassDeclaration(node.As<ClassDeclaration>());
                     break;
-                case Nodes.ForOfStatement:
+                case NodeType.ForOfStatement:
                     VisitForOfStatement(node.As<ForOfStatement>());
                     break;
-                case Nodes.MethodDefinition:
+                case NodeType.MethodDefinition:
                     VisitMethodDefinition(node.As<MethodDefinition>());
                     break;
-                case Nodes.ImportSpecifier:
+                case NodeType.ImportSpecifier:
                     VisitImportSpecifier(node.As<ImportSpecifier>());
                     break;
-                case Nodes.ImportDefaultSpecifier:
+                case NodeType.ImportDefaultSpecifier:
                     VisitImportDefaultSpecifier(node.As<ImportDefaultSpecifier>());
                     break;
-                case Nodes.ImportNamespaceSpecifier:
+                case NodeType.ImportNamespaceSpecifier:
                     VisitImportNamespaceSpecifier(node.As<ImportNamespaceSpecifier>());
                     break;
-                case Nodes.ImportDeclaration:
+                case NodeType.ImportDeclaration:
                     VisitImportDeclaration(node.As<ImportDeclaration>());
                     break;
-                case Nodes.ExportSpecifier:
+                case NodeType.ExportSpecifier:
                     VisitExportSpecifier(node.As<ExportSpecifier>());
                     break;
-                case Nodes.ExportNamedDeclaration:
+                case NodeType.ExportNamedDeclaration:
                     VisitExportNamedDeclaration(node.As<ExportNamedDeclaration>());
                     break;
-                case Nodes.ExportAllDeclaration:
+                case NodeType.ExportAllDeclaration:
                     VisitExportAllDeclaration(node.As<ExportAllDeclaration>());
                     break;
-                case Nodes.ExportDefaultDeclaration:
+                case NodeType.ExportDefaultDeclaration:
                     VisitExportDefaultDeclaration(node.As<ExportDefaultDeclaration>());
                     break;
-                case Nodes.ClassExpression:
+                case NodeType.ClassExpression:
                     VisitClassExpression(node.As<ClassExpression>());
                     break;
                 default:
@@ -732,18 +731,20 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             switch (property.Kind)
             {
+                case PropertyKind.Unknown:
+                    break;
                 case PropertyKind.Init:
                     VisitExpression(property.Value.As<Expression>());
                     break;
-                case PropertyKind.None:
-                    break;
-                case PropertyKind.Set:
                 case PropertyKind.Get:
+                case PropertyKind.Set:
                     VisitFunctionExpression(property.Value.As<FunctionExpression>());
                     break;
                 case PropertyKind.Constructor:
                     break;
                 case PropertyKind.Method:
+                    break;
+                case PropertyKind.Property:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

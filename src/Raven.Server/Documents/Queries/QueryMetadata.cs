@@ -5,9 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Esprima;
-using Esprima.Ast;
-using Esprima.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -38,6 +35,8 @@ using Spatial4n.Shapes.Nts;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 using Circle = Raven.Server.Documents.Indexes.Spatial.Circle;
 using System.Diagnostics.CodeAnalysis;
+using Acornima;
+using Acornima.Ast;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -442,7 +441,7 @@ function execute(doc, args){
                     {
                         foreach (var property in objectExpression.Properties)
                         {
-                            if (property is StaticMemberExpression staticMemberExpression)
+                            if (property is MemberExpression staticMemberExpression)
                             {
                                 HandleDeclaredFunctionStaticMemberExpression(staticMemberExpression);
                                 if (HasIncludeOrLoad)
@@ -450,7 +449,7 @@ function execute(doc, args){
                             }
                         }
                     }
-                    else if (returnStatement.Argument is StaticMemberExpression staticMemberExpression)
+                    else if (returnStatement.Argument is MemberExpression staticMemberExpression)
                     {
                         HandleDeclaredFunctionStaticMemberExpression(staticMemberExpression);
                         if (HasIncludeOrLoad)
@@ -464,7 +463,7 @@ function execute(doc, args){
             }
         }
 
-        private void HandleDeclaredFunctionStaticMemberExpression(StaticMemberExpression staticMemberExpression)
+        private void HandleDeclaredFunctionStaticMemberExpression(MemberExpression staticMemberExpression)
         {
             if (staticMemberExpression.Object is CallExpression callExpression)
             {
@@ -713,7 +712,7 @@ function execute(doc, args){
             // validate that this is valid JS code
             try
             {
-                (Esprima.Ast.Program program, HashSet<string> referencedParameters) = ValidateScript(parameters);
+                (Acornima.Ast.Program program, HashSet<string> referencedParameters) = ValidateScript(parameters);
                 Query.SelectFunctionBody.Program = program;
                 Query.SelectFunctionBody.ReferencedParameters = referencedParameters;
                 CheckIfProjectionHasSpecialMethod(Query.SelectFunctionBody.Program);
@@ -1609,7 +1608,7 @@ function execute(doc, args){
             return args;
         }
 
-        private void CheckIfProjectionHasSpecialMethod(Esprima.Ast.Program ast)
+        private void CheckIfProjectionHasSpecialMethod(Acornima.Ast.Program ast)
         {
             if (ast == null || (HasIncludeOrLoad && HasCounterSelect && HasCmpXchg && HasTimeSeriesSelect && HasCmpXchgIncludes))
                 return;
@@ -2822,11 +2821,11 @@ function execute(doc, args){
                 return base.VisitFunctionExpression(expression);
             }
 
-            protected override object VisitProperty(Property property)
+            protected override object VisitObjectProperty(ObjectProperty property)
             {
                 if (property.Key != _currentProp)
                 {
-                    return base.VisitProperty(property);
+                    return base.VisitObjectProperty(property);
                 }
 
                 if (_maybeUnknowns?.Count > 0)
@@ -2836,12 +2835,12 @@ function execute(doc, args){
 
                 _currentProp = null;
 
-                return base.VisitProperty(property);
+                return base.VisitObjectProperty(property);
             }
 
             protected override object VisitMemberExpression(MemberExpression memberExpression)
             {
-                if (memberExpression is StaticMemberExpression { Object: Identifier id } && UnknownIdentifier(id.Name))
+                if (memberExpression is MemberExpression { Object: Identifier id } && UnknownIdentifier(id.Name))
                 {
                     _maybeUnknowns ??= new HashSet<string>();
                     _maybeUnknowns.Add(id.Name);
@@ -2872,13 +2871,13 @@ function execute(doc, args){
             }
         }
 
-        private (Esprima.Ast.Program, HashSet<string>) ValidateScript(BlittableJsonReaderObject parameters)
+        private (Acornima.Ast.Program, HashSet<string>) ValidateScript(BlittableJsonReaderObject parameters)
         {
             ScriptValidator validator = new(this, parameters);
-            JavaScriptParser parser = new(new ParserOptions
+            Acornima.Parser parser = new(new ParserOptions
             {
                 AllowReturnOutsideFunction = true,
-                OnNodeCreated = n => validator.Visit(n)
+                OnNode = (node, context) => validator.Visit(node)
             });
             Script script = parser.ParseScript("return " + Query.SelectFunctionBody.FunctionText);
 

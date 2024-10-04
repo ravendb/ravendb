@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
-using Esprima;
+using Acornima;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
@@ -356,7 +356,7 @@ function map(name, lambda) {
         {
             _engine.ExecuteWithReset(code);
 
-            var javascriptParser = new JavaScriptParser(DefaultParserOptions);
+            var javascriptParser = new Parser(DefaultParserOptions);
             var program = javascriptParser.ParseScript(code);
 
             var loadVisitor = new EsprimaReferencedCollectionVisitor();

@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Queries.AST
         public Dictionary<string, DeclaredFunction> DeclaredFunctions;
 
         public string QueryText;
-        public (string FunctionText, Esprima.Ast.Program Program, HashSet<string> ReferencedParameters) SelectFunctionBody;
+        public (string FunctionText, Acornima.Ast.Program Program, HashSet<string> ReferencedParameters) SelectFunctionBody;
         public string UpdateBody;
         public ValueExpression Offset;
         public ValueExpression Limit;
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public string Name;
         public string FunctionText;
-        public Esprima.Ast.Program JavaScript;
+        public Acornima.Ast.Program JavaScript;
         public TimeSeriesFunction TimeSeries;
         public FunctionType Type;
         public List<QueryExpression> Parameters;

@@ -10,7 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Esprima;
+using Acornima;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -348,7 +348,7 @@ namespace Raven.Server.Documents.TcpHandlers
             // verify that the JS code parses
             try
             {
-                new JavaScriptParser(DefaultParserOptions).ParseScript(script);
+                new Parser(DefaultParserOptions).ParseScript(script);
             }
             catch (Exception e)
             {
