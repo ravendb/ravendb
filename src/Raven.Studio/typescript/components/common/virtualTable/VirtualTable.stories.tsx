@@ -4,13 +4,14 @@ import VirtualTable from "./VirtualTable";
 import document from "models/database/documents/document";
 import { useDocumentColumnsProvider } from "./columnProviders/useDocumentColumnsProvider";
 import { mockStore } from "test/mocks/store/MockStore";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useReactTable, getCoreRowModel, getSortedRowModel, ColumnDef } from "@tanstack/react-table";
 import TableDisplaySettings from "./commonComponents/columnsSelect/TableDisplaySettings";
 import { FlexGrow } from "components/common/FlexGrow";
 import { CellValueWrapper } from "./cells/CellValue";
-import VirtualTableWithDynamicLoading from "./VirtualTableWithLazyLoading";
-import { useVirtualTableWithLazyLoading } from "./hooks/useVirtualTableWithLazyLoading";
+import { useVirtualTableWithToken } from "components/common/virtualTable/hooks/useVirtualTableWithToken";
+import { useVirtualTableWithLazyLoading } from "components/common/virtualTable/hooks/useVirtualTableWithLazyLoading";
+import VirtualTableWithLazyLoading from "components/common/virtualTable/VirtualTableWithLazyLoading";
 
 // copied from queryCommand
 const selector = (
@@ -43,6 +44,16 @@ export const VirtualTableStory: StoryObj = {
 
         return <VirtualTableExample />;
     },
+};
+
+export const VirtualTableWithLazyLoadingStory: StoryObj = {
+    name: "With lazy loading",
+    render: VirtualTableWithLazyLoadingExample,
+};
+
+export const VirtualTableWithTokenStory: StoryObj = {
+    name: "With token (infinite scroll)",
+    render: VirtualTableWithTokenExample,
 };
 
 function VirtualTableExample() {
@@ -85,20 +96,15 @@ function VirtualTableExample() {
     );
 }
 
-export const VirtualTableWithDynamicLoadingStory: StoryObj = {
-    name: "With lazy loading",
-    render: VirtualTableWithDynamicLoadingExample,
-};
-
-function VirtualTableWithDynamicLoadingExample() {
-    const { dataArray, componentProps } = useVirtualTableWithLazyLoading({ fetchData });
+function VirtualTableWithLazyLoadingExample() {
+    const { dataPreview, componentProps } = useVirtualTableWithLazyLoading({ fetchData: fetchPagedResultData });
 
     const table = useReactTable({
         defaultColumn: {
             enableSorting: false,
         },
-        data: dataArray,
-        columns: lazyLoadingColumnDefs,
+        data: dataPreview,
+        columns: itemColumnDefs,
         columnResizeMode: "onChange",
         getCoreRowModel: getCoreRowModel(),
     });
@@ -106,7 +112,30 @@ function VirtualTableWithDynamicLoadingExample() {
     return (
         <div>
             <h2>100M items</h2>
-            <VirtualTableWithDynamicLoading {...componentProps} table={table} heightInPx={500} />
+            <VirtualTableWithLazyLoading {...componentProps} table={table} heightInPx={500} />
+        </div>
+    );
+}
+
+function VirtualTableWithTokenExample() {
+    const fetchData = useMemo(() => fetchPagedResultWithToken(100), []);
+
+    const { dataArray, componentProps } = useVirtualTableWithToken({ fetchData });
+
+    const table = useReactTable({
+        defaultColumn: {
+            enableSorting: false,
+        },
+        columns: itemColumnDefs,
+        data: dataArray,
+        columnResizeMode: "onChange",
+        getCoreRowModel: getCoreRowModel(),
+    });
+
+    return (
+        <div>
+            <h2>Infinity scroll</h2>
+            <VirtualTable {...componentProps} table={table} heightInPx={500} />
         </div>
     );
 }
@@ -117,7 +146,7 @@ interface Item {
 }
 
 // mocked fetcher with 100_000_001 items
-function fetchData(skip: number, take: number): Promise<pagedResult<Item>> {
+function fetchPagedResultData(skip: number, take: number): Promise<pagedResult<Item>> {
     const items: Item[] = new Array(take).fill(null).map((_, i) => {
         return {
             id: skip + i,
@@ -131,11 +160,37 @@ function fetchData(skip: number, take: number): Promise<pagedResult<Item>> {
                 totalResultCount: 100_000_001,
                 items,
             });
-        }, 500);
+        }, 200);
     });
 }
 
-const lazyLoadingColumnDefs: ColumnDef<Item>[] = [
+function fetchPagedResultWithToken(take: number): () => Promise<pagedResultWithToken<Item>> {
+    const initialTake = take;
+    let lastFetchedIndex = 0;
+
+    return () => {
+        const items: Item[] = new Array(initialTake).fill(null).map((_, i) => {
+            return {
+                id: lastFetchedIndex + i,
+                name: `Item ${lastFetchedIndex + i}`,
+            };
+        });
+
+        lastFetchedIndex += initialTake;
+
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({
+                    totalResultCount: 100_000_001,
+                    items,
+                    continuationToken: "continuationToken",
+                });
+            }, 200);
+        });
+    };
+}
+
+const itemColumnDefs: ColumnDef<Item>[] = [
     {
         header: "Index",
         accessorKey: "id",
