@@ -350,7 +350,7 @@ function map(name, lambda) {
             return definitions;
         }
 
-        private static readonly ParserOptions DefaultParserOptions = new ParserOptions();
+        private static readonly ParserOptions DefaultParserOptions = new() { Tolerant = true };
 
         private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
         {
