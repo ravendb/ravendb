@@ -33,6 +33,8 @@ internal sealed class AttachmentHandlerProcessorForHeadAttachment : AbstractAtta
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
 
+            RangeHelper.SetRangeHeaders(HttpContext, attachment.Size);
+
             return ValueTask.CompletedTask;
         }
     }

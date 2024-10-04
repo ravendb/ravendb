@@ -30,6 +30,11 @@ namespace Raven.Client.Documents.Session
         AttachmentResult Get(object entity, string name);
 
         /// <summary>
+        /// Returns a range of the attachment by the document id and attachment name.
+        /// </summary>
+        AttachmentResult GetRange(string documentId, string name, long? from, long? to);
+
+        /// <summary>
         /// Returns Enumerator of KeyValuePairs of attachment name and stream.
         /// </summary>
         IEnumerator<AttachmentEnumeratorResult> Get(IEnumerable<AttachmentRequest> attachments);
