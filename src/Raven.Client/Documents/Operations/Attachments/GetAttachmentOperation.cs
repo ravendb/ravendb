@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -156,6 +158,14 @@ namespace Raven.Client.Documents.Operations.Attachments
                 };
 
                 return ResponseDisposeHandling.Manually;
+            }
+
+            public override void OnResponseFailure(HttpResponseMessage response)
+            {
+                if (response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
+                {
+                    InvalidAttachmentRangeException.ThrowFor(_documentId, _name, _from, _to);
+                }
             }
 
             public override bool IsReadRequest => true;
