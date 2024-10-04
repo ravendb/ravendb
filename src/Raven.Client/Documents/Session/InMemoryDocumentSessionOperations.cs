@@ -785,9 +785,6 @@ more responsive application.
             return new AsyncTaskHolder(this);
         }
 
-        [Obsolete("InMemoryDocumentSessionOperations.GenerateId is not supported anymore. Will be removed in next major version of the product.")]
-        protected abstract string GenerateId(object entity);
-
         protected virtual void RememberEntityForDocumentIdGeneration(object entity)
         {
             throw new NotImplementedException("You cannot set GenerateDocumentIdsOnStore to false without implementing RememberEntityForDocumentIdGeneration");
@@ -841,22 +838,6 @@ more responsive application.
                 return;
 
             throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
-        }
-
-        [Obsolete("InMemoryDocumentSessionOperations.GetOrGenerateDocumentIdAsync is not supported anymore. Will be removed in next major version of the product.")]
-        protected async Task<string> GetOrGenerateDocumentIdAsync(object entity)
-        {
-            GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out var id);
-
-            Task<string> generator = id != null
-                ? Task.FromResult(id)
-                : GenerateIdAsync(entity);
-
-            var result = await generator.ConfigureAwait(false);
-            if (result != null && result.StartsWith("/"))
-                throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
-
-            return result;
         }
 
         internal SaveChangesData PrepareForSaveChanges()
