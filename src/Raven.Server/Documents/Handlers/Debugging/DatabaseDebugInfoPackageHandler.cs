@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Debugging
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = contentDisposition;
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                await using (var ms = new MemoryStream())
+                await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {

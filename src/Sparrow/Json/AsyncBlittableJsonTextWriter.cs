@@ -11,7 +11,7 @@ namespace Sparrow.Json
         private readonly Stream _outputStream;
         private readonly CancellationToken _cancellationToken;
 
-        public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken = default) : base(context, context.CheckoutMemoryStream())
+        public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken = default) : base(context, RecyclableMemoryStreamFactory.GetRecyclableStream())
         {
             _outputStream = stream ?? throw new ArgumentNullException(nameof(stream));
             _cancellationToken = cancellationToken;
@@ -102,7 +102,11 @@ namespace Sparrow.Json
             if (await FlushAsync().ConfigureAwait(false) > 0)
                 await _outputStream.FlushAsync().ConfigureAwait(false);
 
-            _context.ReturnMemoryStream((MemoryStream)_stream);
+#if !NETSTANDARD2_0
+            await _stream.DisposeAsync().ConfigureAwait(false);
+#else
+            _stream.Dispose();
+#endif
         }
 
         private void ThrowInvalidTypeException(Type typeOfStream)

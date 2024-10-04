@@ -10,6 +10,7 @@ using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Http;
 using Raven.Client.Http.Behaviors;
 using Raven.Client.Json.Serialization;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Exceptions
@@ -228,29 +229,26 @@ namespace Raven.Client.Exceptions
 
         private static async Task<BlittableJsonReaderObject> GetJson(JsonOperationContext context, HttpResponseMessage response, Stream stream)
         {
-            var ms = context.CheckoutMemoryStream();
-
             BlittableJsonReaderObject json;
 
-            try
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
-                // copying the error stream so we can read it as string if we fail to parse it
-                await stream.CopyToAsync(ms).ConfigureAwait(false);
-                ms.Position = 0;
-                json = await context.ReadForMemoryAsync(ms, "error/response").ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                string content = "Content: ";
-                ms.Position = 0;
-                using (var reader = new StreamReader(ms, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true))
-                    content += await reader.ReadToEndAsync().ConfigureAwait(false);
+                try
+                {
+                    // copying the error stream so we can read it as string if we fail to parse it
+                    await stream.CopyToAsync(ms).ConfigureAwait(false);
+                    ms.Position = 0;
+                    json = await context.ReadForMemoryAsync(ms, "error/response").ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    string content = "Content: ";
+                    ms.Position = 0;
+                    using (var reader = new StreamReader(ms, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true))
+                        content += await reader.ReadToEndAsync().ConfigureAwait(false);
 
-                throw new InvalidOperationException($"Cannot parse the '{response.StatusCode}' response. {content}", e);
-            }
-            finally
-            {
-                context.ReturnMemoryStream(ms);
+                    throw new InvalidOperationException($"Cannot parse the '{response.StatusCode}' response. {content}", e);
+                }
             }
 
             return json;

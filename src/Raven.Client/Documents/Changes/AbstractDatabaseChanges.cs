@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.IO;
 using Raven.Client.Exceptions.Changes;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
@@ -22,7 +23,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
 {
     private int _commandId;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private readonly MemoryStream _ms = new();
+    private readonly MemoryStream _ms = RecyclableMemoryStreamFactory.GetMemoryStream();
 
     protected readonly RequestExecutor RequestExecutor;
     private readonly string _database;
@@ -192,6 +193,8 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
         }
 
         ConnectionStatusChanged -= OnConnectionStatusChanged;
+
+        _ms?.Dispose();
 
         _onDispose?.Invoke();
     }

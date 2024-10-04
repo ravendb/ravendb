@@ -2016,7 +2016,7 @@ namespace Raven.Client.Http
             if (response != null)
             {
                 using (var stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
-                using (var ms = new MemoryStream()) // todo: have a pool of those
+                using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                 {
                     await stream.CopyToAsync(ms).ConfigureAwait(false);
                     try

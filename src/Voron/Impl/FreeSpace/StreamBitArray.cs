@@ -152,19 +152,6 @@ namespace Voron.Impl.FreeSpace
             return c == max;
         }
 
-        public Stream ToStream()
-        {
-            var ms = new MemoryStream(260);
-
-            var tmpBuffer = ToBuffer();
-
-            Debug.Assert(BitConverter.ToInt32(tmpBuffer,0) == SetCount); 
-
-            ms.Write(tmpBuffer, 0, tmpBuffer.Length);
-            ms.Position = 0;
-            return ms;
-        }
-
         private unsafe byte[] ToBuffer()
         {
             var tmpBuffer = new byte[(_inner.Length + 1)*sizeof (int)];

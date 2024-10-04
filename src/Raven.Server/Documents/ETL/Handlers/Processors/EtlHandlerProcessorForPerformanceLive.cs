@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 
 namespace Raven.Server.Documents.ETL.Handlers.Processors;
 
@@ -26,7 +27,7 @@ internal sealed class EtlHandlerProcessorForPerformanceLive : AbstractEtlHandler
             var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
             var receive = webSocket.ReceiveAsync(receiveBuffer, token.Token);
 
-            await using (var ms = new MemoryStream())
+            await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
             using (var collector = new LiveEtlPerformanceCollector(RequestHandler.Database, etls))
             {
                 // 1. Send data to webSocket without making UI wait upon opening webSocket

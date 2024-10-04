@@ -15,6 +15,7 @@ using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
@@ -152,7 +153,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             try
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                using (var ms = new MemoryStream())
+                using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                 {
                     using (var writer = new BlittableJsonTextWriter(context, ms))
                     {

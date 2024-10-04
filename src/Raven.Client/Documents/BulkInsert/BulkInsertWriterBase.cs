@@ -3,7 +3,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.IO;
 using Raven.Client.Http;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -34,8 +36,8 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
         _token = token;
         StreamExposer = new BulkInsertOperation.BulkInsertStreamExposerContent();
 
-        _currentWriteStream = new MemoryStream();
-        _backgroundWriteStream = new MemoryStream();
+        _currentWriteStream = RecyclableMemoryStreamFactory.GetMemoryStream();
+        _backgroundWriteStream = RecyclableMemoryStreamFactory.GetMemoryStream();
         _asyncWrite = Task.CompletedTask;
 
         var returnMemoryBuffer = ctx.GetMemoryBuffer(out _memoryBuffer);
@@ -71,6 +73,8 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
                 using (StreamExposer)
                 using (returnMemoryBuffer)
                 using (returnBackgroundMemoryBuffer)
+                using (_currentWriteStream)
+                using (_backgroundWriteStream)
                 {
 
                 }

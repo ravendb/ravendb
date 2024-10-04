@@ -4,6 +4,7 @@ using System.IO;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Session;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
@@ -80,7 +81,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             {
                 var jsString = string.Empty;
 
-                using (var memoryStream = new MemoryStream())
+                using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
                 {
                     try
                     {

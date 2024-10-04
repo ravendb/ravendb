@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using Microsoft.IO;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Global;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
@@ -18,7 +20,6 @@ namespace Raven.Server.Indexing
     {
         private readonly StorageEnvironmentOptions _options;
         private readonly ConcurrentQueue<TempFileStream> _files = new ConcurrentQueue<TempFileStream>();
-        private readonly ConcurrentQueue<MemoryStream> _ms = new ConcurrentQueue<MemoryStream>();
 
         private const long MaxFileSizeToKeepInBytes = 16 * Constants.Size.Megabyte;
         internal const int MaxFilesToKeepInCache = 32;
@@ -67,15 +68,14 @@ namespace Raven.Server.Indexing
             _memoryStreamCapacity = capacity;
         }
 
-        public MemoryStream RentMemoryStream()
+        public RecyclableMemoryStream RentMemoryStream()
         {
-            return _ms.TryDequeue(out var ms) ? ms : new MemoryStream(_memoryStreamCapacity);
+            return RecyclableMemoryStreamFactory.GetRecyclableStream(_memoryStreamCapacity);
         }
 
-        public void ReturnMemoryStream(MemoryStream stream)
+        public void ReturnMemoryStream(RecyclableMemoryStream stream)
         {
-            stream.SetLength(0);
-            _ms.Enqueue(stream);
+            stream.Dispose();
         }
 
         public Stream RentFileStream()
@@ -129,11 +129,6 @@ namespace Raven.Server.Indexing
             {
                 DisposeFile(file);
             }
-
-            while (_ms.TryDequeue(out var ms))
-            {
-                ms.Dispose();
-            }
         }
 
         private static void DisposeFile(TempFileStream file)
@@ -160,11 +155,6 @@ namespace Raven.Server.Indexing
             while (_files.TryDequeue(out var s))
             {
                 DisposeFile(s);
-            }
-
-            while (_ms.TryDequeue(out var ms))
-            {
-                ms.Dispose();
             }
         }
 
