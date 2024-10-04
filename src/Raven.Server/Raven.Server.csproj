@@ -151,33 +151,33 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Core" Version="3.7.400.5" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.400.5" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.400.5" />
-    <PackageReference Include="Azure.Identity" Version="1.12.0" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.21.2" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.400.29" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.400.29" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.404.1" />
+    <PackageReference Include="Azure.Identity" Version="1.12.1" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.22.1" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.8.0" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.8.0" />    
     <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.8.0" />
     <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.8.0" />
-    <PackageReference Include="Confluent.Kafka" Version="2.5.2" />
+    <PackageReference Include="Confluent.Kafka" Version="2.5.3" />
     <PackageReference Include="CsvHelper" Version="33.0.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2024.2.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Jint" Version="3.0.32-ravendb" />
-    <PackageReference Include="Google.Api.Gax.Rest" Version="4.8.0" />
+    <PackageReference Include="Google.Api.Gax.Rest" Version="4.9.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.10.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
-    <PackageReference Include="librdkafka.redist" Version="2.5.0" />
+    <PackageReference Include="librdkafka.redist" Version="2.5.3" />
     <PackageReference Include="Lucene.Net" Version="3.0.54011" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.54011" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.7.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.7.0" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.1" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
@@ -186,13 +186,13 @@
     <PackageReference Include="MySqlConnector" Version="2.3.7" />
     <PackageReference Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageReference Include="NEST" Version="7.17.5" />
-    <PackageReference Include="Npgsql" Version="8.0.3" />
-    <PackageReference Include="NuGet.Commands" Version="6.11.0" Alias="NGC" />
-    <PackageReference Include="NuGet.ProjectModel" Version="6.11.0" />
-    <PackageReference Include="NuGet.Resolver" Version="6.11.0" />
-    <PackageReference Include="NuGet.PackageManagement" Version="6.11.0" />
-    <PackageReference Include="NuGet.Protocol" Version="6.11.0" />
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.5.0" />
+    <PackageReference Include="Npgsql" Version="8.0.4" />
+    <PackageReference Include="NuGet.Commands" Version="6.11.1" Alias="NGC" />
+    <PackageReference Include="NuGet.ProjectModel" Version="6.11.1" />
+    <PackageReference Include="NuGet.Resolver" Version="6.11.1" />
+    <PackageReference Include="NuGet.PackageManagement" Version="6.11.1" />
+    <PackageReference Include="NuGet.Protocol" Version="6.11.1" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.6.0" />
     <PackageReference Include="Parquet.Net" Version="3.10.0" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
     <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
