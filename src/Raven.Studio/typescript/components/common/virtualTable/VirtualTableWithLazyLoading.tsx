@@ -3,6 +3,9 @@ import { flexRender } from "@tanstack/react-table";
 import { ClassNameProps } from "components/models/common";
 import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
 import VirtualTableBodyWrapper, { VirtualTableBodyWrapperProps } from "./bits/VirtualTableBodyWrapper";
+import classNames from "classnames";
+
+// Use it along with useVirtualTableWithLazyLoading hook
 
 export interface VirtualTableWithLazyLoadingProps<T> extends VirtualTableBodyWrapperProps<T> {
     bodyHeightInPx: number;
@@ -40,6 +43,9 @@ export default function VirtualTableWithLazyLoading<T>(props: VirtualTableWithLa
                                 height: virtualTableConstants.defaultRowHeightInPx,
                                 transform: `translateY(${positionY}px)`,
                             }}
+                            className={classNames({
+                                "is-odd": Math.round(positionY / virtualTableConstants.defaultRowHeightInPx) % 2 !== 0,
+                            })}
                         >
                             {row.getVisibleCells().map((cell) => (
                                 <td
