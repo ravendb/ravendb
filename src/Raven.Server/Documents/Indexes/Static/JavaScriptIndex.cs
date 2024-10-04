@@ -359,7 +359,7 @@ function map(name, lambda) {
             var javascriptParser = new Parser(DefaultParserOptions);
             var program = javascriptParser.ParseScript(code);
 
-            var loadVisitor = new EsprimaReferencedCollectionVisitor();
+            var loadVisitor = new AcornimaReferencedCollectionVisitor();
             if (string.IsNullOrEmpty(additionalSources) == false)
                 loadVisitor.Visit(javascriptParser.ParseScript(additionalSources));
 
