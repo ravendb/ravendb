@@ -4,7 +4,7 @@ using Acornima.Ast;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public sealed class EsprimaReferencedCollectionVisitor : EsprimaVisitor
+    public sealed class AcornimaReferencedCollectionVisitor : AcornimaVisitor
     {
         public readonly HashSet<CollectionName> ReferencedCollection = new HashSet<CollectionName>();
 

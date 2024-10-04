@@ -5,7 +5,7 @@ using Acornima.Ast;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class EsprimaVisitor
+    public class AcornimaVisitor
     {
         public virtual void VisitProgram(Acornima.Ast.Program program)
         {
@@ -93,12 +93,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitUnknownNode(Node node)
         {
-            throw new NotImplementedException($"ESprima visitor doesn't support nodes of type {node.Type}, you can override VisitUnknownNode to handle this case.");
+            throw new NotImplementedException($"Acornima visitor doesn't support nodes of type {node.Type}, you can override VisitUnknownNode to handle this case.");
         }
 
         public virtual void VisitUnknownObject(object obj)
         {
-            throw new NotImplementedException($"ESprima visitor doesn't support object of type {obj?.GetType()}, you can override VisitUnknownObject to handle this case.");
+            throw new NotImplementedException($"Acornima visitor doesn't support object of type {obj?.GetType()}, you can override VisitUnknownObject to handle this case.");
         }
 
         private void VisitCatchClause(CatchClause catchClause)
