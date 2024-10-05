@@ -6,6 +6,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Size = Sparrow.Size;
 

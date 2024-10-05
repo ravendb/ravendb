@@ -10,6 +10,7 @@ using Raven.Server.Config;
 using Raven.Server.Logging;
 using Raven.Server.Utils.Features;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {

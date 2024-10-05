@@ -28,6 +28,7 @@ using Raven.Server.Exceptions.PeriodicBackup;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Azure

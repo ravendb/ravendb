@@ -7,6 +7,7 @@ using Raven.Server.Logging;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Indexing;

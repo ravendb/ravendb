@@ -20,6 +20,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Logging;
 using Voron;
 
 namespace Raven.Server.Commercial

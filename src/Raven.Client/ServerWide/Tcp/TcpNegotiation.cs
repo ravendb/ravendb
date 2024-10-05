@@ -14,7 +14,7 @@ namespace Raven.Client.ServerWide.Tcp
         public const int OutOfRangeStatus = -1;
         public const int DropStatus = -2;
 
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient(typeof(TcpNegotiation));
+        private static readonly IRavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient(typeof(TcpNegotiation));
 
         private static SyncTcpNegotiation _sync;
 

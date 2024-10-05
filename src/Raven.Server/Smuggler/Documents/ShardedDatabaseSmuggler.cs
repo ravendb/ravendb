@@ -16,6 +16,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents

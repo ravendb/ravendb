@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -36,6 +36,8 @@ using Constants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using CoraxSpatialResult = global::Corax.Utils.Spatial.SpatialResult;
+using Sparrow.Server.Logging;
+
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase

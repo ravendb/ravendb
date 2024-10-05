@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Smuggler
 {
     public sealed class DatabaseSmuggler
     {
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient<DatabaseSmuggler>();
+        private static readonly IRavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient<DatabaseSmuggler>();
 
         private readonly Func<string, string, ISingleNodeDatabaseChanges> _getChanges;
         private readonly Func<string, RequestExecutor> _getRequestExecutor;

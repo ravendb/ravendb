@@ -9,6 +9,7 @@ using Raven.Server.Logging;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.TrafficWatch;

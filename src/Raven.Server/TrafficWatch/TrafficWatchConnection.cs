@@ -10,6 +10,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.TrafficWatch
 {

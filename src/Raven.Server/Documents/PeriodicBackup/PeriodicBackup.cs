@@ -7,6 +7,7 @@ using Raven.Client.Util;
 using Raven.Server.ServerWide;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Threading;
 
 namespace Raven.Server.Documents.PeriodicBackup

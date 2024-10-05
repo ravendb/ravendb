@@ -7,6 +7,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {

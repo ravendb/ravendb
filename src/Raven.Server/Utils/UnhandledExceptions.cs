@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using NLog;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Utils
 {

@@ -11,6 +11,7 @@ using Sparrow.Threading;
 using Voron.Impl;
 using System.Diagnostics.CodeAnalysis;
 using Raven.Server.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {

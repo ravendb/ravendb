@@ -11,6 +11,7 @@ using Sparrow.Json;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.ServerWide
 {

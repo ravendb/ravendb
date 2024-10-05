@@ -29,6 +29,7 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
 using RavenServerBackupUtils = Raven.Server.Utils.BackupUtils;
 

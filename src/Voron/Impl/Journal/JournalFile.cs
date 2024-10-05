@@ -14,6 +14,7 @@ using Sparrow.Logging;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
 using Voron.Logging;

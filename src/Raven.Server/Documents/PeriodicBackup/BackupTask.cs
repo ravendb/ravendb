@@ -27,6 +27,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
 using StorageEnvironmentType = Voron.StorageEnvironmentWithType.StorageEnvironmentType;

@@ -6,6 +6,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.ServerWide.Tcp.Sync
 {

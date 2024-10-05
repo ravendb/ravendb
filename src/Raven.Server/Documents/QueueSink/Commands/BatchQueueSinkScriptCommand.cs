@@ -7,6 +7,7 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.QueueSink.Commands;
 

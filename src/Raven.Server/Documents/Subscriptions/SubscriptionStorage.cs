@@ -21,6 +21,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Subscriptions
 {

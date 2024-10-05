@@ -15,7 +15,7 @@ namespace Raven.Client.Http
 {
     internal static class ClusterTopologyLocalCache
     {
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient(typeof(ClusterTopologyLocalCache));
+        private static readonly IRavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient(typeof(ClusterTopologyLocalCache));
 
         private static void Clear(string path)
         {

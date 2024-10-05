@@ -9,6 +9,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils.Cpu

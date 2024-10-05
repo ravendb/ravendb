@@ -27,6 +27,7 @@ using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;

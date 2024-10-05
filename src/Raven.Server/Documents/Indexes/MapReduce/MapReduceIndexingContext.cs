@@ -4,6 +4,7 @@ using Raven.Server.Logging;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;

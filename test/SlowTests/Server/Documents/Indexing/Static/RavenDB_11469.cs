@@ -10,6 +10,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -50,7 +51,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
             }, database))
             {
                 var mapReduceContext = new MapReduceIndexingContext(index);
-                using (var contextPool = new TransactionContextPool(RavenLogManager.CreateNullLogger(), database.DocumentsStorage.Environment))
+                using (var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), database.DocumentsStorage.Environment))
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
                     var reducer = new ReduceMapResultsOfStaticIndex(index, index._compiled.Reduce, index.Definition, indexStorage, new MetricCounters(), mapReduceContext);

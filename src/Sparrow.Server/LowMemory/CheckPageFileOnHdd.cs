@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
 
@@ -19,7 +20,7 @@ namespace Sparrow.Server.LowMemory
 {
     public static class CheckPageFileOnHdd
     {
-        private static readonly RavenLogger Log = RavenLogManager.Instance.GetLoggerForSparrow(typeof(CheckPageFileOnHdd));
+        private static readonly RavenLogger Log = RavenLogManager.Instance.GetLoggerForSparrowServer(typeof(CheckPageFileOnHdd));
 
         private const string PageFileName = "pagefile.sys";
 

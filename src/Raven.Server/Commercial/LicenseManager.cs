@@ -46,6 +46,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;

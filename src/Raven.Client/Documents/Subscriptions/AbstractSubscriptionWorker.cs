@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Subscriptions
         where TType : class
     {
         public delegate Task AfterAcknowledgmentAction(TBatch batch);
-        protected readonly RavenLogger _logger;
+        protected readonly IRavenLogger _logger;
         internal readonly string _dbName;
         protected CancellationTokenSource _processingCts = new CancellationTokenSource();
         protected readonly SubscriptionWorkerOptions _options;
@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         public event Action<Exception> OnUnexpectedSubscriptionError;
 
-        internal AbstractSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RavenLogger logger)
+        internal AbstractSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, IRavenLogger logger)
         {
             if (string.IsNullOrEmpty(options.SubscriptionName))
                 throw new ArgumentException("SubscriptionConnectionOptions must specify the SubscriptionName", nameof(options));

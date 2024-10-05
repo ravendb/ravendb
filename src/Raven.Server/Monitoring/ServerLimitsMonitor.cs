@@ -14,6 +14,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Monitoring
 {

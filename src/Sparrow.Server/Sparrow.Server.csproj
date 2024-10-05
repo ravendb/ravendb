@@ -44,6 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Mono.Posix.NETStandard" />
+    <PackageReference Include="NLog" />
     <PackageReference Include="Raven.CodeAnalysis">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>

@@ -16,6 +16,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron;
 

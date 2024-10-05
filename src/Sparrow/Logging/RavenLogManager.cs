@@ -1,14 +1,30 @@
-﻿using NLog;
+﻿using System;
 
 namespace Sparrow.Logging;
 
-internal class RavenLogManager
+public sealed class RavenLogManager
 {
-    public static readonly RavenLogManager Instance = new();
+    private static IRavenLogManager LogManager = RavenNullLogManager.Instance;
+
+    internal static readonly RavenLogManager Instance = new();
 
     public bool IsAuditEnabled;
 
     private RavenLogManager()
+    {
+        Refresh();
+    }
+
+    internal void Shutdown()
+    {
+        LogManager.Shutdown();
+    }
+
+    internal IRavenLogger GetLogger(string name) => LogManager.GetLogger(name);
+
+    internal IRavenLogger GetLogger(string name, Type loggerType) => LogManager.GetLogger(name);
+
+    internal void Refresh()
     {
         var innerLogger = LogManager.GetLogger("Audit");
         IsAuditEnabled = innerLogger.IsInfoEnabled;
@@ -16,13 +32,10 @@ internal class RavenLogManager
         LogManager.ConfigurationChanged += (_, _) => IsAuditEnabled = innerLogger.IsInfoEnabled;
     }
 
-    public void Shutdown()
+    public static void Set(IRavenLogManager logManager)
     {
-        LogManager.Shutdown();
-    }
+        LogManager = logManager ?? throw new ArgumentNullException(nameof(logManager));
 
-    public static RavenLogger CreateNullLogger()
-    {
-        return new RavenLogger(LogManager.CreateNullLogger());
+        Instance.Refresh();
     }
 }

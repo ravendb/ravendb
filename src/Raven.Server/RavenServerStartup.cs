@@ -39,6 +39,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Exceptions;
+using Sparrow.Server.Logging;
 using Voron.Exceptions;
 
 namespace Raven.Server

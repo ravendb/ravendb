@@ -7,6 +7,7 @@ using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication.Senders
 {

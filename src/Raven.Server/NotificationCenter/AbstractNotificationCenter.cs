@@ -10,6 +10,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.NotificationCenter;
 

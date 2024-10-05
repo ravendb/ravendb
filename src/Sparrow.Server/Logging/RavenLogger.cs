@@ -1,9 +1,11 @@
 ﻿using System;
 using NLog;
+using Sparrow.Logging;
+using LogLevel = Sparrow.Logging.LogLevel;
 
-namespace Sparrow.Logging;
+namespace Sparrow.Server.Logging;
 
-public class RavenLogger
+public sealed class RavenLogger : IRavenLogger
 {
     private readonly Logger _logger;
 
@@ -88,7 +90,6 @@ public class RavenLogger
         _logger.Trace(exception, message);
     }
 
-
     public bool IsEnabled(LogLevel logLevel)
     {
         return _logger.IsEnabled(logLevel.ToNLogLogLevel());
@@ -97,5 +98,10 @@ public class RavenLogger
     public void Log(LogLevel logLevel, string message)
     {
         _logger.Log(logLevel.ToNLogLogLevel(), message);
+    }
+
+    public IRavenLogger WithProperty(string propertyKey, object propertyValue)
+    {
+        return new RavenLogger(_logger.WithProperty(propertyKey, propertyValue));
     }
 }

@@ -94,6 +94,8 @@ internal static class RavenLogManagerServerExtensions
     private static readonly ConcurrentDictionary<string, RavenAuditLogger> AuditLoggers = new(StringComparer.OrdinalIgnoreCase);
 #endif
 
+    public static RavenLogger CreateNullLogger(this RavenLogManager logManager) => new(LogManager.CreateNullLogger());
+
     public static RavenLogger GetLoggerForCluster<T>(this RavenLogManager logManager, LoggingComponent component = null) => GetLoggerForCluster(logManager, typeof(T), component);
 
     public static RavenLogger GetLoggerForCluster(this RavenLogManager logManager, Type type, LoggingComponent component = null)

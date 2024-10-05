@@ -12,6 +12,7 @@ using RabbitMQ.Client;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using PemWriter = Org.BouncyCastle.OpenSsl.PemWriter;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;

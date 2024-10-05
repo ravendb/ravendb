@@ -3,6 +3,7 @@ using JetBrains.Annotations;
 using NLog;
 using NLog.Filters;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Logging;
 

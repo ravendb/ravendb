@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Subscriptions
         private readonly IDocumentStore _store;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
-        public SubscriptionBatch(RequestExecutor requestExecutor, IDocumentStore store, string dbName, RavenLogger logger) : base(requestExecutor, dbName, logger)
+        public SubscriptionBatch(RequestExecutor requestExecutor, IDocumentStore store, string dbName, IRavenLogger logger) : base(requestExecutor, dbName, logger)
         {
             _store = store;
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, generateIdAsync: entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));

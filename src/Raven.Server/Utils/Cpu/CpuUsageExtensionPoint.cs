@@ -9,6 +9,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Utils.Cpu
 {

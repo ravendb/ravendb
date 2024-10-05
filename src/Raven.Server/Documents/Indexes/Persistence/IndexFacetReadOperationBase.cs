@@ -9,6 +9,7 @@ using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Indexes.Persistence;
 

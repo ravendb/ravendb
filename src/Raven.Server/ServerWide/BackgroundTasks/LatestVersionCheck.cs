@@ -11,6 +11,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.ServerWide.BackgroundTasks
 {

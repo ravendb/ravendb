@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions;
 
@@ -37,7 +38,7 @@ public sealed class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJs
         ConfirmFromShardSubscriptionConnectionTcs?.TrySetException(e);
     }
 
-    public ShardedSubscriptionBatch(RequestExecutor requestExecutor, string dbName, RavenLogger logger, ShardedDatabaseContext databaseContext) : base(requestExecutor, dbName, logger)
+    public ShardedSubscriptionBatch(RequestExecutor requestExecutor, string dbName, IRavenLogger logger, ShardedDatabaseContext databaseContext) : base(requestExecutor, dbName, logger)
     {
         ShardName = dbName;
         _databaseContext = databaseContext;

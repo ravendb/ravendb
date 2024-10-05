@@ -6,6 +6,7 @@ using Sparrow.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 // ReSharper disable InconsistentNaming
@@ -14,7 +15,7 @@ namespace Sparrow.Server.Platform.Win32
 {
     public static unsafe class Win32MemoryQueryMethods
     {
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrow(typeof(Win32MemoryQueryMethods));
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrowServer(typeof(Win32MemoryQueryMethods));
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr GetCurrentProcess();

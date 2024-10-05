@@ -29,6 +29,7 @@ using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using ServerVersion = Raven.Server.Monitoring.Snmp.Objects.Server.ServerVersion;
 using TimeoutException = System.TimeoutException;
 

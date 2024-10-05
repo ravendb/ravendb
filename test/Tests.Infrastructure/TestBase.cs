@@ -38,6 +38,7 @@ using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Debugging;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Tests.Infrastructure;
@@ -107,6 +108,7 @@ namespace FastTests
             DebugStuff.Attach();
 
             IgnoreProcessorAffinityChanges(ignore: true);
+            RavenLogManager.Set(RavenNLogLogManager.Instance);
             //RequestExecutor.HttpClientFactory = RavenServerHttpClientFactory.Instance;
             LicenseManager.AddLicenseStatusToLicenseLimitsException = true;
             RachisStateMachine.EnableDebugLongCommit = true;

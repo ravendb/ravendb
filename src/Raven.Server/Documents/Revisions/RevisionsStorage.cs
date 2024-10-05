@@ -25,6 +25,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;

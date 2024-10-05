@@ -16,6 +16,7 @@ using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Spatial4n.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Static

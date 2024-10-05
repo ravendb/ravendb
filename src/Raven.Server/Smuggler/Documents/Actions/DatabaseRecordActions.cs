@@ -23,6 +23,7 @@ using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Smuggler.Documents.Actions;
 

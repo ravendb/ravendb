@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron.Impl.Journal;
 using Voron.Logging;

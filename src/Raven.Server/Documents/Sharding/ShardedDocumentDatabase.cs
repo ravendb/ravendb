@@ -25,6 +25,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding;

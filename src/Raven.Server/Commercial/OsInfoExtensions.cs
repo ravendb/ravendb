@@ -10,6 +10,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Logging;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Commercial
 {

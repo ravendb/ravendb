@@ -17,6 +17,7 @@ using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.ServerWide
 {

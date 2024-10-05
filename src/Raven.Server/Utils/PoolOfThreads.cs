@@ -7,6 +7,7 @@ using Raven.Server.Logging;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;

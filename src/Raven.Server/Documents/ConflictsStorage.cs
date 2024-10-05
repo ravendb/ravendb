@@ -19,6 +19,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;

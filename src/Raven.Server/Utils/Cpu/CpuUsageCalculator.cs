@@ -7,6 +7,7 @@ using Raven.Server.Monitoring.Snmp.Objects.Server;
 using Raven.Server.NotificationCenter;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Platform.Posix.macOS;
 using Sparrow.Utils;
 

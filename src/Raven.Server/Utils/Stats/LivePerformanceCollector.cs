@@ -9,6 +9,7 @@ using Raven.Server.Logging;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Collections;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils.Stats

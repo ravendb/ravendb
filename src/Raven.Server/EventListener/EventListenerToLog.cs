@@ -4,6 +4,7 @@ using System.Threading;
 using Raven.Server.Logging;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.EventListener;
 

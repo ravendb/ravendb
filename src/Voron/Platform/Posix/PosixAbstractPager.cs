@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Posix;
 using Voron.Impl;

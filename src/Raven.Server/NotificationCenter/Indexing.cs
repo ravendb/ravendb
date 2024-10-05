@@ -11,6 +11,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.NotificationCenter
 {

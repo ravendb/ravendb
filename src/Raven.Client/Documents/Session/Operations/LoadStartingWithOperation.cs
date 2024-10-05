@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Session.Operations
 {
     internal sealed class LoadStartingWithOperation
     {
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient<LoadStartingWithOperation>();
+        private static readonly IRavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient<LoadStartingWithOperation>();
         private readonly InMemoryDocumentSessionOperations _session;
 
         private string _startWith;

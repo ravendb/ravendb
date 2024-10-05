@@ -14,6 +14,7 @@ using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Logging;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {

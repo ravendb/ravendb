@@ -28,6 +28,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication
 {

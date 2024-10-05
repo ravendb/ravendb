@@ -5,6 +5,7 @@ using NuGet.Packaging;
 using NuGet.ProjectManagement;
 using Raven.Server.Logging;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using LogLevel = NuGet.Common.LogLevel;
 
 namespace Raven.Server.Documents.Indexes.Static.NuGet

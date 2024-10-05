@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;

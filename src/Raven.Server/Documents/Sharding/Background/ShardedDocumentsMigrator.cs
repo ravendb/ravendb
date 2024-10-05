@@ -8,6 +8,7 @@ using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Background

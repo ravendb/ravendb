@@ -6,12 +6,13 @@ using System.IO;
 using System.Linq;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Sparrow.Server.Platform.Posix
 {
     internal static class KernelVirtualFileSystemUtils
     {
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrow(typeof(KernelVirtualFileSystemUtils));
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrowServer(typeof(KernelVirtualFileSystemUtils));
         private static readonly ConcurrentSet<string> IsOldFileAlert = new ConcurrentSet<string>();
         private static readonly ConcurrentSet<string> MissingCgroupFiles = new ConcurrentSet<string>();
 

@@ -29,6 +29,7 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using static Raven.Server.RavenServer;
 using HttpMethods = Raven.Client.Util.HttpMethods;
 

@@ -8,6 +8,7 @@ using Raven.Server.Logging;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
 using Raven.Server.Utils.Cpu;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 

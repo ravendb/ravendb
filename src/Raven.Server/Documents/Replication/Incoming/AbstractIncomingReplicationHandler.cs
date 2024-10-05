@@ -28,6 +28,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;

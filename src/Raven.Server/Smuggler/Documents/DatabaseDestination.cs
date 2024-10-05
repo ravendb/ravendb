@@ -31,6 +31,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Global;

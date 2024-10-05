@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Impl;
