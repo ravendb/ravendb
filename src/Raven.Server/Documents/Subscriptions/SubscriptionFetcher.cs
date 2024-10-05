@@ -7,6 +7,7 @@ using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Enumerators;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Subscriptions
 {

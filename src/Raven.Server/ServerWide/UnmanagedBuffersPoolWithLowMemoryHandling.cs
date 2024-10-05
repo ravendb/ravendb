@@ -1,6 +1,7 @@
 ﻿using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.ServerWide
 {

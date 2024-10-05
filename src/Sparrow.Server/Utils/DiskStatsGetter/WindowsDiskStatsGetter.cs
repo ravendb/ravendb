@@ -3,13 +3,14 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Sparrow.Server.Utils.DiskStatsGetter;
 
 [SupportedOSPlatform("windows")]
 internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResult>
 {
-    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrow(typeof(WindowsDiskStatsGetter));
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrowServer(typeof(WindowsDiskStatsGetter));
 
     private const string DiskCategory = "LogicalDisk";
 

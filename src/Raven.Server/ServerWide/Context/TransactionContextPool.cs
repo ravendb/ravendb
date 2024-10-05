@@ -7,6 +7,7 @@
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron;
 
 namespace Raven.Server.ServerWide.Context

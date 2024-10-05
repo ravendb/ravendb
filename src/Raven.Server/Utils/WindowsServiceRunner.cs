@@ -6,6 +6,7 @@ using Raven.Server.Logging;
 using Raven.Server.Utils.Cli;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Utils
 {

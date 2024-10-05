@@ -5,13 +5,14 @@ using System.Runtime.Versioning;
 using System.Text;
 using Mono.Unix.Native;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Sparrow.Server.Utils.DiskStatsGetter;
 
 [SupportedOSPlatform("linux")]
 internal class LinuxDiskStatsGetter : DiskStatsGetter<LinuxDiskStatsRawResult>
 {
-    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrow(typeof(LinuxDiskStatsGetter));
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrowServer(typeof(LinuxDiskStatsGetter));
 
     public LinuxDiskStatsGetter(TimeSpan minInterval) : base(minInterval)
     {

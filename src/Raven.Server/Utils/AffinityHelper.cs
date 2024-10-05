@@ -7,6 +7,7 @@ using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.Utils

@@ -9,6 +9,7 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Commands;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {

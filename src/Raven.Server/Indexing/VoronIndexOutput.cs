@@ -4,6 +4,7 @@ using Lucene.Net.Store;
 using Raven.Server.Logging;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron.Impl;
 using Voron;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -40,7 +41,7 @@ namespace Raven.Server.Indexing
 
             _logger = index != null 
                 ? RavenLogManager.Instance.GetLoggerForIndex<VoronIndexOutput>(index) 
-                : RavenLogManager.CreateNullLogger();
+                : RavenLogManager.Instance.CreateNullLogger();
 
             _ms = fileCache.RentMemoryStream();
             _tx.ReadTree(_tree).AddStream(name, Stream.Null); // ensure it's visible by LuceneVoronDirectory.FileExists, the actual write is inside Dispose

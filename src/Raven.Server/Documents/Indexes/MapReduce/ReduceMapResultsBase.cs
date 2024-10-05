@@ -20,6 +20,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Server.LowMemory;
 using Voron;
 using Voron.Data.BTrees;

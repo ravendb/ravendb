@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Raven.Server.Config.Categories;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron;
 

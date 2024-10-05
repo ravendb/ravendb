@@ -7,6 +7,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Logging;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron.Data.BTrees;
 
 namespace Raven.Server.Documents.Indexes;

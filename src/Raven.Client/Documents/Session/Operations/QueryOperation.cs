@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Session.Operations
         private QueryResult _currentQueryResults;
         private readonly FieldsToFetchToken _fieldsToFetch;
         private Stopwatch _sp;
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient<QueryOperation>();
+        private static readonly IRavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient<QueryOperation>();
         private static readonly PropertyInfo[] _facetResultProperties = typeof(FacetResult).GetProperties();
 
         public QueryResult CurrentQueryResults => _currentQueryResults;

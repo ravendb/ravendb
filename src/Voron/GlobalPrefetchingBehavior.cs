@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron.Logging;
 using static Sparrow.Server.Platform.Pal;

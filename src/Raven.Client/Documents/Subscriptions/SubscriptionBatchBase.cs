@@ -53,14 +53,14 @@ public abstract class SubscriptionBatchBase<T>
 
     protected readonly RequestExecutor _requestExecutor;
     protected readonly string _dbName;
-    protected readonly RavenLogger _logger;
+    protected readonly IRavenLogger _logger;
 
     public List<Item> Items { get; } = new List<Item>();
     protected List<BlittableJsonReaderObject> _includes;
     protected List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> _counterIncludes;
     protected List<BlittableJsonReaderObject> _timeSeriesIncludes;
 
-    protected SubscriptionBatchBase(RequestExecutor requestExecutor, string dbName, RavenLogger logger)
+    protected SubscriptionBatchBase(RequestExecutor requestExecutor, string dbName, IRavenLogger logger)
     {
         _requestExecutor = requestExecutor;
         _dbName = dbName;

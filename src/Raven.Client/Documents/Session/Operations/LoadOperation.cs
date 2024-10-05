@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Session.Operations
     internal sealed class LoadOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient<LoadOperation>();
+        private static readonly IRavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient<LoadOperation>();
 
         private string[] _ids;
         private string[] _includes;

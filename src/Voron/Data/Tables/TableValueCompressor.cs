@@ -10,6 +10,7 @@ using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron.Data.Fixed;
 using Voron.Global;

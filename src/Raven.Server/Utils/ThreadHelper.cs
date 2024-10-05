@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Utils;
 

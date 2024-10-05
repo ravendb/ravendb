@@ -73,7 +73,7 @@ namespace Raven.Client.Http
         public X509Certificate2 Certificate { get; }
         private readonly string _databaseName;
 
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient<RequestExecutor>();
+        private static readonly IRavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient<RequestExecutor>();
 
         public readonly JsonContextPool ContextPool;
 

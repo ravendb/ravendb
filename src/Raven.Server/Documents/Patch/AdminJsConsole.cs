@@ -4,6 +4,7 @@ using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Cli;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Patch
 {

@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using NLog.Layouts;
-
-namespace Sparrow.Global
+﻿namespace Sparrow.Global
 {
     internal static class Constants
     {
@@ -22,17 +19,6 @@ namespace Sparrow.Global
             internal const string DefaultHeaderAndFooterLayout = "Date|Level|Resource|Component|Logger|Message|Data";
 
             internal const string DefaultLayout = "${longdate}|${level:uppercase=true}|${event-properties:item=Resource}|${event-properties:item=Component}|${logger}|${message:withexception=true}|${event-properties:item=Data}";
-
-            internal static List<JsonAttribute> DefaultAdminLogsJsonAttributes = new()
-            {
-                new JsonAttribute("Date", "${longdate}"),
-                new JsonAttribute("Level", "${level:uppercase=true}"),
-                new JsonAttribute("Resource", "${event-properties:item=Resource}"),
-                new JsonAttribute("Component", "${event-properties:item=Component}"),
-                new JsonAttribute("Logger", "${logger}"),
-                new JsonAttribute("Message", "${message:withexception=true}"),
-                new JsonAttribute("Data", "${event-properties:item=Data}"),
-            };
 
             internal class Properties
             {

@@ -14,7 +14,7 @@ namespace Sparrow.LowMemory
     {
         private const string NotificationThreadName = "Low memory notification thread";
 
-        private readonly RavenLogger _logger;
+        private readonly IRavenLogger _logger;
 
         private readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> _lowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
 

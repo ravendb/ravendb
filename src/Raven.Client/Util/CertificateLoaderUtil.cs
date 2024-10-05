@@ -10,7 +10,7 @@ namespace Raven.Client.Util;
 
 internal static class CertificateLoaderUtil
 {
-    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient(typeof(CertificateLoaderUtil));
+    private static readonly IRavenLogger Logger = RavenLogManager.Instance.GetLoggerForClient(typeof(CertificateLoaderUtil));
 
     private static bool FirstTime = true;
     public static X509KeyStorageFlags FlagsForExport => X509KeyStorageFlags.Exportable;

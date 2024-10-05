@@ -8,6 +8,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.NotificationCenter.BackgroundWork
 {

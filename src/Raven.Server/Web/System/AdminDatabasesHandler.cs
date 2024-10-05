@@ -56,6 +56,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Voron;
 using Voron.Util.Settings;
 using BackupUtils = Raven.Server.Utils.BackupUtils;

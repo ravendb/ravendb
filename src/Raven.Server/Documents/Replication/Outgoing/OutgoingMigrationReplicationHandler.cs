@@ -6,6 +6,7 @@ using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication.Outgoing

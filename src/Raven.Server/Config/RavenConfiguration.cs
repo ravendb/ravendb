@@ -25,6 +25,7 @@ using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron.Util.Settings;
 
 namespace Raven.Server.Config

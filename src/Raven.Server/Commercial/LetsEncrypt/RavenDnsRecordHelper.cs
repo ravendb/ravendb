@@ -12,6 +12,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Http;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 

@@ -25,7 +25,7 @@ public sealed class AdminLogsTarget : AbstractTarget
     static AdminLogsTarget()
     {
         var layout = new JsonLayout();
-        foreach (var attribute in Constants.Logging.DefaultAdminLogsJsonAttributes)
+        foreach (var attribute in Sparrow.Server.Global.Constants.Logging.DefaultAdminLogsJsonAttributes)
             layout.Attributes.Add(attribute);
 
         Instance = new()

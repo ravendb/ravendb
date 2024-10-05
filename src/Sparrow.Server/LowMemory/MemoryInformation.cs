@@ -8,6 +8,7 @@ using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Posix.macOS;
 using Sparrow.Server.Utils;
@@ -18,7 +19,7 @@ namespace Sparrow.Server.LowMemory
 {
     public static class MemoryInformation
     {
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrow(typeof(MemoryInformation));
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrowServer(typeof(MemoryInformation));
 
         private static readonly byte[] VmRss = Encoding.UTF8.GetBytes("VmRSS:");
         private static readonly byte[] VmSwap = Encoding.UTF8.GetBytes("VmSwap:");

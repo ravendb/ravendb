@@ -11,6 +11,7 @@ using Raven.Server.Integrations.PostgreSQL.PowerBI;
 using Raven.Server.Integrations.PostgreSQL.Types;
 using Raven.Server.Logging;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {

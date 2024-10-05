@@ -41,7 +41,7 @@ namespace Raven.Client.Util
 #endif
             NegotiationCallback negotiationCallback,
             TimeSpan timeout,
-            RavenLogger log
+            IRavenLogger log
 #if !NETSTANDARD
             ,
             CancellationToken token = default

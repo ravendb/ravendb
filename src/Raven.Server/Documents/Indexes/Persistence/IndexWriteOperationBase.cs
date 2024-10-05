@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Indexes.Persistence
 {
