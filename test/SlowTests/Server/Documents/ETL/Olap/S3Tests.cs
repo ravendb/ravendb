@@ -542,7 +542,7 @@ loadToOrders(partitionBy(['order_date', key]),
                     var script = @"
 loadToOrders(noPartition(),
     {
-        OrderDate : this.OrderedAt
+        OrderDate : this.OrderedAt,
         Company : this.Company,
         ShipVia : this.ShipVia
     });

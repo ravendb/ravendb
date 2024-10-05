@@ -141,7 +141,7 @@ namespace SlowTests.Issues
         ac: g.key.ac,
         a: {
             b: g.key.ab,
-            c: g.key.ac
+            c: g.key.ac,
             f: g.values.reduce((res, val) => res + val.a.f, 0)
         },
         d: g.values.reduce((res, val) => res + val.d, 0)
