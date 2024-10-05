@@ -17,6 +17,7 @@ using SlowTests.Authentication;
 using SlowTests.Issues;
 using SlowTests.Server.Documents.PeriodicBackup;
 using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftAntimalwareEngine;
+using NLog;
 using RachisTests;
 using SlowTests.SlowTests.MailingList;
 

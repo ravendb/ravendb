@@ -11,6 +11,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding;

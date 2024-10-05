@@ -1,6 +1,7 @@
 ﻿using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Sparrow.Server;
 using Sparrow.Json;
@@ -21,7 +22,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         [Fact]
         public void Can_handle_values_of_different_types()
         {
-            using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling(RavenLogManager.CreateNullLogger(), "ReduceKeyProcessorTests"))
+            using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling(RavenLogManager.Instance.CreateNullLogger(), "ReduceKeyProcessorTests"))
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var bsc = new ByteStringContext(SharedMultipleUseFlag.None))
             {

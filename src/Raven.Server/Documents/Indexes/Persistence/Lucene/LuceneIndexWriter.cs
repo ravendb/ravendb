@@ -16,6 +16,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Server.Exceptions;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Voron.Exceptions;
 

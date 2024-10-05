@@ -20,6 +20,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {

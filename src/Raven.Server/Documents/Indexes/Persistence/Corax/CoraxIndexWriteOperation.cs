@@ -12,6 +12,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Voron;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;

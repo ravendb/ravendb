@@ -13,7 +13,7 @@ namespace Sparrow.Json
 {
     public unsafe class UnmanagedBuffersPool : IDisposable, IDisposableQueryable
     {
-        private readonly RavenLogger _logger;
+        private readonly IRavenLogger _logger;
 
         protected readonly string _debugTag;
 
@@ -24,7 +24,7 @@ namespace Sparrow.Json
         private bool _isDisposed;
         bool IDisposableQueryable.IsDisposed => _isDisposed;
 
-        public UnmanagedBuffersPool(RavenLogger logger, string debugTag, string databaseName = null)
+        public UnmanagedBuffersPool(IRavenLogger logger, string debugTag, string databaseName = null)
         {
             _logger = logger;
             _debugTag = debugTag;

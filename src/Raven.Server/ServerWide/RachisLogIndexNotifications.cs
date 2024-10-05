@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Threading;
 
 namespace Raven.Server.ServerWide;

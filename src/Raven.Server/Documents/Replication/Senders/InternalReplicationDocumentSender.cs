@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using Raven.Server.Documents.Replication.Outgoing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication.Senders
 {

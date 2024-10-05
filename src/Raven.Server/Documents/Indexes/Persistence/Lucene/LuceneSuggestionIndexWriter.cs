@@ -15,6 +15,7 @@ using Raven.Server.Indexing;
 using Raven.Server.Logging;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene

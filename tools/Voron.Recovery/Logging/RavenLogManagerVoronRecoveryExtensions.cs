@@ -6,6 +6,7 @@ using NLog.Config;
 using NLog.Targets.Wrappers;
 using NLog.Targets;
 using Raven.Server.Config.Settings;
+using Sparrow.Server.Logging;
 using LogLevel = Sparrow.Logging.LogLevel;
 
 namespace Voron.Recovery.Logging;

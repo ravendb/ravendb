@@ -42,6 +42,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Threading;
 
 namespace Raven.Server.Documents.Indexes

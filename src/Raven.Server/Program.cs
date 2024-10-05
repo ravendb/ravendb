@@ -24,6 +24,7 @@ using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron;
@@ -35,7 +36,13 @@ namespace Raven.Server
 {
     public sealed class Program
     {
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<Program>();
+        private static readonly RavenLogger Logger;
+
+        static Program()
+        {
+            RavenLogManager.Set(RavenNLogLogManager.Instance);
+            Logger = RavenLogManager.Instance.GetLoggerForServer<Program>();
+        }
 
         public static unsafe int Main(string[] args)
         {

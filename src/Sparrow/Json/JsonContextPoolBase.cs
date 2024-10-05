@@ -12,7 +12,7 @@ namespace Sparrow.Json
     public abstract class JsonContextPoolBase<T> : ILowMemoryHandler, IDisposable
         where T : JsonOperationContext
     {
-        private readonly RavenLogger _logger;
+        private readonly IRavenLogger _logger;
         private readonly object _locker = new object();
 
         private bool _disposed;
@@ -30,7 +30,7 @@ namespace Sparrow.Json
         private readonly CountingConcurrentStack<T> _globalStack = new CountingConcurrentStack<T>();
         private readonly Timer _cleanupTimer;
 
-        protected JsonContextPoolBase(RavenLogger logger)
+        protected JsonContextPoolBase(IRavenLogger logger)
         {
             _logger = logger;
             _cleanupTimer = new Timer(Cleanup, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
@@ -41,14 +41,14 @@ namespace Sparrow.Json
                 : 1024;
         }
 
-        protected JsonContextPoolBase(Size? maxContextSizeToKeep, RavenLogger logger)
+        protected JsonContextPoolBase(Size? maxContextSizeToKeep, IRavenLogger logger)
             : this(logger)
         {
             if (maxContextSizeToKeep.HasValue)
                 _maxContextSizeToKeepInBytes = maxContextSizeToKeep.Value.GetValue(SizeUnit.Bytes);
         }
 
-        protected JsonContextPoolBase(Size? maxContextSizeToKeep, long? maxNumberOfContextsToKeepInGlobalStack, RavenLogger logger)
+        protected JsonContextPoolBase(Size? maxContextSizeToKeep, long? maxNumberOfContextsToKeepInGlobalStack, IRavenLogger logger)
             : this(maxContextSizeToKeep, logger)
         {
             if (maxNumberOfContextsToKeepInGlobalStack.HasValue)

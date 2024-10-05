@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Commercial;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
 namespace Raven.Server.Documents.PeriodicBackup

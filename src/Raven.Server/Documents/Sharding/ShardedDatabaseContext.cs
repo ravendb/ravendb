@@ -22,6 +22,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron;
 using static Raven.Server.Documents.DatabasesLandlord;

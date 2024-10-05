@@ -4,6 +4,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Suggestions;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Indexes.Persistence
 {

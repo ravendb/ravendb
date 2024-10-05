@@ -9,6 +9,7 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Handlers.Processors.BulkInsert;

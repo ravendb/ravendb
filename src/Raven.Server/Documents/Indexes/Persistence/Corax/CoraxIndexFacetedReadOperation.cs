@@ -17,6 +17,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Voron;
 using Voron.Impl;
 using IndexSearcher = Corax.Querying.IndexSearcher;

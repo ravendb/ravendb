@@ -10,6 +10,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Voron;
 

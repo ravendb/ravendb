@@ -17,6 +17,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;

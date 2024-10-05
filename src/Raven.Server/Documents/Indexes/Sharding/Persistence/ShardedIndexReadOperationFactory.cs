@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes.Sharding.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Sharding.Persistence;

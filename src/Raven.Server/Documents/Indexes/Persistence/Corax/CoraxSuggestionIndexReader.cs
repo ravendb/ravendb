@@ -13,6 +13,7 @@ using Raven.Server.Documents.Queries.Suggestions;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Voron.Impl;
 using Encoding = System.Text.Encoding;
 using IndexSearcher = Corax.Querying.IndexSearcher;

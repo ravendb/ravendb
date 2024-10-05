@@ -20,6 +20,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 

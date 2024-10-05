@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Utils.DiskStatsGetter;
@@ -13,7 +14,7 @@ namespace Sparrow.Server.Utils
 {
     public static class DiskUtils
     {
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrow(typeof(DiskUtils));
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrowServer(typeof(DiskUtils));
 
         // from https://github.com/dotnet/corefx/blob/9c06da6a34fcefa6fb37776ac57b80730e37387c/src/Common/src/System/IO/PathInternal.Windows.cs#L52
         public const short WindowsMaxPath = short.MaxValue;

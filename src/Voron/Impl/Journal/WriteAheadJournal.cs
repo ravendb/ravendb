@@ -39,6 +39,7 @@ using System.Diagnostics.Eventing.Reader;
 using System.Windows.Markup;
 using Microsoft.Win32.SafeHandles;
 using System.Runtime.CompilerServices;
+using Sparrow.Server.Logging;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform;
 using Voron.Impl.FreeSpace;
