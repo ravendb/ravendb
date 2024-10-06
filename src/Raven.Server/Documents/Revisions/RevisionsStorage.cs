@@ -17,6 +17,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Enumerators;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -2488,14 +2489,15 @@ namespace Raven.Server.Documents.Revisions
 
                 using (GetEtagAsSlice(context, state.LastEtag, out var startSlice))
                 {
-                    foreach (var seekResult in table.SeekForwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], startSlice, 0))
+                    var enumerator = new TransactionForgetAboutStorageIdEnumerator(
+                        table.SeekForwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], startSlice, 0).GetEnumerator(), context);
+
+                    foreach (var seekResult in enumerator)
                     {
                         var tvr = seekResult.Result;
-                        var storageId = tvr.Reader.Id;
                         var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr.Reader);
                         if (etag == NotDeletedRevisionMarker)
                         {
-                            context.Transaction.InnerTransaction.ForgetAbout(storageId);
                             continue;
                         }
 
@@ -2505,7 +2507,6 @@ namespace Raven.Server.Documents.Revisions
                         {
                             if (IsRevisionsBinEntry(context, table, lowerId, etag) == false) // if its not last - continue
                             {
-                                context.Transaction.InnerTransaction.ForgetAbout(storageId);
                                 continue;
                             }
                         }
@@ -2513,12 +2514,10 @@ namespace Raven.Server.Documents.Revisions
                         var deleteRevision = TableValueToRevision(context, ref tvr.Reader, fields);
                         if (deleteRevision.LastModified >= before)
                         {
-                            context.Transaction.ForgetAbout(deleteRevision);
                             yield break;
                         }
 
                         yield return deleteRevision;
-                        context.Transaction.InnerTransaction.ForgetAbout(storageId);
                         ended = false;
                         break;
                     }
