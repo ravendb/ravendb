@@ -107,21 +107,25 @@ namespace Sparrow.Json
 
                     if (charA == charB)
                     {
-                        a++; b++;
+                        a++;
+                        b++;
                         length--;
                         continue;
                     }
 
                     // uppercase both chars - notice that we need just one compare per char
-                    if ((uint)(charA - 'a') <= 'z' - 'a') charA -= 0x20;
-                    if ((uint)(charB - 'a') <= 'z' - 'a') charB -= 0x20;
+                    if ((uint)(charA - 'a') <= 'z' - 'a')
+                        charA -= 0x20;
+                    if ((uint)(charB - 'a') <= 'z' - 'a')
+                        charB -= 0x20;
 
                     // Return the (case-insensitive) difference between them.
                     if (charA != charB)
                         return charA - charB;
 
                     // Next char
-                    a++; b++;
+                    a++;
+                    b++;
                     length--;
                 }
 
@@ -263,7 +267,7 @@ namespace Sparrow.Json
         public int Compare(byte* other, int otherSize)
         {
             DisposableExceptions.ThrowIfDisposedOnDebug(this);
-            
+
             int size = Size;
             var result = Memory.CompareInline(Buffer, other, Math.Min(size, otherSize));
             return result == 0 ? size - otherSize : result;
@@ -301,7 +305,7 @@ namespace Sparrow.Json
                 return null;
 
             DisposableExceptions.ThrowIfDisposedOnDebug(self);
-            
+
             return self._string ??
                    (self._string = Encodings.Utf8.GetString(self._buffer, self._size));
         }
@@ -380,7 +384,7 @@ namespace Sparrow.Json
         public override bool Equals(object other)
         {
             DisposableExceptions.ThrowIfDisposedOnDebug(this);
-            
+
             if (ReferenceEquals(other, this))
                 return true;
 
@@ -407,7 +411,7 @@ namespace Sparrow.Json
         public override int GetHashCode()
         {
             DisposableExceptions.ThrowIfDisposedOnDebug(this);
-            
+
             if (_hashCode.HasValue)
                 return _hashCode.Value;
 
@@ -536,7 +540,7 @@ namespace Sparrow.Json
         public bool EndsWith(LazyStringValue value)
         {
             DisposableExceptions.ThrowIfDisposed(this);
-            
+
             if (value.Size > Size)
                 return false;
 
@@ -772,7 +776,7 @@ namespace Sparrow.Json
         public int LastIndexOfAny(char[] anyOf, int startIndex, int count)
         {
             DisposableExceptions.ThrowIfDisposed(this);
-            
+
             if (_string != null)
                 return _string.LastIndexOfAny(anyOf, startIndex, count);
 
@@ -923,6 +927,13 @@ namespace Sparrow.Json
             return ToString().Split(separator, count, options);
         }
 
+#if NET9_0_OR_GREATER
+        public string[] Split(scoped ReadOnlySpan<char> separator)
+        {
+            return ToString().Split(separator);
+        }
+#endif
+
         public bool StartsWith(string value)
         {
             DisposableExceptions.ThrowIfDisposed(this);
@@ -1061,6 +1072,13 @@ namespace Sparrow.Json
             return ToString().Trim(trimChars);
         }
 
+#if NET9_0_OR_GREATER
+        public string Trim(scoped ReadOnlySpan<char> trimChars)
+        {
+            return ToString().Trim(trimChars);
+        }
+#endif
+
         public string TrimEnd()
         {
             return ToString().TrimEnd();
@@ -1076,6 +1094,13 @@ namespace Sparrow.Json
             return ToString().TrimEnd(trimChars);
         }
 
+#if NET9_0_OR_GREATER
+        public string TrimEnd(scoped ReadOnlySpan<char> trimChars)
+        {
+            return ToString().TrimEnd(trimChars);
+        }
+#endif
+
         public string TrimStart()
         {
             return ToString().TrimStart();
@@ -1090,6 +1115,13 @@ namespace Sparrow.Json
         {
             return ToString().TrimStart(trimChars);
         }
+
+#if NET9_0_OR_GREATER
+        public string TrimStart(scoped ReadOnlySpan<char> trimChars)
+        {
+            return ToString().TrimStart(trimChars);
+        }
+#endif
 
         public string Reverse()
         {
@@ -1140,7 +1172,7 @@ namespace Sparrow.Json
                     AllocatedMemoryData = null;
                 }
             }
-            
+
             _size = size;
             _buffer = buffer;
             _string = str;
