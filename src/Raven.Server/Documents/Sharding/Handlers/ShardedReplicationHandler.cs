@@ -86,7 +86,7 @@ public sealed class ShardedReplicationHandler : ShardedDatabaseRequestHandler
     [RavenShardedAction("/databases/*/replication/progress", "GET")]
     public async Task GetReplicationProgress()
     {
-        using (var processor = new ShardedReplicationHandlerProcessorForProgress(this))
+        using (var processor = new ShardedReplicationHandlerProcessorForGetOngoingTasksProgress(this))
             await processor.ExecuteAsync();
     }
 }

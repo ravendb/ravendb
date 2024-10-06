@@ -160,6 +160,90 @@ namespace SlowTests.Server.Documents.OngoingTasks
 
         [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Studio)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task GetPullReplicationAsHubTaskProgressShouldWork_TwoSinks(Options options)
+        {
+            using var hub = GetDocumentStore(new Options(options) { ModifyDatabaseName = _ => "HubDB" });
+            using var sink1 = GetDocumentStore(new Options(options) { ModifyDatabaseName = _ => "Sink1DB" });
+            using var sink2 = GetDocumentStore(new Options(options) { ModifyDatabaseName = _ => "Sink2DB" });
+
+            // we want the first result to show unprocessed items
+            // so, we define pull replication task and break it immediately
+
+            await hub.Maintenance.SendAsync(new PutPullReplicationAsHubOperation("hub"));
+            await PullReplicationTests.SetupPullReplicationAsync("hub", sink1, hub);
+            await PullReplicationTests.SetupPullReplicationAsync("hub", sink2, hub);
+
+            var replication = await BreakReplication(Server.ServerStore, hub.Database);
+
+            await StoreData(hub);
+
+            // since we broke replication, we expect incomplete results with items to process
+
+            var result = await GetReplicationProgress(hub);
+
+            AssertReplicationProgress(result, ReplicationNode.ReplicationType.PullAsHub);
+
+            // we should have 2 results, one per each sink
+
+            var processesProgress = result[0].ProcessesProgress;
+            Assert.Equal(2, processesProgress.Count);
+            foreach (var processProgress in processesProgress)
+            {
+                AssertPendingItemsToProcess(result, processProgress: processProgress);
+                Assert.True(processProgress.FromToString.Contains(sink1.Database) || processProgress.FromToString.Contains(sink2.Database));
+            }
+
+            // continue the replication and let the items replicate to the sink
+
+            replication.Mend();
+            Assert.NotNull(await WaitForDocumentToReplicateAsync<User>(sink1, UserId, TimeSpan.FromSeconds(10)));
+            Assert.NotNull(await WaitForDocumentToReplicateAsync<User>(sink2, UserId, TimeSpan.FromSeconds(10)));
+
+            result = await GetReplicationProgress(hub);
+
+            processesProgress = result[0].ProcessesProgress;
+            Assert.Equal(2, processesProgress.Count);
+            foreach (var processProgress in processesProgress)
+            {
+                AssertPendingItemsToProcess(result, processProgress: processProgress, documentsToProcess: 0, countersToProcess: 0, timeSeriesSegmentsToProcess: 0, attachmentsToProcess: 0);
+                AssertItemsProcessed(result, processProgress: processProgress);
+            }
+
+            // break the replication again to perform deletion and check tombstone items
+
+            replication.Break();
+
+            await DeleteUserDocument(hub);
+
+            result = await GetReplicationProgress(hub);
+
+            AssertReplicationProgress(result, ReplicationNode.ReplicationType.PullAsHub);
+
+            processesProgress = result[0].ProcessesProgress;
+            Assert.Equal(2, processesProgress.Count);
+            foreach (var processProgress in processesProgress)
+            {
+                AssertPendingTombstoneItemsToProcess(result, processProgress: processProgress);
+            }
+
+            // continue the replication and check if all tombstones are processed
+
+            replication.Mend();
+            Assert.True(WaitForDocumentDeletion(sink1, UserId));
+            Assert.True(WaitForDocumentDeletion(sink2, UserId));
+
+            result = await GetReplicationProgress(hub);
+
+            processesProgress = result[0].ProcessesProgress;
+            Assert.Equal(2, processesProgress.Count);
+            foreach (var processProgress in processesProgress)
+            {
+                AssertTombstoneItemsProcessed(result, processProgress: processProgress);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Studio)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task GetPullReplicationAsSinkTaskProgressShouldWork(Options options)
         {
             var (_, leader, certificates) = await CreateRaftClusterWithSsl(1);
@@ -231,11 +315,55 @@ namespace SlowTests.Server.Documents.OngoingTasks
             AssertTombstoneItemsProcessed(result);
         }
 
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Studio | RavenTestCategory.Cluster)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task GetInternalReplicationProgressShouldWork(Options options)
+        {
+            var (nodes, leader) = await CreateRaftCluster(3);
+
+            using var store = GetDocumentStore(new Options(options)
+            {
+                Server = leader,
+                ReplicationFactor = 3,
+                CreateDatabase = true
+            });
+
+            await StoreData(store);
+
+            var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, UserId, leader);
+
+            Assert.True(await WaitForDocumentInClusterAsync<User>(nodes, db.Name, UserId, u => u.Name == "shiran", timeout: TimeSpan.FromSeconds(10)));
+
+            foreach (var server in nodes)
+            {
+                var result = await GetInternalReplicationProgress(store, db.Name, server);
+                AssertItemsProcessed(result);
+            }
+
+            await DeleteUserDocument(store);
+            Assert.True(await WaitForDocumentDeletionInClusterAsync(nodes, db.Name, UserId, timeout: TimeSpan.FromSeconds(10)));
+
+            foreach (var server in nodes)
+            {
+                var result = await GetInternalReplicationProgress(store, db.Name, server);
+                AssertTombstoneItemsProcessed(result);
+            }
+        }
+
         private async Task<ReplicationTaskProgress[]> GetReplicationProgress(DocumentStore store, string databaseName = null, RavenServer server = null)
         {
             using var commands = store.Commands(databaseName);
             var nodeTag = server?.ServerStore.NodeTag ?? Server.ServerStore.NodeTag;
             var cmd = new GetReplicationOngoingTasksProgressCommand([], nodeTag);
+            await commands.ExecuteAsync(cmd);
+            return cmd.Result;
+        }
+
+        private async Task<ReplicationTaskProgress[]> GetInternalReplicationProgress(DocumentStore store, string databaseName = null, RavenServer server = null)
+        {
+            using var commands = store.Commands(databaseName);
+            var nodeTag = server?.ServerStore.NodeTag ?? Server.ServerStore.NodeTag;
+            var cmd = new GetOutgoingInternalReplicationProgressCommand(nodeTag);
             await commands.ExecuteAsync(cmd);
             return cmd.Result;
         }
@@ -298,9 +426,10 @@ namespace SlowTests.Server.Documents.OngoingTasks
             Assert.True(processProgress.Completed);
         }
 
-        private void AssertPendingItemsToProcess(ReplicationTaskProgress[] result, long documentsToProcess = 1, long countersToProcess = 1, long timeSeriesSegmentsToProcess = 1, long attachmentsToProcess = 1)
+        private void AssertPendingItemsToProcess(ReplicationTaskProgress[] result, ReplicationProcessProgress processProgress = null,
+            long documentsToProcess = 1, long countersToProcess = 1, long timeSeriesSegmentsToProcess = 1, long attachmentsToProcess = 1)
         {
-            var processProgress = result[0].ProcessesProgress[0];
+            processProgress ??= result[0].ProcessesProgress[0];
 
             Assert.Equal(documentsToProcess, processProgress.NumberOfDocumentsToProcess);
             Assert.Equal(countersToProcess, processProgress.NumberOfCounterGroupsToProcess);
@@ -308,17 +437,19 @@ namespace SlowTests.Server.Documents.OngoingTasks
             Assert.Equal(attachmentsToProcess, processProgress.NumberOfAttachmentsToProcess);
         }
 
-        private void AssertPendingTombstoneItemsToProcess(ReplicationTaskProgress[] result, long documentTombstonesToProcess = 1, long timeSeriesDeletedRangesToProcess = 1)
+        private void AssertPendingTombstoneItemsToProcess(ReplicationTaskProgress[] result, ReplicationProcessProgress processProgress = null,
+            long documentTombstonesToProcess = 1, long timeSeriesDeletedRangesToProcess = 1)
         {
-            var processProgress = result[0].ProcessesProgress[0];
+            processProgress ??= result[0].ProcessesProgress[0];
 
             Assert.Equal(documentTombstonesToProcess, processProgress.NumberOfDocumentTombstonesToProcess);
             Assert.Equal(timeSeriesDeletedRangesToProcess, processProgress.NumberOfTimeSeriesDeletedRangesToProcess);
         }
 
-        private void AssertItemsProcessed(ReplicationTaskProgress[] result, long numberOfDocuments = 1, long numberOfCounters = 1, long numberOfTimeSeriesSegments = 1, long numberOfAttachments = 1)
+        private void AssertItemsProcessed(ReplicationTaskProgress[] result, ReplicationProcessProgress processProgress = null,
+            long numberOfDocuments = 1, long numberOfCounters = 1, long numberOfTimeSeriesSegments = 1, long numberOfAttachments = 1)
         {
-            var processProgress = result[0].ProcessesProgress[0];
+            processProgress ??= result[0].ProcessesProgress[0];
 
             Assert.Equal(numberOfDocuments, processProgress.TotalNumberOfDocuments);
             Assert.Equal(numberOfCounters, processProgress.TotalNumberOfCounterGroups);
@@ -326,9 +457,10 @@ namespace SlowTests.Server.Documents.OngoingTasks
             Assert.Equal(numberOfAttachments, processProgress.TotalNumberOfAttachments);
         }
 
-        private void AssertTombstoneItemsProcessed(ReplicationTaskProgress[] result, long documentTombstones = 1, long timeSeriesDeletedRanges = 1, long attachmentTombstones = 1)
+        private void AssertTombstoneItemsProcessed(ReplicationTaskProgress[] result, ReplicationProcessProgress processProgress = null,
+            long documentTombstones = 1, long timeSeriesDeletedRanges = 1, long attachmentTombstones = 1)
         {
-            var processProgress = result[0].ProcessesProgress[0];
+            processProgress ??= result[0].ProcessesProgress[0];
 
             Assert.Equal(documentTombstones, processProgress.TotalNumberOfDocumentTombstones);
             Assert.Equal(timeSeriesDeletedRanges, processProgress.TotalNumberOfTimeSeriesDeletedRanges);

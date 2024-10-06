@@ -300,6 +300,10 @@ namespace Raven.Server.Json
                     w.WriteBool(processProgress.Completed);
                     w.WriteComma();
 
+                    w.WritePropertyName(nameof(processProgress.AverageProcessedPerSecond));
+                    w.WriteDouble(processProgress.AverageProcessedPerSecond);
+                    w.WriteComma();
+
                     w.WritePropertyName(nameof(processProgress.LastEtagSent));
                     w.WriteInteger(processProgress.LastEtagSent);
                     w.WriteComma();

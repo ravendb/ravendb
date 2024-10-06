@@ -17,6 +17,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Documents.Replication.Metrics;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Sharding.Handlers;
@@ -84,6 +85,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         public int MissingAttachmentsRetries;
 
+        public readonly ReplicationMetricsCountersManager Metrics;
+
         public string OutgoingReplicationThreadName
         {
             set => _outgoingReplicationThreadName = value;
@@ -107,6 +110,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
             Logger = LoggingSource.Instance.GetLogger(_databaseName, GetType().FullName);
             Destination = node;
+            Metrics = new ReplicationMetricsCountersManager();
         }
 
         public void Start()
@@ -789,6 +793,14 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 IsExternal = GetType() != typeof(OutgoingInternalReplicationHandler),
                 ExceptionMessage = exceptionMessage
             });
+        }
+
+        protected void UpdateMetrics(DateTime startTime, OutgoingReplicationStatsScope stats)
+        {
+            var batchSize = stats.GetTotalOutputItemsCount();
+
+            Metrics.BatchSizeMeter.MarkSingleThreaded(batchSize);
+            Metrics.UpdateProcessedPerSecondRate(batchSize, stats.Duration);
         }
 
         protected abstract void AddAlertOnFailureToReachOtherSide(string msg, Exception e);

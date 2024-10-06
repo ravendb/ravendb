@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Replication;
+﻿using System.Collections.Generic;
+using Raven.Client.Documents.Replication;
 
 namespace Raven.Server.Documents.Replication.Stats
 {
@@ -8,7 +9,7 @@ namespace Raven.Server.Documents.Replication.Stats
 
         public ReplicationNode.ReplicationType ReplicationType { get; set; }
 
-        public ReplicationProcessProgress[] ProcessesProgress { get; set; }
+        public List<ReplicationProcessProgress> ProcessesProgress { get; set; }
     }
 
     public sealed class ReplicationProcessProgress
@@ -16,6 +17,8 @@ namespace Raven.Server.Documents.Replication.Stats
         public string FromToString { get; set; }
 
         public bool Completed { get; set; }
+
+        public double AverageProcessedPerSecond { get; set; }
 
         public long LastEtagSent { get; set; }
 

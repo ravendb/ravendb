@@ -1902,7 +1902,7 @@ namespace Raven.Server.Documents.Replication
             return false;
         }
 
-        internal ReplicationProcessProgress GetOutgoingReplicationProgress(DocumentsOperationContext documentsContext, long taskId, DatabaseOutgoingReplicationHandler handler)
+        internal ReplicationProcessProgress GetOutgoingReplicationProgress(DocumentsOperationContext documentsContext, DatabaseOutgoingReplicationHandler handler)
         {
             var lastProcessedEtag = handler.LastSentDocumentEtag;
 
@@ -1911,7 +1911,8 @@ namespace Raven.Server.Documents.Replication
                 FromToString = handler.FromToString,
                 LastEtagSent = lastProcessedEtag,
                 DestinationChangeVector = handler.LastAcceptedChangeVector,
-                SourceChangeVector = handler.LastSentChangeVector
+                SourceChangeVector = handler.LastSentChangeVector,
+                AverageProcessedPerSecond = handler.Metrics.GetProcessedPerSecondRate() ?? 0.0
             };
 
             var collections = Database.DocumentsStorage.GetCollections(documentsContext).Select(x => x.Name).ToList();

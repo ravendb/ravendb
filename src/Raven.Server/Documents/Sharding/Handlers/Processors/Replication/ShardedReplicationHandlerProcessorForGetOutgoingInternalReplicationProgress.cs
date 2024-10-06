@@ -9,9 +9,9 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
-    internal sealed class ShardedReplicationHandlerProcessorForProgress : AbstractReplicationHandlerProcessorForProgress<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal sealed class ShardedReplicationHandlerProcessorForGetOutgoingInternalReplicationProgress : AbstractReplicationHandlerProcessorForProgress<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
-        public ShardedReplicationHandlerProcessorForProgress([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
+        public ShardedReplicationHandlerProcessorForGetOutgoingInternalReplicationProgress([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler, internalReplication: true)
         {
         }
 

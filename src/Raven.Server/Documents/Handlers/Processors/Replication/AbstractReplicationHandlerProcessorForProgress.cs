@@ -11,14 +11,19 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractReplicationHandlerProcessorForProgress([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+        private readonly bool _internalReplication;
+
+        protected AbstractReplicationHandlerProcessorForProgress([NotNull] TRequestHandler requestHandler, bool internalReplication) : base(requestHandler)
         {
+            _internalReplication = internalReplication;
         }
 
         protected override RavenCommand<ReplicationTaskProgress[]> CreateCommandForNode(string nodeTag)
         {
-            var names = GetNames();
+            if (_internalReplication)
+                return new GetOutgoingInternalReplicationProgressCommand(nodeTag);
 
+            var names = GetNames();
             return new GetReplicationOngoingTasksProgressCommand(names, nodeTag);
         }
 
