@@ -11,10 +11,10 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-    <TargetFrameworks>net8.0;net7.0;net6.0;net462</TargetFrameworks>
+    <TargetFrameworks>net9.0;net8.0;net6.0;net462</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
-    <TargetFrameworks>net8.0;net7.0;net6.0;</TargetFrameworks>
+    <TargetFrameworks>net9.0;net8.0;net6.0;</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
