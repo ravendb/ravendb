@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         public TimeSpan? MinimumEntriesAgeToKeep { get; set; }
         public TimeSpan RefreshFrequency { get; set; } = TimeSpan.FromMinutes(5);
         public TimeSpan CleanupInterval { get; set; } = TimeSpan.FromSeconds(15);
-        public int MaxItemsToProcess { get; set; } = int.MaxValue;
+        public int MaxItemsToProcess { get; set; } = 16 * 1024;
         public int? NumberOfDeletesInBatch { get; set; }
 
         private bool Equals(RevisionsBinConfiguration other)

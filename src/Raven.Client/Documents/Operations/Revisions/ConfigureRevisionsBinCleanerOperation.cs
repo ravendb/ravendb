@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Operations.Revisions
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/revisions-bin-cleaner/config";
+                url = $"{node.Url}/databases/{node.Database}/admin/revisions/bin-cleaner/config";
 
                 var request = new HttpRequestMessage
                 {

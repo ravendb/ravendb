@@ -30,8 +30,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                 throw new InvalidOperationException(
                     $"RevisionsBinConfiguration.NumberOfDeletesInBatch for database '{database}' must be greater than 0.");
 
-            var editExpiration = new RevisionsBinConfigurationCommand(config, database, raftRequestId);
-            return ServerStore.SendToLeaderAsync(editExpiration);
+            var cmd = new RevisionsBinConfigurationCommand(config, database, raftRequestId);
+            return ServerStore.SendToLeaderAsync(cmd);
         }
     }
 }
