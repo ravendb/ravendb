@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             return new ContentRangeHeaderValue(start, end, size);
         }
 
-        private static RangeItemHeaderValue? NormalizeRange(RangeItemHeaderValue range, long length)
+        private static RangeItemHeaderValue NormalizeRange(RangeItemHeaderValue range, long length)
         {
             var start = range.From;
             var end = range.To;

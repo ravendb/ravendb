@@ -35,6 +35,23 @@ namespace Raven.Client.Documents.Operations.Attachments
         /// <param name="name">The name of the attachment to be retrieved.</param>
         /// <param name="type">The type of the attachment.</param>
         /// <param name="changeVector">change vector for optimistic concurrency control. If no concurrency control require this should be set to null</param>
+        /// <remarks>
+        /// This constructor sets up an operation to retrieve a specific attachment.
+        /// If the <paramref name="changeVector"/> is provided, it ensures that the operation 
+        /// corresponds to the specified version of the document.
+        /// </remarks>
+        public GetAttachmentOperation(string documentId, string name, AttachmentType type, string changeVector)
+            : this(documentId, name, type, changeVector, null, null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetAttachmentOperation"/> class.
+        /// </summary>
+        /// <param name="documentId">The ID of the document associated with the attachment.</param>
+        /// <param name="name">The name of the attachment to be retrieved.</param>
+        /// <param name="type">The type of the attachment.</param>
+        /// <param name="changeVector">change vector for optimistic concurrency control. If no concurrency control require this should be set to null</param>
         /// <param name="from">the position at which to start sending data</param>
         /// <param name="to">the position at which to stop sending data</param>
         /// <remarks>
@@ -42,7 +59,7 @@ namespace Raven.Client.Documents.Operations.Attachments
         /// If the <paramref name="changeVector"/> is provided, it ensures that the operation 
         /// corresponds to the specified version of the document.
         /// </remarks>
-        public GetAttachmentOperation(string documentId, string name, AttachmentType type, string changeVector, long? from = null, long? to = null)
+        public GetAttachmentOperation(string documentId, string name, AttachmentType type, string changeVector, long? from, long? to)
         {
             _documentId = documentId;
             _name = name;

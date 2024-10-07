@@ -48,6 +48,15 @@ namespace Raven.Client.Documents.Session
             return Session.Operations.Send(operation, SessionInfo);
         }
 
+        public AttachmentResult GetRange(object entity, string name, long? from, long? to)
+        {
+            if (Session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSessionOrMissingId(entity);
+
+            var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null, from, to);
+            return Session.Operations.Send(operation, SessionInfo);
+        }
+
         public IEnumerator<AttachmentEnumeratorResult> Get(IEnumerable<AttachmentRequest> attachments)
         {
             var operation = new GetAttachmentsOperation(attachments, AttachmentType.Document);
