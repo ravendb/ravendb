@@ -134,6 +134,8 @@
     <PackageReference Include="System.Reflection.Metadata" Version="8.0.1" />
     <PackageReference Include="System.Runtime.Caching" Version="8.0.1" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="System.Reflection.Metadata" Version="9.0.0-rc.1.24431.7" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0-rc.1.24431.7" />
     <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
     <PackageReference Include="ZstdSharp.Port" Version="0.8.1" />
