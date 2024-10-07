@@ -1290,7 +1290,7 @@ namespace Raven.Server
 
             try
             {
-                SecretProtection.ValidatePrivateKey(newCertificate, password);
+                SecretProtection.ValidateCertificateBeforeReplacement(newCertificate, password, ServerStore.GetLicenseType(), ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
                 if (Certificate.Certificate.Thumbprint == newCertificate.Thumbprint)
                 {

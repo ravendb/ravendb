@@ -774,7 +774,14 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        internal static void ValidatePrivateKey(X509Certificate2 certificate, string password) => ValidatePrivateKey("ValidatePrivateKey", password, certificate.Export(X509ContentType.Pkcs12), out _);
+        public static void ValidateCertificateBeforeReplacement(X509Certificate2 certificate, string password, LicenseType licenseType, bool certificateValidationKeyUsages)
+        {
+            ValidateExpiration("ValidateCertificateBeforeReplacement", certificate, licenseType, throwOnExpired: true);
+
+            ValidatePrivateKey("ValidateCertificateBeforeReplacement", password, certificate.Export(X509ContentType.Pkcs12), out _);
+            
+            ValidateKeyUsages("ValidateCertificateBeforeReplacement", certificate, certificateValidationKeyUsages);
+        }
 
         internal static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk, SetupProgressAndResult progress = null)
         {
