@@ -45,8 +45,11 @@ namespace Voron.Impl.FreeSpace
 {
     public sealed class StreamBitArray
     {
-        readonly int[] _inner = new int[64];
+        private const int CountOfItems = 64;
+        private const int BitsInItem = 32;
+        private const int TotalBits = CountOfItems * BitsInItem;
 
+        readonly int[] _inner = new int[CountOfItems];
         public int SetCount { get; private set; }
 
         public StreamBitArray()
@@ -127,16 +130,17 @@ namespace Voron.Impl.FreeSpace
                             case 0:
                                 continue;
                             case -1:
-                                return i * 32;
+                                return i * BitsInItem;
                             default:
-                                return i * 32 + BitOperations.TrailingZeroCount(_inner[i]);
+                                return i * BitsInItem + BitOperations.TrailingZeroCount(_inner[i]);
                         }
                     }
 
                     return null;
 
-                case < 32:
+                case < BitsInItem:
                     // finding sequences up to 32 bits
+
                     for (var i = 0; i < _inner.Length; i++)
                     {
                         int current = _inner[i];
@@ -144,23 +148,21 @@ namespace Voron.Impl.FreeSpace
                             continue;
 
                         if (current == -1)
-                            return i * 32;
+                            return i * BitsInItem;
 
                         int firstSetBitPos = BitOperations.TrailingZeroCount((uint)current);
 
-                        // Only proceed if there is a set bit and it's within range
-                        int mask = (1 << num) - 1; // Create a mask of num 1s
+                        int mask = (1 << num) - 1;
 
-                        if (firstSetBitPos <= 32 - num)
+                        if (firstSetBitPos <= BitsInItem - num)
                         {
-                            for (int bitPos = firstSetBitPos; bitPos <= 32 - num; bitPos++)
+                            // only proceed if there is a set bit and it's within range
+                            for (int bitPos = firstSetBitPos; bitPos <= BitsInItem - num; bitPos++)
                             {
-                                var temp = mask << bitPos; // Shift the mask to the current position
-
-                                // Check if the current block has the sequence of 1s
+                                var temp = mask << bitPos;
                                 if ((current & temp) == temp)
                                 {
-                                    return i * 32 + bitPos; // Found the sequence, return the position
+                                    return i * BitsInItem + bitPos;
                                 }
                             }
                         }
@@ -177,7 +179,7 @@ namespace Voron.Impl.FreeSpace
                         var numberOfSetBitsNext = BitOperations.TrailingZeroCount(~nextBlock);
 
                         if (numberOfSetBitsCurrent + numberOfSetBitsNext >= num)
-                            return (i * 32) + (32 - numberOfSetBitsCurrent);
+                            return (i * BitsInItem) + (BitsInItem - numberOfSetBitsCurrent);
                     }
 
                     return null;
@@ -202,10 +204,10 @@ namespace Voron.Impl.FreeSpace
                         {
                             if (start == -1)
                             {
-                                start = i * 32;
+                                start = i * BitsInItem;
                             }
 
-                            count += 32;
+                            count += BitsInItem;
                             if (count >= num)
                                 return start;
 
@@ -219,7 +221,7 @@ namespace Voron.Impl.FreeSpace
                         }
                         else
                         {
-                            if (count + (2048 - i * 32) < num)
+                            if (count + (TotalBits - i * BitsInItem) < num)
                             {
                                 // impossible to satisfy the continuous bit requirement
                                 return null;
@@ -253,7 +255,7 @@ namespace Voron.Impl.FreeSpace
                             else
                             {
                                 // Calculate the starting bit position in the array
-                                start = (i * 32) + (32 - numberOfSetBits);
+                                start = (i * BitsInItem) + (BitsInItem - numberOfSetBits);
                                 count = numberOfSetBits;
                             }
                         }
@@ -268,7 +270,7 @@ namespace Voron.Impl.FreeSpace
             var start = -1;
             var count = 0;
 
-            for (int i = 0; i < _inner.Length * 32; i++)
+            for (int i = 0; i < TotalBits; i++)
             {
                 if (Get(i))
                 {
