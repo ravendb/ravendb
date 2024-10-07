@@ -16,12 +16,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             using (RequestHandler.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                RevisionsBinConfiguration configuration;
                 using (var rawRecord = RequestHandler.Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.Database.Name))
                 {
-                    configuration = rawRecord?.RevisionsBin;
+                    return rawRecord?.RevisionsBin;
                 }
-                return configuration;
             }
         }
     }

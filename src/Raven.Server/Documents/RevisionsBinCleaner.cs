@@ -13,16 +13,11 @@ namespace Raven.Server.Documents
     public class RevisionsBinCleaner : BackgroundWorkBase
     {
         private readonly DocumentDatabase _documentDatabase;
-        private readonly int _numberOfRevisionsToDeleteInBatch;
         private readonly RevisionsBinConfiguration _configuration;
 
         public RevisionsBinCleaner(DocumentDatabase documentDatabase, RevisionsBinConfiguration configuration) : base(documentDatabase.Name, documentDatabase.DatabaseShutdown)
         {
             _documentDatabase = documentDatabase;
-            _numberOfRevisionsToDeleteInBatch = _documentDatabase.Is32Bits
-                ? 1024
-                : 10 * 1024;
-
             _configuration = configuration;
         }
 
@@ -44,7 +39,7 @@ namespace Raven.Server.Documents
                     return null;
                 }
 
-                if(oldCleaner != null && config.Equals(oldCleaner._configuration))
+                if (oldCleaner != null && config.Equals(oldCleaner._configuration))
                     return oldCleaner;
 
                 oldCleaner?.Dispose();
@@ -85,24 +80,18 @@ namespace Raven.Server.Documents
             try
             {
                 var before = _documentDatabase.Time.GetUtcNow() - config.MinimumEntriesAgeToKeep.Value;
-                var batchSize = config.NumberOfDeletesInBatch ?? _numberOfRevisionsToDeleteInBatch;
                 var maxReadsPerBatch = config.MaxItemsToProcess;
-
-                var sw = Stopwatch.StartNew();
 
                 while (CancellationToken.IsCancellationRequested == false)
                 {
-                    var command = new RevisionsStorage.RevisionsBinCleanMergedCommand(before, batchSize, maxReadsPerBatch);
+                    var command = new RevisionsStorage.RevisionsBinCleanMergedCommand(before, maxReadsPerBatch);
                     await _documentDatabase.TxMerger.Enqueue(command);
 
-                    if (command.Result.HasValue == false)
-                        throw new NullReferenceException("RevisionsBinCleanMergedCommand result is null after execution by TxMerger");
-
-                    var res = command.Result.Value;
+                    var res = command.Result;
 
                     numberOfDeletedEntries += res.DeletedEntries;
                     
-                     if (res.HasMore == false || sw.Elapsed > config.CleanupInterval)
+                     if (res.HasMore == false)
                         break;
                 }
             }

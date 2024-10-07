@@ -80,8 +80,8 @@ namespace Raven.Server.Documents
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
         private static readonly Slice LastCompletedClusterTransactionIndexSlice;
-        private static readonly Slice RevisionsBinCleanerLastEtag;
-        private static readonly Slice GlobalTreeSlice;
+        public static readonly Slice RevisionsBinCleanerLastEtag;
+        public static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
         private readonly Action<LogMode, string> _addToInitLog;
@@ -649,31 +649,6 @@ namespace Raven.Server.Documents
             var tree = context.Transaction.InnerTransaction.CreateTree(GlobalTreeSlice);
             using (Slice.External(context.Allocator, (byte*)&index, sizeof(long), out Slice indexSlice))
                 tree.Add(LastCompletedClusterTransactionIndexSlice, indexSlice);
-        }
-
-        public static long ReadLastRevisionsBinCleanerState(Transaction tx)
-        {
-            if (tx == null)
-                throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
-            var tree = tx.ReadTree(GlobalTreeSlice);
-            if (tree == null)
-            {
-                return 0;
-            }
-            var readResult = tree.Read(RevisionsBinCleanerLastEtag);
-            if (readResult == null)
-            {
-                return 0;
-            }
-
-            return readResult.Reader.ReadLittleEndianInt64();
-        }
-
-        public void SetLastRevisionsBinCleanerState(DocumentsOperationContext context, long etag)
-        {
-            var tree = context.Transaction.InnerTransaction.CreateTree(GlobalTreeSlice);
-            using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
-                tree.Add(RevisionsBinCleanerLastEtag, etagSlice);
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string startAfterId,

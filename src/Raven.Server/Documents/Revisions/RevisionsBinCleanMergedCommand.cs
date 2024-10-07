@@ -12,30 +12,27 @@ public partial class RevisionsStorage
     {
         public DateTime _before;
 
-        public long _maxTotalDeletes;
-
         public long _maxReadsPerBatch;
 
-        public (long DeletedEntries, bool HasMore)? Result { get; private set; }
+        public (long DeletedEntries, bool HasMore) Result { get; private set; }
 
-        public RevisionsBinCleanMergedCommand(DateTime before, long maxTotalDeletes, long maxReadsPerBatch)
+        public RevisionsBinCleanMergedCommand(DateTime before, long maxReadsPerBatch)
         {
             _before = before;
-            _maxTotalDeletes = maxTotalDeletes;
             _maxReadsPerBatch = maxReadsPerBatch;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            var lastEtag = DocumentsStorage.ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
+            var lastEtag = ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
             var currentState = new RevisionsBinCleanerState() { LastEtag = lastEtag };
             Result = DeleteRevisions(context, currentState);
-            if(currentState.LastEtag != lastEtag)
-                context.DocumentDatabase.DocumentsStorage.SetLastRevisionsBinCleanerState(context, currentState.LastEtag);
+            if (currentState.LastEtag > lastEtag)
+                SetLastRevisionsBinCleanerState(context, currentState.LastEtag);
             return 1;
         }
 
-        private (long DeletedRevisions, bool HasMore)? DeleteRevisions(DocumentsOperationContext context, RevisionsBinCleanerState state)
+        private (long DeletedRevisions, bool HasMore) DeleteRevisions(DocumentsOperationContext context, RevisionsBinCleanerState state)
         {
             if (_maxReadsPerBatch == 0)
                 return (0, false);
@@ -43,9 +40,10 @@ public partial class RevisionsStorage
             var revisionsStorage = context.DocumentDatabase.DocumentsStorage.RevisionsStorage;
             var revisions = revisionsStorage.GetRevisionsBinEntries(context, _before, DocumentFields.Id | DocumentFields.ChangeVector, state); // forget about enumerator
 
-            var deletedRevisions = 0L;
             var deletedEntries = 0L;
             var numOfReads = 0L;
+
+            var hasMore = false;
 
             foreach (var r in revisions)
             {
@@ -62,50 +60,45 @@ public partial class RevisionsStorage
                         continue;
                     }
 
-                    var remainingDeletes = _maxTotalDeletes - deletedRevisions;
-                    var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName, remainingDeletes, shouldSkip: null);
+                    var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName, Int64.MaxValue, shouldSkip: null);
 
                     if (result.MoreWork == false)
                     {
                         deletedEntries++;
                     }
-
-                    deletedRevisions += result.Deleted;
-                    if (deletedRevisions >= _maxTotalDeletes)
-                        break;
                 }
 
-                if (numOfReads == _maxReadsPerBatch)
+                if (context.CanContinueTransaction == false || numOfReads == _maxReadsPerBatch)
+                {
+                    hasMore = true;
                     break;
+                }
             }
 
-            var hasMore = (deletedRevisions < _maxTotalDeletes && numOfReads < _maxReadsPerBatch) == false;
             return (deletedEntries, hasMore);
         }
 
-        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>>
+            ToDto(DocumentsOperationContext context)
         {
-            return new RevisionsBinCleanMergedCommandDto(_before, _maxTotalDeletes, _maxReadsPerBatch);
+            return new RevisionsBinCleanMergedCommandDto(_before, _maxReadsPerBatch);
         }
 
         public sealed class RevisionsBinCleanMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RevisionsBinCleanMergedCommand>
         {
             public DateTime _before;
 
-            public long _maxTotalDeletes;
-
             public long _maxReadsPerBatch;
 
-            public RevisionsBinCleanMergedCommandDto(DateTime before, long maxTotalDeletes, long maxReadsPerBatch)
+            public RevisionsBinCleanMergedCommandDto(DateTime before, long maxReadsPerBatch)
             {
                 _before = before;
-                _maxTotalDeletes = maxTotalDeletes;
                 _maxReadsPerBatch = maxReadsPerBatch;
             }
 
             public RevisionsBinCleanMergedCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new RevisionsBinCleanMergedCommand(_before, _maxTotalDeletes, _maxReadsPerBatch);
+                return new RevisionsBinCleanMergedCommand(_before, _maxReadsPerBatch);
             }
         }
     }

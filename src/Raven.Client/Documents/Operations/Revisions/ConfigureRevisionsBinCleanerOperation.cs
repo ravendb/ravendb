@@ -13,6 +13,11 @@ namespace Raven.Client.Documents.Operations.Revisions
     {
         private readonly RevisionsBinConfiguration _configuration;
 
+        /// <summary>
+        /// Configure the revisions-bin cleaner which cleans the revisions bin automatically when enabled.
+        /// </summary>
+        /// <param name="configuration">The configuration for the revisions bin cleaner. This parameter cannot be null.</param>
+        /// <exception cref="ArgumentNullException">Thrown if the <paramref name="configuration"/> is null.</exception>
         public ConfigureRevisionsBinCleanerOperation(RevisionsBinConfiguration configuration)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));

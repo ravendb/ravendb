@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
@@ -33,7 +34,7 @@ namespace SlowTests.Issues
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    db.DocumentsStorage.SetLastRevisionsBinCleanerState(context, 1234567890123456789);
+                    RevisionsStorage.SetLastRevisionsBinCleanerState(context, 1234567890123456789);
                     tx.Commit();
                 }
 
@@ -41,7 +42,7 @@ namespace SlowTests.Issues
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var state = DocumentsStorage.ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
+                    var state = RevisionsStorage.ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
 
                     Assert.Equal(1234567890123456789, state);
                 }
@@ -165,11 +166,9 @@ namespace SlowTests.Issues
             
             var config = new RevisionsBinConfiguration
             {
-                NumberOfDeletesInBatch = 5 * 12, // Max deletes of revisions in batch
                 MaxItemsToProcess = 3, // max deleted document we pass on in batch
                 MinimumEntriesAgeToKeep = TimeSpan.Zero,
-                RefreshFrequency = TimeSpan.FromMilliseconds(200),
-                CleanupInterval = TimeSpan.MaxValue
+                RefreshFrequency = TimeSpan.FromMilliseconds(200)
             };
 
             var db = await Databases.GetDocumentDatabaseInstanceFor(store);
@@ -236,8 +235,7 @@ namespace SlowTests.Issues
             var config = new RevisionsBinConfiguration
             {
                 MinimumEntriesAgeToKeep = TimeSpan.FromDays(15),
-                RefreshFrequency = TimeSpan.FromMilliseconds(200),
-                CleanupInterval = TimeSpan.MaxValue
+                RefreshFrequency = TimeSpan.FromMilliseconds(200)
             };
 
             var cleaner = new RevisionsBinCleaner(db, config);
@@ -329,8 +327,7 @@ namespace SlowTests.Issues
 
             var config = new RevisionsBinConfiguration
             {
-                MinimumEntriesAgeToKeep = TimeSpan.FromDays(15),
-                CleanupInterval = TimeSpan.MaxValue
+                MinimumEntriesAgeToKeep = TimeSpan.FromDays(15)
             };
             var cleaner = new RevisionsBinCleaner(db, config);
 
@@ -340,7 +337,7 @@ namespace SlowTests.Issues
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var state = DocumentsStorage.ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
+                var state = RevisionsStorage.ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
                 Assert.Equal(lastEtag5, state);
             }
 
@@ -351,9 +348,82 @@ namespace SlowTests.Issues
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var state = DocumentsStorage.ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
+                var state = RevisionsStorage.ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
                 Assert.Equal(lastEtag9, state);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Revisions)]
+        public async Task RevisionsBinCleanerStateTest2()
+        {
+            var baseTime = new DateTime(year: 2024, month: 1, day: 1);
+
+            using var store = GetDocumentStore();
+            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+            db.Time.UtcDateTime = () => baseTime - TimeSpan.FromDays(30);
+
+            var revisionsConfig = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 100
+                }
+            };
+            await RevisionsHelper.SetupRevisionsAsync(store, store.Database, revisionsConfig);
+
+            var users = new List<User>();
+            for (int i = 0; i < 10; i++)
+                users.Add(new User { Id = $"Users/{i}", Name = "Shahar" });
+
+            long lastEtag0;
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.MaxNumberOfRequestsPerSession = Int32.MaxValue;
+
+                for (int u = 0; u < 10; u++)
+                {
+                    var user = users[u];
+
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                    for (int i = 1; i <= 10; i++)
+                    {
+                        (await session.LoadAsync<User>(user.Id)).Name = $"Shahar{i}";
+                        await session.SaveChangesAsync();
+                    }
+                    session.Delete(user.Id);
+                    await session.SaveChangesAsync();
+
+                    Assert.Equal(12, await session.Advanced.Revisions.GetCountForAsync(user.Id));
+                }
+
+                var revisions0MetaData = await session.Advanced.Revisions.GetMetadataForAsync(users[0].Id);
+                Assert.True(revisions0MetaData[0].TryGetValue(Constants.Documents.Metadata.ChangeVector, out string cv0));
+
+                lastEtag0 = ChangeVectorUtils.GetEtagById(cv0, db.DbBase64Id) + 1;
+            }
+
+            var config = new RevisionsBinConfiguration
+            {
+                MinimumEntriesAgeToKeep = TimeSpan.FromDays(15)
+            };
+            var cleaner = new RevisionsBinCleaner(db, config);
+
+            var deletes = await cleaner.ExecuteCleanup();
+            Assert.Equal(0, deletes);
+
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var state = RevisionsStorage.ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
+                Assert.Equal(lastEtag0, state);
+            }
+
+            db.Time.UtcDateTime = () => baseTime;
+            deletes = await cleaner.ExecuteCleanup();
+            Assert.Equal(10, deletes);
         }
 
         private async Task ConfigRevisionsBinCleaner(DocumentStore store, RevisionsBinConfiguration config)

@@ -2525,6 +2525,37 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
+        public static long ReadLastRevisionsBinCleanerState(Transaction tx)
+        {
+            if (tx == null)
+                throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
+            var tree = tx.ReadTree(DocumentsStorage.GlobalTreeSlice);
+            if (tree == null)
+            {
+                // When we start passing the revisions (forward - from the oldest) on DeleteRevisionEtagSlice index,
+                // we want to skip the revisions with key 0, because they are not relevant (not 'Delete Revisions').
+                // so we start from etag (key) 1.
+                return 1;
+            }
+            var readResult = tree.Read(DocumentsStorage.RevisionsBinCleanerLastEtag);
+            if (readResult == null)
+            {
+                // When we start passing the revisions (forward - from the oldest) on DeleteRevisionEtagSlice index,
+                // we want to skip the revisions with key 0, because they are not relevant (not 'Delete Revisions').
+                // so we start from etag (key) 1.
+                return 1;
+            }
+
+            return readResult.Reader.ReadLittleEndianInt64();
+        }
+
+        public static unsafe void SetLastRevisionsBinCleanerState(DocumentsOperationContext context, long etag)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree(GlobalTreeSlice);
+            using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
+                tree.Add(RevisionsBinCleanerLastEtag, etagSlice);
+        }
+
         private bool IsRevisionsBinEntry(DocumentsOperationContext context, Table table, Slice lowerId, long revisionsBinEntryEtag)
         {
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))

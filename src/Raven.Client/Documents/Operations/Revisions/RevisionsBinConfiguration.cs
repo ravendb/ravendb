@@ -5,23 +5,50 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    public sealed class RevisionsBinConfiguration : IFillFromBlittableJson, IDynamicJson
+    public sealed class RevisionsBinConfiguration : IDynamicJson
     {
+        /// <summary>
+        /// Gets or sets a value indicating whether the revisions bin cleaner is disabled.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if the cleaner is disabled; otherwise, <c>false</c>.
+        /// </value>
         public bool Disabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the minimum age of revisions to keep in the database.
+        /// The revisions-bin cleaner deletes revisions that are older than that.
+        /// </summary>
+        /// <value>
+        /// The minimum <see cref="TimeSpan"/> that revisions must be kept before being eligible for deletion.
+        /// A null value means no age restriction is applied.
+        /// </value>
         public TimeSpan? MinimumEntriesAgeToKeep { get; set; }
+
+        /// <summary>
+        /// Gets or sets the frequency at which the revisions bin cleaner executes cleaning.
+        /// </summary>
+        /// <value>
+        /// The <see cref="TimeSpan"/> defining how often the cleaner will check for and process old revisions.
+        /// The default value is 5 minutes.
+        /// </value>
         public TimeSpan RefreshFrequency { get; set; } = TimeSpan.FromMinutes(5);
-        public TimeSpan CleanupInterval { get; set; } = TimeSpan.FromSeconds(15);
+
+        /// <summary>
+        /// Gets or sets the maximum number of items to process (read) in one cleaning cycle.
+        /// </summary>
+        /// <value>
+        /// The maximum number of revisions to process during a single execution of the bin cleaner.
+        /// The default value is 16,384.
+        /// </value>
         public int MaxItemsToProcess { get; set; } = 16 * 1024;
-        public int? NumberOfDeletesInBatch { get; set; }
 
         private bool Equals(RevisionsBinConfiguration other)
         {
             return Disabled == other.Disabled &&
                    MinimumEntriesAgeToKeep == other.MinimumEntriesAgeToKeep &&
                    RefreshFrequency == other.RefreshFrequency &&
-                   CleanupInterval == other.CleanupInterval &&
-                   MaxItemsToProcess == other.MaxItemsToProcess &&
-                   NumberOfDeletesInBatch == other.NumberOfDeletesInBatch;
+                   MaxItemsToProcess == other.MaxItemsToProcess;
         }
 
         public override bool Equals(object obj)
@@ -42,22 +69,9 @@ namespace Raven.Client.Documents.Operations.Revisions
                 var hashCode = Disabled.GetHashCode();
                 hashCode = (hashCode * 397) ^ (MinimumEntriesAgeToKeep?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ RefreshFrequency.GetHashCode();
-                hashCode = (hashCode * 397) ^ CleanupInterval.GetHashCode();
                 hashCode = (hashCode * 397) ^ MaxItemsToProcess.GetHashCode();
-                hashCode = (hashCode * 397) ^ (NumberOfDeletesInBatch?.GetHashCode() ?? 0);
                 return hashCode;
             }
-        }
-
-        public void FillFromBlittableJson(BlittableJsonReaderObject json)
-        {
-            var configuration = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<RevisionsBinConfiguration>(json, "RevisionsConfiguration");
-            Disabled = configuration.Disabled;
-            MinimumEntriesAgeToKeep = configuration.MinimumEntriesAgeToKeep;
-            RefreshFrequency = configuration.RefreshFrequency;
-            CleanupInterval = configuration.CleanupInterval;
-            MaxItemsToProcess = configuration.MaxItemsToProcess;
-            NumberOfDeletesInBatch = configuration.NumberOfDeletesInBatch;
         }
 
         public DynamicJsonValue ToJson()
@@ -67,9 +81,7 @@ namespace Raven.Client.Documents.Operations.Revisions
                 [nameof(Disabled)] = Disabled,
                 [nameof(MinimumEntriesAgeToKeep)] = MinimumEntriesAgeToKeep,
                 [nameof(RefreshFrequency)] = RefreshFrequency,
-                [nameof(CleanupInterval)] = CleanupInterval,
                 [nameof(MaxItemsToProcess)] = MaxItemsToProcess,
-                [nameof(NumberOfDeletesInBatch)] = NumberOfDeletesInBatch
             };
         }
 
