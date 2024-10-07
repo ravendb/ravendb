@@ -135,7 +135,7 @@ namespace Voron.Impl.FreeSpace
 
                     return null;
 
-                case <= 32:
+                case < 32:
                     // finding sequences up to 32 bits
                     for (var i = 0; i < _inner.Length; i++)
                     {
@@ -146,24 +146,21 @@ namespace Voron.Impl.FreeSpace
                         if (current == -1)
                             return i * 32;
 
-                        if (num < 32)
+                        int firstSetBitPos = BitOperations.TrailingZeroCount((uint)current);
+
+                        // Only proceed if there is a set bit and it's within range
+                        int mask = (1 << num) - 1; // Create a mask of num 1s
+
+                        if (firstSetBitPos <= 32 - num)
                         {
-                            int firstSetBitPos = BitOperations.TrailingZeroCount((uint)current);
-
-                            // Only proceed if there is a set bit and it's within range
-                            int mask = (1 << num) - 1; // Create a mask of num 1s
-
-                            if (firstSetBitPos <= 32 - num)
+                            for (int bitPos = firstSetBitPos; bitPos <= 32 - num; bitPos++)
                             {
-                                for (int bitPos = firstSetBitPos; bitPos <= 32 - num; bitPos++)
-                                {
-                                    var temp = mask << bitPos; // Shift the mask to the current position
+                                var temp = mask << bitPos; // Shift the mask to the current position
 
-                                    // Check if the current block has the sequence of 1s
-                                    if ((current & temp) == temp)
-                                    {
-                                        return i * 32 + bitPos; // Found the sequence, return the position
-                                    }
+                                // Check if the current block has the sequence of 1s
+                                if ((current & temp) == temp)
+                                {
+                                    return i * 32 + bitPos; // Found the sequence, return the position
                                 }
                             }
                         }
