@@ -216,30 +216,12 @@ namespace Voron.Impl.FreeSpace
             StreamBitArray current, long currentSectionId, out long? page)
         {
             page = -1;
-            var start = -1;
-            var count = 0;
-            for (int i = 0; i < NumberOfPagesInSection; i++)
-            {
-                if (current.Get(i))
-                {
-                    if (start == -1)
-                        start = i;
-                    count++;
-                    if (count == num)
-                    {
-                        page = currentSectionId * NumberOfPagesInSection + start;
-                        break;
-                    }
-                }
-                else
-                {
-                    start = -1;
-                    count = 0;
-                }
-            }
 
-            if (count != num)
+            var start = current.GetContinuousRangeStart(num);
+            if (start == null)
                 return false;
+
+            page = currentSectionId * NumberOfPagesInSection + start;
 
             if (current.SetCount == num)
             {
@@ -249,7 +231,7 @@ namespace Voron.Impl.FreeSpace
             {
                 for (int i = 0; i < num; i++)
                 {
-                    current.Set(i + start, false);
+                    current.Set(i + start.Value, false);
                 }
 
                 Slice val;
