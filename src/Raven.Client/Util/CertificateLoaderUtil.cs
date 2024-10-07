@@ -39,12 +39,20 @@ internal static class CertificateLoaderUtil
 
     public static X509Certificate2 CreateCertificate(byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
     {
+#if NET9_0_OR_GREATER
+        return CreateCertificate(f => X509CertificateLoader.LoadPkcs12(rawData, password, f), flags);
+#else
         return CreateCertificate(f => new X509Certificate2(rawData, password, f), flags);
+#endif
     }
 
     internal static X509Certificate2 CreateCertificate(string fileName, string password = null, X509KeyStorageFlags? flags = null)
     {
+#if NET9_0_OR_GREATER
+        return CreateCertificate(f => X509CertificateLoader.LoadPkcs12FromFile(fileName, password, f), flags);
+#else
         return CreateCertificate(f => new X509Certificate2(fileName, password, f), flags);
+#endif
     }
 
     private static X509Certificate2 CreateCertificate(Func<X509KeyStorageFlags, X509Certificate2> creator, X509KeyStorageFlags? flag)

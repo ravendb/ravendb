@@ -295,7 +295,7 @@ namespace Raven.Debug.LogTrafficWatch
                 {
                     ClientCertificates =
                     {
-                        new X509Certificate2(certPath, certPass, X509KeyStorageFlags.MachineKeySet)
+                        X509CertificateLoader.LoadPkcs12FromFile(certPath, certPass, X509KeyStorageFlags.MachineKeySet)
                     }
                 });
                 return;
