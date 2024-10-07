@@ -37,6 +37,11 @@ namespace Raven.Client.Documents.Session
         Task<AttachmentResult> GetRangeAsync(string documentId, string name, long? from, long? to, CancellationToken token = default);
 
         /// <summary>
+        /// Returns a range of the attachment by the document id and attachment name.
+        /// </summary>
+        Task<AttachmentResult> GetRangeAsync(object entity, string name, long? from, long? to, CancellationToken token = default);
+
+        /// <summary>
         /// Returns Enumerator of KeyValuePairs of attachment name and stream.
         /// </summary>
         Task<IEnumerator<AttachmentEnumeratorResult>> GetAsync(IEnumerable<AttachmentRequest> attachments, CancellationToken token = default);
