@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
@@ -151,7 +152,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/log", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetLogs()
         {
-            var start = GetStart();
+            var fromIndex = GetLongQueryString("from", required: false);
             var take = GetPageSize(defaultPageSize: 1024);
             var detailed = GetBoolValueQueryString("detailed", required: false) ?? false;
             var debugView = ServerStore.Engine.DebugView();
@@ -161,9 +162,22 @@ namespace Raven.Server.Documents.Handlers.Admin
                 using (context.OpenReadTransaction())
                 await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
-                    debugView.PopulateLogs(context, start, take, detailed);
+                    debugView.PopulateLogs(context, fromIndex, take, detailed);
                     context.Write(writer, debugView.ToJson());
                 }
+            }
+        }
+
+        [RavenAction("/admin/cluster/log/entry", "GET", AuthorizationStatus.Operator)]
+        public async Task GetLogByIndex()
+        {
+            var fromIndex = GetLongQueryString("index");
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            {
+                var entry = Server.ServerStore.Engine.GetLogEntries(context, fromIndex, take: 1, detailed: true).Single();
+                context.Write(writer, entry.ToJson());
             }
         }
 

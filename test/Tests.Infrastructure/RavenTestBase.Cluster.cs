@@ -217,7 +217,7 @@ public partial class RavenTestBase
             return
                 $"{Environment.NewLine}Log for server '{server.ServerStore.NodeTag}':" +
                 $"{Environment.NewLine}Last notified Index '{server.ServerStore.Cluster.LastNotifiedIndex}':" +
-                $"{Environment.NewLine}{context.ReadObject(server.ServerStore.Engine.GetLogDetails(context, start: 0, take: int.MaxValue, detailed: true).ToJson(), "LogSummary/" + server.ServerStore.NodeTag)}" +
+                $"{Environment.NewLine}{context.ReadObject(server.ServerStore.Engine.GetLogDetails(context, fromIndex: 0, take: int.MaxValue, detailed: true).ToJson(), "LogSummary/" + server.ServerStore.NodeTag)}" +
                 $"{Environment.NewLine}{server.ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
         }
 
