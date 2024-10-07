@@ -39,6 +39,7 @@ using System.IO;
 using System.Linq;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using System.Numerics;
 
 namespace Voron.Impl.FreeSpace
 {
@@ -111,6 +112,184 @@ namespace Voron.Impl.FreeSpace
         public bool Get(int index)
         {
             return (_inner[index >> 5] & (1 << (index & 31))) != 0;
+        }
+
+        public int? GetContinuousRangeStart(int num)
+        {
+            switch (num)
+            {
+                case 1:
+                    // finding a single set bit
+                    for (var i = 0; i < _inner.Length; i++)
+                    {
+                        switch (_inner[i])
+                        {
+                            case 0:
+                                continue;
+                            case -1:
+                                return i * 32;
+                            default:
+                                return i * 32 + BitOperations.TrailingZeroCount(_inner[i]);
+                        }
+                    }
+
+                    return null;
+
+                case <= 32:
+                    // finding sequences up to 32 bits
+                    for (var i = 0; i < _inner.Length; i++)
+                    {
+                        int current = _inner[i];
+                        if (current == 0)
+                            continue;
+
+                        if (current == -1)
+                            return i * 32;
+
+                        if (num < 32)
+                        {
+                            int firstSetBitPos = BitOperations.TrailingZeroCount((uint)current);
+
+                            // Only proceed if there is a set bit and it's within range
+                            int mask = (1 << num) - 1; // Create a mask of num 1s
+
+                            if (firstSetBitPos <= 32 - num)
+                            {
+                                for (int bitPos = firstSetBitPos; bitPos <= 32 - num; bitPos++)
+                                {
+                                    var temp = mask << bitPos; // Shift the mask to the current position
+
+                                    // Check if the current block has the sequence of 1s
+                                    if ((current & temp) == temp)
+                                    {
+                                        return i * 32 + bitPos; // Found the sequence, return the position
+                                    }
+                                }
+                            }
+                        }
+
+                        if (i == _inner.Length - 1)
+                        {
+                            // this is the last block, no next block to check with
+                            break;
+                        }
+
+                        // we didn't find the sequence in the block, let's check it between blocks
+                        int numberOfSetBitsCurrent = BitOperations.LeadingZeroCount((uint)~current);
+                        var nextBlock = _inner[i + 1];
+                        var numberOfSetBitsNext = BitOperations.TrailingZeroCount(~nextBlock);
+
+                        if (numberOfSetBitsCurrent + numberOfSetBitsNext >= num)
+                            return (i * 32) + (32 - numberOfSetBitsCurrent);
+                    }
+
+                    return null;
+
+                default:
+                    // finding sequences larger than 32 bits
+                    // the idea is that we look for sequences that bridge across blocks using leading/trailing zero counts
+                    var start = -1;
+                    var count = 0;
+
+                    for (var i = 0; i < _inner.Length; i++)
+                    {
+                        int current = _inner[i];
+                        if (current == 0)
+                        {
+                            start = -1;
+                            count = 0;
+                            continue;
+                        }
+
+                        if (current == -1)
+                        {
+                            if (start == -1)
+                            {
+                                start = i * 32;
+                            }
+
+                            count += 32;
+                            if (count >= num)
+                                return start;
+
+                            continue;
+                        }
+
+                        if (start == -1)
+                        {
+                            // find trailing ones at the end of the block if no sequence has started
+                            CheckTrailingSequence();
+                        }
+                        else
+                        {
+                            if (count + (2048 - i * 32) < num)
+                            {
+                                // impossible to satisfy the continuous bit requirement
+                                return null;
+                            }
+
+                            if (count + 31 < num)
+                            {
+                                // impossible to satisfy the continuous bit requirement in this block
+                                CheckTrailingSequence();
+                                continue;
+                            }
+
+                            // we look at the beginning of the block
+                            int numberOfSetBits = BitOperations.TrailingZeroCount(~current);
+                            count += numberOfSetBits;
+                            if (count >= num)
+                                return start;
+
+                            // reset for the next sequence
+                            CheckTrailingSequence();
+                        }
+
+                        void CheckTrailingSequence()
+                        {
+                            int numberOfSetBits = BitOperations.LeadingZeroCount((uint)~current);
+                            if (numberOfSetBits == 0)
+                            {
+                                start = -1;
+                                count = 0;
+                            }
+                            else
+                            {
+                                // Calculate the starting bit position in the array
+                                start = (i * 32) + (32 - numberOfSetBits);
+                                count = numberOfSetBits;
+                            }
+                        }
+                    }
+
+                    return null;
+            }
+        }
+
+        public int? GetContinuousRangeStartLegacy(int num)
+        {
+            var start = -1;
+            var count = 0;
+
+            for (int i = 0; i < _inner.Length * 32; i++)
+            {
+                if (Get(i))
+                {
+                    if (start == -1)
+                        start = i;
+                    count++;
+
+                    if (count == num)
+                        return start;
+                }
+                else
+                {
+                    start = -1;
+                    count = 0;
+                }
+            }
+
+            return null;
         }
 
         public void Set(int index, bool value)
