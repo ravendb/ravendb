@@ -929,7 +929,7 @@ namespace Raven.Server.Utils.Cli
             {
                 var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), cli._server.ServerStore.ServerShutdown);
 
-                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(loadedCert, replaceImmediately, RaftIdGenerator.NewId());
+                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(loadedCert, password, replaceImmediately, RaftIdGenerator.NewId());
 
                 Task.WhenAny(replicationTask, timeoutTask).Wait();
                 if (replicationTask.IsCompleted == false)
@@ -937,6 +937,8 @@ namespace Raven.Server.Utils.Cli
                     WriteError("Timeout when trying to replace the server certificate.", cli);
                     return false;
                 }
+
+                replicationTask.GetAwaiter().GetResult(); // already completed, need to propagate any exception
             }
             catch (Exception e)
             {
