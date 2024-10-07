@@ -470,7 +470,7 @@ namespace Raven.Server.Utils
             var stream = new MemoryStream();
             store.Save(stream, Array.Empty<char>(), random);
 
-            return new X509Certificate2(stream.ToArray());
+            return X509CertificateLoader.LoadCertificate(stream.ToArray());
         }
 
         // generating this can take a while, so we cache that at the process level, to significantly speed up the tests

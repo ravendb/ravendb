@@ -42,6 +42,7 @@ namespace FastTests
             }
 #pragma warning restore SYSLIB0026 // Type or member is obsolete
 
+#pragma warning disable SYSLIB0057
             public TrackingX509Certificate2(byte[] rawData)
                 : base(rawData)
             {
@@ -91,6 +92,7 @@ namespace FastTests
                 : base(fileName, password, keyStorageFlags)
             {
             }
+#pragma warning restore SYSLIB0057
 
             public TrackingX509Certificate2(X509Certificate certificate)
                 : base(certificate)
