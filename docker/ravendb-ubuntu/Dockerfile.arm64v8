@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-jammy-arm64v8
+FROM mcr.microsoft.com/dotnet/runtime-deps:9.0-jammy-arm64v8
 
 ARG PATH_TO_DEB RAVEN_USER_ID RAVEN_GROUP_ID
 
