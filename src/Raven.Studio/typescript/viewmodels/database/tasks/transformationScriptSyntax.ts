@@ -152,7 +152,29 @@ loadToOrders(orderData);`;
 
     sqlEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.sqlEtlSampleText);
 
-    static readonly snowflakeEtlSampleText = transformationScriptSyntax.sqlEtlSampleText;
+    static readonly snowflakeEtlSampleText =
+`var orderData = {
+    Id: id(this),
+    OrderLinesCount: this.Lines.length,
+    TotalCost: 0
+};
+
+for (var i = 0; i < this.Lines.length; i++) {
+    var line = this.Lines[i];
+    orderData.TotalCost += line.PricePerUnit;
+    
+    // Load to Snowflake table 'OrderLines'
+    loadToOrderLines({
+        OrderId: id(this),
+        Qty: line.Quantity,
+        Product: line.Product,
+        Cost: line.PricePerUnit
+    });
+}
+orderData.TotalCost = Math.round(orderData.TotalCost * 100) / 100;
+
+// Load to Snowflake table 'Orders'
+loadToOrders(orderData);`;
 
     snowflakeEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.snowflakeEtlSampleText);
 
