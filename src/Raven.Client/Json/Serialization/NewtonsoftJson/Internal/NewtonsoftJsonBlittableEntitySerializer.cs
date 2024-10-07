@@ -36,10 +36,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                 {
                     if (json.TryGetValue(Constants.Documents.Metadata.Id, out id))
                     {
-                        if (_generateEntityIdOnTheClient.TryGetIdFromInstance(o, out var existing) &&
-                            existing != null)
-                            return;
-
                         var isProjection = json.TryGetValue(Constants.Documents.Metadata.Projection, out var projection)
                                          && projection.Type == JTokenType.Boolean
                                          && projection.Value<bool>();
