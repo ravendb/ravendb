@@ -12,6 +12,20 @@ namespace Voron.Data.Lookups
         bool Skip(long count);
         bool MoveNext(out long value);
         bool MoveNext<TLookupKey>(out TLookupKey key, out long value, out bool hasPreviousValue);
+        
+        /// <summary>
+        /// Moves iterator to the element equal to key parameter
+        /// 
+        /// If equal element doesn't exist, moves iterator to element that succeeds it:
+        /// Forward - the smallest element that's bigger than key parameter
+        /// Backward - the biggest element that's smaller than key parameter
+        /// 
+        /// If succeeding element doesn't exist, moves iterator (LastSearchPosition) to:
+        /// ForwardIterator - position n, where n is the number of elements (effectively moving one position after actual data)
+        /// BackwardIterator - position -1
+        /// </summary>
+        /// <param name="key">Lookup key</param>
+        /// <typeparam name="TLookupKey">Type of lookup key used for seek.</typeparam>
         void Seek<TLookupKey>(TLookupKey key);
     }
 
@@ -161,6 +175,11 @@ namespace Voron.Data.Lookups
                 }
             }
             
+            /// <summary>
+            /// Returns currently pointed value and moves to the next element in the tree.
+            /// </summary>
+            /// <param name="value">Current (before MoveNext) value.</param>
+            /// <returns>Indicates if current exists.</returns>
             public bool MoveNext(out long value)
             {
                 if (_cursor._pos < 0)
@@ -276,8 +295,11 @@ namespace Voron.Data.Lookups
                 _tree.FindPageFor(ref lookupKey, ref _cursor);
 
                 ref var state = ref _cursor._stk[_cursor._pos];
-                if (state.LastSearchPosition < 0)
-                    state.LastSearchPosition = Math.Min(~state.LastSearchPosition, state.Header->NumberOfEntries - 1);
+                
+                if (state.LastSearchPosition >= 0)
+                    return;
+
+                state.LastSearchPosition = ~state.LastSearchPosition - 1;
             }
             
             
@@ -343,7 +365,7 @@ namespace Voron.Data.Lookups
                     if (state.LastSearchPosition >= 0)
                     {
                         int read = 0;
-                        while(read < results.Length && state.LastSearchPosition >= 0)
+                        while (read < results.Length && state.LastSearchPosition >= 0)
                         {
                             int curPos = state.LastSearchPosition--;
                             results[read++] = GetValue(ref state, curPos);
@@ -373,7 +395,9 @@ namespace Voron.Data.Lookups
                     value = default;
                     return false;
                 }
+                
                 ref var state = ref _cursor._stk[_cursor._pos];
+                
                 while (true)
                 {
                     Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));
@@ -407,6 +431,7 @@ namespace Voron.Data.Lookups
                     return false;
                 }
                 ref var state = ref _cursor._stk[_cursor._pos];
+                
                 while (true)
                 {
                     Debug.Assert(state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf));

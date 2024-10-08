@@ -190,7 +190,15 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     public struct CursorState
     {
         public Page Page;
+        
+        /// <summary>
+        /// Values:
+        /// 0: searched value was found
+        /// 1: searched value was bigger than last compared value in the page
+        /// -1: searched value was smaller than last compared value in the page
+        /// </summary>
         public int LastMatch;
+        
         public int LastSearchPosition;
 
         public LookupPageHeader* Header => (LookupPageHeader*)Page.Pointer;
@@ -1304,6 +1312,9 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         NotFound:
         state.LastMatch = match > 0 ? 1 : -1;
+        // Negation gives information we didn't find the key in the page
+        // In this case, if last compared value is smaller than seeked key, we may suspect it will be the next element of the tree.
+        // It points to the smallest element that is bigger than seeked key. 
         state.LastSearchPosition = ~(bot + (match > 0).ToInt32());
     }
 
