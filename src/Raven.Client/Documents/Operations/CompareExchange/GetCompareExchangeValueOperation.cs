@@ -8,6 +8,11 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.CompareExchange
 {
+    /// <summary>
+    /// Operation to retrieve a compare exchange value from a RavenDB database.
+    /// A compare exchange value is a distributed key-value pair used for coordinating actions across the cluster.
+    /// </summary>
+    /// <typeparam name="T">The type of the value associated with the compare exchange key.</typeparam>
     public sealed class GetCompareExchangeValueOperation<T> : IOperation<CompareExchangeValue<T>>
     {
         private readonly string _key;
@@ -16,6 +21,15 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
         private readonly string _nodeTag;
 
+        /// <summary>
+        /// Operation to retrieve a compare exchange value from a RavenDB database.
+        /// A compare exchange value is a distributed key-value pair used for coordinating actions across the cluster.
+        /// Initializes a new instance of the <see cref="GetCompareExchangeValueOperation{T}"/> class.
+        /// Retrieves the compare exchange value for the specified key.
+        /// </summary>
+        /// <typeparam name="T">The type of the value associated with the compare exchange key.</typeparam>
+        /// <param name="key">The key of the compare exchange value to retrieve.</param>
+        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="key"/> is null or empty.</exception>
         public GetCompareExchangeValueOperation(string key)
             : this(key, materializeMetadata: true)
         {
