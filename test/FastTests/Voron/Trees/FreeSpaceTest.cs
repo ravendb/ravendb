@@ -127,6 +127,32 @@ namespace FastTests.Voron.Trees
                 Assert.Equal(510 , Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, 50));
             }
         }
+        
+        [RavenFact(RavenTestCategory.Voron)]
+        public void FindConsecutiveRange_AcrossWords()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 31 + i);
+                }
+                
+                for (int i = 0; i < 15; i++)
+                {
+                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 60 + i);
+                }
+
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                Assert.Equal(60 , Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, 12));
+                Assert.Equal(31 , Env.FreeSpaceHandling.TryAllocateFromFreeSpace(tx.LowLevelTransaction, 8));
+            }
+        }
 
         [RavenFact(RavenTestCategory.Voron)]
         public void FindConsecutiveRange_AcrossSections()

@@ -3,9 +3,11 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using Sparrow.Server;
 using Sparrow.Server.Utils.VxSort;
+using Sparrow.Threading;
 using Voron.Data.Fixed;
 
 namespace Voron.Impl.FreeSpace;
@@ -53,7 +55,7 @@ public unsafe struct StreamBitArray
         h.StoreUnsafe(ref _inner[56]);
     }
 
-    public unsafe void Write(FixedSizeTree freeSpaceTree, long sectionId)
+    public void Write(FixedSizeTree freeSpaceTree, long sectionId)
     {
         using (freeSpaceTree.DirectAdd(sectionId, out _, out var ptr))
         {
@@ -84,19 +86,9 @@ public unsafe struct StreamBitArray
         h.StoreUnsafe(ref ints[57]);
     }
 
-    public int NextUnsetBits(int start)
-    {
-        return FirstSetBits<Inverse>(start);
-    }
-
-    public int FirstSetBits(int bitsToStart)
-    {
-        return FirstSetBits<Nothing>(bitsToStart);
-    }
-
     public int FirstSetBit()
     {
-        for (int i = 0; i < CountOfItems; i += Vector256<int>.Count)
+        for (int i = 0; i < CountOfItems; i += Vector256<uint>.Count)
         {
             var a = Vector256.LoadUnsafe(ref _inner[i]);
             var gt = Vector256.GreaterThan(a, Vector256<uint>.Zero);
@@ -111,72 +103,145 @@ public unsafe struct StreamBitArray
         }
         return -1;
     }
-    
-    private int FirstSetBits<TModify>(int bitsToStart)
-        where TModify: struct, IModifyBuffer
-    {
-        int vectorStart = (bitsToStart / 256) * Vector256<int>.Count;
-        var scalarSearch = bitsToStart % 256;
-        if (scalarSearch != 0)
-        {
-            if (TryScalarSearch<TModify>(scalarSearch, vectorStart, out int trailingZeroCount)) 
-                return trailingZeroCount;
 
-            vectorStart += Vector256<int>.Count;
-        }
-        for (int i = vectorStart; i < CountOfItems; i += Vector256<int>.Count)
+    public int FindRange(int num)
+    {
+        return num switch
         {
-            var a = default(TModify).Modify(Vector256.LoadUnsafe(ref _inner[i]));
-            var gt = Vector256.GreaterThan(a, Vector256<uint>.Zero);
-            if (gt == Vector256<uint>.Zero)
-            {
-                continue;
-            }
-            var mask = gt.ExtractMostSignificantBits();
-            var idx = BitOperations.TrailingZeroCount(mask) + i;
-            var item = default(TModify).Modify(_inner[idx]);
-            return idx * 32 + BitOperations.TrailingZeroCount(item);
+            >= 32 => FindRangeUsingWords(num),
+            _ => FindRangeUsingBits(num)
+        };
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool FindRangeInVector(Vector256<uint> v, int num, out int bits)
+    {
+        // find consecutive range: https://stackoverflow.com/a/37903049/6366
+        // note that this is only _inside_ words
+        for (int j = 0; j < num-1; j++)
+        {
+            v &= v << 1;
         }
+            
+        var gt = Vector256.GreaterThan(v, Vector256<uint>.Zero);
+        if (gt == Vector256<uint>.Zero)
+        {
+            bits = -1;
+            return false;
+        }
+            
+        var mask = gt.ExtractMostSignificantBits();
+        int vectorIndex = BitOperations.TrailingZeroCount(mask);
+        uint element = v.GetElement(vectorIndex);
+        var item = element - (element & (element - 1));
+        var bitPos = BitOperations.TrailingZeroCount(item) - (num - 1);
+        bits = bitPos + vectorIndex * 32;
+        return true;
+    }
+
+    private int FindRangeUsingBits(int num)
+    {
+        ref uint shiftedInner = ref Unsafe.AddByteOffset(ref _inner[0], 2);
+        // we are skipping the first 2 bytes, and we are ***reading 2 bytes past the buffer***
+        // this is fine to do, since we know that after the buffer, we have the SetCount field
+        Debug.Assert(
+            Unsafe.AsPointer(ref SetCount) == Unsafe.AsPointer(ref _inner[CountOfItems]),
+            "We are intentionally reading past the end of the buffer"
+        );
+        for (int i = 0; i < CountOfItems; i += Vector256<uint>.Count)
+        {
+            var aligned = Vector256.LoadUnsafe(ref _inner[0], (nuint)i);
+            var unaligned = Vector256.LoadUnsafe(ref shiftedInner, (nuint)i);
+
+            bool hasAligned = FindRangeInVector(aligned, num, out int alignedBits);
+            bool hasUnaligned = FindRangeInVector(unaligned, num, out int unalignedBits);
+
+            var alignedPos = i * 32 + alignedBits;
+            var unalignedPos = i * 32 + unalignedBits + 16;
+            if (unalignedPos + num > CountOfItems * 32)
+                hasUnaligned = false;
+
+            switch (hasAligned, hasUnaligned)
+            {
+                case (true, true):
+                    return Math.Min(alignedPos, unalignedPos);
+                case (true, false):
+                    return alignedPos;
+                case (false, true):
+                    return unalignedPos;
+            }
+        }
+        
         return -1;
     }
 
-    private bool TryScalarSearch<TModify>(int scalarSearch, int vectorStart, out int trailingZeroCount)
-        where TModify: struct, IModifyBuffer
+    private int FindRangeUsingWords(int num)
     {
-        for (int i = scalarSearch / 32; i < Vector256<int>.Count; i++)
+        Debug.Assert(num >= 32, "num >= 32");
+        int requiredWords = num / 32;
+        int totalWords = requiredWords + (num % 32 > 0 ? 1 : 0);
+            
+        for (int i = 0; i < CountOfItems; i += Vector256<uint>.Count)
         {
-            var bitsToZero = scalarSearch % 32;
-            scalarSearch = 0;
-            var bits = default(TModify).Modify(_inner[vectorStart + i]) & (-1 << bitsToZero);
-            if (bits != 0)
+            var a = Vector256.LoadUnsafe(ref _inner[i]);
+            var eq = Vector256.Equals(a, Vector256<uint>.AllBitsSet);
+            if (eq == Vector256<uint>.Zero)
+                continue;
+            
+            var mask = eq.ExtractMostSignificantBits();
+            int idx = BitOperations.TrailingZeroCount(mask) + i;
+            
+            if (idx + totalWords > CountOfItems)
+                break;
+
+            while(true)
             {
-                trailingZeroCount = (vectorStart+i) * 32 + BitOperations.TrailingZeroCount(bits);
-                return true;
+                Debug.Assert(_inner[idx] == uint.MaxValue, "_inner[idx] == uint.MaxValue - because it must be given the SIMD check");
+                int remainingBits = num % 32;
+                int found = idx * 32;
+                if (idx > 0)
+                {
+                    var prev = _inner[idx - 1];
+                    int previousBits = BitOperations.LeadingZeroCount(~prev);
+                    if (previousBits > 0)
+                    {
+                        int bitsToTake = Math.Min(remainingBits, previousBits);
+                        remainingBits -= bitsToTake;
+                        found -= bitsToTake;
+                    }
+                }
+                
+                for (int j = 1; j < requiredWords; j++)
+                {
+                    if (_inner[idx + j] == uint.MaxValue) 
+                        continue;
+
+                    idx += j;
+                    goto NextElement;
+                }
+
+                if (remainingBits == 0)
+                    return found;
+
+                var availableBits = BitOperations.TrailingZeroCount(~_inner[idx + requiredWords]);
+                if(availableBits >= remainingBits)
+                    return found;
+
+                idx += requiredWords;
+                    
+                NextElement:
+                while (idx < i + Vector256<uint>.Count && 
+                       _inner[idx] != uint.MaxValue)
+                {
+                    idx++;
+                }
+
+                if (idx >= i + Vector256<uint>.Count)
+                    break;
             }
         }
 
-        trailingZeroCount = -1;
-        return false;
-    }
-    
-    private struct Nothing : IModifyBuffer
-    {
-        public uint Modify(uint i) => i;
-
-        public Vector256<uint> Modify(Vector256<uint> v) => v;
-    }
-    
-    private struct Inverse : IModifyBuffer
-    {
-        public uint Modify(uint i) => ~i;
-
-        public Vector256<uint> Modify(Vector256<uint> v) => ~v;
-    }
-
-    private interface IModifyBuffer
-    {
-        uint Modify(uint i);
-        Vector256<uint> Modify(Vector256<uint> v);
+        return -1;
     }
 
     public bool Get(int index)
@@ -240,7 +305,27 @@ public unsafe struct StreamBitArray
     {
         Debug.Assert(max <= 2048, "max <= 2048 - maximum range inside the bit array");
         
-        var next = NextUnsetBits(0);
-        return next == -1 || next >= max;
+        if (SetCount < max)
+            return false; // not possible
+
+        if (SetCount == CountOfItems)
+            return true; // naturally true
+        
+        for (int i = 0; i < CountOfItems; i += Vector256<int>.Count)
+        {
+            var a = Vector256.LoadUnsafe(ref _inner[i]);
+            var lt = Vector256.LessThan(a, Vector256<uint>.AllBitsSet);
+            if (lt == Vector256<uint>.Zero)
+            {
+                continue;
+            }
+            var mask = lt.ExtractMostSignificantBits();
+            var idx = BitOperations.TrailingZeroCount(mask) + i;
+            var item = _inner[idx];
+            var firstUnsetBit =  idx * 32 + BitOperations.TrailingZeroCount(~item);
+            return firstUnsetBit >= max;
+        }
+
+        return true; // we should never reach here, mind
     }
 }

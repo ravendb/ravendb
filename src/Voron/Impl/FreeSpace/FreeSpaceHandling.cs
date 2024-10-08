@@ -201,28 +201,14 @@ namespace Voron.Impl.FreeSpace
         private bool TryFindContinuousRange(FixedSizeTree freeSpaceTree, int num,
             StreamBitArray current, long currentSectionId, out long? page)
         {
+            Debug.Assert(num > 1, "num > 1");
+            
             page = -1;
-            var start = -1;
-            while(true)
-            {
-                start = current.FirstSetBits(start + 1);
-                if (start == -1 || 
-                    start + num > NumberOfPagesInSection)
-                    return false;
-
-                if (num > 1)
-                {
-                    var nextUnsetBit = current.NextUnsetBits(start + 1);
-                    if (nextUnsetBit != -1 && (nextUnsetBit - start) < num )
-                    {
-                        start = nextUnsetBit;
-                        continue;
-                    }
-                }                
-                
-                page = currentSectionId * NumberOfPagesInSection + start;
-                break;
-            }
+            int start = current.FindRange(num);
+            if (start == -1)
+                return false;
+            
+            page = currentSectionId * NumberOfPagesInSection + start;
 
             current.Set(start, num, false);
             FlushBitmap(freeSpaceTree, current, currentSectionId);
