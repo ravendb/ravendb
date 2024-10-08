@@ -11,11 +11,33 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
+    /// <summary>
+    ///     A class for executing JsonPatch operations on documents in the database
+    /// </summary>
     public sealed class JsonPatchOperation : IOperation<JsonPatchResult>
     {
+        /// <summary>
+        /// The id of the document on which to execute the patch operations
+        /// </summary>
         public string Id;
+
+        /// <summary>
+        /// A collection of JsonPatch operations to execute on the document. <br/>
+        /// <remarks>The operations are executed sequentially by the order of their addition to the collection</remarks>
+        /// </summary>
         public JsonPatchDocument JsonPatchDocument;
 
+        /// <summary>
+        ///     Executes a collection of JsonPatch operations on a specific document in the database.<br/>
+        /// <remarks>
+        ///     See <see href="https://ravendb.net/docs/article-page/latest/csharp/client-api/operations/patching/json-patch-syntax">documentation</see>
+        /// </remarks>
+        /// </summary>
+        /// <param name="id">The id of the document on which to execute the <paramref name="jsonPatchDocument"/> operations</param>
+        /// <param name="jsonPatchDocument">
+        ///     A collection of JsonPatch operations to execute on the document. <br/>
+        /// <remarks>The operations are executed sequentially by the order of their addition to the collection</remarks>
+        /// </param>
         public JsonPatchOperation(string id, JsonPatchDocument jsonPatchDocument)
         {
             Id = id;
