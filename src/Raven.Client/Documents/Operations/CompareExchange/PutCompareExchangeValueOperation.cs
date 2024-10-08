@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 {
     /// <summary>
     /// Operation to insert or update a compare exchange value in the RavenDB database.
-    /// A compare exchange value is a distributed key-value pair used for coordination between nodes in a cluster.
+    /// A compare exchange is a key-value pair is a distributed coordination mechanism that ensures a consistent state across the cluster.
     /// </summary>
     /// <typeparam name="T">The type of the value to be stored in the compare exchange.</typeparam>
     public sealed class PutCompareExchangeValueOperation<T> : IOperation<CompareExchangeResult<T>>
@@ -25,11 +25,12 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
         /// <summary>
         /// Operation to insert or update a compare exchange value in the RavenDB database.
+        /// A compare exchange is a key-value pair is a distributed coordination mechanism that ensures a consistent state across the cluster
         /// Initializes a new instance of the <see cref="PutCompareExchangeValueOperation{T}"/> class.
         /// </summary>
         /// <param name="key">The key associated with the compare exchange value.</param>
         /// <param name="value">The value to be stored in the compare exchange.</param>
-        /// <param name="index">The index used for optimistic concurrency control. Pass <c>0</c> to create a new compare exchange.</param>
+        /// <param name="index">The index used for optimistic concurrency control. the index is used for concurrency check, only if it matches the operation will succeed. Pass <c>0</c> to create a new compare exchange.</param>
         /// <param name="metadata">Optional metadata associated with the compare exchange value.</param>
         /// <remarks>
         /// The index must be set to <c>0</c> for new compare exchange entries. For updates, the current index of the existing entry must be provided.

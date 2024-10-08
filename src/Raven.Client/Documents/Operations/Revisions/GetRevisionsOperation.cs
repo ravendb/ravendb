@@ -17,7 +17,6 @@ namespace Raven.Client.Documents.Operations.Revisions
 {
     /// <summary>
     /// Operation to retrieve revisions of a document in the RavenDB database.
-    /// Provides the ability to specify pagination through start index and page size.
     /// </summary>
     /// <typeparam name="T">The type of the document for which the revisions are being retrieved.</typeparam>
     public sealed class GetRevisionsOperation<T> : IOperation<RevisionsResult<T>>
@@ -26,7 +25,6 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         /// <summary>
         /// Operation to retrieve revisions of a document in the RavenDB database.
-        /// Provides the ability to specify pagination through start index and page size.
         /// Initializes a new instance of the <see cref="GetRevisionsOperation{T}"/> class for the specified document ID.
         /// </summary>
         /// <typeparam name="T">The type of the document for which the revisions are being retrieved.</typeparam>

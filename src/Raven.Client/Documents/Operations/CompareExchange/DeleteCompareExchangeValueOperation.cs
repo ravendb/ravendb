@@ -8,8 +8,8 @@ using Sparrow.Json;
 namespace Raven.Client.Documents.Operations.CompareExchange
 {
     /// <summary>
-    /// Operation to delete a compare exchange value in a RavenDB database. 
-    /// A compare exchange value is a key-value pair that is part of the RavenDB distributed coordination mechanism.
+    /// Operation to delete a compare exchange value. 
+    /// A compare exchange is a key-value pair is a distributed coordination mechanism that ensures a consistent state across the cluster.
     /// </summary>
     /// <typeparam name="T">The type of the value associated with the compare exchange key.</typeparam>
     public sealed class DeleteCompareExchangeValueOperation<T> : IOperation<CompareExchangeResult<T>>
@@ -18,13 +18,13 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         private readonly long _index;
 
         /// <summary>
-        /// Operation to delete a compare exchange value in a RavenDB database. 
-        /// A compare exchange value is a key-value pair that is part of the RavenDB distributed coordination mechanism.
+        /// Operation to delete a compare exchange value. 
+        /// A compare exchange is a key-value pair is a distributed coordination mechanism that ensures a consistent state across the cluster.
         /// Initializes a new instance of the <see cref="DeleteCompareExchangeValueOperation{T}"/> class.
         /// </summary>
         /// <typeparam name="T">The type of the value associated with the compare exchange key.</typeparam>
         /// <param name="key">The key of the compare exchange value to delete.</param>
-        /// <param name="index">The index of the compare exchange value to delete.</param>
+        /// <param name="index">The index of the compare exchange value to delete. the index is used for concurrency check, only if it matches the operation will succeed.</param>
         public DeleteCompareExchangeValueOperation(string key, long index)
         {
             _key = key;
