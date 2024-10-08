@@ -138,7 +138,6 @@
   <ItemGroup>
     <PackageReference Include="Lambda2Js.Signed" Version="3.1.4" />
     <PackageReference Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.10" />
-    <PackageReference Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.8" />
     <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
