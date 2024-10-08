@@ -11,5 +11,6 @@ namespace Voron.Impl.FreeSpace
         long GetFreePagesOverhead(LowLevelTransaction tx);
         IEnumerable<long> GetFreePagesOverheadPages(LowLevelTransaction tx);
         FreeSpaceHandlingDisabler Disable();
+        void OnRollback();
     }
 }

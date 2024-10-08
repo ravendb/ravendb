@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Sparrow.Server;
 using Voron.Data.Fixed;
 
@@ -13,6 +14,10 @@ namespace Voron.Impl.FreeSpace
         private readonly FreeSpaceHandlingDisabler _disableStatus = new();
 
         private readonly FreeSpaceRecursiveCallGuard _guard;
+
+        private readonly Dictionary<long, int> _maxConsecutiveRange = new();
+
+        public void OnRollback() => _maxConsecutiveRange.Clear();
         
         static FreeSpaceHandling()
         {
@@ -184,15 +189,26 @@ namespace Voron.Impl.FreeSpace
         {
             do
             {
+                long currentSectionId = it.CurrentKey;
+                if(_maxConsecutiveRange.TryGetValue(currentSectionId, out var knownMax) && knownMax >= num)
+                    continue; // we know it isn't there, so we can safely skip it
+                
                 var current = new StreamBitArray(it.CreateReaderForCurrent().Base);
 
                 if (current.SetCount >= num &&
-                    TryFindContinuousRange(freeSpaceTree, num, current, it.CurrentKey, out long? page))
+                    TryFindContinuousRange(freeSpaceTree, num, current, currentSectionId, out long? page))
                     return page;
 
+                if (knownMax == 0 || num < knownMax)
+                {
+                    // here we _know_ it can't fit anything larger, so we mark it for the next time
+                    _maxConsecutiveRange[currentSectionId] = num;
+                }
+
                 //could not find a continuous so trying to merge
-                if (TryFindSmallValueMergingTwoSections(freeSpaceTree, it.CurrentKey, num, current, out page))
+                if (TryFindSmallValueMergingTwoSections(freeSpaceTree, currentSectionId, num, current, out page))
                     return page;
+                
             } while (it.MoveNext());
 
             return null;
@@ -322,6 +338,7 @@ namespace Voron.Impl.FreeSpace
                 var freeSpaceTree = GetFreeSpaceTree(tx);
                 StreamBitArray sba;
                 var section = pageNumber / NumberOfPagesInSection;
+                _maxConsecutiveRange.Remove(section);
                 using (freeSpaceTree.Read(section, out Slice result))
                 {
                     sba = !result.HasValue ? new StreamBitArray() : new StreamBitArray(result.CreateReader().Base);

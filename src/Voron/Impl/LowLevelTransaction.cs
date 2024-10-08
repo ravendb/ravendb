@@ -1189,6 +1189,8 @@ namespace Voron.Impl
 
             OnRollBack?.Invoke(this);
 
+            _freeSpaceHandling.OnRollback();
+            
             ValidateReadOnlyPages();
 
             var rollbackPages = _env.WriteTransactionPool.ScratchPagesInUse;
