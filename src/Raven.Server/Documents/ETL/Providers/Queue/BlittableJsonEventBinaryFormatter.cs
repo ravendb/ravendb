@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue
                 return Array.Empty<byte>();
             }
 
-            var ms = new MemoryStream();
+            var ms = RecyclableMemoryStreamFactory.GetRecyclableStream();
 
             _streams.Add(ms);
 

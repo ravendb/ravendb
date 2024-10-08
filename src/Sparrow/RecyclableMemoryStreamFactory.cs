@@ -6,8 +6,6 @@ namespace Sparrow;
 
 internal class RecyclableMemoryStreamFactory
 {
-    public static RecyclableMemoryStreamFactory Instance = new();
-
     private static readonly RecyclableMemoryStreamManager Manager = new()
     {
         Settings =
