@@ -150,20 +150,42 @@ namespace Voron.Impl.FreeSpace
                         if (current == -1)
                             return i * BitsInItem;
 
-                        int firstSetBitPos = BitOperations.TrailingZeroCount((uint)current);
+                        int currentCopy = current;
+                        int position = 0;
 
-                        int mask = (1 << num) - 1;
-
-                        if (firstSetBitPos <= BitsInItem - num)
+                        while (currentCopy != 0)
                         {
-                            // only proceed if there is a set bit and it's within range
-                            for (int bitPos = firstSetBitPos; bitPos <= BitsInItem - num; bitPos++)
+                            int firstSetBitPos = BitOperations.TrailingZeroCount((uint)currentCopy);
+                            position += firstSetBitPos;
+
+                            currentCopy >>= firstSetBitPos;
+                            if (currentCopy == -1)
                             {
-                                var temp = mask << bitPos;
-                                if ((current & temp) == temp)
-                                {
-                                    return i * BitsInItem + bitPos;
-                                }
+                                // all bits after the shift are ones
+                                if (BitsInItem - position >= num)
+                                    return i * BitsInItem + position;
+
+                                break;
+                            }
+
+                            int onesCount = BitOperations.TrailingZeroCount((uint)~currentCopy);
+                            if (onesCount >= num)
+                                return i * BitsInItem + position;
+
+                            position += onesCount;
+
+                            if (BitsInItem - position < num)
+                            {
+                                // impossible to satisfy the continuous bit requirement
+                                break;
+                            }
+
+                            currentCopy >>= onesCount;
+                            if (currentCopy != 0)
+                            {
+                                int zerosCount = BitOperations.TrailingZeroCount((uint)currentCopy);
+                                position += zerosCount;
+                                currentCopy >>= zerosCount; // prepare for the next iteration
                             }
                         }
 
