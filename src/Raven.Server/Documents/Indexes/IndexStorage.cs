@@ -906,8 +906,8 @@ namespace Raven.Server.Documents.Indexes
             if (SimulateIndexWriteException != null)
                 SimulateIndexWriteError(SimulateIndexWriteException);
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Writing last etag for '{_index.Name}'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Writing last etag for '{_index.Name}'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
 
             var statsTree = tx.InnerTransaction.CreateTree(tree);
             using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
