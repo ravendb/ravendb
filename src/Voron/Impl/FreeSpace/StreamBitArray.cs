@@ -33,8 +33,11 @@
 
 using Sparrow;
 using System;
+using System.Collections;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 
 namespace Voron.Impl.FreeSpace
@@ -189,6 +192,19 @@ namespace Voron.Impl.FreeSpace
             var scope = context.From(buffer, 0, buffer.Length, type, out byteString);
             str = new Slice(byteString);
             return scope;
+        }
+
+        public DynamicJsonValue ToJson(long key, bool hex)
+        {
+            IEnumerable collection = hex
+                ? _inner.Select(x => x.ToString("X"))
+                : _inner;
+
+            return new DynamicJsonValue { 
+                ["Key"] = key,
+                [nameof(SetCount)] = SetCount, 
+                ["Data"] = new DynamicJsonArray(collection) 
+            };
         }
     }
 }

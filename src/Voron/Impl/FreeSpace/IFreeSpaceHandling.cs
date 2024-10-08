@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
 namespace Voron.Impl.FreeSpace
 {
@@ -6,6 +7,7 @@ namespace Voron.Impl.FreeSpace
     {
         long? TryAllocateFromFreeSpace(LowLevelTransaction tx, int num);
         List<long> AllPages(LowLevelTransaction tx);
+        List<DynamicJsonValue> FreeSpaceSnapshot(LowLevelTransaction tx, bool hex);
         void FreePage(LowLevelTransaction tx, long pageNumber);
         long GetFreePagesOverhead(LowLevelTransaction tx);
         IEnumerable<long> GetFreePagesOverheadPages(LowLevelTransaction tx);
