@@ -305,9 +305,9 @@ namespace Raven.Server.Rachis
                                         : "Heartbeat"
                                 );
 
-                                if (_engine.Log.IsInfoEnabled && entries.Count > 0)
+                                if (_engine.Log.IsDebugEnabled && entries.Count > 0)
                                 {
-                                    _engine.Log.Info($"FollowerAmbassador for {_tag}: sending {entries.Count} entries to {_tag}"
+                                    _engine.Log.Debug($"FollowerAmbassador for {_tag}: sending {entries.Count} entries to {_tag}"
 #if DEBUG
                                                      + $" [{string.Join(" ,", entries.Select(x => x.ToString()))}]"
 #endif
