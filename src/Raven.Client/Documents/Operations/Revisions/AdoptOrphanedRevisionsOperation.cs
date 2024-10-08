@@ -11,12 +11,25 @@ using Raven.Client.Json;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Revisions;
+
+/// <summary>
+/// Operation to adopt orphaned revisions, which are revisions that belong to a deleted document but are not shown 
+/// in the revisions bin, due to the absence of a "Delete Revision".
+/// </summary>
 public sealed class AdoptOrphanedRevisionsOperation : IOperation<OperationIdResult>
 {
     private readonly Parameters _parameters;
 
+    /// <summary>
+    /// Parameters for the <see cref="AdoptOrphanedRevisionsOperation"/>, specifying which collections 
+    /// to adopt orphaned revisions from.
+    /// </summary>
     public sealed class Parameters : IRevisionsOperationParameters
     {
+        /// <summary>
+        /// Gets or sets the collections from which orphaned revisions will be adopted.
+        /// If <c>null</c>, the operation will apply to all collections.
+        /// </summary>
         public string[] Collections { get; set; } = null;
     }
 
@@ -25,6 +38,13 @@ public sealed class AdoptOrphanedRevisionsOperation : IOperation<OperationIdResu
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="AdoptOrphanedRevisionsOperation"/> with the specified parameters.
+    /// Operation to adopt orphaned revisions, which are revisions that belong to a deleted document but are not shown 
+    /// in the revisions bin, due to the absence of a "Delete Revision".
+    /// </summary>
+    /// <param name="parameters">The parameters specifying the collections for which orphaned revisions will be adopted.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameters"/> is <c>null</c>.</exception>
     public AdoptOrphanedRevisionsOperation(Parameters parameters)
     {
         _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));

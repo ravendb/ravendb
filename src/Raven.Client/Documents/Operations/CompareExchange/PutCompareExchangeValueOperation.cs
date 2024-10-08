@@ -11,6 +11,11 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.CompareExchange
 {
+    /// <summary>
+    /// Operation to insert or update a compare exchange value in the RavenDB database.
+    /// A compare exchange value is a distributed key-value pair used for coordination between nodes in a cluster.
+    /// </summary>
+    /// <typeparam name="T">The type of the value to be stored in the compare exchange.</typeparam>
     public sealed class PutCompareExchangeValueOperation<T> : IOperation<CompareExchangeResult<T>>
     {
         private readonly string _key;
@@ -18,6 +23,17 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         private readonly long _index;
         private readonly IMetadataDictionary _metadata;
 
+        /// <summary>
+        /// Operation to insert or update a compare exchange value in the RavenDB database.
+        /// Initializes a new instance of the <see cref="PutCompareExchangeValueOperation{T}"/> class.
+        /// </summary>
+        /// <param name="key">The key associated with the compare exchange value.</param>
+        /// <param name="value">The value to be stored in the compare exchange.</param>
+        /// <param name="index">The index used for optimistic concurrency control. Pass <c>0</c> to create a new compare exchange.</param>
+        /// <param name="metadata">Optional metadata associated with the compare exchange value.</param>
+        /// <remarks>
+        /// The index must be set to <c>0</c> for new compare exchange entries. For updates, the current index of the existing entry must be provided.
+        /// </remarks>
         public PutCompareExchangeValueOperation(string key, T value, long index, IMetadataDictionary metadata = null)
         {
             _key = key;
