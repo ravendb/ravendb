@@ -27,7 +27,7 @@ namespace SlowTests.Voron
             for (int j = 1; j <= 2048; j += 1)
             {
                 var result1 = sba.GetContinuousRangeStart(j);
-                var result2 = sba.GetContinuousRangeStartLegacy(j);
+                var result2 = GetContinuousRangeSlow(sba, j);
                 Assert.Equal(result1, result2);
             }
         }
@@ -58,9 +58,35 @@ namespace SlowTests.Voron
             for (int j = 1; j <= 2048; j += 1)
             {
                 var result1 = sba.GetContinuousRangeStart(j);
-                var result2 = sba.GetContinuousRangeStartLegacy(j);
+                var result2 = GetContinuousRangeSlow(sba, j);
                 Assert.Equal(result1, result2);
             }
+        }
+
+        public static int? GetContinuousRangeSlow(StreamBitArray current, int num)
+        {
+            var start = -1;
+            var count = 0;
+
+            for (int i = 0; i < 2048; i++)
+            {
+                if (current.Get(i))
+                {
+                    if (start == -1)
+                        start = i;
+                    count++;
+
+                    if (count == num)
+                        return start;
+                }
+                else
+                {
+                    start = -1;
+                    count = 0;
+                }
+            }
+
+            return null;
         }
     }
 }

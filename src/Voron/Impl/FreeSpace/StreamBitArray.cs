@@ -287,32 +287,6 @@ namespace Voron.Impl.FreeSpace
             }
         }
 
-        public int? GetContinuousRangeStartLegacy(int num)
-        {
-            var start = -1;
-            var count = 0;
-
-            for (int i = 0; i < TotalBits; i++)
-            {
-                if (Get(i))
-                {
-                    if (start == -1)
-                        start = i;
-                    count++;
-
-                    if (count == num)
-                        return start;
-                }
-                else
-                {
-                    start = -1;
-                    count = 0;
-                }
-            }
-
-            return null;
-        }
-
         public void Set(int index, bool value)
         {
             if (value)
