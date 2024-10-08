@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
@@ -158,6 +159,19 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             using (var processor = new RachisAdminHandlerProcessorForGetClusterLogs(this)) 
                 await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/admin/cluster/log/entry", "GET", AuthorizationStatus.Operator)]
+        public async Task GetLogByIndex()
+        {
+            var fromIndex = GetLongQueryString("index");
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            {
+                var entry = Server.ServerStore.Engine.GetLogEntries(context, fromIndex, take: 1, detailed: true).Single();
+                context.Write(writer, entry.ToJson());
+            }
         }
 
         [RavenAction("/admin/debug/cluster/history-logs", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
