@@ -65,7 +65,7 @@ namespace Raven.Debug.LogTrafficWatch
                 {
                     ExitAndPrintError(ex: null, Environment.NewLine + $"URL '{url}' starts with 'http' but certificate provided.");
                 }
-                _cert = new X509Certificate2(certPath, certPass, X509KeyStorageFlags.MachineKeySet);
+                _cert = X509CertificateLoader.LoadPkcs12FromFile(certPath, certPass, X509KeyStorageFlags.MachineKeySet);
                 _url = url.StartsWith("https://") == false ? $"https://{url}" : url;
             }
         }

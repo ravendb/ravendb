@@ -4,8 +4,8 @@ const fsUtils = require("./fsUtils");
 const exec = require('child_process').execSync;
 
 const possibleTypingsGenPaths = [
-    '../../tools/TypingsGenerator/bin/Debug/net8.0/TypingsGenerator.dll',
-    '../../tools/TypingsGenerator/bin/Release/net8.0/TypingsGenerator.dll' ];
+    '../../tools/TypingsGenerator/bin/Debug/net9.0/TypingsGenerator.dll',
+    '../../tools/TypingsGenerator/bin/Release/net9.0/TypingsGenerator.dll' ];
 
 const dllPath = fsUtils.getLastRecentlyModifiedFile(possibleTypingsGenPaths);
 if (!dllPath) {

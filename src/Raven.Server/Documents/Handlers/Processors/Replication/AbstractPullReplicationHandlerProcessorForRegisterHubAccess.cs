@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             var access = JsonDeserializationClient.ReplicationHubAccess(configuration);
             access.Validate(_hubDefinition.WithFiltering);
 
-            using var cert = new X509Certificate2(Convert.FromBase64String(access.CertificateBase64));
+            using var cert = X509CertificateLoader.LoadCertificate(Convert.FromBase64String(access.CertificateBase64));
 
             var command = new RegisterReplicationHubAccessCommand(RequestHandler.DatabaseName, _hubTaskName, access, cert, raftRequestId);
             return await RequestHandler.Server.ServerStore.SendToLeaderAsync(command);

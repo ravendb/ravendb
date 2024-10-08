@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 {
                     if (connectionString.Authentication.Certificate.CertificatesBase64.Length == 1)
                     {
-                        var cert = new X509Certificate2(Convert.FromBase64String(connectionString.Authentication.Certificate.CertificatesBase64.First()));
+                        var cert = X509CertificateLoader.LoadCertificate(Convert.FromBase64String(connectionString.Authentication.Certificate.CertificatesBase64.First()));
                         settings.ClientCertificate(cert);
                     }
                     else
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
                         foreach (var certificateBase64 in connectionString.Authentication.Certificate.CertificatesBase64)
                         {
-                            certificates.Add(new X509Certificate2(Convert.FromBase64String(certificateBase64)));
+                            certificates.Add(X509CertificateLoader.LoadCertificate(Convert.FromBase64String(certificateBase64)));
                         }
 
                         settings.ClientCertificates(certificates);

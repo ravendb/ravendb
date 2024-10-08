@@ -19,10 +19,10 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 3.1.x
-      - name: Setup .NET 8
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0'
+          dotnet-version: '9.0'
       - name: Restore
         run: |
           git clean -xfd

@@ -38,7 +38,7 @@ namespace Voron.Util
             // this is being run from the flusher, since we can afford to 
             // do an actual here, without stopping transaction speed
 
-            var oldTx = Thread.VolatileRead(ref _oldestTransaction);
+            var oldTx = Volatile.Read(ref _oldestTransaction);
             Interlocked.MemoryBarrier();
             var currentOldest = _activeTxs.ScanOldest();
             if (oldTx != currentOldest)

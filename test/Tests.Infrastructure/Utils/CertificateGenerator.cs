@@ -96,6 +96,6 @@ public static class CertificateGenerator
         var signatureFactory = new Asn1SignatureFactory("SHA256WITHRSA", signerKeyPair != null ? signerKeyPair.Private : keyPair.Private);
         var certificate = certGenerator.Generate(signatureFactory);
 
-        return new X509Certificate2(certificate.GetEncoded());
+        return X509CertificateLoader.LoadCertificate(certificate.GetEncoded());
     }
 }
