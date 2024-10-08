@@ -10,8 +10,7 @@ using Sparrow.Json;
 namespace Raven.Client.Documents.Operations.Revisions
 {
     /// <summary>
-    /// Operation to enforce the current revisions configuration on all existing revisions 
-    /// of all documents in the RavenDB database. 
+    /// Operation to enforce the current revisions configuration on all existing revisions.
     /// This applies the current revision configuration (rules), which are usually applied when a document is modified, 
     /// to all revisions at once.
     /// </summary>
@@ -27,8 +26,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         {
             /// <summary>
             /// Gets or sets a value indicating whether to include force-created revisions.
-            /// Force-created revisions are those created by the user - when an explicit revision creation is triggered 
-            /// without any actual document changes.
+            /// For more information, visit <a href="https://ravendb.net/docs/article-page/6.2/csharp/document-extensions/revisions/overview#force-revision-creation">here</a>.
             /// </summary>
             public bool IncludeForceCreated { get; set; } = false;
 
@@ -40,8 +38,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         }
 
         /// <summary>
-        /// Operation to enforce the current revisions configuration on all existing revisions 
-        /// of all documents in the RavenDB database. 
+        /// Operation to enforce the current revisions configuration on all existing revisions.
         /// This applies the current revision configuration (rules), which are usually applied when a document is modified, 
         /// to all revisions at once.
         /// Initializes a new instance of <see cref="EnforceRevisionsConfigurationOperation"/> with default parameters.
@@ -53,9 +50,9 @@ namespace Raven.Client.Documents.Operations.Revisions
         }
 
         /// <summary>
-        /// Operation to enforce the current revisions configuration on all existing revisions 
-        /// of all documents in the RavenDB database. 
-        /// This applies the current revision configuration (rules), which are usually applied when a document is modified, 
+        /// Operation to enforce the current revisions configuration on all existing revisions.
+        /// This applies the current revision configuration (rules), which are usually applied when a document is modified,
+        /// to all revisions at once.
         /// Initializes a new instance of <see cref="EnforceRevisionsConfigurationOperation"/> with the specified parameters.
         /// </summary>
         /// <param name="parameters">The parameters specifying whether to include force-created revisions and the target collections.</param>

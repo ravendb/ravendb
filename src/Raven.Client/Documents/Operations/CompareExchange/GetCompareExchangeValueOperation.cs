@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 {
     /// <summary>
     /// Operation to retrieve a compare exchange value from a RavenDB database.
-    /// A compare exchange value is a distributed key-value pair used for coordinating actions across the cluster.
+    /// A compare exchange is a key-value pair is a distributed coordination mechanism that ensures a consistent state across the cluster.
     /// </summary>
     /// <typeparam name="T">The type of the value associated with the compare exchange key.</typeparam>
     public sealed class GetCompareExchangeValueOperation<T> : IOperation<CompareExchangeValue<T>>
@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
         /// <summary>
         /// Operation to retrieve a compare exchange value from a RavenDB database.
-        /// A compare exchange value is a distributed key-value pair used for coordinating actions across the cluster.
+        /// AA compare exchange is a key-value pair is a distributed coordination mechanism that ensures a consistent state across the cluster.
         /// Initializes a new instance of the <see cref="GetCompareExchangeValueOperation{T}"/> class.
         /// Retrieves the compare exchange value for the specified key.
         /// </summary>
