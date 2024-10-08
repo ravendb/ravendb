@@ -186,6 +186,7 @@
     <PackageReference Include="FubarDev.FtpServer.FileSystem.InMemory" Version="3.1.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="System.DirectoryServices.Protocols" Version="8.0.0" />
+    <PackageReference Include="System.DirectoryServices.Protocols" Version="9.0.0-rc.2.24473.5" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
