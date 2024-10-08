@@ -25,16 +25,26 @@ internal static class CertificateLoaderUtil
         Exception exception = null;
         try
         {
-            collection.Import(rawData, password, f);
+            ImportCertificate(collection, rawData, password, f);
         }
         catch (Exception e)
         {
             exception = e;
             f = AddMachineKeySet(flags);
-            collection.Import(rawData, password, f);
+            ImportCertificate(collection, rawData, password, f);
         }
 
         LogIfNeeded(nameof(Import), f, exception);
+        return;
+
+        static void ImportCertificate(X509Certificate2Collection collection, byte[] data, string password, X509KeyStorageFlags keyStorageFlags)
+        {
+#if NET9_0_OR_GREATER
+            collection.Add(X509CertificateLoader.LoadPkcs12(data, password, keyStorageFlags));
+#else
+            collection.Import(data, password, keyStorageFlags);
+#endif
+        }
     }
 
     public static X509Certificate2 CreateCertificate(byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
