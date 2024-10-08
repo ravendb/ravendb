@@ -47,6 +47,14 @@
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.4.0-beta.1.build10001" />
     <PackageReference Include="Npgsql" Version="5.0.18" />
   </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net6.0'">
+    <PackageReference Include="System.Text.Encodings.Web" Version="9.0.0-rc.2.24473.5" />
+    <PackageReference Include="System.Text.Json" Version="9.0.0-rc.2.24473.5" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
+    <PackageReference Include="System.Text.Encodings.Web" Version="6.0.0" />
+    <PackageReference Include="System.Text.Json" Version="6.0.9" />
+  </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\MyCustomAnalyzers.dll" />
     <EmbeddedResource Include="Data\testing.ravendbdump" />
