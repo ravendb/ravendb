@@ -160,8 +160,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         _index.ErrorIndexIfCriticalException(e);
 
                                         collectionStats.RecordMapError();
-                                        if (_logger.IsInfoEnabled)
-                                            _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
+                                        if (_logger.IsWarnEnabled)
+                                            _logger.Warn($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
 
                                         collectionStats.AddMapError(current.Id, $"Failed to execute mapping function on {current.Id}. " +
                                                                                 $"Exception: {e}");
@@ -184,8 +184,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     moreWorkFound = true;
 
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executed map for '{_index.Name}' index and '{collection}' collection. Got {resultsCount:#,#;;0} map results in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Executed map for '{_index.Name}' index and '{collection}' collection. Got {resultsCount:#,#;;0} map results in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
                     if (_index.Type.IsMap())
                     {
