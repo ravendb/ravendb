@@ -86,15 +86,33 @@ public unsafe struct StreamBitArray
 
     public int NextUnsetBits(int start)
     {
-        return FirstSetBit<Inverse>(start);
+        return FirstSetBits<Inverse>(start);
     }
 
-    public int FirstSetBit(int bitsToStart)
+    public int FirstSetBits(int bitsToStart)
     {
-        return FirstSetBit<Nothing>(bitsToStart);
+        return FirstSetBits<Nothing>(bitsToStart);
+    }
+
+    public int FirstSetBit()
+    {
+        for (int i = 0; i < CountOfItems; i += Vector256<int>.Count)
+        {
+            var a = Vector256.LoadUnsafe(ref _inner[i]);
+            var gt = Vector256.GreaterThan(a, Vector256<uint>.Zero);
+            if (gt == Vector256<uint>.Zero)
+            {
+                continue;
+            }
+            var mask = gt.ExtractMostSignificantBits();
+            var idx = BitOperations.TrailingZeroCount(mask) + i;
+            var item = _inner[idx];
+            return idx * 32 + BitOperations.TrailingZeroCount(item);
+        }
+        return -1;
     }
     
-    private  int FirstSetBit<TModify>(int bitsToStart)
+    private int FirstSetBits<TModify>(int bitsToStart)
         where TModify: struct, IModifyBuffer
     {
         int vectorStart = (bitsToStart / 256) * Vector256<int>.Count;
@@ -164,6 +182,14 @@ public unsafe struct StreamBitArray
     public bool Get(int index)
     {
         return (_inner[index >> 5] & (1 << (index & 31))) != 0;
+    }
+
+    public void Set(int index, int count, bool value)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            Set(i + index, value);
+        }
     }
 
     public void Set(int index, bool value)

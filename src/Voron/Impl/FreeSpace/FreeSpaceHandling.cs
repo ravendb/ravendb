@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Sparrow.Server;
 using Voron.Data.Fixed;
 
@@ -9,10 +10,10 @@ namespace Voron.Impl.FreeSpace
     {
         private static readonly Slice FreeSpaceKey;
 
-        private readonly FreeSpaceHandlingDisabler _disableStatus = new FreeSpaceHandlingDisabler();
+        private readonly FreeSpaceHandlingDisabler _disableStatus = new();
 
         private readonly FreeSpaceRecursiveCallGuard _guard;
-
+        
         static FreeSpaceHandling()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -50,24 +51,35 @@ namespace Voron.Impl.FreeSpace
             {
                 var freeSpaceTree = GetFreeSpaceTree(tx);
 
-                if (freeSpaceTree.NumberOfEntries == 0)
-                    return null;
-
-                using (var it = freeSpaceTree.Iterate())
+                using var it = freeSpaceTree.Iterate();
+                if (it.Seek(0) is false)
                 {
-                    if (it.Seek(0) == false)
-                        return null;
-
-                    if (num < NumberOfPagesInSection)
-                    {
-                        return TryFindSmallValue(tx, freeSpaceTree, it, num);
-                    }
-                    return TryFindLargeValue(tx, freeSpaceTree, it, num);
+                    return null;
                 }
+
+                return num switch
+                {
+                    1 => AllocateSinglePage(freeSpaceTree, it),
+                    < NumberOfPagesInSection => TryFindSmallValue(freeSpaceTree, num, it),
+                    _ => TryFindLargeValue(freeSpaceTree, num, it)
+                };
             }
         }
 
-        private long? TryFindLargeValue(LowLevelTransaction tx, FixedSizeTree freeSpaceTree, FixedSizeTree.IFixedSizeIterator it, int num)
+        private static long? AllocateSinglePage(FixedSizeTree freeSpaceTree, FixedSizeTree.IFixedSizeIterator it)
+        {
+            var current = new StreamBitArray(it.CreateReaderForCurrent().Base);
+            int idx = current.FirstSetBit();
+            Debug.Assert(idx is not -1, "idx is not -1 - because we *must* have _a_ value there");
+                
+            current.Set(idx, false);
+            long currentSectionId = it.CurrentKey;
+            
+            FlushBitmap(freeSpaceTree, current, currentSectionId);
+            return currentSectionId * NumberOfPagesInSection + idx;
+        }
+
+        private long? TryFindLargeValue(FixedSizeTree freeSpaceTree, int num, FixedSizeTree<long>.IFixedSizeIterator it)
         {
             int numberOfNeededFullSections = num / NumberOfPagesInSection;
             int numberOfExtraBitsNeeded = num % NumberOfPagesInSection;
@@ -76,82 +88,38 @@ namespace Voron.Impl.FreeSpace
             do
             {
                 var stream = it.CreateReaderForCurrent();
+                
+                var current = new StreamBitArray(stream.Base);
+                var currentSectionId = it.CurrentKey;
+
+                //need to find full free pages
+                if (current.SetCount < NumberOfPagesInSection)
                 {
-                    var current = new StreamBitArray(stream.Base);
-                    var currentSectionId = it.CurrentKey;
+                    info.Clear();
+                    continue;
+                }
 
-                    //need to find full free pages
-                    if (current.SetCount < NumberOfPagesInSection)
-                    {
-                        info.Clear();
-                        continue;
-                    }
+                //those sections are not following each other in the memory
+                if (info.StartSectionId != null && currentSectionId != info.StartSectionId + info.Sections.Count)
+                {
+                    info.Clear();
+                }
 
-                    //those sections are not following each other in the memory
-                    if (info.StartSectionId != null && currentSectionId != info.StartSectionId + info.Sections.Count)
-                    {
-                        info.Clear();
-                    }
+                //set the first section of the sequence
+                if (info.StartSection == -1)
+                {
+                    info.StartSection = it.CurrentKey;
+                    info.StartSectionId = currentSectionId;
+                }
 
-                    //set the first section of the sequence
-                    if (info.StartSection == -1)
-                    {
-                        info.StartSection = it.CurrentKey;
-                        info.StartSectionId = currentSectionId;
-                    }
+                info.Sections.Add(it.CurrentKey);
 
-                    info.Sections.Add(it.CurrentKey);
+                if (info.Sections.Count != numberOfNeededFullSections)
+                    continue;
 
-                    if (info.Sections.Count != numberOfNeededFullSections)
-                        continue;
-
-                    //we found enough full sections now we need just a bit more
-                    if (numberOfExtraBitsNeeded == 0)
-                    {
-                        foreach (var section in info.Sections)
-                        {
-                            freeSpaceTree.Delete(section);
-                        }
-
-                        return info.StartSectionId * NumberOfPagesInSection;
-                    }
-
-                    StreamBitArray next;
-                    var nextSectionId = currentSectionId + 1;
-                    Slice read;
-                    using (freeSpaceTree.Read(nextSectionId, out read))
-                    {
-                        if (!read.HasValue)
-                        {
-                            //not a following next section
-                            info.Clear();
-                            continue;
-                        }
-
-                        next = new StreamBitArray(read.CreateReader().Base);
-                    }
-
-                    if (next.HasStartRangeCount(numberOfExtraBitsNeeded) == false)
-                    {
-                        //not enough start range count
-                        info.Clear();
-                        continue;
-                    }
-
-                    //mark selected bits to false
-                    if (next.SetCount == numberOfExtraBitsNeeded)
-                    {
-                        freeSpaceTree.Delete(nextSectionId);
-                    }
-                    else
-                    {
-                        for (int i = 0; i < numberOfExtraBitsNeeded; i++)
-                        {
-                            next.Set(i, false);
-                        } 
-                        next.Write(freeSpaceTree,nextSectionId);
-                    }
-
+                //we found enough full sections now we need just a bit more
+                if (numberOfExtraBitsNeeded == 0)
+                {
                     foreach (var section in info.Sections)
                     {
                         freeSpaceTree.Delete(section);
@@ -159,20 +127,49 @@ namespace Voron.Impl.FreeSpace
 
                     return info.StartSectionId * NumberOfPagesInSection;
                 }
+
+                StreamBitArray next;
+                var nextSectionId = currentSectionId + 1;
+                using (freeSpaceTree.Read(nextSectionId, out Slice read))
+                {
+                    if (!read.HasValue)
+                    {
+                        //not a following next section
+                        info.Clear();
+                        continue;
+                    }
+
+                    next = new StreamBitArray(read.CreateReader().Base);
+                }
+
+                if (next.HasStartRangeCount(numberOfExtraBitsNeeded) == false)
+                {
+                    //not enough start range count
+                    info.Clear();
+                    continue;
+                }
+                
+                next.Set(0, numberOfExtraBitsNeeded, false);
+                FlushBitmap(freeSpaceTree, next, nextSectionId);
+                
+                foreach (var section in info.Sections)
+                {
+                    freeSpaceTree.Delete(section);
+                }
+
+                return info.StartSectionId * NumberOfPagesInSection;
             } while (it.MoveNext());
 
             return null;
         }
 
-        private sealed class FoundSectionsInfo
+        private struct FoundSectionsInfo()
         {
-
-            public List<long> Sections = new List<long>();
+            public List<long> Sections = new();
 
             public long StartSection = -1;
 
             public long? StartSectionId;
-
 
             public void Clear()
             {
@@ -183,33 +180,32 @@ namespace Voron.Impl.FreeSpace
         }
 
 
-        private long? TryFindSmallValue(LowLevelTransaction tx, FixedSizeTree freeSpaceTree, FixedSizeTree.IFixedSizeIterator it, int num)
+        private long? TryFindSmallValue(FixedSizeTree freeSpaceTree, int num, FixedSizeTree.IFixedSizeIterator it)
         {
             do
             {
                 var current = new StreamBitArray(it.CreateReaderForCurrent().Base);
 
                 if (current.SetCount >= num &&
-                    TryFindContinuousRange(freeSpaceTree, it, num, current, it.CurrentKey, out long? page))
+                    TryFindContinuousRange(freeSpaceTree, num, current, it.CurrentKey, out long? page))
                     return page;
 
                 //could not find a continuous so trying to merge
-                if (TryFindSmallValueMergingTwoSections(tx, freeSpaceTree, it.CurrentKey, num, current, out page))
+                if (TryFindSmallValueMergingTwoSections(freeSpaceTree, it.CurrentKey, num, current, out page))
                     return page;
-            }
-            while (it.MoveNext());
+            } while (it.MoveNext());
 
             return null;
         }
 
-        private bool TryFindContinuousRange(FixedSizeTree freeSpaceTree, FixedSizeTree.IFixedSizeIterator it, int num,
+        private bool TryFindContinuousRange(FixedSizeTree freeSpaceTree, int num,
             StreamBitArray current, long currentSectionId, out long? page)
         {
             page = -1;
             var start = -1;
             while(true)
             {
-                start = current.FirstSetBit(start + 1);
+                start = current.FirstSetBits(start + 1);
                 if (start == -1 || 
                     start + num > NumberOfPagesInSection)
                     return false;
@@ -228,24 +224,24 @@ namespace Voron.Impl.FreeSpace
                 break;
             }
 
-            if (current.SetCount == num)
-            {
-                freeSpaceTree.Delete(it.CurrentKey);
-            }
-            else
-            {
-                for (int i = 0; i < num; i++)
-                {
-                    current.Set(i + start, false);
-                }
-
-                current.Write(freeSpaceTree, it.CurrentKey);
-            }
-
+            current.Set(start, num, false);
+            FlushBitmap(freeSpaceTree, current, currentSectionId);
             return true;
         }
 
-        private static bool TryFindSmallValueMergingTwoSections(LowLevelTransaction tx, FixedSizeTree freeSpacetree, long currentSectionId, int num,
+        private static void FlushBitmap(FixedSizeTree freeSpaceTree, StreamBitArray current, long currentSectionId)
+        {
+            if (current.SetCount == 0)
+            {
+                freeSpaceTree.Delete(currentSectionId);
+            }
+            else
+            {
+                current.Write(freeSpaceTree, currentSectionId);
+            }
+        }
+
+        private static bool TryFindSmallValueMergingTwoSections(FixedSizeTree freeSpaceTree, long currentSectionId, int num,
             StreamBitArray current, out long? result)
         {
             result = -1;
@@ -256,7 +252,7 @@ namespace Voron.Impl.FreeSpace
             var nextSectionId = currentSectionId + 1;
 
             StreamBitArray next;
-            using (freeSpacetree.Read(nextSectionId, out Slice read))
+            using (freeSpaceTree.Read(nextSectionId, out Slice read))
             {
                 if (!read.HasValue)
                     return false;
@@ -268,35 +264,12 @@ namespace Voron.Impl.FreeSpace
             if (next.HasStartRangeCount(nextRange) == false)
                 return false;
 
-            if (next.SetCount == nextRange)
-            {
-                freeSpacetree.Delete(nextSectionId);
-            }
-            else
-            {
-                for (int i = 0; i < nextRange; i++)
-                {
-                    next.Set(i, false);
-                }
-
-                next.Write(freeSpacetree, nextSectionId);
-            }
-
-            if (current.SetCount == currentEndRange)
-            {
-                freeSpacetree.Delete(currentSectionId);
-            }
-            else
-            {
-                for (int i = 0; i < currentEndRange; i++)
-                {
-                    current.Set(NumberOfPagesInSection - 1 - i, false);
-                }
-
-                current.Write(freeSpacetree, currentSectionId);
-            }
-
-
+            current.Set(NumberOfPagesInSection - currentEndRange, currentEndRange, false);
+            next.Set(0, nextRange, false);
+            
+            FlushBitmap(freeSpaceTree, next, nextSectionId);
+            FlushBitmap(freeSpaceTree, current, currentSectionId);
+            
             result = currentSectionId * NumberOfPagesInSection + (NumberOfPagesInSection - currentEndRange);
             return true;
         }
