@@ -174,10 +174,18 @@ namespace Raven.Server.Documents.Handlers.Admin
             var fromIndex = GetLongQueryString("index");
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
-                var entry = Server.ServerStore.Engine.GetLogEntries(context, fromIndex, take: 1, detailed: true).Single();
-                context.Write(writer, entry.ToJson());
+                var entry = Server.ServerStore.Engine.GetLogEntries(context, fromIndex, take: 1, detailed: true).SingleOrDefault();
+                if (entry == default)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
+
+                await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+                {
+                    context.Write(writer, entry.ToJson());
+                }
             }
         }
 
