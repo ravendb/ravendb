@@ -45,7 +45,7 @@
     </PackageReference>
     <PackageReference Include="xunit" Version="2.9.2" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.4.0-beta.1.build10001" />
-    <PackageReference Include="Npgsql" Version="8.0.4" />
+    <PackageReference Include="Npgsql" Version="5.0.18" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\MyCustomAnalyzers.dll" />
