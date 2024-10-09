@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
@@ -8,6 +8,7 @@ using Raven.Client.Util;
 using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
@@ -31,7 +32,7 @@ namespace Raven.Server.NotificationCenter
 
         private readonly ConcurrentQueue<(string indexName, string fieldName)> _warningComplexFieldAutoIndexing = new();
 
-        private readonly HashSet<string> _cpuExhaustionWarningIndexNames = new();
+        private readonly ConcurrentSet<string> _cpuExhaustionWarningIndexNames = new();
         private bool _isCpuExhaustionWarningAdded = false;
 
         private Timer _indexingTimer;
@@ -103,7 +104,7 @@ namespace Raven.Server.NotificationCenter
 
         public void RemoveIndexNameFromCpuCreditsExhaustionWarning(string indexName)
         {
-            _cpuExhaustionWarningIndexNames.Remove(indexName);
+            _cpuExhaustionWarningIndexNames.TryRemove(indexName);
         }
 
         public void ProcessCpuCreditsExhaustion()
@@ -153,7 +154,7 @@ namespace Raven.Server.NotificationCenter
                 }
                 else
                 {
-                    var cpuCreditsExhaustionAlertMessage = new CpuCreditsExhaustionWarning(_cpuExhaustionWarningIndexNames);
+                    var cpuCreditsExhaustionAlertMessage = new CpuCreditsExhaustionWarning(_cpuExhaustionWarningIndexNames.ToHashSet());
                     _notificationCenter.Add(GetCpuCreditsExhaustionAlert(cpuCreditsExhaustionAlertMessage));
                     _isCpuExhaustionWarningAdded = true;
                 }

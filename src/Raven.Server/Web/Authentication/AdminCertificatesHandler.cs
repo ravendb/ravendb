@@ -1079,11 +1079,13 @@ namespace Raven.Server.Web.Authentication
                         {
                             Logger.Debug("Initiating the replacement of the certificate upon explicit request - '/admin/certificates/replace-cluster-cert'.");
                         }
-                        var replicationTask = Server.StartCertificateReplicationAsync(newCertificate, replaceImmediately, GetRaftRequestIdFromQuery());
+                        var replicationTask = Server.StartCertificateReplicationAsync(newCertificate, certificate.Password, replaceImmediately, GetRaftRequestIdFromQuery());
 
                         await Task.WhenAny(replicationTask, timeoutTask);
                         if (replicationTask.IsCompleted == false)
                             throw new TimeoutException("Timeout when trying to replace the server certificate.");
+
+                        await replicationTask;
                     }
                     catch (Exception e)
                     {

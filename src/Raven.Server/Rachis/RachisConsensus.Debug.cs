@@ -114,7 +114,7 @@ public abstract partial class RachisConsensus
         }
     }
 
-    public LogSummary GetLogDetails(ClusterOperationContext context, int start, int take, bool detailed)
+    public LogSummary GetLogDetails(ClusterOperationContext context, long? fromIndex, int take, bool detailed)
     {
         GetLastTruncated(context, out var index, out var term);
         var range = GetLogEntriesRange(context);
@@ -127,21 +127,21 @@ public abstract partial class RachisConsensus
             LastLogEntryIndex = range.Max,
             LastAppendedTime = LastAppended,
             LastCommitedTime = LastCommitted,
-            Logs = GetLogEntries(context, range.Min, start, take, detailed)
+            Logs = GetLogEntries(context, fromIndex ?? range.Min, take, detailed)
         };
     }
 
-    public IEnumerable<RachisDebugLogEntry> GetLogEntries(ClusterOperationContext context, long first, int start, int take, bool detailed)
+    public IEnumerable<RachisDebugLogEntry> GetLogEntries(ClusterOperationContext context, long fromIndex, int take, bool detailed)
     {
-        var reveredNextIndex = Bits.SwapBytes(first);
+        var reveredNextIndex = Bits.SwapBytes(fromIndex);
         Span<byte> span = stackalloc byte[sizeof(long)];
         if (BitConverter.TryWriteBytes(span, reveredNextIndex) == false)
-            throw new InvalidOperationException($"Couldn't convert {first} to span<byte>");
+            throw new InvalidOperationException($"Couldn't convert {fromIndex} to span<byte>");
 
         var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
         using (Slice.From(context.Allocator, span, out Slice key))
         {
-            foreach (var value in table.SeekByPrimaryKey(key, start))
+            foreach (var value in table.SeekByPrimaryKey(key, 0))
             {
                 if (take-- <= 0)
                     yield break;
@@ -231,9 +231,9 @@ public abstract class RaftDebugView : IDynamicJsonValueConvertible
         Since = engine.LastStateChangeTime;
     }
 
-    public void PopulateLogs(ClusterOperationContext context, int start, int take, bool detailed)
+    public void PopulateLogs(ClusterOperationContext context, long? fromIndex, int take, bool detailed)
     {
-        Log = _engine.GetLogDetails(context, start, take, detailed);
+        Log = _engine.GetLogDetails(context, fromIndex, take, detailed);
     }
 
     public class PeerConnection(string destination) : IDynamicJsonValueConvertible
