@@ -146,42 +146,21 @@ namespace Voron.Impl.FreeSpace
                 if (current == -1)
                     return i * BitsInWord;
 
-                int position = 0;
                 var currentCopy = current;
-                while (currentCopy != 0)
+                int numCopy = num - 1;
+
+                // find consecutive range: https://stackoverflow.com/a/37903049/6366
+                // perform AND operations with shifted versions of the number
+                // this will leave 1s only where there were n consecutive 1s
+                while (currentCopy != 0 && numCopy-- > 0)
                 {
-                    int firstSetBitPos = BitOperations.TrailingZeroCount((uint)currentCopy);
-                    position += firstSetBitPos;
+                    currentCopy &= (currentCopy << 1);
+                }
 
-                    currentCopy >>= firstSetBitPos;
-                    if (currentCopy == -1)
-                    {
-                        // all bits after the shift are ones
-                        if (BitsInWord - position >= num)
-                            return i * BitsInWord + position;
-
-                        break;
-                    }
-
-                    int onesCount = BitOperations.TrailingZeroCount((uint)~currentCopy);
-                    if (onesCount >= num)
-                        return i * BitsInWord + position;
-
-                    position += onesCount;
-
-                    if (BitsInWord - position < num)
-                    {
-                        // impossible to satisfy the continuous bit requirement
-                        break;
-                    }
-
-                    currentCopy >>= onesCount;
-                    if (currentCopy != 0)
-                    {
-                        int zerosCount = BitOperations.TrailingZeroCount((uint)currentCopy);
-                        position += zerosCount;
-                        currentCopy >>= zerosCount; // prepare for the next iteration
-                    }
+                if (currentCopy != 0)
+                {
+                    int position = BitOperations.TrailingZeroCount(currentCopy);
+                    return i * BitsInWord + position - (num - 1);
                 }
 
                 if (i == _inner.Length - 1)
