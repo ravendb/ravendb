@@ -233,6 +233,19 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
+        public IEnumerable<NotificationTableValue> GetByPrefix(TransactionOperationContext<RavenTransaction> context, string prefix)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
+
+            using (Slice.From(context.Transaction.InnerTransaction.Allocator, prefix, out Slice prefixSlice))
+            {
+                foreach (var notification in table.SeekByPrimaryKeyPrefix(prefixSlice, prefixSlice, skip: 0))
+                {
+                    yield return Read(context, ref notification.Value.Reader);
+                }
+            }
+        }
+
         public bool Delete(string id, RavenTransaction existingTransaction = null)
         {
             bool deleteResult;
