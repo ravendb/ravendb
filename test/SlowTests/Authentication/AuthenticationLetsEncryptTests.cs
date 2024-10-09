@@ -32,7 +32,9 @@ using Tests.Infrastructure;
 using xRetry;
 using Xunit;
 using Xunit.Abstractions;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.ServerWide.Context;
+using Raven.Client.Exceptions;
 
 namespace SlowTests.Authentication
 {
@@ -97,6 +99,40 @@ namespace SlowTests.Authentication
         {
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
             await CanGetLetsEncryptCertificateAndRenewAfterFailure(acmeUrl);
+        }
+
+        [RetryFact(delayBetweenRetriesMs: 1000)]
+        public async Task ReplaceCertificateWithPrivateKey()
+        {
+            var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
+            
+            SetupLocalServer();
+            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
+
+            var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
+            Server.Dispose();
+            UseNewLocalServer();
+
+            var mre = new AsyncManualResetEvent();
+            Server.ServerCertificateChanged += (sender, args) => mre.Set();
+
+            var ct = Certificates.GenerateAndSaveSelfSignedCertificate();
+            var first = Server.Certificate.Certificate.Thumbprint;
+
+            using (var store = GetDocumentStore(new Options { AdminCertificate = serverCert, ClientCertificate = serverCert }))
+            {
+                var bytesWithoutPrivateKey = ct.ServerCertificate.Value.RawData;
+                var op = new ReplaceClusterCertificateOperation(bytesWithoutPrivateKey, replaceImmediately: true);
+                var ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(op));
+                Assert.Contains("Unable to find the private key in the provided certificate", ex.ToString());
+
+                var bytesWithPrivateKey = ct.ServerCertificate.Value.Export(X509ContentType.Pkcs12);
+                var op2 = new ReplaceClusterCertificateOperation(bytesWithPrivateKey, replaceImmediately: true);
+                await store.Maintenance.Server.SendAsync(op2);
+            }
+
+            await mre.WaitAsync(TimeSpan.FromSeconds(15));
+            Assert.NotEqual(first, Server.Certificate.Certificate.Thumbprint);
         }
 
         private async Task CanGetLetsEncryptCertificateAndRenewAfterFailure(string acmeUrl)

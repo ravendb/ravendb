@@ -37,6 +37,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Session
 {
@@ -2441,6 +2442,15 @@ more responsive application.
 
                 public void UpdateEntityDocumentInfo(DocumentInfo documentInfo, BlittableJsonReaderObject document)
                 {
+                    var clusterId = _session.SessionInfo?.ClusterTransactionId;
+                    if (clusterId is not null)
+                    {
+                        var clusterTxIndex = ClientChangeVectorUtils.GetEtagById(documentInfo.ChangeVector, clusterId);
+                        if (clusterTxIndex > 0)
+                        {
+                            _session.SessionInfo.LastClusterTransactionIndex = Math.Max(_session.SessionInfo.LastClusterTransactionIndex ?? 0, clusterTxIndex);
+                        }
+                    }
                     _documentInfosToUpdate.Add((documentInfo, document));
                 }
 

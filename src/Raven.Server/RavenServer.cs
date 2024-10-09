@@ -1244,7 +1244,8 @@ namespace Raven.Server
                     Logger.Operations($"Got new certificate from {source}. Starting certificate replication.");
                 }
 
-                await StartCertificateReplicationAsync(newCert, false, raftRequestId);
+                // password here is null since we do not use a password with let's encrypt / RefreshViaExecutable
+                await StartCertificateReplicationAsync(newCert, password: null, false, raftRequestId);
             }
             catch (Exception e)
             {
@@ -1259,6 +1260,8 @@ namespace Raven.Server
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
+
+                throw;
             }
         }
 
@@ -1420,7 +1423,7 @@ namespace Raven.Server
             return (false, firstPossibleSaturday.Date);
         }
 
-        public async Task StartCertificateReplicationAsync(X509Certificate2 newCertificate, bool replaceImmediately, string raftRequestId)
+        public async Task StartCertificateReplicationAsync(X509Certificate2 newCertificate, string password, bool replaceImmediately, string raftRequestId)
         {
             // We assume that at this point, the password was already stripped out of the certificate.
 
@@ -1432,6 +1435,8 @@ namespace Raven.Server
 
             try
             {
+                SecretProtection.ValidateCertificateBeforeReplacement(newCertificate, password, ServerStore.GetLicenseType(), ServerStore.Configuration.Security.CertificateValidationKeyUsages);
+
                 if (Certificate.Certificate.Thumbprint == newCertificate.Thumbprint)
                 {
                     if (Logger.IsOperationsEnabled)
@@ -1497,6 +1502,8 @@ namespace Raven.Server
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
+
+                throw;
             }
         }
 
