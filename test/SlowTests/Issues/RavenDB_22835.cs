@@ -60,8 +60,6 @@ namespace SlowTests.Issues
             }
 
             // starting import 1
-            Console.WriteLine("starting import 1");
-
             var temp1 = GetTempFileName();
             var export = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), temp1);
             await export.WaitForCompletionAsync(TimeSpan.FromMinutes(10));
@@ -71,13 +69,9 @@ namespace SlowTests.Issues
             await import.WaitForCompletionAsync(TimeSpan.FromMinutes(10));
 
             // import 1 went well, now adding more counters to this doc
-            Console.WriteLine("import 1 went well, now adding more counters to this doc ");
-
             AddMoreCountersForDoc(store2, rand, id);
 
             // starting import 2
-            Console.WriteLine("starting import 2");
-
             var temp2 = GetTempFileName();
             export = await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), temp2);
             await export.WaitForCompletionAsync(TimeSpan.FromMinutes(10));
@@ -87,12 +81,9 @@ namespace SlowTests.Issues
             await import.WaitForCompletionAsync(TimeSpan.FromMinutes(10));
 
             // import 2 went well, now adding more counters to this doc
-            Console.WriteLine("import 2 went well, now adding more counters to this doc ");
-
             AddMoreCountersForDoc(store3, rand, id);
 
             // all good - no exception was thrown during imports or when adding new counters
-            Console.WriteLine("all good");
         }
 
         [Fact]
@@ -168,7 +159,7 @@ namespace SlowTests.Issues
 
             // calling FixCounters tool again should return 0 - no CounterGroup was fixed
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
+            using (context.OpenWriteTransaction())
             {
                 var numOfFixes = db.DocumentsStorage.CountersStorage.FixCountersForDocument(context, id);
                 Assert.Equal(0, numOfFixes);
@@ -370,7 +361,6 @@ namespace SlowTests.Issues
                     }
                 }
 
-                session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
                 session.SaveChanges();
             }
 
@@ -441,7 +431,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private unsafe void CorruptCountersData(DocumentDatabase database, string? id = null)
+        private unsafe void CorruptCountersData(DocumentDatabase database, string id = null)
         {
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())

@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using NetTopologySuite.Utilities;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
@@ -1163,54 +1162,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        public List<string> BadCountersList = new List<string>();
-
-        public bool CheckIfWeHaveBadCounters()
-        {
-            using (_documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var counterGroups = _documentsStorage.CountersStorage.GetCountersFrom(context, etag: 0);
-
-                foreach (var item in counterGroups)
-                {
-                    var counterGroup = item as CounterReplicationItem;
-                    counterGroup.Values.TryGet(Values, out BlittableJsonReaderObject counterValues);
-                    counterGroup.Values.TryGet(CounterNames, out BlittableJsonReaderObject counterNames);
-
-                    if (counterValues.Count != counterNames.Count)
-                        return true;
-
-                    //Assert.Equal(counterValues.Count, counterNames.Count);
-
-                    BlittableJsonReaderObject.PropertyDetails p1 = default, p2 = default;
-                    for (int i = 0; i < counterValues.Count; i++)
-                    {
-                        counterValues.GetPropertyByIndex(i, ref p1);
-                        counterNames.GetPropertyByIndex(i, ref p2);
-                        if (p1.Name != p2.Name)
-                            return true;
-                        //Assert.Equal(p1.Name, p2.Name);
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        public long FixCounters()
-        {
-            using (_documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                var result =  FixCountersForDocument(context, "drivers/519276");
-                tx.Commit();
-                return result;
-            }
-        }
-
-        public int NumOfCounterGroupsFixed = 0;
-
         public int FixCountersForDocument(DocumentsOperationContext context, string documentId)
         {
             List<string> allNames = null;
@@ -1277,8 +1228,6 @@ namespace Raven.Server.Documents
                             }
 
                             originalNames[lowerCasedCounterName] = counterNameToUse;
-                            //originalNames.Properties.Insert(i, (lowerCasedCounterName, counterNameToUse));
-
                         }
 
                         data.Modifications = new DynamicJsonValue(data)
@@ -1319,7 +1268,6 @@ namespace Raven.Server.Documents
                         }
 
                         numOfCounterGroupFixed++;
-                        NumOfCounterGroupsFixed++;
                     }
                 }
             }
@@ -1363,16 +1311,6 @@ namespace Raven.Server.Documents
                 // 4.2 source
                 counterName = incomingCountersProp.Name.ToLower();
             }
-
-            else
-            {
-                if (sourceCounterNames.TryGet(counterName, out string originalName) == false)
-                {
-                    // RavenDB-22835 fix corrupted state
-
-                }
-            }
-
 
             if (localCounters.TryGetMember(counterName, out object localVal))
             {
@@ -1661,7 +1599,6 @@ namespace Raven.Server.Documents
                 // RavenDB-22835
                 // incoming counter has blob.Length = 0, but we still need to merge it
                 // otherwise we'll have the counter name in '@names' without having the counter value in '@values'
-
                 modified = true;
             }
 
