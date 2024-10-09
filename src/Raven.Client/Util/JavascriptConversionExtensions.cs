@@ -13,7 +13,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Sparrow;
 using Sparrow.Extensions;
@@ -2569,7 +2568,7 @@ namespace Raven.Client.Util
                 if (expression is MethodCallExpression { Method.Name: nameof(RavenQuery.Id) } mce && mce.Method.DeclaringType == typeof(RavenQuery) )
                 {
                     if (mce.Arguments.Count != 1)
-                        throw new InvalidQueryException($"{nameof(RavenQuery.Id)} can only get one argument");
+                        throw new InvalidOperationException($"{nameof(RavenQuery.Id)} can only get one argument");
                     innerExpression = mce.Arguments[0];
                     return true;
                 }
