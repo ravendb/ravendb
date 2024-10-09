@@ -45,11 +45,11 @@ namespace Voron.Impl.FreeSpace
 {
     public sealed class StreamBitArray
     {
-        private const int CountOfItems = 64;
-        private const int BitsInItem = 32;
-        private const int TotalBits = CountOfItems * BitsInItem;
+        private const int CountOfWords = 64;
+        private const int BitsInWord = 32;
+        private const int TotalBits = CountOfWords * BitsInWord;
 
-        readonly int[] _inner = new int[CountOfItems];
+        readonly int[] _inner = new int[CountOfWords];
         public int SetCount { get; private set; }
 
         public StreamBitArray()
@@ -74,18 +74,6 @@ namespace Voron.Impl.FreeSpace
                 }
             }
         }
-
-        public int FirstSetBit()
-        {
-            for (int i = 0; i < _inner.Length; i++)
-            {
-                if (_inner[i] == 0)
-                    continue;
-                return i << 5 | HighestBitSet(_inner[i]);
-            }
-            return -1;
-        }
-        
 
         // Code taken from http://graphics.stanford.edu/~seander/bithacks.html#IntegerLogDeBruijn
         private static readonly int[] MultiplyDeBruijnBitPosition = 
@@ -119,172 +107,180 @@ namespace Voron.Impl.FreeSpace
 
         public int? GetContinuousRangeStart(int num)
         {
-            switch (num)
+            return num switch
             {
-                case 1:
-                    // finding a single set bit
-                    for (var i = 0; i < _inner.Length; i++)
-                    {
-                        switch (_inner[i])
-                        {
-                            case 0:
-                                continue;
-                            case -1:
-                                return i * BitsInItem;
-                            default:
-                                return i * BitsInItem + BitOperations.TrailingZeroCount(_inner[i]);
-                        }
-                    }
+                1 => FirstSetBit(),
+                < BitsInWord => FindSmallRange(num),
+                _ => FindLargeRange(num)
+            };
+        }
 
-                    return null;
-
-                case < BitsInItem:
-                    // finding sequences up to 32 bits
-
-                    for (var i = 0; i < _inner.Length; i++)
-                    {
-                        int current = _inner[i];
-                        if (current == 0)
-                            continue;
-
-                        if (current == -1)
-                            return i * BitsInItem;
-
-                        int currentCopy = current;
-                        int position = 0;
-
-                        while (currentCopy != 0)
-                        {
-                            int firstSetBitPos = BitOperations.TrailingZeroCount((uint)currentCopy);
-                            position += firstSetBitPos;
-
-                            currentCopy >>= firstSetBitPos;
-                            if (currentCopy == -1)
-                            {
-                                // all bits after the shift are ones
-                                if (BitsInItem - position >= num)
-                                    return i * BitsInItem + position;
-
-                                break;
-                            }
-
-                            int onesCount = BitOperations.TrailingZeroCount((uint)~currentCopy);
-                            if (onesCount >= num)
-                                return i * BitsInItem + position;
-
-                            position += onesCount;
-
-                            if (BitsInItem - position < num)
-                            {
-                                // impossible to satisfy the continuous bit requirement
-                                break;
-                            }
-
-                            currentCopy >>= onesCount;
-                            if (currentCopy != 0)
-                            {
-                                int zerosCount = BitOperations.TrailingZeroCount((uint)currentCopy);
-                                position += zerosCount;
-                                currentCopy >>= zerosCount; // prepare for the next iteration
-                            }
-                        }
-
-                        if (i == _inner.Length - 1)
-                        {
-                            // this is the last block, no next block to check with
-                            break;
-                        }
-
-                        // we didn't find the sequence in the block, let's check it between blocks
-                        int numberOfSetBitsCurrent = BitOperations.LeadingZeroCount((uint)~current);
-                        var nextBlock = _inner[i + 1];
-                        var numberOfSetBitsNext = BitOperations.TrailingZeroCount(~nextBlock);
-
-                        if (numberOfSetBitsCurrent + numberOfSetBitsNext >= num)
-                            return (i * BitsInItem) + (BitsInItem - numberOfSetBitsCurrent);
-                    }
-
-                    return null;
-
-                default:
-                    // finding sequences larger than 32 bits
-                    // the idea is that we look for sequences that bridge across blocks using leading/trailing zero counts
-                    var start = -1;
-                    var count = 0;
-
-                    for (var i = 0; i < _inner.Length; i++)
-                    {
-                        int current = _inner[i];
-                        if (current == 0)
-                        {
-                            start = -1;
-                            count = 0;
-                            continue;
-                        }
-
-                        if (current == -1)
-                        {
-                            if (start == -1)
-                            {
-                                start = i * BitsInItem;
-                            }
-
-                            count += BitsInItem;
-                            if (count >= num)
-                                return start;
-
-                            continue;
-                        }
-
-                        if (start == -1)
-                        {
-                            // find trailing ones at the end of the block if no sequence has started
-                            CheckTrailingSequence();
-                        }
-                        else
-                        {
-                            if (count + (TotalBits - i * BitsInItem) < num)
-                            {
-                                // impossible to satisfy the continuous bit requirement
-                                return null;
-                            }
-
-                            if (count + 31 < num)
-                            {
-                                // impossible to satisfy the continuous bit requirement in this block
-                                CheckTrailingSequence();
-                                continue;
-                            }
-
-                            // we look at the beginning of the block
-                            int numberOfSetBits = BitOperations.TrailingZeroCount(~current);
-                            count += numberOfSetBits;
-                            if (count >= num)
-                                return start;
-
-                            // reset for the next sequence
-                            CheckTrailingSequence();
-                        }
-
-                        void CheckTrailingSequence()
-                        {
-                            int numberOfSetBits = BitOperations.LeadingZeroCount((uint)~current);
-                            if (numberOfSetBits == 0)
-                            {
-                                start = -1;
-                                count = 0;
-                            }
-                            else
-                            {
-                                // Calculate the starting bit position in the array
-                                start = (i * BitsInItem) + (BitsInItem - numberOfSetBits);
-                                count = numberOfSetBits;
-                            }
-                        }
-                    }
-
-                    return null;
+        private int? FirstSetBit()
+        {
+            // finding a single set bit
+            for (var i = 0; i < _inner.Length; i++)
+            {
+                switch (_inner[i])
+                {
+                    case 0:
+                        continue;
+                    case -1:
+                        return i * BitsInWord;
+                    default:
+                        return i * BitsInWord + BitOperations.TrailingZeroCount(_inner[i]);
+                }
             }
+
+            return null;
+        }
+
+        private int? FindSmallRange(int num)
+        {
+            // finding sequences up to 32 bits
+            for (var i = 0; i < _inner.Length; i++)
+            {
+                int current = _inner[i];
+                if (current == 0)
+                    continue;
+
+                if (current == -1)
+                    return i * BitsInWord;
+
+                int position = 0;
+                var currentCopy = current;
+                while (currentCopy != 0)
+                {
+                    int firstSetBitPos = BitOperations.TrailingZeroCount((uint)currentCopy);
+                    position += firstSetBitPos;
+
+                    currentCopy >>= firstSetBitPos;
+                    if (currentCopy == -1)
+                    {
+                        // all bits after the shift are ones
+                        if (BitsInWord - position >= num)
+                            return i * BitsInWord + position;
+
+                        break;
+                    }
+
+                    int onesCount = BitOperations.TrailingZeroCount((uint)~currentCopy);
+                    if (onesCount >= num)
+                        return i * BitsInWord + position;
+
+                    position += onesCount;
+
+                    if (BitsInWord - position < num)
+                    {
+                        // impossible to satisfy the continuous bit requirement
+                        break;
+                    }
+
+                    currentCopy >>= onesCount;
+                    if (currentCopy != 0)
+                    {
+                        int zerosCount = BitOperations.TrailingZeroCount((uint)currentCopy);
+                        position += zerosCount;
+                        currentCopy >>= zerosCount; // prepare for the next iteration
+                    }
+                }
+
+                if (i == _inner.Length - 1)
+                {
+                    // this is the last word, no next word to check with
+                    break;
+                }
+
+                // we didn't find the sequence in the word, let's check it between words
+                int numberOfSetBitsCurrent = BitOperations.LeadingZeroCount((uint)~current);
+                var nextWord = _inner[i + 1];
+                var numberOfSetBitsNext = BitOperations.TrailingZeroCount(~nextWord);
+
+                if (numberOfSetBitsCurrent + numberOfSetBitsNext >= num)
+                    return (i * BitsInWord) + (BitsInWord - numberOfSetBitsCurrent);
+            }
+
+            return null;
+        }
+
+        private int? FindLargeRange(int num)
+        {
+            // finding sequences larger than 32 bits
+            // the idea is that we look for sequences that bridge across words using leading/trailing zero counts
+            var start = -1;
+            var count = 0;
+
+            for (var i = 0; i < _inner.Length; i++)
+            {
+                int current = _inner[i];
+                if (current == 0)
+                {
+                    start = -1;
+                    count = 0;
+                    continue;
+                }
+
+                if (current == -1)
+                {
+                    if (start == -1)
+                    {
+                        start = i * BitsInWord;
+                    }
+
+                    count += BitsInWord;
+                    if (count >= num)
+                        return start;
+
+                    continue;
+                }
+
+                if (start == -1)
+                {
+                    // find trailing ones at the end of the word if no sequence has started
+                    CheckTrailingSequence();
+                }
+                else
+                {
+                    if (count + (TotalBits - i * BitsInWord) < num)
+                    {
+                        // impossible to satisfy the continuous bit requirement
+                        return null;
+                    }
+
+                    if (count + 31 < num)
+                    {
+                        // impossible to satisfy the continuous bit requirement in this word
+                        CheckTrailingSequence();
+                        continue;
+                    }
+
+                    // we look at the beginning of the word
+                    int numberOfSetBits = BitOperations.TrailingZeroCount(~current);
+                    count += numberOfSetBits;
+                    if (count >= num)
+                        return start;
+
+                    // reset for the next sequence
+                    CheckTrailingSequence();
+                }
+
+                void CheckTrailingSequence()
+                {
+                    int numberOfSetBits = BitOperations.LeadingZeroCount((uint)~current);
+                    if (numberOfSetBits == 0)
+                    {
+                        start = -1;
+                        count = 0;
+                    }
+                    else
+                    {
+                        // Calculate the starting bit position in the array
+                        start = (i * BitsInWord) + (BitsInWord - numberOfSetBits);
+                        count = numberOfSetBits;
+                    }
+                }
+            }
+
+            return null;
         }
 
         public void Set(int index, bool value)
