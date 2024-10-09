@@ -437,10 +437,14 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 // direct SortResult, but first we need to remove all the items that we already matched
                 int notMatchedYet = FilterAlreadyFoundMatches(allMatches);
 
-                // if we scanned through the index more than twice the amount of records of the query, but still
-                // didn't find enough to fill the page size, we'll fall back to normal sorting, instead of using the
-                // index method. That would prevent degenerate cases.
-                SortResults<TEntryComparer>(ref match, allMatches[..notMatchedYet]);
+                if (notMatchedYet > 0)
+                {
+                    // if we scanned through the index more than twice the amount of records of the query, but still
+                    // didn't find enough to fill the page size, we'll fall back to normal sorting, instead of using the
+                    // index method. That would prevent degenerate cases.
+                    SortResults<TEntryComparer>(ref match, allMatches[..notMatchedYet]);
+                }
+
                 return;
             }
 

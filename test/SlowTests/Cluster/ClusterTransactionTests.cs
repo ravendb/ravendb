@@ -2240,5 +2240,32 @@ select incl(c)"
             
         }
         
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ClusterWideTrx_WhenLoadingDeletedDoc_ShouldNotIncludingMissingAtomicGard(Options options)
+        {
+            using (var store = GetDocumentStore())
+            {
+                string id;
+
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var user = new User() { Name = "Test" };
+
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+
+                    session.Delete(user);
+                    await session.SaveChangesAsync();
+
+                    id = user.Id;
+                }
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    _ = await session.LoadAsync<User>(id);
+                    Assert.Equal(0, ((ClusterTransactionOperationsBase)session.Advanced.ClusterTransaction).NumberOfTrackedCompareExchangeValues);
+                }
+            }
+        }
     }
 }
