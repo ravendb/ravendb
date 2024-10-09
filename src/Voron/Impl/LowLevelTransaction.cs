@@ -806,6 +806,8 @@ namespace Voron.Impl
                 
                 PagerTransactionState.InvokeDispose(_env, ref DataPagerState, ref PagerTransactionState);
                 OnDispose?.Invoke(this);
+
+                _envRecord = null;
             }
         }
 
