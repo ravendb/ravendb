@@ -13,6 +13,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Sparrow;
 using Sparrow.Extensions;
@@ -2557,7 +2558,6 @@ namespace Raven.Client.Util
                     {
                         context.Visitor.Visit(innerExpression);
                     }
-
                     writer.Write(")");
                 }
             }
@@ -2566,10 +2566,17 @@ namespace Raven.Client.Util
             {
                 innerExpression = null;
 
+                if (expression is MethodCallExpression { Method.Name: nameof(RavenQuery.Id) } mce && mce.Method.DeclaringType == typeof(RavenQuery) )
+                {
+                    if (mce.Arguments.Count != 1)
+                        throw new InvalidQueryException($"{nameof(RavenQuery.Id)} can only get one argument");
+                    innerExpression = mce.Arguments[0];
+                    return true;
+                }
+
                 if (expression is not MemberExpression member ||
                     conventions.GetIdentityProperty(member.Member.DeclaringType) != member.Member)
                     return false;
-
 
                 var hasTypeInLoadType = false;
                 if (expression is MemberExpression propertyExpression)
