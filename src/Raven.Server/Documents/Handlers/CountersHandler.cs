@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -19,7 +18,6 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
-using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
@@ -776,7 +774,6 @@ namespace Raven.Server.Documents.Handlers
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var numOfCounterGroupFixed = _database.DocumentsStorage.CountersStorage.FixCountersForDocument(context, _docId);
-
                 return numOfCounterGroupFixed;
             }
 
@@ -789,14 +786,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/counters/fix", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task FixCounterGroups()
         {
-            //var docId = GetStringQueryString("id");
             var first = GetBoolValueQueryString("first", required: false) ?? true;
-
             var task = FixAllCounterGroups();
-            //Database.TxMerger.Enqueue(new ExecuteFixCounterGroupsCommand(Database, docId));
-
-            // todo remove
-            await task;
 
             if (first == false)
             {
@@ -807,41 +798,34 @@ namespace Raven.Server.Documents.Handlers
 
             var tasks = new List<Task> { task };
             var toDispose = new List<IDisposable>();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
+            try
             {
-                foreach (var node in ServerStore.GetClusterTopology(context).AllNodes)
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
                 {
-                    if (node.Value == Server.WebUrl)
-                        continue;
-                    
-                    var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(node.Value, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
-                    toDispose.Add(requestExecutor);
+                    foreach (var node in ServerStore.GetClusterTopology(context).AllNodes)
+                    {
+                        if (node.Value == Server.WebUrl)
+                            continue;
 
-                    var cmd = new FixCounterGroupsCommand(Database.Name);
+                        var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(node.Value, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
+                        toDispose.Add(requestExecutor);
 
+                        var cmd = new FixCounterGroupsCommand(Database.Name);
+                        tasks.Add(requestExecutor.ExecuteAsync(cmd, context));
+                    }
+                }
 
-                    // todo remove
-                    Task t = Task.Run(async () => await requestExecutor.ExecuteAsync(cmd, context));
-                    tasks.Add(t);
-                    await t;
-                    ///
-                    
-                    //tasks.Add(requestExecutor.ExecuteAsync(cmd, context));
+                await Task.WhenAll(tasks);
+                await NoContent();
+            }
+            finally
+            {
+                foreach (var disposable in toDispose)
+                {
+                    disposable.Dispose();
                 }
             }
-
-
-            await Task.WhenAll(tasks);
-            foreach (var disposable in toDispose)
-            {
-                disposable.Dispose();
-            }
-
-            Console.WriteLine("num of counters fixed: " + Database.DocumentsStorage.CountersStorage.NumOfCounterGroupsFixed);
-
-            await NoContent();
         }
 
         private async Task FixAllCounterGroups()
@@ -869,12 +853,10 @@ namespace Raven.Server.Documents.Handlers
         private class FixCounterGroupsCommand : RavenCommand
         {
             private readonly string _database;
-            //private readonly string _docId;
 
             public FixCounterGroupsCommand(string database)
             {
                 _database = database;
-                //_docId = docId;
             }
 
             public override bool IsReadRequest => false;
