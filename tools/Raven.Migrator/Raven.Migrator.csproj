@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.8</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.10</RuntimeFrameworkVersion>
     <RuntimeIdentifiers>win-x64;win-x86;linux-x64;osx-x64</RuntimeIdentifiers>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
@@ -13,7 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Core" Version="3.7.400.29" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.400.31" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
     <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" />
     <PackageReference Include="MongoDB.Driver" Version="2.29.0" />

@@ -7,7 +7,7 @@ on:
     - cron: '30 6 * * *'
 
 env:
-  DOTNET_VERSION: 8.0.400
+  DOTNET_VERSION: 8.0.403
   DOTNET_INSTALL_DIR: "./.dotnet"
 
 jobs:
