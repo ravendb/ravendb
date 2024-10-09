@@ -7,21 +7,28 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Counters;
+using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
+using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
+using Voron.Data.Tables;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -754,6 +761,135 @@ namespace Raven.Server.Documents.Handlers
         {
             throw new DocumentDoesNotExistException(docId, "Cannot operate on counters of a missing document.");
         }
+
+        public class ExecuteFixCounterGroupsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly string _docId;
+            private readonly DocumentDatabase _database;
+
+            public ExecuteFixCounterGroupsCommand(DocumentDatabase database, string docId)
+            {
+                _docId = docId;
+                _database = database;
+            }
+
+            protected override long ExecuteCmd(DocumentsOperationContext context)
+            {
+                var numOfCounterGroupFixed = _database.DocumentsStorage.CountersStorage.FixCountersForDocument(context, _docId);
+
+                return numOfCounterGroupFixed;
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        [RavenAction("/databases/*/counters/fix", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        public async Task FixCounterGroups()
+        {
+            //var docId = GetStringQueryString("id");
+            var first = GetBoolValueQueryString("first", required: false) ?? true;
+
+            var task = FixAllCounterGroups();
+            //Database.TxMerger.Enqueue(new ExecuteFixCounterGroupsCommand(Database, docId));
+
+            // todo remove
+            await task;
+
+            if (first == false)
+            {
+                await task;
+                await NoContent();
+                return;
+            }
+
+            var tasks = new List<Task> { task };
+            var toDispose = new List<IDisposable>();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (var node in ServerStore.GetClusterTopology(context).AllNodes)
+                {
+                    if (node.Value == Server.WebUrl)
+                        continue;
+                    
+                    var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(node.Value, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
+                    toDispose.Add(requestExecutor);
+
+                    var cmd = new FixCounterGroupsCommand(Database.Name);
+
+
+                    // todo remove
+                    Task t = Task.Run(async () => await requestExecutor.ExecuteAsync(cmd, context));
+                    tasks.Add(t);
+                    await t;
+                    ///
+                    
+                    //tasks.Add(requestExecutor.ExecuteAsync(cmd, context));
+                }
+            }
+
+
+            await Task.WhenAll(tasks);
+            foreach (var disposable in toDispose)
+            {
+                disposable.Dispose();
+            }
+
+            Console.WriteLine("num of counters fixed: " + Database.DocumentsStorage.CountersStorage.NumOfCounterGroupsFixed);
+
+            await NoContent();
+        }
+
+        private async Task FixAllCounterGroups()
+        {
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var table = new Table(CountersStorage.CountersSchema, context.Transaction.InnerTransaction);
+                string currentId = null;
+
+                foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, skip: 0))
+                {
+                    using (var docId = CountersStorage.ExtractDocId(context, ref tvh.Reader))
+                    {
+                        if (docId == currentId)
+                            continue;
+
+                        currentId = docId;
+                        await Database.TxMerger.Enqueue(new ExecuteFixCounterGroupsCommand(Database, docId));
+                    }
+                }
+            }
+        }
+
+        private class FixCounterGroupsCommand : RavenCommand
+        {
+            private readonly string _database;
+            //private readonly string _docId;
+
+            public FixCounterGroupsCommand(string database)
+            {
+                _database = database;
+                //_docId = docId;
+            }
+
+            public override bool IsReadRequest => false;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{_database}/counters/fix?first=false";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Patch
+                };
+            }
+        }
+
     }
 
     public class ExecuteCounterBatchCommandDto : TransactionOperationsMerger.IReplayableCommandDto<CountersHandler.ExecuteCounterBatchCommand>

@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using NetTopologySuite.Utilities;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
@@ -22,6 +24,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
+using Memory = Sparrow.Memory;
 
 namespace Raven.Server.Documents
 {
@@ -845,9 +848,20 @@ namespace Raven.Server.Documents
 
                 for (int i = start; i < end; i++)
                 {
-                    originalNames.GetPropertyByIndex(i, ref prop);
+                    // RavenDB-22835
+                    // we might be operating on corrupted data where names.Count < values.Count
+                    // if so, use lower-cased name instead
+                    if (i >= originalNames.Count)
+                    {
+                        values.GetPropertyByIndex(i, ref prop);
+                        builder.WritePropertyName(prop.Name);
+                        builder.WriteValue(prop.Name);
+                        continue;
+                    }
 
+                    originalNames.GetPropertyByIndex(i, ref prop);
                     builder.WritePropertyName(prop.Name);
+
                     if (prop.Value is LazyStringValue lsv)
                         builder.WriteValue(lsv);
                     else if (prop.Value is LazyCompressedStringValue compressed)
@@ -1149,6 +1163,175 @@ namespace Raven.Server.Documents
             }
         }
 
+        public List<string> BadCountersList = new List<string>();
+
+        public bool CheckIfWeHaveBadCounters()
+        {
+            using (_documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var counterGroups = _documentsStorage.CountersStorage.GetCountersFrom(context, etag: 0);
+
+                foreach (var item in counterGroups)
+                {
+                    var counterGroup = item as CounterReplicationItem;
+                    counterGroup.Values.TryGet(Values, out BlittableJsonReaderObject counterValues);
+                    counterGroup.Values.TryGet(CounterNames, out BlittableJsonReaderObject counterNames);
+
+                    if (counterValues.Count != counterNames.Count)
+                        return true;
+
+                    //Assert.Equal(counterValues.Count, counterNames.Count);
+
+                    BlittableJsonReaderObject.PropertyDetails p1 = default, p2 = default;
+                    for (int i = 0; i < counterValues.Count; i++)
+                    {
+                        counterValues.GetPropertyByIndex(i, ref p1);
+                        counterNames.GetPropertyByIndex(i, ref p2);
+                        if (p1.Name != p2.Name)
+                            return true;
+                        //Assert.Equal(p1.Name, p2.Name);
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        public long FixCounters()
+        {
+            using (_documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var result =  FixCountersForDocument(context, "drivers/519276");
+                tx.Commit();
+                return result;
+            }
+        }
+
+        public int NumOfCounterGroupsFixed = 0;
+
+        public int FixCountersForDocument(DocumentsOperationContext context, string documentId)
+        {
+            List<string> allNames = null;
+            LazyStringValue collection = default;
+
+            Table writeTable = default;
+            int numOfCounterGroupFixed = 0;
+            CollectionName collectionName = default;
+            try
+            {
+                var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
+                using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice key, separator: SpecialChars.RecordSeparator))
+                {
+                    foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
+                    {
+                        var tvr = result.Value.Reader;
+                        BlittableJsonReaderObject data;
+
+                        using (data = GetCounterValuesData(context, ref tvr))
+                        {
+                            data = data.Clone(context);
+                        }
+
+                        data.TryGet(Values, out BlittableJsonReaderObject counterValues);
+                        data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames);
+                        if (counterValues == null || counterNames == null)
+                            throw new InvalidDataException("Invalid CounterGroup data - missing counter values or counter names");
+
+                        if (counterValues.Count == counterNames.Count)
+                        {
+                            var counterValuesPropertyNames = counterValues.GetSortedPropertyNames();
+                            var counterNamesPropertyNames = counterNames.GetSortedPropertyNames();
+                            if (counterValuesPropertyNames.SequenceEqual(counterNamesPropertyNames))
+                                continue;
+                        }
+
+                        if (collection == null)
+                        {
+                            collection = TableValueToId(context, (int)CountersTable.Collection, ref tvr);
+                            collectionName = _documentsStorage.ExtractCollectionName(context, collection); //todo
+
+                            writeTable = GetOrCreateTable(context.Transaction.InnerTransaction, CountersSchema, collectionName, CollectionTableType.CounterGroups);
+                        }
+
+                        BlittableJsonReaderObject.PropertyDetails prop = default;
+                        var originalNames = new DynamicJsonValue();
+
+                        for (int i = 0; i < counterValues.Count; i++)
+                        {
+                            counterValues.GetPropertyByIndex(i, ref prop);
+
+                            var lowerCasedCounterName = prop.Name;
+                            if (counterNames.TryGet(lowerCasedCounterName, out string counterNameToUse) == false)
+                            {
+                                // CounterGroup document is corrupted - missing counter name
+                                allNames ??= GetCountersForDocument(context, documentId).ToList();
+                                var location = allNames.BinarySearch(lowerCasedCounterName, StringComparer.OrdinalIgnoreCase);
+
+                                // if we don't have the counter name in its original casing - we'll use the lowered-case name instead
+                                counterNameToUse = location < 0
+                                    ? lowerCasedCounterName
+                                    : allNames[location];
+                            }
+
+                            originalNames[lowerCasedCounterName] = counterNameToUse;
+                            //originalNames.Properties.Insert(i, (lowerCasedCounterName, counterNameToUse));
+
+                        }
+
+                        data.Modifications = new DynamicJsonValue(data)
+                        {
+                            [CounterNames] = originalNames
+                        };
+
+                        using (var old = data)
+                        {
+                            data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        }
+
+                        // we're using the same change vector and etag here, in order to avoid replicating
+                        // the counter group to other nodes (each node should fix its counters locally)
+                        using var changeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref tvr);
+                        var groupEtag = TableValueToEtag((int)CountersTable.Etag, ref tvr);
+
+                        using (var counterGroupKey = TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
+                        using (context.Allocator.Allocate(counterGroupKey.Size, out var buffer))
+                        {
+                            counterGroupKey.CopyTo(buffer.Ptr);
+
+                            using (var clonedKey = context.AllocateStringValue(null, buffer.Ptr, buffer.Length))
+                            using (Slice.External(context.Allocator, clonedKey, out var countersGroupKey))
+                            using (Slice.From(context.Allocator, changeVector, out var cv))
+                            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                            using (writeTable.Allocate(out TableValueBuilder tvb))
+                            {
+                                tvb.Add(countersGroupKey);
+                                tvb.Add(Bits.SwapBytes(groupEtag));
+                                tvb.Add(cv);
+                                tvb.Add(data.BasePointer, data.Size);
+                                tvb.Add(collectionSlice);
+                                tvb.Add(context.GetTransactionMarker());
+
+                                writeTable.Set(tvb);
+                            }
+                        }
+
+                        numOfCounterGroupFixed++;
+                        NumOfCounterGroupsFixed++;
+                    }
+                }
+            }
+            finally
+            {
+                collection?.Dispose();
+            }
+
+            return numOfCounterGroupFixed;
+
+        }
+
         private void UpdateMetricsForNewCounterGroup(BlittableJsonReaderObject data)
         {
             _documentDatabase.Metrics.Counters.BytesPutsPerSec.MarkSingleThreaded(data.Size);
@@ -1180,6 +1363,16 @@ namespace Raven.Server.Documents
                 // 4.2 source
                 counterName = incomingCountersProp.Name.ToLower();
             }
+
+            else
+            {
+                if (sourceCounterNames.TryGet(counterName, out string originalName) == false)
+                {
+                    // RavenDB-22835 fix corrupted state
+
+                }
+            }
+
 
             if (localCounters.TryGetMember(counterName, out object localVal))
             {
