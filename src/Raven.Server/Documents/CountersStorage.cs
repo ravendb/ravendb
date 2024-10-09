@@ -1463,6 +1463,15 @@ namespace Raven.Server.Documents
                 existingCount = existingCounter.Length / SizeOfCounterValues;
             }
 
+            if (existingCount == 0 && sourceCount == 0)
+            {
+                // RavenDB-22835
+                // incoming counter has blob.Length = 0, but we still need to merge it
+                // otherwise we'll have the counter name in '@names' without having the counter value in '@values'
+
+                modified = true;
+            }
+
             if (modified)
             {
                 if (changeType == CounterChangeTypes.None)
