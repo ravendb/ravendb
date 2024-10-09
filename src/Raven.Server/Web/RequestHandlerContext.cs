@@ -17,5 +17,7 @@ namespace Raven.Server.Web
 
         public string DatabaseName => Database?.Name ?? DatabaseContext?.DatabaseName;
         public MetricCounters DatabaseMetrics => Database?.Metrics ?? DatabaseContext?.Metrics;
+
+        public string ClusterTransactionId => Database?.ClusterTransactionId;
     }
 }

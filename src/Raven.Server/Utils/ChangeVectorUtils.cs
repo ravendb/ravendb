@@ -329,23 +329,7 @@ namespace Raven.Server.Utils
                 .ToString();
         }
 
-        public static long GetEtagById(string changeVector, string id)
-        {
-            if (changeVector == null)
-                return 0;
-
-            if (id == null)
-                throw new ArgumentNullException(nameof(id));
-
-            var index = changeVector.IndexOf("-" + id, StringComparison.Ordinal);
-            if (index == -1)
-                return 0;
-
-            var end = index - 1;
-            var start = changeVector.LastIndexOf(":", end, StringComparison.Ordinal) + 1;
-
-            return long.Parse(changeVector.Substring(start, end - start + 1));
-        }
+        public static long GetEtagById(string changeVector, string id) => ClientChangeVectorUtils.GetEtagById(changeVector, id);
 
         public static string GetNodeTagById(string changeVector, string id)
         {

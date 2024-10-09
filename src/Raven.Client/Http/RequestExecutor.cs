@@ -1051,6 +1051,11 @@ namespace Raven.Client.Http
 
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
+                    
+                    if (sessionInfo != null && response.Headers.TryGetValues(Constants.Headers.DatabaseClusterTransactionId, out var clusterTransactionId))
+                    {
+                        sessionInfo.ClusterTransactionId = clusterTransactionId.First();
+                    }
 
                     OnSucceedRequest?.Invoke(this, new SucceedRequestEventArgs(_databaseName, url, response, request, attemptNum));
                     responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
