@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Operations
     public enum PatchStatus
     {
         /// <summary>
-        /// The document does not exists, operation was a no-op
+        /// The document does not exist, operation was a no-op
         /// </summary>
         DocumentDoesNotExist,
         /// <summary>

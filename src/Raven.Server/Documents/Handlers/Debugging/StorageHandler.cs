@@ -324,5 +324,32 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (var processor = new StorageHandlerProcessorForGetScratchBufferReport(this))
                 await processor.ExecuteAsync();
         }
+        
+        [RavenAction("/databases/*/debug/storage/environment/free-space-snapshot", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetFreeSpaceInfo()
+        {
+            var name = GetStringQueryString("name", false) ?? Database.Name;
+            var typeAsString = GetStringQueryString("type", false) ?? nameof(StorageEnvironmentWithType.StorageEnvironmentType.Documents);
+            if (Enum.TryParse(typeAsString, out StorageEnvironmentWithType.StorageEnvironmentType type) == false)
+                throw new InvalidOperationException("Query string value 'type' is not a valid environment type: " + typeAsString);
+
+            var storage = Database.GetAllStoragesEnvironment().FirstOrDefault(x => x.Name == name && x.Type == type);
+            if (storage == null)
+                throw new InvalidOperationException($"The storage with name '{name}' and type '{type}' was not found.");
+                    
+            var hex = this.GetBoolValueQueryString("hex", false) ?? true;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var freeSpaceHandling = storage.Environment.FreeSpaceHandling;
+                await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+                {
+                    context.Write(write, new DynamicJsonValue()
+                    {
+                        ["FreePages"] = freeSpaceHandling.FreeSpaceSnapshot(context.Transaction.InnerTransaction.LowLevelTransaction, hex)
+                    });
+                }
+            }
+        }
     }
 }

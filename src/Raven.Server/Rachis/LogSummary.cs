@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using static Raven.Server.Rachis.RachisConsensus;
 
 namespace Raven.Server.Rachis
 {
@@ -14,7 +15,8 @@ namespace Raven.Server.Rachis
         public long LastTruncatedTerm { get; set; }
         public long FirstEntryIndex { get; set; }
         public long LastLogEntryIndex { get; set; }
-        public IEnumerable<RachisConsensus.RachisDebugLogEntry> Logs { get; set; }
+        public UnrecoverableClusterError CriticalError { get; set; }
+        public IEnumerable<RachisDebugLogEntry> Logs { get; set; }
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -26,6 +28,7 @@ namespace Raven.Server.Rachis
                 [nameof(LastTruncatedTerm)] = LastTruncatedTerm,
                 [nameof(FirstEntryIndex)] = FirstEntryIndex,
                 [nameof(LastLogEntryIndex)] = LastLogEntryIndex,
+                [nameof(CriticalError)] = CriticalError,
                 [nameof(Logs)] = new DynamicJsonArray(Logs)
             };
         }

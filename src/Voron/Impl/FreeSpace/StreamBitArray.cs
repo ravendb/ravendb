@@ -1,11 +1,7 @@
-using Sparrow;
-using System;
 using System.Diagnostics;
-using System.IO;
 using System.Numerics;
 using System.Runtime.Intrinsics;
-using Sparrow.Server;
-using Sparrow.Server.Utils.VxSort;
+using Sparrow.Json.Parsing;
 using Voron.Data.Fixed;
 
 namespace Voron.Impl.FreeSpace;
@@ -93,15 +89,15 @@ public unsafe struct StreamBitArray
     {
         return FirstSetBit<Nothing>(bitsToStart);
     }
-    
-    private  int FirstSetBit<TModify>(int bitsToStart)
-        where TModify: struct, IModifyBuffer
+
+    private int FirstSetBit<TModify>(int bitsToStart)
+        where TModify : struct, IModifyBuffer
     {
         int vectorStart = (bitsToStart / 256) * Vector256<int>.Count;
         var scalarSearch = bitsToStart % 256;
         if (scalarSearch != 0)
         {
-            if (TryScalarSearch<TModify>(scalarSearch, vectorStart, out int trailingZeroCount)) 
+            if (TryScalarSearch<TModify>(scalarSearch, vectorStart, out int trailingZeroCount))
                 return trailingZeroCount;
 
             vectorStart += Vector256<int>.Count;
@@ -123,7 +119,7 @@ public unsafe struct StreamBitArray
     }
 
     private bool TryScalarSearch<TModify>(int scalarSearch, int vectorStart, out int trailingZeroCount)
-        where TModify: struct, IModifyBuffer
+        where TModify : struct, IModifyBuffer
     {
         for (int i = scalarSearch / 32; i < Vector256<int>.Count; i++)
         {
@@ -132,7 +128,7 @@ public unsafe struct StreamBitArray
             var bits = default(TModify).Modify(_inner[vectorStart + i]) & (-1 << bitsToZero);
             if (bits != 0)
             {
-                trailingZeroCount = (vectorStart+i) * 32 + BitOperations.TrailingZeroCount(bits);
+                trailingZeroCount = (vectorStart + i) * 32 + BitOperations.TrailingZeroCount(bits);
                 return true;
             }
         }
@@ -140,14 +136,14 @@ public unsafe struct StreamBitArray
         trailingZeroCount = -1;
         return false;
     }
-    
+
     private struct Nothing : IModifyBuffer
     {
         public uint Modify(uint i) => i;
 
         public Vector256<uint> Modify(Vector256<uint> v) => v;
     }
-    
+
     private struct Inverse : IModifyBuffer
     {
         public uint Modify(uint i) => ~i;
@@ -213,8 +209,22 @@ public unsafe struct StreamBitArray
     public bool HasStartRangeCount(int max)
     {
         Debug.Assert(max <= 2048, "max <= 2048 - maximum range inside the bit array");
-        
+
         var next = NextUnsetBits(0);
         return next == -1 || next >= max;
+    }
+
+    public DynamicJsonValue ToJson(long key, bool hex)
+    {
+        object[] collection = new object[CountOfItems];
+        for (var i = 0; i < CountOfItems; i++)
+            collection[i] = hex ? _inner[i].ToString("X") : _inner[i];
+
+        return new DynamicJsonValue
+        {
+            ["Key"] = key,
+            [nameof(SetCount)] = SetCount,
+            ["Data"] = new DynamicJsonArray(collection)
+        };
     }
 }
