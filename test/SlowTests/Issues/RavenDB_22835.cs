@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -30,7 +31,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public async Task SplittingCountersManyTimes_ShouldNotCauseErrorsDuringImport()
         {
             var rand = new Random(12345);
@@ -86,7 +87,7 @@ namespace SlowTests.Issues
             // all good - no exception was thrown during imports or when adding new counters
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public async Task FixCorruptedCounterData()
         {
             var rand = new Random(12345);
@@ -193,7 +194,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public async Task FixCorruptedCounterData_InCluster()
         {
             var rand = new Random(12345);
@@ -292,7 +293,9 @@ namespace SlowTests.Issues
 
             // call FixCounters endpoint
             using var requestExecutor = leaderStore.GetRequestExecutor();
-            var cmd = new FixCountersCommand();
+
+            // use the single-doc endpoint 
+            var cmd = new FixCountersCommand(id);
             using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 await requestExecutor.ExecuteAsync(cmd, ctx);
 
@@ -328,7 +331,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public async Task FixCorruptedCounterData_MultipleDocs()
         {
             var rand = new Random(12345);
@@ -393,8 +396,6 @@ namespace SlowTests.Issues
 
                     Assert.False(counterNames.TryGet(firstCounter, out string _));
                 }
-
-                AddMoreCountersForDoc(store, rand, id, numOfIterations: 10);
             }
 
             // call FixCounters endpoint
@@ -431,6 +432,64 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Counters)]
+        public async Task ShouldThrowOnAttemptToAddNewCounterIfCountersDataIsCorrupted()
+        {
+            var rand = new Random(12345);
+            const string id = "users/1";
+
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User(), id);
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var countersFor = session.CountersFor(id);
+
+                for (int j = 0; j < 10; j++)
+                {
+                    var strSize = (int)rand.NextInt64(5, 15);
+                    var s = GenRandomString(rand, strSize);
+
+                    countersFor.Increment(s, j);
+                }
+
+                session.SaveChanges();
+            }
+
+            var db = await GetDatabase(store.Database);
+
+            // deliberately corrupt counters group data
+            CorruptCountersData(db);
+
+            using (var session = store.OpenSession())
+            {
+                session.CountersFor(id).Increment("new-counter", 123);
+                Assert.Throws<RavenException>(() => session.SaveChanges());
+            }
+
+            // call FixCounters tool
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var numOfFixes = db.DocumentsStorage.CountersStorage.FixCountersForDocument(context, id);
+                Assert.Equal(1, numOfFixes);
+
+                tx.Commit();
+            }
+
+            // we should be able to add new counters now
+            using (var session = store.OpenSession())
+            {
+                session.CountersFor(id).Increment("new-counter", 123);
+                session.SaveChanges();
+            }
+        }
+
         private unsafe void CorruptCountersData(DocumentDatabase database, string id = null)
         {
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -451,7 +510,6 @@ namespace SlowTests.Issues
                     }
                 }
 
-                BlittableJsonReaderObject.PropertyDetails prop = default;
                 BlittableJsonReaderObject data;
                 using (data = GetCounterValuesData(context, ref tvr))
                 {
@@ -531,9 +589,18 @@ namespace SlowTests.Issues
 
         private class FixCountersCommand : RavenCommand
         {
+            private readonly string _docId;
+
+            public FixCountersCommand(string docId = null)
+            {
+                _docId = docId;
+            }
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/counters/fix";
+                url = _docId != null 
+                    ? $"{node.Url}/databases/{node.Database}/counters/fix-document?id={_docId}" 
+                    : $"{node.Url}/databases/{node.Database}/counters/fix";
 
                 return new HttpRequestMessage
                 {
