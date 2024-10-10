@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -65,7 +66,7 @@ namespace Raven.Debug.LogTrafficWatch
                 {
                     ExitAndPrintError(ex: null, Environment.NewLine + $"URL '{url}' starts with 'http' but certificate provided.");
                 }
-                _cert = X509CertificateLoader.LoadPkcs12FromFile(certPath, certPass, X509KeyStorageFlags.MachineKeySet);
+                _cert = CertificateHelper.CreateCertificate(certPath, certPass, X509KeyStorageFlags.MachineKeySet);
                 _url = url.StartsWith("https://") == false ? $"https://{url}" : url;
             }
         }

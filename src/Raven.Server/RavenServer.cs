@@ -3205,7 +3205,7 @@ namespace Raven.Server
                 {
                     try
                     {
-                        certificate = X509CertificateLoader.LoadCertificate(buffer[0..read]);
+                        certificate = CertificateHelper.CreateCertificate(buffer[0..read]);
                     }
                     catch (Exception e)
                     {
@@ -3218,7 +3218,7 @@ namespace Raven.Server
                 {
                     try
                     {
-                        certificate = X509CertificateLoader.LoadCertificateFromFile(issuer);
+                        certificate = CertificateHelper.CreateCertificate(issuer);
                     }
                     catch (Exception e)
                     {

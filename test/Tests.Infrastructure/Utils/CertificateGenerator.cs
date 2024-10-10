@@ -7,6 +7,7 @@ using Org.BouncyCastle.Crypto.Operators;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
+using Raven.Client.Util;
 
 namespace Tests.Infrastructure.Utils;
 
@@ -96,6 +97,6 @@ public static class CertificateGenerator
         var signatureFactory = new Asn1SignatureFactory("SHA256WITHRSA", signerKeyPair != null ? signerKeyPair.Private : keyPair.Private);
         var certificate = certGenerator.Generate(signatureFactory);
 
-        return X509CertificateLoader.LoadCertificate(certificate.GetEncoded());
+        return CertificateHelper.CreateCertificate(certificate.GetEncoded());
     }
 }
