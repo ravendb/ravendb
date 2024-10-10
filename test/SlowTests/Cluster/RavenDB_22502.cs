@@ -1,12 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -53,7 +54,7 @@ namespace SlowTests.Cluster
                     }
                 }
 
-                await WaitForDocumentInClusterAsync<User>(nodes, store.Database, id, predicate: null, TimeSpan.FromSeconds(10));
+                await Cluster.WaitForDocumentOnAllNodesAsync<User>(store, id, predicate: null, TimeSpan.FromSeconds(10));
             }
 
             var o2 = options.Clone();
@@ -98,7 +99,7 @@ namespace SlowTests.Cluster
             using (var store = GetDocumentStore(o1))
             {
                 await store.ExecuteIndexAsync(new MyUsers());
-                WaitForIndexingInTheCluster(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var watchers = nodes.Where(n => n != leader).Select(n => n.ServerStore.NodeTag).ToList();
                 leader.ServerStore.Engine.ForTestingPurposesOnly().NodeTagsToDisconnect = watchers;
@@ -117,8 +118,8 @@ namespace SlowTests.Cluster
                     }
                 }
 
-                await WaitForDocumentInClusterAsync<User>(nodes, store.Database, id, predicate: null, TimeSpan.FromSeconds(15));
-                WaitForIndexingInTheCluster(store);
+                await Cluster.WaitForDocumentOnAllNodesAsync<User>(store, id, predicate: null, TimeSpan.FromSeconds(10));
+                await Indexes.WaitForIndexingAsync(store);
             }
 
             var o2 = options.Clone();
@@ -168,7 +169,7 @@ namespace SlowTests.Cluster
                     await session.SaveChangesAsync();
                 }
                 
-                await WaitForDocumentInClusterAsync<User>(nodes, store.Database, id, predicate: null, TimeSpan.FromSeconds(10));
+                await Cluster.WaitForDocumentOnAllNodesAsync<User>(store, id, predicate: null, TimeSpan.FromSeconds(10));
 
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -185,7 +186,7 @@ namespace SlowTests.Cluster
                     await session.SaveChangesAsync();
                 }
 
-                await WaitForDocumentInClusterAsync<User>(nodes, store.Database, id, predicate: null, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForDocumentOnAllNodesAsync<User>(store, id, predicate: null, TimeSpan.FromSeconds(10));
 
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.SingleNode }))
                 {
@@ -195,7 +196,7 @@ namespace SlowTests.Cluster
                     await session.SaveChangesAsync();
                 }
 
-                await WaitForDocumentInClusterAsync<User>(nodes, store.Database, id, predicate: u => u.Age == 10, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForDocumentOnAllNodesAsync<User>(store, id, predicate: null, TimeSpan.FromSeconds(10));
 
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -205,7 +206,7 @@ namespace SlowTests.Cluster
                     await session.SaveChangesAsync();
                 }
 
-                await WaitForDocumentInClusterAsync<User>(nodes, store.Database, id, predicate: u => u.Count == 10, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForDocumentOnAllNodesAsync<User>(store, id, predicate: null, TimeSpan.FromSeconds(10));
             }
         }
         
@@ -220,7 +221,7 @@ namespace SlowTests.Cluster
             }
             else
             {
-                /*@new.ModifyDatabaseRecord = r =>
+                @new.ModifyDatabaseRecord = r =>
                 {
                     r.Sharding = new ShardingConfiguration
                     {
@@ -248,7 +249,7 @@ namespace SlowTests.Cluster
                             }
                         }
                     };
-                };*/
+                };
             }
         }
 
