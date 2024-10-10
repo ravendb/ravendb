@@ -174,7 +174,10 @@ namespace SlowTests.Authentication
             using (var commands = store.Commands())
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var command = new SetupLetsEncryptCommand(store.Conventions, context, setupInfo);
+                var command = new SetupLetsEncryptCommand(store.Conventions, context, setupInfo)
+                {
+                    Timeout = TimeSpan.FromMinutes(10)
+                };
 
                 await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
