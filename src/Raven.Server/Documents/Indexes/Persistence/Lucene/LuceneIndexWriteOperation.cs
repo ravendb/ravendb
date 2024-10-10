@@ -230,8 +230,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             using (Stats.DeleteStats.Start())
                 _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash), _state);
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Deleted document for '{_indexName}'. Reduce key hash: {reduceKeyHash}.");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Deleted document for '{_indexName}'. Reduce key hash: {reduceKeyHash}.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -217,9 +217,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                 var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
                 if (status == ConflictStatus.Update || _lastDocumentEtag > lastEtag)
                 {
-                    if (Logger.IsInfoEnabled)
+                    if (Logger.IsDebugEnabled)
                     {
-                        Logger.Info(
+                        Logger.Debug(
                             $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status}" +
                             $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
                     }
@@ -228,9 +228,9 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                     if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
                     {
-                        if (Logger.IsInfoEnabled)
+                        if (Logger.IsDebugEnabled)
                         {
-                            Logger.Info(
+                            Logger.Debug(
                                 $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
                                 "nevertheless we create an additional task.");
                         }
