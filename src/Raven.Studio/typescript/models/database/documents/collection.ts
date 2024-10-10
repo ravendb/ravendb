@@ -3,6 +3,7 @@ import { Collection } from "components/common/shell/collectionsTrackerSlice";
 
 class collection {
     static readonly allDocumentsCollectionName = "All Documents";
+    static readonly allRevisionsCollectionName = "All Revisions";
     static readonly revisionsBinCollectionName = "Revisions Bin";
     static readonly hiloCollectionName = "@hilo";
 
@@ -40,6 +41,10 @@ class collection {
 
     get isAllDocuments() {
         return this.name === collection.allDocumentsCollectionName;
+    }
+
+    get isAllRevisions() {
+        return this.name === collection.allRevisionsCollectionName;
     }
     
     get isRevisionsBin() {

@@ -458,8 +458,7 @@ interface pagedResultWithToken<T> extends pagedResult<T> {
     continuationToken?: string;
 }
 
-interface pagedResultWithTokenAndSkippedResults<T> extends pagedResult<T> {
-    continuationToken?: string;
+interface pagedResultWithTokenAndSkippedResults<T> extends pagedResultWithToken<T> {
     scannedResults?: number;
 }
 
