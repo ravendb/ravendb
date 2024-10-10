@@ -27,6 +27,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
+using System.Linq;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -762,18 +763,23 @@ namespace Raven.Server.Documents.Handlers
 
         public class ExecuteFixCounterGroupsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly string _docId;
+            private readonly List<string> _docIds;
             private readonly DocumentDatabase _database;
 
-            public ExecuteFixCounterGroupsCommand(DocumentDatabase database, string docId)
+
+            public ExecuteFixCounterGroupsCommand(DocumentDatabase database, string docId) : this(database, [docId])
             {
-                _docId = docId;
+            }
+
+            public ExecuteFixCounterGroupsCommand(DocumentDatabase database, List<string> docIdsToFix)
+            {
+                _docIds = docIdsToFix;
                 _database = database;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                var numOfCounterGroupFixed = _database.DocumentsStorage.CountersStorage.FixCountersForDocument(context, _docId);
+                var numOfCounterGroupFixed = _database.DocumentsStorage.CountersStorage.FixCountersForDocuments(context, _docIds);
                 return numOfCounterGroupFixed;
             }
 
@@ -783,16 +789,27 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/counters/fix-document", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        public async Task FixCounterGroupsForDocument()
+        {
+            var docId = GetStringQueryString("id");
+            await FixCounterGroupsInternal(docId);
+        }
+
         [RavenAction("/databases/*/counters/fix", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public async Task FixCounterGroups()
+        public async Task FixCounterGroupsForDatabase() => await FixCounterGroupsInternal();
+
+        private async Task FixCounterGroupsInternal(string id = null)
         {
             var first = GetBoolValueQueryString("first", required: false) ?? true;
-            var task = FixAllCounterGroups();
+
+            Task task = id == null
+                ? FixAllCounterGroups()
+                : Database.TxMerger.Enqueue(new ExecuteFixCounterGroupsCommand(Database, id));
 
             if (first == false)
             {
                 await task;
-                await NoContent();
                 return;
             }
 
@@ -812,12 +829,13 @@ namespace Raven.Server.Documents.Handlers
                         toDispose.Add(requestExecutor);
 
                         var cmd = new FixCounterGroupsCommand(Database.Name);
-                        tasks.Add(requestExecutor.ExecuteAsync(cmd, context));
+
+                        toDispose.Add(requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx));
+                        tasks.Add(requestExecutor.ExecuteAsync(cmd, ctx));
                     }
                 }
 
                 await Task.WhenAll(tasks);
-                await NoContent();
             }
             finally
             {
@@ -828,24 +846,64 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+
         private async Task FixAllCounterGroups()
         {
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+            const int maxNumberOfDocsToFixInSingleTx = 1024;
+            int skip = 0;
+            string currentId = null;
+            bool corruptedDoc = false;
+
+            while (true)
             {
-                var table = new Table(CountersStorage.CountersSchema, context.Transaction.InnerTransaction);
-                string currentId = null;
+                List<string> docIdsToFix = new();
 
-                foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, skip: 0))
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
                 {
-                    using (var docId = CountersStorage.ExtractDocId(context, ref tvh.Reader))
-                    {
-                        if (docId == currentId)
-                            continue;
+                    var table = new Table(CountersStorage.CountersSchema, context.Transaction.InnerTransaction);
 
-                        currentId = docId;
-                        await Database.TxMerger.Enqueue(new ExecuteFixCounterGroupsCommand(Database, docId));
+                    foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, skip: skip))
+                    {
+                        skip++;
+
+                        using (var docId = CountersStorage.ExtractDocId(context, ref tvh.Reader))
+                        {
+                            if (docId != currentId)
+                            {
+                                currentId = docId;
+                                corruptedDoc = false;
+                            }
+
+                            else if (corruptedDoc)
+                                continue;
+                            
+                            using (var data = CountersStorage.GetCounterValuesData(context, ref tvh.Reader))
+                            {
+                                data.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counterValues);
+                                data.TryGet(CountersStorage.CounterNames, out BlittableJsonReaderObject counterNames);
+
+                                if (counterValues.Count == counterNames.Count)
+                                {
+                                    var counterValuesPropertyNames = counterValues.GetSortedPropertyNames();
+                                    var counterNamesPropertyNames = counterNames.GetSortedPropertyNames();
+                                    if (counterValuesPropertyNames.SequenceEqual(counterNamesPropertyNames))
+                                        continue;
+                                }
+                            }
+
+                            corruptedDoc = true;
+                            docIdsToFix.Add(docId);
+                        }
+
+                        if (docIdsToFix.Count == maxNumberOfDocsToFixInSingleTx)
+                            break;
                     }
+
+                    if (docIdsToFix.Count == 0)
+                        return;
+
+                    await Database.TxMerger.Enqueue(new ExecuteFixCounterGroupsCommand(Database, docIdsToFix));
                 }
             }
         }
