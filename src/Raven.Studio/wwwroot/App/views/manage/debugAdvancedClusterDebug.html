@@ -2,7 +2,7 @@
     <div class="flex-window-head">
         <div class="clearfix padding padding-sm">
             <div class="flex-header flex-horizontal flex-noshrink margin-bottom">
-                <div class="btn-group">
+                <div class="btn-group margin-right-sm">
                     <button type="button" class="btn btn-primary"
                             data-bind="click: refresh, enable: !spinners.refresh(), css: { 'btn-spinner': spinners.refresh() }">
                         <i class="icon-refresh"></i>
@@ -10,7 +10,7 @@
                     </button>
                 </div>
                 
-                <div>
+                <div class="margin-right-sm">
                     <div class="text-muted info-block">
                         <div class="text-center"><small>Cluster Version:</small></div>
                         <div class="text-center">
@@ -18,7 +18,7 @@
                         </div>
                     </div>
                 </div>
-                <div>
+                <div class="margin-right-sm">
                     <div class="text-muted info-block">
                         <div class="text-center"><small>Local Version:</small></div>
                         <div class="text-center">
@@ -26,7 +26,7 @@
                         </div>
                     </div>
                 </div>
-                <div>
+                <div class="margin-right-sm">
                     <div class="text-muted info-block">
                         <div class="text-center"><small>Term:</small></div>
                         <div class="text-center">
@@ -34,7 +34,7 @@
                         </div>
                     </div>
                 </div>
-                <div>
+                <div class="margin-right-sm">
                     <div class="text-muted info-block" data-placement="bottom" data-html="true" data-bind="tooltipText: progressTooltip">
                         <div class="text-center"><small>Progress:</small></div>
                         <div class="text-center">
@@ -42,7 +42,7 @@
                         </div>
                     </div>
                 </div>
-                <div>
+                <div class="margin-right-sm">
                     <div class="text-muted info-block">
                         <div class="text-center"><small>Queue Size:</small></div>
                         <div class="text-center">
@@ -50,7 +50,7 @@
                         </div>
                     </div>
                 </div>
-                <div>
+                <div class="margin-right-sm">
                     <div class="text-muted info-block">
                         <div class="text-center"><small>Role:</small></div>
                         <div class="text-center">
@@ -58,7 +58,7 @@
                         </div>
                     </div>
                 </div>
-                <div>
+                <div class="margin-right-sm">
                     <div class="text-muted info-block">
                         <div class="text-center"><small>Last Appended:</small></div>
                         <div class="text-center" data-bind="tooltipText: clusterLog().Log.LastAppendedTime ?? 'n/a'">
@@ -66,7 +66,7 @@
                         </div>
                     </div>
                 </div>
-                <div>
+                <div class="margin-right-sm">
                     <div class="text-muted info-block">
                         <div class="text-center"><small>Last Committed:</small></div>
                         <div class="text-center" data-bind="tooltipText: clusterLog().Log.LastCommitedTime ?? 'n/a'">
@@ -74,7 +74,7 @@
                         </div>
                     </div>
                 </div>
-                <div data-bind="if: clusterLog().Role === 'Follower', visible: clusterLog().Role === 'Follower'">
+                <div class="margin-right-sm" data-bind="if: clusterLog().Role === 'Follower', visible: clusterLog().Role === 'Follower'">
                     <div class="text-muted info-block">
                         <div class="text-center"><small>Phase:</small></div>
                         <div class="text-center">
@@ -88,8 +88,41 @@
                         </div>
                     </div>
                 </div>
-               
+                <div>
+                    <button data-bind="visible: clusterLog().Phase === 'Snapshot', click: openInstallationDetails" class="btn btn-sm btn-default">view details</button>
+                </div>
+
+                <div class="margin-right-sm" data-bind="if: connections().length, visible: connections().length">
+                    <div class="text-muted info-block">
+                        <div class="text-center"><small>Connection:</small></div>
+                        <div class="text-center" data-bind="foreach: connections">
+                            <a href="#" data-bind="click: $root.showConnectionDetails">
+                                <small class="margin-right-sm">
+                                    <strong>
+                                        <span data-bind="text: Destination"></span> 
+                                        <i class="icon-check text-success" data-bind="visible: Connected"></i>
+                                        <i class="icon-danger text-danger" data-bind="visible: !Connected"></i>
+                                    </strong>
+                                </small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="margin-right-sm" data-bind="visible: hasCriticalError, if: hasCriticalError">
+                    <small class="text-danger">
+                        <i class="icon-danger"></i>
+                        <span>Critical Cluster Error: </span> 
+                        <button class="btn-link" data-bind="click: openCriticalError">see details</button>
+                    </small>
+                </div>
+                
                 <div class="flex-separator"></div>
+                <div>
+                    <a target="_blank" href="#" title="Click to view the raw content" class="margin-left margin-left-sm"
+                       data-bind="attr: { href: rawJsonUrl }"><i class="icon-json"></i>
+                    </a>
+                </div>
             </div>
         </div>
 

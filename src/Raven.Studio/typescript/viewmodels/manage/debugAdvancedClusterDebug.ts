@@ -7,6 +7,14 @@ import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 import actionColumn from "widgets/virtualGrid/columns/actionColumn";
 import FollowerDebugView = Raven.Server.Rachis.FollowerDebugView;
+import appUrl from "common/appUrl";
+import removeEntryFromLogCommand from "commands/database/cluster/removeEntryFromLogCommand";
+import getClusterLogEntryCommand from "commands/database/cluster/getClusterLogEntryCommand";
+import showDataDialog from "viewmodels/common/showDataDialog";
+import app from "durandal/app";
+import debugAdvancedClusterSnapshotInstallation from "viewmodels/manage/debugAdvancedClusterSnapshotInstallation";
+import notificationCenter from "common/notifications/notificationCenter";
+import messagePublisher from "common/messagePublisher";
 
 type LogEntryStatus = "Commited" | "Appended";
 
@@ -29,7 +37,7 @@ class clusterDebug extends viewModelBase {
     }
   
     clusterLog = ko.observable<Raven.Server.Rachis.RaftDebugView>();
-
+    
     private gridController = ko.observable<virtualGridController<LogEntry>>();
     private columnPreview = new columnPreviewPlugin<LogEntry>();
     
@@ -39,11 +47,40 @@ class clusterDebug extends viewModelBase {
     progress: KnockoutComputed<number>;
     progressTooltip: KnockoutComputed<string>;
     queueLength: KnockoutComputed<number>;
+    rawJsonUrl: KnockoutComputed<string>;
+    hasCriticalError: KnockoutComputed<boolean>;
+    connections: KnockoutComputed<Raven.Server.Rachis.RaftDebugView.PeerConnection[]>;
     
     constructor() {
         super();
         
-        this.bindToCurrentInstance("refresh", "customInlinePreview");
+        this.bindToCurrentInstance("refresh", "customInlinePreview", "deleteLogEntry", "openInstallationDetails", "openCriticalError", "showConnectionDetails");
+        
+        this.connections = ko.pureComputed(() => {
+            const log = this.clusterLog();
+            if (!log) {
+                return [];
+            }
+            
+            if ("ConnectionToPeers" in log) {
+                return (log as any).ConnectionToPeers;
+            }
+
+            if ("ConnectionToLeader" in log) {
+                return [(log as any).ConnectionToLeader];
+            }
+            
+            return [];
+        })
+        
+        this.hasCriticalError = ko.pureComputed(() => {
+            const log = this.clusterLog();
+            if (!log) {
+                return false;
+            }
+            
+            return !!log.Log.CriticalError;
+        });
         
         this.lastAppendedAsAgo = ko.pureComputed(() => {
             const log = this.clusterLog();
@@ -123,7 +160,9 @@ class clusterDebug extends viewModelBase {
                     Last log entry index: <strong>${log.Log.LastLogEntryIndex.toLocaleString()}</strong> 
                 </div>
               `;
-        })
+        });
+
+        this.rawJsonUrl = ko.pureComputed(() => appUrl.forAdminClusterLogRawData());
     }
     
     activate(args: any, parameters?: any) {
@@ -185,8 +224,14 @@ class clusterDebug extends viewModelBase {
                 new textColumn<LogEntry>(grid, x => x.Status, "Status", "15%", {
                     sortable: "string"
                 }),
-                
-                //TODO: delete button
+                new actionColumn<LogEntry>(this.gridController(), x => this.deleteLogEntry(x),
+                    "Delete",
+                    `<i class="icon-trash"></i>`,
+                    "35px",
+                    {
+                        extraClass: () => 'file-trash btn-danger',
+                        title: () => 'Delete Log Entry',
+                    })
             ]
         );
 
@@ -204,8 +249,25 @@ class clusterDebug extends viewModelBase {
             });
     }
 
+    deleteLogEntry(log: LogEntry) {
+        this.confirmationMessage("Are you sure?", "Do you want to delete log item with index '" + log.Index +"' from cluster log?", {
+            buttons: ["Cancel", "I understand the risk, delete"]
+        })
+            .done(result => {
+                if (result.can) {
+                    new removeEntryFromLogCommand(log.Index)
+                        .execute()
+                    
+                }
+            });
+    }
+
     customInlinePreview(log: LogEntry) {
-        //TODO: 
+        new getClusterLogEntryCommand(log.Index)
+            .execute()
+            .done((entry) => {
+                app.showBootstrapDialog(new showDataDialog("Cluster Log Entry", JSON.stringify(entry, null, 4), "javascript"));
+            });
     }
     
     private fetchClusterLog() {
@@ -215,6 +277,27 @@ class clusterDebug extends viewModelBase {
                 this.clusterLog(log);
             });
     }
+
+    openInstallationDetails() {
+        if (this.clusterLog().Role === "Follower") {
+            const log = this.clusterLog() as Raven.Server.Rachis.FollowerDebugView;
+            if (log.Phase === "Snapshot") {
+                const items = log.RecentMessages;
+                const dialog = new debugAdvancedClusterSnapshotInstallation(items);
+                app.showBootstrapDialog(dialog);
+            }
+        }
+    }
+
+    openCriticalError() {
+        const alertId = this.clusterLog().Log.CriticalError.Id;
+        const criticalErrorAlert = notificationCenter.instance.globalNotifications().find(x => x.id === alertId);
+        if (!criticalErrorAlert) {
+            messagePublisher.reportError("Unable to find critical error alert");
+        }
+        
+        notificationCenter.instance.openDetails(criticalErrorAlert);
+    }
     
     refresh() {
         this.spinners.refresh(true);
@@ -222,6 +305,10 @@ class clusterDebug extends viewModelBase {
         this.fetchClusterLog()
             .done(() => this.gridController().reset())
             .always(() => this.spinners.refresh(false));
+    }
+
+    showConnectionDetails(connection: Raven.Server.Rachis.RaftDebugView.PeerConnection) {
+        app.showBootstrapDialog(new showDataDialog("Connection details", JSON.stringify(connection, null, 4), "javascript"));
     }
 }
 
