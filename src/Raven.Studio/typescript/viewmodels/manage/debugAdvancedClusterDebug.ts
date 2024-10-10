@@ -15,6 +15,7 @@ import app from "durandal/app";
 import debugAdvancedClusterSnapshotInstallation from "viewmodels/manage/debugAdvancedClusterSnapshotInstallation";
 import notificationCenter from "common/notifications/notificationCenter";
 import messagePublisher from "common/messagePublisher";
+import virtualColumn from "widgets/virtualGrid/columns/virtualColumn";
 
 type LogEntryStatus = "Commited" | "Appended";
 
@@ -263,14 +264,14 @@ class clusterDebug extends viewModelBase {
         );
 
         this.columnPreview.install("virtual-grid", ".js-cluster-log-tooltip",
-            (entry: LogEntry,
-             column: textColumn<LogEntry>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+            (entry: LogEntry, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
                 if (column.header === "Created") {
                     onValue(moment.utc(entry.CreateAt), entry.CreateAt);
                 } else {
-                    const value = column.getCellValue(entry);
-                    onValue(generalUtils.escapeHtml(value), value);
+                    if (column instanceof textColumn) {
+                        const value = column.getCellValue(entry);
+                        onValue(generalUtils.escapeHtml(value), value);
+                    }
                 }
                
             });

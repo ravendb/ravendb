@@ -4,6 +4,7 @@ import virtualGridController from "widgets/virtualGrid/virtualGridController";
 import textColumn from "widgets/virtualGrid/columns/textColumn";
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
+import virtualColumn from "widgets/virtualGrid/columns/virtualColumn";
 
 class debugAdvancedClusterSnapshotInstallation extends dialogViewModelBase {
     
@@ -38,13 +39,14 @@ class debugAdvancedClusterSnapshotInstallation extends dialogViewModelBase {
         });
 
         this.columnPreview.install(".clusterSnapshotInstallationDetails", ".js-cluster-snapshot-installation-details-tooltip",
-            (details: Raven.Server.Rachis.RachisDebugMessage, column: textColumn<Raven.Server.Rachis.RachisDebugMessage>, e: JQueryEventObject,
-             onValue: (context: any, valueToCopy?: string) => void) => {
-                const value = column.getCellValue(details);
-                if (column.header === "Time") {
-                    onValue(moment.utc(details.At), details.At);
-                } else if (!_.isUndefined(value)) {
-                    onValue(generalUtils.escapeHtml(value));
+            (details: Raven.Server.Rachis.RachisDebugMessage, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
+                if (column instanceof textColumn) {
+                    const value = column.getCellValue(details);
+                    if (column.header === "Time") {
+                        onValue(moment.utc(details.At), details.At);
+                    } else if (!_.isUndefined(value)) {
+                        onValue(generalUtils.escapeHtml(value), value);
+                    }
                 }
             });
     }
