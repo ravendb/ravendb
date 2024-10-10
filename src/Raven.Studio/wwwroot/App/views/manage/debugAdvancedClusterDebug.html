@@ -67,10 +67,11 @@
                     </div>
                 </div>
                 <div class="margin-right-sm">
-                    <div class="text-muted info-block">
+                    <div class="text-muted info-block" data-bind="css: { 'text-warning': chokedCluster }">
                         <div class="text-center"><small>Last Committed:</small></div>
-                        <div class="text-center" data-bind="tooltipText: clusterLog().Log.LastCommitedTime ?? 'n/a'">
-                            <small><strong data-bind="text: lastCommittedAsAgo() ?? 'n/a'"></strong></small>
+                        <div class="text-center" data-html="true" data-bind="tooltipText: lastCommittedTooltip">
+                            <i class="icon-warning" data-bind="visible: chokedCluster"></i> 
+                            <small><strong data-bind="text: lastCommittedAsAgo() ?? 'n/a', css: { 'text-warning': chokedCluster }"></strong></small>
                         </div>
                     </div>
                 </div>
