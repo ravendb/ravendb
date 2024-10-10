@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests.Voron.FixedSize;
+using Tests.Infrastructure;
 using Xunit;
 using Voron.Impl.FreeSpace;
 using Xunit.Abstractions;
@@ -244,6 +245,110 @@ namespace FastTests.Voron.Trees
                 var sorted = freedPages.OrderBy(x => x).ToList();
 
                 Assert.Equal(sorted, retrievedFreePages);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void CanUpdateMaxConsecutiveRanges()
+        {
+            const int totalSections = 4;
+            const int totalPages = 2048 * totalSections;
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var max = Env.FreeSpaceHandling.GetMaxConsecutiveRangePerSection(tx.LowLevelTransaction);
+                Assert.Empty(max);
+
+                for (int i = 0; i < totalPages; i++)
+                {
+                    tx.LowLevelTransaction.AllocatePage(1);
+                }
+
+                tx.Commit();
+
+                max = Env.FreeSpaceHandling.GetMaxConsecutiveRangePerSection(tx.LowLevelTransaction);
+                Assert.Empty(max);
+            }
+
+            const int lastPageInAllSections = totalPages - 1;
+            using (var tx = Env.WriteTransaction())
+            {
+                for (int i = 0; i < totalPages; i += 2048)
+                {
+                    Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, i);
+                }
+
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, lastPageInAllSections);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                tx.LowLevelTransaction.AllocatePage(3);
+
+                // releasing 2 pages in section 4 to make 3 consecutive pages between two sections
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, totalPages);
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, totalPages + 1);
+                tx.Commit();
+
+                var max = Env.FreeSpaceHandling.GetMaxConsecutiveRangePerSection(tx.LowLevelTransaction);
+
+                for (var i = 0; i < totalSections; i++)
+                {
+                    Assert.Equal(max[i], 3);
+                }
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var page = tx.LowLevelTransaction.AllocatePage(3);
+                Assert.Equal(lastPageInAllSections, page.PageNumber);
+                tx.Commit();
+
+                var max = Env.FreeSpaceHandling.GetMaxConsecutiveRangePerSection(tx.LowLevelTransaction);
+
+                for (var i = 0; i < totalSections; i++)
+                {
+                    Assert.Equal(max[i], 3);
+                }
+
+                // shouldn't find anything and update the max consecutive
+                tx.LowLevelTransaction.AllocatePage(2);
+
+                max = Env.FreeSpaceHandling.GetMaxConsecutiveRangePerSection(tx.LowLevelTransaction);
+
+                for (var i = 0; i < totalSections; i++)
+                {
+                    Assert.Equal(max[i], 2);
+                }
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                // releasing from sections 0 and 2 - this should clear the in memory state for those sections
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 3);
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 2048 * 2 + 15);
+
+                tx.Commit();
+
+                var max = Env.FreeSpaceHandling.GetMaxConsecutiveRangePerSection(tx.LowLevelTransaction);
+
+                Assert.Equal(max[1], 2);
+                Assert.Equal(max[3], 2);
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 4);
+
+                // not commiting on purpose, this should simulate a rollback and clear the in memory state
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var max = Env.FreeSpaceHandling.GetMaxConsecutiveRangePerSection(tx.LowLevelTransaction);
+                Assert.Empty(max);
             }
         }
     }

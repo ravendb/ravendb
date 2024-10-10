@@ -11,6 +11,8 @@ namespace Voron.Impl.FreeSpace
         void FreePage(LowLevelTransaction tx, long pageNumber);
         long GetFreePagesOverhead(LowLevelTransaction tx);
         IEnumerable<long> GetFreePagesOverheadPages(LowLevelTransaction tx);
+        Dictionary<long, int> GetMaxConsecutiveRangePerSection(LowLevelTransaction tx);
+        void OnRollback();
         FreeSpaceHandlingDisabler Disable();
     }
 }

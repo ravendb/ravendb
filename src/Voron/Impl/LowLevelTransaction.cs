@@ -1377,11 +1377,12 @@ namespace Voron.Impl
             if (_txState.HasFlag(TxState.Disposed))
                 ThrowObjectDisposed();
 
-
             if (Committed || RolledBack || Flags != (TransactionFlags.ReadWrite))
                 return;
 
             OnRollBack?.Invoke(this);
+
+            _freeSpaceHandling.OnRollback();
 
             ValidateReadOnlyPages();
 
