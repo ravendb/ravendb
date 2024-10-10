@@ -24,7 +24,7 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
     private readonly TimeSpan _maxCompletedTaskLifeTime;
 
     protected readonly ConcurrentDictionary<long, AbstractOperation> Active = new();
-    protected readonly ConcurrentDictionary<long, AbstractOperation> Completed = new();
+    internal readonly ConcurrentDictionary<long, AbstractOperation> Completed = new();
 
     protected AbstractOperations(IDocumentsChanges changes, TimeSpan maxCompletedTaskLifeTime)
     {

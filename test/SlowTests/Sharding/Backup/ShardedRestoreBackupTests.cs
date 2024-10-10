@@ -442,7 +442,7 @@ namespace SlowTests.Sharding.Backup
                     await session.SaveChangesAsync();
                 }
 
-                await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                 var dirs = Directory.GetDirectories(backupPath);
@@ -608,7 +608,7 @@ namespace SlowTests.Sharding.Backup
                         await session.SaveChangesAsync();
                     }
 
-                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, false);
+                    await Sharding.Backup.RunBackupAsync(store, backupTaskId, false);
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                     var sharding = await Sharding.GetShardingConfigurationAsync(store);
@@ -1191,7 +1191,7 @@ namespace SlowTests.Sharding.Backup
                     await session.SaveChangesAsync();
                 }
 
-                await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                 // add more docs
@@ -1206,7 +1206,7 @@ namespace SlowTests.Sharding.Backup
                     session.SaveChanges();
                 }
 
-                await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                 var dirs = Directory.GetDirectories(backupPath);
@@ -1321,7 +1321,7 @@ namespace SlowTests.Sharding.Backup
                         await session.SaveChangesAsync();
                     }
 
-                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                    await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                     // add more docs
@@ -1336,7 +1336,7 @@ namespace SlowTests.Sharding.Backup
                         session.SaveChanges();
                     }
 
-                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                    await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                     var sharding = await Sharding.GetShardingConfigurationAsync(store);
@@ -1454,7 +1454,7 @@ namespace SlowTests.Sharding.Backup
                         await session.SaveChangesAsync();
                     }
 
-                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                    await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                     // add more docs
@@ -1469,7 +1469,7 @@ namespace SlowTests.Sharding.Backup
                         session.SaveChanges();
                     }
 
-                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                    await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                     var sharding = await Sharding.GetShardingConfigurationAsync(store);
@@ -1587,7 +1587,7 @@ namespace SlowTests.Sharding.Backup
                         await session.SaveChangesAsync();
                     }
 
-                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                    await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                     // add more docs
@@ -1602,7 +1602,7 @@ namespace SlowTests.Sharding.Backup
                         session.SaveChanges();
                     }
 
-                    await Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, cluster.Nodes);
+                    await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                     var sharding = await Sharding.GetShardingConfigurationAsync(store);
@@ -1727,7 +1727,7 @@ namespace SlowTests.Sharding.Backup
                     Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
 
                     var taskId = databaseRecord.PeriodicBackups[0].TaskId;
-                    await Sharding.Backup.RunBackupAsync(store.Database, taskId, isFullBackup: true);
+                    await Sharding.Backup.RunBackupAsync(store, taskId, isFullBackup: true);
 
                     Assert.True(WaitHandle.WaitAll(backupsDone, TimeSpan.FromMinutes(1)));
 

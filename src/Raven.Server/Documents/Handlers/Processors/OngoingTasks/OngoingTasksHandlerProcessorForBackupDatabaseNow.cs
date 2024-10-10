@@ -1,10 +1,11 @@
 ﻿using System;
-using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client;
-using Raven.Client.Http;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
@@ -18,64 +19,23 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
             return RequestHandler.Database.Operations.GetNextOperationId();
         }
-
-        protected override async ValueTask<bool> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId, DateTime? startTime)
+        
+        protected override async ValueTask<(long OperationId, bool IsResponsibleNode)> ScheduleBackupOperationAsync(long taskId, bool isFullBackup, long operationId, DateTime? startTime)
         {
-            // task id == raft index
-            // we must wait here to ensure that the task was actually created on this node
-            await ServerStore.Cluster.WaitForIndexNotification(taskId);
-
-            var nodeTag = RequestHandler.Database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
-            if (nodeTag == null)
-            {
-                // this can happen if the database was just created or if a new task that was just created
-                // we'll wait for the cluster observer to give more time for the database stats to become stable,
-                // and then we'll wait for the cluster observer to determine the responsible node for the backup
-
-                var task = Task.Delay(RequestHandler.Database.Configuration.Cluster.StabilizationTime.AsTimeSpan + RequestHandler.Database.Configuration.Cluster.StabilizationTime.AsTimeSpan);
-
-                while (true)
-                {
-                    if (Task.WaitAny(new[] { task }, millisecondsTimeout: 100) == 0)
-                    {
-                        throw new InvalidOperationException($"Couldn't find a node which is responsible for backup task id: {taskId}");
-                    }
-
-                    nodeTag = RequestHandler.Database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
-                    if (nodeTag != null)
-                        break;
-                }
-            }
+            var nodeTag = await BackupUtils.WaitAndGetResponsibleNodeAsync(taskId, RequestHandler.Database);
 
             if (nodeTag == ServerStore.NodeTag)
             {
-                RequestHandler.Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup, operationId, startTime);
-                return true;
+                operationId = RequestHandler.Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup, operationId, startTime);
+                return (operationId, IsResponsibleNode: true);
             }
 
-            RedirectToRelevantNode(nodeTag);
-            return false;
-        }
-
-        private void RedirectToRelevantNode(string nodeTag)
-        {
-            ClusterTopology topology;
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                topology = ServerStore.GetClusterTopology(context);
-            }
-
-            var url = topology.GetUrlFromTag(nodeTag);
-            if (url == null)
-            {
-                throw new InvalidOperationException($"Couldn't find the node url for node tag: {nodeTag}");
-            }
-
-            var location = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
-            HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
-            HttpContext.Response.Headers["Location"] = location;
+            //redirect
+            var cmd = new StartBackupOperation.StartBackupCommand(isFullBackup, taskId, operationId, startTime);
+            cmd.SelectedNodeTag = nodeTag;
+            await RequestHandler.ExecuteRemoteAsync(new ProxyCommand<OperationIdResult<StartBackupOperationResult>>(cmd, HttpContext.Response));
+            
+            return (operationId, IsResponsibleNode: false);
         }
     }
 }

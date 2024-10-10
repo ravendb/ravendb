@@ -9,7 +9,9 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
@@ -56,7 +58,16 @@ namespace FastTests
             {
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-                var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
+
+                long op;
+                try
+                {
+                    op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
+                }
+                catch (BackupAlreadyRunningException alreadyRunningException)
+                {
+                    op = alreadyRunningException.OperationId;
+                }
 
                 BackupResult result = default;
                 var actual = await WaitForValueAsync(async () =>
@@ -357,7 +368,7 @@ namespace FastTests
                 else
                 {
                     var backupCompleted = await _parent.Sharding.Backup.WaitForBackupToComplete(store);
-                    await _parent.Sharding.Backup.RunBackupAsync(store.Database, backupTaskId, isFullBackup: false, servers: new List<RavenServer> { _parent.Server });
+                    await _parent.Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup: false);
                     Assert.True(WaitHandle.WaitAll(backupCompleted, TimeSpan.FromSeconds(10)));
 
                     var dirs = Directory.GetDirectories(backupPath);
@@ -704,7 +715,7 @@ namespace FastTests
                 if (databaseMode == RavenDatabaseMode.Sharded)
                 {
                     waitHandles = await _parent.Sharding.Backup.WaitForBackupsToComplete(new[] { store });
-                    await _parent.Sharding.Backup.RunBackupAsync(store.Database, taskId.Value, isFullBackup);
+                    await _parent.Sharding.Backup.RunBackupAsync(store, taskId.Value, isFullBackup);
                 }
                 else
                 {

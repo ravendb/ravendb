@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -27,6 +28,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
@@ -329,7 +331,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations($"Could not start backup task '{periodicBackup.Configuration.TaskId}' because there is already a running backup '{runningTask.Id}'");
 
-                    return runningTask.Id;
+                    throw new BackupAlreadyRunningException(
+                        $"Could not start backup task '{periodicBackup.Configuration.TaskId}' because there is already a running backup under operation id '{runningTask.Id}'")
+                    {
+                        OperationId = runningTask.Id,
+                        NodeTag = _serverStore.NodeTag
+                    };
                 }
 
                 BackupUtils.CheckServerHealthBeforeBackup(_serverStore, periodicBackup.Configuration.Name);
@@ -507,8 +514,11 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             try
             {
-                _serverStore.ConcurrentBackupsCounter.FinishBackup(_originalDatabaseName, periodicBackup.Configuration.Name, periodicBackup.RunningBackupStatus, elapsed, _logger);
+                if (_forTestingPurposes?.HoldBackupFromFinishing != null)
+                    _forTestingPurposes.HoldBackupFromFinishing.WaitOne();
 
+                _serverStore.ConcurrentBackupsCounter.FinishBackup(_originalDatabaseName, periodicBackup.Configuration.Name, periodicBackup.RunningBackupStatus, elapsed, _logger);
+                
                 periodicBackup.RunningTask = null;
                 periodicBackup.CancelToken = null;
                 periodicBackup.RunningBackupStatus = null;
@@ -1094,6 +1104,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             internal TaskCompletionSource<object> OnBackupTaskRunHoldBackupExecution;
 
             internal Action AfterBackupBatchCompleted;
+
+            internal ManualResetEvent HoldBackupFromFinishing;
         }
     }
 }
