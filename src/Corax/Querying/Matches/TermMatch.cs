@@ -7,6 +7,7 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
+using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server;
 using Voron.Data.Containers;
@@ -311,60 +312,52 @@ namespace Corax.Querying.Matches
                 // There is no element equal to or greater than `min(matches)-1`. No matches possible anyway.
                 if (it.Seek(EntryIdEncodings.PrepareIdForSeekInPostingList(matches[0] - 1)) == false)
                     return 0;
+                
+                Span<long> postingListBuffer = stackalloc long[1024];
+                ref var postingListStartPtr = ref MemoryMarshal.GetReference(postingListBuffer);
+                
+                ref var resultStartPtr = ref MemoryMarshal.GetReference(matches);
+                var resultIdx = 0;
+                
+                ref var matchesStartPtr = ref MemoryMarshal.GetReference(matches);
+                var matchesIdx = 0;
+                var matchesMax = matches[matchesCount - 1];
 
-                var maxValidValue = EntryIdEncodings.PrepareIdForPruneInPostingList(matches[^1] + 1);
-                var postingListBuffer = stackalloc long[1024];
-                fixed (long* matchesPtr = matches)
+                var maxValidValue = EntryIdEncodings.PrepareIdForPruneInPostingList(matchesMax + 1);
+                while (matchesIdx < matchesCount)
                 {
-                    var resultDestination = matchesPtr;
-                    var matchesStartPtr = matchesPtr;
-                    var matchesEndPtr = matchesStartPtr + matchesCount;
+                    //posting list is empty
+                    if (it.Fill(postingListBuffer, out var postingListCount, maxValidValue) == false || postingListCount == 0)
+                        break;
                     
-                    while (matchesStartPtr < matchesEndPtr
-                           && it.Fill(new Span<long>(postingListBuffer, 1024), out var postingListCount, maxValidValue)
-                           && postingListCount > 0)
+                    var postingListMinValue = EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListStartPtr, 0));
+                    if (matchesMax < postingListMinValue)
+                        continue;
+                    
+                    var postingListMaxValue = EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListStartPtr, postingListCount - 1));
+                    var matchesMinValue = Unsafe.Add(ref matchesStartPtr, matchesIdx);
+                    if (postingListMaxValue < matchesMinValue)
+                        continue;
+
+                    var postingListIdx = 0;
+                    while (postingListIdx < postingListCount && matchesIdx < matchesCount)
                     {
-                        var postingListMinValue = EntryIdEncodings.DecodeAndDiscardFrequency(*postingListBuffer);
-                        var postingListMaxValue = EntryIdEncodings.DecodeAndDiscardFrequency(*(postingListBuffer + postingListCount - 1));
-                        if (*(matchesEndPtr - 1) < postingListMinValue || postingListMaxValue < *matchesStartPtr)
-                            continue;
+                        var currentMatchesMin = Unsafe.Add(ref matchesStartPtr, matchesIdx);
+                        var currentPostingListMin = EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListStartPtr, postingListIdx));
                         
-                        var postingListStartPtr = postingListBuffer;
-                        var postingListEndPtr = postingListBuffer + postingListCount;
-
-                        while (postingListStartPtr < postingListEndPtr && matchesStartPtr < matchesEndPtr)
-                        {
-                            var currentMatchesMin = *matchesStartPtr;
-                            var currentPostingListDocument = EntryIdEncodings.DecodeAndDiscardFrequency(*postingListStartPtr);
-
-                            if (currentMatchesMin == currentPostingListDocument)
-                            {
-                                *resultDestination = currentMatchesMin;
-                                resultDestination++;
-                                matchesStartPtr++;
-                                
-                                //Add frequency for scoring
-                                if (typeof(TBoostingMode) == typeof(HasBoosting))
-                                    term._bm25Relevance.Add(*postingListStartPtr);
-                                
-                                postingListStartPtr++;
-                            }
-                            else if (currentMatchesMin < currentPostingListDocument)
-                            {
-                                matchesStartPtr++;
-                            }
-                            else
-                            {
-                                postingListStartPtr++;
-                            }
-                        }
+                        if (typeof(TBoostingMode) == typeof(HasBoosting) && currentMatchesMin == currentPostingListMin)
+                            term._bm25Relevance.Add(Unsafe.Add(ref postingListStartPtr, postingListIdx));
+                        
+                        Unsafe.Add(ref resultStartPtr, resultIdx) = currentMatchesMin;
+                        resultIdx += (currentMatchesMin == currentPostingListMin).ToInt32();
+                        postingListIdx += (currentMatchesMin >= currentPostingListMin).ToInt32();
+                        matchesIdx += (currentMatchesMin <= currentPostingListMin).ToInt32();
                     }
-                    
-                    return (int)(resultDestination - matchesPtr);
                 }
-
+                
+                return resultIdx;
             }
-            
+
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int AndWithVectorizedFunc<TBoostingMode>(ref TermMatch term, Span<long> buffer, int matches) where TBoostingMode : IBoostingMarker
