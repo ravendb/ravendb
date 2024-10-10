@@ -521,13 +521,14 @@ namespace Raven.Server.Utils
             publicTcpUrl = null;
             var node = setupInfo.NodeSetupInfos[nodeTag];
 
-            var cn = cert.GetNameInfo(X509NameType.SimpleName, false);
-            Debug.Assert(cn != null, nameof(cn) + " != null");
-            if (cn[0] == '*')
+            var subjectAlternativeNames = GetCertificateAlternativeNames(cert).ToList();
+            var subjectAlternativeName = subjectAlternativeNames.FirstOrDefault();
+            Debug.Assert(subjectAlternativeName != null, nameof(subjectAlternativeName) + " != null");
+            if (subjectAlternativeName[0] == '*')
             {
-                var parts = cn.Split("*.");
+                var parts = subjectAlternativeName.Split("*.");
                 if (parts.Length != 2)
-                    throw new FormatException($"{cn} is not a valid wildcard name for a certificate.");
+                    throw new FormatException($"{subjectAlternativeName} is not a valid wildcard name for a certificate.");
 
                 domain = parts[1];
 
@@ -543,9 +544,9 @@ namespace Raven.Server.Utils
                     : $"https://{nodeTag.ToLower()}.{domain}:{port}";
             }
 
-            domain = cn; //default for one node case
+            domain = subjectAlternativeName; //default for one node case
 
-            foreach (var value in GetCertificateAlternativeNames(cert))
+            foreach (var value in subjectAlternativeNames)
             {
                 if (value.StartsWith(nodeTag + ".", StringComparison.OrdinalIgnoreCase) == false)
                     continue;
