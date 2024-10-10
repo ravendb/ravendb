@@ -121,9 +121,9 @@ namespace Raven.Server.Documents.Replication.Senders
                     var lastEtagFromDestinationChangeVector = ChangeVectorUtils.GetEtagById(_parent.LastAcceptedChangeVector, _parent._database.DbBase64Id);
                     if (lastEtagFromDestinationChangeVector > _lastEtag)
                     {
-                        if (Log.IsInfoEnabled)
+                        if (Log.IsDebugEnabled)
                         {
-                            Log.Info($"We jump to get items from etag {lastEtagFromDestinationChangeVector} instead of {_lastEtag}, because we got a bigger etag for the destination database change vector ({_parent.LastAcceptedChangeVector})");
+                            Log.Debug($"We jump to get items from etag {lastEtagFromDestinationChangeVector} instead of {_lastEtag}, because we got a bigger etag for the destination database change vector ({_parent.LastAcceptedChangeVector})");
                         }
                         _lastEtag = lastEtagFromDestinationChangeVector;
                     }

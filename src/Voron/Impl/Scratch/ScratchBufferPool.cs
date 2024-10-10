@@ -434,9 +434,9 @@ namespace Voron.Impl.Scratch
 
                         var removedInactiveRecycled = RemoveInactiveRecycledScratches();
 
-                        if (_logger.IsInfoEnabled)
+                        if (_logger.IsDebugEnabled)
                         {
-                            _logger.Info(
+                            _logger.Debug(
                                 $"Cleanup of {nameof(ScratchBufferPool)} removed: {removedInactive} inactive scratches and {removedInactiveRecycled} inactive from the recycle area");
                         }
 

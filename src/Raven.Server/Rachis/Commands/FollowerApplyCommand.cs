@@ -34,9 +34,9 @@ public sealed class FollowerApplyCommand : MergedTransactionCommand<ClusterOpera
     protected override long ExecuteCmd(ClusterOperationContext context)
     {
         _engine.ValidateTermIn(context, _term);
-        if (_engine.Log.IsInfoEnabled)
+        if (_engine.Log.IsDebugEnabled)
         {
-            _engine.Log.Info($"{ToString()}: Tx running in {_sw.Elapsed}");
+            _engine.Log.Debug($"{ToString()}: Tx running in {_sw.Elapsed}");
         }
         if (_entries.Count > 0)
         {
@@ -83,9 +83,9 @@ public sealed class FollowerApplyCommand : MergedTransactionCommand<ClusterOpera
         _engine.TruncateLogBefore(context, LastTruncate);
 
         LastCommit = lastAppliedIndex;
-        if (_engine.Log.IsInfoEnabled)
+        if (_engine.Log.IsDebugEnabled)
         {
-            _engine.Log.Info($"{ToString()}: Ready to commit in {_sw.Elapsed}");
+            _engine.Log.Debug($"{ToString()}: Ready to commit in {_sw.Elapsed}");
         }
 
         return 1;
