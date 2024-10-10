@@ -58,6 +58,15 @@
             <!-- /ko -->
         </li>
         <li>
+            <!-- ko with: $root.collectionsTracker.getAllRevisionsCollection() -->
+            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForAllRevisions() }, 
+                          css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+                <i class="icon-revisions"></i>
+                <span>All Revisions</span>
+            </a>
+            <!-- /ko -->
+        </li>
+        <li>
             <!-- ko with: $root.collectionsTracker.getRevisionsBinCollection() -->
             <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForRevisionsBin() }, 
                           css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">

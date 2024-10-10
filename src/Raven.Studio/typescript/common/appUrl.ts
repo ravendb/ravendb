@@ -30,6 +30,7 @@ class appUrl {
         clientConfiguration: ko.pureComputed(() => appUrl.forClientConfiguration(appUrl.currentDatabase())),
         studioConfiguration: ko.pureComputed(() => appUrl.forStudioConfiguration(appUrl.currentDatabase())),
         documents: ko.pureComputed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
+        allRevisions: ko.pureComputed(() => appUrl.forAllRevisions(appUrl.currentDatabase())),
         revisionsBin: ko.pureComputed(() => appUrl.forRevisionsBin(appUrl.currentDatabase())),
         conflicts: ko.pureComputed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         identities: ko.pureComputed(() => appUrl.forIdentities(appUrl.currentDatabase())),
@@ -447,6 +448,11 @@ class appUrl {
         const collectionPart = collectionName ? "collection=" + encodeURIComponent(collectionName) : "";
         
         return "#databases/documents?" + collectionPart + appUrl.getEncodedDbPart(db);
+    }
+
+    static forAllRevisions(db: database): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/documents/revisions/all?" + databasePart;
     }
 
     static forRevisionsBin(db: database): string {

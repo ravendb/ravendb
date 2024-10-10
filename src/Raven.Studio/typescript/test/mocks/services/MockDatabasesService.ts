@@ -11,6 +11,7 @@ import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinitio
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 import DataArchival = Raven.Client.Documents.Operations.DataArchival.DataArchivalConfiguration;
 import document from "models/database/documents/document";
+import { RevisionsPreviewResultItem } from "commands/database/documents/getRevisionsPreviewCommand";
 
 interface WithGetDatabasesStateOptions {
     loadError?: string[];
@@ -169,5 +170,9 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
             dto,
             DatabasesStubs.documentsMetadataByIDPrefix()
         );
+    }
+
+    withRevisionsPreview(dto?: MockedValue<pagedResultWithToken<RevisionsPreviewResultItem>>) {
+        return this.mockResolvedValue(this.mocks.getRevisionsPreview, dto, DatabasesStubs.revisionsPreview());
     }
 }

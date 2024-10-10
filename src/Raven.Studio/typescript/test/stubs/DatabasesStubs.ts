@@ -13,6 +13,7 @@ import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revi
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 import document from "models/database/documents/document";
+import { RevisionsPreviewResultItem } from "commands/database/documents/getRevisionsPreviewCommand";
 
 export class DatabasesStubs {
     private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
@@ -950,5 +951,29 @@ return docs[0];`,
                 },
             },
         ];
+    }
+
+    static revisionsPreview(): pagedResultWithToken<RevisionsPreviewResultItem> {
+        return {
+            items: [
+                {
+                    ChangeVector: "A:2568-F9I6Egqwm0Kz+K0oFVIR9Q",
+                    Id: "doc/1-A",
+                    Etag: "2568",
+                    Flags: "HasRevisions",
+                    LastModified: "2018-07-27T12:11:53.0447651Z",
+                    ShardNumber: null,
+                },
+                {
+                    ChangeVector: "A:2569-F9I6Egqwm0Kz+K0oFVIR9Q",
+                    Id: "doc/2-A",
+                    Etag: "2569",
+                    Flags: "HasRevisions",
+                    LastModified: "2018-07-27T12:11:53.0451613Z",
+                    ShardNumber: null,
+                },
+            ],
+            totalResultCount: 2,
+        };
     }
 }

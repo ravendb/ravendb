@@ -63,6 +63,7 @@ import distributeSecretCommand = require("commands/database/secrets/distributeSe
 import saveCustomAnalyzerCommand from "commands/database/settings/saveCustomAnalyzerCommand";
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
+import getRevisionsPreviewCommand from "commands/database/documents/getRevisionsPreviewCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -294,5 +295,9 @@ export default class DatabasesService {
 
     async getDocumentsMetadataByIDPrefix(...args: ConstructorParameters<typeof getDocumentsMetadataByIDPrefixCommand>) {
         return new getDocumentsMetadataByIDPrefixCommand(...args).execute();
+    }
+
+    async getRevisionsPreview(...args: ConstructorParameters<typeof getRevisionsPreviewCommand>) {
+        return new getRevisionsPreviewCommand(...args).execute();
     }
 }
