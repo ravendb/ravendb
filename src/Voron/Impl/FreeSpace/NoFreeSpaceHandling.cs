@@ -14,6 +14,11 @@ namespace Voron.Impl.FreeSpace
             return new List<long>();
         }
 
+        public int GetFreePagesCount(LowLevelTransaction txLowLevelTransaction)
+        {
+            return 0;
+        }
+
         public void FreePage(LowLevelTransaction tx, long pageNumber)
         {
             
