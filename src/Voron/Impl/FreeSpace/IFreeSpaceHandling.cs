@@ -6,6 +6,7 @@ namespace Voron.Impl.FreeSpace
     {
         long? TryAllocateFromFreeSpace(LowLevelTransaction tx, int num);
         List<long> AllPages(LowLevelTransaction tx);
+        int GetFreePagesCount(LowLevelTransaction txLowLevelTransaction);
         void FreePage(LowLevelTransaction tx, long pageNumber);
         long GetFreePagesOverhead(LowLevelTransaction tx);
         IEnumerable<long> GetFreePagesOverheadPages(LowLevelTransaction tx);

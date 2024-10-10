@@ -349,6 +349,31 @@ namespace Voron.Impl.FreeSpace
             }
         }
 
+        public int GetFreePagesCount(LowLevelTransaction tx)
+        {
+            var freeSpaceTree = GetFreeSpaceTree(tx);
+            if (freeSpaceTree.NumberOfEntries == 0)
+                return 0;
+
+            using (var it = freeSpaceTree.Iterate())
+            {
+                if (it.Seek(0) == false)
+                    return 0;
+
+                var count = 0;
+
+                do
+                {
+                    var stream = it.CreateReaderForCurrent();
+                    var current = new StreamBitArray(stream);
+                    count += current.GetNumberOfSetBits();
+
+                } while (it.MoveNext());
+
+                return count;
+            }
+        }
+
         public void FreePage(LowLevelTransaction tx, long pageNumber)
         {
             if (_guard.IsProcessingFixedSizeTree)
