@@ -205,9 +205,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _converter?.Clean();
             if (mode.HasFlag(IndexCleanup.Readers))
             {
-                foreach (LowLevelTransaction llt in _index._indexStorage.Environment().ActiveTransactions.Enumerate())
+                using (var tx = _index._indexStorage.Environment().ReadTransaction())
                 {
-                    if (llt.TryGetClientState(out IndexStateRecord stateRecord))
+                    if (tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord stateRecord))
                     {
                         stateRecord.LuceneIndexState.Recreate(CreateIndexSearcher);
                     }

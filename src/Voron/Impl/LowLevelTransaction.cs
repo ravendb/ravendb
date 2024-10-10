@@ -50,6 +50,7 @@ namespace Voron.Impl
         private readonly ImmutableDictionary<long,PageFromScratchBuffer> _scratchPagesForReads;
         private List<long> _sparsePageRanges;
         private readonly GetPageMethod _getPageMethod;
+        private readonly long _id;
         
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
@@ -149,7 +150,7 @@ namespace Voron.Impl
 
         public StorageEnvironment Environment => _env;
 
-        public long Id => _envRecord.TransactionId;
+        public long Id => _id;
 
         public bool Committed { get; private set; }
 
@@ -181,6 +182,7 @@ namespace Voron.Impl
             _txHeader = TxHeaderInitializerTemplate;
             _env = previous._env;
             _journal = previous._journal;
+            _id = previous._id;
             _envRecord = previous._envRecord;
             _freeSpaceHandling = previous._freeSpaceHandling;
             _allocator = allocator ?? new ByteStringContext(SharedMultipleUseFlag.None);
@@ -220,9 +222,10 @@ namespace Voron.Impl
             TxStartTime = DateTime.UtcNow;
             DataPager = previous.DataPager;
             DataPagerState = previous.DataPagerState;
+            _id = txId;
             _envRecord = previous._envRecord with
             {
-                TransactionId = txId,
+                TransactionId = _id,
                 Root = previous._root.ReadHeader()
             };
             _localTxNextPageNumber = previous._localTxNextPageNumber;
@@ -290,6 +293,7 @@ namespace Voron.Impl
 
             if (flags != TransactionFlags.ReadWrite)
             {
+                _id = _envRecord.TransactionId;
                 _scratchPagesForReads = _envRecord.ScratchPagesTable.Count > 0 ? _envRecord.ScratchPagesTable : null;
                 _getPageMethod = _envRecord.ScratchPagesTable.Count > 0 ? GetPageMethod.ReadScratchFirst : GetPageMethod.DataFile;
                 InitializeRoots();
@@ -297,7 +301,8 @@ namespace Voron.Impl
                 return;
             }
 
-            _envRecord = _envRecord with { TransactionId = _envRecord.TransactionId + 1 };
+            _id = _envRecord.TransactionId + 1;
+            _envRecord = _envRecord with { TransactionId = _id };
             _getPageMethod = GetPageMethod.WriteScratchFirst;
             _env.WriteTransactionPool.Reset();
             _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
@@ -313,7 +318,12 @@ namespace Voron.Impl
 
         public bool TryGetClientState<T>(out T value)
         {
-            if (_envRecord.ClientState is T t)
+            var envRecord = _envRecord;
+
+            if (envRecord is null) 
+                ThrowObjectDisposed();
+
+            if (envRecord.ClientState is T t)
             {
                 value = t;
                 return true;
@@ -807,7 +817,7 @@ namespace Voron.Impl
                 PagerTransactionState.InvokeDispose(_env, ref DataPagerState, ref PagerTransactionState);
                 OnDispose?.Invoke(this);
 
-                _envRecord = null;
+                _envRecord = null; // RavenDB-22972 - it prevents from having a possible reference cycle via EnvironmentStateRecord.ClientState
             }
         }
 
