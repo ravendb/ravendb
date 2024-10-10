@@ -43,6 +43,7 @@ class clusterDebug extends viewModelBase {
     
     lastAppendedAsAgo: KnockoutComputed<string>;
     lastCommittedAsAgo: KnockoutComputed<string>;
+    lastCommittedTooltip: KnockoutComputed<string>;
     installingSnapshot: KnockoutComputed<boolean>;
     progress: KnockoutComputed<number>;
     progressTooltip: KnockoutComputed<string>;
@@ -50,11 +51,25 @@ class clusterDebug extends viewModelBase {
     rawJsonUrl: KnockoutComputed<string>;
     hasCriticalError: KnockoutComputed<boolean>;
     connections: KnockoutComputed<Raven.Server.Rachis.RaftDebugView.PeerConnection[]>;
+    chokedCluster: KnockoutComputed<boolean>;
     
     constructor() {
         super();
         
         this.bindToCurrentInstance("refresh", "customInlinePreview", "deleteLogEntry", "openInstallationDetails", "openCriticalError", "showConnectionDetails");
+        
+        this.chokedCluster = ko.pureComputed(() => {
+            const log = this.clusterLog();
+            if (!log) {
+                return false;
+            }
+            
+            const queueSizeCheck = log.Log.Logs.length >= 5;
+            const lastCommit = moment.utc(log.Log.LastCommitedTime);
+            const lastCommitAgoInMs = moment.utc().diff(lastCommit);
+            const lastCommitCheck = lastCommitAgoInMs >= 2 * 60 * 1_000; // 2 minutes
+            return queueSizeCheck && lastCommitCheck;
+        })
         
         this.connections = ko.pureComputed(() => {
             const log = this.clusterLog();
@@ -109,6 +124,18 @@ class clusterDebug extends viewModelBase {
 
             return generalUtils.formatDurationByDate(moment.utc(date), true);
         });
+        
+        this.lastCommittedTooltip = ko.pureComputed(() => {
+            const log = this.clusterLog();
+            if (!log) {
+                return null;
+            }
+
+            const chokedText = this.chokedCluster() ? `<span class="text-warning">Warning: No commits for over 2 minutes </span><br />` : "";
+            const commitTimeText = log.Log.LastCommitedTime ?? 'n/a';
+            
+            return chokedText + commitTimeText;
+        })
         
         this.installingSnapshot = ko.pureComputed(() => {
             const log = this.clusterLog();
