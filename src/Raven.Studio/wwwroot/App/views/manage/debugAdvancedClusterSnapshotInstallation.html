@@ -1,0 +1,24 @@
+<div class="modal-dialog modal-lg clusterSnapshotInstallationDetails" role="document">
+    <div class="modal-content force-text-wrap-word" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <div>
+                <h3 class="modal-title">Cluster Snapshot installation progress</h3>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div style="position: relative; height: 300px">
+                <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController"></virtual-grid>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: close" title="Close this dialog">
+                <i class="icon-cancel"></i><span>Close</span>
+            </button>
+        </div>
+    </div>
+</div>
+<div class="tooltip json-preview js-cluster-snapshot-installation-details-tooltip" style="opacity: 0">
+</div>

@@ -655,6 +655,10 @@ class appUrl {
         return "#databases/tasks/csvImport?" + databasePart;
     }
 
+    static forAdminClusterLogRawData(): string {
+        return window.location.protocol + "//" + window.location.host + "/admin/cluster/log";
+    }
+
     static forStatsRawData(db: database | databaseInfo): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/stats";
     }
