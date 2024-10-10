@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Util;
 using Sparrow;
 using BasicAuthentication = Elastic.Transport.BasicAuthentication;
 
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 {
                     if (connectionString.Authentication.Certificate.CertificatesBase64.Length == 1)
                     {
-                        var cert = X509CertificateLoader.LoadCertificate(Convert.FromBase64String(connectionString.Authentication.Certificate.CertificatesBase64.First()));
+                        var cert = CertificateHelper.CreateCertificate(Convert.FromBase64String(connectionString.Authentication.Certificate.CertificatesBase64.First()));
                         settings.ClientCertificate(cert);
                     }
                     else
@@ -59,7 +60,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
                         foreach (var certificateBase64 in connectionString.Authentication.Certificate.CertificatesBase64)
                         {
-                            certificates.Add(X509CertificateLoader.LoadCertificate(Convert.FromBase64String(certificateBase64)));
+                            certificates.Add(CertificateHelper.CreateCertificate(Convert.FromBase64String(certificateBase64)));
                         }
 
                         settings.ClientCertificates(certificates);

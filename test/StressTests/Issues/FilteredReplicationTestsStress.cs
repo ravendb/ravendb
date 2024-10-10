@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
@@ -85,7 +86,7 @@ namespace StressTests.Issues
                 await s.SaveChangesAsync();
             }
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -236,7 +237,7 @@ namespace StressTests.Issues
                 await s.SaveChangesAsync();
             }
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition

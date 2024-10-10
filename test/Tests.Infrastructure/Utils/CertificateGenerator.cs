@@ -10,6 +10,7 @@ using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
+using Raven.Client.Util;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Tests.Infrastructure.Utils;

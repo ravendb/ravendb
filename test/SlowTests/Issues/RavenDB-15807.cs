@@ -42,7 +42,7 @@ namespace SlowTests.Issues
             var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = hubSettings, RegisterForDisposal = true });
             var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings, RegisterForDisposal = true });
 
-            var ownCertificate = X509CertificateLoader.LoadPkcs12FromFile(sinkCertificates.ClientCertificate1Path, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
+            var ownCertificate = CertificateHelper.CreateCertificate(sinkCertificates.ClientCertificate1Path, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
             Assert.True(ownCertificate.HasPrivateKey);
 
             using (var hubStore = GetDocumentStore(new Options

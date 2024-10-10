@@ -37,7 +37,7 @@ namespace StressTests.Issues
             var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings, RegisterForDisposal = true });
 
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
-            var pullReplicationCertificate = X509CertificateLoader.LoadPkcs12FromFile(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
+            var pullReplicationCertificate = CertificateHelper.CreateCertificate(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
             Assert.True(pullReplicationCertificate.HasPrivateKey);
 
             using (var hubStore = GetDocumentStore(new Options

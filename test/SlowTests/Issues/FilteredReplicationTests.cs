@@ -18,6 +18,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
@@ -255,7 +256,7 @@ namespace SlowTests.Issues
                 ModifyDatabaseName = s => dbNameA
             });
             long[] ids = new long[3];
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
             for (int i = 0; i < 3; i++)
             {
@@ -364,7 +365,7 @@ namespace SlowTests.Issues
                 await s.LoadAsync<object>("users/ayende");
             }
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
@@ -514,7 +515,7 @@ namespace SlowTests.Issues
                 await s.LoadAsync<object>("users/ayende");
             }
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await storeB.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -640,7 +641,7 @@ namespace SlowTests.Issues
                 await s.SaveChangesAsync();
             }
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -738,7 +739,7 @@ namespace SlowTests.Issues
                 ClientCertificate = adminCert,
             });
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             var result = await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -822,7 +823,7 @@ namespace SlowTests.Issues
                 ClientCertificate = adminCert,
             });
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -965,7 +966,7 @@ namespace SlowTests.Issues
                 ClientCertificate = adminCert,
             });
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -1135,10 +1136,10 @@ namespace SlowTests.Issues
                 ClientCertificate = adminCert,
             });
 
-            var fooCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var fooCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
-            var barCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(certificates.ClientCertificate3Path), (string)null,
+            var barCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate3Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -1386,7 +1387,7 @@ namespace SlowTests.Issues
                 await s.SaveChangesAsync();
             }
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -1534,7 +1535,7 @@ namespace SlowTests.Issues
                 Assert.True(changeVector.Contains(sinkDatabaseId));
             }
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(hubCertificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(hubCertificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hub.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -1660,7 +1661,7 @@ namespace SlowTests.Issues
                 Assert.True(changeVector.Contains(sinkClusterId));
             }
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(hubCertificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(hubCertificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hub.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -1803,7 +1804,7 @@ namespace SlowTests.Issues
                 Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
             }
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(hubCertificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(hubCertificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hub.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -1929,7 +1930,7 @@ namespace SlowTests.Issues
                 Assert.True(changeVector.Contains(hubClusterId));
             }
 
-            var pullCert = X509CertificateLoader.LoadPkcs12(File.ReadAllBytes(hubCertificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(hubCertificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hub.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
