@@ -186,6 +186,7 @@ export class LicenseStubs {
             EndsAt: moment()
                 .add(2 as const, "months")
                 .format() as any,
+            SupportType: "None",
         };
     }
 

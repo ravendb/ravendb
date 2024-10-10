@@ -55,6 +55,20 @@ export function SupportDetails(props: SupportDetailsProps) {
         );
     }
 
+    const getTypeHeader = () => {
+        if (supportType === "Community") {
+            return "Free Community Support";
+        }
+        if (isCloud && supportType === "Production") {
+            return "Cloud Support";
+        }
+        if (support.SupportType === "Extended") {
+            return "Extended Support";
+        }
+
+        return `${supportType} Support`;
+    };
+
     return (
         <React.Fragment key="support-details">
             <div className="bg-faded-info hstack justify-content-center">
@@ -64,7 +78,7 @@ export function SupportDetails(props: SupportDetailsProps) {
                 <>
                     <RichPanelHeader className="text-center p-4">
                         You are using
-                        <h2 className="text-info">Free Community Support</h2>
+                        <h2 className="text-info">{getTypeHeader()}</h2>
                         <p>
                             Get help and connect with fellow users and RavenDB developers through our community forum.
                         </p>
@@ -129,7 +143,7 @@ export function SupportDetails(props: SupportDetailsProps) {
                                                 { "text-enterprise": supportType === "Production" }
                                             )}
                                         >
-                                            {isCloud && supportType === "Production" ? "Cloud" : supportType} Support
+                                            {getTypeHeader()}
                                         </h2>
                                     </div>
                                     <img alt="Support" src={supportImg} width={70} className="ms-4" />

@@ -98,6 +98,7 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Maintenance;
@@ -334,6 +335,10 @@ namespace TypingsGenerator
             // cluster
             scripter.AddType(typeof(ClusterTopology));
             scripter.AddType(typeof(ClusterObserverDecisions));
+            scripter.AddType(typeof(CandidateDebugView));
+            scripter.AddType(typeof(FollowerDebugView));
+            scripter.AddType(typeof(LeaderDebugView));
+            scripter.AddType(typeof(PassiveDebugView));
             scripter.AddType(typeof(Raven.Client.ServerWide.Commands.NodeInfo));
             scripter.AddType(typeof(Raven.Server.Commercial.NodeInfo));
             scripter.AddType(typeof(SetupInfo));
