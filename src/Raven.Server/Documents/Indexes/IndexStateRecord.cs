@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Corax;
 using Lucene.Net.Search;
 using Raven.Client.Documents.Linq;
@@ -47,6 +48,8 @@ public record IndexStateRecord(
 
 public class LuceneIndexState
 {
+    private static readonly ConditionalWeakTable<IndexSearcher, IndexSearcherDisposer> InstancesThatGotRecreated = new();
+
     public Lazy<IndexSearcher> IndexSearcher;
 
     public LuceneIndexState(Func<IndexSearcher> func)
@@ -80,7 +83,10 @@ public class LuceneIndexState
                     logger.Error("Failed to finalize index searcher", e);
                 }
             }
-            catch { }
+            catch
+            {
+                // ignored
+            }
             Debug.Assert(false, e.ToString());
         }
     }
@@ -89,6 +95,43 @@ public class LuceneIndexState
     {
         if (IndexSearcher.IsValueCreated == false)
             return;
+
+        var old = IndexSearcher.Value;
+
+        InstancesThatGotRecreated.Add(old, new IndexSearcherDisposer(old)); // this way we ensure the old searcher will get disposed - https://www.ayende.com/blog/199169-A/externalfinalizer-adding-a-finalizer-to-3rd-party-objects
+
         IndexSearcher = new Lazy<IndexSearcher>(createIndexSearcher);
+    }
+
+    private class IndexSearcherDisposer(IndexSearcher searcher)
+    {
+        ~IndexSearcherDisposer()
+        {
+            try
+            {
+                using (searcher)
+                using (searcher.IndexReader)
+                {
+
+                }
+            }
+            catch (Exception e)
+            {
+                try
+                {
+                    RavenLogger logger = RavenLogManager.Instance.GetLoggerForServer<IndexStateRecord>();
+                    if (logger.IsErrorEnabled)
+                    {
+                        logger.Error($"Failed to finalize index searcher from {nameof(IndexSearcherDisposer)}", e);
+                    }
+                }
+                catch
+                {
+                    // ignored
+                }
+                Debug.Assert(false, e.ToString());
+            }
+            
+        }
     }
 }
