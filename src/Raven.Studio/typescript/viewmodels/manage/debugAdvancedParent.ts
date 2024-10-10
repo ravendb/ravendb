@@ -44,6 +44,15 @@ class debugAdvanced {
                     requiredAccess: "Operator"
                 },
                 {
+                    route: 'admin/settings/debug/advanced/clusterDebug',
+                    moduleId: require('viewmodels/manage/debugAdvancedClusterDebug'),
+                    title: 'Cluster Debug',
+                    tabName: "Cluster Debug",
+                    nav: true,
+                    hash: appUrl.forDebugAdvancedClusterDebug(),
+                    requiredAccess: "Operator"
+                },
+                {
                     route: 'admin/settings/debug/advanced/recordTransactionCommands',
                     moduleId: require('viewmodels/manage/debugAdvancedRecordTransactionCommands'),
                     title: 'Record Transaction Commands',

@@ -144,6 +144,10 @@ class appUrl {
         return "#admin/settings/debug/advanced/observerLog";
     }
 
+    static forDebugAdvancedClusterDebug(): string {
+        return "#admin/settings/debug/advanced/clusterDebug";
+    }
+
     static forDebugAdvancedRecordTransactionCommands(databaseToHighlight: string = undefined): string {
         const dbPart = databaseToHighlight === undefined ? "" : "?highlight=" + encodeURIComponent(databaseToHighlight);
         return "#admin/settings/debug/advanced/recordTransactionCommands" + dbPart;
@@ -666,6 +670,10 @@ class appUrl {
     static forCsvImport(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/csvImport?" + databasePart;
+    }
+
+    static forAdminClusterLogRawData(): string {
+        return window.location.protocol + "//" + window.location.host + "/admin/cluster/log";
     }
 
     static forStatsRawData(db: database): string {
