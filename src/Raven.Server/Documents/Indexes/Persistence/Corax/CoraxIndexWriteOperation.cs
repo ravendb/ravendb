@@ -207,8 +207,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             DeleteByField(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, reduceKeyHash, stats);
             
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Deleted document for '{_indexName}'. Reduce key hash: {reduceKeyHash}.");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Deleted document for '{_indexName}'. Reduce key hash: {reduceKeyHash}.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

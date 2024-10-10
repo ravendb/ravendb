@@ -512,27 +512,27 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                     sw.Stop();
 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Replication connection {FromToString}: " +
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Replication connection {FromToString}: " +
                                   $"received and written {replicatedItemsCount:#,#;;0} items to database in {sw.ElapsedMilliseconds:#,#;;0}ms, " +
                                   $"with last etag = {lastEtag}.");
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsInfoEnabled)
+                    if (Logger.IsDebugEnabled)
                     {
                         //This is the case where we had a missing attachment, it is rare but expected.
                         if (e.ExtractSingleInnerException() is MissingAttachmentException mae)
                         {
-                            Logger.Info("Replication batch contained missing attachments will request the batch to be re-sent with those attachments.", mae);
+                            Logger.Debug("Replication batch contained missing attachments will request the batch to be re-sent with those attachments.", mae);
                         }
                         else if (_cts.IsCancellationRequested || e.ExtractSingleInnerException() is ObjectDisposedException)
                         {
-                            Logger.Info($"Shutting down the replication connection {FromToString}, likely because the sender has closed the connection.");
+                            Logger.Debug($"Shutting down the replication connection {FromToString}, likely because the sender has closed the connection.");
                         }
                         else
                         {
-                            Logger.Info("Failed to receive documents replication batch.", e);
+                            Logger.Debug("Failed to receive documents replication batch.", e);
                         }
                     }
                     throw;

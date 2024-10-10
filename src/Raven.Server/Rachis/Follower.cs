@@ -126,9 +126,9 @@ namespace Raven.Server.Rachis
                             }
                             _engine.Timeout.Defer(_connection.Source);
                         }
-                        if (_engine.Log.IsInfoEnabled)
+                        if (_engine.Log.IsDebugEnabled)
                         {
-                            _engine.Log.Info($"{ToString()}: Got non empty append entries request with {entries.Count} entries. Last: ({entries[entries.Count - 1].Index} - {entries[entries.Count - 1].Flags})"
+                            _engine.Log.Debug($"{ToString()}: Got non empty append entries request with {entries.Count} entries. Last: ({entries[entries.Count - 1].Index} - {entries[entries.Count - 1].Flags})"
 #if DEBUG
                                 + $"[{string.Join(" ,", entries.Select(x => x.ToString()))}]"
 #endif
@@ -275,17 +275,17 @@ namespace Raven.Server.Rachis
         private (bool HasRemovedFromTopology, long LastAcknowledgedIndex, long LastTruncate, long LastCommit) ApplyLeaderStateToLocalState(Stopwatch sp, List<RachisEntry> entries, AppendEntries appendEntries)
         {
             // we start the tx after we finished reading from the network
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"{ToString()}: Ready to start tx in {sp.Elapsed}");
+                _engine.Log.Debug($"{ToString()}: Ready to start tx in {sp.Elapsed}");
             }
 
             var command = new FollowerApplyCommand(_engine, _term, entries, appendEntries, sp);
             _engine.TxMerger.EnqueueSync(command);
 
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"{ToString()}: Processing entries request with {entries.Count} entries took {sp.Elapsed}");
+                _engine.Log.Debug($"{ToString()}: Processing entries request with {entries.Count} entries took {sp.Elapsed}");
             }
 
             var lastAcknowledgedIndex = entries.Count == 0 ? appendEntries.PrevLogIndex : entries[^1].Index;

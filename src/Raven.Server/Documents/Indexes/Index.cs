@@ -2179,7 +2179,7 @@ namespace Raven.Server.Documents.Indexes
         internal void HandleUnexpectedErrors(IndexingStatsScope stats, Exception e)
         {
             if (_logger.IsErrorEnabled)
-                _logger.Warn($"Unexpected exception occurred for '{Name}'.", e);
+                _logger.Error($"Unexpected exception occurred for '{Name}'.", e);
 
             stats.AddUnexpectedError(e);
 
@@ -2194,7 +2194,7 @@ namespace Raven.Server.Documents.Indexes
         internal void HandleCriticalErrors(IndexingStatsScope stats, CriticalIndexingException e)
         {
             if (_logger.IsErrorEnabled)
-                _logger.Warn($"Critical exception occurred for '{Name}'.", e);
+                _logger.Error($"Critical exception occurred for '{Name}'.", e);
 
             if (State == IndexState.Error)
                 return;
@@ -2205,7 +2205,7 @@ namespace Raven.Server.Documents.Indexes
         internal void HandleWriteErrors(IndexingStatsScope stats, IndexWriteException iwe)
         {
             if (_logger.IsErrorEnabled)
-                _logger.Warn($"Write exception occurred for '{Name}'.", iwe);
+                _logger.Error($"Write exception occurred for '{Name}'.", iwe);
 
             stats.AddWriteError(iwe);
 
@@ -2220,7 +2220,7 @@ namespace Raven.Server.Documents.Indexes
         internal void HandleExcessiveNumberOfReduceErrors(IndexingStatsScope stats, ExcessiveNumberOfReduceErrorsException e)
         {
             if (_logger.IsErrorEnabled)
-                _logger.Warn($"Erroring index due to excessive number of reduce errors '{Name}'.", e);
+                _logger.Error($"Erroring index due to excessive number of reduce errors '{Name}'.", e);
 
             stats.AddExcessiveNumberOfReduceErrors(e);
 

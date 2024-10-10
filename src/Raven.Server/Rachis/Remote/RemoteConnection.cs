@@ -369,9 +369,9 @@ namespace Raven.Server.Rachis.Remote
 
         public void Send(JsonOperationContext context, AppendEntriesResponse aer, bool shouldLog=true)
         {
-            if (_log.IsInfoEnabled && shouldLog)
+            if (_log.IsDebugEnabled && shouldLog)
             {
-                _log.Info(aer.ToString());
+                _log.Debug(aer.ToString());
             }
 
             var msg = new DynamicJsonValue
