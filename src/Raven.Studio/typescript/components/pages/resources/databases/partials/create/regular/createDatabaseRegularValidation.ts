@@ -87,8 +87,12 @@ const shardingPrefixesStepSchema = yup.object({
                                     return value.endsWith("/") || value.endsWith("-");
                                 }
                             )
-                            .test("unique-prefix", "Prefix must be unique", (value, ctx) => {
-                                return ctx.options.context.usedPrefixes.filter((x: string) => x === value).length < 2;
+                            .test("unique-prefix", "Prefix must be unique (case-insensitive)", (value, ctx) => {
+                                return (
+                                    ctx.options.context.usedPrefixes.filter(
+                                        (x: string) => x.toLowerCase() === value.toLowerCase()
+                                    ).length < 2
+                                );
                             }),
                 }),
                 shardNumbers: yup
