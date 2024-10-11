@@ -690,13 +690,13 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e) when (ExpectedException(e))
             {
-                if (_parent.Log.IsInfoEnabled)
+                if (_parent.Log.IsDebugEnabled)
                 {
                     var error = $"Failed to execute command of type '{type}'";
                     if (cmd.TryGet(DatabaseName, out string databaseName))
                         error += $"on database '{databaseName}'";
 
-                    _parent.Log.Info(error, e);
+                    _parent.Log.Debug(error, e);
                 }
 
                 _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTermIn(context), cmd, null, e);

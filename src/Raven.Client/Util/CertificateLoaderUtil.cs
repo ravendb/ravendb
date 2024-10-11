@@ -58,13 +58,13 @@ internal static class CertificateLoaderUtil
         {
             certificate = creator(f);
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             exception = e;
             f = AddMachineKeySet(flag);
             certificate = creator(f);
         }
-        
+
         LogIfNeeded(nameof(CreateCertificate), f, exception);
 
         CertificateCleaner.RegisterForDisposalDuringFinalization(certificate);
@@ -90,15 +90,19 @@ internal static class CertificateLoaderUtil
 #endif
             X509KeyStorageFlags.UserKeySet |
             X509KeyStorageFlags.MachineKeySet;
-        
+
         Debug.Assert(flags.HasValue == false || (flags.Value & keyStorageFlags) == 0);
     }
-    
+
     private static void LogIfNeeded(string method, X509KeyStorageFlags flags, Exception exception)
     {
+        if (exception == null)
+            return;
+
         if (FirstTime)
         {
             FirstTime = false;
+
             if (Logger.IsWarnEnabled)
                 Logger.Warn(CreateMsg(), exception);
         }
@@ -107,6 +111,8 @@ internal static class CertificateLoaderUtil
             if (Logger.IsDebugEnabled)
                 Logger.Debug(CreateMsg(), exception);
         }
+
+        return;
 
         string CreateMsg()
         {

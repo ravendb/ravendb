@@ -756,14 +756,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 case TaskStatus.Disabled:
                     existingBackupState.DisableFutureBackups();
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Backup task '{taskId}' state is '{taskState}', will cancel the backup for it.");
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Backup task '{taskId}' state is '{taskState}', will cancel the backup for it.");
 
                     return;
                 case TaskStatus.ActiveByOtherNode:
                     // the task is disabled or this node isn't responsible for the backup task
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Backup task '{taskId}' state is '{taskState}', will keep the timer for it.");
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Backup task '{taskId}' state is '{taskState}', will keep the timer for it.");
 
                     return;
 
@@ -775,8 +775,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // a backup is already running, the next one will be re-scheduled by the backup task if needed
                     if (existingBackupState.RunningTask != null)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Backup task '{taskId}' state is '{taskState}', and currently are being executed since '{existingBackupState.StartTimeInUtc}'.");
+                        if (_logger.IsDebugEnabled)
+                            _logger.Debug($"Backup task '{taskId}' state is '{taskState}', and currently are being executed since '{existingBackupState.StartTimeInUtc}'.");
 
                         return;
                     }
@@ -784,14 +784,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // backup frequency hasn't changed, and we have a scheduled backup
                     if (previousConfiguration.HasBackupFrequencyChanged(newConfiguration) == false && existingBackupState.HasScheduledBackup())
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Backup task '{taskId}' state is '{taskState}', the task doesn't have frequency changes and has scheduled backup, will continue to execute by the current node '{_database.ServerStore.NodeTag}'.");
+                        if (_logger.IsDebugEnabled)
+                            _logger.Debug($"Backup task '{taskId}' state is '{taskState}', the task doesn't have frequency changes and has scheduled backup, will continue to execute by the current node '{_database.ServerStore.NodeTag}'.");
 
                         return;
                     }
 
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Backup task '{taskId}' state is '{taskState}', the task has frequency changes or doesn't have scheduled backup, the timer will be rearranged and the task will be executed by current node '{_database.ServerStore.NodeTag}'.");
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Backup task '{taskId}' state is '{taskState}', the task has frequency changes or doesn't have scheduled backup, the timer will be rearranged and the task will be executed by current node '{_database.ServerStore.NodeTag}'.");
 
                     var backupStatus = GetBackupStatus(taskId, inMemoryBackupStatus: null);
                     existingBackupState.UpdateTimer(GetNextBackupDetails(newConfiguration, backupStatus, _serverStore.NodeTag), lockTaken: false);
@@ -847,8 +847,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (responsibleNodeTag == _serverStore.NodeTag)
                 return TaskStatus.ActiveByCurrentNode;
 
-            if (disableLog == false && _logger.IsInfoEnabled)
-                _logger.Info($"Backup job is skipped at {SystemTime.UtcNow}, because it is managed " +
+            if (disableLog == false && _logger.IsDebugEnabled)
+                _logger.Debug($"Backup job is skipped at {SystemTime.UtcNow}, because it is managed " +
                              $"by '{responsibleNodeTag}' node and not the current node ({_serverStore.NodeTag})");
 
             return TaskStatus.ActiveByOtherNode;
