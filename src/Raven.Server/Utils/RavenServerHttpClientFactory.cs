@@ -70,6 +70,8 @@ public class RavenServerHttpClientFactory : IRavenHttpClientFactory
             if (_registeredConfigurations.TryGetValue(name, out var key) == false)
                 throw new InvalidOperationException($"Could not retrieve configuration for '{name}' http client.");
 
+            options.HttpClientActions.Add(DefaultRavenHttpClientFactory.ConfigureHttpClient);
+
             options.HttpMessageHandlerBuilderActions.Add(builder =>
             {
                 var h = builder.PrimaryHandler;
