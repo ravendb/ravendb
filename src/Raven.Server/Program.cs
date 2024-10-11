@@ -36,10 +36,21 @@ namespace Raven.Server
     public class Program
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Server");
-        
+
+        static Program()
+        {
+            bool useLegacyHttpClientFactory = false;
+            var useLegacyHttpClientFactoryAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_USELEGACYHTTPCLIENTFACTORY");
+            if (useLegacyHttpClientFactoryAsString != null && bool.TryParse(useLegacyHttpClientFactoryAsString, out useLegacyHttpClientFactory) == false)
+                throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_USELEGACYHTTPCLIENTFACTORY' env variable with value '{useLegacyHttpClientFactoryAsString}'.");
+
+            RequestExecutor.HttpClientFactory = useLegacyHttpClientFactory 
+                ? DefaultRavenHttpClientFactory.Instance 
+                : RavenServerHttpClientFactory.Instance;
+        }
+
         public static unsafe int Main(string[] args)
         {
-            RequestExecutor.HttpClientFactory = RavenServerHttpClientFactory.Instance;
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
 
