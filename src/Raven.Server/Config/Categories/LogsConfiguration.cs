@@ -12,6 +12,7 @@ namespace Raven.Server.Config.Categories
     {
         [DefaultValue(null)]
         [ConfigurationEntry("Logs.ConfigPath", ConfigurationEntryScope.ServerWideOnly)]
+        [ReadOnlyPath]
         public PathSetting ConfigPath { get; set; }
 
         [DefaultValue("Logs")]

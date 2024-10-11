@@ -287,9 +287,9 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
-                if (_engine.Log.IsInfoEnabled)
+                if (_engine.Log.IsWarnEnabled)
                 {
-                    _engine.Log.Info($"Failed to talk to candidate: {_engine.Tag}", e);
+                    _engine.Log.Warn($"Failed to talk to candidate: {_engine.Tag}", e);
                 }
             }
         }
@@ -314,9 +314,9 @@ namespace Raven.Server.Rachis
             if (_electionWon == false)
                 _connection.Dispose();
 
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"{ToString()}: Disposing");
+                _engine.Log.Debug($"{ToString()}: Disposing");
             }
 
             if (_electorLongRunningWork != null && _electorLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
