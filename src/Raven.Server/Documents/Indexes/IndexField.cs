@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes
@@ -38,7 +39,7 @@ namespace Raven.Server.Documents.Indexes
 
         public SpatialOptions Spatial { get; set; }
         
-        public bool Vector { get; set; }
+        public VectorOptions Vector { get; set; }
 
         public IndexField()
         {
@@ -80,6 +81,9 @@ namespace Raven.Server.Documents.Indexes
             if (options.Spatial != null)
                 field.Spatial = new SpatialOptions(options.Spatial);
 
+            if (options.Vector != null)
+                field.Vector = new(options.Vector);
+
             return field;
         }
 
@@ -91,7 +95,9 @@ namespace Raven.Server.Documents.Indexes
                 && Storage == other.Storage
                 && Indexing == other.Indexing
                 && Vector == other.Vector
-                && TermVector == other.TermVector;
+                && TermVector == other.TermVector
+                //todo: should we add spatial & vector as well here?
+                ;
         }
 
         public override bool Equals(object obj)
@@ -119,10 +125,10 @@ namespace Raven.Server.Documents.Indexes
                 hashCode = (hashCode * 397) ^ (Analyzer != null ? StringComparer.Ordinal.GetHashCode(Analyzer) : 0);
                 hashCode = (hashCode * 397) ^ (int)Storage;
                 hashCode = (hashCode * 397) ^ Id;
-                hashCode = (hashCode * 397) ^ (Vector ? 233 : 343);
                 hashCode = (hashCode * 397) ^ (int)Indexing;
                 hashCode = (hashCode * 397) ^ (int)TermVector;
                 hashCode = (hashCode * 397) ^ (HasSuggestions ? 233 : 343);
+                //todo: vector & spatial as well?
                 return hashCode;
             }
         }
@@ -141,7 +147,8 @@ namespace Raven.Server.Documents.Indexes
                 Storage = Storage,
                 TermVector = TermVector,
                 Suggestions = HasSuggestions,
-                Spatial = Spatial
+                Spatial = Spatial,
+                Vector = Vector
             };
         }
     }
@@ -166,6 +173,8 @@ namespace Raven.Server.Documents.Indexes
         public int Id { get; set; }
 
         public AutoSpatialOptions Spatial { get; set; }
+        
+        public AutoVectorOptions Vector { get; set; }
 
         public bool SamePathToArrayAsGroupByField { get; set; }
 
@@ -185,6 +194,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (options.Spatial != null)
                 field.Spatial = new AutoSpatialOptions(options.Spatial);
+
+            if (options.Vector != null)
+                field.Vector = new AutoVectorOptions(options.Vector);
 
             if (options.Suggestions.HasValue)
                 field.HasSuggestions = options.Suggestions.Value;
@@ -209,6 +221,24 @@ namespace Raven.Server.Documents.Indexes
                     Storage = Storage,
                     HasSuggestions = HasSuggestions,
                     Spatial = new AutoSpatialOptions(Spatial),
+                    Vector = null,
+                    Id = Id
+                });
+
+                return fields;
+            }
+
+            if (Vector != null)
+            {
+                var vector = new AutoVectorOptions(Vector);
+                fields.Add(new IndexField
+                {
+                    Indexing = FieldIndexing.Default,
+                    Name =  Name,
+                    Storage = Storage,
+                    HasSuggestions = HasSuggestions,
+                    Spatial = null,
+                    Vector = vector,
                     Id = Id
                 });
 
@@ -234,19 +264,6 @@ namespace Raven.Server.Documents.Indexes
                 return fields;
 
             var hasHighlighting = Indexing.HasFlag(AutoFieldIndexing.Highlighting);
-
-            if (Indexing.HasFlag(AutoFieldIndexing.Vector))
-            {
-                fields.Add(new IndexField
-                {
-                    Vector = true,
-                    Name = GetVectorAutoIndexFieldName(Name),
-                    OriginalName = originalName,
-                    Storage = FieldStorage.Yes,
-                    Indexing = FieldIndexing.No,
-                    Id = ++lastUsedId.Value
-                });
-            }
             
             if (Indexing.HasFlag(AutoFieldIndexing.Search) || hasHighlighting)
             {
@@ -315,18 +332,31 @@ namespace Raven.Server.Documents.Indexes
                 return hashCode;
             }
         }
-
-        public static string GetVectorAutoIndexFieldName(string name)
-        {
-            return $"vector({name})";
-        }
-
         
         public static string GetSearchAutoIndexFieldName(string name)
         {
             return $"search({name})";
         }
 
+        public static string GetVectorAutoIndexFieldName(string name, VectorOptions vectorOptions)
+        {
+            var innerMethod = (vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType) switch
+            {
+                (EmbeddingType.Text, EmbeddingType.Float32) => "text",
+                (EmbeddingType.Text, EmbeddingType.Int8) => "text_i8",
+                (EmbeddingType.Text, EmbeddingType.Binary) => "text_i1",
+                (EmbeddingType.Float32, EmbeddingType.Float32) => string.Empty,
+                (EmbeddingType.Float32, EmbeddingType.Int8) => "f32_i8",
+                (EmbeddingType.Float32, EmbeddingType.Binary) => "f32_i1",
+                (EmbeddingType.Int8, EmbeddingType.Int8) => "i8",
+                (EmbeddingType.Binary, EmbeddingType.Binary) => "i1",
+                _ => throw new NotImplementedException(),
+            };
+            
+            var inner = innerMethod == string.Empty ? name : $"embedding.{innerMethod}({name})";
+            return $"vector.search({inner})";
+        }
+        
         public static string GetExactAutoIndexFieldName(string name)
         {
             return $"exact({name})";

@@ -1753,6 +1753,29 @@ namespace Raven.Server.Json
             }
             else
                 writer.WriteNull();
+            
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(options.Vector));
+            if (options.Vector != null)
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(options.Vector.Dimensions));
+                if (options.Vector.Dimensions.HasValue)
+                    writer.WriteString(options.Vector.Dimensions.ToString());
+                else
+                    writer.WriteNull();
+                writer.WriteComma();
+                
+                writer.WritePropertyName(nameof(options.Vector.IndexingStrategy));
+                writer.WriteString(options.Vector.IndexingStrategy.ToString());
+                writer.WriteComma();
+                
+                writer.WritePropertyName(nameof(options.Vector.SourceEmbeddingType));
+                writer.WriteString(options.Vector.SourceEmbeddingType.ToString());
+            }
+            else
+                writer.WriteNull();
 
             writer.WriteEndObject();
         }

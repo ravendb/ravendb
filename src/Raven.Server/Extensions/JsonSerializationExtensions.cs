@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
@@ -72,14 +73,25 @@ namespace Raven.Server.Extensions
                     spatial[nameof(SpatialOptions.Units)] = kvp.Value.Spatial.Units.ToString();
                 }
 
+                DynamicJsonValue vector = null;
+                if (kvp.Value.Vector != null)
+                {
+                    vector = new();
+                    vector[nameof(VectorOptions.Dimensions)] = kvp.Value.Vector.Dimensions;
+                    vector[nameof(VectorOptions.SourceEmbeddingType)] = kvp.Value.Vector.SourceEmbeddingType.ToString();
+                    vector[nameof(VectorOptions.DestinationEmbeddingType)] = kvp.Value.Vector.DestinationEmbeddingType.ToString();
+                    vector[nameof(VectorOptions.IndexingStrategy)] = kvp.Value.Vector.IndexingStrategy.ToString();
+                }
+
                 var field = new DynamicJsonValue();
                 field[nameof(IndexFieldOptions.Analyzer)] = kvp.Value.Analyzer;
                 field[nameof(IndexFieldOptions.Indexing)] = kvp.Value.Indexing?.ToString();
                 field[nameof(IndexFieldOptions.Spatial)] = spatial;
+                field[nameof(IndexFieldOptions.Vector)] = vector;
                 field[nameof(IndexFieldOptions.Storage)] = kvp.Value.Storage?.ToString();
                 field[nameof(IndexFieldOptions.Suggestions)] = kvp.Value.Suggestions;
                 field[nameof(IndexFieldOptions.TermVector)] = kvp.Value.TermVector?.ToString();
-
+                
                 fields[kvp.Key] = field;
             }
 

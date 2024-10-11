@@ -4,6 +4,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Indexes.TimeSeries;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Expiration;
@@ -276,6 +277,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, TestIndexParameters> TestIndexParameters = GenerateJsonDeserializationRoutine<TestIndexParameters>();
 
         internal static readonly Func<BlittableJsonReaderObject, AutoSpatialOptions> AutoSpatialOptions = GenerateJsonDeserializationRoutine<AutoSpatialOptions>();
+        internal static readonly Func<BlittableJsonReaderObject, AutoVectorOptions> AutoVectorOptions = GenerateJsonDeserializationRoutine<AutoVectorOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, BlockingTombstoneDetails> BlockingTombstoneDetails = GenerateJsonDeserializationRoutine<BlockingTombstoneDetails>();
 

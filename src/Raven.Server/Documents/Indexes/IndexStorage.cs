@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         // We only support Vectors in Corax, so if an auto-index is using it, let's already set it up as such, regardless
                         // of what type of default storage engine is configured.
-                        true when _index.Definition.IndexFields.Any(x=>x.Value.Vector) => SearchEngineType.Corax,
+                        true when _index.Definition.IndexFields.Any(x=> x.Value.Vector != null) => SearchEngineType.Corax,
                         true => _index.Configuration.AutoIndexingEngineType,
                         false => _index.Configuration.StaticIndexingEngineType
                     };

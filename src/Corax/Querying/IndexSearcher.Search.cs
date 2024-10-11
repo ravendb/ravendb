@@ -536,12 +536,12 @@ public partial class IndexSearcher
         return a;
     }
 
-    public IQueryMatch VectorQuery(FieldMetadata fieldMetadata, byte[] vectorToSearch, float minimumMatch)
+    public IQueryMatch VectorQuery(in FieldMetadata fieldMetadata, Span<byte> vectorToSearch, in float minimumMatch, in VectorSimilarityType similarityType)
     {
         long rootPageByFieldName = GetRootPageByFieldName(fieldMetadata.FieldName);
         if (rootPageByFieldName is -1)
             return EmptyMatch();
         
-        return new ExactVectorSearchMatch(this, _transaction, rootPageByFieldName, vectorToSearch, minimumMatch);
+        return new ExactVectorSearchMatch(this, _transaction, rootPageByFieldName, vectorToSearch, minimumMatch, similarityType);
     }
 }

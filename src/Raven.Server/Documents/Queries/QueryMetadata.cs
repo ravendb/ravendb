@@ -37,6 +37,9 @@ using Circle = Raven.Server.Documents.Indexes.Spatial.Circle;
 using System.Diagnostics.CodeAnalysis;
 using Acornima;
 using Acornima.Ast;
+using Amqp.Framing;
+using Raven.Client.Documents.Indexes.Vector;
+using Raven.Server.Documents.Indexes;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -289,39 +292,20 @@ function execute(doc, args){
             IsCollectionQuery = false;
         }
 
-        public void AddVectorField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
-        {
-            IsCollectionQuery = false;
-            var split = fieldName.Value.Split(".");
-            if (split.Length > 1 && NotInRootAliasPaths(split[0]))
-            {
-                ThrowUnknownAlias(split[0], parameters);
-            }
-            var indexFieldName = GetIndexFieldName(fieldName, parameters);
-            IndexFieldNames.Add(indexFieldName);
-            if (WhereFields.TryGetValue(indexFieldName, out var existingField))
-            {
-                existingField.IsVector = true;
-            }
-            else
-            {
-                WhereFields[indexFieldName] = new WhereField(false, false, null) { IsVector = true };
-            }
-        }
-        
-        public void AddWhereField(QueryFieldName fieldName,
+        private void AddWhereField(QueryFieldName fieldName,
             BlittableJsonReaderObject parameters,
             bool search = false,
             bool exact = false,
             AutoSpatialOptions spatial = null,
             OperatorType? operatorType = null,
             bool isNegated = false,
-            string methodName = null
+            string methodName = null,
+            AutoVectorOptions vector = null
             )
         {
             QueryFieldName indexFieldName;
-
-            if (spatial != null && IsDynamic)
+            
+            if ((spatial != null || vector != null) && IsDynamic)
             {
                 indexFieldName = new QueryFieldName(fieldName.Value, fieldName.IsQuoted);
             }
@@ -340,7 +324,7 @@ function execute(doc, args){
                 string.Equals(methodName, "startsWith", StringComparison.OrdinalIgnoreCase))
                 operatorType = OperatorType.Equal;
 
-            if (search || exact || spatial != null || isNegated ||
+            if (search || exact || spatial != null || vector != null || isNegated ||
                 operatorType != OperatorType.Equal)
             {
                 IsCollectionQuery = false;
@@ -350,7 +334,6 @@ function execute(doc, args){
                 IsCollectionQuery = false;
             }
 
-            bool isVector = false;
             if (IndexFieldNames.Add(indexFieldName) == false)
             {
                 // RavenDB-14176
@@ -360,15 +343,12 @@ function execute(doc, args){
                 {
                     search |= existingField.IsFullTextSearch;
                     exact |= existingField.IsExactSearch;
-                    spatial = spatial ?? existingField.Spatial;
-                    isVector |= existingField.IsVector;
+                    spatial ??= existingField.Spatial;
+                    vector ??= existingField.Vector;
                 }
             }
 
-            WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact, spatial: spatial)
-            {
-                IsVector = isVector
-            };
+            WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact, spatial: spatial, vector: vector);
         }
 
         private void Build(BlittableJsonReaderObject parameters)
@@ -2410,9 +2390,7 @@ function execute(doc, args){
                         return;
                     
                     case MethodType.Vector_Search:
-                    case MethodType.Vector_Nearest:
-                        fieldName = GetQueryFieldName(methodName, arguments, parameters);
-                        _metadata.AddVectorField(fieldName, parameters);
+                        HandleVector(methodName.Value, arguments, withoutAlias: true, parameters);
                         break;
 
                     case MethodType.MoreLikeThis:
@@ -2432,7 +2410,7 @@ function execute(doc, args){
                         break;
                 }
             }
-
+            
             private QueryFieldName GetQueryFieldName(StringSegment methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
             {
                 QueryFieldName fieldName;
@@ -2518,6 +2496,101 @@ function execute(doc, args){
                 throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a parameter name or value", QueryText, parameters);
             }
 
+            private void HandleVector(string methodName, List<QueryExpression> arguments, bool withoutAlias, BlittableJsonReaderObject parameters)
+            {
+                QueryFieldName fieldName;
+
+                if (_metadata.IsDynamic == false)
+                {
+                    if (arguments.Count == 0)
+                        throw new InvalidQueryException($"Method {methodName}() expects at least one argument to be passed", QueryText, parameters);
+
+                    var argument = arguments[0];
+                    if (argument is FieldExpression == false && argument is ValueExpression == false)
+                        throw new InvalidQueryException($"Method {methodName}() expects that first argument will be a field name when static index is queried", QueryText,
+                            parameters);
+
+                    fieldName = _metadata.ExtractFieldNameFromArgument(argument, withoutAlias, methodName, parameters, QueryText);
+                    _metadata.AddWhereField(new QueryFieldName(fieldName, false), parameters, exact: _insideExact > 0);
+                }
+                else
+                {
+                    var embedding = (Source: EmbeddingType.Float32, Destination: EmbeddingType.Float32);
+                    //vector.search(SRC_DST(Field))
+                    if (arguments.Count > 0 && arguments[0] is MethodExpression embeddingMethod)
+                    {
+                        var materializedMethodName = embeddingMethod.Name.Value;
+                        var embeddingType = QueryMethod.GetMethodType(materializedMethodName);
+                        embedding = MethodTypeToEmbeddingType(embeddingType);
+                        fieldName = _metadata.ExtractFieldNameFromFirstArgument(embeddingMethod.Arguments, materializedMethodName, parameters);
+                    }
+                    else
+                    {
+                        fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
+                    }
+                    
+                    
+                    //HANDLE ALIASED:
+                    var split = fieldName.Value.Split(".");
+                    if (split.Length > 1 && _metadata.NotInRootAliasPaths(split[0]))
+                    {
+                        _metadata.ThrowUnknownAlias(split[0], parameters);
+                    }
+                    fieldName = _metadata.GetIndexFieldName(fieldName, parameters);
+                    
+                    var vectorOptions = new AutoVectorOptions()
+                    {
+                        SourceFieldName = fieldName, 
+                        IndexingStrategy = VectorIndexingStrategy.Exact, 
+                        DestinationEmbeddingType = embedding.Destination, 
+                        SourceEmbeddingType = embedding.Source
+                    };
+                    
+                    _metadata.AddWhereField(new(AutoIndexField.GetVectorAutoIndexFieldName(fieldName, vectorOptions), false), parameters, exact: _insideExact > 0, vector: vectorOptions);
+                }
+          
+                (EmbeddingType Source, EmbeddingType Destination) MethodTypeToEmbeddingType(MethodType embeddingType)
+                {
+                    var sourceEmbedding = EmbeddingType.Float32;
+                    var destinationEmbedding = EmbeddingType.Float32;
+                    
+                    switch (embeddingType)
+                    {
+                        case MethodType.Embedding_Text:
+                            sourceEmbedding = EmbeddingType.Text;
+                            break;
+                        case MethodType.Embedding_Text_I8:
+                            sourceEmbedding = EmbeddingType.Text;
+                            destinationEmbedding = EmbeddingType.Int8;
+                            break;
+                        case MethodType.Embedding_Text_I1:
+                            sourceEmbedding = EmbeddingType.Text;
+                            destinationEmbedding = EmbeddingType.Binary;
+                            break;
+                        case MethodType.Embedding_F32:
+                            break;
+                        case MethodType.Embedding_F32_I8:
+                            destinationEmbedding = EmbeddingType.Int8;
+                            break;
+                        case MethodType.Embedding_F32_I1:
+                            destinationEmbedding = EmbeddingType.Binary;
+                            break;
+                        case MethodType.Embedding_I8:
+                            sourceEmbedding = EmbeddingType.Int8;
+                            destinationEmbedding = EmbeddingType.Int8;
+                            break;
+                        case MethodType.Embedding_I1:
+                            sourceEmbedding = EmbeddingType.Binary;
+                            destinationEmbedding = EmbeddingType.Binary;
+                            break;
+                        default:
+                            throw new InvalidDataException("todo");
+                    }
+
+                    return (sourceEmbedding, destinationEmbedding);
+                }
+            }
+            
             public void HandleSpatial(string methodName, List<QueryExpression> arguments, bool withoutAlias, BlittableJsonReaderObject parameters)
             {
                 AutoSpatialOptions fieldOptions = null;
@@ -2718,6 +2791,28 @@ function execute(doc, args){
             }
         }
 
+        internal string GetVectorFieldName(MethodExpression vectorExpression, BlittableJsonReaderObject parameters)
+        {
+            var sb = new StringBuilder();
+            sb.Append(vectorExpression.Name.ToString());
+            sb.Append("(");
+
+            if (vectorExpression.Arguments.Count > 0 && vectorExpression.Arguments[0] is MethodExpression innerExpression)
+            {
+                sb.Append(innerExpression.Name.ToString());
+                sb.Append("(");
+                sb.Append(ExtractFieldNameFromArgument(innerExpression.Arguments[0], withoutAlias: true, innerExpression.Name.Value, parameters, QueryText));
+                sb.Append(")");
+            }
+            else
+            {
+                sb.Append(ExtractFieldNameFromArgument(vectorExpression.Arguments[0], withoutAlias: true, vectorExpression.Name.Value, parameters, QueryText));
+            }
+
+            sb.Append(")");
+            return sb.ToString();
+        }
+        
         internal string GetSpatialFieldName(MethodExpression spatialExpression, BlittableJsonReaderObject parameters)
         {
             var sb = new StringBuilder();

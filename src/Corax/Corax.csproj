@@ -26,6 +26,7 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Spatial4n" Version="0.4.1.1" />
+    <PackageReference Include="System.Numerics.Tensors" Version="9.0.0-rc.1.24431.7" />
   </ItemGroup>
 
   <ItemGroup>

@@ -278,7 +278,7 @@ public partial class IndexWriter
 
         public void Write(int fieldId, ReadOnlySpan<byte> value) => Write(fieldId, null, value);
 
-        public void WriteVector(int fieldId, string path, ReadOnlySpan<byte> value)
+        public void WriteExactVector(int fieldId, string path, ReadOnlySpan<byte> value)
         {
             if (value.Length <= 0) return; // we don't index missing / empty vectors 
             

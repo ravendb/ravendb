@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             foreach ((var name, var field) in _fields)
             {
-                if (field.Vector)
+                if (field.Vector != null)
                     throw new NotSupportedException("Vector Search is enabled only for Corax indexes, not Lucene. But was asked to index " + name + " as a vector");
             }
             
