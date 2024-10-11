@@ -699,8 +699,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private long GetRootPageByFieldName(Slice fieldName)
     {
-        var result = _fieldsTree?.Read(fieldName);
-        if (result is null)
+        var it = _fieldsTree.Iterate(false);
+
+        if (_fieldsTree.TryRead(fieldName, out var reader) == false)
             return -1;
         
         var state = (LookupState*)reader.Base;
