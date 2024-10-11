@@ -55,19 +55,6 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
         GlobalHttpClientCache = new Dictionary<HttpClientCacheKey, Lazy<HttpClientCacheItem>>();
     }
 
-    private sealed class HttpClientCacheItem
-    {
-        public HttpClientCacheItem(HttpClient httpClient, DateTime createdAt)
-        {
-            HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            CreatedAt = createdAt;
-        }
-
-        public readonly HttpClient HttpClient;
-
-        public readonly DateTime CreatedAt;
-    }
-
     private static HttpClient CreateClient(HttpClientCacheKey key, Func<HttpClientHandler, HttpClient> createHttpClient)
     {
         var httpMessageHandler = CreateHttpMessageHandler(key.Certificate,
@@ -79,9 +66,15 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
         );
 
         var httpClient = createHttpClient(httpMessageHandler);
-        httpClient.Timeout = RequestExecutor.GlobalHttpClientTimeout;
+
+        ConfigureHttpClient(httpClient);
 
         return httpClient;
+    }
+
+    internal static void ConfigureHttpClient(HttpClient httpClient)
+    {
+        httpClient.Timeout = RequestExecutor.GlobalHttpClientTimeout;
     }
 
     internal static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false, TimeSpan? pooledConnectionLifetime = null, TimeSpan? pooledConnectionIdleTimeout = null)
@@ -168,5 +161,18 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
 
         if (supported == false)
             throw new InvalidOperationException("Client certificate " + certificate.FriendlyName + " must be defined with the following 'Enhanced Key Usage': Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
+    }
+
+    private sealed class HttpClientCacheItem
+    {
+        public HttpClientCacheItem(HttpClient httpClient, DateTime createdAt)
+        {
+            HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            CreatedAt = createdAt;
+        }
+
+        public readonly HttpClient HttpClient;
+
+        public readonly DateTime CreatedAt;
     }
 }
