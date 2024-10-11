@@ -42,17 +42,22 @@ public class RavenServerHttpClientFactory : IRavenHttpClientFactory
 
     private sealed class RavenDynamicHttpClientFactoryConfiguration : IConfigureNamedOptions<HttpClientFactoryOptions>
     {
+        private readonly object _locker = new object();
+
         private FrozenDictionary<string, HttpClientCacheKey> _registeredConfigurations = FrozenDictionary<string, HttpClientCacheKey>.Empty;
 
         public void Register(HttpClientCacheKey key)
         {
-            if (_registeredConfigurations.TryGetValue(key.AsString, out _))
+            if (_registeredConfigurations.ContainsKey(key.AsString))
                 return;
 
-            _registeredConfigurations = new Dictionary<string, HttpClientCacheKey>(_registeredConfigurations)
+            lock (_locker)
             {
-                { key.AsString, key }
-            }.ToFrozenDictionary(StringComparer.Ordinal);
+                _registeredConfigurations = new Dictionary<string, HttpClientCacheKey>(_registeredConfigurations)
+                {
+                    { key.AsString, key }
+                }.ToFrozenDictionary(StringComparer.Ordinal);
+            }
         }
 
         public void Configure(HttpClientFactoryOptions options)
