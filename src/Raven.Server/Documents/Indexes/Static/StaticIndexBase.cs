@@ -9,6 +9,8 @@ using System.Runtime.CompilerServices;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Linq.Indexing;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -330,41 +332,140 @@ namespace Raven.Server.Documents.Indexes.Static
                 return null;
             }
         }
-     
-        public object VectorSearch(object value)
+
+        internal static object CreateVectorSearch(IndexField indexField, object value)
         {
-            var str = value switch
-            {
-                LazyStringValue lsv => (string)lsv,
-                LazyCompressedStringValue lcsv => lcsv,
-                string s => s,
-                DynamicNullObject => null,
-                null => null,
-                _ => throw new NotSupportedException("Only strings are supported, but got: " + value?.GetType().FullName)
-            };
-
-            if (str is null)
-                return null;
-
-            return new VectorField(GenerateEmbeddings.UsingI8(str));
-        }
-
-
-        public object Vector(object value)
-        {
+            object embedding;
             switch (value)
             {
-                case LazyStringValue lsv:
-                    return new VectorField(Convert.FromBase64String(lsv));
-                case LazyCompressedStringValue lcsv:
-                    return new VectorField(Convert.FromBase64String(lcsv));
-                case string s:
-                    return new VectorField(Convert.FromBase64String(s));
-                case byte[] b:
-                    return new VectorField(b);
+                //todo: when value is str but index field has source set as Non-Text we should decode string as Base64?
+                case LazyStringValue keyLazy:
+                    embedding = CreateVectorValue(keyLazy.ToString());
+                    break;               
+                case LazyCompressedStringValue keyLazy:
+                    embedding = CreateVectorValue(keyLazy.ToString());
+                    break;
+                case string stringValue:
+                    embedding = CreateVectorValue(stringValue);
+                    break;
+                case DynamicNullObject or null:
+                    embedding = null;
+                    break;
+                case IEnumerable enumerable:
+                {
+                    var vectorList = new List<VectorValue>();
+                    foreach (var item in enumerable)
+                        vectorList.Add(CreateVectorValue(item));
+                    embedding = vectorList;
+                    break;
+                }
                 default:
-                    throw new NotSupportedException();
+                    throw new NotSupportedException($"Unsupported vector search type: {value.GetType().FullName}");
             }
+            
+            if (indexField.Id == Corax.Constants.IndexWriter.DynamicField)
+                return new List<CoraxDynamicItem> {new CoraxDynamicItem(){Field = indexField, FieldName = indexField.Name, Value = embedding}};
+
+            return embedding;
+
+            VectorValue CreateVectorValue(object value)
+            {
+                var str = value switch
+                {
+                    LazyStringValue lsv => (string)lsv,
+                    LazyCompressedStringValue lcsv => lcsv,
+                    string s => s,
+                    DynamicNullObject => null,
+                    null => null,
+                    _ => throw new NotSupportedException("Only strings are supported, but got: " + value?.GetType().FullName)
+                };
+
+                if (str == null)
+                    throw new InvalidDataException($"Unsupported vector value type: {value?.GetType().FullName}");
+
+                return GenerateEmbeddings.FromText(indexField.Vector.DestinationEmbeddingType, str);
+            }
+        }
+     
+        public object CreateVectorSearch(string fieldName, object value)
+        {
+            var currentIndexingField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName);
+            
+            //Assert
+            if (currentIndexingField.Vector.SourceEmbeddingType is EmbeddingType.Binary or EmbeddingType.Int8)
+            {
+                if (currentIndexingField.Vector.IndexingStrategy is not VectorIndexingStrategy.Exact)
+                    throw new InvalidOperationException($"Embedding `{currentIndexingField.Vector.SourceEmbeddingType}` supports only `{VectorIndexingStrategy.Exact}` indexing strategy.");
+            }
+
+
+            object embedding;
+            switch (value)
+            {
+                case LazyStringValue keyLazy:
+                    embedding = CreateVectorValue(keyLazy.ToString());
+                    break;               
+                case LazyCompressedStringValue keyLazy:
+                    embedding = CreateVectorValue(keyLazy.ToString());
+                    break;
+                case string stringValue:
+                    embedding = CreateVectorValue(stringValue);
+                    break;
+                case DynamicNullObject or null:
+                    embedding = null;
+                    break;
+                case IEnumerable enumerable:
+                {
+                    var it = enumerable.GetEnumerator();
+                    var vectorList = new List<VectorValue>();
+                    foreach (var item in enumerable)
+                        vectorList.Add(CreateVectorValue(item));
+                    embedding = vectorList;
+                    break;
+                }
+                default:
+                    throw new NotSupportedException($"Unsupported vector search type: {value.GetType().FullName}");
+            }
+            
+            if (currentIndexingField.Id == Corax.Constants.IndexWriter.DynamicField)
+                return new List<CoraxDynamicItem> {new CoraxDynamicItem(){Field = currentIndexingField, FieldName = fieldName, Value = embedding}};
+
+            return embedding;
+
+            VectorValue CreateVectorValue(object value)
+            {
+                var str = value switch
+                {
+                    LazyStringValue lsv => (string)lsv,
+                    LazyCompressedStringValue lcsv => lcsv,
+                    string s => s,
+                    DynamicNullObject => null,
+                    null => null,
+                    _ => throw new NotSupportedException("Only strings are supported, but got: " + value?.GetType().FullName)
+                };
+
+                if (str == null)
+                    throw new InvalidDataException($"Unsupported vector value type: {value?.GetType().FullName}");
+
+                return GenerateEmbeddings.FromText(currentIndexingField.Vector.DestinationEmbeddingType, str);
+            }
+        }
+        
+        public object CreateVector(string fieldName, object value)
+        {
+            var currentIndexingField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName);
+            
+            var embeddingHolder = (value) switch
+            {
+                float[] floatArray => GenerateEmbeddings.FromArray(EmbeddingType.Float32, EmbeddingType.Int8, floatArray),
+                byte[] byteArray => GenerateEmbeddings.FromArray(EmbeddingType.Int8, EmbeddingType.Int8, byteArray),
+                _ => throw new NotSupportedException()
+            };
+            
+            if (currentIndexingField.Id == Corax.Constants.IndexWriter.DynamicField)
+                return new CoraxDynamicItem {Field = currentIndexingField, FieldName = fieldName, Value = value};
+
+            return embeddingHolder;
         }
 
         public dynamic LoadDocument<TIgnored>(object keyOrEnumerable, string collectionName)

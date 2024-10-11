@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Sparrow.Json;
@@ -142,12 +143,17 @@ namespace Raven.Server.Documents.Indexes.Auto
                 json.TryGet(nameof(AutoIndexField.HasSuggestions), out bool hasSuggestions);
                 json.TryGet(nameof(AutoIndexField.HasQuotedName), out bool hasQuotedName);
                 json.TryGet(nameof(AutoIndexField.Spatial), out BlittableJsonReaderObject spatialBlittable);
+                json.TryGet(nameof(AutoIndexField.Vector), out BlittableJsonReaderObject vectorBlittable);
 
                 AutoSpatialOptions spatial = null;
                 
                 if (spatialBlittable != null)
                     spatial = JsonDeserializationServer.AutoSpatialOptions(spatialBlittable);
 
+                AutoVectorOptions vector = null;
+                if (vectorBlittable != null)
+                    vector = JsonDeserializationServer.AutoVectorOptions(vectorBlittable);
+                
                 var field = new AutoIndexField
                 {
                     Name = name,
@@ -155,7 +161,8 @@ namespace Raven.Server.Documents.Indexes.Auto
                     Indexing = (AutoFieldIndexing)Enum.Parse(typeof(AutoFieldIndexing), indexing),
                     HasSuggestions = hasSuggestions,
                     HasQuotedName = hasQuotedName,
-                    Spatial = spatial
+                    Spatial = spatial,
+                    Vector = vector
                 };
 
                 fields[i] = field;

@@ -50,6 +50,13 @@ namespace Raven.Server.Documents.Indexes.Auto
                     writer.WriteObject(DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(field.Spatial, context));
                 writer.WriteComma();
 
+                writer.WritePropertyName(nameof(field.Vector));
+                if (field.Vector == null)
+                    writer.WriteNull();
+                else
+                    writer.WriteObject(DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(field.Vector, context));
+                writer.WriteComma();
+                
                 writer.WritePropertyName(nameof(field.HasSuggestions));
                 writer.WriteBool(field.HasSuggestions);
                 writer.WriteComma();

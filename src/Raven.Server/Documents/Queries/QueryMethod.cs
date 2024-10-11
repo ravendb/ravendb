@@ -53,9 +53,30 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "vector.search", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Vector_Search;
             
-            if (string.Equals(methodName, "vector.nearest", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Vector_Nearest;
+            if (string.Equals(methodName, "embedding.text", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_Text;            
+            
+            if (string.Equals(methodName, "embedding.text_i8", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_Text_I8;            
+            
+            if (string.Equals(methodName, "embedding.text_i1", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_Text_I1;
+            
+            if (string.Equals(methodName, "embedding.f32_i8", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_F32_I8;
+            
+            if (string.Equals(methodName, "embedding.f32_i1", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_F32_I1;
 
+            if (string.Equals(methodName, "embedding.f32", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_F32;
+            
+            if (string.Equals(methodName, "embedding.i8", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_I8;
+            
+            if (string.Equals(methodName, "embedding.i1", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_I1;
+            
             if (string.Equals(methodName, "spatial.within", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Spatial_Within;
 

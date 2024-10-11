@@ -451,7 +451,7 @@ namespace Raven.Client.Documents.Indexes
                             allDefault = false;
                     }
 
-                    allDefault = allDefault && (field.Spatial == null);
+                    allDefault = allDefault && (field.Spatial == null) && (field.Vector == null);
                 }
 
                 if (allDefault)
@@ -550,7 +550,8 @@ namespace Raven.Client.Documents.Indexes
                         Spatial = value.Spatial,
                         Storage = value.Storage,
                         Suggestions = value.Suggestions,
-                        TermVector = value.TermVector
+                        TermVector = value.TermVector,
+                        Vector = value.Vector
                     };
                 }
             }

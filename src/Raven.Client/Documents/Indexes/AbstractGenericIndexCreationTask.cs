@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Indexes
@@ -28,6 +29,8 @@ namespace Raven.Client.Documents.Indexes
             TermVectorsStrings = new Dictionary<string, FieldTermVector>();
             SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
+            VectorIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, VectorOptions>();
+            VectorIndexesStrings = new Dictionary<string, VectorOptions>();
             CompoundFields = new List<Expression<Func<TReduceResult, object>>[]>();
         }
 
@@ -84,11 +87,21 @@ namespace Raven.Client.Documents.Indexes
         /// Spatial index options
         /// </summary>
         protected IDictionary<Expression<Func<TReduceResult, object>>, SpatialOptions> SpatialIndexes { get; set; }
+        
+        /// <summary>
+        /// Vector index options
+        /// </summary>
+        protected IDictionary<Expression<Func<TReduceResult, object>>, VectorOptions> VectorIndexes { get; set; }
 
         /// <summary>
         /// Spatial index options
         /// </summary>
         protected IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
+        
+        /// <summary>
+        /// Vector index options
+        /// </summary>
+        protected IDictionary<string, VectorOptions> VectorIndexesStrings { get; set; }
 
         /// <summary>
         /// Indexing options

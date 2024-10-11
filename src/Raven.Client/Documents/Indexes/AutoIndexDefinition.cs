@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Indexes
@@ -56,6 +57,8 @@ namespace Raven.Client.Documents.Indexes
             public AggregationOperation Aggregation { get; set; }
 
             public AutoSpatialOptions Spatial { get; set; }
+            
+            public AutoVectorOptions Vector { get; set; }
 
             public GroupByArrayBehavior GroupByArrayBehavior { get; set; }
 
@@ -69,6 +72,7 @@ namespace Raven.Client.Documents.Indexes
                        && Indexing == other.Indexing
                        && Aggregation == other.Aggregation
                        && Equals(Spatial, other.Spatial)
+                       && Equals(Vector, other.Vector)
                        && GroupByArrayBehavior == other.GroupByArrayBehavior
                        && Suggestions == other.Suggestions
                        && IsNameQuoted == other.IsNameQuoted;
@@ -93,6 +97,7 @@ namespace Raven.Client.Documents.Indexes
                     hashCode = (hashCode * 397) ^ Indexing.GetHashCode();
                     hashCode = (hashCode * 397) ^ (int)Aggregation;
                     hashCode = (hashCode * 397) ^ (Spatial != null ? Spatial.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Vector != null ? Vector.GetHashCode() : 0);
                     hashCode = (hashCode * 397) ^ (int)GroupByArrayBehavior;
                     hashCode = (hashCode * 397) ^ Suggestions.GetHashCode();
                     hashCode = (hashCode * 397) ^ IsNameQuoted.GetHashCode();

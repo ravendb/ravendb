@@ -64,10 +64,5 @@ namespace Raven.Client.Documents.Indexes
         /// Index this field using the default internal analyzer: LowerCaseKeywordAnalyzer
         /// </summary>
         Default = 1 << 4, 
-        
-        /// <summary>
-        /// Index this field for vector search using the default builtin model
-        /// </summary>
-        Vector = 1 << 5,
     }
 }

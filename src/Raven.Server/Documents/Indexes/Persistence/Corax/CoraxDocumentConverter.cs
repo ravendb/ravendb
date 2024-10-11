@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Sparrow.Json;
@@ -32,7 +33,14 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
         {
             object value;
             bool innerShouldSkip = false;
-            if (indexField.Spatial is AutoSpatialOptions spatialOptions)
+            if (indexField.Vector != null)
+            {
+                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, ((AutoVectorOptions)indexField.Vector).SourceFieldName, out value) == false)
+                    continue;
+                var vector = AbstractStaticIndexBase.CreateVectorSearch(indexField, value);
+                InsertRegularField(indexField, vector, indexContext, builder, sourceDocument,  out innerShouldSkip);
+            }
+            else if (indexField.Spatial is AutoSpatialOptions spatialOptions)
             {
                 var spatialField = CurrentIndexingScope.Current.GetOrCreateSpatialField(indexField.Name);
 
@@ -65,14 +73,7 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
 
                 if (successfulRead)
                 {
-                    if (indexField.Vector is false)
-                    {
-                        InsertRegularField(indexField, value, indexContext, builder, sourceDocument,  out innerShouldSkip);
-                    }
-                    else
-                    {
-                        InsertVectorFields(indexField, value, builder, sourceDocument);
-                    }
+                    InsertRegularField(indexField, value, indexContext, builder, sourceDocument,  out innerShouldSkip);
                 }
 
                 if (successfulRead == false || innerShouldSkip)

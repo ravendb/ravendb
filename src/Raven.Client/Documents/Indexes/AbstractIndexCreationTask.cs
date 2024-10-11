@@ -197,6 +197,48 @@ namespace Raven.Client.Documents.Indexes
         }
 
         /// <summary>
+        /// Generates a vector field in the index, generating embeddings from the provided value
+        /// </summary>
+        /// <param name="value">Source of text to generate tokens</param>
+        public object CreateVectorSearch(string value)
+        {
+            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        }
+        
+        /// <summary>
+        /// Generates a vector field in the index, generating embeddings from the provided value
+        /// </summary>
+        /// <param name="value">Source of text to generate tokens</param>
+        public object CreateVectorSearch(string fieldName, string value)
+        {
+            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        }
+
+
+        /// <inheritdoc cref="VectorSearch(string)"/>
+        /// <param name="values">Enumerable of text to generate tokens</param>
+        public object CreateVectorSearch(IEnumerable<string> values)
+        {
+            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        }
+        
+        /// <summary>
+        /// Generates a vector field in the index, generating embeddings from the provided value
+        /// </summary>
+        /// <param name="value">Source of text to generate tokens</param>
+        public object CreateVector(float[] value)
+        {
+            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        }
+
+        /// <inheritdoc cref="VectorSearch(string)"/>
+        /// <param name="values">Enumerable of text to generate tokens</param>
+        public object CreateVector(IEnumerable<string> values)
+        {
+            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        }
+
+        /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>
         public virtual void Execute(IDocumentStore store, DocumentConventions conventions = null, string database = null)
@@ -311,7 +353,9 @@ namespace Raven.Client.Documents.Indexes
                 TermVectors = TermVectors,
                 TermVectorsStrings = TermVectorsStrings,
                 SpatialIndexes = SpatialIndexes,
+                VectorIndexes = VectorIndexes,
                 SpatialIndexesStrings = SpatialIndexesStrings,
+                VectorIndexesStrings = VectorIndexesStrings,
                 OutputReduceToCollection = OutputReduceToCollection,
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
                 PatternReferencesCollectionName = PatternReferencesCollectionName,

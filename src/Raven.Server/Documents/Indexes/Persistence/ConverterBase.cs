@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                         valueType = ValueType.TimeOnly;
                         break;
                     
-                    case VectorField:
+                    case VectorValue:
                         valueType = ValueType.Vector;
                         break;
 
