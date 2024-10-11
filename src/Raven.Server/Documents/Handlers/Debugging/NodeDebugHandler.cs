@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/node/clear-http-clients-pool", "GET", AuthorizationStatus.ClusterAdmin)]
         public Task ClearHttpClientsPool()
         {
-            RequestExecutor.ClearHttpClientsPool();
+            DefaultRavenHttpClientFactory.Instance.Clear();
 
             return NoContent(HttpStatusCode.OK);
         }

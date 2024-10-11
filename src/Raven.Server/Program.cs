@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.AspNetCore.Connections;
+using Raven.Client.Http;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -38,6 +39,7 @@ namespace Raven.Server
         
         public static unsafe int Main(string[] args)
         {
+            RequestExecutor.HttpClientFactory = RavenServerHttpClientFactory.Instance;
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
 
