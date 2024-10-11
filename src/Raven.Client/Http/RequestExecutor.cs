@@ -68,7 +68,7 @@ namespace Raven.Client.Http
         private readonly string _databaseName;
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
-        
+
         public readonly JsonContextPool ContextPool;
 
         public readonly AsyncLocal<AggressiveCacheOptions> AggressiveCaching = new AsyncLocal<AggressiveCacheOptions>();
@@ -286,7 +286,7 @@ namespace Raven.Client.Http
 
             _databaseName = databaseName;
             Certificate = certificate;
-            
+
             Conventions = conventions.Clone();
             _httpClientCacheKey = GetHttpClientCacheKey();
 
@@ -462,9 +462,9 @@ namespace Raven.Client.Http
                     var topology = command.Result;
 
                     await DatabaseTopologyLocalCache.TrySavingAsync(_databaseName, TopologyHash, topology, Conventions, context, CancellationToken.None).ConfigureAwait(false);
-                    
+
                     UpdateNodeSelector(topology, parameters.ForceUpdate);
-                    
+
                     var urls = _nodeSelector.Topology.Nodes.Select(x => x.Url);
                     UpdateConnectionLimit(urls);
 
@@ -549,7 +549,7 @@ namespace Raven.Client.Http
             {
                 return _nodeSelector.GetRequestedNode(cmd.SelectedNodeTag);
             }
-            
+
             switch (Conventions.LoadBalanceBehavior)
             {
                 case LoadBalanceBehavior.UseSessionContext:
@@ -642,16 +642,16 @@ namespace Raven.Client.Http
             var selector = requestExecutor._nodeSelector;
             if (selector == null || selector.Topology == null)
                 return;
-            
+
             // Fetch topologies from all nodes, the executor's topology will be updated to the most recent one
             foreach (var serverNode in selector.Topology.Nodes)
             {
                 try
                 {
-                    if(serverNode.ServerRole != ServerNode.Role.Member)
+                    if (serverNode.ServerRole != ServerNode.Role.Member)
                         continue;
 
-                    await requestExecutor.UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) {TimeoutInMs = 0, DebugTag = $"timer-callback-node-{serverNode.ClusterTag}"})
+                    await requestExecutor.UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) { TimeoutInMs = 0, DebugTag = $"timer-callback-node-{serverNode.ClusterTag}" })
                         .ConfigureAwait(false);
                 }
                 catch (Exception e)
@@ -664,12 +664,12 @@ namespace Raven.Client.Http
 
         protected async Task SingleTopologyUpdateAsync(string[] initialUrls, Guid? applicationIdentifier = null)
         {
-            if(Disposed)
+            if (Disposed)
                 return;
 
             //fetch tag for each of the urls
-            Topology topology = new Topology() {Nodes = new List<ServerNode>(), Etag = TopologyEtag};
-            
+            Topology topology = new Topology() { Nodes = new List<ServerNode>(), Etag = TopologyEtag };
+
             foreach (var url in initialUrls)
             {
                 var serverNode = new ServerNode
@@ -706,7 +706,7 @@ namespace Raven.Client.Http
                 catch (Exception e)
                 {
                     serverNode.ClusterTag = "!";
-                    if(Logger.IsInfoEnabled)
+                    if (Logger.IsInfoEnabled)
                         Logger.Info($"Error occurred while attempting to fetch the Cluster Tag for {url} in {nameof(SingleTopologyUpdateAsync)}", e);
                 }
 
@@ -714,7 +714,7 @@ namespace Raven.Client.Http
 
                 UpdateNodeSelector(topology, forceUpdate: true);
             }
-            
+
             _lastKnownUrls = initialUrls;
         }
 
@@ -944,7 +944,7 @@ namespace Raven.Client.Http
 
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
-                    
+
                     if (sessionInfo != null && response.Headers.TryGetValues(Constants.Headers.DatabaseClusterTransactionId, out var clusterTransactionId))
                     {
                         sessionInfo.ClusterTransactionId = clusterTransactionId.First();
@@ -1067,7 +1067,7 @@ namespace Raven.Client.Http
                         {
                             if (TryRemoveHttpClient())
                                 requestContext.HttpClientRemoved = true;
-                            }
+                        }
                         else
                         {
                             requestContext.HttpClientRemoved = false;
