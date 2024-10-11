@@ -36,8 +36,8 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
         _token = token;
         StreamExposer = new BulkInsertOperation.BulkInsertStreamExposerContent();
 
-        _currentWriteStream = RecyclableMemoryStreamFactory.GetMemoryStream();
-        _backgroundWriteStream = RecyclableMemoryStreamFactory.GetMemoryStream();
+        _currentWriteStream = RecyclableMemoryStreamFactory.GetRecyclableStream();
+        _backgroundWriteStream = RecyclableMemoryStreamFactory.GetRecyclableStream();
         _asyncWrite = Task.CompletedTask;
 
         var returnMemoryBuffer = ctx.GetMemoryBuffer(out _memoryBuffer);
@@ -71,12 +71,11 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
             finally
             {
                 using (StreamExposer)
-                using (returnMemoryBuffer)
-                using (returnBackgroundMemoryBuffer)
                 using (_currentWriteStream)
                 using (_backgroundWriteStream)
+                using (returnMemoryBuffer)
+                using (returnBackgroundMemoryBuffer)
                 {
-
                 }
             }
         });
