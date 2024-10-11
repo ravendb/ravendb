@@ -13,6 +13,7 @@ const initialState: LicenseState = {
     support: {
         Status: "NoSupport",
         EndsAt: undefined,
+        SupportType: "None",
     },
     limitsUsage: {
         NumberOfStaticIndexesInCluster: 0,
