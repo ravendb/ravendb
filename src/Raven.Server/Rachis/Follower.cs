@@ -96,9 +96,9 @@ namespace Raven.Server.Rachis
                             Message = $"The current term that I have {committedTerm} doesn't match {appendEntries.Term}",
                             Success = false
                         });
-                        if (_engine.Log.IsInfoEnabled)
+                        if (_engine.Log.IsWarnEnabled)
                         {
-                            _engine.Log.Info($"{ToString()}: Got invalid term {appendEntries.Term} while the current term is {committedTerm}, aborting connection...");
+                            _engine.Log.Warn($"{ToString()}: Got invalid term {appendEntries.Term} while the current term is {committedTerm}, aborting connection...");
                         }
 
                         return;
@@ -831,9 +831,9 @@ namespace Raven.Server.Rachis
         public void Dispose()
         {
             _connection.Dispose();
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"{ToString()}: Disposing");
+                _engine.Log.Debug($"{ToString()}: Disposing");
             }
 
             if (_followerLongRunningWork != null && _followerLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)

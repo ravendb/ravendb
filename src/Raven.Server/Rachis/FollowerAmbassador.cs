@@ -562,9 +562,9 @@ namespace Raven.Server.Rachis
                 {
                     // we don't need a snapshot, so just send updated topology
                     UpdateLastSend("Send empty snapshot");
-                    if (_engine.Log.IsInfoEnabled)
+                    if (_engine.Log.IsDebugEnabled)
                     {
-                        _engine.Log.Info($"{ToString()}: sending empty snapshot to {_tag}");
+                        _engine.Log.Debug($"{ToString()}: sending empty snapshot to {_tag}");
                     }
 
                     _connection.Send(context, new InstallSnapshot
@@ -614,9 +614,9 @@ namespace Raven.Server.Rachis
                 }
                 _debugRecorder.Record("Sending and installing the snapshot is completed");
 
-                if (_engine.Log.IsInfoEnabled)
+                if (_engine.Log.IsDebugEnabled)
                 {
-                    _engine.Log.Info($"{ToString()}: done sending snapshot to {_tag}");
+                    _engine.Log.Debug($"{ToString()}: done sending snapshot to {_tag}");
                 }
             }
         }
@@ -883,9 +883,9 @@ namespace Raven.Server.Rachis
                 var minimalVersion = _engine.CommandsVersionManager.GetClusterMinimalVersion(_leader.PeersVersion.Values.ToList(), _engine.MaximalVersion);
                 _engine.CommandsVersionManager.SetClusterVersion(minimalVersion);
 
-                if (_engine.Log.IsInfoEnabled)
+                if (_engine.Log.IsDebugEnabled)
                 {
-                    _engine.Log.Info($"Got 1st LogLengthNegotiationResponse from {_tag} with term {llr.CurrentTerm:#,#;;0} " +
+                    _engine.Log.Debug($"Got 1st LogLengthNegotiationResponse from {_tag} with term {llr.CurrentTerm:#,#;;0} " +
                                      $"({llr.MidpointIndex:#,#;;0} / {llr.MidpointTerm:#,#;;0}) {llr.Status}, version: {FollowerCommandsVersion}");
                 }
                 // need to negotiate
@@ -965,9 +965,9 @@ namespace Raven.Server.Rachis
                     UpdateLastSend("Negotiation 2");
                     _connection.Send(context, lln);
                     llr = _connection.Read<LogLengthNegotiationResponse>(context);
-                    if (_engine.Log.IsInfoEnabled)
+                    if (_engine.Log.IsDebugEnabled)
                     {
-                        _engine.Log.Info($"Got LogLengthNegotiationResponse from {_tag} with term {llr.CurrentTerm} " +
+                        _engine.Log.Debug($"Got LogLengthNegotiationResponse from {_tag} with term {llr.CurrentTerm} " +
                                          $"({llr.MidpointIndex:#,#;;0} / {llr.MidpointTerm:#,#;;0}) {llr.Status}");
                     }
                 } while (true);

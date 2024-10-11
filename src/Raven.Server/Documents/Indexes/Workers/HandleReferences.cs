@@ -286,7 +286,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             }
                                         }
 
-                                        if (numberOfReferencedItemLoad > 0) 
+                                        if (numberOfReferencedItemLoad > 0)
                                             _index.CheckReferenceLoadsPerformanceHintLimit(referencedItem, numberOfReferencedItemLoad);
 
                                         if (earlyExit)
@@ -338,8 +338,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             moreWorkFound = true;
 
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info($"Executed handle references for '{_index.Name}' index and '{referencedCollection.Name}' collection. " +
+                            if (_logger.IsDebugEnabled)
+                                _logger.Debug($"Executed handle references for '{_index.Name}' index and '{referencedCollection.Name}' collection. " +
                                              $"Got {resultsCount:#,#;;0} map results in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
                             switch (actionType)
@@ -357,9 +357,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                             if (earlyExit == false)
                             {
                                 indexContext.ClearReferencesStateFor(actionType, collection);
+                            }
                         }
                     }
-                }
                 }
                 finally
                 {
