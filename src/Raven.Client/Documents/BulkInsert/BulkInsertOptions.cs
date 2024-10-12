@@ -25,6 +25,7 @@ namespace Raven.Client.Documents.BulkInsert
         internal class TestingStuff
         {
             internal Action OnSendHeartBeat_DoBulkStore;
+            internal Action OnSendHeartBeat_AfterFlush;
             internal int OverrideHeartbeatCheckInterval;
         }
     }
