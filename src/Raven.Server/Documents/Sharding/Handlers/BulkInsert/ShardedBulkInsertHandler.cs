@@ -16,7 +16,7 @@ public sealed class ShardedBulkInsertHandler : ShardedDatabaseRequestHandler
         await using (var processor = new ShardedBulkInsertHandlerProcessor(this, DatabaseContext, id, skipOverwriteIfUnchanged, operationCancelToken.Token))
         {
             if (DatabaseContext.ForTestingPurposes?.BulkInsertStreamWriteTimeout > 0)
-                processor.ForTestingPurposesOnly().BulkInsertStreamReadTimeout = DatabaseContext.ForTestingPurposes.BulkInsertStreamWriteTimeout;
+                processor.ForTestingPurposesOnly().BulkInsert_StreamReadTimeout = DatabaseContext.ForTestingPurposes.BulkInsertStreamWriteTimeout;
 
             await processor.ExecuteAsync();
         }

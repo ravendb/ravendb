@@ -2164,7 +2164,8 @@ namespace Raven.Server.Documents
             internal ManualResetEvent DatabaseRecordLoadHold;
             internal ManualResetEvent HealthCheckHold;
 
-            internal int BulkInsertStreamReadTimeout;
+            internal int BulkInsert_StreamReadTimeout;
+            internal Action BulkInsert_OnHeartBeat;
         }
     }
 
