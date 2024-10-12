@@ -10,19 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Grep .Net version
-        run: |
-          dotnet_version=$(grep '<TargetFramework>' < src/Raven.Server/Raven.Server.csproj | tr -cd [:digit:].)
-          echo "DOTNET_VERSION=${dotnet_version}.x" >> $GITHUB_ENV
-      - name: Install 3.1 sdk
-        if: startsWith( env.DOTNET_VERSION, '3' )
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 3.1.x
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
+          global-json-file: global.json
       - name: Restore
         run: |
           git clean -xfd
