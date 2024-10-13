@@ -787,9 +787,10 @@ namespace Raven.Server.Documents
             return indexOfLargestEtag;
         }
 
-        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, string changeVector, out bool hasLocalClusterTx)
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, string changeVector, DocumentFlags flags)
         {
-            hasLocalClusterTx = false;
+            var hasLocalClusterTx = false;
+            var hasRemoteClusterTx = flags.Contain(DocumentFlags.FromClusterTransaction);
 
             //tombstones also can be a conflict entry
             var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id);
@@ -831,7 +832,22 @@ namespace Raven.Server.Documents
             if (status == ConflictStatus.Conflict)
             {
                 ConflictManager.AssertChangeVectorNotNull(local);
+
+                // when hasLocalClusterTx and hasRemoteClusterTx both 'true'
+                // it is a case of a conflict between documents which were modified in a cluster transaction
+                // in two _different clusters_, so we will treat it as a "normal" conflict
+
+                if (hasLocalClusterTx == hasRemoteClusterTx)
+                    return ConflictStatus.Conflict;
+            
+                // cluster tx has precedence over regular tx
+                if (hasLocalClusterTx)
+                    return ConflictStatus.AlreadyMerged;
+
+                // hasRemoteClusterTx is true
+                return ConflictStatus.Update;
             }
+
             return status;
         }
 
