@@ -3,7 +3,7 @@ using System.Net.Http;
 
 namespace Raven.Client.Http;
 
-public interface IRavenHttpClientFactory
+internal interface IRavenHttpClientFactory
 {
     HttpClient GetHttpClient(HttpClientCacheKey key, Func<HttpClientHandler, HttpClient> createHttpClient);
 

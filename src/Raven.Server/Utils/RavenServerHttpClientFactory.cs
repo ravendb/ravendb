@@ -9,7 +9,7 @@ using Raven.Client.Http;
 
 namespace Raven.Server.Utils;
 
-public class RavenServerHttpClientFactory : IRavenHttpClientFactory
+internal class RavenServerHttpClientFactory : IRavenHttpClientFactory
 {
     private readonly RavenDynamicHttpClientFactoryConfiguration _configuration;
     private readonly IHttpClientFactory _factory;

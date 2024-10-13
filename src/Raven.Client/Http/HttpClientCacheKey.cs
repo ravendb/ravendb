@@ -3,7 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Raven.Client.Http;
 
-public readonly struct HttpClientCacheKey
+internal readonly struct HttpClientCacheKey
 {
     private readonly string _certificateThumbprint;
     internal readonly X509Certificate2 Certificate;
