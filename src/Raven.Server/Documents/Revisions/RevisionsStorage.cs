@@ -578,7 +578,7 @@ namespace Raven.Server.Documents.Revisions
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out var lowerId, out _))
             {
-                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, id, changeVector, out _);
+                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, id, changeVector, flags);
                 if (conflictStatus != ConflictStatus.Update)
                     return; // Do not modify the document.
 
