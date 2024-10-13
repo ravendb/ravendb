@@ -14,93 +14,95 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Querying)]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void RavenDB_22948_Fail()
         {
             // Arrange
-            var testDocumentStore = GetDocumentStore();
-
-            using (var rs = testDocumentStore.OpenSession())
+            using (var testDocumentStore = GetDocumentStore())
             {
-                // Act
-                var customer = new Customer() { Name = "My Customer" };
-                rs.Store(customer);
+                using (var rs = testDocumentStore.OpenSession())
+                {
+                    // Act
+                    var customer = new Customer() { Name = "My Customer" };
+                    rs.Store(customer);
 
-                var order = new Order() { CustomerId = customer.Id, TotalPrice = 100.00 };
-                rs.Store(order);
-                rs.SaveChanges();
+                    var order = new Order() { CustomerId = customer.Id, TotalPrice = 100.00 };
+                    rs.Store(order);
+                    rs.SaveChanges();
 
-                var customerWithPetName = rs
-                    .Query<Order>()
-                    .Select(x => new CustomerWithPet()
-                    {
-                        Customer = rs.Load<Customer>(x.CustomerId),
-                        Pet = "My Pet"
-                    })
-                    .SingleOrDefault();
+                    var customerWithPetName = rs
+                        .Query<Order>()
+                        .Select(x => new CustomerWithPet()
+                        {
+                            Customer = rs.Load<Customer>(x.CustomerId),
+                            Pet = "My Pet"
+                        })
+                        .SingleOrDefault();
 
-                // Assert
-                Assert.Equal(customer.Id, customerWithPetName.Customer.Id);
+                    // Assert
+                    Assert.Equal(customer.Id, customerWithPetName.Customer.Id);
+                }
             }
         }
 
-        [RavenFact(RavenTestCategory.Querying)]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void RavenDB_22948_Pass()
         {
-            var testDocumentStore = GetDocumentStore();
-
-            using (var rs = testDocumentStore.OpenSession())
+            using (var testDocumentStore = GetDocumentStore())
             {
-                // Act
-                var customer = new Customer() { Name = "My Customer" };
-                rs.Store(customer);
-
-                var order = new Order() { CustomerId = customer.Id, TotalPrice = 100.00 };
-                rs.Store(order);
-                rs.SaveChanges();
-
-                var qryorder = rs
-                    .Query<Order>()
-                    .Include(o => o.CustomerId)
-                    .Where(x => x.Id == order.Id)
-                    .SingleOrDefault();
-
-                Customer customerret = rs
-                    .Load<Customer>(qryorder.CustomerId);
-
-                var custwithpet = new CustomerWithPet()
+                using (var rs = testDocumentStore.OpenSession())
                 {
-                    Customer = customerret,
-                    Pet = "My Pet"
-                };
+                    // Act
+                    var customer = new Customer() { Name = "My Customer" };
+                    rs.Store(customer);
 
-                // Assert
-                Assert.Equal(customer.Id, custwithpet.Customer.Id);
+                    var order = new Order() { CustomerId = customer.Id, TotalPrice = 100.00 };
+                    rs.Store(order);
+                    rs.SaveChanges();
+
+                    var qryorder = rs
+                        .Query<Order>()
+                        .Include(o => o.CustomerId)
+                        .Where(x => x.Id == order.Id)
+                        .SingleOrDefault();
+
+                    Customer customerret = rs
+                        .Load<Customer>(qryorder.CustomerId);
+
+                    var custwithpet = new CustomerWithPet()
+                    {
+                        Customer = customerret,
+                        Pet = "My Pet"
+                    };
+
+                    // Assert
+                    Assert.Equal(customer.Id, custwithpet.Customer.Id);
+                }
             }
         }
 
-        public class CustomerWithPet
+        private class CustomerWithPet
         {
             public Customer Customer { get; set; }
 
             public string Pet { get; set; }
         }
 
-        public class Order : EntityWithId
+        private class Order : EntityWithId
         {
             public string CustomerId { get; set; }
 
             public double TotalPrice { get; set; }
         }
 
-        public class Customer : EntityWithId
+        private class Customer : EntityWithId
         {
 
             public string Name { get; set; }
         }
 
-        public static int i;
-        public abstract class EntityWithId
+        private static int IdCounter;
+        private abstract class EntityWithId
         {
             public EntityWithId()
             {
@@ -110,8 +112,8 @@ namespace SlowTests.Issues
 
             public virtual string GenerateId()
             {
-                i++;
-                return GetType().Name + "-" + i;
+                IdCounter++;
+                return GetType().Name + "-" + IdCounter;
             }
         }
     }
