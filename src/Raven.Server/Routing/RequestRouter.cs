@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -48,6 +49,7 @@ namespace Raven.Server.Routing
         private readonly Trie<RouteInformation> _trie;
         private DateTime _lastAuthorizedNonClusterAdminRequestTime;
         private DateTime _lastRequestTimeUpdated;
+        private static Logger RequestLogger = LoggingSource.Instance.GetLogger<RequestRouter>("Http");
 
         public RequestRouter(Dictionary<string, RouteInformation> routes, RavenServer ravenServer)
         {
@@ -385,6 +387,7 @@ namespace Raven.Server.Routing
                 }
 
                 context.Response.Headers[Constants.Headers.ServerVersion] = RavenServerStartup.ServerVersionHeaderValue;
+                context.Response.Headers[Constants.Headers.DatabaseClusterTransactionId] = reqCtx.ClusterTransactionId;
 
                 if (reqCtx.Database != null)
                 {
@@ -401,7 +404,18 @@ namespace Raven.Server.Routing
                             && long.TryParse(value, out var index)
                             && index > reqCtx.Database.ClusterWideTransactionIndexWaiter.LastIndex)
                         {
+                            Stopwatch sp = null;
+                            if (RequestLogger.IsInfoEnabled)
+                            {
+                                sp = Stopwatch.StartNew();
+                            }
+
                             await reqCtx.Database.ClusterWideTransactionIndexWaiter.WaitAsync(index, context.RequestAborted);
+                            
+                            if (RequestLogger.IsInfoEnabled && sp != null)
+                            {
+                                RequestLogger.Info($"Took {sp} to wait for cluster transaction {index} (connId: {context.Connection.Id})");
+                            }
                         }
 
                         await handler(reqCtx);

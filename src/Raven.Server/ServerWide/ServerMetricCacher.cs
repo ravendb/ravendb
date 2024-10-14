@@ -1,18 +1,18 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Platform.Posix;
 using Raven.Server.Utils;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.ServerWide
 {
     public class ServerMetricCacher : MetricCacher
     {
-        private readonly SmapsReader _smapsReader;
+        private readonly ISmapsReader _smapsReader;
         private readonly RavenServer _server;
 
         public const int DefaultCpuRefreshRateInMs = 1000;
@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide
             _server = server;
 
             if (PlatformDetails.RunningOnLinux)
-                _smapsReader = new SmapsReader(new[] { new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize] });
+                _smapsReader = SmapsFactory.CreateSmapsReader([new byte[SmapsFactory.BufferSize], new byte[SmapsFactory.BufferSize]]);
         }
 
         public void Initialize()
@@ -41,7 +41,7 @@ namespace Raven.Server.ServerWide
             Register(MetricCacher.Keys.Server.GcFullBlocking, TimeSpan.FromSeconds(15), () => CalculateGcMemoryInfo(GCKind.FullBlocking));
         }
 
-        private object CalculateMemoryInfo()
+        private static object CalculateMemoryInfo()
         {
             return MemoryInformation.GetMemoryInfo();
         }
@@ -56,7 +56,7 @@ namespace Raven.Server.ServerWide
             return DiskUtils.GetDiskSpaceInfo(_server.ServerStore.Configuration.Core.DataDirectory.FullPath);
         }
 
-        private GCMemoryInfo CalculateGcMemoryInfo(GCKind gcKind)
+        private static GCMemoryInfo CalculateGcMemoryInfo(GCKind gcKind)
         {
             return GC.GetGCMemoryInfo(gcKind);
         }

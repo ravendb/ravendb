@@ -29,8 +29,10 @@ using Raven.Server.Utils.Features;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Utils;
+using Voron.Platform.Posix;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Commercial
@@ -878,6 +880,11 @@ namespace Raven.Server.Commercial
                     var certBytes = serverCertBytes;
                     await certFile.WriteAsync(certBytes, 0, certBytes.Length);
                     await certFile.FlushAsync();
+                }
+
+                if (PlatformDetails.RunningOnPosix)
+                {
+                    PosixHelper.EnsureRWPermissionsForOwnerAndGroup(certPath);
                 }
             }
             catch (Exception e)

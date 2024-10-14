@@ -85,8 +85,29 @@
                                         </li>
                                     </ul>
                                     <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
+                                    <div class="has-warning" data-bind="visible: $root.selectedConnectionStringFactoryName() === 'MySql.Data.MySqlClient'">
+                                        <div class="help-block">
+                                            <i class="icon-warning"></i>
+                                            <span>
+                                                This connector is deprecated. 
+                                                MySqlConnector will be used instead. 
+                                                Please update Factory to: MySqlConnector.MySqlConnectorFactory.
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="has-warning" data-bind="visible: $root.selectedConnectionStringFactoryName() === 'System.Data.SqlClient'">
+                                        <div class="help-block">
+                                            <i class="icon-warning"></i>
+                                            <span>
+                                                This connector is deprecated. 
+                                                Microsoft SqlClient will be used instead. 
+                                                Please update Factory to: Microsoft.Data.SqlClient.
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+                            
                             <div class="flex-horizontal">
                                 <div class="flex-grow margin-top">
                                     <button type="button" class="btn btn-info" data-bind="click: $root.toggleAdvancedArea">

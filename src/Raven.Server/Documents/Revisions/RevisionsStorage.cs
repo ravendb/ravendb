@@ -27,8 +27,8 @@ using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
-using static Voron.Data.Tables.Table;
 using static Raven.Server.NotificationCenter.ConflictRevisionsExceeded;
+using static Voron.Data.Tables.Table;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Revisions
@@ -309,12 +309,12 @@ namespace Raven.Server.Documents.Revisions
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
                 return true;
 
-            if(docConfiguration == ConflictConfiguration.Default || docConfiguration==_emptyConfiguration)
+            if (docConfiguration == ConflictConfiguration.Default || docConfiguration == _emptyConfiguration)
             {
                 // If comes from resolver (creating conflicted/resolved revision when resolving a conflict), and doc has no config, do not touch the revisions.
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver))
                     return false;
-            
+
                 if (documentFlags.Contain(DocumentFlags.HasRevisions) == false) // If the doc has revisions but no config, do not touch the revisions
                     return false;
             }
@@ -423,6 +423,17 @@ namespace Raven.Server.Documents.Revisions
                 {
                     MarkRevisionsAsConflictedIfNeeded(context, lowerId, idSlice, flags, tvr, table, changeVectorSlice);
                     return false;
+                }
+
+                if (_database.SupportedFeatures.SupportedFeatureTypes.ThrowRevisionKeyTooBigFix &&
+                    flags.Contain(DocumentFlags.FromReplication) == false &&
+                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
+                    changeVector.Length > DocumentIdWorker.RevisionMaxKeySize)
+                {
+                    // RavenDB-21047 
+                    // throw if the change vector length exceeds the maximum id length (1536 bytes)
+                    // we allow it if the operation originated from smuggler/replication to avoid inconsistent data or broken replication
+                    DocumentIdWorker.ThrowRevisionKeyTooBig(id, changeVector, isTombstone: false);
                 }
 
                 // We want the revision's attachments to have a lower etag than the revision itself
@@ -567,7 +578,7 @@ namespace Raven.Server.Documents.Revisions
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out var lowerId, out _))
             {
-                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, id, changeVector, out _);
+                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, id, changeVector, flags);
                 if (conflictStatus != ConflictStatus.Update)
                     return; // Do not modify the document.
 
@@ -759,7 +770,7 @@ namespace Raven.Server.Documents.Revisions
                     Debug.Assert(local.Document != null || local.Tombstone != null);
                 }
 
-                var result = DeleteOldRevisions(context, table, lowerIdPrefix, collectionName, configuration, 
+                var result = DeleteOldRevisions(context, table, lowerIdPrefix, collectionName, configuration,
                     NonPersistentDocumentFlags.None,
                     changeVector, lastModifiedTicks, fromDelete, skipForceCreated: false);
 
@@ -905,7 +916,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private long DeleteRevisionsInternal(DocumentsOperationContext context, Table table, Slice lowerIdPrefix, CollectionName collectionName,
-            string changeVector, long lastModifiedTicks, long revisionsPreviousCount, 
+            string changeVector, long lastModifiedTicks, long revisionsPreviousCount,
             IEnumerable<Document> revisionsToRemove,
             DeleteOldRevisionsResult result)
         {
@@ -1010,7 +1021,7 @@ namespace Raven.Server.Documents.Revisions
             using (revision)
             using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
             {
-                CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
+                CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks, fromReplication: revision.Flags.Contain(DocumentFlags.FromReplication));
 
                 if (revision.Flags.Contain(DocumentFlags.HasAttachments))
                 {
@@ -1056,7 +1067,7 @@ namespace Raven.Server.Documents.Revisions
             private readonly DateTime _databaseTime;
             private readonly long? _minimumConflictRevisionsToKeep;
 
-            public ConflictedRevisionsDeletionState(long allRevisionCount, long conflictRevisionsCount, 
+            public ConflictedRevisionsDeletionState(long allRevisionCount, long conflictRevisionsCount,
                 RevisionsCollectionConfiguration conflictConfig, HandleConflictRevisionsFlags handlingFlags,
                 DateTime databaseTime, bool documentDeleted)
             {
@@ -1067,7 +1078,7 @@ namespace Raven.Server.Documents.Revisions
                 _regularCount = allRevisionCount - conflictRevisionsCount;
 
                 _databaseTime = databaseTime;
-                _skipForceCreated = handlingFlags.HasFlag(HandleConflictRevisionsFlags.ForceCreated)==false;
+                _skipForceCreated = handlingFlags.HasFlag(HandleConflictRevisionsFlags.ForceCreated) == false;
 
                 FinishedRegular = handlingFlags.HasFlag(HandleConflictRevisionsFlags.Regular) == false || AllRegularAreDeleted();
 
@@ -1076,7 +1087,7 @@ namespace Raven.Server.Documents.Revisions
                     _minimumConflictRevisionsToKeep = 0L;
                     FinishedConflicted = ConflictedReachedMinimumToKeep();
                 }
-                else if(_config.MinimumRevisionsToKeep.HasValue==false && _config.MinimumRevisionAgeToKeep.HasValue==false)
+                else if (_config.MinimumRevisionsToKeep.HasValue == false && _config.MinimumRevisionAgeToKeep.HasValue == false)
                 {
                     FinishedConflicted = true;
                 }
@@ -1103,7 +1114,7 @@ namespace Raven.Server.Documents.Revisions
                 }
             }
 
-            public bool ReachedMaximumRevisionsToDeleteUponDocumentUpdate() => 
+            public bool ReachedMaximumRevisionsToDeleteUponDocumentUpdate() =>
                     _config.MaximumRevisionsToDeleteUponDocumentUpdate.HasValue &&
                         _config.MaximumRevisionsToDeleteUponDocumentUpdate.Value <= DeletedCount;
 
@@ -1144,7 +1155,7 @@ namespace Raven.Server.Documents.Revisions
                 return true;
             }
 
-            private bool ShouldDeleteNonConflicted( DocumentFlags revisionFlags)
+            private bool ShouldDeleteNonConflicted(DocumentFlags revisionFlags)
             {
 
                 if (FinishedRegular)
@@ -1268,7 +1279,7 @@ namespace Raven.Server.Documents.Revisions
                     context.Transaction.ForgetAbout(revision);
                 }
             }
-        
+
             return conflictCount;
         }
 
@@ -1314,7 +1325,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks)
+        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks, bool fromReplication)
         {
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
@@ -1353,17 +1364,28 @@ namespace Raven.Server.Documents.Revisions
                 // but we don't want to mess up the order of events so the delete revision etag we use is negative
                 revisionEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
             }
-            CreateTombstone(context, key, revisionEtag, collectionName, changeVector, lastModifiedTicks);
+
+            CreateTombstone(context, key, revisionEtag, collectionName, changeVector, lastModifiedTicks, fromReplication);
         }
 
         private unsafe void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag,
-            CollectionName collectionName, string changeVector, long lastModifiedTicks)
+            CollectionName collectionName, string changeVector, long lastModifiedTicks, bool fromReplication)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
             if (table.VerifyKeyExists(keySlice))
                 return; // revisions (and revisions tombstones) are immutable, we can safely ignore this
+
+            if (_database.SupportedFeatures.SupportedFeatureTypes.ThrowRevisionKeyTooBigFix &&
+                fromReplication == false &&
+                changeVector.Length > DocumentIdWorker.RevisionMaxKeySize)
+            {
+                // RavenDB-21047 
+                // throw if the change vector length exceeds the maximum id length (1536 bytes)
+                // we allow it if the operation originated from smuggler/replication to avoid inconsistent data or broken replication
+                DocumentIdWorker.ThrowRevisionKeyTooBig(keySlice.Content.ToString(), changeVector, isTombstone: true);
+            }
 
             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
             using (Slice.From(context.Allocator, changeVector, out var cv))
@@ -1587,7 +1609,7 @@ namespace Raven.Server.Documents.Revisions
             return numbers.Read(prefix)?.Reader.ReadLittleEndianInt64() ?? 0;
         }
 
-        public Document 
+        public Document
             GetRevisionBefore(DocumentsOperationContext context, string id, DateTime max)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
@@ -1750,7 +1772,7 @@ namespace Raven.Server.Documents.Revisions
             return EnforceConfigurationAsync(onProgress, includeForceCreated, null, token: token);
         }
 
-        public async Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress, 
+        public async Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress,
             bool includeForceCreated, // include ForceCreated revisions on deletion in case of no revisions configuration (only conflict revisions config is exist).
             HashSet<string> collections, 
             OperationCancelToken token)
@@ -1952,7 +1974,7 @@ namespace Raven.Server.Documents.Revisions
 
                 var configuration = GetRevisionsConfiguration(collectionName.Name, deleteRevisionsWhenNoCofiguration: true);
 
-                var result = DeleteOldRevisions(context, table, lowerIdPrefix, collectionName, configuration, 
+                var result = DeleteOldRevisions(context, table, lowerIdPrefix, collectionName, configuration,
                     NonPersistentDocumentFlags.ByEnforceRevisionConfiguration,
                     changeVector, lastModifiedTicks, deletedDoc, skipForceCreated);
 
@@ -2083,7 +2105,7 @@ namespace Raven.Server.Documents.Revisions
             }
             else
             {
-                if (collections.Comparer != null && collections.Comparer.Equals(StringComparer.OrdinalIgnoreCase) == false )
+                if (collections.Comparer != null && collections.Comparer.Equals(StringComparer.OrdinalIgnoreCase) == false)
                 {
                     throw new InvalidOperationException("'collections' hashset must have an 'OrdinalIgnoreCase' comparer");
                 }
@@ -2154,7 +2176,7 @@ namespace Raven.Server.Documents.Revisions
                     var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
                     if (collectionName == null)
                     {
-                        var msg = $"Tried to revert revisions in the collection '{collection}' which does not exist"; 
+                        var msg = $"Tried to revert revisions in the collection '{collection}' which does not exist";
                         if (_logger.IsInfoEnabled)
                             _logger.Info(msg);
                         result.WarnAboutFailedCollection(msg);
@@ -2178,7 +2200,7 @@ namespace Raven.Server.Documents.Revisions
                     var revisions = new Table(RevisionsSchema, readCtx.Transaction.InnerTransaction);
                     tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], parameters.LastScannedEtag);
                 }
-                
+
                 foreach (var tvr in tvrs)
                 {
                     token.ThrowIfCancellationRequested();
@@ -2310,7 +2332,7 @@ namespace Raven.Server.Documents.Revisions
 
             private static void InsertNewMetadataInfo(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document, CollectionName collectionName)
             {
-                documentsStorage.AttachmentsStorage.PutAttachmentRevert(context, document.Id,  document.Data, out bool has);
+                documentsStorage.AttachmentsStorage.PutAttachmentRevert(context, document.Id, document.Data, out bool has);
                 RevertCounters(context, documentsStorage, document, collectionName);
 
                 document.Data = RevertSnapshotFlags(context, document.Data, document.Id);

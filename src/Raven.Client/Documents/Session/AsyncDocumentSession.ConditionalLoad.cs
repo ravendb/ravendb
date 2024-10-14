@@ -12,21 +12,21 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public async Task<(T Entity, string ChangeVector)> ConditionalLoadAsync<T>(string id, string changeVector, CancellationToken token = default)
         {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentNullException(nameof(id));
+
+            if (Advanced.IsLoaded(id))
+            {
+                var entity = await LoadAsync<T>(id, token).ConfigureAwait(false);
+                if (entity == null)
+                    return default;
+
+                var cv = Advanced.GetChangeVectorFor(entity);
+                return (entity, cv);
+            }
+
             using (AsyncTaskHolder())
             {
-                if (string.IsNullOrEmpty(id))
-                    throw new ArgumentNullException(nameof(id));
-
-                if (Advanced.IsLoaded(id))
-                {
-                    var entity = await LoadAsync<T>(id, token).ConfigureAwait(false);
-                    if (entity == null)
-                        return default;
-                    
-                    var cv = Advanced.GetChangeVectorFor(entity);
-                    return (entity, cv);
-                }
-
                 if (string.IsNullOrEmpty(changeVector))
                     throw new InvalidOperationException($"The requested document with id '{id} is not loaded into the session and could not conditional load when {nameof(changeVector)} is null or empty.");
 

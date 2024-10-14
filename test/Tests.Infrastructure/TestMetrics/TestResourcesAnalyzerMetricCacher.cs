@@ -4,18 +4,19 @@ using Raven.Server.Utils.Cpu;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
 
 namespace Tests.Infrastructure.TestMetrics
 {
     public class TestResourcesAnalyzerMetricCacher : MetricCacher
     {
-        private readonly SmapsReader _smapsReader;
+        private readonly ISmapsReader _smapsReader;
         private readonly TimeSpan _cacheRefreshRate = TimeSpan.FromMilliseconds(25);
 
         public TestResourcesAnalyzerMetricCacher(ICpuUsageCalculator cpuUsageCalculator)
         {
             if (PlatformDetails.RunningOnLinux)
-                _smapsReader = new SmapsReader(new[] { new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize] });
+                _smapsReader = SmapsFactory.CreateSmapsReader([new byte[SmapsFactory.BufferSize], new byte[SmapsFactory.BufferSize]]);
 
             Register(Keys.Server.CpuUsage, _cacheRefreshRate, cpuUsageCalculator.Calculate);
             Register(Keys.Server.MemoryInfo, _cacheRefreshRate, CalculateMemoryInfo);

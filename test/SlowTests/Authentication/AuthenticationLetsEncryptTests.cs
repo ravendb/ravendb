@@ -22,6 +22,10 @@ using xRetry;
 using Xunit;
 using Xunit.Abstractions;
 using Sparrow.Server;
+using System.Linq;
+using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.ServerWide.Context;
+using Raven.Client.Exceptions;
 
 namespace SlowTests.Authentication
 {
@@ -61,6 +65,91 @@ namespace SlowTests.Authentication
 
             UseNewLocalServer();
             await RenewCertificate(serverCert, firstServerCertThumbprint);
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var local = Server.ServerStore.Cluster.GetCertificateThumbprintsFromLocalState(context).ToList();
+                Assert.Equal(0, local.Count);
+
+                var cluster = Server.ServerStore.Cluster.GetCertificateThumbprintsFromCluster(context).ToList();
+                Assert.Equal(0, cluster.Count);
+            }
+        }
+
+        [RavenIntegrationRetryFact(delayBetweenRetriesMs: 1000)]
+        public async Task CanGetLetsEncryptCertificateAndRenewAfterFailurePebble()
+        {
+            var acmeUrl = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_URL") ?? string.Empty;
+            Assert.NotEmpty(acmeUrl);
+
+            await CanGetLetsEncryptCertificateAndRenewAfterFailure(acmeUrl);
+        }
+
+        [RetryFact(delayBetweenRetriesMs: 1000)]
+        public async Task CanGetLetsEncryptCertificateAndRenewAfterFailure()
+        {
+            var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
+            await CanGetLetsEncryptCertificateAndRenewAfterFailure(acmeUrl);
+        }
+
+        [RetryFact(delayBetweenRetriesMs: 1000)]
+        public async Task ReplaceCertificateWithPrivateKey()
+        {
+            var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
+            
+            SetupLocalServer();
+            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
+
+            var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
+            Server.Dispose();
+            UseNewLocalServer();
+
+            var mre = new AsyncManualResetEvent();
+            Server.ServerCertificateChanged += (sender, args) => mre.Set();
+
+            var ct = Certificates.GenerateAndSaveSelfSignedCertificate();
+            var first = Server.Certificate.Certificate.Thumbprint;
+
+            using (var store = GetDocumentStore(new Options { AdminCertificate = serverCert, ClientCertificate = serverCert }))
+            {
+                var bytesWithoutPrivateKey = ct.ServerCertificate.Value.RawData;
+                var op = new ReplaceClusterCertificateOperation(bytesWithoutPrivateKey, replaceImmediately: true);
+                var ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.Server.SendAsync(op));
+                Assert.Contains("Unable to find the private key in the provided certificate", ex.ToString());
+
+                var bytesWithPrivateKey = ct.ServerCertificate.Value.Export(X509ContentType.Pkcs12);
+                var op2 = new ReplaceClusterCertificateOperation(bytesWithPrivateKey, replaceImmediately: true);
+                await store.Maintenance.Server.SendAsync(op2);
+            }
+
+            await mre.WaitAsync(TimeSpan.FromSeconds(15));
+            Assert.NotEqual(first, Server.Certificate.Certificate.Thumbprint);
+        }
+
+        private async Task CanGetLetsEncryptCertificateAndRenewAfterFailure(string acmeUrl)
+        {
+            RemoveAcmeCache(acmeUrl);
+
+            SetupLocalServer();
+            SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
+
+            var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
+            var firstServerCertThumbprint = serverCert.Thumbprint;
+            Server.Dispose();
+
+            UseNewLocalServer();
+            Server.ForTestingPurposesOnly().ThrowExceptionAfterLetsEncryptRefresh = true;
+            await RenewCertificate(serverCert, firstServerCertThumbprint);
+
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var local = Server.ServerStore.Cluster.GetCertificateThumbprintsFromLocalState(context).ToList();
+                Assert.Equal(0, local.Count);
+
+                var cluster = Server.ServerStore.Cluster.GetCertificateThumbprintsFromCluster(context).ToList();
+                Assert.Equal(0, cluster.Count);
+            }
         }
 
         private static void RemoveAcmeCache(string acmeUrl)
@@ -85,7 +174,10 @@ namespace SlowTests.Authentication
             using (var commands = store.Commands())
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var command = new SetupLetsEncryptCommand(store.Conventions, context, setupInfo);
+                var command = new SetupLetsEncryptCommand(store.Conventions, context, setupInfo)
+                {
+                    Timeout = TimeSpan.FromMinutes(10)
+                };
 
                 await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 

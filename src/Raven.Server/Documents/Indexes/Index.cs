@@ -20,7 +20,6 @@ using Raven.Client.Exceptions.Corax;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -263,7 +262,7 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly double _txAllocationsRatio;
 
-        private readonly string _itemType;
+        private readonly IndexItemType _itemType;
 
         internal bool SourceDocumentIncludedInOutput;
         private bool _alreadyNotifiedAboutIncludingDocumentInOutput;
@@ -296,19 +295,19 @@ namespace Raven.Server.Documents.Indexes
             switch (sourceType)
             {
                 case IndexSourceType.None:
-                    _itemType = "item";
+                    _itemType = IndexItemType.None;
                     break;
 
                 case IndexSourceType.Documents:
-                    _itemType = "document";
+                    _itemType = IndexItemType.Document;
                     break;
 
                 case IndexSourceType.TimeSeries:
-                    _itemType = "time series item";
+                    _itemType = IndexItemType.TimeSeries;
                     break;
 
                 case IndexSourceType.Counters:
-                    _itemType = "counter";
+                    _itemType = IndexItemType.Counters;
                     break;
 
                 default:
@@ -1335,7 +1334,7 @@ namespace Raven.Server.Documents.Indexes
                 var lastItemEtag = GetLastItemEtagInCollection(queryContext, collection);
 
                 var lastProcessedItemEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
-                var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
+                var lastProcessedTombstoneEtag = ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                 _inMemoryIndexProgress.TryGetValue(collection, out var stats);
 
@@ -1348,10 +1347,10 @@ namespace Raven.Server.Documents.Indexes
 
                         var lastDoc = GetItemByEtag(queryContext, lastItemEtag);
 
-                        var message = $"There are still some {_itemType}s to process from collection '{collection}'. " +
+                        var message = $"There are still some {_itemType.GetDescription()}s to process from collection '{collection}'. " +
                                    $"The last {_itemType} etag in that collection is '{lastItemEtag:#,#;;0}' " +
                                    $"({lastDoc}), " +
-                                   $"but last committed {_itemType} etag for that collection is '{lastProcessedItemEtag:#,#;;0}'";
+                                   $"but last committed {_itemType.GetDescription()} etag for that collection is '{lastProcessedItemEtag:#,#;;0}'";
                         if (stats != null)
                             message += $" (last processed etag is: '{stats.LastProcessedItemEtag:#,#;;0}')";
 
@@ -2840,14 +2839,16 @@ namespace Raven.Server.Documents.Indexes
 
                 var lastEtags = GetLastEtags(_inMemoryIndexProgress, collectionNameForStats,
                     collectionStats?.LastProcessedDocumentEtag ?? 0,
-                    collectionStats?.LastProcessedTombstoneEtag ?? 0);
+                    collectionStats?.LastProcessedTombstoneEtag ?? 0,
+                    collectionStats?.LastProcessedTimeSeriesDeletedRangeEtag ?? 0);
 
                 if (progress.Collections.TryGetValue(collectionNameForStats, out var progressStats) == false)
                 {
                     progressStats = progress.Collections[collectionNameForStats] = new IndexProgress.CollectionStats
                     {
                         LastProcessedItemEtag = lastEtags.LastProcessedDocumentEtag,
-                        LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
+                        LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag,
+                        LastProcessedTimeSeriesDeletedRangeEtag = lastEtags.LastProcessedTimeSeriesDeletedRangeEtag
                     };
                 }
 
@@ -2873,7 +2874,7 @@ namespace Raven.Server.Documents.Indexes
 
                             var lastReferenceEtag = _indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, referencedCollection.Key, value);
                             var lastReferenceTombstoneEtag = _indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, referencedCollection.Key, value);
-                            var lastEtags = GetLastEtags(_inMemoryReferencesIndexProgress, collectionName, lastReferenceEtag, lastReferenceTombstoneEtag);
+                            var lastEtags = GetLastEtags(_inMemoryReferencesIndexProgress, collectionName, lastReferenceEtag, lastReferenceTombstoneEtag, 0);
 
                             progressStats = progress.Collections[collectionName] = new IndexProgress.CollectionStats
                             {
@@ -2924,16 +2925,18 @@ namespace Raven.Server.Documents.Indexes
             return _inMemoryReferencesIndexProgress.GetOrAdd(collection, _ => new IndexProgress.CollectionStats());
         }
 
-        private static (long LastProcessedDocumentEtag, long LastProcessedTombstoneEtag) GetLastEtags(
+        private static (long LastProcessedDocumentEtag, long LastProcessedTombstoneEtag, long LastProcessedTimeSeriesDeletedRangeEtag) GetLastEtags(
             ConcurrentDictionary<string, IndexProgress.CollectionStats> indexProgressStats,
-            string collection, long lastProcessedDocumentEtag, long lastProcessedTombstoneEtag)
+            string collection, long lastProcessedDocumentEtag, long lastProcessedTombstoneEtag, long lastProcessedTimeSeriesDeletedRangeEtag)
         {
             if (indexProgressStats.TryGetValue(collection, out var stats) == false)
-                return (lastProcessedDocumentEtag, lastProcessedTombstoneEtag);
+                return (lastProcessedDocumentEtag, lastProcessedTombstoneEtag, lastProcessedTimeSeriesDeletedRangeEtag);
 
             var lastDocumentEtag = Math.Max(lastProcessedDocumentEtag, stats.LastProcessedItemEtag);
             var lastTombstoneEtag = Math.Max(lastProcessedTombstoneEtag, stats.LastProcessedTombstoneEtag);
-            return (lastDocumentEtag, lastTombstoneEtag);
+            var lastTimeSeriesDeletedRangeEtag = Math.Max(lastProcessedTimeSeriesDeletedRangeEtag, stats.LastProcessedTimeSeriesDeletedRangeEtag);
+            
+            return (lastDocumentEtag, lastTombstoneEtag, lastTimeSeriesDeletedRangeEtag);
         }
 
         public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false,
@@ -4951,6 +4954,9 @@ namespace Raven.Server.Documents.Indexes
             }
             return Math.Max(lastDocEtag, lastTombstoneEtag);
         }
+
+        public virtual long ReadLastProcessedTombstoneEtag(RavenTransaction transaction, string collection) =>
+            _indexStorage.ReadLastProcessedTombstoneEtag(transaction, collection);
 
         public virtual long GetLastItemEtagInCollection(QueryOperationContext queryContext, string collection)
         {

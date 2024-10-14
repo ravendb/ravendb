@@ -96,6 +96,8 @@ class about extends viewModelBase {
         return support.Status !== "ProductionSupport";
     });
 
+    isExtendedSupport = ko.pureComputed(() => license.supportCoverage()?.SupportType === "Extended");
+
     spinners = {
         forceLicenseUpdate: ko.observable<boolean>(false),
         renewLicense: ko.observable<boolean>(false),

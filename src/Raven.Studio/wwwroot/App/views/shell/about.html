@@ -251,7 +251,7 @@
                         <div class="big-label">
                             <div class="content">
                                 <small>Type</small>
-                                <strong data-bind="text: supportLabel"></strong>
+                                <strong data-bind="text: ['Professional', 'Production'].includes(supportLabel()) && isExtendedSupport() ? 'Extended' : supportLabel"></strong>
                             </div>
                         </div>
                     </div>
@@ -263,11 +263,11 @@
                     <strong>Essential support<br/> to get started</strong>
                 </div>
                 <div class="top-row professional" data-bind="visible: !isCloud()">
-                    <h4>Professional</h4>
+                    <h4 data-bind="text: supportLabel() === 'Professional' && isExtendedSupport() ? 'Extended' : 'Professional'"></h4>
                     <strong>Priority support<br /> for professional<br /> projects</strong>
                 </div>
                 <div class="top-row production" data-bind="visible: !isCloud()">
-                    <h4>Production</h4>
+                    <h4 data-bind="text: supportLabel() === 'Production' && isExtendedSupport() ? 'Extended' : 'Production'"></h4>
                     <strong>Top-tier support<br /> for enterprise and<br /> mission-critical<br /> projects</strong>
                 </div>
                 <div class="top-row grid-span-2 production" data-bind="visible: isCloud">

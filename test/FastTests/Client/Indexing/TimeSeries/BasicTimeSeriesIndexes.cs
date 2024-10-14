@@ -122,7 +122,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.Equal(2, staleness.StalenessReasons.Count); // one for time series and one for time series deleted range
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
                 store.Maintenance.Send(new StartIndexingOperation());
@@ -1173,14 +1173,14 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company, "HeartRate").Delete( now1);
+                    session.TimeSeriesFor(company, "HeartRate").Delete(now1);
 
                     session.SaveChanges();
                 }
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.Equal(2, staleness.StalenessReasons.Count); // one for time series update and one for time series deleted range 
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
                 store.Maintenance.Send(new StartIndexingOperation());
@@ -1465,7 +1465,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
         [Theory]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
-        public void SupportForEscapedCollectionAndTimeSeriesNames(RavenTestParameters config)
+        public async Task SupportForEscapedCollectionAndTimeSeriesNames(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(new Options
             {
@@ -1526,6 +1526,9 @@ namespace FastTests.Client.Indexing.TimeSeries
                 };
 
                 AssertIndex(store, indexDefinition, "HeartRate");
+
+                var db = await GetDatabase(store.Database);
+                await db.TombstoneCleaner.ExecuteCleanup();
 
                 indexDefinition = new TimeSeriesIndexDefinition
                 {

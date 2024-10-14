@@ -1,71 +1,11 @@
-﻿﻿using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 
 namespace Sparrow.Platform.Posix
 {
-    internal class SmapsReaderResults
-    {
-        public string ResultString;
-        public long Size;
-        public long Rss;
-        public long SharedClean;
-        public long SharedDirty;
-        public long PrivateClean;
-        public long PrivateDirty;
-        public long Swap;
-    }
-    
-    internal interface ISmapsReaderResultAction
-    {
-        void Add(SmapsReaderResults results);
-    }
-
-    internal struct SmapsReaderJsonResults : ISmapsReaderResultAction
-    {
-        private DynamicJsonArray _dja;
-
-        public void Add(SmapsReaderResults results)
-        {
-            var djv = new DynamicJsonValue
-            {
-                ["File"] = results.ResultString,
-                ["Size"] = Sizes.Humane(results.Size),
-                ["Rss"] = Sizes.Humane(results.Rss),
-                ["SharedClean"] = Sizes.Humane(results.SharedClean),
-                ["SharedDirty"] = Sizes.Humane(results.SharedDirty),
-                ["PrivateClean"] = Sizes.Humane(results.PrivateClean),
-                ["PrivateDirty"] = Sizes.Humane(results.PrivateDirty),
-                ["TotalClean"] = results.SharedClean + results.PrivateClean,
-                ["TotalCleanHumanly"] = Sizes.Humane(results.SharedClean + results.PrivateClean),
-                ["TotalDirty"] = results.SharedDirty + results.PrivateDirty,
-                ["TotalDirtyHumanly"] = Sizes.Humane(results.SharedDirty + results.PrivateDirty),
-                ["TotalSwap"] = results.Swap,
-                ["TotalSwapHumanly"] = Sizes.Humane(results.Swap)
-            };
-            if (_dja == null)
-                _dja = new DynamicJsonArray();
-            _dja.Add(djv);
-        }
-
-        public DynamicJsonArray ReturnResults()
-        {
-            return _dja;
-        }
-    }
-    
-    internal struct SmapsReaderNoAllocResults : ISmapsReaderResultAction
-    {
-        public void Add(SmapsReaderResults results)
-        {
-        // currently we do not use these results with SmapsReaderNoAllocResults so we do not store them
-        }
-    }
-    
-    internal class SmapsReader
+    internal class SmapsReader : ISmapsReader
     {
         // this /proc/self/smaps reader assumes the format of smaps will always be with the following order:
         // - filename line (where we count rw-s) where with white-spaces delimeters - rw-s is second word in line and filename is last word
@@ -73,7 +13,6 @@ namespace Sparrow.Platform.Posix
         // Size, Rss, Shared_Clean, Private_Clean, Shared_Dirty, Private_Dirty and in order to finish reading a file data : Locked
         // Each must have with white-space delimiters a value, delimiter, "kB"
 
-        public const int BufferSize = 4096;
         private readonly byte[][] _smapsBuffer;
         private readonly SmapsReaderResults _smapsReaderResults = new SmapsReaderResults();
 
@@ -89,7 +28,7 @@ namespace Sparrow.Platform.Posix
         private readonly byte[] _lockedBytes = Encoding.UTF8.GetBytes("Locked:");
         private readonly byte[] _tempBufferBytes = new byte[256];
 
-        private readonly int[] _endOfBuffer = {0, 0};
+        private readonly int[] _endOfBuffer = { 0, 0 };
         private int _currentBuffer;
 
         private enum SearchState
@@ -109,7 +48,7 @@ namespace Sparrow.Platform.Posix
         {
             _smapsBuffer = smapsBuffer;
         }
-        
+
         private int ReadFromFile(Stream fileStream, int bufferIndex)
         {
             var read = fileStream.Read(_smapsBuffer[bufferIndex], 0, _smapsBuffer[bufferIndex].Length);
@@ -123,16 +62,6 @@ namespace Sparrow.Platform.Posix
             return $"/proc/{pid}/smaps";
         }
 
-        public struct SmapsReadResult<T> where T : struct, ISmapsReaderResultAction
-        {
-            public long Rss;
-            public long SharedClean;
-            public long PrivateClean;
-            public long TotalDirty;
-            public long Swap;
-            public T SmapsResults;
-        }
-        
         public SmapsReadResult<T> CalculateMemUsageFromSmaps<T>() where T : struct, ISmapsReaderResultAction
         {
             using (var currentProcess = Process.GetCurrentProcess())
@@ -150,7 +79,7 @@ namespace Sparrow.Platform.Posix
             _endOfBuffer[0] = 0;
             _endOfBuffer[1] = 0;
             _currentBuffer = 0;
-            
+
             var state = SearchState.None;
             var smapResultsObject = new T();
 
@@ -235,7 +164,7 @@ namespace Sparrow.Platform.Posix
                                 if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
                                     continue;
                             }
-                            
+
                             if (term == _swapBytes) // didn't find Size - try to find Swap
                             {
                                 // Shared_X is longer than Swap or Size so we're putting it in between
@@ -250,7 +179,7 @@ namespace Sparrow.Platform.Posix
                                 if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
                                     continue;
                             }
-                            
+
                             hasMatch = false;
                             break;
                         }
@@ -305,7 +234,7 @@ namespace Sparrow.Platform.Posix
                             }
 
                             //TODO what if there's a space in the file path?
-                            if (currentChar == ' ' || currentChar == '\t') 
+                            if (currentChar == ' ' || currentChar == '\t')
                                 posInTempBuf = 0;
                             else if (currentChar == '\n')
                                 break;
@@ -346,7 +275,7 @@ namespace Sparrow.Platform.Posix
                             ThrowNotContainsKbValue(term, pid, additionalInfo);
                         }
                     }
-                    
+
                     i += term.Length + bytesSearched;
                     if (i >= _smapsBuffer[_currentBuffer].Length)
                         offsetForNextBuffer = _smapsBuffer[_currentBuffer].Length - i;

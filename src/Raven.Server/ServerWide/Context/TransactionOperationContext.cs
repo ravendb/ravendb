@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -55,12 +56,15 @@ namespace Raven.Server.ServerWide.Context
             Allocator = new ByteStringContext(lowMemoryFlag);
         }
 
-        public TTransaction OpenReadTransaction()
+        public TTransaction OpenReadTransaction([CallerMemberName] string caller = null)
         {
             if (Transaction != null && Transaction.Disposed == false)
                 ThrowTransactionAlreadyOpened();
 
             Transaction = CreateReadTransaction();
+
+            if (caller != null)
+                Transaction.InnerTransaction.LowLevelTransaction.CallerName = caller;
 
             return Transaction;
         }
@@ -118,7 +122,7 @@ namespace Raven.Server.ServerWide.Context
 
         protected abstract TTransaction CreateWriteTransaction(TimeSpan? timeout = null);
 
-        public TTransaction OpenWriteTransaction(TimeSpan? timeout = null)
+        public TTransaction OpenWriteTransaction(TimeSpan? timeout = null, [CallerMemberName] string caller = null)
         {
             if (Transaction != null && Transaction.Disposed == false)
             {
@@ -126,6 +130,9 @@ namespace Raven.Server.ServerWide.Context
             }
 
             Transaction = CreateWriteTransaction(timeout);
+
+            if (caller != null)
+                Transaction.InnerTransaction.LowLevelTransaction.CallerName = caller;
 
             return Transaction;
         }

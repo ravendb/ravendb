@@ -307,7 +307,7 @@ return ({
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.Equal(2, staleness.StalenessReasons.Count); // one for time series update and one for time series deleted range
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
                 store.Maintenance.Send(new StartIndexingOperation());
@@ -948,7 +948,7 @@ return ({
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllTimeSeries"));
                 Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.Equal(2, staleness.StalenessReasons.Count); // one for time series update and one for time series deleted range
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
                 store.Maintenance.Send(new StartIndexingOperation());

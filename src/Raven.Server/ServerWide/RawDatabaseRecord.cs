@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
@@ -1045,6 +1044,25 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private List<string> _supportedFeatures;
+
+        public IReadOnlyList<string> SupportedFeatures
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.SupportedFeatures ?? new List<string>();
+
+                if (_supportedFeatures == null && _record.TryGet(nameof(DatabaseRecord.SupportedFeatures), out BlittableJsonReaderArray supportedFeatures) && supportedFeatures != null)
+                {
+                    _supportedFeatures = new List<string>();
+                    foreach (LazyStringValue supportedFeature in supportedFeatures)
+                        _supportedFeatures.Add(supportedFeature);
+                }
+
+                return _supportedFeatures;
+            }
+        }
 
         public void Dispose()
         {

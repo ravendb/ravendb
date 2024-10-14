@@ -436,14 +436,14 @@ namespace Tests.Infrastructure
             }, true, timeout: timeout, interval: 333);
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DocumentSession session, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null)
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DocumentSession session, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null, bool assertTo = true)
         {
             var nodes = session.RequestExecutor.TopologyNodes;
             var stores = GetDocumentStores(nodes, disableTopologyUpdates: true, certificate: certificate);
-            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
+            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores, assertTo);
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology, string db, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null)
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology, string db, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null, bool assertTo = true)
         {
             var allNodes = topology.Members;
             var serversTopology = Servers.Where(s => allNodes.Contains(s.ServerStore.NodeTag));
@@ -453,31 +453,32 @@ namespace Tests.Infrastructure
                 Database = db
             });
             var stores = GetDocumentStores(nodes, disableTopologyUpdates: true, certificate: certificate);
-            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
+            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores, assertTo);
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(IReadOnlyList<ServerNode> topology, string docId, Func<T, bool> predicate, TimeSpan timeout)
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(IReadOnlyList<ServerNode> topology, string docId, Func<T, bool> predicate, TimeSpan timeout, bool assertTo = true)
         {
             var stores = GetDocumentStores(topology, disableTopologyUpdates: true);
-            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
+            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores, assertTo);
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(List<RavenServer> nodes, string database, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null)
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(List<RavenServer> nodes, string database, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null, bool assertTo = true)
         {
             var stores = GetDocumentStores(nodes, database, disableTopologyUpdates: true, certificate: certificate);
-            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
+            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores, assertTo);
         }
 
-        private async Task<bool> WaitForDocumentInClusterAsyncInternal<T>(string docId, Func<T, bool> predicate, TimeSpan timeout, List<DocumentStore> stores)
+        private async Task<bool> WaitForDocumentInClusterAsyncInternal<T>(string docId, Func<T, bool> predicate, TimeSpan timeout, List<DocumentStore> stores, bool assertTo = true)
         {
             var tasks = new List<Task<bool>>();
-
             foreach (var store in stores)
                 tasks.Add(Task.Run(() => WaitForDocument(store, docId, predicate, (int)timeout.TotalMilliseconds)));
 
             await Task.WhenAll(tasks);
 
-            return tasks.All(x => x.Result);
+            var r = tasks.All(x => x.Result);
+            Assert.True(r == assertTo, assertTo ? $"Document {docId} is missing on some nodes" : $"Document {docId} is on all nodes");
+            return true;
         }
 
         private List<DocumentStore> GetDocumentStores(IEnumerable<ServerNode> nodes, bool disableTopologyUpdates, X509Certificate2 certificate = null)

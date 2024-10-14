@@ -4,7 +4,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 using FastTests;
+using Sparrow;
 using Sparrow.Platform.Posix;
+using Sparrow.Server.Platform.Posix;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,18 +19,64 @@ namespace SlowTests.Utils
         {
         }
 
+        private const string SmapsRollup = @"605f1bf67000-7fff4b6e2000 ---p 00000000 00:00 0                          [rollup]
+Rss:              843564 kB
+Pss:              809811 kB
+Pss_Dirty:        543903 kB
+Pss_Anon:         422104 kB
+Pss_File:         265771 kB
+Pss_Shmem:        121935 kB
+Shared_Clean:      61696 kB
+Shared_Dirty:         32 kB
+Private_Clean:    237944 kB
+Private_Dirty:    543892 kB
+Referenced:       713176 kB
+Anonymous:        422104 kB
+LazyFree:              0 kB
+AnonHugePages:         0 kB
+ShmemPmdMapped:        0 kB
+FilePmdMapped:         0 kB
+Shared_Hugetlb:        0 kB
+Private_Hugetlb:       0 kB
+Swap:                  0 kB
+SwapPss:               0 kB
+Locked:                0 kB
+";
+
+
+        [RavenFact(RavenTestCategory.Linux | RavenTestCategory.Memory)]
+        public void ParsesSmapsProperlyFromRollup()
+        {
+            var smapsReader = new SmapsRollupReader([new byte[SmapsFactory.BufferSize], new byte[SmapsFactory.BufferSize]]);
+            SmapsReadResult<SmapsTestResult> result;
+            using (var smapsStream = new FakeProcSmapsEntriesStream(new MemoryStream(Encoding.UTF8.GetBytes(SmapsRollup))))
+            {
+                result = smapsReader
+                    .CalculateMemUsageFromSmaps<SmapsTestResult>(smapsStream, pid: 1234);
+            }
+
+            Assert.Single(result.SmapsResults.Entries);
+
+            var totalDirty = new Size(0, SizeUnit.Bytes);
+            totalDirty.Add(543892, SizeUnit.Kilobytes);
+            totalDirty.Add(32, SizeUnit.Kilobytes);
+
+            Assert.Equal(new Size(843564, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes), result.Rss);
+            Assert.Equal(new Size(61696, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes), result.SharedClean);
+            Assert.Equal(new Size(237944, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes), result.PrivateClean);
+            Assert.Equal(new Size(0, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes), result.Swap);
+            Assert.Equal(totalDirty.GetValue(SizeUnit.Bytes), result.TotalDirty);
+        }
+
         [Fact]
         public void ParsesSmapsProperly()
         {
             var assembly = typeof(SmapsReaderTests).Assembly;
-            var smapsReader = new SmapsReader(new[]
-            {
-                new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]
-            });
+            var smapsReader = new SmapsReader([new byte[SmapsFactory.BufferSize], new byte[SmapsFactory.BufferSize]]);
 
-            SmapsReader.SmapsReadResult<SmapsTestResult> result;
-            
-            using (var fs = 
+            SmapsReadResult<SmapsTestResult> result;
+
+            using (var fs =
                 assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_15159.12119.smaps.gz"))
             using (var deflated = new GZipStream(fs, CompressionMode.Decompress))
             using (var smapsStream = new FakeProcSmapsEntriesStream(deflated))
@@ -35,14 +84,14 @@ namespace SlowTests.Utils
                 result = smapsReader
                     .CalculateMemUsageFromSmaps<SmapsTestResult>(smapsStream, pid: 1234);
             }
-            
+
             // 385 .buffers
             // 181 .voron
-            Assert.Equal(385 + 181, result.SmapsResults.Entries.Count); 
-            
+            Assert.Equal(385 + 181, result.SmapsResults.Entries.Count);
+
             // cat 12119.smaps | grep -e "rw-s" -A 3 | awk '$1 ~ /Rss/ {sum += $2} END {print sum}'
             Assert.Equal(722136L * 1024, result.Rss);
-            
+
             // cat 12119.smaps | grep -e "rw-s" -A 16 | awk '$1 ~ /Swap/ {sum += $2} END {print sum}'
             Assert.Equal(1348L * 1024, result.Swap);
         }
@@ -54,12 +103,12 @@ namespace SlowTests.Utils
             {
                 if (Entries == null)
                     Entries = new List<SmapsReaderResults>();
-                
+
                 Entries.Add(results);
             }
         }
 
-        private class FakeProcSmapsEntriesStream : Stream 
+        private class FakeProcSmapsEntriesStream : Stream
         {
             private readonly Stream _smapsSnapshotStream;
 
@@ -73,24 +122,26 @@ namespace SlowTests.Utils
 
             private IEnumerable<string> ReadEntry()
             {
-                using (StreamReader reader = new StreamReader(_smapsSnapshotStream))
+                using (StreamReader reader = new(_smapsSnapshotStream))
                 {
                     var currentEntry = new StringBuilder();
                     string line;
-                    
+
                     while ((line = reader.ReadLine()) != null)
                     {
                         currentEntry.Append(line + '\n');
-                        
+
                         if (line.StartsWith("VmFlags"))
                         {
                             yield return currentEntry.ToString();
                             currentEntry = new StringBuilder();
                         }
                     }
+
+                    yield return currentEntry.ToString();
                 }
             }
-            
+
             public override void Flush()
             {
                 throw new System.NotImplementedException();
@@ -100,7 +151,7 @@ namespace SlowTests.Utils
             {
                 if (_entriesEnumerator.MoveNext() == false)
                     return 0;
-                
+
                 var currentEntryString = _entriesEnumerator.Current;
                 var entryBytes = Encoding.UTF8.GetBytes(currentEntryString);
                 entryBytes.CopyTo(new Memory<byte>(buffer));
@@ -128,6 +179,6 @@ namespace SlowTests.Utils
             public override long Length => 0;
             public override long Position { get; set; }
         }
-    
+
     }
 }

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Buffers;
-using System.Threading;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Raven.Server.Exceptions;
+﻿using System.Threading;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -33,6 +28,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations();
 
         public abstract void Delete(LazyStringValue key, IndexingStatsScope stats);
+
+        public abstract void DeleteTimeSeries(LazyStringValue docId, LazyStringValue key, IndexingStatsScope stats);
 
         public abstract void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats);
 

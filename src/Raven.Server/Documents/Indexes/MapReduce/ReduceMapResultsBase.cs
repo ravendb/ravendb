@@ -170,6 +170,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, lastEtag.Key, lastEtag.Value);
             }
+
+            foreach (var lastEtag in _mapReduceContext.ProcessedTimeSeriesDeletedRangeEtags)
+            {
+                _indexStorage.WriteLastTimeSeriesDeletedRangeEtag(indexContext.Transaction, lastEtag.Key, lastEtag.Value);
+            }
         }
 
         private void HandleNestedValuesReduction(TransactionOperationContext indexContext, IndexingStatsScope stats,

@@ -10,6 +10,8 @@ using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Collections;
@@ -180,6 +182,16 @@ namespace Raven.Server.NotificationCenter
                     return message;
                 }
             }
+        }
+
+        public BlittableJsonReaderObject GetStoredMessageByPrefix(TransactionOperationContext<RavenTransaction> context, string prefix)
+        {
+            foreach (var notification in _notificationsStorage.GetByPrefix(context, prefix))
+            {
+                return notification.Json;
+            }
+
+            return null;
         }
 
         public long GetAlertCount()

@@ -1251,8 +1251,8 @@ namespace RachisTests.DatabaseCluster
                         session.SaveChanges();
                     }
                     controller.ReplicateOnce();
-                    Assert.False(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology { Members = new List<string> { "A", "B" } }, store.Database, "users/3", null,
-                        TimeSpan.FromSeconds(10)));
+                    await WaitForDocumentInClusterAsync<User>(new DatabaseTopology { Members = new List<string> { "A", "B" } }, store.Database, "users/3", null,
+                        TimeSpan.FromSeconds(10), assertTo: false);
                 }
 
                 Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology { Members = new List<string> { "A", "B" } }, store.Database, "users/3", null,

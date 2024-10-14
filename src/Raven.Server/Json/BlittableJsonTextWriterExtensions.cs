@@ -1297,6 +1297,10 @@ namespace Raven.Server.Json
                     writer.WriteInteger(kvp.Value.LastProcessedTombstoneEtag);
                     writer.WriteComma();
 
+                    writer.WritePropertyName(nameof(kvp.Value.LastProcessedTimeSeriesDeletedRangeEtag));
+                    writer.WriteInteger(kvp.Value.LastProcessedTimeSeriesDeletedRangeEtag);
+                    writer.WriteComma();
+
                     writer.WritePropertyName(nameof(kvp.Value.NumberOfItemsToProcess));
                     writer.WriteInteger(kvp.Value.NumberOfItemsToProcess);
                     writer.WriteComma();
@@ -1305,12 +1309,20 @@ namespace Raven.Server.Json
                     writer.WriteInteger(kvp.Value.NumberOfTombstonesToProcess);
                     writer.WriteComma();
 
+                    writer.WritePropertyName(nameof(kvp.Value.NumberOfTimeSeriesDeletedRangesToProcess));
+                    writer.WriteInteger(kvp.Value.NumberOfTimeSeriesDeletedRangesToProcess);
+                    writer.WriteComma();
+
                     writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfItems));
                     writer.WriteInteger(kvp.Value.TotalNumberOfItems);
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfTombstones));
                     writer.WriteInteger(kvp.Value.TotalNumberOfTombstones);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfTimeSeriesDeletedRanges));
+                    writer.WriteInteger(kvp.Value.TotalNumberOfTimeSeriesDeletedRanges);
 
                     writer.WriteEndObject();
                 }

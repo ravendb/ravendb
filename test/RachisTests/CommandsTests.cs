@@ -26,13 +26,19 @@ namespace RachisTests
             long lastIndex;
             using (leader.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
-                var cmd = new TestCommandWithRaftId("test", RaftIdGenerator.NewId())
+                var guid = RaftIdGenerator.NewId();
+                var cmd = new TestCommandWithRaftId("test", guid)
+                {
+                    RaftCommandIndex = 322
+                };
+
+                var cloned = new TestCommandWithRaftId("test", guid)
                 {
                     RaftCommandIndex = 322
                 };
 
                 var t = leader.SendToLeaderAsync(cmd);
-                await leader.SendToLeaderAsync(cmd);
+                await leader.SendToLeaderAsync(cloned);
 
                 // this should not throw timeout exception.
                 var exception = await Record.ExceptionAsync(async () => await t);

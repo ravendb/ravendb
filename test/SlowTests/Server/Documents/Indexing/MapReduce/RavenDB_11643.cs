@@ -68,18 +68,18 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                             // we're cheating here a bit as the originally this issue was reproduced on very large amount of data
                             //
-                            // we choose page 542 because it's going to be used when calling store1.Add() below
+                            // we choose page 545 because it's going to be used when calling store1.Add() below
                             // let's pretend this page that was freed as the result of deletion in store2
-                            // the important thing is that store1 will be processed before processing store2 and we'll store the aggregation result for page 542 in PageNumberToReduceResult table
-                            // the issue was that modification of page 542 in the tree of store1 didn't remove it from FreedPages of store2
-                            // in result the processing of store2 removed page 542 from the table
+                            // the important thing is that store1 will be processed before processing store2 and we'll store the aggregation result for page 545 in PageNumberToReduceResult table
+                            // the issue was that modification of page 545 in the tree of store1 didn't remove it from FreedPages of store2
+                            // in result the processing of store2 removed page 545 from the table
 
-                            long pageNumber = 544;
+                            long pageNumber = 545;
 
                             if (tx.InnerTransaction.LowLevelTransaction.Environment.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                             {
-                                // in 32 bits we might allocate different pages, 94 is going to be used during store1.Add() calls
-                                pageNumber = 96;
+                                // in 32 bits we might allocate different pages, 97 is going to be used during store1.Add() calls
+                                pageNumber = 97;
                             }
 
                             mapReduceContext.FreedPages.Add(pageNumber);

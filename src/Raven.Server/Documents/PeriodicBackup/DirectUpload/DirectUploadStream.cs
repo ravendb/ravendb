@@ -111,19 +111,21 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 
     protected override void Dispose(bool disposing)
     {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+
         if (_abortUpload)
         {
+            using (Client)
             using (_backupStatusIDisposable)
             using (_uploadStream)
             using (_writeStream)
                 return;
         }
 
-        if (_disposed)
-            return;
-
-        _disposed = true;
-
+        using (Client)
         using (_backupStatusIDisposable)
         {
             using (_uploadStream)
@@ -150,8 +152,12 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
             _cloudUploadStatus.UploadProgress.ChangeState(UploadState.Done);
 
             _onProgress.Invoke($"Total uploaded: {new Size(_position, SizeUnit.Bytes)}");
+
+            OnCompleteUpload();
         }
     }
+
+    protected abstract void OnCompleteUpload();
 
     public override bool CanRead => false;
     public override bool CanSeek => false;

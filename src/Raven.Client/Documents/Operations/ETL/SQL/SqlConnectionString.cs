@@ -54,7 +54,14 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
         public override DynamicJsonValue ToAuditJson()
         {
-            return ToJson();
+            var json = base.ToAuditJson();
+            
+            var databaseAndServer = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(FactoryName, ConnectionString);
+            json[nameof(FactoryName)] = FactoryName;
+            json["Database"] = databaseAndServer.Database;
+            json["Server"] = databaseAndServer.Server;
+
+            return json;
         }
     }
 }

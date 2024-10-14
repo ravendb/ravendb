@@ -461,6 +461,7 @@ namespace Raven.Server.Web.System
                 Server.ServerStore.AssignNodesToDatabase(clusterTopology, databaseRecord);
             }
 
+            databaseRecord.SupportedFeatures = new List<string> { Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix };
             databaseRecord.Topology.ClusterTransactionIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
             databaseRecord.Topology.DatabaseTopologyIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
 
@@ -707,7 +708,7 @@ namespace Raven.Server.Web.System
                     $"Database restore: {restoreBackupTask.RestoreFromConfiguration.DatabaseName}",
                     Documents.Operations.Operations.OperationType.DatabaseRestore,
                     taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
-                    id: operationId, token: cancelToken);
+                    id: operationId, token: cancelToken, resourceName: restoreBackupTask.RestoreFromConfiguration.DatabaseName);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -774,10 +775,7 @@ namespace Raven.Server.Web.System
                             if (rawRecord == null)
                                 continue;
 
-                            if (rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
-                                throw new InvalidOperationException($"Can't delete database '{databaseName}' while the restore " +
-                                                                    $"process is in progress. In order to delete the database, " +
-                                                                    $"you can cancel the restore task from node {rawRecord.Topology.Members[0]}");
+                            AssertCanDeleteDatabase(databaseName, rawRecord.DatabaseState, rawRecord.Topology);
 
                             switch (rawRecord.LockMode)
                             {
@@ -919,6 +917,34 @@ namespace Raven.Server.Web.System
                         [nameof(DeleteDatabaseResult.RaftCommandIndex)] = actualDeletionIndex,
                         [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(pendingDeletes)
                     });
+                }
+            }
+        }
+
+        private void AssertCanDeleteDatabase(string databaseName, DatabaseStateStatus state, DatabaseTopology topology)
+        {
+            if (state != DatabaseStateStatus.RestoreInProgress)
+                return;
+
+            var restoredOnNode = topology.Members.First(); // we restore only on one node
+            if (ServerStore.NodeTag != restoredOnNode)
+                throw new InvalidOperationException($"Can't delete database '{databaseName}' while the restore " +
+                                                    $"process is in progress. In order to delete the database, " +
+                                                    $"you can cancel the restore task from node {topology.Members.First()}");
+
+            var operations = ServerStore.Operations.GetActive();
+            if (operations == null || operations.Count == 0)
+                return;
+
+            foreach (var operation in operations)
+            {
+                if (operation.Description.TaskType == Documents.Operations.Operations.OperationType.DatabaseRestore &&
+                    databaseName.Equals(operation.DatabaseName, StringComparison.OrdinalIgnoreCase) &&
+                    operation.IsCompleted() == false)
+                {
+                    throw new InvalidOperationException($"Can't delete database '{databaseName}' while the restore " +
+                                                        $"process is in progress. In order to delete the database, " +
+                                                        $"you need cancel the restore task first");
                 }
             }
         }
