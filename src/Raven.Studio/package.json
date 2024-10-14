@@ -69,6 +69,7 @@
         "eslint": "^8.57.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-jest": "^28.6.0",
+        "eslint-plugin-local-rules": "^3.0.2",
         "eslint-plugin-react": "^7.34.3",
         "eslint-plugin-react-hooks": "^4.6.2",
         "eslint-plugin-storybook": "^0.8.0",
@@ -105,6 +106,8 @@
     "dependencies": {
         "@hookform/resolvers": "^3.9.0",
         "@reduxjs/toolkit": "^2.2.6",
+        "@tanstack/react-table": "^8.19.3",
+        "@tanstack/react-virtual": "^3.8.3",
         "@testing-library/dom": "^10.3.1",
         "@types/eonasdan-bootstrap-datetimepicker": "^4.17.32",
         "@types/react-datepicker": "^6.2.0",

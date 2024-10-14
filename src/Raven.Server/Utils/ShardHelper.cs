@@ -21,7 +21,7 @@ namespace Raven.Server.Utils
 {
     public static class ShardHelper
     {
-        public const int NumberOfBuckets = 1024 * 1024;
+        public const int NumberOfBuckets = ClientShardHelper.NumberOfBuckets;
 
         /// <summary>
         /// The bucket is a hash of the document id, lower case, reduced to
@@ -40,41 +40,7 @@ namespace Raven.Server.Utils
 
         public static int GetBucketFor(ShardingConfiguration configuration, Slice lowerId) => GetBucketFor(configuration, lowerId.AsReadOnlySpan());
 
-        public static int GetBucketFor(ShardingConfiguration configuration, ReadOnlySpan<byte> lowerId)
-        {
-            var bucket = GetBucketFor(lowerId);
-
-            if (configuration?.Prefixed != null)
-            {
-                foreach (var setting in configuration.Prefixed)
-                {
-                    if (lowerId.StartsWith(setting.PrefixBytesLowerCase))
-                    {
-                        bucket += setting.BucketRangeStart;
-                        break;
-                    }
-                }
-            }
-
-            return bucket;
-        }
-
-        private static int GetBucketFor(ReadOnlySpan<byte> buffer)
-        {
-            var len = buffer.Length;
-            for (int i = len - 1; i > 0; i--)
-            {
-                if (buffer[i] != (byte)'$')
-                    continue;
-
-                buffer = buffer.Slice(i + 1, len - i - 1);
-                break;
-            }
-
-            var hash = Hashing.XXHash64.Calculate(buffer);
-            return (int)(hash % NumberOfBuckets);
-        }
-
+        public static int GetBucketFor(ShardingConfiguration configuration, ReadOnlySpan<byte> lowerId) => ClientShardHelper.GetBucketFor(configuration, lowerId);
         private static unsafe void AdjustAfterSeparator(char expected, ref char* ptr, ref int len)
         {
             for (int i = len - 1; i > 0; i--)
@@ -192,22 +158,7 @@ namespace Raven.Server.Utils
             return (FindBucketShard(configuration.BucketRanges, bucket), bucket);
         }
 
-        private static int FindBucketShard(List<ShardBucketRange> ranges, int bucket)
-        {
-            int prefixRange = bucket >> 20;
-            for (int i = 0; i < ranges.Count - 1; i++)
-            {
-                int bucketRangeStart = ranges[i].BucketRangeStart;
-                if ((bucketRangeStart >> 20) != prefixRange)
-                    continue;
-
-                int nextBucketRangeStart = ranges[i + 1].BucketRangeStart;
-                if (bucket < nextBucketRangeStart)
-                    return ranges[i].ShardNumber;
-            }
-
-            return ranges[^1].ShardNumber;
-        }
+        private static int FindBucketShard(List<ShardBucketRange> ranges, int bucket) => ClientShardHelper.FindBucketShard(ranges, bucket);
 
         public static void MoveBucket(this DatabaseRecord record, int bucket, int toShard)
         {

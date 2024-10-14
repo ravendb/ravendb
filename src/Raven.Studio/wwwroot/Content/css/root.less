@@ -81,11 +81,38 @@ body {
         width: 100%;
         transition: left @menu-transition-ease;
         overflow: auto;
+        height: 100%;
+
+        .page-host {
+            height: 100%;
+            width: 100%;
+
+            .durandal-wrapper {
+                width: 100%;
+                height: 100%;
+            }
+
+            .shard-aware-container {
+                width: 100%;
+                height: 100%;
+            }
+
+            .react-container {
+                height: 100%;
+                width: 100%;
+            }
+        }
 
         .content-margin {
             flex-grow: 1;
             margin: @gutter;
             position: relative;
+        }
+
+        .content-padding {
+            padding: @gutter;
+            height: 100%;
+            width: 100%;
         }
     }
 

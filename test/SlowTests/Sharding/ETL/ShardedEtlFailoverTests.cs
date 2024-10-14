@@ -24,7 +24,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL.Olap;
-using Sparrow.Json;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;

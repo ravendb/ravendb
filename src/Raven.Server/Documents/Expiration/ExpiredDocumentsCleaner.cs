@@ -124,17 +124,17 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
-        internal Task CleanupExpiredDocs(int? batchSize = null)
+        internal Task CleanupExpiredDocs(int? batchSize = null, bool throwOnError = false)
         {
-            return CleanupDocs(batchSize ?? BatchSize, ExpirationConfiguration.MaxItemsToProcess ?? DefaultMaxItemsToProcessInSingleRun, forExpiration: true);
+            return CleanupDocs(batchSize ?? BatchSize, ExpirationConfiguration.MaxItemsToProcess ?? DefaultMaxItemsToProcessInSingleRun, forExpiration: true, throwOnError: throwOnError);
         }
 
-        internal Task RefreshDocs(int? batchSize = null)
+        internal Task RefreshDocs(int? batchSize = null, bool throwOnError = false)
         {
-            return CleanupDocs(batchSize ?? BatchSize, RefreshConfiguration.MaxItemsToProcess ?? DefaultMaxItemsToProcessInSingleRun, forExpiration: false);
+            return CleanupDocs(batchSize ?? BatchSize, RefreshConfiguration.MaxItemsToProcess ?? DefaultMaxItemsToProcessInSingleRun, forExpiration: false, throwOnError: throwOnError);
         }
         
-        private async Task CleanupDocs(int batchSize, long maxItemsToProcess, bool forExpiration)
+        private async Task CleanupDocs(int batchSize, long maxItemsToProcess, bool forExpiration, bool throwOnError)
         {
             var currentTime = _database.Time.GetUtcNow();
             
@@ -195,6 +195,9 @@ namespace Raven.Server.Documents.Expiration
             {
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Failed to {(forExpiration ? "delete" : "refresh")} documents on {_database.Name} which are older than {currentTime}", e);
+
+                if (throwOnError)
+                    throw;
             }
         }
 

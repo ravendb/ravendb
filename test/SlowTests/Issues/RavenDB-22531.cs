@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Confluent.Kafka;
-using SlowTests.MailingList;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

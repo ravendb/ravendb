@@ -1,8 +1,7 @@
 import React from "react";
-import { Alert, Button, Card, CardBody, Col, Row } from "reactstrap";
+import { Button, Card, CardBody, Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { Icon } from "components/common/Icon";
 import { CounterBadge } from "components/common/CounterBadge";
 import UsedId from "components/pages/database/settings/unusedDatabaseIds/bits/UsedId";
 import UnusedDatabaseIdsAboutView from "components/pages/database/settings/unusedDatabaseIds/bits/UnusedDatabaseIdsAboutView";
@@ -11,6 +10,7 @@ import UnusedIdsForm from "components/pages/database/settings/unusedDatabaseIds/
 import { useUnusedDatabaseIds } from "components/pages/database/settings/unusedDatabaseIds/useUnusedDatabaseIds";
 import PotentialUnusedIdList from "components/pages/database/settings/unusedDatabaseIds/bits/PotentialUnusedIdList";
 import "./UnusedDatabaseIds.scss";
+import RichAlert from "components/common/RichAlert";
 
 export default function UnusedDatabaseIds() {
     const { isDirty, usedIds, unusedIds, unusedIdsActions, potentialUnusedId, isLoading, asyncSaveUnusedDatabaseIDs } =
@@ -69,11 +69,10 @@ export default function UnusedDatabaseIds() {
                                             Remove all
                                         </Button>
                                     </div>
-                                    <Alert color="info" className="mt-1">
-                                        <Icon icon="info" />
+                                    <RichAlert variant="info" className="mt-1">
                                         The Unused Database IDs will not be used in the Change Vector generated for a
                                         new or modified document
-                                    </Alert>
+                                    </RichAlert>
                                     <UnusedIdsForm
                                         ids={unusedIds}
                                         addId={unusedIdsActions.add}

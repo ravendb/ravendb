@@ -35,7 +35,7 @@ class appUrl {
         identities: ko.pureComputed(() => appUrl.forIdentities(appUrl.currentDatabase())),
         cmpXchg: ko.pureComputed(() => appUrl.forCmpXchg(appUrl.currentDatabase())),
         patch: ko.pureComputed(() => appUrl.forPatch(appUrl.currentDatabase())),
-        indexes: ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase())),
+        indexes: (indexName: string = null, staleOnly = false, isImportOpen = false) => ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase(), indexName, staleOnly, isImportOpen)),
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.pureComputed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
@@ -141,6 +141,10 @@ class appUrl {
         return "#admin/settings/debug/advanced/observerLog";
     }
 
+    static forDebugAdvancedClusterDebug(): string {
+        return "#admin/settings/debug/advanced/clusterDebug";
+    }
+
     static forDebugAdvancedRecordTransactionCommands(databaseToHighlight: string = undefined): string {
         const dbPart = databaseToHighlight === undefined ? "" : "?highlight=" + encodeURIComponent(databaseToHighlight);
         return "#admin/settings/debug/advanced/recordTransactionCommands" + dbPart;
@@ -227,11 +231,14 @@ class appUrl {
         return "#admin/settings/serverWideCustomSorters";
     }
 
-    static forDatabases(databasesUrlAction?: "compact" | "restore", databaseToCompact?: string): string {
+    static forDatabases(databasesUrlAction?: "compact" | "restore", databaseToCompact?: string, shardToCompact?: number): string {
         let actionPart = "";
         
         if (databasesUrlAction === "compact" && databaseToCompact) {
             actionPart = "?compact=" + encodeURIComponent(databaseToCompact);
+            if (shardToCompact != null) {
+                actionPart += "&shard=" + shardToCompact;
+            }
         } else if (databasesUrlAction === "restore") {
             actionPart = "?restore=true";
         }
@@ -488,12 +495,13 @@ class appUrl {
         }
     }
 
-    static forIndexes(db: database | string, indexName: string = null, staleOnly = false): string {
+    static forIndexes(db: database | string, indexName: string = null, staleOnly = false, isImportOpen = false): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const indexNamePart = indexName ? `&indexName=${indexName}` : "";
         const stalePart = staleOnly ? "&stale=true" : "";
+        const isImportOpenPart = isImportOpen ? "&isImportOpen=true" : "";
         
-        return "#databases/indexes?" + databasePart + indexNamePart + stalePart;
+        return "#databases/indexes?" + databasePart + indexNamePart + stalePart + isImportOpenPart;
     }
 
     static forNewIndex(db: database): string {
@@ -664,6 +672,10 @@ class appUrl {
     static forCsvImport(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/csvImport?" + databasePart;
+    }
+
+    static forAdminClusterLogRawData(): string {
+        return window.location.protocol + "//" + window.location.host + "/admin/cluster/log";
     }
 
     static forStatsRawData(db: database): string {

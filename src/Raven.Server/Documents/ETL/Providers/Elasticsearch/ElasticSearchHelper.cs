@@ -3,7 +3,6 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
-using NetTopologySuite.Utilities;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Sparrow;
 using BasicAuthentication = Elastic.Transport.BasicAuthentication;

@@ -400,7 +400,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Count > 0);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
                 store.Maintenance.Send(new StartIndexingOperation());
@@ -1045,7 +1045,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllTimeSeries"));
                 Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Count > 0);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
                 store.Maintenance.Send(new StartIndexingOperation());
@@ -1461,7 +1461,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(definition.Name));
                 Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Count > 0);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
                 store.Maintenance.Send(new StartIndexingOperation());

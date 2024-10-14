@@ -16,6 +16,9 @@ $prefix: "bs-";
     --pre-bg: #{$pre-bg};
     --ace-gutter-bg: #{$ace-gutter-bg};
 
+    --row-bg: #{$row-bg};
+    --row-even-bg: #{$row-even-bg};
+
     --hover-filter: #{$hover-filter};
     --shadow-color: #{to-rgb($shadow-color)};
 

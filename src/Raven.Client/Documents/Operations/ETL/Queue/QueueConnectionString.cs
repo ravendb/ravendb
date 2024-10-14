@@ -72,6 +72,12 @@ public sealed class QueueConnectionString : ConnectionString
 
     public override DynamicJsonValue ToAuditJson()
     {
-        return ToJson();
+        var json = base.ToAuditJson();
+        
+        json[nameof(BrokerType)] = BrokerType;
+        json[nameof(KafkaConnectionSettings)] = KafkaConnectionSettings?.ToAuditJson();
+        json[nameof(RabbitMqConnectionSettings)] = RabbitMqConnectionSettings?.ToAuditJson();
+
+        return json;
     }
 }

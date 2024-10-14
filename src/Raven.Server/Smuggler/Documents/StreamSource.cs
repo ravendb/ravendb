@@ -9,7 +9,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -761,6 +760,22 @@ namespace Raven.Server.Smuggler.Documents
                         }
 
                         throw new InvalidDataException(errorMessage, e);
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.SupportedFeatures), out BlittableJsonReaderArray supportedFeaturesBjra) && supportedFeaturesBjra != null)
+                {
+                    try
+                    {
+                        var supportedFeatures = new List<string>();
+                        foreach (var supportedFeature in supportedFeaturesBjra)
+                            supportedFeatures.Add(supportedFeature.ToString());
+                        databaseRecord.SupportedFeatures = supportedFeatures;
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the Supported Features from smuggler file. Skipping.", e);
                     }
                 }
             });

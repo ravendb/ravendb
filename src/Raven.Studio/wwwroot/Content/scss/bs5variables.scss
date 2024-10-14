@@ -378,8 +378,8 @@ $mark-bg: var(--faded-primary) !default;
 // Customizes the `.table` component with basic values, each used across all table variations.
 
 // scss-docs-start table-variables
-$table-cell-padding-y: 0.5rem !default;
-$table-cell-padding-x: 0.5rem !default;
+$table-cell-padding-y: $gutter-xxs !default;
+$table-cell-padding-x: $gutter-xs !default;
 $table-cell-padding-y-sm: 0.25rem !default;
 $table-cell-padding-x-sm: 0.25rem !default;
 
@@ -1158,8 +1158,8 @@ $popover-header-padding-y: 0.5rem !default;
 $popover-header-padding-x: $spacer !default;
 
 $popover-body-color: var(--#{$prefix}body-color) !default;
-$popover-body-padding-y: $spacer !default;
-$popover-body-padding-x: $spacer !default;
+$popover-body-padding-y: $gutter-sm !default;
+$popover-body-padding-x: $gutter-sm !default;
 
 $popover-arrow-width: 1rem !default;
 $popover-arrow-height: 0.5rem !default;
@@ -1252,12 +1252,12 @@ $modal-scale-transform: scale(1.02) !default;
 // Define alert colors, border radius, and padding.
 
 // scss-docs-start alert-variables
-$alert-padding-y: $spacer-xs !default;
+$alert-padding-y: $spacer-sm !default;
 $alert-padding-x: $spacer-sm !default;
 $alert-margin-bottom: 0 !default;
 $alert-border-radius: var(--#{$prefix}border-radius) !default;
-$alert-link-font-weight: $font-weight-bold !default;
-$alert-border-width: 0 !default;
+$alert-link-font-weight: $font-weight-normal !default;
+$alert-border-width: var(--#{$prefix}border-width) !default;
 $alert-dismissible-padding-r: $alert-padding-x * 3 !default; // 3x covers width of x plus default padding on either side
 // scss-docs-end alert-variables
 
@@ -1284,14 +1284,14 @@ $progress-bar-transition: width 0.6s ease !default;
 // List group
 
 // scss-docs-start list-group-variables
-$list-group-color: $text-color !default;
-$list-group-bg: transparent !default;
-$list-group-border-color: $border-color-light !default;
+$list-group-color: $text-color-var !default;
+$list-group-bg: $panel-header-bg-var !default;
+$list-group-border-color: $border-color-light-var !default;
 $list-group-border-width: var(--#{$prefix}border-width) !default;
 $list-group-border-radius: var(--#{$prefix}border-radius) !default;
 
-$list-group-item-padding-y: $spacer * 0.5 !default;
-$list-group-item-padding-x: $spacer !default;
+$list-group-item-padding-y: $gutter-xxs !default;
+$list-group-item-padding-x: $list-group-item-padding-y !default;
 // fusv-disable
 $list-group-item-bg-scale: -80% !default; // Deprecated in v5.3.0
 $list-group-item-color-scale: 40% !default; // Deprecated in v5.3.0

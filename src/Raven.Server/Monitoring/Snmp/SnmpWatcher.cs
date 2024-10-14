@@ -431,6 +431,7 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new TotalDatabaseCountOfStaleIndexes(server.ServerStore));
             store.Add(new TotalDatabaseNumberOfErrorIndexes(server.ServerStore));
             store.Add(new TotalDatabaseNumberOfFaultyIndexes(server.ServerStore));
+            store.Add(new TotalNumberOfIndexingErrors(server.ServerStore));
 
             store.Add(new TotalNumberOfActiveBackupTasks(server.ServerStore));
             store.Add(new TotalNumberOfActiveElasticSearchEtlTasks(server.ServerStore));

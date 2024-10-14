@@ -309,14 +309,25 @@ select {
 
 // custom alerts colors
 @each $key, $value in $theme-colors {
-    $color: mix($text-emphasis-color, $value, 30%);
     $bg: mix($panel-bg-1, $value, 80%);
     $border-color: mix($text-emphasis-color, $value, 30%);
+    $color: color-contrast($bg);
+    $title-color: mix($text-emphasis-color, $value, 30%);
 
     .alert-#{$key} {
         --#{$prefix}alert-color: #{$color};
         --#{$prefix}alert-bg: #{$bg};
         --#{$prefix}alert-border-color: #{$border-color};
+
+        > h3,
+        .title-icon {
+            color: $title-color;
+        }
+
+        a:not(.btn) {
+            color: $title-color;
+            text-decoration: underline;
+        }
     }
 }
 
@@ -571,14 +582,73 @@ select {
     display: inline !important;
 }
 
-//Classes for different panel colors
+// Classes for different panel colors
 $panels: (
     1: --panel-bg-1,
     2: --panel-bg-2,
     3: --panel-bg-3,
 );
+
 @each $key, $color in $panels {
     .panel-bg-#{$key} {
         background-color: var(#{$color});
+    }
+}
+
+.button-dropdown-pill {
+    .button-dropdown-btn {
+        border-top-left-radius: $border-radius-pill;
+        border-bottom-left-radius: $border-radius-pill;
+    }
+    .button-dropdown-toggle {
+        border-top-right-radius: $border-radius-pill;
+        border-bottom-right-radius: $border-radius-pill;
+    }
+}
+
+$filtering-input-baseheight: 35px !default;
+$filtering-input-bg: $well-bg-var !default;
+$filtering-input-border-radius: $filtering-input-baseheight !default;
+$filtering-input-bg: $toggle-bg !default;
+
+// Text inputs for filtering that will go in pair with multi-toggle component
+.form-control.filtering-input {
+    background: $filtering-input-bg;
+    border-radius: $filtering-input-border-radius;
+    border: $border-width solid $border-color-light-var;
+    height: $filtering-input-baseheight;
+    font-size: 0.8rem;
+    min-width: 20em;
+    padding-left: $gutter-sm;
+    padding-right: $gutter-sm;
+}
+
+.hover-filter {
+    filter: $hover-filter-var;
+    transition: $global-easing-in-out;
+}
+
+.list-group-item {
+    &.disabled {
+        cursor: unset;
+        pointer-events: unset;
+        background-color: $panel-bg-1-var;
+        color: $text-muted-var;
+    }
+}
+
+// Classes for bg-striped-*
+@each $key, $value in $theme-colors {
+    $striped-bg: repeating-linear-gradient(
+        45deg,
+        $value,
+        $value $gutter-xs,
+        shade-color($value, 10%) $gutter-xs,
+        shade-color($value, 10%) $gutter-sm
+    );
+
+    .bg-striped-#{$key} {
+        @extend .bg-#{$key};
+        background: #{$striped-bg};
     }
 }

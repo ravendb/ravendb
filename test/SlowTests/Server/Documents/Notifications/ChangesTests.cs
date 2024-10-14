@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Changes;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;

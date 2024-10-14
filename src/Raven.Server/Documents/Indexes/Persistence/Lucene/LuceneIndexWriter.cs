@@ -17,7 +17,6 @@ using Sparrow.Logging;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;
 using Voron.Exceptions;
-using Directory = Lucene.Net.Store.Directory;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -62,6 +61,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public void DeleteDocuments(Term term, IState state)
         {
             _indexWriter.DeleteDocuments(term, state);
+        }
+
+        public void DeleteByPrefix(Term term, IState state)
+        {
+            using var reader = _indexWriter.GetReader(state);
+            using var termsEnumerator = reader.Terms(term, state);
+            
+            while (termsEnumerator.Term != null)
+            {
+                if (termsEnumerator.Term.Text.StartsWith(term.Text) == false)
+                    return;
+
+                // found by prefix
+                _indexWriter.DeleteDocuments(termsEnumerator.Term, state);
+
+                if (termsEnumerator.Next(state) == false)
+                    return;
+            }
         }
 
         public int EntriesCount(IState state)

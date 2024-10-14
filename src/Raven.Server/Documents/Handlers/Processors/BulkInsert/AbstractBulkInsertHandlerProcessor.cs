@@ -27,12 +27,15 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
     protected readonly bool SkipOverwriteIfUnchanged;
     protected List<StreamsTempFile> AttachmentStreamsTempFiles;
 
+    protected readonly CancellationToken CancellationToken;
+
     protected AbstractBulkInsertHandlerProcessor([NotNull] TRequestHandler requestHandler, Action<IOperationProgress> onProgress, bool skipOverwriteIfUnchanged, CancellationToken token)
         : base(requestHandler)
     {
         _onProgress = onProgress;
         SkipOverwriteIfUnchanged = skipOverwriteIfUnchanged;
         _cts = CancellationTokenSource.CreateLinkedTokenSource(token, requestHandler.AbortRequestToken);
+        CancellationToken = _cts.Token;
         _progress = new BulkInsertProgress();
     }
 
@@ -40,7 +43,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
 
     protected abstract ValueTask ExecuteCommands(Task currentTask, int numberOfCommands, TCommandData[] array, long totalSize);
 
-    protected async ValueTask<MergedBatchCommand.AttachmentStream> WriteAttachmentStream(long size, Stream stream)
+    protected async ValueTask<MergedBatchCommand.AttachmentStream> WriteAttachmentStream(long size, Stream stream, CancellationToken token)
     {
         var attachmentStream = new MergedBatchCommand.AttachmentStream();
 
@@ -59,16 +62,16 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
             AttachmentStreamsTempFiles.Add(attachmentStreamsTempFile);
         }
 
-        attachmentStream.Hash = await CopyAttachmentStream(stream, attachmentStream.Stream);
+        attachmentStream.Hash = await CopyAttachmentStreamAsync(stream, attachmentStream.Stream, token);
         
-        await attachmentStream.Stream.FlushAsync();
+        await attachmentStream.Stream.FlushAsync(token);
 
         return attachmentStream;
     }
 
     protected abstract StreamsTempFile GetTempFile();
 
-    protected abstract ValueTask<string> CopyAttachmentStream(Stream sourceStream, Stream attachmentStream);
+    protected abstract ValueTask<string> CopyAttachmentStreamAsync(Stream sourceStream, Stream attachmentStream, CancellationToken token);
 
     protected abstract (long, int) GetSizeAndOperationsCount(TCommandData commandData);
 
@@ -93,7 +96,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                         var streamWithTimeout = (StreamWithTimeout)requestBodyStream;
                         streamWithTimeout.ReadTimeout = ForTestingPurposes.BulkInsertStreamReadTimeout;
                     }
-                    using (var reader = GetCommandsReader(context, requestBodyStream, buffer, _cts.Token))
+                    using (var reader = GetCommandsReader(context, requestBodyStream, buffer, CancellationToken))
                     {
                         await reader.InitAsync();
 
@@ -110,7 +113,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                                 if (task == null || task.IsCompleted && task.Result == null)
                                     break;
 
-                                _cts.Token.ThrowIfCancellationRequested();
+                                CancellationToken.ThrowIfCancellationRequested();
 
                                 // if we are going to wait on the network, flush immediately
                                 if ((task.Wait(5) == false && numberOfCommands > 0) ||
@@ -145,7 +148,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
 
                                 if (commandData.Type == CommandType.AttachmentPUT)
                                 {
-                                    commandData.AttachmentStream = await WriteAttachmentStream(commandData.ContentLength, reader.GetBlob(commandData.ContentLength));
+                                    commandData.AttachmentStream = await WriteAttachmentStream(commandData.ContentLength, reader.GetBlob(commandData.ContentLength), CancellationToken);
                                 }
 
                                 (long size, int opsCount) = GetSizeAndOperationsCount(commandData);

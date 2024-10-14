@@ -12,7 +12,6 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;

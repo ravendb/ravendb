@@ -11,7 +11,10 @@
                     "NumberOfItemsToProcess": 50,
                     "NumberOfTombstonesToProcess": 0,
                     "TotalNumberOfItems": 830,
-                    "TotalNumberOfTombstones": 0
+                    "TotalNumberOfTombstones": 0,
+                    "LastProcessedTimeSeriesDeletedRangeEtag": 0,
+                    "NumberOfTimeSeriesDeletedRangesToProcess": 0,
+                    "TotalNumberOfTimeSeriesDeletedRanges": 0
                 },
                 "Orders2": {
                     "LastProcessedItemEtag": 1740,
@@ -19,7 +22,10 @@
                     "NumberOfItemsToProcess": 50,
                     "NumberOfTombstonesToProcess": 50,
                     "TotalNumberOfItems": 830,
-                    "TotalNumberOfTombstones": 200
+                    "TotalNumberOfTombstones": 200,
+                    "LastProcessedTimeSeriesDeletedRangeEtag": 0,
+                    "NumberOfTimeSeriesDeletedRangesToProcess": 0,
+                    "TotalNumberOfTimeSeriesDeletedRanges": 0
                 }
             },
             "Name": "Orders/ByCompany",
@@ -37,7 +43,10 @@
                     "NumberOfItemsToProcess": 50,
                     "NumberOfTombstonesToProcess": 0,
                     "TotalNumberOfItems": 830,
-                    "TotalNumberOfTombstones": 0
+                    "TotalNumberOfTombstones": 0,
+                    "LastProcessedTimeSeriesDeletedRangeEtag": 0,
+                    "NumberOfTimeSeriesDeletedRangesToProcess": 0,
+                    "TotalNumberOfTimeSeriesDeletedRanges": 0
                 }
             },
             "Name": "Orders/Totals",
@@ -55,7 +64,10 @@
                     "NumberOfItemsToProcess": 50,
                     "NumberOfTombstonesToProcess": 0,
                     "TotalNumberOfItems": 830,
-                    "TotalNumberOfTombstones": 0
+                    "TotalNumberOfTombstones": 0,
+                    "LastProcessedTimeSeriesDeletedRangeEtag": 0,
+                    "NumberOfTimeSeriesDeletedRangesToProcess": 0,
+                    "TotalNumberOfTimeSeriesDeletedRanges": 0
                 }
             },
             "Name": "Orders/ByShipment/Location",

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron.Data.Fixed;
 
@@ -347,7 +348,30 @@ namespace Voron.Impl.FreeSpace
 
                 return freePages;
             }
-        }
+        } 
+        public List<DynamicJsonValue> FreeSpaceSnapshot(LowLevelTransaction tx, bool hex)
+        {
+            var freeSpaceTree = GetFreeSpaceTree(tx);
+            if (freeSpaceTree.NumberOfEntries == 0)
+                return new List<DynamicJsonValue>();
+
+            using (var it = freeSpaceTree.Iterate())
+            {
+                if (it.Seek(0) == false)
+                    return new List<DynamicJsonValue>();
+
+                var freeSpace = new List<DynamicJsonValue>();
+
+                do
+                {
+                    var stream = it.CreateReaderForCurrent();
+                    var current = new StreamBitArray(stream);
+                    freeSpace.Add(current.ToJson(it.CurrentKey, hex));
+                } while (it.MoveNext());
+
+                return freeSpace;
+            }
+        } 
 
         public void FreePage(LowLevelTransaction tx, long pageNumber)
         {

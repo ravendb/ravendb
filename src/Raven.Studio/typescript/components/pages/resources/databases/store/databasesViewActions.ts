@@ -168,10 +168,10 @@ export const changeDatabasesLockMode =
         }
     }*/
 
-export const compactDatabase = (database: DatabaseSharedInfo) => () => {
+export const compactDatabase = (database: DatabaseSharedInfo, shardNumber?: number) => () => {
     const db = databasesManager.default.getDatabaseByName(database.name);
     if (db) {
         changesContext.default.disconnectIfCurrent(db, "DatabaseDisabled");
     }
-    app.showBootstrapDialog(new compactDatabaseDialog(database));
+    app.showBootstrapDialog(new compactDatabaseDialog(database, shardNumber));
 };

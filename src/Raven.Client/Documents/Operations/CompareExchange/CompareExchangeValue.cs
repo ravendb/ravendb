@@ -16,6 +16,9 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         /// <inheritdoc cref="ICompareExchangeValue.Value"/>
         public T Value { get; set; }
 
+        /// <summary>
+        /// The change vector for the compare-exchange value, used for concurrency checks.
+        /// </summary>
         public string ChangeVector { get; internal set; }
 
         /// <inheritdoc cref="ICompareExchangeValue.Metadata"/>
@@ -34,6 +37,13 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         IMetadataDictionary ICompareExchangeValue.Metadata => Metadata;
         bool ICompareExchangeValue.HasMetadata => HasMetadata;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CompareExchangeValue{T}"/> class with the specified key, index, value, and optional metadata.
+        /// </summary>
+        /// <param name="key">The unique key of the compare-exchange value.</param>
+        /// <param name="index">The index used for optimistic concurrency control. the index is used for concurrency check.</param>
+        /// <param name="value">The value associated with the specified compare-exchange key.</param>
+        /// <param name="metadata">Optional metadata associated with the compare-exchange value.</param>
         public CompareExchangeValue(string key, long index, T value, IMetadataDictionary metadata = null)
             : this(key, index, value, changeVector: null, metadata)
         {

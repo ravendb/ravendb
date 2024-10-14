@@ -331,6 +331,17 @@ namespace Raven.Server.Documents.Revisions
                     return false;
                 }
 
+                if (_database.SupportedFeatures.SupportedFeatureTypes.ThrowRevisionKeyTooBigFix &&
+                    flags.Contain(DocumentFlags.FromReplication) == false &&
+                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
+                    changeVectorSlice.Size > DocumentIdWorker.RevisionMaxKeySize)
+                {
+                    // RavenDB-21047 
+                    // throw if the change vector length exceeds the maximum id length (1536 bytes)
+                    // we allow it if the operation originated from smuggler/replication to avoid inconsistent data or broken replication
+                    DocumentIdWorker.ThrowRevisionKeyTooBig(id, changeVector, isTombstone: false);
+                }
+
                 // We want the revision's attachments to have a lower etag than the revision itself
                 if (flags.Contain(DocumentFlags.HasAttachments) &&
                     flags.Contain(DocumentFlags.Revision) == false)
@@ -473,7 +484,7 @@ namespace Raven.Server.Documents.Revisions
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out var lowerId, out _))
             {
-                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, id, changeVector, out _);
+                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, id, changeVector, flags);
                 if (conflictStatus != ConflictStatus.Update)
                     return; // Do not modify the document.
 
@@ -919,7 +930,7 @@ namespace Raven.Server.Documents.Revisions
             using (DocumentIdWorker.GetSliceFromId(context, revision.LowerId, out var prefixSlice))
             using (CreateRevisionTombstoneKeySlice(context, prefixSlice, revision.ChangeVector, out var changeVectorSlice, out var keySlice))
             {
-                CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks, flags);
+                CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks, fromReplication: flags.Contain(DocumentFlags.FromReplication), flags);
 
                 if (revision.Flags.Contain(DocumentFlags.HasAttachments))
                 {
@@ -1252,7 +1263,7 @@ namespace Raven.Server.Documents.Revisions
             });
         }
 
-        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks, Slice changeVectorSlice)
+        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks, Slice changeVectorSlice, bool fromReplication)
         {
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
@@ -1283,15 +1294,26 @@ namespace Raven.Server.Documents.Revisions
                 // but we don't want to mess up the order of events so the delete revision etag we use is negative
                 revisionEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
             }
-            CreateTombstone(context, key, revisionEtag, collectionName, changeVector, lastModifiedTicks);
+            
+            CreateTombstone(context, key, revisionEtag, collectionName, changeVector, lastModifiedTicks, fromReplication);
         }
 
         private unsafe void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag,
-            CollectionName collectionName, string changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
+            CollectionName collectionName, string changeVector, long lastModifiedTicks, bool fromReplication, DocumentFlags flags = DocumentFlags.None)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, RevisionsTombstonesSlice);
             if (table.VerifyKeyExists(keySlice))
                 return; // revisions (and revisions tombstones) are immutable, we can safely ignore this
+
+            if (_database.SupportedFeatures.SupportedFeatureTypes.ThrowRevisionKeyTooBigFix &&
+                fromReplication == false &&
+                changeVector.Length > DocumentIdWorker.RevisionMaxKeySize)
+            {
+                // RavenDB-21047 
+                // throw if the change vector length exceeds the maximum id length (1536 bytes)
+                // we allow it if the operation originated from smuggler/replication to avoid inconsistent data or broken replication
+                DocumentIdWorker.ThrowRevisionKeyTooBig(keySlice.Content.ToString(), changeVector, isTombstone: true);
+            }
 
             var newEtag = _documentsStorage.GenerateNextEtag();
 

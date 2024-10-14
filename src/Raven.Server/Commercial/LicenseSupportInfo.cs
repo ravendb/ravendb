@@ -9,12 +9,15 @@ namespace Raven.Server.Commercial
 
         public DateTimeOffset? EndsAt { get; set; }
 
+        public LicenseSupportType SupportType { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(Status)] = Status,
-                [nameof(EndsAt)] = EndsAt
+                [nameof(EndsAt)] = EndsAt,
+                [nameof(SupportType)] = SupportType
             };
         }
     }
@@ -32,5 +35,12 @@ namespace Raven.Server.Commercial
         LicenseNotFound,
 
         InvalidStateSupportNotFound
+    }
+
+    public enum LicenseSupportType 
+    {
+        None,
+        Regular,
+        Extended
     }
 }

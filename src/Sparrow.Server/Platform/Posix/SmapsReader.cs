@@ -3,70 +3,10 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
-using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 
 namespace Sparrow.Server.Platform.Posix
 {
-    internal sealed class SmapsReaderResults
-    {
-        public string ResultString;
-        public long Size;
-        public long Rss;
-        public long SharedClean;
-        public long SharedDirty;
-        public long PrivateClean;
-        public long PrivateDirty;
-        public long Swap;
-    }
-    
-    internal interface ISmapsReaderResultAction
-    {
-        void Add(SmapsReaderResults results);
-    }
-
-    internal struct SmapsReaderJsonResults : ISmapsReaderResultAction
-    {
-        private DynamicJsonArray _dja;
-
-        public void Add(SmapsReaderResults results)
-        {
-            var djv = new DynamicJsonValue
-            {
-                ["File"] = results.ResultString,
-                ["Size"] = Sizes.Humane(results.Size),
-                ["Rss"] = Sizes.Humane(results.Rss),
-                ["SharedClean"] = Sizes.Humane(results.SharedClean),
-                ["SharedDirty"] = Sizes.Humane(results.SharedDirty),
-                ["PrivateClean"] = Sizes.Humane(results.PrivateClean),
-                ["PrivateDirty"] = Sizes.Humane(results.PrivateDirty),
-                ["TotalClean"] = results.SharedClean + results.PrivateClean,
-                ["TotalCleanHumanly"] = Sizes.Humane(results.SharedClean + results.PrivateClean),
-                ["TotalDirty"] = results.SharedDirty + results.PrivateDirty,
-                ["TotalDirtyHumanly"] = Sizes.Humane(results.SharedDirty + results.PrivateDirty),
-                ["TotalSwap"] = results.Swap,
-                ["TotalSwapHumanly"] = Sizes.Humane(results.Swap)
-            };
-            if (_dja == null)
-                _dja = new DynamicJsonArray();
-            _dja.Add(djv);
-        }
-
-        public DynamicJsonArray ReturnResults()
-        {
-            return _dja;
-        }
-    }
-    
-    internal struct SmapsReaderNoAllocResults : ISmapsReaderResultAction
-    {
-        public void Add(SmapsReaderResults results)
-        {
-        // currently we do not use these results with SmapsReaderNoAllocResults so we do not store them
-        }
-    }
-    
-    internal sealed class SmapsReader
+    internal class SmapsReader : ISmapsReader
     {
         // this /proc/self/smaps reader assumes the format of smaps will always be with the following order:
         // - filename line (where we count rw-s) where with white-spaces delimeters - rw-s is second word in line and filename is last word
@@ -74,7 +14,6 @@ namespace Sparrow.Server.Platform.Posix
         // Size, Rss, Shared_Clean, Private_Clean, Shared_Dirty, Private_Dirty and in order to finish reading a file data : Locked
         // Each must have with white-space delimiters a value, delimiter, "kB"
 
-        public const int BufferSize = 4096;
         private readonly byte[][] _smapsBuffer;
         private readonly SmapsReaderResults _smapsReaderResults = new SmapsReaderResults();
 
@@ -124,16 +63,6 @@ namespace Sparrow.Server.Platform.Posix
             return $"/proc/{pid}/smaps";
         }
 
-        public struct SmapsReadResult<T> where T : struct, ISmapsReaderResultAction
-        {
-            public long Rss;
-            public long SharedClean;
-            public long PrivateClean;
-            public long TotalDirty;
-            public long Swap;
-            public T SmapsResults;
-        }
-        
         public SmapsReadResult<T> CalculateMemUsageFromSmaps<T>() where T : struct, ISmapsReaderResultAction
         {
             using (var currentProcess = Process.GetCurrentProcess())

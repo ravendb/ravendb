@@ -4,7 +4,7 @@ import { CreateDatabaseRegularFormData } from "../createDatabaseRegularValidatio
 import { useAppSelector } from "components/store";
 import React, { useEffect } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { Alert, Col, Collapse, InputGroup, InputGroupText, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
+import { Col, Collapse, InputGroup, InputGroupText, PopoverBody, Row, UncontrolledPopover } from "reactstrap";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
@@ -13,6 +13,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import classNames from "classnames";
 import { createDatabaseRegularDataUtils } from "components/pages/resources/databases/partials/create/regular/createDatabaseRegularDataUtils";
+import RichAlert from "components/common/RichAlert";
 
 const shardingImg = require("Content/img/createDatabase/sharding.svg");
 
@@ -107,7 +108,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             <Icon id="ReplicationInfo" icon="info" color="info" margin="m-0" /> Available nodes:{" "}
                             <UncontrolledPopover
                                 target="ReplicationInfo"
-                                placement="left"
+                                placement="right"
                                 trigger="hover"
                                 className="bs5"
                             >
@@ -197,7 +198,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             </Collapse>
                         </Col>
                     </Row>
-                    <Alert color="info" className="text-center mt-4">
+                    <RichAlert variant="info" className="mt-4">
                         <Collapse isOpen={isSharded}>
                             <>
                                 Data will be divided into{" "}
@@ -219,7 +220,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         ) : (
                             <>Data won&apos;t be replicated.</>
                         )}
-                    </Alert>
+                    </RichAlert>
                 </Col>
             </Row>
 
@@ -231,11 +232,11 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             message: (
                                 <LicenseRestrictedMessage>
                                     Current license doesn&apos;t include{" "}
-                                    <strong>Dynamic database distribution feature</strong>.
+                                    <strong className="text-info">Dynamic database distribution feature</strong>.
                                 </LicenseRestrictedMessage>
                             ),
                         }}
-                        popoverPlacement="left"
+                        popoverPlacement="top"
                     >
                         <FormSwitch
                             control={control}
@@ -266,7 +267,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                     "You need to select nodes manually because the encryption is enabled and there are more than 1 nodes in cluster.",
                             },
                         ]}
-                        popoverPlacement="left"
+                        popoverPlacement="top"
                     >
                         <FormSwitch
                             control={control}

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using CloudNative.CloudEvents;
 using Jint;
 using Jint.Native;
-using Jint.Native.Date;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
 using Raven.Client.Documents.Operations.ETL;

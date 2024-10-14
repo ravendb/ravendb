@@ -51,7 +51,7 @@ export default function Code({ code, language, className, elementToCopy }: CodeP
                     <Icon icon="copy" margin="m-0" />
                 </Button>
             )}
-            <pre className="code-classes d-flex flex-grow-1">
+            <pre className="code-classes d-flex flex-grow-1 m-0">
                 <code className={`language-${language}`}>
                     <div dangerouslySetInnerHTML={{ __html: html }} />
                 </code>

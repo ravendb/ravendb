@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -961,6 +960,9 @@ namespace Raven.Server.Rachis
         }
         public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd, CancellationToken token = default)
         {
+            // prevent sending the same command _instance_, since it contain unmanaged parts
+            cmd.InUse.RaiseOrDie();
+
             //I think it is reasonable to expect timeout twice of error retry
             var timeoutTask = TimeoutManager.WaitFor(OperationTimeout, token);
             Exception requestException = null;

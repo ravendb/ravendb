@@ -8,7 +8,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto;
 

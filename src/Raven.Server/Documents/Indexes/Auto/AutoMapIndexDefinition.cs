@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Sparrow.Json;

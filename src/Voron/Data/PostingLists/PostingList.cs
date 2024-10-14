@@ -255,7 +255,7 @@ namespace Voron.Data.PostingLists
                 SeekSmallest();
             }
 
-            public bool SeekSmallest()
+            private bool SeekSmallest()
             {
                 // We need to find the long.MinValue therefore the fastest way is to always
                 // take the left-most pointer on any branch node.
@@ -266,6 +266,14 @@ namespace Voron.Data.PostingLists
                 return _parent.State.NumberOfEntries > 0;
             }
 
+            /// <summary>
+            /// Seeks elements that are equal or greater than the given parameter
+            /// </summary>
+            /// <param name="from">Minimum value of element to seek</param>
+            /// <returns>
+            /// False - no element equal to or greater than the given parameter exists
+            /// True - otherwise
+            /// </returns>
             public bool Seek(long from = long.MinValue)
             {
                 _parent.FindPageFor(from);

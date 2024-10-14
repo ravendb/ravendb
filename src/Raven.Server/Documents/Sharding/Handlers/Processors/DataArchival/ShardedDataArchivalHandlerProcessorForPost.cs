@@ -1,5 +1,4 @@
 ﻿using JetBrains.Annotations;
-using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Processors.DataArchival;
 using Raven.Server.ServerWide.Context;
 

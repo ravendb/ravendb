@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.8</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.10</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -105,6 +105,8 @@
     <EmbeddedResource Include="Data\RavenDB_22363\RavenDB_22363.ravendb-snapshot" />
     <None Remove="Data\RavenDB_22703\RavenDB-22703.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_22703\RavenDB_22703.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_22937\RavenDB_22937.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_22937\RavenDB_22937.ravendb-snapshot" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
@@ -147,6 +149,9 @@
     <EmbeddedResource Include="Data\testing.ravendbdump" />
     <EmbeddedResource Include="Data\data.txt" />
     <EmbeddedResource Include="Data\data2.txt" />
+    <EmbeddedResource Include="Data\RavenDB_21263\revisionsWithLargeChangeVector-oldDatabaseVersion.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_21263\test1111-emptySupportedFeatures.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_21263\test1111-withoutSupportedFeatures.ravendbdump" />
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
     <EmbeddedResource Include="Data\RavenDB_22200\OneDamagedBucket.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
@@ -174,13 +179,13 @@
     <PackageReference Include="FubarDev.FtpServer" Version="3.1.2" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.DotNet" Version="3.1.2" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.InMemory" Version="3.1.2" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="System.DirectoryServices.Protocols" Version="8.0.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="xunit" Version="2.9.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.4.0-beta.1.build10001" />
   </ItemGroup>
   <ItemGroup>

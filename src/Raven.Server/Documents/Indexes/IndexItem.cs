@@ -1,7 +1,6 @@
 ﻿using System;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
 
@@ -20,7 +19,7 @@ namespace Raven.Server.Documents.Indexes
         public readonly long Etag;
 
         public DateTime LastModified;
-        
+
         public DocumentFlags? DocumentFlags;
 
         public readonly int Size;
@@ -57,7 +56,7 @@ namespace Raven.Server.Documents.Indexes
         {
             return DocumentFlags?.HasFlag(Documents.DocumentFlags.Archived) == true;
         }
-        
+
         public bool ShouldBeProcessedAsArchived(ArchivedDataProcessingBehavior behavior)
         {
             return behavior switch
@@ -68,7 +67,7 @@ namespace Raven.Server.Documents.Indexes
                 _ => throw new NotSupportedException($"Unknown archived behavior: '{behavior}'")
             };
         }
-        
+
         public void Dispose()
         {
             if (Item is IDisposable disposable)
@@ -84,7 +83,7 @@ namespace Raven.Server.Documents.Indexes
     public sealed class DocumentIndexItem : IndexItem
     {
         public DocumentIndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, DateTime lastModified, int size, object item, DocumentFlags flags)
-            : base(id, lowerId, null, null, etag, lastModified, null, size, item, empty: false, IndexItemType.Document, flags )
+            : base(id, lowerId, null, null, etag, lastModified, null, size, item, empty: false, IndexItemType.Document, flags)
         {
         }
 
@@ -104,6 +103,19 @@ namespace Raven.Server.Documents.Indexes
         protected override string ToStringInternal()
         {
             return $"@key: '{SourceDocumentId}|{IndexingKey}', {Constants.Documents.Metadata.LastModified}: '{LastModified}'";
+        }
+    }
+
+    public class TimeSeriesDeletedRangeIndexItem : IndexItem
+    {
+        public TimeSeriesDeletedRangeIndexItem(LazyStringValue id, LazyStringValue sourceDocumentId, long etag, string timeSeriesName, int size, TimeSeriesDeletedRangeEntry item)
+            : base(id, id, sourceDocumentId, sourceDocumentId, etag, default, timeSeriesName, size, item, empty: true, IndexItemType.TimeSeriesDeletedRange, flags: null)
+        {
+        }
+
+        protected override string ToStringInternal()
+        {
+            return $"@key: '{SourceDocumentId}|{IndexingKey}'";
         }
     }
 

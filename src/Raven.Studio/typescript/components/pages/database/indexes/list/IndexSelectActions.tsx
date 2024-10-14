@@ -7,9 +7,11 @@ import { SelectionActions } from "components/common/SelectionActions";
 import genUtils = require("common/generalUtils");
 import ResetIndexesButton from "components/pages/database/indexes/list/partials/ResetIndexesButton";
 import { IndexSharedInfo } from "components/models/indexes";
+import { ExportIndexes } from "components/pages/database/indexes/list/migration/export/ExportIndexes";
+import useBoolean from "components/hooks/useBoolean";
 
 interface IndexSelectActionProps {
-    indexNames: string[];
+    allIndexes: IndexSharedInfo[];
     selectedIndexes: string[];
     replacements: IndexSharedInfo[];
     deleteSelectedIndexes: () => Promise<void>;
@@ -24,9 +26,8 @@ interface IndexSelectActionProps {
 
 export default function IndexSelectAction(props: IndexSelectActionProps) {
     const {
-        indexNames,
+        allIndexes,
         selectedIndexes,
-        replacements,
         deleteSelectedIndexes,
         startSelectedIndexes,
         disableSelectedIndexes,
@@ -40,9 +41,10 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
     const [globalLockChanges] = useState(false);
     // TODO: IDK I just wanted it to compile
 
-    const selectionState = genUtils.getSelectionState(indexNames, selectedIndexes);
+    const { value: isExportIndexModalOpen, toggle: toggleIsExportIndexModalOpen } = useBoolean(false);
 
-    const isResetDropdownVisible = !replacements.some((x) => selectedIndexes.includes(x.name));
+    const indexNames = allIndexes.map((x) => x.name);
+    const selectionState = genUtils.getSelectionState(indexNames, selectedIndexes);
 
     return (
         <div className="position-relative">
@@ -64,6 +66,23 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                         <strong className="text-emphasis me-1">{selectedIndexes.length}</strong> selected
                     </div>
                     <div className="hstack gap-2 flex-wrap justify-content-center">
+                        <Button
+                            color="primary"
+                            disabled={selectedIndexes.length === 0}
+                            onClick={toggleIsExportIndexModalOpen}
+                            className="rounded-pill flex-grow-0"
+                        >
+                            <Icon icon="index-export" />
+                            <span>Export {selectedIndexes.length > 1 ? "indexes" : "index"}</span>
+                        </Button>
+                        {isExportIndexModalOpen && (
+                            <ExportIndexes
+                                toggle={toggleIsExportIndexModalOpen}
+                                indexes={allIndexes}
+                                selectedNames={selectedIndexes}
+                            />
+                        )}
+
                         <UncontrolledDropdown>
                             <DropdownToggle
                                 title="Set the indexing state for the selected indexes"
@@ -124,13 +143,7 @@ export default function IndexSelectAction(props: IndexSelectActionProps) {
                                 </DropdownItem>
                             </DropdownMenu>
                         </UncontrolledDropdown>
-
-                        <ResetIndexesButton
-                            resetIndex={resetSelectedIndexes}
-                            isDropdownVisible={isResetDropdownVisible}
-                            isRounded
-                        />
-
+                        <ResetIndexesButton isRounded resetIndex={resetSelectedIndexes} />
                         <Button
                             color="danger"
                             disabled={selectedIndexes.length === 0}

@@ -1,9 +1,7 @@
 ﻿using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 

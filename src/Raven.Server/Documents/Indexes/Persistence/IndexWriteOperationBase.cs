@@ -29,6 +29,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract void Delete(LazyStringValue key, IndexingStatsScope stats);
 
+        public abstract void DeleteByPrefix(LazyStringValue key, IndexingStatsScope stats);
+
         public abstract void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats);
 
         public abstract void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats);

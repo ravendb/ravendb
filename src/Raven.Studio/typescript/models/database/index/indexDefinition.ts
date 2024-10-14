@@ -92,7 +92,7 @@ class indexDefinition {
         this.patternForReferencesToReduceOutputCollection(dto.PatternForOutputReduceToCollectionReferences);
         this.collectionNameForReferenceDocuments(dto.PatternReferencesCollectionName);
 
-        this.fields(Object.entries(dto.Fields).map(([indexName, fieldDto]) =>
+        this.fields(Object.entries(dto.Fields ?? []).map(([indexName, fieldDto]) =>
             new indexFieldOptions(indexName, fieldDto, this.hasReduce, this.searchEngine, indexFieldOptions.defaultFieldOptions(this.hasReduce, this.searchEngine))));
         
         if (dto.CompoundFields) {
@@ -120,7 +120,7 @@ class indexDefinition {
         this.configuration(this.parseConfiguration(dto.Configuration));
 
         if (dto.AdditionalSources) {
-            this.additionalSources(Object.entries(dto.AdditionalSources).map(([name, code]) => additionalSource.create(name, code)));
+            this.additionalSources(Object.entries(dto.AdditionalSources ?? []).map(([name, code]) => additionalSource.create(name, code)));
         }
         
         if (dto.AdditionalAssemblies) {
@@ -248,7 +248,7 @@ class indexDefinition {
     }
     
     private parseConfiguration(config: Raven.Client.Documents.Indexes.IndexConfiguration): Array<configurationItem> {
-        return config ? Object.entries(config).map(([key, value]) => new configurationItem(key, value)) : [];
+        return config ? Object.entries(config ?? []).map(([key, value]) => new configurationItem(key, value)) : [];
     }
 
     private detectIndexType(): Raven.Client.Documents.Indexes.IndexType {

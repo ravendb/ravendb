@@ -1,6 +1,4 @@
 using System;
-using Corax.Querying;
-using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
 using Sparrow.Extensions;
 using IndexSearcher = Corax.Querying.IndexSearcher;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
@@ -32,6 +34,77 @@ public partial class RavenTestBase
         public ClusterTestBase2(RavenTestBase parent)
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+        }
+        
+        public async Task<bool> WaitForDocumentOnAllNodesAsync<T>(IDocumentStore store, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null, bool assertTo = true)
+        {
+            var record = await _parent.GetDatabaseRecordAsync(store);
+            IEnumerable<RavenServer> nodes;
+            string database;
+            if (record.IsSharded)
+            {
+                var shardSetting = record.Sharding;
+                var shard = ClientShardHelper.GetShardNumberFor(shardSetting, docId);
+                var shardTopology = shardSetting.Shards[shard];
+                nodes = _parent.Servers.Where(n => shardTopology.RelevantFor(n.ServerStore.NodeTag));
+                database = ClientShardHelper.ToShardName(store.Database, shard);
+            }
+            else
+            {
+                nodes = _parent.Servers.Where(n => record.Topology.RelevantFor(n.ServerStore.NodeTag));
+                database = store.Database;
+            }
+
+            var tasks = new List<Task<bool>>();
+            foreach (RavenServer node in nodes)
+            {
+                var t = Task.Run(() =>
+                {
+                    using var localStore = new DocumentStore
+                    {
+                        Urls = new[] { node.WebUrl },
+                        Database = database,
+                        Certificate = certificate,
+                        Conventions =
+                        {
+                            DisableTopologyUpdates = true,
+                            DisposeCertificate = false
+                        }
+                    }.Initialize();
+                    return _parent.WaitForDocument(localStore, docId, predicate, (int)timeout.TotalMilliseconds);
+                });
+                tasks.Add(t);
+            }
+
+          
+            await Task.WhenAll(tasks);
+
+            var r = tasks.All(x => x.Result);
+            Assert.True(r == assertTo, assertTo ? $"Document {docId} is missing on some nodes" : $"Document {docId} is on all nodes");
+            return true;
+        }
+
+        public List<DocumentStore> GetDocumentStores(List<RavenServer> nodes, string database, bool disableTopologyUpdates, X509Certificate2 certificate = null)
+        {
+            var stores = new List<DocumentStore>();
+            foreach (var node in nodes)
+            {
+                var store = new DocumentStore
+                {
+                    Urls = new[] { node.WebUrl },
+                    Database = database,
+                    Certificate = certificate,
+                    Conventions =
+                    {
+                        DisableTopologyUpdates = disableTopologyUpdates,
+                        DisposeCertificate = false
+                    }
+                };
+                store.Initialize();
+                stores.Add(store);
+            }
+
+            return stores;
         }
 
         public async Task WaitForRaftCommandToBeAppliedInClusterAsync(RavenServer leader, string commandType)
@@ -321,7 +394,7 @@ public partial class RavenTestBase
             return
                 $"{Environment.NewLine}Log for server '{server.ServerStore.NodeTag}':" +
                 $"{Environment.NewLine}Last notified Index '{server.ServerStore.Cluster.LastNotifiedIndex}':" +
-                $"{Environment.NewLine}{context.ReadObject(server.ServerStore.Engine.GetLogDetails(context, start: 0, take: int.MaxValue, detailed: true).ToJson(), "LogSummary/" + server.ServerStore.NodeTag)}" +
+                $"{Environment.NewLine}{context.ReadObject(server.ServerStore.Engine.GetLogDetails(context, fromIndex: 0, take: int.MaxValue, detailed: true).ToJson(), "LogSummary/" + server.ServerStore.NodeTag)}" +
                 $"{Environment.NewLine}{server.ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
         }
 

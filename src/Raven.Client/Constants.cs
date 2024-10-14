@@ -51,6 +51,8 @@ namespace Raven.Client
 
             public const string LastKnownClusterTransactionIndex = "Known-Raft-Index";
 
+            public const string DatabaseClusterTransactionId = "Database-Cluster-Tx-Id";
+
             public const string RefreshClientConfiguration = "Refresh-Client-Configuration";
 
             public const string Etag = "ETag";
@@ -551,6 +553,22 @@ namespace Raven.Client
         {
             private Obsolete()
             {
+            }
+        }
+
+        internal class DatabaseRecord
+        {
+            private DatabaseRecord()
+            {
+            }
+
+            internal class SupportedFeatures
+            {
+                private SupportedFeatures()
+                {
+                }
+
+                public const string ThrowRevisionKeyTooBigFix = "ThrowRevisionKeyTooBigFix";
             }
         }
     }

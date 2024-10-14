@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.DataArchival;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Auto
