@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Esprima.Ast;
 using FastTests;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.ServerWide;
+using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Revisions;
@@ -17,7 +22,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_21326 : RavenTestBase
+    public class RavenDB_21326 : ClusterTestBase
     {
         public RavenDB_21326(ITestOutputHelper output) : base(output)
         {
@@ -425,6 +430,149 @@ namespace SlowTests.Issues
             deletes = await cleaner.ExecuteCleanup();
             Assert.Equal(10, deletes);
         }
+
+        [RavenTheory(RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RevisionsBinCleanerClusterTest(Options options)
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+
+            options.Server = leader;
+            options.ReplicationFactor = 3;
+
+            using var store = GetDocumentStore(options);
+
+            var revisionsConfig = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 100
+                }
+            };
+            await RevisionsHelper.SetupRevisionsAsync(store, store.Database, revisionsConfig);
+
+            var user1 = new User { Id = "Users/1-A", Name = "Shahar" };
+            var user2 = new User { Id = "Users/2-B", Name = "Shahar" };
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(user1);
+                await session.StoreAsync(user2);
+                await session.SaveChangesAsync();
+
+                for (int i = 1; i <= 10; i++)
+                {
+                    (await session.LoadAsync<User>(user1.Id)).Name = $"Shahar{i}";
+                    (await session.LoadAsync<User>(user2.Id)).Name = $"Shahar{i}";
+                    await session.SaveChangesAsync();
+                }
+
+                session.Delete(user1.Id);
+                session.Delete(user2.Id);
+                await session.SaveChangesAsync();
+
+                await session.StoreAsync(user2); // revive user2
+                await session.SaveChangesAsync();
+
+                Assert.Equal(12, await session.Advanced.Revisions.GetCountForAsync(user1.Id));
+                Assert.Equal(13, await session.Advanced.Revisions.GetCountForAsync(user2.Id));
+            }
+
+            var config = new RevisionsBinConfiguration
+            {
+                MinimumEntriesAgeToKeep = TimeSpan.Zero,
+                RefreshFrequency = TimeSpan.FromMilliseconds(200)
+            };
+            await ConfigRevisionsBinCleaner(store, config);
+
+            using var stores = new NodesDocumentStores(nodes, store.Database);
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                foreach (var node in nodes)
+                {
+                    using (var session = stores.GetStore(node.ServerStore.NodeTag).OpenAsyncSession())
+                    {
+                        var count = await session.Advanced.Revisions.GetCountForAsync(user1.Id);
+                        if (count != 0)
+                        {
+                            var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                            var topology = db.ReadDatabaseRecord().Topology;
+                            return $"node {node} has {count} revisions for 'user1.Id' instead of 0 revisions, Database Topology: {topology}";
+                        }
+                    }
+                }
+
+                return string.Empty;
+            }, string.Empty);
+
+            if (options.DatabaseMode == RavenDatabaseMode.Single)
+            {
+                await AssertDatabaseSingleCleaner(nodes, store.Database);
+            }
+            else if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    await AssertDatabaseSingleCleaner(nodes, store.Database+"$"+i);
+                }
+            }
+
+
+        }
+
+        private async Task AssertDatabaseSingleCleaner(IEnumerable<RavenServer> nodes, string database)
+        {
+            var cleanersCount = 0;
+            foreach (var node in nodes)
+            {
+                var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                if (db.RevisionsBinCleaner != null)
+                    cleanersCount++;
+            }
+
+            Assert.Equal(1, cleanersCount);
+        }
+
+        private class NodesDocumentStores : IDisposable
+        {
+            private Dictionary<string, IDocumentStore> _stores;
+
+            public NodesDocumentStores(IEnumerable<RavenServer> nodes, string database)
+            {
+                _stores = new Dictionary<string, IDocumentStore>();
+                foreach (var node in nodes)
+                {
+                    _stores[node.ServerStore.NodeTag] = GetStoreForServer(node, database);
+                }
+            }
+
+            public IDocumentStore GetStore(string nodeTag)
+            {
+                return _stores[nodeTag];
+            }
+
+            private IDocumentStore GetStoreForServer(RavenServer server, string database)
+            {
+                return new DocumentStore
+                {
+                    Database = database,
+                    Urls = new[] { server.WebUrl },
+                    Conventions = new DocumentConventions { DisableTopologyUpdates = true }
+                }.Initialize();
+            }
+
+            public void Dispose()
+            {
+                foreach (var store in _stores.Values)
+                {
+                    store?.Dispose();
+                }
+            }
+        }
+
+
+
 
         private async Task ConfigRevisionsBinCleaner(DocumentStore store, RevisionsBinConfiguration config)
         {

@@ -1755,7 +1755,7 @@ namespace Raven.Server.Documents
             InitializeCompressionFromDatabaseRecord(record);
             DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(record);
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
-            RevisionsBinCleaner = RevisionsBinCleaner.LoadConfigurations(this, record, RevisionsBinCleaner);
+            RevisionsBinCleaner = RevisionsBinCleaner.LoadConfigurations(this, record, RevisionsBinCleaner, ServerStore.NodeTag);
             DataArchivist = DataArchivist.LoadConfiguration(this, record, DataArchivist);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
             UpdateCompressionConfigurationFromDatabaseRecord(record);

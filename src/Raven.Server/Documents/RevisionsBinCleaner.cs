@@ -28,12 +28,12 @@ namespace Raven.Server.Documents
             await ExecuteCleanup(_configuration);
         }
 
-        public static RevisionsBinCleaner LoadConfigurations(DocumentDatabase database, DatabaseRecord record, RevisionsBinCleaner oldCleaner)
+        public static RevisionsBinCleaner LoadConfigurations(DocumentDatabase database, DatabaseRecord record, RevisionsBinCleaner oldCleaner, string nodeTag)
         {
             try
             {
                 var config = record.RevisionsBin;
-                if (config == null || config.Disabled)
+                if (config == null || config.Disabled || NodeIsResponsible(record.Topology, nodeTag) == false)
                 {
                     oldCleaner?.Dispose();
                     return null;
@@ -63,6 +63,9 @@ namespace Raven.Server.Documents
                 return null;
             }
         }
+
+        private static bool NodeIsResponsible(DatabaseTopology topology, string nodeTag) => topology.Members[0] == nodeTag;
+        
 
         internal async Task<long> ExecuteCleanup(RevisionsBinConfiguration config = null)
         {
