@@ -2752,7 +2752,7 @@ namespace Raven.Server.Documents.Revisions
                 return 0;
             }
 
-            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName, RevisionsSchema);
+            var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, collectionName.GetTableName(CollectionTableType.Revisions));
 
             if (table == null)
             {

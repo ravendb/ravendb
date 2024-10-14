@@ -1915,7 +1915,7 @@ namespace Raven.Server.Documents.Replication
                 AverageProcessedPerSecond = handler.Metrics.GetProcessedPerSecondRate() ?? 0.0
             };
 
-            var collections = Database.DocumentsStorage.GetCollections(documentsContext).Select(x => x.Name).ToList();
+            var collections = Database.DocumentsStorage.GetCollections(documentsContext).Select(x => x.Name);
 
             long total;
             var overallDuration = Stopwatch.StartNew();
