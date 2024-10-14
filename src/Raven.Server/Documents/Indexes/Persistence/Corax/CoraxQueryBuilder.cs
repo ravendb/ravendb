@@ -1028,7 +1028,7 @@ public static class CoraxQueryBuilder
         var indexFieldsMapping = builderParameters.IndexFieldsMapping;
         var allocator = builderParameters.Allocator;
         IndexSearcher.SearchQueryOptions searchQueryOptions = IndexSearcher.SearchQueryOptions.Legacy;
-        if (builderParameters.Index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxSearchWildcardAdjustment)
+        if (IndexDefinitionBaseServerSide.IndexVersion.IsCoraxSearchWildcardAdjustmentSupported(builderParameters.Index.Definition.Version))
             searchQueryOptions = IndexSearcher.SearchQueryOptions.PhraseQueryWithWildcardAdjustments;
         else if (builderParameters.Index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes)
             searchQueryOptions = IndexSearcher.SearchQueryOptions.PhraseQuery;
