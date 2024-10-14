@@ -42,8 +42,68 @@ namespace SlowTests.Voron
             }
 
             const int num = 19;
-            var result1 = sba.GetContinuousRangeStart(num);
-            var result2 = GetContinuousRangeSlow(sba, num);
+            var result1 = GetContinuousRangeSlow(sba, num);
+            var result2 = sba.GetContinuousRangeStart(num);
+            Assert.Equal(result1, result2);
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void VerifySingleLargeResultSearching100()
+        {
+            int[] arr =
+            [
+                0, 0, 0, 0, 0, 0, -256, -1, -1, -1, -1, -1, 65535, 0, 0, 0, 0, 0, -16777216, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, -256, -1, -1, -1, -1, -1, 65535, 0,
+                0, 0, 0, 0, -16777216, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, -256, -1, -1, -1, -1, -1, 65535, 0
+            ];
+
+            var sba = new StreamBitArray();
+
+            for (var wordIndex = 0; wordIndex < arr.Length; wordIndex++)
+            {
+                var word = arr[wordIndex];
+                for (int i = 0; i < 32; i++)
+                {
+                    if ((word & (1 << i)) == 0)
+                        continue;
+
+                    int globalIndex = wordIndex * 32 + i;
+                    sba.Set(globalIndex, true);
+                }
+            }
+
+            const int num = 100;
+            var result1 = GetContinuousRangeSlow(sba, num);
+            var result2 = sba.GetContinuousRangeStart(num);
+            Assert.Equal(result1, result2);
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void VerifySingleLargeResultSearching451()
+        {
+            int[] arr =
+            [
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8388607, 0, -1, -1, -1, -1, -1,
+                -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+            ];
+
+            var sba = new StreamBitArray();
+
+            for (var wordIndex = 0; wordIndex < arr.Length; wordIndex++)
+            {
+                var word = arr[wordIndex];
+                for (int i = 0; i < 32; i++)
+                {
+                    if ((word & (1 << i)) == 0)
+                        continue;
+
+                    int globalIndex = wordIndex * 32 + i;
+                    sba.Set(globalIndex, true);
+                }
+            }
+
+            const int num = 451;
+            var result1 = GetContinuousRangeSlow(sba, num);
+            var result2 = sba.GetContinuousRangeStart(num);
             Assert.Equal(result1, result2);
         }
 
@@ -72,8 +132,8 @@ namespace SlowTests.Voron
             }
 
             const int num = 100;
-            var result1 = sba.GetContinuousRangeStart(num);
-            var result2 = GetContinuousRangeSlow(sba, num);
+            var result1 = GetContinuousRangeSlow(sba, num);
+            var result2 = sba.GetContinuousRangeStart(num);
             Assert.Equal(result1, result2);
         }
 
@@ -91,8 +151,8 @@ namespace SlowTests.Voron
 
             for (int j = 1; j <= 2048; j += 1)
             {
-                var result1 = sba.GetContinuousRangeStart(j);
-                var result2 = GetContinuousRangeSlow(sba, j);
+                var result1 = GetContinuousRangeSlow(sba, j);
+                var result2 = sba.GetContinuousRangeStart(j);
                 Assert.Equal(result1, result2);
             }
         }
@@ -123,8 +183,8 @@ namespace SlowTests.Voron
 
             for (int j = 1; j <= 2048; j += 1)
             {
-                var result1 = sba.GetContinuousRangeStart(j);
-                var result2 = GetContinuousRangeSlow(sba, j);
+                var result1 = GetContinuousRangeSlow(sba, j);
+                var result2 = sba.GetContinuousRangeStart(j);
                 Assert.Equal(result1, result2);
             }
         }
