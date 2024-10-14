@@ -15,6 +15,8 @@ namespace Raven.Server.Documents.Replication
 
         public string DestinationChangeVector { get; set; }
 
+        public string FromToString { get; set; }
+
         public static string GenerateItemName(string databaseName, long taskId)
         {
             return $"values/{databaseName}/external-replication/{taskId}";
@@ -28,7 +30,8 @@ namespace Raven.Server.Documents.Replication
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(LastSentEtag)] = LastSentEtag,
                 [nameof(SourceChangeVector)] = SourceChangeVector,
-                [nameof(DestinationChangeVector)] = DestinationChangeVector
+                [nameof(DestinationChangeVector)] = DestinationChangeVector,
+                [nameof(FromToString)] = FromToString
             };
         }
     }

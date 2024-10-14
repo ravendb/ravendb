@@ -1529,13 +1529,18 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public (string Url, OngoingTaskConnectionStatus Status) GetExternalReplicationDestination(long taskId)
+        public (string Url, OngoingTaskConnectionStatus Status) GetExternalReplicationDestination(long taskId, out string fromToString)
         {
-            foreach (var outgoing in OutgoingConnections)
+            foreach (var outgoingHandler in OutgoingHandlers)
             {
-                if (outgoing is ExternalReplication ex && ex.TaskId == taskId)
+                if (outgoingHandler.Destination is ExternalReplication ex && ex.TaskId == taskId)
+                {
+                    fromToString = outgoingHandler.FromToString;
                     return (ex.Url, OngoingTaskConnectionStatus.Active);
+                }
             }
+
+            fromToString = string.Empty;
             foreach (var reconnect in ReconnectQueue)
             {
                 if (reconnect is ExternalReplication ex && ex.TaskId == taskId)
@@ -1895,6 +1900,66 @@ namespace Raven.Server.Documents.Replication
             }
 
             return false;
+        }
+
+        internal ReplicationProcessProgress GetOutgoingReplicationProgress(DocumentsOperationContext documentsContext, DatabaseOutgoingReplicationHandler handler)
+        {
+            var lastProcessedEtag = handler.LastSentDocumentEtag;
+
+            var progress = new ReplicationProcessProgress
+            {
+                FromToString = handler.FromToString,
+                LastEtagSent = lastProcessedEtag,
+                DestinationChangeVector = handler.LastAcceptedChangeVector,
+                SourceChangeVector = handler.LastSentChangeVector,
+                AverageProcessedPerSecond = handler.Metrics.GetProcessedPerSecondRate() ?? 0.0
+            };
+
+            var collections = Database.DocumentsStorage.GetCollections(documentsContext).Select(x => x.Name);
+
+            long total;
+            var overallDuration = Stopwatch.StartNew();
+
+            foreach (var collection in collections)
+            {
+                progress.NumberOfDocumentsToProcess += Database.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
+                progress.TotalNumberOfDocuments += total;
+
+                progress.NumberOfDocumentTombstonesToProcess += Database.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
+                progress.TotalNumberOfDocumentTombstones += total;
+
+                progress.NumberOfRevisionsToProcess += Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionsToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
+                progress.TotalNumberOfRevisions += total;
+
+                progress.NumberOfCounterGroupsToProcess += Database.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
+                progress.TotalNumberOfCounterGroups += total;
+
+                progress.NumberOfTimeSeriesSegmentsToProcess += Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
+                progress.TotalNumberOfTimeSeriesSegments += total;
+
+                progress.NumberOfTimeSeriesDeletedRangesToProcess += Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
+                progress.TotalNumberOfTimeSeriesDeletedRanges += total;
+            }
+
+            progress.NumberOfAttachmentsToProcess = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachmentsToProcess(documentsContext, lastProcessedEtag, out total, overallDuration);
+            progress.TotalNumberOfAttachments = total;
+            progress.TotalNumberOfRevisionTombstones = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionTombstones(documentsContext);
+            progress.TotalNumberOfAttachmentTombstones = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachmentTombstones(documentsContext);
+
+            progress.Completed = IsCompleted();
+
+            return progress;
+
+            bool IsCompleted()
+            {
+                return progress.NumberOfDocumentsToProcess == 0
+                       && progress.NumberOfDocumentTombstonesToProcess == 0
+                       && progress.NumberOfCounterGroupsToProcess == 0
+                       && progress.NumberOfTimeSeriesSegmentsToProcess == 0
+                       && progress.NumberOfTimeSeriesDeletedRangesToProcess == 0
+                       && progress.NumberOfRevisionsToProcess == 0
+                       && progress.NumberOfAttachmentsToProcess == 0;
+            }
         }
     }
 

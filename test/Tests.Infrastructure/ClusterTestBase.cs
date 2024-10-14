@@ -561,6 +561,24 @@ namespace Tests.Infrastructure
             return stores;
         }
 
+        protected async Task<bool> WaitForDocumentDeletionInClusterAsync(List<RavenServer> nodes, string database, string docId, TimeSpan timeout, X509Certificate2 certificate = null)
+        {
+            var stores = GetDocumentStores(nodes, database, disableTopologyUpdates: true, certificate: certificate);
+            return await WaitForDocumentDeletionInClusterAsyncInternal(docId, timeout, stores);
+        }
+
+        private async Task<bool> WaitForDocumentDeletionInClusterAsyncInternal(string docId, TimeSpan timeout, List<DocumentStore> stores)
+        {
+            var tasks = new List<Task<bool>>();
+
+            foreach (var store in stores)
+                tasks.Add(Task.Run(() => WaitForDocumentDeletion(store, docId, (int)timeout.TotalMilliseconds)));
+
+            await Task.WhenAll(tasks);
+
+            return tasks.All(x => x.Result);
+        }
+
         protected bool WaitForDocument(IDocumentStore store,
             string docId,
             int timeout = 10000,

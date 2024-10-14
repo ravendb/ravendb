@@ -204,6 +204,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                         once.Wait(_cts.Token);
                     }
 
+                    var startTime = _database.Time.GetUtcNow();
                     var sp = Stopwatch.StartNew();
                     var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
                     AddReplicationPerformance(stats);
@@ -228,6 +229,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                                     break;
 
                                 DocumentsSend?.Invoke(this);
+                                UpdateMetrics(startTime, scope);
 
                                 if (sp.ElapsedMilliseconds > 60 * 1000)
                                 {

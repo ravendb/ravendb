@@ -48,6 +48,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 {
                     TaskId = _taskId.Value,
                     NodeTag = _parent._server.NodeTag,
+                    FromToString = FromToString,
                     LastSentEtag = _lastSentDocumentEtag,
                     SourceChangeVector = LastSentChangeVector,
                     DestinationChangeVector = LastAcceptedChangeVector
