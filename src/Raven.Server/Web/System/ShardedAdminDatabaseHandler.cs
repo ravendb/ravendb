@@ -102,19 +102,19 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static string FindFitNodeForDatabase(string databaseName, DatabaseTopology topology, bool isEncrypted, ClusterTopology clusterTopology, Dictionary<string, int> nodeToInstanceCount = null)
+        private static string FindFitNodeForDatabase(string databaseName, DatabaseTopology topology, bool isEncrypted, ClusterTopology clusterTopology, string node = null)
         {
             var candidateNodes = clusterTopology.Members.Keys
                 .Concat(clusterTopology.Promotables.Keys)
                 .Concat(clusterTopology.Watchers.Keys)
-                .ToList();
+                .ToHashSet(StringComparer.InvariantCultureIgnoreCase);
 
-            candidateNodes.RemoveAll(n => topology.AllNodes.Contains(n));
+            candidateNodes.RemoveWhere(n => topology.AllNodes.Contains(n));
 
             if (candidateNodes.Count == 0)
                 throw new InvalidOperationException($"Looking for a fit node for database {databaseName} but all nodes in cluster are already taken");
 
-            candidateNodes.RemoveAll(n => isEncrypted && AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
+            candidateNodes.RemoveWhere(n => isEncrypted && AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
             
             if (isEncrypted && candidateNodes.Count == 0)
                 throw new InvalidOperationException($"Database {databaseName} is encrypted and requires a node which supports SSL. There is no such node available in the cluster.");
@@ -122,26 +122,10 @@ namespace Raven.Server.Web.System
             if (candidateNodes.Count == 0)
                 throw new InvalidOperationException($"Database {databaseName} already exists on all the nodes of the cluster");
 
-            //find node with the least shard replicas on it
-            string minNode = null;
+            if (string.IsNullOrEmpty(node) == false && candidateNodes.Contains(node) == false)
+                throw new InvalidOperationException($"Cannot put the requested node '{node}' to topology");
 
-            if (nodeToInstanceCount != null)
-            {
-                var minCount = int.MaxValue;
-                foreach (var (node, count) in nodeToInstanceCount)
-                {
-                    if (candidateNodes.Contains(node) == false)
-                        continue;
-
-                    if (count < minCount)
-                    {
-                        minCount = count;
-                        minNode = node;
-                    }
-                }
-            }
-
-            return minNode ?? clusterTopology.AllNodes.Keys.ElementAt((new Random(DateTime.Now.Microsecond)).Next(clusterTopology.Count - 1));
+            return node ?? candidateNodes.ElementAt(Random.Shared.Next(candidateNodes.Count - 1));
         }
 
         [RavenAction("/admin/databases/orchestrator", "DELETE", AuthorizationStatus.Operator)]
@@ -242,7 +226,7 @@ namespace Raven.Server.Web.System
 
             await ServerStore.EnsureNotPassiveAsync();
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var databaseRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, database, out var index);
@@ -285,7 +269,6 @@ namespace Raven.Server.Web.System
                     throw new InvalidOperationException($"Can't add a new shard to database '{database}' because it is currently being deleted.");
                 }
 
-                var newShardTopology = new DatabaseTopology();
 
                 int newChosenShardNumber;
                 
@@ -307,30 +290,43 @@ namespace Raven.Server.Web.System
                 if (replicationFactor.HasValue && replicationFactor.Value > clusterTopology.AllNodes.Count)
                     throw new InvalidOperationException($"Replication factor {replicationFactor.Value} cannot exceed the number of nodes in the cluster {clusterTopology.AllNodes.Count}.");
 
-                newShardTopology.ReplicationFactor = replicationFactor ?? (nodesList.Count > 0 ? nodesList.Count : databaseRecord.Sharding.Shards.ElementAt(0).Value.ReplicationFactor);
-                newShardTopology.DynamicNodesDistribution = dynamicNodeDistribution ?? databaseRecord.Sharding.Shards.ElementAt(0).Value.DynamicNodesDistribution;
+                replicationFactor  ??= (nodesList.Count > 0 ? nodesList.Count : databaseRecord.Sharding.Shards.ElementAt(0).Value.ReplicationFactor);
+                dynamicNodeDistribution ??= databaseRecord.Sharding.Shards.ElementAt(0).Value.DynamicNodesDistribution;
 
-                var nodeToInstanceCount = new Dictionary<string, int>();
-                foreach (var node in clusterTopology.AllNodes.Keys)
+                if (nodesList.Count == 0)
                 {
-                    nodeToInstanceCount[node] = 0;
-                }
-
-                foreach (var (_, topology) in databaseRecord.Sharding.Shards)
-                {
-                    foreach (var node in topology.AllNodes)
+                    var nodeToInstanceCount = new Dictionary<string, int>();
+                    foreach (var node in clusterTopology.AllNodes.Keys)
                     {
-                        nodeToInstanceCount[node] += 1;
+                        nodeToInstanceCount[node] = 0;
                     }
-                }
 
-                for (int i = 0; i < newShardTopology.ReplicationFactor; i++)
-                {
-                    var node = nodesList.ElementAtOrDefault(i);
-                    node ??= FindFitNodeForDatabase(database, newShardTopology, databaseRecord.IsEncrypted, clusterTopology, nodeToInstanceCount);
-                    newShardTopology.Members.Add(node);
+                    foreach (var (_, topology) in databaseRecord.Sharding.Shards)
+                    {
+                        foreach (var node in topology.AllNodes)
+                        {
+                            nodeToInstanceCount[node] += 1;
+                        }
+                    }
+
+                    nodesList = nodeToInstanceCount.OrderBy(n => n.Value).Select(kvp => kvp.Key).ToList();
                 }
                 
+                var newShardTopology = new DatabaseTopology
+                {
+                    DynamicNodesDistribution = dynamicNodeDistribution.Value
+                };
+
+                for (int i = 0; i < replicationFactor; i++)
+                {
+                    var node = nodesList.ElementAtOrDefault(i);
+                    node = FindFitNodeForDatabase(database, newShardTopology, databaseRecord.IsEncrypted, clusterTopology, node);
+                    newShardTopology.Members.Add(node);
+                }
+
+                DatabaseHelper.InitializeDatabaseTopology(ServerStore, newShardTopology, clusterTopology, replicationFactor.Value,
+                    databaseRecord.Sharding.Orchestrator.Topology.ClusterTransactionIdBase64);
+
                 var update = new CreateNewShardCommand(database, newChosenShardNumber, newShardTopology, SystemTime.UtcNow, raftRequestId);
 
                 var (newIndex, _) = await ServerStore.SendToLeaderAsync(update);

@@ -1,4 +1,4 @@
-import { Table as TanstackTable, flexRender } from "@tanstack/react-table";
+import { Column, Table as TanstackTable, flexRender } from "@tanstack/react-table";
 import classNames from "classnames";
 
 interface VirtualTableHeadProps<T> {
@@ -22,7 +22,7 @@ export default function VirtualTableHead<T>({ table }: VirtualTableHeadProps<T>)
                                 className={classNames("position-relative", {
                                     "cursor-pointer select-none": header.column.getCanSort(),
                                 })}
-                                title={`Sort by ${header.column.columnDef.header}`}
+                                title={getHeaderTitle(header.column)}
                             >
                                 {flexRender(header.column.columnDef.header, header.getContext())}
 
@@ -53,4 +53,24 @@ export default function VirtualTableHead<T>({ table }: VirtualTableHeadProps<T>)
             ))}
         </thead>
     );
+}
+
+function getHeaderTitle<T>(column: Column<T, unknown>): string {
+    const { columnDef } = column;
+
+    const getTitle = (): string => {
+        if (typeof columnDef.header === "string") {
+            return columnDef.header;
+        }
+        if ("accessorKey" in columnDef && typeof columnDef.accessorKey === "string") {
+            return columnDef.accessorKey;
+        }
+        return columnDef.id;
+    };
+
+    if (column.getCanSort()) {
+        return `Sort by ${getTitle()}`;
+    }
+
+    return getTitle();
 }
