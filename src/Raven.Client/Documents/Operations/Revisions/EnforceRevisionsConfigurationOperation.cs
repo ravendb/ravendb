@@ -9,22 +9,54 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
+    /// <summary>
+    /// Operation to enforce the current revisions configuration on all existing revisions.
+    /// This applies the current revision configuration (rules), which are usually applied when a document is modified, 
+    /// to all revisions at once.
+    /// </summary>
     public sealed class EnforceRevisionsConfigurationOperation : IOperation<OperationIdResult>
     {
         private readonly Parameters _parameters;
 
+        /// <summary>
+        /// Parameters for the <see cref="EnforceRevisionsConfigurationOperation"/>, 
+        /// allowing specification of whether to include force-created revisions and target specific collections.
+        /// </summary>
         public sealed class Parameters : IRevisionsOperationParameters
         {
+            /// <summary>
+            /// Gets or sets a value indicating whether to include force-created revisions.
+            /// For more information, visit <a href="https://ravendb.net/docs/article-page/6.2/csharp/document-extensions/revisions/overview#force-revision-creation">here</a>.
+            /// </summary>
             public bool IncludeForceCreated { get; set; } = false;
+
+            /// <summary>
+            /// Gets or sets the collections to which the enforcement should apply. 
+            /// If <c>null</c>, the operation will apply to all collections in the database.
+            /// </summary>
             public string[] Collections { get; set; } = null;
         }
 
+        /// <summary>
+        /// Operation to enforce the current revisions configuration on all existing revisions.
+        /// This applies the current revision configuration (rules), which are usually applied when a document is modified, 
+        /// to all revisions at once.
+        /// Initializes a new instance of <see cref="EnforceRevisionsConfigurationOperation"/> with default parameters.
+        /// </summary>
         public EnforceRevisionsConfigurationOperation()
             : this(new Parameters())
         {
 
         }
 
+        /// <summary>
+        /// Operation to enforce the current revisions configuration on all existing revisions.
+        /// This applies the current revision configuration (rules), which are usually applied when a document is modified,
+        /// to all revisions at once.
+        /// Initializes a new instance of <see cref="EnforceRevisionsConfigurationOperation"/> with the specified parameters.
+        /// </summary>
+        /// <param name="parameters">The parameters specifying whether to include force-created revisions and the target collections.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameters"/> is <c>null</c>.</exception>
         public EnforceRevisionsConfigurationOperation(Parameters parameters)
         {
             _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));

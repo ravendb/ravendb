@@ -10,6 +10,7 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.PostingLists;
 using Voron.Util;
@@ -18,12 +19,24 @@ namespace Corax.Querying;
 
 public partial class IndexSearcher
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IQueryMatch SearchQuery(in FieldMetadata field, IEnumerable<string> values, Constants.Search.Operator @operator, bool? supportsPhraseQuery = null, in CancellationToken cancellationToken = default)
+    public enum SearchQueryOptions
     {
-        return supportsPhraseQuery is true or null 
-            ? SearchQueryWithPhraseQuery(field, values, @operator, cancellationToken) 
-            : SearchQueryLegacy(field, values, @operator, cancellationToken);
+        Legacy,
+        PhraseQuery,
+        PhraseQueryWithWildcardAdjustments
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public IQueryMatch SearchQuery(in FieldMetadata field, IEnumerable<string> values, Constants.Search.Operator @operator, SearchQueryOptions searchQueryOptions = SearchQueryOptions.PhraseQueryWithWildcardAdjustments, in CancellationToken cancellationToken = default)
+    {
+        return searchQueryOptions switch
+        {
+            SearchQueryOptions.Legacy => SearchQueryLegacy(field, values, @operator, cancellationToken),
+            SearchQueryOptions.PhraseQueryWithWildcardAdjustments =>
+                SearchQueryWithPhraseQueryWithWildcardQueriesAdjustments(field, values, @operator, cancellationToken),
+            SearchQueryOptions.PhraseQuery => SearchQueryWithPhraseQuery(field, values, @operator, cancellationToken),
+            _ => throw new ArgumentOutOfRangeException(nameof(searchQueryOptions))
+        };
     }
 
     private IQueryMatch SearchQueryLegacy(FieldMetadata field, IEnumerable<string> values, Constants.Search.Operator @operator, in CancellationToken cancellationToken)
@@ -171,6 +184,7 @@ public partial class IndexSearcher
         
     }
 
+    
     private IQueryMatch SearchQueryWithPhraseQuery(FieldMetadata field, IEnumerable<string> values, Constants.Search.Operator @operator, in CancellationToken cancellationToken = default)
     {
         AssertFieldIsSearched();
@@ -353,7 +367,121 @@ public partial class IndexSearcher
             return count;
         }
     }
+    
+    private IQueryMatch SearchQueryWithPhraseQueryWithWildcardQueriesAdjustments(FieldMetadata field, IEnumerable<string> values, Constants.Search.Operator @operator, in CancellationToken cancellationToken = default)
+    {
+        AssertFieldIsSearched();
+        IQueryMatch searchQuery = null;
+        List<Slice> termMatches = null;
+        var terms = new ContextBoundNativeList<Slice>(Allocator);
 
+        foreach (var word in values)
+        {
+            terms.Clear();
+            //When a word contains asterisks, it's not our responsibility to persist it; the analyzer should not remove them either.
+            EncodeAndApplyAnalyzerForMultipleTerms(field, word, ref terms);
+            var tokensInWord = terms.Count;
+            
+            if (tokensInWord == 0)
+                continue;
+
+            //single word
+            if (tokensInWord is 1)
+            {
+                var value = terms[0];
+                var termType = GetTermType(value);
+                
+                (int startIncrement, int lengthIncrement) = termType switch
+                {
+                    Constants.Search.SearchMatchOptions.StartsWith => (0, -1),
+                    Constants.Search.SearchMatchOptions.EndsWith => (1, 0),
+                    Constants.Search.SearchMatchOptions.Contains => (1, -1),
+                    Constants.Search.SearchMatchOptions.TermMatch => (0, 0),
+                    Constants.Search.SearchMatchOptions.Exists => (0, 0),
+                    _ => throw new InvalidExpressionException("Unknown flag inside Search match.")
+                };
+                
+                //Rewrite term without asterisks.
+                if (termType is not (Constants.Search.SearchMatchOptions.Exists or Constants.Search.SearchMatchOptions.TermMatch))
+                {
+                    var span = value.AsSpan();
+                    Slice.From(Allocator, span.Slice(startIncrement, span.Length - startIncrement + lengthIncrement), ByteStringType.Immutable, out value);
+                }
+                
+                if (termType is Constants.Search.SearchMatchOptions.TermMatch)
+                {
+                    termMatches ??= new();
+                    termMatches.Add(value);
+                    continue;
+                }
+                
+                var query = termType switch
+                {
+                    Constants.Search.SearchMatchOptions.TermMatch => throw new InvalidDataException(
+                        $"{nameof(TermMatch)} is handled in different part of evaluator. This is a bug."),
+                    Constants.Search.SearchMatchOptions.Exists => ExistsQuery(field, token: cancellationToken),
+                    Constants.Search.SearchMatchOptions.StartsWith => StartWithQuery(field, value, token: cancellationToken),
+                    Constants.Search.SearchMatchOptions.EndsWith => EndsWithQuery(field, value, token: cancellationToken),
+                    Constants.Search.SearchMatchOptions.Contains => ContainsQuery(field, value, token: cancellationToken),
+                    _ => throw new ArgumentOutOfRangeException(nameof(termType), termType.ToString())
+                };
+
+                searchQuery = (searchQuery, @operator) switch
+                {
+                    (null, _) => query,
+                    (_, Constants.Search.Operator.And) => And(searchQuery, query),
+                    (_, Constants.Search.Operator.Or) => Or(searchQuery, query),
+                    _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
+                };
+                
+                continue;
+            }
+            
+            // Phrase query part (wildcards are not supported in phrase queries).
+            var hs = new HashSet<Slice>(SliceComparer.Instance);
+            for (var i = 0; i < terms.Count; ++i)
+            {
+                hs.Add(terms[i]);
+            }
+
+            var allIn = AllInQuery(field, hs, cancellationToken: cancellationToken);
+            var phraseMatch = PhraseQuery(allIn, field, terms.ToSpan());
+
+            searchQuery = (searchQuery, @operator) switch
+            {
+                (null, _) => phraseMatch,
+                (_, Constants.Search.Operator.And) => And(searchQuery, phraseMatch, cancellationToken),
+                (_, Constants.Search.Operator.Or) => Or(searchQuery, phraseMatch, cancellationToken),
+                _ => throw new ArgumentOutOfRangeException($"({searchQuery?.GetType().FullName ?? "NULL"}, {@operator.ToString()})")
+            };
+        }
+        
+        if (termMatches?.Count > 0)
+        {
+            var termMatchesQuery = @operator switch
+            {
+                Constants.Search.Operator.And => AllInQuery(field, termMatches.ToHashSet(SliceComparer.Instance), token: cancellationToken),
+                Constants.Search.Operator.Or => InQuery(field, termMatches, token: cancellationToken),
+                _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
+            };
+
+            searchQuery = (searchQuery, @operator) switch
+            {
+                (null, _) => termMatchesQuery,
+                (_, Constants.Search.Operator.Or) => Or(termMatchesQuery, searchQuery),
+                (_, Constants.Search.Operator.And) => And(termMatchesQuery, searchQuery),
+                _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
+            };
+        }
+        
+        return searchQuery ?? TermMatch.CreateEmpty(this, Allocator);
+        
+        void AssertFieldIsSearched()
+        {
+            if (field.Analyzer == null && field.IsDynamic == false)
+                throw new InvalidOperationException($"{nameof(SearchQueryWithPhraseQuery)} requires analyzer.");
+        }
+    }
     
     private Constants.Search.SearchMatchOptions GetTermType(ReadOnlySpan<char> termValue)
     {
@@ -372,6 +500,28 @@ public partial class IndexSearcher
         }
             
         if (mode == Constants.Search.SearchMatchOptions.Contains && termValue.Count('*') == termValue.Length)
+            return Constants.Search.SearchMatchOptions.Exists;
+
+        return mode;
+    }
+    
+    private Constants.Search.SearchMatchOptions GetTermType(ReadOnlySpan<byte> termValue)
+    {
+        if (termValue.IsEmpty)
+            return Constants.Search.SearchMatchOptions.TermMatch;
+            
+        Constants.Search.SearchMatchOptions mode = default;
+            
+        if (termValue[0] == '*')
+            mode |= Constants.Search.SearchMatchOptions.EndsWith;
+
+        if (termValue[^1] == '*')
+        {
+            if (termValue.Length <= 2 || termValue[^2] != '\\')
+                mode |= Constants.Search.SearchMatchOptions.StartsWith;
+        }
+            
+        if (mode == Constants.Search.SearchMatchOptions.Contains && termValue.Count((byte)'*') == termValue.Length)
             return Constants.Search.SearchMatchOptions.Exists;
 
         return mode;

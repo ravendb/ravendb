@@ -153,7 +153,7 @@ public sealed class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDat
 
     protected override bool CheckIfNewerInResendList(DocumentsOperationContext context, string id, string cvInStorage, string cvInResendList)
     {
-        var resendListCvIsNewer = Database.DocumentsStorage.GetConflictStatus(context, cvInResendList, cvInStorage, ChangeVectorMode.Version);
+        var resendListCvIsNewer = Database.DocumentsStorage.GetConflictStatusForVersion(context, cvInResendList, cvInStorage);
         if (resendListCvIsNewer == ConflictStatus.Update)
         {
             return true;

@@ -10,9 +10,14 @@ using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
+using Lucene.Net.Analysis;
+using NetTopologySuite.Utilities;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.Collation;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
@@ -21,6 +26,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 using Spatial4n.Shapes;
+using Analyzer = Corax.Analyzers.Analyzer;
 using RavenConstants = Raven.Client.Constants;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using CoraxConstants = Corax.Constants;
@@ -1021,7 +1027,13 @@ public static class CoraxQueryBuilder
         var fieldsToFetch = builderParameters.FieldsToFetch;
         var indexFieldsMapping = builderParameters.IndexFieldsMapping;
         var allocator = builderParameters.Allocator;
-
+        IndexSearcher.SearchQueryOptions searchQueryOptions = IndexSearcher.SearchQueryOptions.Legacy;
+        if (builderParameters.Index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxSearchWildcardAdjustment)
+            searchQueryOptions = IndexSearcher.SearchQueryOptions.PhraseQueryWithWildcardAdjustments;
+        else if (builderParameters.Index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes)
+            searchQueryOptions = IndexSearcher.SearchQueryOptions.PhraseQuery;
+        
+        
         QueryFieldName fieldName;
         var isDocumentId = false;
         switch (expression.Arguments[0])
@@ -1073,6 +1085,11 @@ public static class CoraxQueryBuilder
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
             builderParameters.DynamicFields, handleSearch: true, hasBoost: builderParameters.HasBoost);
 
+        // Wildcard queries:
+        if (searchQueryOptions is IndexSearcher.SearchQueryOptions.PhraseQueryWithWildcardAdjustments && valueAsString.Length >= 1 && (valueAsString[0] == '*' || (valueAsString.Length >= 2 && valueAsString[^1] == '*')))
+            fieldMetadata = ReplaceAnalyzerForWildcardQueries(fieldMetadata);
+        
+        
         if (proximity.HasValue)
         {
             throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support proximity over search() method");
@@ -1094,7 +1111,7 @@ public static class CoraxQueryBuilder
                 QueryBuilderHelper.ThrowInvalidOperatorInSearch(metadata, queryParameters, fieldExpression);
         }
         
-        return indexSearcher.SearchQuery(fieldMetadata, GetValues(), @operator, builderParameters.Index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes, builderParameters.Token);
+        return indexSearcher.SearchQuery(fieldMetadata, GetValues(), @operator, searchQueryOptions, builderParameters.Token);
         
         /*
          * Here we need to deal with value that comes from the user, which means that we
@@ -1190,6 +1207,37 @@ public static class CoraxQueryBuilder
             }
 
             return (count & 1) == 1;
+        }
+
+        FieldMetadata ReplaceAnalyzerForWildcardQueries(in FieldMetadata original)
+        {
+            FieldMetadata result = original;
+            // We need to retrieve the analyzer for the dynamic field since the field metadata is created dynamically.
+            if (original.IsDynamic)
+                result = fieldMetadata.ChangeAnalyzer(original.Mode, builderParameters.IndexFieldsMapping.SearchAnalyzer(original.FieldName.ToString()));
+
+            
+            if (original.Analyzer is LuceneAnalyzerAdapter laa)
+            {
+                //logic from LuceneQueryBuilder
+                var luceneAnalyzer = laa.Analyzer switch
+                {
+                    KeywordAnalyzer keywordAnalyzer => builderParameters.IndexFieldsMapping.ExactAnalyzer(original.FieldName.ToString()),
+                    // here we force a lower case keyword analyzer to ensure proper behavior
+                    // https://ayende.com/blog/191841-B/understanding-query-processing-and-wildcards-in-ravendb
+                    RavenStandardAnalyzer or NGramAnalyzer => builderParameters.IndexFieldsMapping.DefaultAnalyzer,
+                    LowerCaseKeywordAnalyzer or CollationAnalyzer => builderParameters.IndexFieldsMapping.DefaultAnalyzer,
+                    // if the user has a custom analyzer, we'll use that, and they can deal with any surprises
+                    // in wildcard queries
+                    _ => null
+                };
+            
+                if (luceneAnalyzer != null) 
+                    result = original.ChangeAnalyzer(FieldIndexingMode.Search, luceneAnalyzer);
+            }
+            
+            // Currently, we do not have any custom Corax analyzers, so we don't need to address them.
+            return result;
         }
     }
     
