@@ -205,12 +205,12 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 return false;
             }
 
-            var status = Database.DocumentsStorage.GetConflictStatusForOrder(item.Document.ChangeVector, currentChangeVector);
+            var status = Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, currentChangeVector);
             switch (status)
             {
                 case ConflictStatus.Update:
                     // If document was updated, but the subscription went too far.
-                    var resendStatus = Database.DocumentsStorage.GetConflictStatusForOrder(item.Document.ChangeVector, SubscriptionConnectionsState.LastChangeVectorSent);
+                    var resendStatus = Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, SubscriptionConnectionsState.LastChangeVectorSent);
                     if (resendStatus == ConflictStatus.Update)
                     {
                         // we can clear it from resend list, and it will processed as regular document
@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         {
             if (item.Document != null)
             {
-                var status = Database.DocumentsStorage.GetConflictStatusForVersion(item.Document.ChangeVector, currentChangeVector);
+                var status = Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, currentChangeVector);
                 switch (status)
                 {
                     case ConflictStatus.Update:

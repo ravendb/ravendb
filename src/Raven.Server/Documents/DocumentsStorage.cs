@@ -2461,12 +2461,7 @@ namespace Raven.Server.Documents
         }
 
 
-        public ConflictStatus GetConflictStatusForOrder(string remote, string local)
-        {
-            return ChangeVectorUtils.GetConflictStatus(remote, local);
-        }
-
-        public ConflictStatus GetConflictStatusForVersion(string remote, string local)
+        public ConflictStatus GetConflictStatus(string remote, string local)
         {
             return GetConflictStatus(remote, local, out _);
         }
@@ -2513,7 +2508,11 @@ namespace Raven.Server.Documents
 
                 TryRemoveUnusedIds(ref remote);
                 skipValidation = TryRemoveUnusedIds(ref local);
-                return ChangeVectorUtils.GetConflictStatus(remote, local);
+                var after = ChangeVectorUtils.GetConflictStatus(remote, local);
+
+                if (after == ConflictStatus.AlreadyMerged)
+                    return ConflictStatus.Conflict;
+                return after;
             }
 
             return originalStatus;
