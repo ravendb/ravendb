@@ -12,6 +12,7 @@ using System.Net.Sockets;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -1710,15 +1711,41 @@ namespace Raven.Server
             }
             else if (CertificateHasWellKnownIssuer(certificate, out var issuer))
             {
-                if (_authAuditLog.IsInfoEnabled)
+                string authLogMessage;
+
+                if (Configuration.Security.ValidateSanForCertificateWithWellKnownIssuer)
                 {
-                    _authAuditLog.Info(
+                    if (AreCertificateSansValid(certificate))
+                    {
+                        authLogMessage =
+                            $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                            "Allowing the connection based on the certificate's *issuer* which is trusted by the cluster and valid SAN matching server domain. " +
+                            $"Registering the new certificate explicitly based on permissions of existing certificate '{issuer}'. Security Clearance: {AuthenticationStatus.ClusterAdmin}";
+                        authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+                        
+                    }
+                    else
+                    {
+                        authLogMessage =
+                            $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                            "Certificate's *issuer* is trusted by the cluster. " +
+                            "Rejecting the connection based on certificate SAN not matching server domain.";
+                        authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                    }
+                }
+                else 
+                {
+                    authLogMessage =
                         $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                         "Allowing the connection based on the certificate's *issuer* which is trusted by the cluster. " +
-                        $"Registering the new certificate explicitly based on permissions of existing certificate '{issuer}'. Security Clearance: {AuthenticationStatus.ClusterAdmin}");
+                        $"Registering the new certificate explicitly based on permissions of existing certificate '{issuer}'. Security Clearance: {AuthenticationStatus.ClusterAdmin}";
+                    authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
                 }
 
-                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+                if (_authAuditLog.IsInfoEnabled)
+                {
+                    _authAuditLog.Info(authLogMessage);
+                }
             }
             else
             {
@@ -2941,6 +2968,50 @@ namespace Raven.Server
                     issuer = knownIssuer.SubjectName.Name + " - " + knownIssuer.Thumbprint;
                     return true;
                 }
+            }
+
+            return false;
+        }
+
+        private bool AreCertificateSansValid(X509Certificate2 cert)
+        {
+            var serverDomain = new Uri(ServerStore.GetNodeHttpServerUrl()).Host;
+            var sans = CertificateUtils.GetCertificateAlternativeNames(cert).ToList();
+            if (sans.Count == 0)
+            {
+                if (_authAuditLog.IsInfoEnabled)
+                {
+                    _authAuditLog.Info("Certificate does not contain any SAN.");
+                }
+
+                return false;
+            }
+
+            Regex regex;
+            foreach (var san in sans)
+            {
+                if (san.StartsWith("*."))
+                {
+                    var array = san.Split("*.");
+                    if (array.Length != 2)
+                    {
+                        if (_authAuditLog.IsInfoEnabled)
+                        {
+                            _authAuditLog.Info($"Certificate {cert.Thumbprint} contains invalid SAN {san}");
+                        }
+
+                        continue;
+                    }
+
+                    regex = new Regex(@"^[^.]+\." + Regex.Escape(array[1]) + "$", RegexOptions.IgnoreCase);
+                }
+                else
+                {
+                    regex = new Regex($"^{Regex.Escape(san)}$", RegexOptions.IgnoreCase);
+                }
+
+                if (regex.IsMatch(serverDomain))
+                    return true;
             }
 
             return false;
