@@ -203,7 +203,7 @@ namespace Raven.Server.Web.System
             databaseTopology.ReplicationFactor = Math.Min(databaseTopology.ReplicationFactor, clusterTopology.AllNodes.Count);
         }
 
-        private static void InitializeDatabaseTopology(ServerStore server, DatabaseTopology databaseTopology, ClusterTopology clusterTopology, int replicationFactor,
+        public static void InitializeDatabaseTopology(ServerStore server, DatabaseTopology databaseTopology, ClusterTopology clusterTopology, int replicationFactor,
             string clusterTransactionId)
         {
             Debug.Assert(databaseTopology != null);
