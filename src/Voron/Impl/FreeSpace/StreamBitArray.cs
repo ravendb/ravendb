@@ -40,6 +40,7 @@ using System.Linq;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace Voron.Impl.FreeSpace
 {
@@ -111,7 +112,8 @@ namespace Voron.Impl.FreeSpace
             {
                 1 => FirstSetBit(),
                 < BitsInWord => FindSmallRange(num),
-                _ => FindLargeRange(num)
+                < 64 => FindLargeRange<int>(num),
+                _ => FindLargeRange<long>(num)
             };
         }
 
@@ -181,31 +183,35 @@ namespace Voron.Impl.FreeSpace
             return null;
         }
 
-        private int? FindLargeRange(int num)
+        private unsafe int? FindLargeRange<T>(int num)
+            where T : unmanaged, INumber<T>
         {
             // finding sequences larger than 32 bits
             // the idea is that we look for sequences that bridge across words using leading/trailing zero counts
             var start = -1;
             var count = 0;
 
-            for (var i = 0; i < _inner.Length; i++)
+            int currentBitsInWord = sizeof(T) * 8;
+            var span = MemoryMarshal.Cast<int, T>(_inner);
+
+            for (var i = 0; i < span.Length; i++)
             {
-                int current = _inner[i];
-                if (current == 0)
+                T current = span[i];
+                if (current == T.Zero)
                 {
                     start = -1;
                     count = 0;
                     continue;
                 }
 
-                if (current == -1)
+                if (current == -T.One)
                 {
                     if (start == -1)
                     {
-                        start = i * BitsInWord;
+                        start = i * currentBitsInWord;
                     }
 
-                    count += BitsInWord;
+                    count += currentBitsInWord;
                     if (count >= num)
                         return start;
 
@@ -219,13 +225,13 @@ namespace Voron.Impl.FreeSpace
                 }
                 else
                 {
-                    if (count + (TotalBits - i * BitsInWord) < num)
+                    if (count + (TotalBits - i * currentBitsInWord) < num)
                     {
                         // impossible to satisfy the continuous bit requirement
                         return null;
                     }
 
-                    if (count + 31 < num)
+                    if (count + (currentBitsInWord - 1) < num)
                     {
                         // impossible to satisfy the continuous bit requirement in this word
                         CheckTrailingSequence();
@@ -233,7 +239,12 @@ namespace Voron.Impl.FreeSpace
                     }
 
                     // we look at the beginning of the word
-                    int numberOfSetBits = BitOperations.TrailingZeroCount(~current);
+                    int numberOfSetBits = current switch
+                    {
+                        int integer => BitOperations.TrailingZeroCount(~integer),
+                        long l => BitOperations.TrailingZeroCount(~l),
+                        _ => throw new NotSupportedException()
+                    };
                     count += numberOfSetBits;
                     if (count >= num)
                         return start;
@@ -244,7 +255,12 @@ namespace Voron.Impl.FreeSpace
 
                 void CheckTrailingSequence()
                 {
-                    int numberOfSetBits = BitOperations.LeadingZeroCount((uint)~current);
+                    int numberOfSetBits = current switch
+                    {
+                        int integer => BitOperations.LeadingZeroCount(~(uint)integer),
+                        long l => BitOperations.LeadingZeroCount(~(ulong)l),
+                        _ => throw new NotSupportedException()
+                    };
                     if (numberOfSetBits == 0)
                     {
                         start = -1;
@@ -253,7 +269,7 @@ namespace Voron.Impl.FreeSpace
                     else
                     {
                         // Calculate the starting bit position in the array
-                        start = (i * BitsInWord) + (BitsInWord - numberOfSetBits);
+                        start = (i * currentBitsInWord) + (currentBitsInWord - numberOfSetBits);
                         count = numberOfSetBits;
                     }
                 }
@@ -354,6 +370,11 @@ namespace Voron.Impl.FreeSpace
                 [nameof(SetCount)] = SetCount, 
                 ["Data"] = new DynamicJsonArray(collection) 
             };
+        }
+
+        public override string ToString()
+        {
+            return string.Join(", ", _inner);
         }
     }
 }
