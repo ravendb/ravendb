@@ -1,11 +1,13 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
@@ -14,11 +16,13 @@ namespace Raven.Server.Documents
     {
         private readonly DocumentDatabase _documentDatabase;
         private readonly RevisionsBinConfiguration _configuration;
+        private readonly long _batchSize;
 
         public RevisionsBinCleaner(DocumentDatabase documentDatabase, RevisionsBinConfiguration configuration) : base(documentDatabase.Name, documentDatabase.DatabaseShutdown)
         {
             _documentDatabase = documentDatabase;
             _configuration = configuration;
+            _batchSize = _documentDatabase.Is32Bits ? 1024 : 10 * 1024;
         }
 
         protected override async Task DoWork()
@@ -33,7 +37,7 @@ namespace Raven.Server.Documents
             try
             {
                 var config = record.RevisionsBin;
-                if (config == null || config.Disabled || NodeIsResponsible(record.Topology, nodeTag) == false)
+                if (config == null || config.Disabled || ShouldHandleWorkOnCurrentNode(record.Topology, nodeTag) == false)
                 {
                     oldCleaner?.Dispose();
                     return null;
@@ -64,8 +68,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static bool NodeIsResponsible(DatabaseTopology topology, string nodeTag) => topology.Members[0] == nodeTag;
-        
+        private static bool ShouldHandleWorkOnCurrentNode(DatabaseTopology topology, string nodeTag) => string.Equals(topology.Members.FirstOrDefault(), nodeTag, StringComparison.OrdinalIgnoreCase);
+
 
         internal async Task<long> ExecuteCleanup(RevisionsBinConfiguration config = null)
         {
@@ -75,26 +79,37 @@ namespace Raven.Server.Documents
 
             if (config == null || 
                 config.MinimumEntriesAgeToKeep == null || 
-                config.MinimumEntriesAgeToKeep.Value == TimeSpan.MaxValue ||
-                config.MaxItemsToProcess <= 0 || 
+                config.MinimumEntriesAgeToKeep.Value == TimeSpan.MaxValue || 
                 CancellationToken.IsCancellationRequested)
                 return numberOfDeletedEntries;
 
             try
             {
                 var before = _documentDatabase.Time.GetUtcNow() - config.MinimumEntriesAgeToKeep.Value;
-                var maxReadsPerBatch = config.MaxItemsToProcess;
 
                 while (CancellationToken.IsCancellationRequested == false)
                 {
-                    var command = new RevisionsStorage.RevisionsBinCleanMergedCommand(before, maxReadsPerBatch);
+                    long newLastEtag;
+                    List<string> ids;
+                    using(_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var oldLastEtag = RevisionsStorage.ReadLastRevisionsBinCleanerLastEtag(ctx.Transaction.InnerTransaction);
+                        newLastEtag = oldLastEtag;
+                        ids = _documentDatabase.DocumentsStorage.RevisionsStorage
+                            .GetRevisionsBinEntriesIds(ctx, before, DocumentFields.Id | DocumentFields.ChangeVector, _batchSize, ref newLastEtag);
+
+                        if (newLastEtag <= oldLastEtag)
+                            break;
+                    }
+
+                    var command = new RevisionsStorage.RevisionsBinCleanMergedCommand(ids, newLastEtag);
                     await _documentDatabase.TxMerger.Enqueue(command);
 
                     var res = command.Result;
-
                     numberOfDeletedEntries += res.DeletedEntries;
-                    
-                     if (res.HasMore == false)
+
+                    if (ids.Count < _batchSize && res.CanContinueTransaction)
                         break;
                 }
             }
@@ -107,9 +122,5 @@ namespace Raven.Server.Documents
             return numberOfDeletedEntries;
         }
 
-        public class RevisionsBinCleanerState
-        {
-            public long LastEtag;
-        }
     }
 }

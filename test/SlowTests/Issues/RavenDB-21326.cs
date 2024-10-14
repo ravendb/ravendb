@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    RevisionsStorage.SetLastRevisionsBinCleanerState(context, 1234567890123456789);
+                    RevisionsStorage.SetLastRevisionsBinCleanerLastEtag(context, 1234567890123456789);
                     tx.Commit();
                 }
 
@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var state = RevisionsStorage.ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
+                    var state = RevisionsStorage.ReadLastRevisionsBinCleanerLastEtag(context.Transaction.InnerTransaction);
 
                     Assert.Equal(1234567890123456789, state);
                 }
@@ -171,7 +171,6 @@ namespace SlowTests.Issues
             
             var config = new RevisionsBinConfiguration
             {
-                MaxItemsToProcess = 3, // max deleted document we pass on in batch
                 MinimumEntriesAgeToKeep = TimeSpan.Zero,
                 RefreshFrequency = TimeSpan.FromMilliseconds(200)
             };
@@ -342,7 +341,7 @@ namespace SlowTests.Issues
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var state = RevisionsStorage.ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
+                var state = RevisionsStorage.ReadLastRevisionsBinCleanerLastEtag(context.Transaction.InnerTransaction);
                 Assert.Equal(lastEtag5, state);
             }
 
@@ -353,7 +352,7 @@ namespace SlowTests.Issues
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var state = RevisionsStorage.ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
+                var state = RevisionsStorage.ReadLastRevisionsBinCleanerLastEtag(context.Transaction.InnerTransaction);
                 Assert.Equal(lastEtag9, state);
             }
         }
@@ -422,7 +421,7 @@ namespace SlowTests.Issues
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var state = RevisionsStorage.ReadLastRevisionsBinCleanerState(context.Transaction.InnerTransaction);
+                var state = RevisionsStorage.ReadLastRevisionsBinCleanerLastEtag(context.Transaction.InnerTransaction);
                 Assert.Equal(lastEtag0, state);
             }
 

@@ -2478,54 +2478,54 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public IEnumerable<Document> GetRevisionsBinEntries(DocumentsOperationContext context, DateTime before, DocumentFields fields, RevisionsBinCleanerState state)
+        public List<string> GetRevisionsBinEntriesIds(DocumentsOperationContext context, DateTime before, DocumentFields fields, long batchSize, ref long lastEtag)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var ids = new List<String>();
+            var count = 0L;
 
-            var ended = false;
-            while (ended == false)
+            using (GetEtagAsSlice(context, lastEtag, out var startSlice))
             {
-                ended = true;
+                var enumerator = new TransactionForgetAboutStorageIdEnumerator(
+                    table.SeekForwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], startSlice, 0).GetEnumerator(), context);
 
-                using (GetEtagAsSlice(context, state.LastEtag, out var startSlice))
+                foreach (var seekResult in enumerator)
                 {
-                    var enumerator = new TransactionForgetAboutStorageIdEnumerator(
-                        table.SeekForwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], startSlice, 0).GetEnumerator(), context);
+                    var tvr = seekResult.Result;
+                    var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr.Reader);
+                    lastEtag = etag;
 
-                    foreach (var seekResult in enumerator)
+                    if (etag == NotDeletedRevisionMarker)
                     {
-                        var tvr = seekResult.Result;
-                        var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr.Reader);
-                        if (etag == NotDeletedRevisionMarker)
+                        continue;
+                    }
+
+                    using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr.Reader, out Slice lowerId))
+                    {
+                        if (IsRevisionsBinEntry(context, table, lowerId, etag) == false) // if its not last - continue
                         {
                             continue;
                         }
+                    }
 
-                        state.LastEtag = etag;
-
-                        using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr.Reader, out Slice lowerId))
-                        {
-                            if (IsRevisionsBinEntry(context, table, lowerId, etag) == false) // if its not last - continue
-                            {
-                                continue;
-                            }
-                        }
-
-                        var deleteRevision = TableValueToRevision(context, ref tvr.Reader, fields);
-                        if (deleteRevision.LastModified >= before)
-                        {
-                            yield break;
-                        }
-
-                        yield return deleteRevision;
-                        ended = false;
+                    var deleteRevision = TableValueToRevision(context, ref tvr.Reader, fields);
+                    if (deleteRevision.LastModified >= before)
+                    {
                         break;
                     }
+
+                    ids.Add(deleteRevision.Id);
+
+                    count++;
+                    if (count >= batchSize)
+                        break;
                 }
             }
+
+            return ids;
         }
 
-        public static long ReadLastRevisionsBinCleanerState(Transaction tx)
+        public static long ReadLastRevisionsBinCleanerLastEtag(Transaction tx)
         {
             if (tx == null)
                 throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
@@ -2549,7 +2549,7 @@ namespace Raven.Server.Documents.Revisions
             return readResult.Reader.ReadLittleEndianInt64();
         }
 
-        public static unsafe void SetLastRevisionsBinCleanerState(DocumentsOperationContext context, long etag)
+        public static unsafe void SetLastRevisionsBinCleanerLastEtag(DocumentsOperationContext context, long etag)
         {
             var tree = context.Transaction.InnerTransaction.CreateTree(GlobalTreeSlice);
             using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))

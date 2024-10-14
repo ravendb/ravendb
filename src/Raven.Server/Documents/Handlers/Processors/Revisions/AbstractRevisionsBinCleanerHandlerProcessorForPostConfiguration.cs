@@ -23,9 +23,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             var database = RequestHandler.DatabaseName;
 
             var config = JsonDeserializationCluster.RevisionsBinConfiguration(configurationJson);
-            if (config.MaxItemsToProcess <= 0)
-                throw new InvalidOperationException(
-                    $"RevisionsBinConfiguration.MaxItemsToProcess for database '{database}' must be greater than 0.");
 
             var cmd = new RevisionsBinConfigurationCommand(config, database, raftRequestId);
             return ServerStore.SendToLeaderAsync(cmd);

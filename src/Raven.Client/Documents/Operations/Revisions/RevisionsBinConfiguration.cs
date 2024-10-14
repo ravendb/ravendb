@@ -34,21 +34,11 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </value>
         public TimeSpan RefreshFrequency { get; set; } = TimeSpan.FromMinutes(5);
 
-        /// <summary>
-        /// Gets or sets the maximum number of items to process (read) in one cleaning cycle.
-        /// </summary>
-        /// <value>
-        /// The maximum number of revisions to process during a single execution of the bin cleaner.
-        /// The default value is 16,384.
-        /// </value>
-        public int MaxItemsToProcess { get; set; } = 16 * 1024;
-
         private bool Equals(RevisionsBinConfiguration other)
         {
             return Disabled == other.Disabled &&
                    MinimumEntriesAgeToKeep == other.MinimumEntriesAgeToKeep &&
-                   RefreshFrequency == other.RefreshFrequency &&
-                   MaxItemsToProcess == other.MaxItemsToProcess;
+                   RefreshFrequency == other.RefreshFrequency;
         }
 
         public override bool Equals(object obj)
@@ -69,7 +59,6 @@ namespace Raven.Client.Documents.Operations.Revisions
                 var hashCode = Disabled.GetHashCode();
                 hashCode = (hashCode * 397) ^ (MinimumEntriesAgeToKeep?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ RefreshFrequency.GetHashCode();
-                hashCode = (hashCode * 397) ^ MaxItemsToProcess.GetHashCode();
                 return hashCode;
             }
         }
@@ -80,8 +69,7 @@ namespace Raven.Client.Documents.Operations.Revisions
             {
                 [nameof(Disabled)] = Disabled,
                 [nameof(MinimumEntriesAgeToKeep)] = MinimumEntriesAgeToKeep,
-                [nameof(RefreshFrequency)] = RefreshFrequency,
-                [nameof(MaxItemsToProcess)] = MaxItemsToProcess,
+                [nameof(RefreshFrequency)] = RefreshFrequency
             };
         }
 
