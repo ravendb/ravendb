@@ -283,8 +283,7 @@ namespace SlowTests.Server.Replication
                     session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
-
-                    await WaitForDocumentInClusterAsync<User>(cluster.Nodes, databaseName, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
+                    await Cluster.WaitForDocumentOnAllNodesAsync<User>(store, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
                 }
 
                 // wait for CV to merge after replication
