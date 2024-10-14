@@ -366,7 +366,7 @@ namespace Voron.Impl.FreeSpace
                 {
                     var stream = it.CreateReaderForCurrent();
                     var current = new StreamBitArray(stream);
-                    count += current.GetNumberOfSetBits();
+                    count += current.SetCount;
 
                 } while (it.MoveNext());
 

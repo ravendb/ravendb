@@ -35,7 +35,6 @@ using Sparrow;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Numerics;
 using Sparrow.Server;
 
 namespace Voron.Impl.FreeSpace
@@ -109,18 +108,6 @@ namespace Voron.Impl.FreeSpace
         public bool Get(int index)
         {
             return (_inner[index >> 5] & (1 << (index & 31))) != 0;
-        }
-
-        public int GetNumberOfSetBits()
-        {
-            var count = 0;
-
-            for (int i = 0; i < _inner.Length; i++)
-            {
-                count += BitOperations.PopCount((uint)_inner[i]);
-            }
-
-            return count;
         }
 
         public void Set(int index, bool value)
