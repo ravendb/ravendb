@@ -17,6 +17,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Enumerators;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -30,7 +31,7 @@ using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
-using static Raven.Server.Documents.Schemas.Collections;
+using static Raven.Server.Documents.RevisionsBinCleaner;
 using static Raven.Server.Documents.Schemas.Revisions;
 using static Voron.Data.Tables.Table;
 using Constants = Raven.Client.Constants;
@@ -2475,6 +2476,84 @@ namespace Raven.Server.Documents.Revisions
 
                 yield return TableValueToRevision(context, ref tvr.Result.Reader);
             }
+        }
+
+        public List<string> GetRevisionsBinEntriesIds(DocumentsOperationContext context, DateTime before, DocumentFields fields, long batchSize, ref long lastEtag)
+        {
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var ids = new List<String>();
+            var count = 0L;
+
+            using (GetEtagAsSlice(context, lastEtag, out var startSlice))
+            {
+                var enumerator = new TransactionForgetAboutStorageIdEnumerator(
+                    table.SeekForwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], startSlice, 0).GetEnumerator(), context);
+
+                foreach (var seekResult in enumerator)
+                {
+                    var tvr = seekResult.Result;
+                    var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr.Reader);
+                    lastEtag = etag;
+
+                    if (etag == NotDeletedRevisionMarker)
+                    {
+                        continue;
+                    }
+
+                    using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr.Reader, out Slice lowerId))
+                    {
+                        if (IsRevisionsBinEntry(context, table, lowerId, etag) == false) // if its not last - continue
+                        {
+                            continue;
+                        }
+                    }
+
+                    var deleteRevision = TableValueToRevision(context, ref tvr.Reader, fields);
+                    if (deleteRevision.LastModified >= before)
+                    {
+                        break;
+                    }
+
+                    ids.Add(deleteRevision.Id);
+
+                    count++;
+                    if (count >= batchSize)
+                        break;
+                }
+            }
+
+            return ids;
+        }
+
+        public static long ReadLastRevisionsBinCleanerLastEtag(Transaction tx)
+        {
+            if (tx == null)
+                throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
+            var tree = tx.ReadTree(DocumentsStorage.GlobalTreeSlice);
+            if (tree == null)
+            {
+                // When we start passing the revisions (forward - from the oldest) on DeleteRevisionEtagSlice index,
+                // we want to skip the revisions with key 0, because they are not relevant (not 'Delete Revisions').
+                // so we start from etag (key) 1.
+                return 1;
+            }
+            var readResult = tree.Read(DocumentsStorage.RevisionsBinCleanerLastEtag);
+            if (readResult == null)
+            {
+                // When we start passing the revisions (forward - from the oldest) on DeleteRevisionEtagSlice index,
+                // we want to skip the revisions with key 0, because they are not relevant (not 'Delete Revisions').
+                // so we start from etag (key) 1.
+                return 1;
+            }
+
+            return readResult.Reader.ReadLittleEndianInt64();
+        }
+
+        public static unsafe void SetLastRevisionsBinCleanerLastEtag(DocumentsOperationContext context, long etag)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree(GlobalTreeSlice);
+            using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
+                tree.Add(RevisionsBinCleanerLastEtag, etagSlice);
         }
 
         private bool IsRevisionsBinEntry(DocumentsOperationContext context, Table table, Slice lowerId, long revisionsBinEntryEtag)

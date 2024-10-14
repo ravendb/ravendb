@@ -299,6 +299,8 @@ namespace Raven.Server.Documents
 
         public TombstoneCleaner TombstoneCleaner { get; private set; }
 
+        public RevisionsBinCleaner RevisionsBinCleaner { get; set; }
+
         public DocumentsChanges Changes { get; }
 
         public IoChangesNotifications IoChanges { get; }
@@ -1154,6 +1156,11 @@ namespace Raven.Server.Documents
             {
                 TombstoneCleaner?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing RevisionsBinCleaner");
+            exceptionAggregator.Execute(() =>
+            {
+                RevisionsBinCleaner?.Dispose();
+            });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TombstoneCleaner");
         }
 
@@ -1747,6 +1754,7 @@ namespace Raven.Server.Documents
             InitializeCompressionFromDatabaseRecord(record);
             DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(record);
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
+            RevisionsBinCleaner = RevisionsBinCleaner.LoadConfigurations(this, record, RevisionsBinCleaner, ServerStore.NodeTag);
             DataArchivist = DataArchivist.LoadConfiguration(this, record, DataArchivist);
             TimeSeriesPolicyRunner = TimeSeriesPolicyRunner.LoadConfigurations(this, record, TimeSeriesPolicyRunner);
             UpdateCompressionConfigurationFromDatabaseRecord(record);

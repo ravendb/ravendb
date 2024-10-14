@@ -80,7 +80,8 @@ namespace Raven.Server.Documents
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
         private static readonly Slice LastCompletedClusterTransactionIndexSlice;
-        private static readonly Slice GlobalTreeSlice;
+        public static readonly Slice RevisionsBinCleanerLastEtag;
+        public static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
         private readonly Action<LogMode, string> _addToInitLog;
@@ -105,6 +106,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
                 Slice.From(ctx, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
                 Slice.From(ctx, "LastCompletedClusterTransactionIndex", ByteStringType.Immutable, out LastCompletedClusterTransactionIndexSlice);
+                Slice.From(ctx, "LastRevisionsBinCleanerState", ByteStringType.Immutable, out RevisionsBinCleanerLastEtag);
                 Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
                 Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
                 Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
