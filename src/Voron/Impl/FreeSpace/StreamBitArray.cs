@@ -42,7 +42,6 @@ using Sparrow.Server;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
 
 namespace Voron.Impl.FreeSpace
 {
@@ -295,27 +294,84 @@ namespace Voron.Impl.FreeSpace
 
         public int GetEndRangeCount()
         {
-            int c = 0;
-            for (int i = _inner.Length * 32 -1; i >= 0; i--)
+            var count = 0;
+            var span = MemoryMarshal.Cast<int, long>(_inner);
+
+            for (var i = span.Length - 1; i >= 0 ; i--)
             {
-                if (Get(i) == false)
+                var current = span[i];
+                if (current == 0)
                     break;
-                c++;
+
+                if (current == -1)
+                {
+                    count += BitsInWord * 2;
+                    continue;
+                }
+
+                int numberOfSetBits = BitOperations.LeadingZeroCount(~(ulong)current);
+                count += numberOfSetBits;
+
+                // we won't find any more continuous bits after this.
+                break;
             }
-            return c;
+
+            return count;
+        }
+
+        public int GetStartRangeCount()
+        {
+            var count = 0;
+            var span = MemoryMarshal.Cast<int, long>(_inner);
+
+            foreach (var current in span)
+            {
+                if (current == 0)
+                    break;
+
+                if (current == -1)
+                {
+                    count += BitsInWord * 2;
+                    continue;
+                }
+
+                int numberOfSetBits = BitOperations.TrailingZeroCount(~current);
+                count += numberOfSetBits;
+
+                // we won't find any more continuous bits after this.
+                return count;
+            }
+
+            return count;
         }
 
         public bool HasStartRangeCount(int max)
         {
-            int c = 0;
-            var len = _inner.Length*32;
-            for (int i = 0; i < len && c < max; i++)
+            var count = 0;
+            var span = MemoryMarshal.Cast<int, long>(_inner);
+
+            foreach (var current in span)
             {
-                if (Get(i) == false)
+                if (current == 0)
                     break;
-                c++;
+
+                if (current == -1)
+                {
+                    count += BitsInWord * 2;
+                    if (count >= max)
+                        return true;
+
+                    continue;
+                }
+
+                int numberOfSetBits = BitOperations.TrailingZeroCount(~current);
+                count += numberOfSetBits;
+
+                // we won't find any more continuous bits after this.
+                return count >= max;
             }
-            return c == max;
+
+            return false;
         }
 
         public Stream ToStream()

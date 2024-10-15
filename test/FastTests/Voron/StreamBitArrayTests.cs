@@ -158,6 +158,94 @@ namespace FastTests.Voron
             }
         }
 
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineDataWithRandomSeed(0, 2)]
+        [InlineDataWithRandomSeed(2, 32)]
+        [InlineDataWithRandomSeed(32, 64)]
+        [InlineDataWithRandomSeed(64, 2048)]
+        [InlineDataWithRandomSeed(0, 2048)]
+        public void VerifyEndRangeCountWithRandomMinMaxInput(int minContinuous, int maxContinuous, int seed)
+        {
+            var random = new Random(seed);
+            var sba = new StreamBitArray();
+
+            int i = 2047;
+
+            while (i >= 0)
+            {
+                int blockSize = random.Next(minContinuous, maxContinuous + 1);
+                bool value = random.Next(2) == 1;
+
+                for (int k = 0; k < blockSize && i >= 0; k++, i--)
+                {
+                    sba.Set(i, value);
+                }
+            }
+
+            var result1 = GetEndRangeCountSlow(sba);
+            var result2 = sba.GetEndRangeCount();
+            Assert.Equal(result1, result2);
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineDataWithRandomSeed(0, 2)]
+        [InlineDataWithRandomSeed(2, 32)]
+        [InlineDataWithRandomSeed(32, 64)]
+        [InlineDataWithRandomSeed(64, 2048)]
+        [InlineDataWithRandomSeed(0, 2048)]
+        public void VerifyStartRangeCountWithRandomMinMaxInput(int minContinuous, int maxContinuous, int seed)
+        {
+            var random = new Random(seed);
+            var sba = new StreamBitArray();
+
+            int i = 0;
+            while (i < 2048)
+            {
+                int blockSize = random.Next(minContinuous, maxContinuous + 1);
+                bool value = random.Next(2) == 1;
+
+                for (int k = 0; k < blockSize && i < 2048; k++, i++)
+                {
+                    sba.Set(i, value);
+                }
+            }
+
+            var result1 = GetStartRangeCount(sba);
+            var result2 = sba.GetStartRangeCount();
+            Assert.Equal(result1, result2);
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineDataWithRandomSeed(0, 2)]
+        [InlineDataWithRandomSeed(2, 32)]
+        [InlineDataWithRandomSeed(32, 64)]
+        [InlineDataWithRandomSeed(64, 2048)]
+        [InlineDataWithRandomSeed(0, 2048)]
+        public void VerifyHasStartRangeCountWithRandomMinMaxInput(int minContinuous, int maxContinuous, int seed)
+        {
+            var random = new Random(seed);
+            var sba = new StreamBitArray();
+
+            int i = 0;
+            while (i < 2048)
+            {
+                int blockSize = random.Next(minContinuous, maxContinuous + 1);
+                bool value = random.Next(2) == 1;
+
+                for (int k = 0; k < blockSize && i < 2048; k++, i++)
+                {
+                    sba.Set(i, value);
+                }
+            }
+
+            for (int j = 1; j <= 2048; j += 1)
+            {
+                var result1 = HasStartRangeCount(sba, j);
+                var result2 = sba.HasStartRangeCount(j);
+                Assert.Equal(result1, result2);
+            }
+        }
+
         private static int? GetContinuousRangeSlow(StreamBitArray current, int num)
         {
             var start = -1;
@@ -182,6 +270,48 @@ namespace FastTests.Voron
             }
 
             return null;
+        }
+
+        public int GetEndRangeCountSlow(StreamBitArray current)
+        {
+            int c = 0;
+
+            for (int i = 2048 - 1; i >= 0; i--)
+            {
+                if (current.Get(i) == false)
+                    break;
+                c++;
+            }
+
+            return c;
+        }
+
+        public int GetStartRangeCount(StreamBitArray current)
+        {
+            int c = 0;
+
+            for (int i = 0; i < 2048; i++)
+            {
+                if (current.Get(i) == false)
+                    break;
+                c++;
+            }
+
+            return c;
+        }
+
+        public bool HasStartRangeCount(StreamBitArray current, int max)
+        {
+            int c = 0;
+
+            for (int i = 0; i < 2048 && c < max; i++)
+            {
+                if (current.Get(i) == false)
+                    break;
+                c++;
+            }
+
+            return c == max;
         }
     }
 }
