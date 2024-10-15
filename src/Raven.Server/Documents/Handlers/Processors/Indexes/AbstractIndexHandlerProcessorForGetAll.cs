@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Http;
@@ -19,29 +20,29 @@ internal abstract class AbstractIndexHandlerProcessorForGetAll<TRequestHandler, 
 
     protected override bool SupportsCurrentNode => true;
 
-    protected string GetName()
+    protected StringValues GetNames()
     {
-        return RequestHandler.GetStringQueryString("name", required: false);
+        return RequestHandler.GetStringValuesQueryString("name", required: false);
     }
 
-    protected abstract IndexDefinition[] GetIndexDefinitions(string indexName, int start, int pageSize);
+    protected abstract IndexDefinition[] GetIndexDefinitions(StringValues indexNames, int start, int pageSize);
 
     protected override ValueTask HandleCurrentNodeAsync()
     {
-        var name = GetName();
+        var names = GetNames();
         var start = RequestHandler.GetStart();
         var pageSize = RequestHandler.GetPageSize();
 
-        var indexDefinitions = GetIndexDefinitions(name, start, pageSize);
+        var indexDefinitions = GetIndexDefinitions(names, start, pageSize);
 
         return WriteResultAsync(indexDefinitions);
     }
 
     protected override RavenCommand<IndexDefinition[]> CreateCommandForNode(string nodeTag)
     {
-        var name = GetName();
-        if (name != null)
-            return new GetIndexesOperation.GetIndexesCommand(name, nodeTag);
+        var names = GetNames();
+        if (names.Count > 0)
+            return new GetIndexesOperation.GetIndexesCommand(names.ToArray(), nodeTag);
 
         return new GetIndexesOperation.GetIndexesCommand(RequestHandler.GetStart(), RequestHandler.GetPageSize(), nodeTag);
     }

@@ -57,6 +57,29 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        public async Task<AttachmentResult> GetRangeAsync(string documentId, string name, long? from, long? to, CancellationToken token = default)
+        {
+            using (Session.AsyncTaskHolder())
+            {
+                var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null, from, to);
+                Session.IncrementRequestCount();
+                return await Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<AttachmentResult> GetRangeAsync(object entity, string name, long? from, long? to, CancellationToken token = default)
+        {
+            using (Session.AsyncTaskHolder())
+            {
+                if (Session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                    ThrowEntityNotInSessionOrMissingId(entity);
+
+                var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null, from, to);
+                Session.IncrementRequestCount();
+                return await Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token).ConfigureAwait(false);
+            }
+        }
+
         public Task<IEnumerator<AttachmentEnumeratorResult>> GetAsync(IEnumerable<AttachmentRequest> attachments, CancellationToken token = default)
         {
             var operation = new GetAttachmentsOperation(attachments, AttachmentType.Document);

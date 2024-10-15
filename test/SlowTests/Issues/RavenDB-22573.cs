@@ -1,11 +1,9 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static Raven.Server.Utils.BackupUtils;
 
 namespace SlowTests.Issues
 {

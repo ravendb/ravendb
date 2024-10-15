@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Alert, Card, CardBody, Col, Form, Row } from "reactstrap";
+import { Card, CardBody, Col, Form, Row } from "reactstrap";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormInput, FormSwitch } from "components/common/Form";
@@ -26,6 +26,7 @@ import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUti
 import moment = require("moment");
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import RichAlert from "components/common/RichAlert";
 
 export default function DocumentExpiration() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -162,14 +163,14 @@ export default function DocumentExpiration() {
                                                     addon="seconds"
                                                 />
                                                 {isLimitWarningVisible && (
-                                                    <Alert color="warning" className="mt-3">
-                                                        <Icon icon="warning" /> Your current license does not allow a
-                                                        frequency higher than {minPeriodForExpirationInHours} hours (
+                                                    <RichAlert variant="warning" className="mt-3">
+                                                        Your current license does not allow a frequency higher than{" "}
+                                                        {minPeriodForExpirationInHours} hours (
                                                         {moment
                                                             .duration(minPeriodForExpirationInHours, "hours")
                                                             .asSeconds()}{" "}
                                                         seconds)
-                                                    </Alert>
+                                                    </RichAlert>
                                                 )}
                                             </div>
                                         </div>

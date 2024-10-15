@@ -11,7 +11,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;
@@ -75,7 +74,7 @@ internal abstract class AbstractDatabaseOperationQueriesHandlerProcessor : Abstr
             description,
             details,
             onProgress => operation(RequestHandler.Database.QueryRunner, options, onProgress, token),
-            token);
+            token: token);
 
         _ = task.ContinueWith(_ =>
         {

@@ -10,11 +10,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
@@ -1523,6 +1521,9 @@ namespace Raven.Server.Documents.Indexes
         {
             if (index.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
                 throw new InvalidOperationException($"Index {index.Name} is already a side-by-side running index.");
+            
+            if (index.Type.IsAuto())
+                throw new NotSupportedException("Side by side index reset is not supported for auto indexes.");
             
             try
             {

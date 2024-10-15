@@ -1,4 +1,4 @@
-﻿import { Alert, Badge, Button, Form, Label } from "reactstrap";
+﻿import { Badge, Button, Form, Label } from "reactstrap";
 import { FormInput } from "components/common/Form";
 import React from "react";
 import { Control, SubmitHandler, UseFormTrigger, UseFormWatch, useFieldArray, useForm } from "react-hook-form";
@@ -13,6 +13,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import ConnectionTestError from "../../../../../common/connectionTests/ConnectionTestError";
 import { yupObjectSchema } from "components/utils/yupUtils";
+import RichAlert from "components/common/RichAlert";
 
 type FormData = ConnectionFormData<RavenConnection>;
 
@@ -173,11 +174,7 @@ function DiscoveryUrl({ idx, control, isDeleteButtonVisible, trigger, watch, onD
 
 function AboutError({ isHTTPSuccess }: { isHTTPSuccess: boolean }) {
     return (
-        <Alert color="info">
-            <Badge color="info" pill className="mb-2">
-                <Icon icon="info" />
-                About this error
-            </Badge>
+        <RichAlert variant="info" title="About this error">
             <p>
                 Each RavenDB server has both HTTP and TCP endpoints. While the first one is used for system management
                 and client-server rest request, the second is used for inter-server and advanced client-server
@@ -203,7 +200,7 @@ function AboutError({ isHTTPSuccess }: { isHTTPSuccess: boolean }) {
                     <li>There are no network configurations that prevent communication</li>
                 </ul>
             </div>
-        </Alert>
+        </RichAlert>
     );
 }
 

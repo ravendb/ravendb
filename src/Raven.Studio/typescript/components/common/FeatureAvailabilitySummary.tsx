@@ -2,13 +2,14 @@ import classNames from "classnames";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { uniqueId } from "lodash";
-import React, { ReactNode } from "react";
-import { Alert, Button, Table, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
+import { ReactNode } from "react";
+import { Button, Table, UncontrolledPopover, UncontrolledTooltip } from "reactstrap";
 import IconName from "typings/server/icons";
 import { licenseSelectors } from "./shell/licenseSlice";
 import { Icon } from "./Icon";
 import "./FeatureAvailabilitySummary.scss";
 import { AccordionItemWrapper } from "./AboutView";
+import RichAlert from "components/common/RichAlert";
 
 export type AvailabilityValue = boolean | number | string;
 
@@ -51,11 +52,13 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
     return (
         <>
             {currentLicense === "None" && (
-                <Alert color="danger" className="text-center mb-4">
-                    No license detected, you are using RavenDB using <strong>AGPL v3 License</strong>.
+                <RichAlert variant="danger" className="mb-4">
+                    No license detected.
+                    <br />
+                    You are using RavenDB using <strong>AGPL v3 License</strong>.
                     <br />
                     Community license feature restrictions are applied.
-                </Alert>
+                </RichAlert>
             )}
             <div className="feature-availability-table">
                 <Table>

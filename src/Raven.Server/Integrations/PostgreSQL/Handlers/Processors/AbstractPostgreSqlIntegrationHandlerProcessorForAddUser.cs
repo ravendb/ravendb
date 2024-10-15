@@ -13,7 +13,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
 

@@ -24,7 +24,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             route: "databases/indexes",
             moduleId: bridgeToReact(IndexesPage, "shardedView"),
             css: 'icon-list-of-indexes',
-            dynamicHash: appUrls.indexes,
+            dynamicHash: appUrls.indexes(null, false, false),
             search: {
                 innerActions: [
                     { name: "Set priority", alternativeNames: ["Set low priority", "Set normal priority", "Set high priority"] },
@@ -33,8 +33,22 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
                     { name: "Delete index", alternativeNames: ["Remove index"] },
                     { name: "Edit index" },
                     { name: "Reset index (rebuild)", alternativeNames: ["Reset in place", "Reset side by side"] }, 
+                    { name: "Export indexes" }
                 ],
             },
+        }),
+        new leafMenuItem({
+            title: "List of Indexes",
+            nav: false,
+            shardingMode: "allShards",
+            route: "databases/indexes",
+            moduleId: bridgeToReact(IndexesPage, "shardedView"),
+            css: 'icon-index-import',
+            itemRouteToHighlight: 'databases/indexes',
+            dynamicHash: appUrls.indexes(null, false, true),
+            search: {
+                overrideTitle: "Import indexes",
+            }
         }),
         new leafMenuItem({
             route: 'databases/indexes/performance',
@@ -127,6 +141,6 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
     ];
 
     return new intermediateMenuItem("Indexes", indexesItems, 'icon-indexing', {
-        dynamicHash: appUrls.indexes
+        dynamicHash: appUrls.indexes(null, false, false)
     });
 }

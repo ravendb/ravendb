@@ -11,7 +11,7 @@ import messagePublisher = require("common/messagePublisher");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
 import indexAceAutoCompleteProvider = require("models/database/index/indexAceAutoCompleteProvider");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
-import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
+import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionsCommand");
 import detectIndexTypeCommand = require("commands/database/index/detectIndexTypeCommand");
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import getIndexFieldsFromMapCommand = require("commands/database/index/getIndexFieldsFromMapCommand");
@@ -93,7 +93,7 @@ class editIndex extends shardViewModelBase {
     private indexesNames = ko.observableArray<string>();
     queryUrl = ko.observable<string>();
     termsUrl = ko.observable<string>();
-    indexesUrl = ko.pureComputed(() => this.appUrls.indexes());
+    indexesUrl = ko.pureComputed(() => this.appUrls.indexes(null, null, false)());
     
     selectedSourcePreview = ko.observable<additionalSource>();
     additionalSourcePreviewHtml: KnockoutComputed<string>;
@@ -1083,7 +1083,7 @@ class editIndex extends shardViewModelBase {
             .execute()
             .then((typeInfo) => {
                 indexDto.SourceType = typeInfo.IndexSourceType;
-                return new saveIndexDefinitionCommand(indexDto, typeInfo.IndexType === "JavaScriptMap" || typeInfo.IndexType === "JavaScriptMapReduce", db)
+                return new saveIndexDefinitionCommand([indexDto], IndexUtils.isJavaScriptIndex(typeInfo.IndexType), db)
                     .execute()
                     .done(() => {
                         this.resetDirtyFlag();
@@ -1099,7 +1099,7 @@ class editIndex extends shardViewModelBase {
     }
     
     private confirmAfterMergeDeletion(db: database, mergedIndexName: string, toDelete: string[]) {
-        return new getIndexesDefinitionsCommand(db, 0, 1024 * 1024)
+        return new getIndexesDefinitionsCommand(db, { skip: 0, take: 1024 * 1024 })
             .execute()
             .done((indexDefinitions) => {
                 const matchedIndexes = indexDefinitions.filter(x => toDelete.includes(x.Name)).map(x => new indexDefinition(x));

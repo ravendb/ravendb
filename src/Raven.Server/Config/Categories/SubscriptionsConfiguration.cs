@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using Raven.Client.Documents.DataArchival;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Server.Config.Attributes;
 
 namespace Raven.Server.Config.Categories

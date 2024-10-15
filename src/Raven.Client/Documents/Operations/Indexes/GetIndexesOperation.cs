@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Operations.Indexes
         {
             private readonly int _start;
             private readonly int _pageSize;
-            private readonly string _indexName;
+            private readonly string[] _indexNames;
 
             public GetIndexesCommand(int start, int pageSize)
                 : this(start, pageSize, nodeTag: null)
@@ -42,20 +42,34 @@ namespace Raven.Client.Documents.Operations.Indexes
                 SelectedNodeTag = nodeTag;
             }
             
-            internal GetIndexesCommand(string indexName, string nodeTag)
+            internal GetIndexesCommand(string indexName, string nodeTag) 
+                : this([indexName], nodeTag)
             {
-                _indexName = indexName;
+            }
+
+            internal GetIndexesCommand(string[] indexNames, string nodeTag)
+            {
+                _indexNames = indexNames;
                 SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/indexes";
+                url = $"{node.Url}/databases/{node.Database}/indexes?";
 
-                if (_indexName != null)
-                    url += $"?name={Uri.EscapeDataString(_indexName)}";
+                if (_indexNames is { Length: > 0 })
+                {
+                    for (int i = 0; i < _indexNames.Length; i++)
+                    {
+                        string indexName = _indexNames[i];
+                        if (i > 0)
+                            url += "&";
+
+                        url += $"name={Uri.EscapeDataString(indexName)}";
+                    }
+                }
                 else
-                    url += $"?start={_start}&pageSize={_pageSize}";
+                    url += $"start={_start}&pageSize={_pageSize}";
 
                 return new HttpRequestMessage
                 {

@@ -180,7 +180,7 @@ class identities extends shardViewModelBase {
             new getIdentitiesCommand(this.db)
                 .execute()
                 .done((identities: dictionary<number>) => {
-                    const mappedIdentities = Object.entries(identities).map(([key, value]) => {
+                    const mappedIdentities = Object.entries(identities ?? []).map(([key, value]) => {
                         return new identity(key, value, this.effectiveIdentitySeparator());
                     });
 

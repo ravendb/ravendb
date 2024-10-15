@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace Sparrow.Platform
 {
@@ -12,13 +13,26 @@ namespace Sparrow.Platform
 
         public static readonly bool Is32Bits = IntPtr.Size == sizeof(int);
 
+#if NET6_0_OR_GREATER
+        [SupportedOSPlatformGuard("linux")]
+        [SupportedOSPlatformGuard("osx")]
+#endif
         public static readonly bool RunningOnPosix = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                                                      RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
+#if NET6_0_OR_GREATER
+        [SupportedOSPlatformGuard("osx")]
+#endif
         public static readonly bool RunningOnMacOsx = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
+#if NET6_0_OR_GREATER
+        [SupportedOSPlatformGuard("linux")]
+#endif
         public static readonly bool RunningOnLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
-        
+
+#if NET6_0_OR_GREATER
+        [SupportedOSPlatformGuard("windows")]
+#endif
         public static readonly bool RunningOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
         public static readonly bool CanPrefetch;

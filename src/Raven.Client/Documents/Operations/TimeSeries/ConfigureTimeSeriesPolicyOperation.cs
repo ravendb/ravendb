@@ -9,11 +9,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
+    /// <summary>
+    /// Configure a time series policy for a specific collection.
+    /// </summary>
     public class ConfigureTimeSeriesPolicyOperation : IMaintenanceOperation<ConfigureTimeSeriesOperationResult>
     {
         private readonly string _collection;
         private readonly TimeSeriesPolicy _config;
 
+        /// <inheritdoc cref="ConfigureTimeSeriesPolicyOperation"/>
+        /// <param name="collection">The name of the collection for which the time series policy is being configured.</param>
+        /// <param name="config">The time series policy configuration to apply to the collection.</param>
         public ConfigureTimeSeriesPolicyOperation(string collection, TimeSeriesPolicy config)
         {
             _collection = collection;
@@ -69,18 +75,26 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         }
     }
 
+    /// <inheritdoc cref="ConfigureTimeSeriesPolicyOperation"/>
     public sealed class ConfigureRawTimeSeriesPolicyOperation : ConfigureTimeSeriesPolicyOperation
     {
+        /// <inheritdoc cref="ConfigureTimeSeriesPolicyOperation(string, TimeSeriesPolicy)"/>
         public ConfigureRawTimeSeriesPolicyOperation(string collection, RawTimeSeriesPolicy config) : base(collection, config)
         {
         }
     }
 
+    /// <summary>
+    /// Operation to remove a time series policy from a specific collection.
+    /// </summary>
     public sealed class RemoveTimeSeriesPolicyOperation : IMaintenanceOperation<ConfigureTimeSeriesOperationResult>
     {
         private readonly string _collection;
         private readonly string _name;
 
+        /// <inheritdoc cref="RemoveTimeSeriesPolicyOperation"/>
+        /// <param name="collection">The name of the collection from which the time series policy will be removed. Cannot be null.</param>
+        /// <param name="name">The name of the time series policy to remove. Cannot be null.</param>
         public RemoveTimeSeriesPolicyOperation(string collection, string name)
         {
             _collection = collection ?? throw new ArgumentNullException(nameof(name));

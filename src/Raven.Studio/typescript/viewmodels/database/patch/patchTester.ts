@@ -73,7 +73,7 @@ class patchTester extends viewModelBase {
 
         this.docsIdsAutocompleteSource = new docsIdsBasedOnQueryFetcher(this.db);
         
-        new getIndexesDefinitionsCommand(this.db, 0, 1024 * 1024)
+        new getIndexesDefinitionsCommand(this.db, { skip: 0, take: 1024 * 1024 })
             .execute()
             .then(indexes => {
                 indexes.forEach(index => {

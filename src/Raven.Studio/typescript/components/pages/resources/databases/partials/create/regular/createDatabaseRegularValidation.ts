@@ -1,15 +1,12 @@
-import { encryptionStepSchema, dataDirectoryStepSchema } from "../shared/createDatabaseSharedValidation";
+import {
+    encryptionStepSchema,
+    dataDirectoryStepSchema,
+    databaseNameSchema,
+} from "../shared/createDatabaseSharedValidation";
 import * as yup from "yup";
 
 const basicInfoStepSchema = yup.object({
-    databaseName: yup
-        .string()
-        .trim()
-        .strict()
-        .required()
-        .when("$usedDatabaseNames", ([usedDatabaseNames], schema) =>
-            schema.notOneOf(usedDatabaseNames, "Database already exists")
-        ),
+    databaseName: databaseNameSchema,
     isEncrypted: yup.boolean(),
 });
 
@@ -90,8 +87,12 @@ const shardingPrefixesStepSchema = yup.object({
                                     return value.endsWith("/") || value.endsWith("-");
                                 }
                             )
-                            .test("unique-prefix", "Prefix must be unique", (value, ctx) => {
-                                return ctx.options.context.usedPrefixes.filter((x: string) => x === value).length < 2;
+                            .test("unique-prefix", "Prefix must be unique (case-insensitive)", (value, ctx) => {
+                                return (
+                                    ctx.options.context.usedPrefixes.filter(
+                                        (x: string) => x.toLowerCase() === value.toLowerCase()
+                                    ).length < 2
+                                );
                             }),
                 }),
                 shardNumbers: yup

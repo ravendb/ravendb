@@ -1,21 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
-using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static Raven.Server.Monitoring.Snmp.SnmpOids;
 
 namespace SlowTests.Issues
 {

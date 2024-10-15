@@ -6,6 +6,7 @@ using System.Linq;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -116,7 +117,7 @@ public abstract partial class RachisConsensus
         }
     }
 
-    public LogSummary GetLogDetails(ClusterOperationContext context, int start, int take, bool detailed)
+    public LogSummary GetLogDetails(ClusterOperationContext context, long? fromIndex, int take, bool detailed)
     {
         GetLastTruncated(context, out var index, out var term);
         var range = GetLogEntriesRange(context);
@@ -129,21 +130,22 @@ public abstract partial class RachisConsensus
             LastLogEntryIndex = range.Max,
             LastAppendedTime = LastAppended,
             LastCommitedTime = LastCommitted,
-            Logs = GetLogEntries(context, range.Min, start, take, detailed)
+            CriticalError = GetUnrecoverableClusterError(),
+            Logs = GetLogEntries(context, fromIndex ?? range.Min, take, detailed),
         };
     }
 
-    public IEnumerable<RachisDebugLogEntry> GetLogEntries(ClusterOperationContext context, long first, int start, int take, bool detailed)
+    public IEnumerable<RachisDebugLogEntry> GetLogEntries(ClusterOperationContext context, long fromIndex, int take, bool detailed)
     {
-        var reveredNextIndex = Bits.SwapBytes(first);
+        var reveredNextIndex = Bits.SwapBytes(fromIndex);
         Span<byte> span = stackalloc byte[sizeof(long)];
         if (BitConverter.TryWriteBytes(span, reveredNextIndex) == false)
-            throw new InvalidOperationException($"Couldn't convert {first} to span<byte>");
+            throw new InvalidOperationException($"Couldn't convert {fromIndex} to span<byte>");
 
         var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
         using (Slice.From(context.Allocator, span, out Slice key))
         {
-            foreach (var value in table.SeekByPrimaryKey(key, start))
+            foreach (var value in table.SeekByPrimaryKey(key, 0))
             {
                 if (take-- <= 0)
                     yield break;
@@ -159,7 +161,48 @@ public abstract partial class RachisConsensus
             }
         }
     }
-    
+    public UnrecoverableClusterError GetUnrecoverableClusterError()
+    {
+        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            var prefix = AlertRaised.GetKey(AlertType.UnrecoverableClusterError, key: null) + "/";
+            var json = ServerStore.NotificationCenter.GetStoredMessageByPrefix(context, prefix);
+            if (json == null)
+                return null;
+            
+            var error = new UnrecoverableClusterError();
+            
+            json.TryGet(nameof(AlertRaised.Id), out error.Id);
+            json.TryGet(nameof(AlertRaised.Title), out error.Title);
+            json.TryGet(nameof(AlertRaised.Message), out error.Message);
+            json.TryGet(nameof(AlertRaised.CreatedAt), out error.CreatedAt);
+            json.TryGet(nameof(AlertRaised.Details), out object exception);
+            error.Exception = exception.ToString();
+            return error;
+        }
+    }
+
+    public class UnrecoverableClusterError : IDynamicJsonValueConvertible
+    {
+        public string Id;
+        public string Title;
+        public string Message;
+        public DateTime CreatedAt;
+        public string Exception;
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Id)] = Id,
+                [nameof(Title)] = Title,
+                [nameof(Message)] = Message,
+                [nameof(CreatedAt)] = CreatedAt,
+                [nameof(Exception)] = Exception
+            };
+        }
+    }
+
     public class RachisDebugLogEntry : IDynamicJsonValueConvertible
     {
         public long Term { get; set; }
@@ -233,25 +276,29 @@ public abstract class RaftDebugView : IDynamicJsonValueConvertible
         Since = engine.LastStateChangeTime;
     }
 
-    public void PopulateLogs(ClusterOperationContext context, int start, int take, bool detailed)
+    public void PopulateLogs(ClusterOperationContext context, long? fromIndex, int take, bool detailed)
     {
-        Log = _engine.GetLogDetails(context, start, take, detailed);
+        Log = _engine.GetLogDetails(context, fromIndex, take, detailed);
     }
 
-    public class PeerConnection(string destination) : IDynamicJsonValueConvertible
+    public class PeerConnection(string destination, string status, bool connected) : IDynamicJsonValueConvertible
     {
+        public bool Connected = connected;
         public string Destination = destination;
-
+        public string Status = status;
+        
         public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Destination)] = Destination
+                [nameof(Status)] = Status,
+                [nameof(Destination)] = Destination,
+                [nameof(Connected)] = Connected
             };
         }
     }
 
-    public class DetailedPeerConnection(string destination) : PeerConnection(destination)
+    public class DetailedPeerConnection(string destination, string status, bool connected) : PeerConnection(destination, status, connected)
     {
         public int Version;
         public bool Compression;
@@ -260,12 +307,12 @@ public abstract class RaftDebugView : IDynamicJsonValueConvertible
         public DateTime LastSent;
         public DateTime LastReceived;
 
-        public static PeerConnection FromRemoteConnection(string destination, RemoteConnection connection)
+        public static PeerConnection FromRemoteConnection(string destination, string status, bool connected, RemoteConnection connection)
         {
             if (connection == null)
-                return new PeerConnection(destination);
+                return new PeerConnection(destination, status, false);
 
-            return new DetailedPeerConnection(destination)
+            return new DetailedPeerConnection(destination, status, connected)
             {
                 Destination = connection.Dest,
                 Version = connection.Features.ProtocolVersion,
@@ -328,7 +375,7 @@ public class PassiveDebugView(RachisConsensus engine) : RaftDebugView(engine)
 
 public class FollowerDebugView(Follower follower) : RaftDebugView(follower.Engine)
 {
-    public PeerConnection ConnectionToLeader = DetailedPeerConnection.FromRemoteConnection(follower.Connection.Dest, follower.Connection);
+    public PeerConnection ConnectionToLeader = DetailedPeerConnection.FromRemoteConnection(follower.Connection.Dest, "Connected", true, follower.Connection);
     public List<RachisDebugMessage> RecentMessages = follower.DebugRecorder.Timings.ToList();
     public FollowerPhase Phase = follower.Phase;
     public enum FollowerPhase
@@ -354,7 +401,8 @@ public class LeaderDebugView(Leader leader) : RaftDebugView(leader.Engine)
 {
     public override string Role => "Leader";
     public string ElectionReason = leader.Engine.LastStateChangeReason;
-    public List<PeerConnection> ConnectionToPeers = leader.CurrentPeers.Select(p => DetailedPeerConnection.FromRemoteConnection(p.Key, p.Value.Connection)).ToList();
+    public List<PeerConnection> ConnectionToPeers = leader.CurrentPeers.Select(p 
+        => DetailedPeerConnection.FromRemoteConnection(p.Key, p.Value.StatusMessage, p.Value.Status == AmbassadorStatus.Connected, p.Value.Connection)).ToList();
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();
@@ -368,7 +416,8 @@ public class CandidateDebugView(Candidate candidate) : RaftDebugView(candidate.E
 {
     public override string Role => "Candidate";
     public string ElectionReason = candidate.Engine.LastStateChangeReason;
-    public List<PeerConnection> ConnectionToPeers = candidate.Voters.Select(p => DetailedPeerConnection.FromRemoteConnection(p.Tag, p.Connection)).ToList();
+    public List<PeerConnection> ConnectionToPeers = candidate.Voters.Select(p 
+        => DetailedPeerConnection.FromRemoteConnection(p.Tag, p.StatusMessage, p.Status == AmbassadorStatus.Connected, p.Connection)).ToList();
 
     public override DynamicJsonValue ToJson()
     {

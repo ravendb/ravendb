@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.Auto; 
 using Raven.Server.Utils;

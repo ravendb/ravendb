@@ -89,6 +89,7 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         public override DynamicJsonValue ToAuditJson()
         {
             DynamicJsonValue json = base.ToAuditJson();
+            
             json[nameof(Nodes)] = new DynamicJsonArray(Nodes);
 #pragma warning disable CS0618 // Type or member is obsolete
             json[nameof(EnableCompatibilityMode)] = EnableCompatibilityMode;

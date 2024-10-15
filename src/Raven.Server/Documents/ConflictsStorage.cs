@@ -280,7 +280,7 @@ namespace Raven.Server.Documents
                         using (RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, conflicted.LowerId, out var changeVectorSlice))
                         {
                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                            _documentsStorage.RevisionsStorage.DeleteRevision(context, key, conflicted.Collection, conflicted.ChangeVector, lastModifiedTicks, changeVectorSlice);
+                            _documentsStorage.RevisionsStorage.DeleteRevision(context, key, conflicted.Collection, conflicted.ChangeVector, lastModifiedTicks, changeVectorSlice, fromReplication: false);
                         }
                     }
                     _documentsStorage.EnsureLastEtagIsPersisted(context, conflicted.Etag);
@@ -547,7 +547,7 @@ namespace Raven.Server.Documents
 
                         foreach (var conflict in conflicts)
                         {
-                            var conflictStatus = _documentDatabase.DocumentsStorage.GetConflictStatus(context, incomingChangeVector, conflict.ChangeVector, ChangeVectorMode.Version);
+                            var conflictStatus = _documentDatabase.DocumentsStorage.GetConflictStatusForVersion(context, incomingChangeVector, conflict.ChangeVector);
                             switch (conflictStatus)
                             {
                                 case ConflictStatus.Update:
@@ -644,10 +644,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, string changeVector, out bool hasLocalClusterTx)
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, string changeVector, DocumentFlags flags)
         {
-            hasLocalClusterTx = false;
-
+            var hasLocalClusterTx = false;
+            var hasRemoteClusterTx = flags.Contain(DocumentFlags.FromClusterTransaction);
+            
             //tombstones also can be a conflict entry
             var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id);
             ConflictStatus status;
@@ -684,12 +685,23 @@ namespace Raven.Server.Documents
             else
                 return ConflictStatus.Update; //document with 'id' doesn't exist locally, so just do PUT
 
-            status = context.DocumentDatabase.DocumentsStorage.GetConflictStatus(context, context.GetChangeVector(changeVector), context.GetChangeVector(local), ChangeVectorMode.Version, out var skipValidation);
-            context.SkipChangeVectorValidation |= skipValidation;
+            status = context.DocumentDatabase.DocumentsStorage.GetConflictStatusForVersion(context, changeVector, local);
 
             if (status == ConflictStatus.Conflict)
             {
                 ConflictManager.AssertChangeVectorNotNull(local);
+
+                // when hasLocalClusterTx and hasRemoteClusterTx both 'true'
+                // it is a case of a conflict between documents which were modified in a cluster transaction
+                // in two _different clusters_, so we will treat it as a "normal" conflict
+                if (hasLocalClusterTx == hasRemoteClusterTx)
+                    return ConflictStatus.Conflict;
+            
+                // cluster tx has precedence over regular tx
+                if (hasLocalClusterTx)
+                    return ConflictStatus.AlreadyMerged;
+                // hasRemoteClusterTx is true
+                return ConflictStatus.Update;
             }
             return status;
         }

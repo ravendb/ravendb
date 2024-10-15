@@ -10,6 +10,13 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
+    /// <summary>
+    /// Represents an operation to upload an attachment to a document in the database.
+    /// </summary>
+    /// <remarks>
+    /// This class implements the <see cref="IOperation{AttachmentDetails}"/> interface,
+    /// enabling the addition of new attachments or updating existing ones for specified documents.
+    /// </remarks>
     public sealed class PutAttachmentOperation : IOperation<AttachmentDetails>
     {
         private readonly string _documentId;
@@ -18,6 +25,14 @@ namespace Raven.Client.Documents.Operations.Attachments
         private readonly string _contentType;
         private readonly string _changeVector;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PutAttachmentOperation"/> class.
+        /// </summary>
+        /// <param name="documentId">The ID of the document to which the attachment will be added.</param>
+        /// <param name="name">The name of the attachment.</param>
+        /// <param name="stream">The stream containing the binary content of the attachment.</param>
+        /// <param name="contentType">The MIME type of the attachment (optional).</param>
+        /// <param name="changeVector">An optional change vector for concurrency control.</param>
         public PutAttachmentOperation(string documentId, string name, Stream stream, string contentType = null, string changeVector = null)
         {
             _documentId = documentId;

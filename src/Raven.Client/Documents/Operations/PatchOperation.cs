@@ -9,20 +9,31 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
+    /// <inheritdoc cref="PatchOperation"/>
     public sealed class PatchOperation<TEntity> : PatchOperation
     {
+        /// <inheritdoc cref="PatchOperation.PatchOperation(string, string, PatchRequest, PatchRequest, bool)"/>
         public PatchOperation(string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfChangeVectorMismatch = false)
             : base(id, changeVector, patch, patchIfMissing, skipPatchIfChangeVectorMismatch)
         {
         }
     }
 
+    /// <summary>
+    /// A Patch operation used to perform updates on a specific document in the database
+    /// </summary>
     public class PatchOperation : IOperation<PatchResult>
     {
         public sealed class Result<TEntity>
         {
+            /// <summary>
+            /// The status of the patch operation on the document.
+            /// </summary>
             public PatchStatus Status { get; set; }
 
+            /// <summary>
+            /// The document after the patch operation has completed (document may have remained unchanged)
+            /// </summary>
             public TEntity Document { get; set; }
         }
 
@@ -32,6 +43,19 @@ namespace Raven.Client.Documents.Operations
         private readonly PatchRequest _patchIfMissing;
         private readonly bool _skipPatchIfChangeVectorMismatch;
 
+        /// <summary>
+        ///     Executes a patch operation on a document in the database.<br/>
+        /// </summary>
+        /// <param name="id">The id of the document on which to execute the <paramref name="patch"/> operation</param>
+        /// <param name="changeVector">
+        ///     Change vector of the document to be patched.<br/>
+        ///     Used to verify that the document was not modified before the patch reached it. <br/> Can be null.
+        /// </param>
+        /// <param name="patch">
+        ///     The patch request to perform the operation.
+        /// </param>
+        /// <param name="patchIfMissing">A patch request to perform if the document was not found</param>
+        /// <param name="skipPatchIfChangeVectorMismatch">Whether to skip the execution of the patch if the document has been modified.</param>
         public PatchOperation(string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfChangeVectorMismatch = false)
         {
             if (patch == null)

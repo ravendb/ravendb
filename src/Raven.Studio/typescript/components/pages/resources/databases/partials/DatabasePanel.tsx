@@ -74,6 +74,8 @@ function getStatusColor(db: DatabaseSharedInfo, localInfo: locationAwareLoadable
             return "secondary";
         case "Disabled":
             return "warning";
+        case "Partially Online":
+            return "striped-success";
         default:
             return "success";
     }
@@ -217,7 +219,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     };
     const onCompactDatabase = async () => {
         reportEvent("databases", "compact");
-        dispatch(compactDatabase(db));
+        dispatch(compactDatabase(db, null));
     };
 
     const onToggleDatabase = async () => {

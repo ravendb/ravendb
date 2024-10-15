@@ -170,7 +170,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using (Stats.DeleteStats.Start())
                 _indexWriter.TryDeleteEntry(key.AsReadOnlySpan());
         }
-        
+
+        public override void DeleteByPrefix(LazyStringValue key, IndexingStatsScope stats)
+        {
+            EnsureValidStats(stats);
+
+            using (Stats.DeleteStats.Start())
+                _indexWriter.DeleteByPrefix(key.AsReadOnlySpan());
+        }
+
         /// <summary>
         /// Should be called to delete whole entry or entires, not only one field.
         /// </summary>

@@ -80,10 +80,14 @@ namespace Raven.Server.Documents.Handlers
                         attachment.Size = attachment.Stream.Length;
                         attachmentsStreams.Add(attachment.Stream);
                         WriteAttachmentDetails(writer, attachment, id);
+
+                        await writer.MaybeFlushAsync(Database.DatabaseShutdown);
                     }
 
                     writer.WriteEndArray();
                     writer.WriteEndObject();
+
+                    await writer.FlushAsync(Database.DatabaseShutdown);
                 }
 
                 using (context.GetMemoryBuffer(out var buffer))

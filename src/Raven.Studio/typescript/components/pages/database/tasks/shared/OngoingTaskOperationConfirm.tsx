@@ -5,9 +5,10 @@ import OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.Ongoing
 import { capitalize } from "lodash";
 import { Icon } from "components/common/Icon";
 import classNames = require("classnames");
-import { Modal, ModalBody, Button, ModalFooter, Alert } from "reactstrap";
+import { Modal, ModalBody, Button, ModalFooter } from "reactstrap";
 import IconName from "typings/server/icons";
 import { TextColor } from "components/models/common";
+import RichAlert from "components/common/RichAlert";
 
 export type OngoingTaskOperationConfirmType = "enable" | "disable" | "delete";
 
@@ -103,7 +104,7 @@ export default function OngoingTaskOperationConfirm(props: OngoingTaskOperationC
                     </div>
                 ))}
 
-                {warningMessage && <Alert color="warning">{warningMessage}</Alert>}
+                {warningMessage && <RichAlert variant="warning">{warningMessage}</RichAlert>}
             </ModalBody>
             <ModalFooter>
                 <Button color="link" onClick={toggle} className="link-muted">

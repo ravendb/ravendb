@@ -2076,7 +2076,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var stats = await store.Maintenance.ForDatabase(databaseName).SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
-                    Assert.Equal(1, stats.CountOfTimeSeriesSegments);
+                    Assert.Equal(0, stats.CountOfTimeSeriesSegments);
 
                     using (var session = store.OpenAsyncSession(databaseName))
                     {

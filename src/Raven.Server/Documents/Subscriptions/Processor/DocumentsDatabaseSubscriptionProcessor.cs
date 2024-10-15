@@ -5,9 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.DataArchival;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
@@ -237,12 +234,12 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 return false;
             }
 
-            var status = Database.DocumentsStorage.GetConflictStatus(context, item.ChangeVector, currentChangeVector, ChangeVectorMode.Version);
+            var status = Database.DocumentsStorage.GetConflictStatusForVersion(context, item.ChangeVector, currentChangeVector);
             switch (status)
             {
                 case ConflictStatus.Update:
                     // If document was updated, but the subscription went too far.
-                    var resendStatus = Database.DocumentsStorage.GetConflictStatus(context, item.ChangeVector, SubscriptionConnectionsState.LastChangeVectorSent, ChangeVectorMode.Order);
+                    var resendStatus = Database.DocumentsStorage.GetConflictStatusForOrder(context, item.ChangeVector, SubscriptionConnectionsState.LastChangeVectorSent);
                     if (resendStatus == ConflictStatus.Update)
                     {
                         // we can clear it from resend list, and it will processed as regular document
@@ -285,7 +282,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
         {
             if (item.Document != null)
             {
-                var status = Database.DocumentsStorage.GetConflictStatus(context, item.Document.ChangeVector, currentChangeVector, ChangeVectorMode.Version);
+                var status = Database.DocumentsStorage.GetConflictStatusForVersion(context, item.Document.ChangeVector, currentChangeVector);
                 switch (status)
                 {
                     case ConflictStatus.Update:

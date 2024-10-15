@@ -4,9 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
@@ -14,7 +12,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -29,8 +26,6 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
@@ -1062,9 +1057,10 @@ namespace Raven.Server.Web.Authentication
                         }
 
                         // Ensure we'll be able to load the certificate
+                        X509Certificate2 newCertificate;
                         try
                         {
-                            var _ = CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForExport);
+                            newCertificate = CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
                         }
                         catch (Exception e)
                         {
@@ -1079,11 +1075,13 @@ namespace Raven.Server.Web.Authentication
                         {
                             Logger.Operations("Initiating the replacement of the certificate upon explicit request - '/admin/certificates/replace-cluster-cert'.");
                         }
-                        var replicationTask = Server.StartCertificateReplicationAsync(certBytes, replaceImmediately, GetRaftRequestIdFromQuery());
+                        var replicationTask = Server.StartCertificateReplicationAsync(newCertificate, certificate.Password, replaceImmediately, GetRaftRequestIdFromQuery());
 
                         await Task.WhenAny(replicationTask, timeoutTask);
                         if (replicationTask.IsCompleted == false)
                             throw new TimeoutException("Timeout when trying to replace the server certificate.");
+
+                        await replicationTask;
                     }
                     catch (Exception e)
                     {

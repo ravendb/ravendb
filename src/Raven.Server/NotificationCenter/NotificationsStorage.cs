@@ -7,7 +7,6 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -208,6 +207,19 @@ namespace Raven.Server.NotificationCenter
                     return null;
 
                 return Read(context, ref tvr);
+            }
+        }
+
+        public IEnumerable<NotificationTableValue> GetByPrefix(TransactionOperationContext<RavenTransaction> context, string prefix)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(Documents.Schemas.Notifications.Current, _tableName);
+
+            using (Slice.From(context.Transaction.InnerTransaction.Allocator, prefix, out Slice prefixSlice))
+            {
+                foreach (var notification in table.SeekByPrimaryKeyPrefix(prefixSlice, prefixSlice, skip: 0))
+                {
+                    yield return Read(context, ref notification.Value.Reader);
+                }
             }
         }
 

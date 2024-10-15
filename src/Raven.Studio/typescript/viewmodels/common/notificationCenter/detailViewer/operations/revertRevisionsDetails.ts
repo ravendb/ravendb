@@ -45,7 +45,7 @@ class revertRevisionsDetails extends abstractOperationDetails {
 
         this.progress.subscribe(result => {
             if (result) {
-                this.allWarnings(Object.entries(result.Warnings).map(([key, value]) => {
+                this.allWarnings(Object.entries(result.Warnings ?? []).map(([key, value]) => {
                     return {
                         Id: key,
                         Description: value

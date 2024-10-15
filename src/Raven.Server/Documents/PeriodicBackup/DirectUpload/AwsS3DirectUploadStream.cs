@@ -17,14 +17,9 @@ public class AwsS3DirectUploadStream : DirectUploadStream<RavenAwsS3Client>
         MinOnePartUploadSizeInBytes = Client.MinOnePartUploadSizeLimit.GetValue(SizeUnit.Bytes);
     }
 
-    protected override void Dispose(bool disposing)
+    protected override void OnCompleteUpload()
     {
-        using (Client)
-        {
-            base.Dispose(disposing);
-
-            var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, Client);
-            runner.Execute();
-        }
+        var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, Client);
+        runner.Execute();
     }
 }

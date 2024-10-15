@@ -12,16 +12,28 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
+    /// <summary>
+    ///     A class for creating operations that update documents according to a given patch query
+    /// </summary>
     public sealed class PatchByQueryOperation : IOperation<OperationIdResult>
     {
         private readonly IndexQuery _queryToUpdate;
         private readonly QueryOperationOptions _options;
 
+        /// <summary>
+        ///     Returns an awaitable operation which updates all documents according to the provided <paramref name="queryToUpdate"/>
+        /// </summary>
+        /// <param name="queryToUpdate">The patch query according to which the documents will be updated</param>
         public PatchByQueryOperation(string queryToUpdate)
             : this(new IndexQuery { Query = queryToUpdate })
         {
         }
 
+        /// <summary>
+        ///     Returns an awaitable operation which updates all documents according to the provided <paramref name="queryToUpdate"/>
+        /// </summary>
+        /// <param name="queryToUpdate">An object containing the patch query according to which the documents will be updated, as well as optional parameters</param>
+        /// <param name="options">Provides additional options for configuring the patch execution when updating documents</param>
         public PatchByQueryOperation(IndexQuery queryToUpdate, QueryOperationOptions options = null)
         {
             _queryToUpdate = queryToUpdate ?? throw new ArgumentNullException(nameof(queryToUpdate));

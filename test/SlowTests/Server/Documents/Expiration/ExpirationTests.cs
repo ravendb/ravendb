@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -117,7 +116,7 @@ namespace SlowTests.Server.Documents.Expiration
                     var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                     var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
-                    await expiredDocumentsCleaner.CleanupExpiredDocs();
+                    await expiredDocumentsCleaner.CleanupExpiredDocs(throwOnError: true);
 
                     using (var session = store.OpenAsyncSession())
                     {

@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.ServerWide;
@@ -15,24 +16,37 @@ internal sealed class ShardedIndexHandlerProcessorForGetAll : AbstractIndexHandl
     {
     }
 
-    protected override IndexDefinition[] GetIndexDefinitions(string indexName, int start, int pageSize)
+    protected override IndexDefinition[] GetIndexDefinitions(StringValues indexNames, int start, int pageSize)
     {
         IndexDefinition[] indexDefinitions;
-        if (string.IsNullOrEmpty(indexName))
-            indexDefinitions = RequestHandler.DatabaseContext.Indexes
-                .GetIndexes()
-                .OrderBy(x => x.Name)
-                .Skip(start)
-                .Take(pageSize)
-                .Select(x => x.Definition.GetOrCreateIndexDefinitionInternal())
-                .ToArray();
-        else
+        switch (indexNames.Count)
         {
-            var index = RequestHandler.DatabaseContext.Indexes.GetIndex(indexName);
-            if (index == null)
-                return null;
+            case 0:
+                indexDefinitions = RequestHandler.DatabaseContext.Indexes
+                    .GetIndexes()
+                    .OrderBy(x => x.Name)
+                    .Skip(start)
+                    .Take(pageSize)
+                    .Select(x => x.Definition.GetOrCreateIndexDefinitionInternal())
+                    .ToArray();
+                break;
+            case 1:
+                {
+                    var index = RequestHandler.DatabaseContext.Indexes.GetIndex(indexNames);
+                    if (index == null)
+                        return null;
 
-            indexDefinitions = new[] { index.Definition.GetOrCreateIndexDefinitionInternal() };
+                    indexDefinitions = new[] { index.Definition.GetOrCreateIndexDefinitionInternal() };
+                    break;
+                }
+            default:
+                indexDefinitions = RequestHandler.DatabaseContext.Indexes
+                    .GetIndexes()
+                    .Where(x => indexNames.Contains(x.Name))
+                    .OrderBy(x => x.Name)
+                    .Select(x => x.Definition.GetOrCreateIndexDefinitionInternal())
+                    .ToArray();
+                break;
         }
 
         return indexDefinitions;
