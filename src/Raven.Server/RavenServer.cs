@@ -3002,7 +3002,7 @@ namespace Raven.Server
                         continue;
                     }
 
-                    if (serverDomain.EndsWith(array[1]) &&
+                    if (serverDomain.EndsWith(array[1], StringComparison.OrdinalIgnoreCase) &&
                         serverDomain.Length > array[1].Length &&
                         serverDomain[..(serverDomain.Length - array[1].Length - 1)].Contains('.') == false)
                     {
