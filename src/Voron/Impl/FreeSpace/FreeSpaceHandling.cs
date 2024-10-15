@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron.Data.Fixed;
@@ -14,7 +15,15 @@ namespace Voron.Impl.FreeSpace
 
         private readonly FreeSpaceRecursiveCallGuard _guard;
 
-        private readonly Dictionary<long, int> _maxConsecutiveRangePerSection = new();
+        private readonly Dictionary<long, SectionMetadata> _maxConsecutiveRangePerSection = new();
+
+        [StructLayout(LayoutKind.Sequential, Size = 6)]
+        public struct SectionMetadata()
+        {
+            public ushort Max = NumberOfPagesInSection;
+            public ushort StartBits = NumberOfPagesInSection;
+            public ushort EndBits = NumberOfPagesInSection;
+        }
 
         static FreeSpaceHandling()
         {
@@ -187,34 +196,44 @@ namespace Voron.Impl.FreeSpace
             }
         }
 
-
         private long? TryFindSmallValue(LowLevelTransaction tx, FixedSizeTree freeSpaceTree, FixedSizeTree.IFixedSizeIterator it, int num)
         {
             do
             {
-                var current = new StreamBitArray(it.CreateReaderForCurrent());
-
                 long currentSectionId = it.CurrentKey;
                 long? page;
-                if (_maxConsecutiveRangePerSection.TryGetValue(currentSectionId, out var knownMax) && knownMax <= num)
+
+                if (_maxConsecutiveRangePerSection.TryGetValue(currentSectionId, out var known) && known.Max <= num)
                 {
+                    if (_maxConsecutiveRangePerSection.TryGetValue(currentSectionId + 1, out var knownNext))
+                    {
+                        if (known.EndBits + knownNext.StartBits < num)
+                            continue;
+                    }
+
                     // current section's maximum continuous range is insufficient for the requested size.
                     // while we can skip searching within this section alone, we still need to check
                     // if merging with the following section could provide enough space
-                    if (TryFindSmallValueMergingTwoSections(tx, freeSpaceTree, currentSectionId, num, current, out page))
+                    var currentBitArray = new StreamBitArray(it.CreateReaderForCurrent());
+                    if (TryFindSmallValueMergingTwoSections(tx, freeSpaceTree, currentSectionId, num, currentBitArray, out page))
                         return page;
-                    
+
                     continue;
                 }
 
+                var current = new StreamBitArray(it.CreateReaderForCurrent());
                 if (current.SetCount >= num
-                    && TryFindContinuousRange(tx, freeSpaceTree, it, num, current, currentSectionId, out page))
+                    && TryFindContinuousRange(tx, freeSpaceTree, num, current, currentSectionId, out page))
                     return page;
 
-                if (knownMax == 0 || num < knownMax)
+                ref var metadata = ref CollectionsMarshal.GetValueRefOrAddDefault(_maxConsecutiveRangePerSection, currentSectionId, out var exists);
+                if (exists == false)
+                    metadata = new SectionMetadata();
+
+                if (num < metadata.Max)
                 {
                     // here we _know_ it can't fit anything larger, so we mark it for the next time
-                    _maxConsecutiveRangePerSection[currentSectionId] = num;
+                    metadata.Max = (ushort)Math.Min(num, current.SetCount);
                 }
 
                 // could not find a continuous so trying to merge two consecutive sections
@@ -226,8 +245,8 @@ namespace Voron.Impl.FreeSpace
             return null;
         }
 
-        private bool TryFindContinuousRange(LowLevelTransaction tx, FixedSizeTree freeSpaceTree, FixedSizeTree.IFixedSizeIterator it, int num,
-            StreamBitArray current, long currentSectionId, out long? page)
+        private bool TryFindContinuousRange(LowLevelTransaction tx, FixedSizeTree freeSpaceTree, 
+            int num, StreamBitArray current, long currentSectionId, out long? page)
         {
             page = -1;
 
@@ -239,7 +258,7 @@ namespace Voron.Impl.FreeSpace
 
             if (current.SetCount == num)
             {
-                freeSpaceTree.Delete(it.CurrentKey);
+                freeSpaceTree.Delete(currentSectionId);
             }
             else
             {
@@ -250,39 +269,61 @@ namespace Voron.Impl.FreeSpace
 
                 Slice val;
                 using (current.ToSlice(tx.Allocator, out val))
-                    freeSpaceTree.Add(it.CurrentKey, val);
+                    freeSpaceTree.Add(currentSectionId, val);
             }
 
             return true;
         }
 
-        private static bool TryFindSmallValueMergingTwoSections(LowLevelTransaction tx, FixedSizeTree freeSpacetree, long currentSectionId, int num,
-            StreamBitArray current, out long? result)
+        private bool TryFindSmallValueMergingTwoSections(LowLevelTransaction tx, FixedSizeTree freeSpaceTree,
+            long currentSectionId, int num, StreamBitArray current, out long? result)
         {
             result = -1;
             var currentEndRange = current.GetEndRangeCount();
-            if (currentEndRange == 0)
-                return false;
 
             var nextSectionId = currentSectionId + 1;
-
-            StreamBitArray next;
-            Slice read;
-            using (freeSpacetree.Read(nextSectionId, out read))
+            StreamBitArray next = null;
+            int nextRangeStart = 0;
+            using (freeSpaceTree.Read(nextSectionId, out Slice read))
             {
-                if (!read.HasValue)
-                    return false;
+                if (read.HasValue)
+                {
+                    next = new StreamBitArray(read.CreateReader());
+                    nextRangeStart = next.GetStartRangeCount();
+                }
+            }
 
-                next = new StreamBitArray(read.CreateReader());
+            if (currentEndRange == 0 || next == null || currentEndRange + nextRangeStart < num)
+            {
+                // we update the cache in any of the following cases:
+                // - the current section has no more available space at its end
+                // - the next section does not exist
+                // - even when combining the current and next sections, the total space is insufficient
+
+                ref var metadata = ref CollectionsMarshal.GetValueRefOrAddDefault(
+                    _maxConsecutiveRangePerSection, currentSectionId, out var exists);
+
+                if (exists == false)
+                    metadata = new SectionMetadata();
+
+                metadata.EndBits = (ushort)currentEndRange;
+
+                ref var nextMetadata = ref CollectionsMarshal.GetValueRefOrAddDefault(
+                    _maxConsecutiveRangePerSection, nextSectionId, out exists);
+
+                if (exists == false)
+                    nextMetadata = new SectionMetadata();
+
+                nextMetadata.StartBits = (ushort)nextRangeStart;
+
+                return false;
             }
 
             var nextRange = num - currentEndRange;
-            if (next.HasStartRangeCount(nextRange) == false)
-                return false;
 
             if (next.SetCount == nextRange)
             {
-                freeSpacetree.Delete(nextSectionId);
+                freeSpaceTree.Delete(nextSectionId);
             }
             else
             {
@@ -292,12 +333,12 @@ namespace Voron.Impl.FreeSpace
                 }
                 Slice val;
                 using (next.ToSlice(tx.Allocator, out val))
-                    freeSpacetree.Add(nextSectionId, val);
+                    freeSpaceTree.Add(nextSectionId, val);
             }
 
             if (current.SetCount == currentEndRange)
             {
-                freeSpacetree.Delete(currentSectionId);
+                freeSpaceTree.Delete(currentSectionId);
             }
             else
             {
@@ -307,7 +348,7 @@ namespace Voron.Impl.FreeSpace
                 }
                 Slice val;
                 using (current.ToSlice(tx.Allocator, out val))
-                    freeSpacetree.Add(currentSectionId, val);
+                    freeSpaceTree.Add(currentSectionId, val);
             }
 
 
@@ -338,13 +379,14 @@ namespace Voron.Impl.FreeSpace
                     for (var i = 0; i < NumberOfPagesInSection; i++)
                     {
                         if (current.Get(i))
-                            freePages.Add(currentSectionId*NumberOfPagesInSection + i);
+                            freePages.Add(currentSectionId * NumberOfPagesInSection + i);
                     }
                 } while (it.MoveNext());
 
                 return freePages;
             }
-        } 
+        }
+
         public List<DynamicJsonValue> FreeSpaceSnapshot(LowLevelTransaction tx, bool hex)
         {
             var freeSpaceTree = GetFreeSpaceTree(tx);
@@ -367,7 +409,7 @@ namespace Voron.Impl.FreeSpace
 
                 return freeSpace;
             }
-        } 
+        }
 
         public int GetFreePagesCount(LowLevelTransaction tx)
         {
@@ -439,12 +481,12 @@ namespace Voron.Impl.FreeSpace
             }
         }
 
-        public Dictionary<long, int> GetMaxConsecutiveRangePerSection(LowLevelTransaction tx)
+        public Dictionary<long, SectionMetadata> GetMaxConsecutiveRangePerSection(LowLevelTransaction tx)
         {
             if (tx.Transaction.IsWriteTransaction == false)
                 throw new InvalidOperationException($"{nameof(GetMaxConsecutiveRangePerSection)} must be called with an open write transaction");
 
-            return new Dictionary<long, int>(_maxConsecutiveRangePerSection);
+            return new Dictionary<long, SectionMetadata>(_maxConsecutiveRangePerSection);
         }
 
         public void OnRollback() => _maxConsecutiveRangePerSection.Clear();
