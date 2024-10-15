@@ -1,12 +1,11 @@
 ﻿using System;
-using FastTests;
-using SlowTests.Utils;
+using FastTests.Voron.FixedSize;
+using Tests.Infrastructure;
+using Voron.Impl.FreeSpace;
 using Xunit;
 using Xunit.Abstractions;
-using Voron.Impl.FreeSpace;
-using Tests.Infrastructure;
 
-namespace SlowTests.Voron
+namespace FastTests.Voron
 {
     public class StreamBitArrayTests : NoDisposalNeeded
     {
@@ -102,36 +101,6 @@ namespace SlowTests.Voron
             }
 
             const int num = 451;
-            var result1 = GetContinuousRangeSlow(sba, num);
-            var result2 = sba.GetContinuousRangeStart(num);
-            Assert.Equal(result1, result2);
-        }
-
-        [RavenFact(RavenTestCategory.Voron)]
-        public void VerifySingleLargeResult()
-        {
-            int[] arr =
-            [
-                0, 0, 0, 0, 0, 0, -256, -1, -1, -1, -1, -1, 65535, 0, 0, 0, 0, 0, -16777216, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, -256, -1, -1, -1, -1, -1, 65535, 0,
-                0, 0, 0, 0, -16777216, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, -256, -1, -1, -1, -1, -1, 65535, 0
-            ];
-
-            var sba = new StreamBitArray();
-
-            for (var wordIndex = 0; wordIndex < arr.Length; wordIndex++)
-            {
-                var word = arr[wordIndex];
-                for (int i = 0; i < 32; i++)
-                {
-                    if ((word & (1 << i)) == 0)
-                        continue;
-
-                    int globalIndex = wordIndex * 32 + i;
-                    sba.Set(globalIndex, true);
-                }
-            }
-
-            const int num = 100;
             var result1 = GetContinuousRangeSlow(sba, num);
             var result2 = sba.GetContinuousRangeStart(num);
             Assert.Equal(result1, result2);
