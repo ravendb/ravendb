@@ -42,7 +42,7 @@ namespace SlowTests.Issues
         
         [RavenTheory(RavenTestCategory.Certificates)]
         [InlineData($"a.{LocalDomainName}", $"*.{LocalDomainName}")]
-        [InlineData($"c.{LocalDomainName}", $"*.{LocalDomainName}")]
+        [InlineData($"c.{LocalDomainName}", $"c.{LocalDomainName}")]
         [InlineData($"test.{LocalDomainName}", $"*.{LocalDomainName}")]
         [InlineData($"longdomainname.{LocalDomainName}", $"*.{LocalDomainName}")]
         [InlineData($"{LocalDomainName}", $"{LocalDomainName}")]
