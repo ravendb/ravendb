@@ -167,9 +167,9 @@ namespace Raven.Client.Documents.Linq
         /// <param name="expression">The expression.</param>
         private void VisitExpression(Expression expression)
         {
-            if (expression is BinaryExpression)
+            if (expression is BinaryExpression be)
             {
-                VisitBinaryExpression((BinaryExpression)expression);
+                VisitBinaryExpression(be);
             }
             else
             {
@@ -2728,6 +2728,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         HandleSelectTimeSeries(mce, GetSelectPath(field.Member));
                         continue;
                     }
+
+                    if (LinqPathProvider.IsIdCall(mce))
+                    {
+                        HandleSelectId(GetSelectPath(field.Member));
+                        continue;
+                    }
                 }
 
                 //lambda 2 js
@@ -2804,6 +2810,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     if (LinqPathProvider.IsTimeSeriesCall(mce))
                     {
                         HandleSelectTimeSeries(mce, GetSelectPath(newExpression.Members[index]));
+                        continue;
+                    }
+
+                    if (LinqPathProvider.IsIdCall(mce))
+                    {
+                        HandleSelectId( GetSelectPath(newExpression.Members[index]));
                         continue;
                     }
                 }
@@ -2892,6 +2904,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var tsQueryText = visitor.Visit(callExpression);
             string path = $"{Constants.TimeSeries.SelectFieldName}({tsQueryText})";
             alias ??= Constants.TimeSeries.QueryFunction + FieldsToFetch.Count;
+
+            AddToFieldsToFetch(path, alias);
+        }
+
+        private void HandleSelectId( string alias = null)
+        {
+            string path = $"{Constants.Documents.Indexing.Fields.DocumentIdFieldName}";
 
             AddToFieldsToFetch(path, alias);
         }
