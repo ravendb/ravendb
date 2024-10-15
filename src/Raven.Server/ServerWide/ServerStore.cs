@@ -2721,6 +2721,18 @@ namespace Raven.Server.ServerWide
                 statistics.Explanations.Add($"Cannot unload database because number of Subscriptions connections ({numberOfSubscriptionConnections}) is greater than 0");
             }
 
+            var numberOfActivePullReplicationAsSinkConnections = database.ReplicationLoader.HasActivePullReplicationAsSinkConnections();
+            if (statistics != null)
+                statistics.NumberOfActivePullReplicationAsSinkConnections = numberOfActivePullReplicationAsSinkConnections;
+
+            if (numberOfActivePullReplicationAsSinkConnections > 0)
+            {
+                if (statistics == null)
+                    return false;
+
+                statistics.Explanations.Add($"Cannot unload database because number of active PullReplication as Sink Connections ({numberOfActivePullReplicationAsSinkConnections}) is greater than 0");
+            }
+
             var hasActiveOperations = database.Operations.HasActive;
             if (statistics != null)
                 statistics.HasActiveOperations = hasActiveOperations;
