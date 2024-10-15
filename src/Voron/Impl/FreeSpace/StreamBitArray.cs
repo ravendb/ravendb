@@ -121,36 +121,17 @@ namespace Voron.Impl.FreeSpace
 
         private int? FirstSetBit()
         {
-            if (Avx2.IsSupported)
+            for (int i = 0; i < _inner.Length; i += Vector256<uint>.Count)
             {
-                for (int i = 0; i < _inner.Length; i += Vector256<uint>.Count)
-                {
-                    var a = Vector256.LoadUnsafe(ref _inner[i]).AsUInt32();
-                    var gt = Vector256.GreaterThan(a, Vector256<uint>.Zero);
-                    if (gt == Vector256<uint>.Zero)
-                        continue;
+                var a = Vector256.LoadUnsafe(ref _inner[i]).AsUInt32();
+                var gt = Vector256.GreaterThan(a, Vector256<uint>.Zero);
+                if (gt == Vector256<uint>.Zero)
+                    continue;
 
-                    var mask = gt.ExtractMostSignificantBits();
-                    var idx = BitOperations.TrailingZeroCount(mask) + i;
-                    var item = _inner[idx];
-                    return idx * BitsInWord + BitOperations.TrailingZeroCount(item);
-                }
-
-                return null;
-            }
-
-            // finding a single set bit
-            for (var i = 0; i < _inner.Length; i++)
-            {
-                switch (_inner[i])
-                {
-                    case 0:
-                        continue;
-                    case -1:
-                        return i * BitsInWord;
-                    default:
-                        return i * BitsInWord + BitOperations.TrailingZeroCount(_inner[i]);
-                }
+                var mask = gt.ExtractMostSignificantBits();
+                var idx = BitOperations.TrailingZeroCount(mask) + i;
+                var item = _inner[idx];
+                return idx * BitsInWord + BitOperations.TrailingZeroCount(item);
             }
 
             return null;
