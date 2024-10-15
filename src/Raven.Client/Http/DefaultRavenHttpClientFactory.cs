@@ -22,6 +22,8 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
     {
     }
 
+    public bool CanCacheHttpClient => true;
+
     public HttpClient GetHttpClient(HttpClientCacheKey key, Func<HttpClientHandler, HttpClient> createHttpClient)
     {
         if (GlobalHttpClientCache.TryGetValue(key, out var value))

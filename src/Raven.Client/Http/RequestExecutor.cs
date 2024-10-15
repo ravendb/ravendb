@@ -81,9 +81,21 @@ namespace Raven.Client.Http
 
         internal string LastServerVersion { get; private set; }
 
+        private HttpClient _cachedHttpClient;
+
         public HttpClient HttpClient
         {
-            get => HttpClientFactory.GetHttpClient(_httpClientCacheKey, Conventions.CreateHttpClient);
+            get
+            {
+                if (_cachedHttpClient != null)
+                    return _cachedHttpClient;
+
+                var httpClient = HttpClientFactory.GetHttpClient(_httpClientCacheKey, Conventions.CreateHttpClient);
+                if (HttpClientFactory.CanCacheHttpClient)
+                    _cachedHttpClient = httpClient;
+
+                return httpClient;
+            }
         }
 
         public IReadOnlyList<ServerNode> TopologyNodes => _nodeSelector?.Topology.Nodes;
@@ -218,7 +230,11 @@ namespace Raven.Client.Http
 
         internal bool TryRemoveHttpClient(bool force = false)
         {
-            return HttpClientFactory.TryRemoveHttpClient(_httpClientCacheKey, force);
+            var removed = HttpClientFactory.TryRemoveHttpClient(_httpClientCacheKey, force);
+            if (removed)
+                _cachedHttpClient = null;
+
+            return removed;
         }
 
         private HttpClientCacheKey GetHttpClientCacheKey()

@@ -28,6 +28,8 @@ internal class RavenServerHttpClientFactory : IRavenHttpClientFactory
         _factory = provider.GetService<IHttpClientFactory>();
     }
 
+    public bool CanCacheHttpClient => false;
+
     public HttpClient GetHttpClient(HttpClientCacheKey key, Func<HttpClientHandler, HttpClient> createHttpClient)
     {
         _configuration.Register(key);
@@ -76,7 +78,7 @@ internal class RavenServerHttpClientFactory : IRavenHttpClientFactory
             {
                 var h = builder.PrimaryHandler;
                 if (h is not HttpClientHandler httpMessageHandler)
-                    return;
+                    throw new InvalidOperationException($"Was expecting handler of type '{nameof(HttpClientHandler)}' but got '{h.GetType().Name}'.");
 
                 DefaultRavenHttpClientFactory.ConfigureHttpMessageHandler(httpMessageHandler, key.Certificate, setSslProtocols: true, key.UseCompression, key.HasExplicitlySetCompressionUsage, key.PooledConnectionLifetime, key.PooledConnectionIdleTimeout);
             });
