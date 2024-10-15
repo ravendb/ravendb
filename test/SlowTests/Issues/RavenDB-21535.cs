@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Server;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Utils;
 using Xunit;
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         public RavenDB_21535(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         [RavenFact(RavenTestCategory.Certificates)]
         public void KnownIssuerCert_CanNotAccess_WithoutSAN()
         {
@@ -29,9 +30,9 @@ namespace SlowTests.Issues
                 {
                     CustomSettings = new Dictionary<string, string>
                     {
-                        ["Security.WellKnownIssuers.Admin"] = caBase64,
-                        ["Security.WellKnownIssuers.Admin.ValidateCertificateNames"] = true.ToString(),
-                        ["PublicServerUrl"] = $"http://{LocalDomainName}",
+                        [RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)] = caBase64,
+                        [RavenConfiguration.GetKey(x => x.Security.ValidateSanForCertificateWithWellKnownIssuer)] = true.ToString(),
+                        [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://{LocalDomainName}",
                     }
                 }
             );
@@ -39,7 +40,7 @@ namespace SlowTests.Issues
             var result = server.AuthenticateConnectionCertificate(client, null);
             Assert.Equal(RavenServer.AuthenticationStatus.UnfamiliarCertificate, result.Status);
         }
-        
+
         [RavenTheory(RavenTestCategory.Certificates)]
         [InlineData($"a.{LocalDomainName}", $"*.{LocalDomainName}")]
         [InlineData($"c.{LocalDomainName}", $"c.{LocalDomainName}")]
@@ -59,9 +60,9 @@ namespace SlowTests.Issues
                 {
                     CustomSettings = new Dictionary<string, string>
                     {
-                        ["Security.WellKnownIssuers.Admin"] = caBase64,
-                        ["Security.WellKnownIssuers.Admin.ValidateCertificateNames"] = true.ToString(),
-                        ["PublicServerUrl"] = $"http://{publicDomain}",
+                        [RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)] = caBase64,
+                        [RavenConfiguration.GetKey(x => x.Security.ValidateSanForCertificateWithWellKnownIssuer)] = true.ToString(),
+                        [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://{publicDomain}",
                     }
                 }
             );
@@ -69,7 +70,7 @@ namespace SlowTests.Issues
             var result = server.AuthenticateConnectionCertificate(client, null);
             Assert.Equal(RavenServer.AuthenticationStatus.ClusterAdmin, result.Status);
         }
-        
+
         [RavenTheory(RavenTestCategory.Certificates)]
         [InlineData($"a.b.{LocalDomainName}", $"*.{LocalDomainName}")]
         [InlineData($"a.{LocalDomainName}", $"*.a.{LocalDomainName}")]
@@ -89,9 +90,9 @@ namespace SlowTests.Issues
                 {
                     CustomSettings = new Dictionary<string, string>
                     {
-                        ["Security.WellKnownIssuers.Admin"] = caBase64,
-                        ["Security.WellKnownIssuers.Admin.ValidateCertificateNames"] = true.ToString(),
-                        ["PublicServerUrl"] = $"http://{publicDomain}",
+                        [RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)] = caBase64,
+                        [RavenConfiguration.GetKey(x => x.Security.ValidateSanForCertificateWithWellKnownIssuer)] = true.ToString(),
+                        [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://{publicDomain}",
                     }
                 }
             );
@@ -107,7 +108,6 @@ namespace SlowTests.Issues
             var ca = CertificateGenerator.GenerateRootCACertificate("ca", 2, caKeyPair);
             var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
 
-
             var clientKeyPair = CertificateGenerator.GenerateRSAKeyPair();
             var client = CertificateGenerator.GenerateSignedClientCertificate(ca, caKeyPair, "admin", 1, clientKeyPair, [LocalDomainName]);
 
@@ -115,8 +115,8 @@ namespace SlowTests.Issues
                 {
                     CustomSettings = new Dictionary<string, string>
                     {
-                        ["Security.WellKnownIssuers.Admin"] = caBase64,
-                        ["PublicServerUrl"] = $"http://a.{LocalDomainName}",
+                        [RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)] = caBase64,
+                        [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://a.{LocalDomainName}",
                     }
                 }
             );
