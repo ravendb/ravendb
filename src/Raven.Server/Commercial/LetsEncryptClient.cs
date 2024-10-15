@@ -304,13 +304,12 @@ namespace Raven.Server.Commercial
                 var challenge = _challenges[index];
 
                 AuthorizationChallengeResponse result;
-                string responseText;
                 try
                 {
                     // From: https://tools.ietf.org/html/rfc8555#section-7.5.1
                     // The first request of AuthorizationChallenge is POST with {} in the body.
                     // Then, all subsequent requests of AuthorizationChallenge (to get the status of the challenge) are POST-AS_GET with an empty body.
-                    (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, "{}", token);
+                    (result, _) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, "{}", token);
 
                     if (result.Status == "pending" || result.Status == "processing")
                     {
@@ -319,12 +318,14 @@ namespace Raven.Server.Commercial
                 }
                 catch (Exception e)
                 {
-                    AuthorizationChallengeResponse err = null;
-                    string errorText = null;
+                    result = null;
+                    string responseText = null;
                     try
                     {
                         // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
-                        (err, errorText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, string.Empty, token);
+                        (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, string.Empty, token);
+                        if (result.Status == "valid")
+                            continue;
                     }
                     catch
                     {
@@ -332,11 +333,11 @@ namespace Raven.Server.Commercial
                         // since err isn't set
                     }
 
-                    if (err == null)
+                    if (result == null)
                         throw;
 
-                    throw new InvalidOperationException("Failed to complete challenge because: " + err.Error?.Detail +
-                        Environment.NewLine + errorText, e);
+                    throw new InvalidOperationException("Failed to complete challenge because: " + result.Error?.Detail +
+                        Environment.NewLine + responseText, e);
                 }
             }
         }
