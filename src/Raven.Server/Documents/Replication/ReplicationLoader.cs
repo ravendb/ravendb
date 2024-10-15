@@ -1461,7 +1461,7 @@ namespace Raven.Server.Documents.Replication
                 using (var requestExecutor = RequestExecutor.CreateForShortTermUse(pullReplicationAsSink.ConnectionString.TopologyDiscoveryUrls, pullReplicationAsSink.ConnectionString.Database,
                     certificate, DocumentConventions.DefaultForServer))
                 {
-                    var cmd = new GetRemoteTaskTopologyCommand(database, Database.DatabaseGroupId, remoteTask);
+                    var cmd = new GetRemoteTaskTopologyCommand(database, Database.DatabaseGroupId, remoteTask, PullReplicationAsSinkTag);
 
                     try
                     {
@@ -1489,7 +1489,7 @@ namespace Raven.Server.Documents.Replication
                 using (var requestExecutor = RequestExecutor.CreateForShortTermUse(remoteDatabaseUrls,
                     pullReplicationAsSink.ConnectionString.Database, certificate, DocumentConventions.DefaultForServer))
                 {
-                    var cmd = new GetTcpInfoForRemoteTaskCommand(ExternalReplicationTag, database, remoteTask);
+                    var cmd = new GetTcpInfoForRemoteTaskCommand(PullReplicationAsSinkTag, database, remoteTask);
 
                     try
                     {
@@ -1507,6 +1507,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private static readonly string ExternalReplicationTag = "external-replication";
+        public static readonly string PullReplicationAsSinkTag = "pull-replication-as-sink";
 
         private TcpConnectionInfo GetExternalReplicationTcpInfo(ExternalReplication exNode, X509Certificate2 certificate, string database)
         {
@@ -1895,6 +1896,37 @@ namespace Raven.Server.Documents.Replication
             }
 
             return false;
+        }
+
+        public int HasActivePullReplicationAsSinkConnections()
+        {
+            var c = 0;
+            foreach (var dest in _externalDestinations)
+            {
+                if (dest.Disabled)
+                    continue;
+                if (dest is not PullReplicationAsSink sink)
+                    continue;
+                if (sink.Mode == PullReplicationMode.HubToSink)
+                    c++;
+            }
+
+            foreach (var node in _outgoing)
+            {
+                var dest = node.Destination;
+
+                if (dest.Disabled)
+                    continue;
+                if (dest is not PullReplicationAsHub hub)
+                {
+                    continue;
+                }
+
+                if (hub.Mode == (PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub))
+                    c++;
+            }
+
+            return c;
         }
     }
 

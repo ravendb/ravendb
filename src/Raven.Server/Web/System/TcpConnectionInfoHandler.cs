@@ -8,6 +8,7 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -37,10 +38,16 @@ namespace Raven.Server.Web.System
             var database = GetStringQueryString("database");
             var databaseGroupId = GetStringQueryString("groupId");
             var remoteTask = GetStringQueryString("remote-task");
+            var tag = GetStringQueryString("tag", false);
 
             var authResult = await AuthenticateAsync(HttpContext, ServerStore, database, remoteTask).ConfigureAwait(false);
             if (authResult == false)
                 return;
+
+            if (ServerStore.IdleDatabases.TryGetValue(database, out _) && (tag == ReplicationLoader.PullReplicationAsSinkTag || string.IsNullOrEmpty(tag)))
+            {
+                throw new DatabaseIdleException($"Cannot GetRemoteTaskTopology for PullReplicationAsSink connection because database '{database}' currently is idle.");
+            }
 
             List<string> nodes;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -76,10 +83,16 @@ namespace Raven.Server.Web.System
             var remoteTask = GetStringQueryString("remote-task");
             var database = GetStringQueryString("database");
             var verifyDatabase = GetBoolValueQueryString("verify-database", false);
+            var tag = GetStringQueryString("tag", false);
 
             if (ServerStore.IsPassive())
             {
                 throw new NodeIsPassiveException($"Can't fetch Tcp info from a passive node in url {this.HttpContext.Request.GetFullUrl()}");
+            }
+
+            if (ServerStore.IdleDatabases.TryGetValue(database, out _) && tag == ReplicationLoader.PullReplicationAsSinkTag)
+            {
+                throw new DatabaseIdleException($"Cannot GetRemoteTaskTcp for PullReplicationAsSink connection because database '{database}' currently is idle.");
             }
 
             if (verifyDatabase.HasValue && verifyDatabase.Value)

@@ -10,12 +10,14 @@ namespace Raven.Client.Documents.Commands
         private readonly string _remoteDatabase;
         private readonly string _databaseGroupId;
         private readonly string _remoteTask;
+        private readonly string _tag;
 
-        public GetRemoteTaskTopologyCommand(string remoteDatabase, string databaseGroupId, string remoteTask)
+        public GetRemoteTaskTopologyCommand(string remoteDatabase, string databaseGroupId, string remoteTask, string tag)
         {
             _remoteDatabase = remoteDatabase ?? throw new ArgumentNullException(nameof(remoteDatabase));
             _databaseGroupId = databaseGroupId ?? throw new ArgumentNullException(nameof(databaseGroupId));
             _remoteTask = remoteTask ?? throw new ArgumentNullException(nameof(remoteTask));
+            _tag = tag;
             Timeout = TimeSpan.FromSeconds(15);
         }
 
@@ -24,7 +26,8 @@ namespace Raven.Client.Documents.Commands
             url = $"{node.Url}/info/remote-task/topology?" +
                   $"database={Uri.EscapeDataString(_remoteDatabase)}" +
                   $"&remote-task={Uri.EscapeDataString(_remoteTask)}" +
-                  $"&groupId={Uri.EscapeDataString(_databaseGroupId)}";
+                  $"&groupId={Uri.EscapeDataString(_databaseGroupId)}" +
+                  $"&tag={Uri.EscapeDataString(_tag)}";
 
             RequestedNode = node;
             var request = new HttpRequestMessage
