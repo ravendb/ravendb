@@ -799,7 +799,7 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public sealed class SingleClusterDatabaseCommand : IDynamicJson
+        public sealed class SingleClusterDatabaseCommand : IDynamicJson, IDisposable
         {
             public ClusterTransactionOptions Options;
             public List<ClusterTransactionDataCommand> Commands;
@@ -821,6 +821,14 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(Index)] = new DynamicJsonArray(Commands),
                     [nameof(ShardNumber)] = ShardNumber
                 };
+            }
+
+            public void Dispose()
+            {
+                foreach (var command in Commands)
+                {
+                    command.Document?.Dispose();
+        }
             }
         }
 
@@ -863,14 +871,29 @@ namespace Raven.Server.ServerWide.Commands
                     var result = ReadCommand(context, reader);
                     if (result == null)
                         yield break;
-                    if (result.Database != lowerDb) // beware of reading commands of other databases.
+
+                    if (result.Database != lowerDb)
+                    {
+                        // beware of reading commands of other databases.
+                        result.Dispose();
                         continue;
+                    } 
+
                     if (result.PreviousCount < fromCount)
+                    {
+                        result.Dispose();
                         continue;
+                    }
+
                     if (lastCompletedClusterTransactionIndex.HasValue && result.Index <= lastCompletedClusterTransactionIndex)
+                    {
+                        result.Dispose();
                         continue;
+                    }
+
                     if (take <= 0)
                         yield break;
+
                     take--;
                     yield return result;
                 }
