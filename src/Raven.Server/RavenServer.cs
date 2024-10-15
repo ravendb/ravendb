@@ -2987,7 +2987,6 @@ namespace Raven.Server
                 return false;
             }
 
-            Regex regex;
             foreach (var san in sans)
             {
                 if (san.StartsWith("*."))
@@ -3003,15 +3002,18 @@ namespace Raven.Server
                         continue;
                     }
 
-                    regex = new Regex(@"^[^.]+\." + Regex.Escape(array[1]) + "$", RegexOptions.IgnoreCase);
+                    if (serverDomain.EndsWith(array[1]) &&
+                        serverDomain.Length > array[1].Length &&
+                        serverDomain[..(serverDomain.Length - array[1].Length - 1)].Contains('.') == false)
+                    {
+                        return true;
+                    }
                 }
                 else
                 {
-                    regex = new Regex($"^{Regex.Escape(san)}$", RegexOptions.IgnoreCase);
+                    if (string.Compare(serverDomain, san, StringComparison.OrdinalIgnoreCase) == 0)
+                        return true;
                 }
-
-                if (regex.IsMatch(serverDomain))
-                    return true;
             }
 
             return false;
