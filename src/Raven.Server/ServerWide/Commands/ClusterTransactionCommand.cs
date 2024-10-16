@@ -37,7 +37,7 @@ namespace Raven.Server.ServerWide.Commands
         //We take the current ticks in advance to ensure consistent results of the command execution on all nodes
         public long CommandCreationTicks = long.MinValue;
 
-        public class ClusterTransactionDataCommand
+        public class ClusterTransactionDataCommand : IDisposable
         {
             public CommandType Type;
             public string Id;
@@ -81,6 +81,11 @@ namespace Raven.Server.ServerWide.Commands
                     djv[nameof(FromBackup)] = FromBackup.Value;
 
                 return djv;
+            }
+
+            public void Dispose()
+            {
+                Document?.Dispose();
             }
         }
 
@@ -599,7 +604,7 @@ namespace Raven.Server.ServerWide.Commands
                 {
                     foreach (var command in Commands)
                     {
-                        command.Document?.Dispose();
+                        command.Dispose();
                     }
                 }
             }
