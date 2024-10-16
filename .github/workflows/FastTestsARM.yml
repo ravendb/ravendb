@@ -7,7 +7,6 @@ on:
     - cron: '30 6 * * *'
 
 env:
-  DOTNET_VERSION: 8.0.403
   DOTNET_INSTALL_DIR: "./.dotnet"
 
 jobs:
@@ -23,7 +22,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+        global-json-file: global.json
 
     - name: Install dependencies
       run: dotnet restore
@@ -47,7 +46,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+        global-json-file: global.json
 
     - name: Install dependencies
       run: dotnet restore

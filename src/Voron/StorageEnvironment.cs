@@ -1046,7 +1046,7 @@ namespace Voron
         public StorageReport GenerateReport(Transaction tx)
         {
             var numberOfAllocatedPages = GetNumberOfAllocatedPages();
-            var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
+            var numberOfFreePages = _freeSpaceHandling.GetFreePagesCount(tx.LowLevelTransaction);
 
             var countOfTrees = 0;
             var countOfTables = 0;
@@ -1332,7 +1332,7 @@ namespace Voron
         public unsafe DetailedReportInput CreateDetailedReportInput(Transaction tx, bool includeDetails)
         {
             var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
-            var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
+            var numberOfFreePages = _freeSpaceHandling.GetFreePagesCount(tx.LowLevelTransaction);
 
             var totalCryptoBufferSize = GetTotalCryptoBufferSize();
 
