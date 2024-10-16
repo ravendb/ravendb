@@ -843,7 +843,8 @@ namespace Voron.Impl
                 && scratchPage.AllocatedInTransaction == Id)
             {
                 _transactionPages.Remove(scratchPage);
-                scratchPagesInUse[pageNumber] = scratchPage with { IsDeleted = true };
+
+                _env.ScratchBufferPool.Free(this, scratchPage.File.Number, scratchPage.PositionInScratchBuffer);
 
                 if (_env.Options.Encryption.IsEnabled)
                 {
