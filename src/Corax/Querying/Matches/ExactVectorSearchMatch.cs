@@ -30,11 +30,11 @@ namespace Corax.Querying.Matches
         private readonly IndexSearcher _searcher;
         private readonly Transaction _tx;
         private readonly long _fieldRootPage;
-        private readonly ByteString _vectorToSearch;
+        private readonly Memory<byte> _vectorToSearch;
         private readonly float _minimumMatch;
         private readonly VectorSimilarityType _similarityType;
 
-        public ExactVectorSearchMatch(IndexSearcher searcher, Transaction tx, long fieldRootPage, Span<byte> vectorToSearch, float minimumMatch, VectorSimilarityType similarityType)
+        public ExactVectorSearchMatch(IndexSearcher searcher, Transaction tx, long fieldRootPage, Memory<byte> vectorToSearch, float minimumMatch, VectorSimilarityType similarityType)
         {
             _count = searcher.NumberOfEntries;
             _similarityFunc = similarityType switch
@@ -47,10 +47,9 @@ namespace Corax.Querying.Matches
             _searcher = searcher;
             _tx = tx;
             _fieldRootPage = fieldRootPage;
-            tx.Allocator.Allocate(vectorToSearch.Length, out _vectorToSearch);
-            vectorToSearch.CopyTo(_vectorToSearch.ToSpan());
             _minimumMatch = minimumMatch;
             _similarityType = similarityType;
+            _vectorToSearch = vectorToSearch;
         }
 
 
@@ -113,7 +112,7 @@ namespace Corax.Querying.Matches
                 if (vector.Length != _vectorToSearch.Length)
                     continue;
 
-                var similarity = _similarityFunc(_vectorToSearch.ToSpan(), vector);
+                var similarity = _similarityFunc(_vectorToSearch.Span, vector);
                 _scores[id] = similarity;
                 if (similarity > _minimumMatch)
                     return true;

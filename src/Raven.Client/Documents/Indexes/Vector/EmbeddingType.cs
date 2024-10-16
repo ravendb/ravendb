@@ -12,5 +12,4 @@ public enum EmbeddingType : byte
     Binary = 2,
     
     Text = 3,
-    Custom = byte.MaxValue
 }

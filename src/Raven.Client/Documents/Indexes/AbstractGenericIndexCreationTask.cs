@@ -159,6 +159,22 @@ namespace Raven.Client.Documents.Indexes
         {
             SpatialIndexesStrings.Add(field, indexing(new SpatialOptionsFactory()));
         }
+        
+        /// <summary>
+        /// Register a field to be vector indexed
+        /// </summary>
+        protected void Vector(Expression<Func<TReduceResult, object>> field, Func<VectorOptionsFactory, VectorOptionsFactory> indexing)
+        {
+            VectorIndexes.Add(field, indexing(new VectorOptionsFactory()).VectorOptions);
+        }
+        
+        /// <summary>
+        /// Register a field to be spatially indexed
+        /// </summary>
+        protected void Vector(string field, Func<VectorOptionsFactory, VectorOptions> indexing)
+        {
+            VectorIndexesStrings.Add(field, indexing(new VectorOptionsFactory()));
+        }
 
         /// <summary>
         /// Register a field to be stored

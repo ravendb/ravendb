@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Indexes
                    && Equals(Spatial, other.Spatial)
                    && string.Equals(Analyzer, other.Analyzer, StringComparison.OrdinalIgnoreCase)
                    && Suggestions == other.Suggestions
-                   && Vector == other.Vector;
+                   && Equals(Vector, other.Vector);
         }
 
         public override bool Equals(object obj)

@@ -137,7 +137,7 @@ public static class QueryBuilderHelper
     }
 
     public static (object Value, ValueTokenType Type) GetValue(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryExpression expression,
-        bool allowObjectsInParameters = false)
+        bool allowObjectsInParameters = false, bool allowArraysInParameters = false)
     {
         var value = expression as ValueExpression;
         if (value == null)
@@ -153,6 +153,9 @@ public static class QueryBuilderHelper
             if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
                 ThrowParameterValueWasNotProvided(parameterName, metadata.QueryText, parameters);
 
+            if (allowArraysInParameters && parameterValue is BlittableJsonReaderArray)
+                return (parameterValue, ValueTokenType.Parameter);
+            
             if (allowObjectsInParameters && parameterValue is BlittableJsonReaderObject)
                 return (parameterValue, ValueTokenType.Parameter);
 

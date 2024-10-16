@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.IO;
+using System.Numerics.Tensors;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raven.Client.Documents.Indexes.Vector;
@@ -38,41 +39,41 @@ public static class GenerateEmbeddings
     public static unsafe VectorValue FromArray<T>(in EmbeddingType embeddingSourceType, in EmbeddingType embeddingDestinationType, in T[] array)
         where T : unmanaged
     {
-        if (embeddingSourceType != EmbeddingType.Float32)
+        if (embeddingSourceType is EmbeddingType.Binary)
         {
-            if (embeddingSourceType == EmbeddingType.Binary)
-            {
-                if (typeof(T) == typeof(byte))
-                    return new VectorValue(arrayPool: null, (byte[])(object)array, (byte[])(object)array);
-
-
-                var bytes = MemoryMarshal.Cast<T, byte>(array);
-                var allocator = Allocator ??= ArrayPool<byte>.Create();
-                var buffer = allocator.Rent(bytes.Length);
-                bytes.CopyTo(buffer.AsSpan());
-            }
+            PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(byte), $"Data already quantized in '{EmbeddingType.Binary}' form should be of type 'byte'.");
+            return new VectorValue(arrayPool: null, (byte[])(object)array, (byte[])(object)array);
         }
-
-        PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(float),
-            $"Quantization {EmbeddingType.Binary} is expecting a float array but got '{array.GetType().FullName}'.");
-
+        
+        if (embeddingSourceType is EmbeddingType.Int8)
+        {
+            PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(sbyte), $"Data already quantized in '{EmbeddingType.Int8}' form should be of type 'sbyte'.");
+            var bytes = MemoryMarshal.Cast<T, byte>(array);
+            var allocator = Allocator ??= ArrayPool<byte>.Create();
+            var buffer = allocator.Rent(bytes.Length);
+            bytes.CopyTo(buffer.AsSpan());
+            
+            return new VectorValue(arrayPool: allocator, (byte[])(object)buffer, new Memory<byte>(buffer, 0, array.Length));
+        }
+        
+        PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(float), $"Not quantized data ('{nameof(VectorOptions.SourceEmbeddingType)}': '{EmbeddingType.Float32}') should be stored as floats (or floats encoded into base64).");
         switch (embeddingDestinationType)
         {
             case EmbeddingType.Binary:
             {
-                PortableExceptions.Throw<NotSupportedException>("Not supported embedding destination type");
+                PortableExceptions.Throw<NotSupportedException>("TODO");
                 return default;
             }
             case EmbeddingType.Int8:
             {
-                PortableExceptions.Throw<NotSupportedException>("Not supported embedding destination type");
+                PortableExceptions.Throw<NotSupportedException>("TODO");
                 return default;
             }
             default:
             {
                 var embeddings = (float[])(object)array;
                 var currentAllocator = Allocator ??= ArrayPool<byte>.Create();
-                int bytesRequires = embeddings.Length; //todo store norm
+                int bytesRequires = embeddings.Length * sizeof(float); //todo store norm
                 byte[] buffer = currentAllocator.Rent(bytesRequires);
                 MemoryMarshal.Cast<float, byte>(embeddings).CopyTo(buffer);
                 return new VectorValue(currentAllocator, buffer, new Memory<byte>(buffer, 0, bytesRequires));

@@ -5225,9 +5225,9 @@ namespace Raven.Server.Documents.Indexes
                 return field switch
                 {
                     //todo: revisit it later
-                    AutoIndexField autoField => IndexField.Create(name, new IndexFieldOptions() { Vector = VectorOptions.Default }, null, Corax.Constants.IndexWriter.DynamicField),
+                    AutoIndexField autoField => throw new InvalidDataException($"{nameof(AutoIndexField)} should not be in this codepath!)"),
                     IndexField staticField => staticField,
-                    _ => IndexField.Create(name, new IndexFieldOptions() { Vector = VectorOptions.Default }, null, Corax.Constants.IndexWriter.DynamicField)
+                    _ => throw new InvalidDataException("Cannot create an vector field without specific configuration!")
                 };
             });
         }

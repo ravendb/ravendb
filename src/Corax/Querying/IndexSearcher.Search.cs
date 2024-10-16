@@ -536,7 +536,7 @@ public partial class IndexSearcher
         return a;
     }
 
-    public IQueryMatch VectorQuery(in FieldMetadata fieldMetadata, Span<byte> vectorToSearch, in float minimumMatch, in VectorSimilarityType similarityType)
+    public IQueryMatch VectorQuery(in FieldMetadata fieldMetadata, Memory<byte> vectorToSearch, in float minimumMatch, in VectorSimilarityType similarityType)
     {
         long rootPageByFieldName = GetRootPageByFieldName(fieldMetadata.FieldName);
         if (rootPageByFieldName is -1)

@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -17,6 +18,7 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Logging;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.NotificationCenter.Notifications;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
@@ -333,39 +335,166 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        internal static object CreateVectorSearch(IndexField indexField, object value)
+        public object CreateVector(string fieldName, object value)
         {
-            object embedding;
-            switch (value)
+            var currentIndexingField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName);
+            PortableExceptions.ThrowIf<InvalidDataException>(currentIndexingField?.Vector is null,
+                $"Field '{fieldName}' does not exist in this indexing scope. Cannot index as vector.");
+
+            return CreateVector(currentIndexingField, value);
+        }
+
+        /// <summary>
+        /// Create vector field object. This method is used by AutoIndexes.
+        /// </summary>
+        /// <param name="indexField">IndexField from IndexDefinition</param>
+        /// <param name="value">Data source to create vector field.</param>
+        /// <returns></returns>
+        internal static object CreateVector(IndexField indexField, object value)
+        {
+#if DEBUG
+            indexField.Vector.Validate();
+#endif
+            
+            if (indexField!.Vector!.SourceEmbeddingType is EmbeddingType.Text)
+                return VectorFromText(indexField, value);
+            
+            return VectorFromEmbedding(indexField, value);
+        }
+
+        private static object VectorFromEmbedding(IndexField currentIndexingField, object value)
+        {
+            var vectorOptions = currentIndexingField.Vector;
+            PortableExceptions.ThrowIf<InvalidDataException>(value is DynamicNullObject or null, $"Cannot index data from a null value!");
+            
+            // We're expecting input in some-kind of numerical form (based on field's configuration). If not we can assume this is base64 form.
+            if (value is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject)
+                return GenerateEmbeddingForBase64(value.ToString());
+
+            // if (value is BlittableJsonReaderArray blittableJsonReaderArray)
+            // {
+            //     return GenerateEmbeddingsFromDynamicArray(blittableJsonReaderArray);
+            // }
+            
+            if (value is DynamicArray or BlittableJsonReaderArray)
             {
-                //todo: when value is str but index field has source set as Non-Text we should decode string as Base64?
-                case LazyStringValue keyLazy:
-                    embedding = CreateVectorValue(keyLazy.ToString());
-                    break;               
-                case LazyCompressedStringValue keyLazy:
-                    embedding = CreateVectorValue(keyLazy.ToString());
-                    break;
-                case string stringValue:
-                    embedding = CreateVectorValue(stringValue);
-                    break;
-                case DynamicNullObject or null:
-                    embedding = null;
-                    break;
-                case IEnumerable enumerable:
+                var da = value as DynamicArray;
+                var bjra = value as BlittableJsonReaderArray;
+                object firstElement = (da?[0] ?? bjra?[0]);
+                PortableExceptions.ThrowIf<InvalidDataException>(firstElement is null, $"There is no element in the vector!");
+                
+                var isEnumerableDynamicArray = firstElement is DynamicArray or BlittableJsonReaderArray; // should be safe since vector at least should have 1 dimension
+                var isBase64 = firstElement is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject;
+
+                // For float[][] we've to wrap it inside List<VectorValue>
+                if (isEnumerableDynamicArray)
                 {
+                    var enumerable = (IEnumerable)da ?? (IEnumerable)bjra;
                     var vectorList = new List<VectorValue>();
                     foreach (var item in enumerable)
-                        vectorList.Add(CreateVectorValue(item));
-                    embedding = vectorList;
-                    break;
+                        vectorList.Add(GenerateEmbeddingsFromDynamicArray((IEnumerable)item));
+                    return vectorList;
                 }
-                default:
-                    throw new NotSupportedException($"Unsupported vector search type: {value.GetType().FullName}");
+                
+                // For string[] as well
+                if (isBase64)
+                {
+                        var enumerable = (IEnumerable)da ?? (IEnumerable)bjra;
+                        var vectorList = new List<VectorValue>();
+                        foreach (var item in enumerable)
+                            vectorList.Add(GenerateEmbeddingForBase64(item.ToString()));
+
+                        return vectorList;
+                }
+
+                if (da != null)
+                    return GenerateEmbeddingsFromDynamicArray(da);
+                
+                return GenerateEmbeddingsFromDynamicArray(bjra);
             }
             
-            if (indexField.Id == Corax.Constants.IndexWriter.DynamicField)
-                return new List<CoraxDynamicItem> {new CoraxDynamicItem(){Field = indexField, FieldName = indexField.Name, Value = embedding}};
+            throw new InvalidDataException($"Not supported vector value: {value?.GetType().FullName}");
 
+            VectorValue GenerateEmbeddingsFromDynamicArray<TEnumerable>(TEnumerable dynamicArray) where TEnumerable : IEnumerable
+            {
+                //Todo: we could use some kind of growable buffer instead list to avoid allocations
+                IList embeddings = null;
+                embeddings = vectorOptions.SourceEmbeddingType switch
+                {
+                    EmbeddingType.Float32 => new List<float>(),
+                    EmbeddingType.Int8 => new List<sbyte>(),
+                    EmbeddingType.Binary => new List<byte>(),
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+
+                foreach (var item in dynamicArray)
+                {
+                    object num = (item, vectorOptions.SourceEmbeddingType) switch
+                    {
+                        (LazyNumberValue lNV, EmbeddingType.Float32) => Convert.ToSingle((float)lNV),
+                        (LazyNumberValue lNV, EmbeddingType.Int8) => Convert.ToSByte((sbyte)lNV),
+                        (float, EmbeddingType.Float32) => Convert.ToSingle(item),
+                        (double d, EmbeddingType.Float32) => Convert.ToSingle(d),
+                        (long l, EmbeddingType.Float32) => Convert.ToSingle(l),
+                        (int i, EmbeddingType.Float32) => Convert.ToSingle(i),
+                        (_, EmbeddingType.Binary) => Convert.ToByte(item),
+                        (long l, EmbeddingType.Int8) => Convert.ToSByte(l),
+                        (int i, EmbeddingType.Int8) => Convert.ToSByte(i),
+                        
+                        _ => throw new NotSupportedException($"Vector.Search() on ({item.GetType().FullName}, {vectorOptions.SourceEmbeddingType}) is not supported.")
+                    };
+
+                    switch (vectorOptions.SourceEmbeddingType)
+                    {
+                        case EmbeddingType.Float32:
+                            embeddings.Add((float)num);
+                            break;
+                        case EmbeddingType.Int8:
+                            embeddings.Add(Convert.ToSByte(num));
+                            break;
+                        default:
+                            embeddings.Add((byte)num);
+                            break;
+                    }
+                }
+
+                return embeddings switch
+                {
+                    List<float> vectorOfSingles => GenerateEmbeddings.FromArray(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType, vectorOfSingles.ToArray()),
+                    List<byte> vectorOfBytes => GenerateEmbeddings.FromArray(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType, vectorOfBytes.ToArray()),
+                    List<sbyte> vectorOfSbytes => GenerateEmbeddings.FromArray(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType, vectorOfSbytes.ToArray()),
+                    _ => throw new InvalidDataException($"Vector values must be either float, byte, or sbyte. Received `{embeddings.GetType().FullName}`.")
+                };
+            }
+
+            VectorValue GenerateEmbeddingForBase64(string source)
+            {
+                var decodedBase = Convert.FromBase64String(source);
+                if (vectorOptions.SourceEmbeddingType is EmbeddingType.Float32)
+                {
+                    var embeddings = MemoryMarshal.Cast<byte, float>(decodedBase);
+                    return GenerateEmbeddings.FromArray(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType, embeddings.ToArray());
+                }
+
+                return GenerateEmbeddings.FromArray(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType, decodedBase);
+            }
+        }
+
+        private static object VectorFromText(IndexField indexField, object value)
+        {
+            object embedding = null;
+
+            if (value is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject)
+                embedding = CreateVectorValue(value);
+            else if (value is IEnumerable enumerable)
+            {
+                var vectorList = new List<VectorValue>();
+                foreach (var item in enumerable)
+                    vectorList.Add(CreateVectorValue(item));
+                embedding = vectorList;
+            }
+
+            PortableExceptions.ThrowIf<InvalidDataException>(embedding is null, $"Tried to convert text into embeddings but got type {value?.GetType().FullName} which is not supported.");
             return embedding;
 
             VectorValue CreateVectorValue(object value)
@@ -385,87 +514,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 return GenerateEmbeddings.FromText(indexField.Vector.DestinationEmbeddingType, str);
             }
-        }
-     
-        public object CreateVectorSearch(string fieldName, object value)
-        {
-            var currentIndexingField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName);
-            
-            //Assert
-            if (currentIndexingField.Vector.SourceEmbeddingType is EmbeddingType.Binary or EmbeddingType.Int8)
-            {
-                if (currentIndexingField.Vector.IndexingStrategy is not VectorIndexingStrategy.Exact)
-                    throw new InvalidOperationException($"Embedding `{currentIndexingField.Vector.SourceEmbeddingType}` supports only `{VectorIndexingStrategy.Exact}` indexing strategy.");
-            }
-
-
-            object embedding;
-            switch (value)
-            {
-                case LazyStringValue keyLazy:
-                    embedding = CreateVectorValue(keyLazy.ToString());
-                    break;               
-                case LazyCompressedStringValue keyLazy:
-                    embedding = CreateVectorValue(keyLazy.ToString());
-                    break;
-                case string stringValue:
-                    embedding = CreateVectorValue(stringValue);
-                    break;
-                case DynamicNullObject or null:
-                    embedding = null;
-                    break;
-                case IEnumerable enumerable:
-                {
-                    var it = enumerable.GetEnumerator();
-                    var vectorList = new List<VectorValue>();
-                    foreach (var item in enumerable)
-                        vectorList.Add(CreateVectorValue(item));
-                    embedding = vectorList;
-                    break;
-                }
-                default:
-                    throw new NotSupportedException($"Unsupported vector search type: {value.GetType().FullName}");
-            }
-            
-            if (currentIndexingField.Id == Corax.Constants.IndexWriter.DynamicField)
-                return new List<CoraxDynamicItem> {new CoraxDynamicItem(){Field = currentIndexingField, FieldName = fieldName, Value = embedding}};
-
-            return embedding;
-
-            VectorValue CreateVectorValue(object value)
-            {
-                var str = value switch
-                {
-                    LazyStringValue lsv => (string)lsv,
-                    LazyCompressedStringValue lcsv => lcsv,
-                    string s => s,
-                    DynamicNullObject => null,
-                    null => null,
-                    _ => throw new NotSupportedException("Only strings are supported, but got: " + value?.GetType().FullName)
-                };
-
-                if (str == null)
-                    throw new InvalidDataException($"Unsupported vector value type: {value?.GetType().FullName}");
-
-                return GenerateEmbeddings.FromText(currentIndexingField.Vector.DestinationEmbeddingType, str);
-            }
-        }
-        
-        public object CreateVector(string fieldName, object value)
-        {
-            var currentIndexingField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName);
-            
-            var embeddingHolder = (value) switch
-            {
-                float[] floatArray => GenerateEmbeddings.FromArray(EmbeddingType.Float32, EmbeddingType.Int8, floatArray),
-                byte[] byteArray => GenerateEmbeddings.FromArray(EmbeddingType.Int8, EmbeddingType.Int8, byteArray),
-                _ => throw new NotSupportedException()
-            };
-            
-            if (currentIndexingField.Id == Corax.Constants.IndexWriter.DynamicField)
-                return new CoraxDynamicItem {Field = currentIndexingField, FieldName = fieldName, Value = value};
-
-            return embeddingHolder;
         }
 
         public dynamic LoadDocument<TIgnored>(object keyOrEnumerable, string collectionName)
@@ -577,13 +625,9 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 mapIndexDefinition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
             }
-            
-            var field = IndexField.Create(name, new IndexFieldOptions
-            {
-                Storage = options?.Storage,
-                TermVector = options?.TermVector,
-                Indexing = options?.Indexing,
-            }, allFields, Corax.Constants.IndexWriter.DynamicField);
+
+            var field = IndexField.Create(name, new IndexFieldOptions { Storage = options?.Storage, TermVector = options?.TermVector, Indexing = options?.Indexing, },
+                allFields, Corax.Constants.IndexWriter.DynamicField);
 
             scope.DynamicFields ??= new Dictionary<string, IndexField>();
             if (scope.DynamicFields.TryGetValue(name, out var existing) == false)

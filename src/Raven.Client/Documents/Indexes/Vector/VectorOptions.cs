@@ -1,45 +1,8 @@
 ﻿using System;
+using System.IO;
+using Sparrow;
 
 namespace Raven.Client.Documents.Indexes.Vector;
-
-public sealed class AutoVectorOptions : VectorOptions
-{
-    /// <summary>
-    /// Data source of embeddings
-    /// </summary>
-    public string SourceFieldName { get; set; }
-
-    public AutoVectorOptions()
-    {
-        
-    }
-    public AutoVectorOptions(AutoVectorOptions options)
-    {
-        Dimensions = options.Dimensions;
-        SourceEmbeddingType = options.SourceEmbeddingType;
-        DestinationEmbeddingType = options.DestinationEmbeddingType;
-        SourceFieldName = options.SourceFieldName;
-        IndexingStrategy = options.IndexingStrategy;
-    }
-
-    public override bool Equals(object obj)
-    {
-        if (obj is not AutoVectorOptions otherOptions)
-            return false;
-        
-        return Equals(otherOptions);
-    }
-
-    protected bool Equals(AutoVectorOptions other)
-    {
-        return base.Equals(other) && SourceFieldName == other.SourceFieldName;
-    }
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(base.GetHashCode(), SourceFieldName.GetHashCode());
-    }
-}
 
 /// <summary>
 /// Configure vector field in index
@@ -63,7 +26,7 @@ public class VectorOptions
     /// <summary>
     /// Defines dimensions size of embedding. When null we're locking the space to size we got from first item indexed.
     /// </summary>
-    public short? Dimensions { get; set; }
+    public int? Dimensions { get; set; }
     
     /// <summary>
     /// Defines indexing strategy for vector field inside index.
@@ -71,14 +34,23 @@ public class VectorOptions
     public VectorIndexingStrategy IndexingStrategy { get; set; }
     
     /// <summary>
-    /// Defines embedding generator.
+    /// Defines embedding source.
     /// </summary>
     public EmbeddingType SourceEmbeddingType { get; set; }
     
     /// <summary>
-    /// Defines in what point are embeddings. Default: single
+    /// Defines quantization of embedding.
     /// </summary>
     public EmbeddingType DestinationEmbeddingType { get; set; }
+
+    internal void Validate()
+    {
+        PortableExceptions.ThrowIf<InvalidOperationException>(DestinationEmbeddingType is EmbeddingType.Text, "Destination embedding type cannot be Text.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(Dimensions is <= 0, "Vector cannot have a negative dimensions.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Text && Dimensions is not null, "Dimensions are set internally by the embedder.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Int8 && DestinationEmbeddingType is not EmbeddingType.Int8, "We cannot perform quantization on already quantized vector.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Binary && DestinationEmbeddingType is not EmbeddingType.Binary, "We cannot perform quantization on already quantized vector.");
+    }
     
     public override bool Equals(object obj)
     {
