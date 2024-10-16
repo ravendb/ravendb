@@ -9,10 +9,6 @@ on:
     branches:
         - v6.2
 
-env:
-  DOTNET_VERSION: 8.0.403
-  
-
 jobs:
   release:
     runs-on: ${{ matrix.os }}
@@ -26,7 +22,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+        global-json-file: global.json
 
     - name: Install dependencies
       run: dotnet restore
@@ -50,7 +46,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+        global-json-file: global.json
 
     - name: Install dependencies
       run: dotnet restore
