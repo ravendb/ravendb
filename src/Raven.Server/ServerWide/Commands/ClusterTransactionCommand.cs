@@ -495,7 +495,7 @@ namespace Raven.Server.ServerWide.Commands
 
             return null;
         }
-        
+
         private struct CommandsPerShard
         {
             private readonly RawDatabaseRecord _record;
@@ -825,9 +825,12 @@ namespace Raven.Server.ServerWide.Commands
 
             public void Dispose()
             {
-                foreach (var command in Commands)
+                if (Commands is { Count: > 0 })
                 {
-                    command.Document?.Dispose();
+                    foreach (var command in Commands)
+                    {
+                        command.Document?.Dispose();
+                    }
         }
             }
         }
@@ -877,7 +880,7 @@ namespace Raven.Server.ServerWide.Commands
                         // beware of reading commands of other databases.
                         result.Dispose();
                         continue;
-                    } 
+                    }
 
                     if (result.PreviousCount < fromCount)
                     {
