@@ -1608,7 +1608,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var fieldFactoryObject);
                     
                     var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
-                    var valueBuilder = new VectorEmbeddingValueFactory();
+                    var valueBuilder = new VectorFieldValueFactory();
 
                     switch (fieldFactoryObject)
                     {
