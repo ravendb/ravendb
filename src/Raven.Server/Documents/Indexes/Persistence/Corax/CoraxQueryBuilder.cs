@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -621,29 +622,7 @@ public static class CoraxQueryBuilder
     private static IQueryMatch HandleVectorSearch(Parameters builderParameters, MethodExpression me)
     {
         var metadata = builderParameters.Metadata;
-        var (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[1]);
-        var fieldName = metadata.IsDynamic == false 
-            ? QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, builderParameters.QueryParameters, me.Arguments[0], metadata) 
-            : metadata.GetVectorFieldName(me, builderParameters.QueryParameters);
-        
-        var valueAsString = valueType switch
-        {
-            ValueTokenType.String =>value.ToString(),
-            _ => throw new NotSupportedException("Vector.Search() on " + valueType)
-        };
-
-        EmbeddingType embeddingType;
-        if (builderParameters.FieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField))
-            embeddingType = indexField.Vector.DestinationEmbeddingType;
-        else
-            embeddingType = VectorOptions.Default.DestinationEmbeddingType;
-            
-        return HandleVector(builderParameters, me, GenerateEmbeddings.FromText(embeddingType, valueAsString).Embedding.Span);
-    }
-
-    private static IQueryMatch HandleVector(Parameters builderParameters, MethodExpression me, Span<byte> vector)
-    {
-        var metadata = builderParameters.Metadata;
+        var (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[1], allowObjectsInParameters: false, allowArraysInParameters: true);
         
         var fieldName = metadata.IsDynamic == false 
             ? QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, builderParameters.QueryParameters, me.Arguments[0], metadata) 
@@ -651,13 +630,62 @@ public static class CoraxQueryBuilder
         
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters.Allocator, fieldName, builderParameters.Index, builderParameters.IndexFieldsMapping,
             builderParameters.FieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, hasBoost: builderParameters.HasBoost);
+        
+        EmbeddingType embeddingType;
+        if (builderParameters.FieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField))
+            embeddingType = indexField.Vector.DestinationEmbeddingType;
+        else
+            embeddingType = VectorOptions.Default.DestinationEmbeddingType;
 
-        var minimumMatch = 0.90f;
+        var vectorOptions = indexField!.Vector;
+
+        Memory<byte> vectorSpan = Memory<byte>.Empty;
+        if (vectorOptions.SourceEmbeddingType is EmbeddingType.Text)
+        {
+            var valueAsString = valueType switch
+            {
+                ValueTokenType.String => value.ToString(),
+                _ => throw new NotSupportedException("Vector.Search() on " + valueType)
+            };
+            vectorSpan = GenerateEmbeddings.FromText(vectorOptions.DestinationEmbeddingType, valueAsString).Embedding;
+        }
+        else
+        {
+            var underlyingEnumerable = (BlittableJsonReaderArray)value;
+            vectorSpan = vectorOptions.SourceEmbeddingType switch
+            {
+                EmbeddingType.Float32 => GetVector<float>(),
+                EmbeddingType.Int8 => GetVector<sbyte>(),
+                EmbeddingType.Binary => GetVector<byte>()
+            };
+            
+            Memory<byte> GetVector<T>() where T : unmanaged
+            {
+                var f = new T[underlyingEnumerable.Length];
+                for (int i = 0; i < underlyingEnumerable.Length; i++)
+                    f[i] = underlyingEnumerable[i] switch
+                    {
+                        LazyNumberValue lNV when typeof(T) == typeof(float) => (T)(object)(float)lNV,
+                        LazyNumberValue lNV when typeof(T) == typeof(sbyte) => (T)(object)(sbyte)lNV,
+                        float v when typeof(T) == typeof(float) => (T)(object)v,
+                        float v when typeof(T) == typeof(sbyte) => (T)(object)(sbyte)v,
+                        long l when typeof(T) == typeof(float) => (T)(object)(float)l,
+                        long l when typeof(T) == typeof(sbyte) => (T)(object)(sbyte)l,
+                        double d when typeof(T) == typeof(sbyte) => (T)(object)(sbyte)d,
+                        double d when typeof(T) == typeof(float) => (T)(object)(float)d,
+                        int @int when typeof(T) == typeof(sbyte) => (T)(object)(sbyte)@int,
+                        int @int when typeof(T) == typeof(float) => (T)(object)(float)@int,
+                        _ => throw new NotSupportedException("Vector.Search() on " + valueType)
+                    };
+                
+                return GenerateEmbeddings.FromArray<T>(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType, f).Embedding;
+            }
+        }
+        
+        var minimumMatch = 0.75f;
 
         if (me.Arguments.Count > 2)
         {
-            object value;
-            ValueTokenType valueType;
             (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[2]);
             minimumMatch = valueType switch
             {
@@ -666,7 +694,7 @@ public static class CoraxQueryBuilder
                 _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + valueType)
             };
         }
-
+        
         //adjust comparison for option used in library, otherwise use cosine (floats)
         var similarityType = (builderParameters.FieldsToFetch.IndexFields[fieldName].Vector?.DestinationEmbeddingType ?? VectorOptions.Default.DestinationEmbeddingType) switch
         {
@@ -675,7 +703,8 @@ public static class CoraxQueryBuilder
             _ => VectorSimilarityType.Cosine,
         };
         
-        return builderParameters.IndexSearcher.VectorQuery(fieldMetadata, vector, minimumMatch, similarityType);
+        
+        return builderParameters.IndexSearcher.VectorQuery(fieldMetadata, vectorSpan, minimumMatch, similarityType);
     }
 
     private static IQueryMatch HandleIn(Parameters builderParameters, InExpression ie, bool exact)

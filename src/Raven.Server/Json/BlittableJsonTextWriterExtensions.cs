@@ -1762,7 +1762,7 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(nameof(options.Vector.Dimensions));
                 if (options.Vector.Dimensions.HasValue)
-                    writer.WriteString(options.Vector.Dimensions.ToString());
+                    writer.WriteInteger(options.Vector.Dimensions.Value);
                 else
                     writer.WriteNull();
                 writer.WriteComma();
@@ -1773,6 +1773,12 @@ namespace Raven.Server.Json
                 
                 writer.WritePropertyName(nameof(options.Vector.SourceEmbeddingType));
                 writer.WriteString(options.Vector.SourceEmbeddingType.ToString());
+                writer.WriteComma();
+                
+                writer.WritePropertyName(nameof(options.Vector.DestinationEmbeddingType));
+                writer.WriteString(options.Vector.DestinationEmbeddingType.ToString());
+                
+                writer.WriteEndObject();
             }
             else
                 writer.WriteNull();

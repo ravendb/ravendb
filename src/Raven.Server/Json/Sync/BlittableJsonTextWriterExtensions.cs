@@ -246,7 +246,7 @@ namespace Raven.Server.Json.Sync
 
                 writer.WritePropertyName(nameof(options.Vector.Dimensions));
                 if (options.Vector.Dimensions.HasValue)
-                    writer.WriteString(options.Vector.Dimensions.ToString());
+                    writer.WriteInteger(options.Vector.Dimensions.Value);
                 else
                     writer.WriteNull();
                 writer.WriteComma();

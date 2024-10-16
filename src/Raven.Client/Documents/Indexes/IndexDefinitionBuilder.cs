@@ -177,6 +177,8 @@ namespace Raven.Client.Documents.Indexes
             TermVectorsStrings = new Dictionary<string, FieldTermVector>();
             SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
+            VectorIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, VectorOptions>();
+            VectorIndexesStrings = new Dictionary<string, VectorOptions>();
             CompoundFields = new List<Expression<Func<TReduceResult, object>>[]>();
             Configuration = new IndexConfiguration();
         }
@@ -215,7 +217,9 @@ namespace Raven.Client.Documents.Indexes
                 var termVectors = ConvertToStringDictionary(conventions,TermVectors);
                 var spatialOptions = ConvertToStringDictionary(conventions,SpatialIndexes);
                 var vectorOptions = ConvertToStringDictionary(conventions, VectorIndexes);
-
+                foreach (var vectorOption in VectorIndexes.Values)
+                    vectorOption.Validate();
+                
                 foreach (var indexesString in IndexesStrings)
                 {
                     if (indexes.ContainsKey(indexesString.Key))
@@ -256,6 +260,7 @@ namespace Raven.Client.Documents.Indexes
                     if (vectorOptions.ContainsKey(vectorString.Key))
                         throw new InvalidOperationException("There is a duplicate key in vector indexes: " + vectorString.Key);
                     
+                    vectorString.Value.Validate();
                     vectorOptions.Add(vectorString);
                 }
 

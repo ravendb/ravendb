@@ -21,8 +21,6 @@ public sealed class VectorFieldRewriter : CSharpSyntaxRewriter
         var expression = node.Expression.ToString();
         switch (expression)
         {
-            case $"this.{nameof(StaticIndexBase.CreateVectorSearch)}":
-            case $"{nameof(StaticIndexBase.CreateVectorSearch)}":
             case $"this.{nameof(StaticIndexBase.CreateVector)}":
             case $"{nameof(StaticIndexBase.CreateVector)}":
                 var parent = GetAnonymousObjectMemberDeclaratorSyntax(node);

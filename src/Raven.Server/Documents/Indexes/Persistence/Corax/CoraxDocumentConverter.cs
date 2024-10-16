@@ -37,7 +37,7 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
             {
                 if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, ((AutoVectorOptions)indexField.Vector).SourceFieldName, out value) == false)
                     continue;
-                var vector = AbstractStaticIndexBase.CreateVectorSearch(indexField, value);
+                var vector = AbstractStaticIndexBase.CreateVector(indexField, value);
                 InsertRegularField(indexField, vector, indexContext, builder, sourceDocument,  out innerShouldSkip);
             }
             else if (indexField.Spatial is AutoSpatialOptions spatialOptions)
