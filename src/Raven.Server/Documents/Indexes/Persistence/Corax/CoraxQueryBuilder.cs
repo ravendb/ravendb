@@ -605,7 +605,7 @@ public static class CoraxQueryBuilder
                 case MethodType.Spatial_Intersects:
                     return HandleSpatial(builderParameters, me, methodType);
                 case MethodType.Vector_Search:
-                    return HandleVectorSearch(builderParameters, me);
+                    return HandleVector(builderParameters, me);
                
                 case MethodType.Regex:
                     return HandleRegex(builderParameters, me, ref leftOnlyOptimization);
