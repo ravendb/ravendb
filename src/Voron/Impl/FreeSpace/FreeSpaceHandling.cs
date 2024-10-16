@@ -149,8 +149,8 @@ namespace Voron.Impl.FreeSpace
                         for (int i = 0; i < numberOfExtraBitsNeeded; i++)
                         {
                             next.Set(i, false);
-                        } 
-                        next.Write(freeSpaceTree,nextSectionId);
+                        }
+                        next.Write(freeSpaceTree, nextSectionId);
                     }
 
                     foreach (var section in info.Sections)
@@ -208,23 +208,23 @@ namespace Voron.Impl.FreeSpace
         {
             page = -1;
             var start = -1;
-            while(true)
+            while (true)
             {
                 start = current.FirstSetBit(start + 1);
-                if (start == -1 || 
+                if (start == -1 ||
                     start + num > NumberOfPagesInSection)
                     return false;
 
                 if (num > 1)
                 {
                     var nextUnsetBit = current.NextUnsetBits(start + 1);
-                    if (nextUnsetBit != -1 && (nextUnsetBit - start) < num )
+                    if (nextUnsetBit != -1 && (nextUnsetBit - start) < num)
                     {
                         start = nextUnsetBit;
                         continue;
                     }
-                }                
-                
+                }
+
                 page = currentSectionId * NumberOfPagesInSection + start;
                 break;
             }
@@ -325,13 +325,13 @@ namespace Voron.Impl.FreeSpace
                     for (var i = 0; i < NumberOfPagesInSection; i++)
                     {
                         if (current.Get(i))
-                            freePages.Add(currentSectionId*NumberOfPagesInSection + i);
+                            freePages.Add(currentSectionId * NumberOfPagesInSection + i);
                     }
                 } while (it.MoveNext());
 
                 return freePages;
             }
-        } 
+        }
         public List<DynamicJsonValue> FreeSpaceSnapshot(LowLevelTransaction tx, bool hex)
         {
             var freeSpaceTree = GetFreeSpaceTree(tx);
@@ -354,7 +354,32 @@ namespace Voron.Impl.FreeSpace
 
                 return freeSpace;
             }
-        } 
+        }
+
+        public int GetFreePagesCount(LowLevelTransaction tx)
+        {
+            var freeSpaceTree = GetFreeSpaceTree(tx);
+            if (freeSpaceTree.NumberOfEntries == 0)
+                return 0;
+
+            using (var it = freeSpaceTree.Iterate())
+            {
+                if (it.Seek(0) == false)
+                    return 0;
+
+                var count = 0;
+
+                do
+                {
+                    var stream = it.CreateReaderForCurrent();
+                    var current = new StreamBitArray(stream.Base);
+                    count += current.SetCount;
+
+                } while (it.MoveNext());
+
+                return count;
+            }
+        }
 
         public IEnumerable<long> GetAllFullyEmptySegments(LowLevelTransaction tx)
         {

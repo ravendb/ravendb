@@ -675,6 +675,11 @@ namespace Raven.Server.Web.Authentication
                         };
                         certificate = ctx.ReadObject(wellKnownCertDef.ToJson(), "WellKnown/Certificate/Definition");
                     }
+                    else
+                    {
+                        NoContentStatus();
+                        return;
+                    }
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream()))

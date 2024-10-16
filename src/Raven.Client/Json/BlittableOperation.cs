@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using Raven.Client.Documents.Session;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
@@ -186,7 +187,7 @@ namespace Raven.Client.Json
                 if (numOfEscapePositions == 0)
                     return false;
 
-                using (var memoryStream = new MemoryStream())
+                using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
                 {
                     using (var textWriter = new BlittableJsonTextWriter(context, memoryStream))
                     {

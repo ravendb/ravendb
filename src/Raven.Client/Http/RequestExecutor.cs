@@ -15,7 +15,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Nito.AsyncEx;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
@@ -42,11 +41,9 @@ namespace Raven.Client.Http
 {
     public class RequestExecutor : IDisposable
     {
-        private const int DefaultConnectionLimit = int.MaxValue;
+        internal const int DefaultConnectionLimit = int.MaxValue;
 
         private static readonly Guid GlobalApplicationIdentifier = Guid.NewGuid();
-
-        private static readonly TimeSpan MinHttpClientLifetime = TimeSpan.FromSeconds(5);
 
         private const int InitialTopologyEtag = -2;
 
@@ -54,7 +51,7 @@ namespace Raven.Client.Http
 
         internal readonly TimeSpan GlobalHttpClientTimeout;
 
-        private static readonly ConcurrentDictionary<HttpClientCacheKey, Lazy<HttpClientCacheItem>> GlobalHttpClientCache = new ConcurrentDictionary<HttpClientCacheKey, Lazy<HttpClientCacheItem>>();
+        internal static IRavenHttpClientFactory HttpClientFactory = DefaultRavenHttpClientFactory.Instance;
 
         private static readonly GetStatisticsOperation BackwardCompatibilityFailureCheckOperation = new GetStatisticsOperation(debugTag: "failure=check");
         private static readonly DatabaseHealthCheckOperation FailureCheckOperation = new DatabaseHealthCheckOperation();
@@ -87,17 +84,20 @@ namespace Raven.Client.Http
 
         internal string LastServerVersion { get; private set; }
 
-        private HttpClient _httpClient;
+        private HttpClient _cachedHttpClient;
 
         public HttpClient HttpClient
         {
             get
             {
-                var httpClient = _httpClient;
-                if (httpClient != null)
-                    return httpClient;
+                if (_cachedHttpClient != null)
+                    return _cachedHttpClient;
 
-                return _httpClient = GetHttpClient();
+                var httpClient = HttpClientFactory.GetHttpClient(_httpClientCacheKey, Conventions.CreateHttpClient);
+                if (HttpClientFactory.CanCacheHttpClient)
+                    _cachedHttpClient = httpClient;
+
+                    return httpClient;
             }
         }
 
@@ -237,34 +237,14 @@ namespace Raven.Client.Http
             _onTopologyUpdated?.Invoke(this, new TopologyUpdatedEventArgs(newTopology, reason));
         }
 
-        private HttpClient GetHttpClient()
-        {
-            var cacheKey = GetHttpClientCacheKey();
-
-            return GlobalHttpClientCache.GetOrAdd(cacheKey, new Lazy<HttpClientCacheItem>(() => new HttpClientCacheItem
-            {
-                HttpClient = CreateClient(),
-                CreatedAt = SystemTime.UtcNow
-            })).Value.HttpClient;
-        }
-
         internal bool TryRemoveHttpClient(bool force = false)
         {
-            var cacheKey = GetHttpClientCacheKey();
+            var removed = HttpClientFactory.TryRemoveHttpClient(_httpClientCacheKey, force);
+            if (removed)
+                _cachedHttpClient = null;
 
-            if (GlobalHttpClientCache.TryGetValue(cacheKey, out var client) &&
-                ((client.IsValueCreated &&
-                SystemTime.UtcNow - client.Value.CreatedAt > MinHttpClientLifetime) || force))
-            {
-                GlobalHttpClientCache.TryRemove(cacheKey, out _);
-
-                _httpClient = null;
-
-                return true;
+            return removed;
             }
-
-            return false;
-        }
 
         private HttpClientCacheKey GetHttpClientCacheKey()
         {
@@ -276,12 +256,7 @@ namespace Raven.Client.Http
             TimeSpan? httpPooledConnectionIdleTimeout = null;
 #endif
 
-            return new HttpClientCacheKey(Certificate?.Thumbprint ?? string.Empty, Conventions.UseHttpDecompression, httpPooledConnectionLifetime, httpPooledConnectionIdleTimeout, GlobalHttpClientTimeout, Conventions.HttpClientType);
-        }
-
-        internal static void ClearHttpClientsPool()
-        {
-            GlobalHttpClientCache.Clear();
+            return new HttpClientCacheKey(Certificate, Conventions.UseHttpDecompression, Conventions.HasExplicitlySetDecompressionUsage, httpPooledConnectionLifetime, httpPooledConnectionIdleTimeout, GlobalHttpClientTimeout, Conventions.HttpClientType);
         }
 
         private static bool ShouldRemoveHttpClient(SocketException exception)
@@ -300,7 +275,7 @@ namespace Raven.Client.Http
             }
         }
 
-        private static readonly Exception ServerCertificateCustomValidationCallbackRegistrationException;
+        internal static readonly Exception ServerCertificateCustomValidationCallbackRegistrationException;
 
         static RequestExecutor()
         {
@@ -336,7 +311,6 @@ namespace Raven.Client.Http
 
             _databaseName = databaseName;
             Certificate = certificate;
-
             Conventions = conventions.Clone();
 
             var maxNumberOfContextsToKeepInGlobalStack = PlatformDetails.Is32Bits == false
@@ -349,6 +323,8 @@ namespace Raven.Client.Http
             DefaultTimeout = Conventions.RequestTimeout;
             SecondBroadcastAttemptTimeout = conventions.SecondBroadcastAttemptTimeout;
             FirstBroadcastAttemptTimeout = conventions.FirstBroadcastAttemptTimeout;
+
+            _httpClientCacheKey = GetHttpClientCacheKey();
 
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
 
@@ -2021,7 +1997,7 @@ namespace Raven.Client.Http
             if (response != null)
             {
                 using (var stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
-                using (var ms = new MemoryStream()) // todo: have a pool of those
+                using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                 {
                     await stream.CopyToAsync(ms).ConfigureAwait(false);
                     try
@@ -2076,117 +2052,7 @@ namespace Raven.Client.Http
             _disposeOnceRunner.Dispose();
         }
 
-        public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useHttpDecompression, bool hasExplicitlySetDecompressionUsage = false, TimeSpan? pooledConnectionLifetime = null, TimeSpan? pooledConnectionIdleTimeout = null)
-        {
-            HttpClientHandler httpMessageHandler;
 
-            try
-            {
-                httpMessageHandler = new HttpClientHandler
-                {
-                    MaxConnectionsPerServer = DefaultConnectionLimit
-                };
-            }
-            catch (NotImplementedException)
-            {
-                httpMessageHandler = new HttpClientHandler();
-            }
-
-            HttpClientHandlerHelper.Configure(httpMessageHandler, pooledConnectionLifetime, pooledConnectionIdleTimeout);
-
-            if (httpMessageHandler.SupportsAutomaticDecompression)
-            {
-                httpMessageHandler.AutomaticDecompression =
-                    useHttpDecompression ?
-                        DecompressionMethods.GZip
-                        | DecompressionMethods.Deflate
-#if FEATURE_BROTLI_SUPPORT
-                        | DecompressionMethods.Brotli
-#endif
-                        : DecompressionMethods.None;
-            }
-            else if (useHttpDecompression && hasExplicitlySetDecompressionUsage)
-            {
-                throw new NotSupportedException("HttpClient implementation for the current platform does not support request compression.");
-            }
-
-            if (ServerCertificateCustomValidationCallbackRegistrationException == null)
-                httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
-
-            if (certificate != null)
-            {
-                if (httpMessageHandler.ClientCertificates == null)
-                    throw new NotSupportedException($"{typeof(HttpClientHandler)} does not support {nameof(httpMessageHandler.ClientCertificates)}. Setting the UseNativeHttpHandler property in project settings to false may solve the issue.");
-
-                httpMessageHandler.ClientCertificates.Add(certificate);
-                try
-                {
-                    if (setSslProtocols)
-                        httpMessageHandler.SslProtocols = TcpUtils.SupportedSslProtocols;
-                }
-                catch (PlatformNotSupportedException)
-                {
-                    // The user can set the following manually:
-                    // ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-                }
-
-                ValidateClientKeyUsages(certificate);
-            }
-
-            return httpMessageHandler;
-        }
-
-        public HttpClient CreateClient()
-        {
-#if NETCOREAPP3_1_OR_GREATER
-            var httpPooledConnectionLifetime = Conventions.HttpPooledConnectionLifetime;
-            var httpPooledConnectionIdleTimeout = Conventions.HttpPooledConnectionIdleTimeout;
-#else
-            TimeSpan? httpPooledConnectionLifetime = null;
-            TimeSpan? httpPooledConnectionIdleTimeout = null;
-#endif
-
-            var httpMessageHandler = CreateHttpMessageHandler(Certificate,
-                setSslProtocols: true,
-                useHttpDecompression: Conventions.UseHttpDecompression,
-                hasExplicitlySetDecompressionUsage: Conventions.HasExplicitlySetDecompressionUsage,
-                httpPooledConnectionLifetime,
-                httpPooledConnectionIdleTimeout
-            );
-
-            var httpClient = Conventions.CreateHttpClient(httpMessageHandler);
-            httpClient.Timeout = GlobalHttpClientTimeout;
-
-            return httpClient;
-        }
-
-        private static void ValidateClientKeyUsages(X509Certificate2 certificate)
-        {
-            var supported = false;
-            foreach (var extension in certificate.Extensions)
-            {
-                if (extension.Oid.Value != "2.5.29.37") //Enhanced Key Usage extension
-                    continue;
-
-                if (!(extension is X509EnhancedKeyUsageExtension kue))
-                    continue;
-
-                foreach (var eku in kue.EnhancedKeyUsages)
-                {
-                    if (eku.Value != "1.3.6.1.5.5.7.3.2")
-                        continue;
-
-                    supported = true;
-                    break;
-                }
-
-                if (supported)
-                    break;
-            }
-
-            if (supported == false)
-                throw new InvalidOperationException("Client certificate " + certificate.FriendlyName + " must be defined with the following 'Enhanced Key Usage': Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
-        }
 
         private static readonly ConcurrentSet<string> UpdatedConnectionLimitUrls = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -2488,55 +2354,9 @@ namespace Raven.Client.Http
             }
         }
 
-        private sealed class HttpClientCacheItem
-        {
-            public HttpClient HttpClient { get; set; }
-
-            public DateTime CreatedAt { get; set; }
-        }
-
-        private readonly struct HttpClientCacheKey
-        {
-            private readonly string _certificateThumbprint;
-            private readonly bool _useHttpDecompression;
-            private readonly TimeSpan? _pooledConnectionLifetime;
-            private readonly TimeSpan? _pooledConnectionIdleTimeout;
-            private readonly TimeSpan _globalHttpClientTimeout;
-            private readonly Type _httpClientType;
-
-            public HttpClientCacheKey(string certificateThumbprint, bool useHttpDecompression, TimeSpan? pooledConnectionLifetime, TimeSpan? pooledConnectionIdleTimeout, TimeSpan globalHttpClientTimeout, Type httpClientType)
-            {
-                _certificateThumbprint = certificateThumbprint;
-                _useHttpDecompression = useHttpDecompression;
-                _pooledConnectionLifetime = pooledConnectionLifetime;
-                _pooledConnectionIdleTimeout = pooledConnectionIdleTimeout;
-                _globalHttpClientTimeout = globalHttpClientTimeout;
-                _globalHttpClientTimeout = globalHttpClientTimeout;
-                _httpClientType = httpClientType;
-            }
-
-            private bool Equals(HttpClientCacheKey other)
-            {
-                return _certificateThumbprint == other._certificateThumbprint
-                       && _useHttpDecompression == other._useHttpDecompression
-                       && Nullable.Equals(_pooledConnectionLifetime, other._pooledConnectionLifetime)
-                       && Nullable.Equals(_pooledConnectionIdleTimeout, other._pooledConnectionIdleTimeout)
-                       && Nullable.Equals(_globalHttpClientTimeout, other._globalHttpClientTimeout)
-                       && _httpClientType == other._httpClientType;
-            }
-
-            public override bool Equals(object obj)
-            {
-                return obj is HttpClientCacheKey other && Equals(other);
-            }
-
-            public override int GetHashCode()
-            {
-                return HashCode.Combine(_certificateThumbprint, _useHttpDecompression, _pooledConnectionLifetime, _pooledConnectionIdleTimeout, _pooledConnectionIdleTimeout, _httpClientType);
-            }
-        }
-
         internal TestingStuff ForTestingPurposes;
+
+        private readonly HttpClientCacheKey _httpClientCacheKey;
 
         internal TestingStuff ForTestingPurposesOnly()
         {

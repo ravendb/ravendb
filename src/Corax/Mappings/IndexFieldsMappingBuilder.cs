@@ -145,8 +145,8 @@ public sealed class IndexFieldsMappingBuilder : IDisposable
 
     public IndexFieldsMappingBuilder AddDefaultAnalyzer(Analyzer defaultAnalyzer)
     {
-        if (_exactAnalyzer != null)
-            throw new InvalidOperationException($"Exact analyzer is already added");
+        if (_defaultAnalyzer != null)
+            throw new InvalidOperationException($"Default analyzer is already added");
 
         _defaultAnalyzer = defaultAnalyzer;
         return this;

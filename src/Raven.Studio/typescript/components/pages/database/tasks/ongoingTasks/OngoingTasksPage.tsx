@@ -213,9 +213,22 @@ export function OngoingTasksPage() {
             return task;
         });
 
-        const taskInfo = await Promise.all(loadTasks);
+        const taskInfoSettledResult = await Promise.allSettled(loadTasks);
 
-        const targetNode = taskInfo.find((x) => x.ResponsibleNode.NodeTag);
+        if (!taskInfoSettledResult.some((x) => x.status === "fulfilled")) {
+            dispatch({
+                type: "SubscriptionConnectionDetailsLoaded",
+                subscriptionId: taskId,
+                loadError: "Failed to get client connection details",
+            });
+
+            return;
+        }
+
+        const targetNode = taskInfoSettledResult
+            .filter((x) => x.status === "fulfilled")
+            .map((x) => x.value)
+            .find((x) => x.ResponsibleNode.NodeTag);
 
         try {
             // ask only responsible node for connection details

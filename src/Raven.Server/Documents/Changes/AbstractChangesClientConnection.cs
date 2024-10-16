@@ -152,7 +152,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
     {
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {
-            await using (var ms = new MemoryStream())
+            await using (var ms = RecyclableMemoryStreamFactory.GetMemoryStream())
             {
                 var sp = Stopwatch.StartNew();
                 var sendTaskSp = Stopwatch.StartNew();

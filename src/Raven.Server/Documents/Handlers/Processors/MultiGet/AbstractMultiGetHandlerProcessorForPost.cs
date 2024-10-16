@@ -8,12 +8,14 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Primitives;
+using Microsoft.IO;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -39,9 +41,7 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
             if (input.TryGet("Requests", out BlittableJsonReaderArray requests) == false)
                 Raven.Server.Web.RequestHandler.ThrowRequiredPropertyNameInRequest("Requests");
 
-            MemoryStream memoryStream = context.CheckoutMemoryStream();
-
-            try
+            using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 Stream responseBodyStream = RequestHandler.ResponseBodyStream();
                 var httpEncodings = HttpContext.Request.Headers.AcceptEncoding;
@@ -85,10 +85,6 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
 
                 memoryStream.Position = 0;
                 await memoryStream.CopyToAsync(responseBodyStream);
-            }
-            finally
-            {
-                context.ReturnMemoryStream(memoryStream);
             }
         }
     }
@@ -249,7 +245,7 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
             }
             else
             {
-                var requestBody = new MemoryStream();
+                var requestBody = RecyclableMemoryStreamFactory.GetRecyclableStream();
                 await using (var contentWriter = new AsyncBlittableJsonTextWriter(context, requestBody))
                     context.Write(contentWriter, (BlittableJsonReaderObject)content);
 

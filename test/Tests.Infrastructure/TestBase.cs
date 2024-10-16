@@ -25,10 +25,12 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static.NuGet;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.EventListener;
 using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Features;
 using Sparrow.Collections;
@@ -107,6 +109,7 @@ namespace FastTests
             DebugStuff.Attach();
 
             IgnoreProcessorAffinityChanges(ignore: true);
+            //RequestExecutor.HttpClientFactory = RavenServerHttpClientFactory.Instance;
             RavenLogManager.Set(RavenNLogLogManager.Instance);
             LicenseManager.AddLicenseStatusToLicenseLimitsException = true;
             RachisStateMachine.EnableDebugLongCommit = true;
@@ -170,6 +173,16 @@ namespace FastTests
             }
 
             RequestExecutor.RemoteCertificateValidationCallback += (sender, cert, chain, errors) => true;
+
+            TrafficWatchToLog.Instance.UpdateConfiguration(RavenConfiguration.Default.TrafficWatch);
+            EventListenerToLog.Instance.UpdateConfiguration(new EventListenerToLog.EventListenerConfiguration
+            {
+                EventListenerMode = RavenConfiguration.Default.DebugConfiguration.EventListenerMode,
+                EventTypes = RavenConfiguration.Default.DebugConfiguration.EventTypes,
+                MinimumDurationInMs = RavenConfiguration.Default.DebugConfiguration.MinimumDuration.GetValue(TimeUnit.Milliseconds),
+                AllocationsLoggingIntervalInMs = RavenConfiguration.Default.DebugConfiguration.AllocationsLoggingInterval.GetValue(TimeUnit.Milliseconds),
+                AllocationsLoggingCount = RavenConfiguration.Default.DebugConfiguration.AllocationsLoggingCount
+            });
 
             var configuration = RavenConfiguration.CreateForTesting("Tests", ResourceType.Server);
             configuration.Initialize();

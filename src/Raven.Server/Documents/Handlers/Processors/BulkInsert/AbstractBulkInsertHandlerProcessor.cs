@@ -63,7 +63,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
         }
 
         attachmentStream.Hash = await CopyAttachmentStreamAsync(stream, attachmentStream.Stream, token);
-        
+
         await attachmentStream.Stream.FlushAsync(token);
 
         return attachmentStream;
@@ -91,10 +91,10 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                     currentCtxReset = ContextPool.AllocateOperationContext(out JsonOperationContext docsCtx);
                     var requestBodyStream = RequestHandler.RequestBodyStream();
 
-                    if (ForTestingPurposes?.BulkInsertStreamReadTimeout > 0)
+                    if (ForTestingPurposes?.BulkInsert_StreamReadTimeout > 0)
                     {
                         var streamWithTimeout = (StreamWithTimeout)requestBodyStream;
-                        streamWithTimeout.ReadTimeout = ForTestingPurposes.BulkInsertStreamReadTimeout;
+                        streamWithTimeout.ReadTimeout = ForTestingPurposes.BulkInsert_StreamReadTimeout;
                     }
                     using (var reader = GetCommandsReader(context, requestBodyStream, buffer, CancellationToken))
                     {
@@ -144,7 +144,10 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                                     break;
 
                                 if (commandData.Type == CommandType.HeartBeat)
+                                {
+                                    ForTestingPurposes?.BulkInsert_OnHeartBeat?.Invoke();
                                     continue;
+                                }
 
                                 if (commandData.Type == CommandType.AttachmentPUT)
                                 {
@@ -299,6 +302,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
 
     internal sealed class TestingStuff
     {
-        internal int BulkInsertStreamReadTimeout;
+        internal int BulkInsert_StreamReadTimeout;
+        internal Action BulkInsert_OnHeartBeat;
     }
 }

@@ -7,6 +7,7 @@ using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Voron.Impl;
 using Voron;
+using Microsoft.IO;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Indexing
@@ -20,7 +21,7 @@ namespace Raven.Server.Indexing
         private readonly string _tree;
         private readonly Transaction _tx;
         private Stream _file;
-        private MemoryStream _ms;
+        private RecyclableMemoryStream _ms;
         private readonly IndexOutputFilesSummary _indexOutputFilesSummary;
 
         private Stream StreamToUse => _ms ?? _file;

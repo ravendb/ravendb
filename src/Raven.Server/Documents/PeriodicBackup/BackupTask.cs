@@ -23,6 +23,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
@@ -322,7 +323,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}. Failed to start process.", e);
             }
 
-            using (var ms = new MemoryStream())
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 var readErrors = process.StandardError.ReadToEndAsync();
                 var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);

@@ -4,6 +4,8 @@ using System.IO;
 using System.Net.Mime;
 using CloudNative.CloudEvents;
 using CloudNative.CloudEvents.Core;
+using Microsoft.IO;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
 
@@ -28,7 +30,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue
                 return Array.Empty<byte>();
             }
 
-            MemoryStream ms = _ctx.CheckoutMemoryStream();
+            var ms = RecyclableMemoryStreamFactory.GetRecyclableStream();
 
             _streams.Add(ms);
 
@@ -74,7 +76,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue
         {
             foreach (MemoryStream ms in _streams)
             {
-                _ctx.ReturnMemoryStream(ms);
+                ms.Dispose();
             }
         }
     }

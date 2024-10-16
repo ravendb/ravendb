@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.AspNetCore.Connections;
+using Raven.Client.Http;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -40,6 +41,15 @@ namespace Raven.Server
 
         static Program()
         {
+            bool useLegacyHttpClientFactory = false;
+            var useLegacyHttpClientFactoryAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_USELEGACYHTTPCLIENTFACTORY");
+            if (useLegacyHttpClientFactoryAsString != null && bool.TryParse(useLegacyHttpClientFactoryAsString, out useLegacyHttpClientFactory) == false)
+                throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_USELEGACYHTTPCLIENTFACTORY' env variable with value '{useLegacyHttpClientFactoryAsString}'.");
+
+            RequestExecutor.HttpClientFactory = useLegacyHttpClientFactory 
+                ? DefaultRavenHttpClientFactory.Instance 
+                : RavenServerHttpClientFactory.Instance;
+
             RavenLogManager.Set(RavenNLogLogManager.Instance);
             Logger = RavenLogManager.Instance.GetLoggerForServer<Program>();
         }

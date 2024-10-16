@@ -48,7 +48,7 @@ namespace Sparrow.Json
 
             ThrowIfDisposedOnDebug(this);
 
-            using (var memoryStream = new MemoryStream())
+            using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 var tw = new AsyncBlittableJsonTextWriter(_context, memoryStream);
                 try

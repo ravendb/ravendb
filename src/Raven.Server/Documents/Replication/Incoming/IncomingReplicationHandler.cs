@@ -569,8 +569,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 }
 
                                 var hasRemoteClusterTx = doc.Flags.Contain(DocumentFlags.FromClusterTransaction);
-                                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, doc.Id, doc.ChangeVector, out var hasLocalClusterTx);
                                 var flags = doc.Flags;
+                                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, doc.Id, doc.ChangeVector, flags);
                                 var resolvedDocument = document;
 
                                 switch (conflictStatus)
@@ -623,26 +623,14 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             _replicationInfo.Logger.Info(
                                                 $"Conflict check resolved to Conflict operation, resolving conflict for doc = {doc.Id}, with change vector = {doc.ChangeVector}");
 
-                                        if (hasLocalClusterTx == hasRemoteClusterTx)
-                                        {
-                                            // when hasLocalClusterTx and hasRemoteClusterTx both 'true'
-                                            // it is a case of a conflict between documents which were modified in a cluster transaction
-                                            // in two _different clusters_, so we will treat it as a "normal" conflict
+                                        // when hasLocalClusterTx and hasRemoteClusterTx both 'true'
+                                        // it is a case of a conflict between documents which were modified in a cluster transaction
+                                        // in two _different clusters_, so we will treat it as a "normal" conflict
 
-                                            IsIncomingInternalReplication = false;
+                                        IsIncomingInternalReplication = false;
 
-                                            conflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
-                                                document, incomingChangeVector, doc.Flags);
-                                            continue;
-                                        }
-
-                                        // cluster tx has precedence over regular tx
-
-                                        if (hasLocalClusterTx)
-                                            goto case ConflictStatus.AlreadyMerged;
-
-                                        if (hasRemoteClusterTx)
-                                            goto case ConflictStatus.Update;
+                                        conflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
+                                            document, incomingChangeVector, doc.Flags);
 
                                         break;
 

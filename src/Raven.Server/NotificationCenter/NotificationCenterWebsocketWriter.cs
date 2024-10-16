@@ -4,8 +4,10 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.IO;
 using Raven.Server.Dashboard;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
@@ -24,7 +26,7 @@ namespace Raven.Server.NotificationCenter
         private readonly JsonOperationContext _context;
         protected readonly CancellationToken _resourceShutdown;
 
-        private readonly MemoryStream _ms = new MemoryStream();
+        private readonly MemoryStream _ms = RecyclableMemoryStreamFactory.GetMemoryStream();
         public Action AfterTrackActionsRegistration;
         private readonly IDisposable _returnContext;
 

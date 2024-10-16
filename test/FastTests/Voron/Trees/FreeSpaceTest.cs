@@ -312,6 +312,8 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.WriteTransaction())
             {
                 var retrievedFreePages = Env.FreeSpaceHandling.AllPages(tx.LowLevelTransaction);
+                var freePagesCount = Env.FreeSpaceHandling.GetFreePagesCount(tx.LowLevelTransaction);
+                Assert.Equal(freePagesCount, retrievedFreePages.Count);
 
                 freedPages.ExceptWith(Env.FreeSpaceHandling.GetFreePagesOverheadPages(tx.LowLevelTransaction)); // need to take into account that some of free pages might be used for free space handling
                 var sorted = freedPages.OrderBy(x => x).ToList();

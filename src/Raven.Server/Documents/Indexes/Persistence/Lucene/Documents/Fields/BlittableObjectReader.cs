@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.IO;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
@@ -12,7 +13,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
     public sealed class BlittableObjectReader : IDisposable
     {
         private readonly NonDisposableStreamReader _reader;
-        private readonly MemoryStream _ms;
+        private readonly RecyclableMemoryStream _ms;
 
         private StringBuilder _sb;
         private char[] _readBuffer;
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 
         public BlittableObjectReader()
         {
-            _ms = new MemoryStream();
+            _ms = RecyclableMemoryStreamFactory.GetRecyclableStream();
             _reader = new NonDisposableStreamReader(new StreamReader(_ms, Encodings.Utf8, true, 1024, leaveOpen: true));
         }
 

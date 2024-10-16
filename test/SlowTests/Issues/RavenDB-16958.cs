@@ -279,7 +279,7 @@ namespace SlowTests.Issues
             using (var serverA = CreateSecuredServer())
             using (var serverB = CreateSecuredServer(serverA.ServerStore.GetNodeTcpServerUrl(), false))
             {
-                using (var handler = RequestExecutor.CreateHttpMessageHandler(serverA.Certificate.Certificate, true, true))
+                using (var handler = DefaultRavenHttpClientFactory.CreateHttpMessageHandler(serverA.Certificate.Certificate, true, true))
                 using (var client = new HttpClient(handler).WithConventions(DocumentConventions.DefaultForServer))
                 {
                     var url = $"{serverA.WebUrl}/admin/debug/node/ping?url={Uri.EscapeDataString(serverB.WebUrl)}";

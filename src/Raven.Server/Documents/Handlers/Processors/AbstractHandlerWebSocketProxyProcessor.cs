@@ -7,6 +7,7 @@ using Raven.Client.Http;
 using Raven.Server.NotificationCenter.Handlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
@@ -109,7 +110,7 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
         try
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var ms = new MemoryStream())
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 using (var writer = new BlittableJsonTextWriter(context, ms))
                 {
