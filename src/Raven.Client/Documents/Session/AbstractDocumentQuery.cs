@@ -1513,7 +1513,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             return propertyName;
         }
 
-        internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorEmbeddingValueFactory queriedEmbeddingFactory,
+        internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory queriedFactory,
             float minimumSimilarity)
         {
             var fieldName = embeddingFieldFactory.FieldName;
@@ -1521,24 +1521,24 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var targetQuantizationType = embeddingFieldFactory.DestinationQuantizationType;
             var isSourceBase64Encoded = embeddingFieldFactory.IsBase64Encoded;
             
-            var queriedVectorQuantizationType = queriedEmbeddingFactory.EmbeddingQuantizationType;
+            var queriedVectorQuantizationType = queriedFactory.EmbeddingQuantizationType;
             
             string queryParameterName;
             var isVectorBase64Encoded = false;
             
-            if (queriedEmbeddingFactory.Text != null)
+            if (queriedFactory.Text != null)
             {
-                queryParameterName = AddQueryParameter(queriedEmbeddingFactory.Text);
+                queryParameterName = AddQueryParameter(queriedFactory.Text);
             }
 
-            else if (queriedEmbeddingFactory.Embedding != null)
+            else if (queriedFactory.Embedding != null)
             {
-                queryParameterName = AddQueryParameter(queriedEmbeddingFactory.Embedding);
+                queryParameterName = AddQueryParameter(queriedFactory.Embedding);
             }
 
             else
             {
-                queryParameterName = AddQueryParameter(queriedEmbeddingFactory.Base64Embedding);
+                queryParameterName = AddQueryParameter(queriedFactory.Base64Embedding);
                 isVectorBase64Encoded = true;
             }
             
@@ -1547,9 +1547,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             WhereTokens.AddLast(vectorSearchToken);
         }
 
-        public void VectorSearch(IVectorFieldFactory<T> fieldFactory, IVectorEmbeddingFieldValueFactoryBase valueFactory, float minimumSimilarity)
+        public void VectorSearch(IVectorFieldFactory<T> fieldFactory, IVectorFieldValueFactory valueFactory, float minimumSimilarity)
         {
-            VectorSearch((VectorEmbeddingFieldFactory<T>)fieldFactory, (VectorEmbeddingValueFactory)valueFactory, minimumSimilarity);
+            VectorSearch((VectorEmbeddingFieldFactory<T>)fieldFactory, (VectorFieldValueFactory)valueFactory, minimumSimilarity);
         }
 
         public void Distinct()
