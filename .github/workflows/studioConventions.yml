@@ -15,16 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-
-    - name: Grep .Net version
-      run: |
-        dotnet_version=$(grep '<TargetFramework>' < src/Raven.Server/Raven.Server.csproj | tr -cd [:digit:].)
-        echo "DOTNET_VERSION=${dotnet_version}" >> $GITHUB_ENV
-
-    - name: Setup .NET Core
+    - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '${{ env.DOTNET_VERSION }}'
+        global-json-file: global.json
 
     - name: Install dependencies
       run: dotnet restore
