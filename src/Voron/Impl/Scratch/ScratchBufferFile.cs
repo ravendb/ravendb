@@ -26,6 +26,7 @@ namespace Voron.Impl.Scratch
         {
             public long Page;
             public long ValidAfterTransactionId;
+            public long AllocatedInTransaction;
         }
 
         private readonly Pager _scratchPager;
@@ -211,7 +212,8 @@ namespace Voron.Impl.Scratch
             list.AddFirst(new PendingPage
             {
                 Page = value.PositionInScratchBuffer,
-                ValidAfterTransactionId = asOfTxId
+                ValidAfterTransactionId = asOfTxId,
+                AllocatedInTransaction = value.AllocatedInTransaction,
             });
 
             _txIdAfterWhichLatestFreePagesBecomeAvailable = asOfTxId;
@@ -277,18 +279,18 @@ namespace Voron.Impl.Scratch
 
             public long LastAsOfTxIdWhenFree { get; set; }
 
-            internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
+            internal Dictionary<long, (long ValidAfterTransactionId, long AllocatedInTransaction)> GetMostAvailableFreePagesBySize()
             {
                 return _parent._freePagesBySize.Keys.ToDictionary(size => size, size =>
                 {
                     if (_parent._freePagesBySize.TryGetValue(size, out var pendingPages) == false)
-                        return -1;
+                        return (-1, -1);
 
                     var value = pendingPages.Last?.Value;
                     if (value == null)
-                        return -1;
+                        return (-1, -1);
 
-                    return value.ValidAfterTransactionId;
+                    return (value.ValidAfterTransactionId, value.AllocatedInTransaction);
                 });
             }
 
