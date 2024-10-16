@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Client.Documents.Changes;
@@ -22,6 +23,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
+using Memory = Sparrow.Memory;
 
 namespace Raven.Server.Documents
 {
@@ -388,7 +390,12 @@ namespace Raven.Server.Documents
                     var lowerName = Encodings.Utf8.GetString(counterName.Content.Ptr, counterName.Content.Length);
 
                     Slice countersGroupKey;
-                    if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var existing))
+                    if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var existing) == false)
+                    {
+                        data = WriteNewCountersDocument(context, originalName: name, lowerName, value);
+                        countersGroupKey = documentKeyPrefix;
+                    }
+                    else
                     {
                         countersGroupKeyScope = Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out countersGroupKey);
 
@@ -409,6 +416,8 @@ namespace Raven.Server.Documents
 
                         if (data.TryGet(CounterNames, out BlittableJsonReaderObject originalNames) == false)
                             ThrowMissingProperty(counterKeySlice, CounterNames);
+
+                        CheckForCorruptedCountersData(documentId, counters, originalNames);
 
                         var counterEtag = _documentsStorage.GenerateNextEtag();
 
@@ -432,7 +441,8 @@ namespace Raven.Server.Documents
                                 var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
                                 using (data)
                                 {
-                                    SplitCounterGroup(context, collectionName, table, documentKeyPrefix, countersGroupKey, counters, dbIds, originalNames, existingChangeVector);
+                                    SplitCounterGroup(context, collectionName, table, documentKeyPrefix, countersGroupKey, counters, dbIds, originalNames,
+                                        existingChangeVector);
                                 }
 
                                 // now we retry and know that we have enough space
@@ -444,10 +454,7 @@ namespace Raven.Server.Documents
                             if (existingCounter == null)
                             {
                                 // new counter
-                                originalNames.Modifications = new DynamicJsonValue
-                                {
-                                    [lowerName] = name
-                                };
+                                originalNames.Modifications = new DynamicJsonValue { [lowerName] = name };
                             }
                         }
 
@@ -458,11 +465,6 @@ namespace Raven.Server.Documents
                                 data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                             }
                         }
-                    }
-                    else
-                    {
-                        data = WriteNewCountersDocument(context, originalName: name, lowerName, value);
-                        countersGroupKey = documentKeyPrefix;
                     }
 
                     var groupEtag = _documentsStorage.GenerateNextEtag();
@@ -516,6 +518,23 @@ namespace Raven.Server.Documents
 
                 _counterModificationMemoryScopes.Clear();
             }
+        }
+
+        private static void CheckForCorruptedCountersData(string documentId, BlittableJsonReaderObject counterValues, BlittableJsonReaderObject counterNames)
+        {
+            // RavenDB-22835
+            // counters data might be corrupted and needs to be fixed before adding/incrementing new counters
+
+            var msg = $"Counters data of document '{documentId}' is corrupted. " +
+                      $"Cannot add/increment counters while counter data is in this corrupted state. Please use FixCounters tool (/databases/*/counters/fix-document) in order to add/increment counters of this document";
+
+            if (counterValues.Count != counterNames.Count)
+                throw new InvalidDataException(msg);
+            
+            var counterValuesPropertyNames = counterValues.GetSortedPropertyNames();
+            var counterNamesPropertyNames = counterNames.GetSortedPropertyNames();
+            if (counterValuesPropertyNames.SequenceEqual(counterNamesPropertyNames) == false)
+                throw new InvalidDataException(msg);
         }
 
         internal static void ThrowMissingProperty(Slice counterKeySlice, string property)
@@ -845,9 +864,20 @@ namespace Raven.Server.Documents
 
                 for (int i = start; i < end; i++)
                 {
-                    originalNames.GetPropertyByIndex(i, ref prop);
+                    // RavenDB-22835
+                    // we might be operating on corrupted data where names.Count < values.Count
+                    // if so, use lower-cased name instead
+                    if (i >= originalNames.Count)
+                    {
+                        values.GetPropertyByIndex(i, ref prop);
+                        builder.WritePropertyName(prop.Name);
+                        builder.WriteValue(prop.Name);
+                        continue;
+                    }
 
+                    originalNames.GetPropertyByIndex(i, ref prop);
                     builder.WritePropertyName(prop.Name);
+
                     if (prop.Value is LazyStringValue lsv)
                         builder.WriteValue(lsv);
                     else if (prop.Value is LazyCompressedStringValue compressed)
@@ -1147,6 +1177,133 @@ namespace Raven.Server.Documents
                 entriesToUpdate.Clear();
                 _dictionariesPool.Free(entriesToUpdate);
             }
+        }
+
+        public int FixCountersForDocuments(DocumentsOperationContext context, List<string> docIds)
+        {
+            var numOfCounterGroupsFixed = 0;
+            foreach (var docId in docIds)
+            {
+                numOfCounterGroupsFixed += FixCountersForDocument(context, docId);
+            }
+
+            return numOfCounterGroupsFixed;
+        }
+
+        public int FixCountersForDocument(DocumentsOperationContext context, string documentId)
+        {
+            List<string> allNames = null;
+            LazyStringValue collection = default;
+
+            Table writeTable = default;
+            int numOfCounterGroupFixed = 0;
+            CollectionName collectionName = default;
+            try
+            {
+                var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
+                using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice key, separator: SpecialChars.RecordSeparator))
+                {
+                    foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
+                    {
+                        var tvr = result.Value.Reader;
+                        BlittableJsonReaderObject data;
+
+                        using (data = GetCounterValuesData(context, ref tvr))
+                        {
+                            data = data.Clone(context);
+                        }
+
+                        data.TryGet(Values, out BlittableJsonReaderObject counterValues);
+                        data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames);
+
+                        if (counterValues.Count == counterNames.Count)
+                        {
+                            var counterValuesPropertyNames = counterValues.GetSortedPropertyNames();
+                            var counterNamesPropertyNames = counterNames.GetSortedPropertyNames();
+                            if (counterValuesPropertyNames.SequenceEqual(counterNamesPropertyNames))
+                                continue;
+                        }
+
+                        if (collection == null)
+                        {
+                            collection = TableValueToId(context, (int)CountersTable.Collection, ref tvr);
+                            collectionName = _documentsStorage.ExtractCollectionName(context, collection);
+
+                            writeTable = GetOrCreateTable(context.Transaction.InnerTransaction, CountersSchema, collectionName, CollectionTableType.CounterGroups);
+                        }
+
+                        BlittableJsonReaderObject.PropertyDetails prop = default;
+                        var originalNames = new DynamicJsonValue();
+
+                        for (int i = 0; i < counterValues.Count; i++)
+                        {
+                            counterValues.GetPropertyByIndex(i, ref prop);
+
+                            var lowerCasedCounterName = prop.Name;
+                            if (counterNames.TryGet(lowerCasedCounterName, out string counterNameToUse) == false)
+                            {
+                                // CounterGroup document is corrupted - missing counter name
+                                allNames ??= GetCountersForDocument(context, documentId).ToList();
+                                var location = allNames.BinarySearch(lowerCasedCounterName, StringComparer.OrdinalIgnoreCase);
+
+                                // if we don't have the counter name in its original casing - we'll use the lowered-case name instead
+                                counterNameToUse = location < 0
+                                    ? lowerCasedCounterName
+                                    : allNames[location];
+                            }
+
+                            originalNames[lowerCasedCounterName] = counterNameToUse;
+                        }
+
+                        data.Modifications = new DynamicJsonValue(data)
+                        {
+                            [CounterNames] = originalNames
+                        };
+
+                        using (var old = data)
+                        {
+                            data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        }
+
+                        // we're using the same change vector and etag here, in order to avoid replicating
+                        // the counter group to other nodes (each node should fix its counters locally)
+                        using var changeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref tvr);
+                        var groupEtag = TableValueToEtag((int)CountersTable.Etag, ref tvr);
+
+                        using (var counterGroupKey = TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
+                        using (context.Allocator.Allocate(counterGroupKey.Size, out var buffer))
+                        {
+                            counterGroupKey.CopyTo(buffer.Ptr);
+
+                            using (var clonedKey = context.AllocateStringValue(null, buffer.Ptr, buffer.Length))
+                            using (Slice.External(context.Allocator, clonedKey, out var countersGroupKey))
+                            using (Slice.From(context.Allocator, changeVector, out var cv))
+                            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                            using (writeTable.Allocate(out TableValueBuilder tvb))
+                            {
+                                tvb.Add(countersGroupKey);
+                                tvb.Add(Bits.SwapBytes(groupEtag));
+                                tvb.Add(cv);
+                                tvb.Add(data.BasePointer, data.Size);
+                                tvb.Add(collectionSlice);
+                                tvb.Add(context.GetTransactionMarker());
+
+                                writeTable.Set(tvb);
+                            }
+                        }
+
+                        numOfCounterGroupFixed++;
+                    }
+                }
+            }
+            finally
+            {
+                collection?.Dispose();
+            }
+
+            return numOfCounterGroupFixed;
+
         }
 
         private void UpdateMetricsForNewCounterGroup(BlittableJsonReaderObject data)
@@ -1461,6 +1618,14 @@ namespace Raven.Server.Documents
                 existingCounter = AddPartialValueToExistingCounter(context, existingCounter, localDbIdIndex, sourceValue->Value, sourceValue->Etag);
 
                 existingCount = existingCounter.Length / SizeOfCounterValues;
+            }
+
+            if (existingCount == 0 && sourceCount == 0)
+            {
+                // RavenDB-22835
+                // incoming counter has blob.Length = 0, but we still need to merge it
+                // otherwise we'll have the counter name in '@names' without having the counter value in '@values'
+                modified = true;
             }
 
             if (modified)

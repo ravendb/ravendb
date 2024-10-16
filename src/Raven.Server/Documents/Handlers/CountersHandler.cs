@@ -7,21 +7,27 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Counters;
+using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
+using Voron.Data.Tables;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using Voron;
+using System.Linq;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -754,6 +760,176 @@ namespace Raven.Server.Documents.Handlers
         {
             throw new DocumentDoesNotExistException(docId, "Cannot operate on counters of a missing document.");
         }
+
+        public class ExecuteFixCounterGroupsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly List<string> _docIds;
+            private readonly DocumentDatabase _database;
+
+
+            public ExecuteFixCounterGroupsCommand(DocumentDatabase database, string docId) : this(database, [docId])
+            {
+            }
+
+            public ExecuteFixCounterGroupsCommand(DocumentDatabase database, List<string> docIdsToFix)
+            {
+                _docIds = docIdsToFix;
+                _database = database;
+            }
+
+            protected override long ExecuteCmd(DocumentsOperationContext context)
+            {
+                var numOfCounterGroupFixed = _database.DocumentsStorage.CountersStorage.FixCountersForDocuments(context, _docIds);
+                return numOfCounterGroupFixed;
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        [RavenAction("/databases/*/counters/fix-document", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        public async Task FixCounterGroupsForDocument()
+        {
+            var docId = GetStringQueryString("id");
+            await FixCounterGroupsInternal(docId);
+        }
+
+        [RavenAction("/databases/*/counters/fix", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        public async Task FixCounterGroupsForDatabase() => await FixCounterGroupsInternal();
+
+        private async Task FixCounterGroupsInternal(string id = null)
+        {
+            var first = GetBoolValueQueryString("first", required: false) ?? true;
+
+            Task task = id == null
+                ? FixAllCounterGroups()
+                : Database.TxMerger.Enqueue(new ExecuteFixCounterGroupsCommand(Database, id));
+
+            if (first == false)
+            {
+                await task;
+                return;
+            }
+
+            var tasks = new List<Task> { task };
+            var toDispose = new List<IDisposable>();
+            try
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    foreach (var node in ServerStore.GetClusterTopology(context).AllNodes)
+                    {
+                        if (node.Value == Server.WebUrl)
+                            continue;
+
+                        var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(node.Value, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
+                        toDispose.Add(requestExecutor);
+
+                        var cmd = new FixCounterGroupsCommand(Database.Name);
+
+                        toDispose.Add(requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx));
+                        tasks.Add(requestExecutor.ExecuteAsync(cmd, ctx));
+                    }
+                }
+
+                await Task.WhenAll(tasks);
+            }
+            finally
+            {
+                foreach (var disposable in toDispose)
+                {
+                    disposable.Dispose();
+                }
+            }
+        }
+
+
+        private async Task FixAllCounterGroups()
+        {
+            const int maxNumberOfDocsToFixInSingleTx = 1024;
+            int skip = 0;
+            string currentId = null;
+            bool corruptedDoc = false;
+
+            while (true)
+            {
+                List<string> docIdsToFix = new();
+
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var table = new Table(CountersStorage.CountersSchema, context.Transaction.InnerTransaction);
+
+                    foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, Slices.Empty, skip: skip))
+                    {
+                        skip++;
+
+                        using (var docId = CountersStorage.ExtractDocId(context, ref tvh.Reader))
+                        {
+                            if (docId != currentId)
+                            {
+                                currentId = docId;
+                                corruptedDoc = false;
+                            }
+
+                            else if (corruptedDoc)
+                                continue;
+                            
+                            using (var data = CountersStorage.GetCounterValuesData(context, ref tvh.Reader))
+                            {
+                                data.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counterValues);
+                                data.TryGet(CountersStorage.CounterNames, out BlittableJsonReaderObject counterNames);
+
+                                if (counterValues.Count == counterNames.Count)
+                                {
+                                    var counterValuesPropertyNames = counterValues.GetSortedPropertyNames();
+                                    var counterNamesPropertyNames = counterNames.GetSortedPropertyNames();
+                                    if (counterValuesPropertyNames.SequenceEqual(counterNamesPropertyNames))
+                                        continue;
+                                }
+                            }
+
+                            corruptedDoc = true;
+                            docIdsToFix.Add(docId);
+                        }
+
+                        if (docIdsToFix.Count == maxNumberOfDocsToFixInSingleTx)
+                            break;
+                    }
+
+                    if (docIdsToFix.Count == 0)
+                        return;
+
+                    await Database.TxMerger.Enqueue(new ExecuteFixCounterGroupsCommand(Database, docIdsToFix));
+                }
+            }
+        }
+
+        private class FixCounterGroupsCommand : RavenCommand
+        {
+            private readonly string _database;
+
+            public FixCounterGroupsCommand(string database)
+            {
+                _database = database;
+            }
+
+            public override bool IsReadRequest => false;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{_database}/counters/fix?first=false";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Patch
+                };
+            }
+        }
+
     }
 
     public class ExecuteCounterBatchCommandDto : TransactionOperationsMerger.IReplayableCommandDto<CountersHandler.ExecuteCounterBatchCommand>
