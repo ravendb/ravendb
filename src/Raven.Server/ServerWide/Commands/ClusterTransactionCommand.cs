@@ -382,7 +382,7 @@ namespace Raven.Server.ServerWide.Commands
 
             return null;
         }
-        
+
         public DynamicJsonArray SaveCommandsBatch(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index)
         {
             var result = new DynamicJsonArray();
@@ -595,9 +595,12 @@ namespace Raven.Server.ServerWide.Commands
 
             public void Dispose()
             {
-                foreach (var command in Commands)
+                if (Commands is { Count: > 0 })
                 {
-                    command.Document?.Dispose();
+                    foreach (var command in Commands)
+                    {
+                        command.Document?.Dispose();
+                    }
                 }
             }
         }
@@ -647,7 +650,7 @@ namespace Raven.Server.ServerWide.Commands
                         // beware of reading commands of other databases.
                         result.Dispose();
                         continue;
-                    } 
+                    }
 
                     if (result.PreviousCount < fromCount)
                     {
