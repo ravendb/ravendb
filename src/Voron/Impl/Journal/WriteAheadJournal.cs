@@ -1331,11 +1331,7 @@ namespace Voron.Impl.Journal
                         continue; // We already wrote those pages to disk in a previous flush... 
 
                     Debug.Assert(pageValue.AllocatedInTransaction <= record.TransactionId, "pageValue.AllocatedInTransaction <= record.TransactionId");
-                    if (pageValue.IsDeleted)
-                    {
-                        //dataPager.ZeroPage() - hole punching
-                        continue;
-                    }
+                    
                     pageNumsBuffer[index] = pageNum;
                     var page = PreparePage(ref txState, pageValue);
                     pagesBuffer[index] = page;

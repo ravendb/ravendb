@@ -29,6 +29,8 @@ namespace Voron.Impl.Scratch
     {
         public long Size { get; set; }
         public long ValidAfterTransactionId { get; set; }
+
+        public long AllocatedInTransaction { get; set; }
     }
 
     public sealed class AllocatedPageInScratchBuffer
@@ -36,6 +38,7 @@ namespace Voron.Impl.Scratch
         public int ScratchFileNumber { get; set; }
         public long PositionInScratchBuffer { get; set; }
         public int NumberOfPages { get; set; }
+        public long AllocatedInTransaction { get; set; }
     }
 
     public sealed class ScratchFileUsage
