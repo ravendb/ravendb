@@ -85,9 +85,9 @@ namespace Raven.Server.Rachis
                 {
                     // the thread may have create a new connection, so need
                     // to dispose that as well
-                    if (_engine.Log.IsInfoEnabled)
+                    if (_engine.Log.IsDebugEnabled)
                     {
-                        _engine.Log.Info(
+                        _engine.Log.Debug(
                             $"CandidateAmbassador for {_tag}: Waited for a full second for thread {_candidateAmbassadorLongRunningWork.ManagedThreadId} " +
                             $"({(_candidateAmbassadorLongRunningWork.Join(0) ? "finished" : "running")}) to finish, after the elections were {_candidate.ElectionResult}");
                     }
@@ -95,9 +95,9 @@ namespace Raven.Server.Rachis
                 }
             }
 
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"Dispose CandidateAmbassador for {_tag} after the elections were {_candidate.ElectionResult}");
+                _engine.Log.Debug($"Dispose CandidateAmbassador for {_tag} after the elections were {_candidate.ElectionResult}");
             }
         }
 
@@ -211,8 +211,8 @@ namespace Raven.Server.Rachis
 
                                     ClusterCommandsVersion = rvr.ClusterCommandsVersion ?? 400;
 
-                                    if (_engine.Log.IsInfoEnabled)
-                                        _engine.Log.Info($"Candidate RequestVote trial vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
+                                    if (_engine.Log.IsDebugEnabled)
+                                        _engine.Log.Debug($"Candidate RequestVote trial vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
                                     if (rvr.Term > _engine.CurrentCommittedState.Term && rvr.VoteGranted == false)
                                     {
@@ -233,9 +233,9 @@ namespace Raven.Server.Rachis
                                     NotInTopology = rvr.NotInTopology;
                                     if (rvr.VoteGranted == false)
                                     {
-                                        if (_engine.Log.IsInfoEnabled)
+                                        if (_engine.Log.IsDebugEnabled)
                                         {
-                                            _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a negative response " +
+                                            _engine.Log.Debug($"CandidateAmbassador for {_tag}: Got a negative response " +
                                                              $"from {_tag} in {rvr.Term:#,#;;0} reason: {rvr.Message}");
                                         }
 

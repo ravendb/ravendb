@@ -52,9 +52,9 @@ namespace Raven.Server.Rachis
                     // Operation may fail, that's why we don't RaiseOrDie
                     _running.Raise();
                     ElectionTerm = _engine.CurrentCommittedState.Term;
-                    if (_engine.Log.IsInfoEnabled)
+                    if (_engine.Log.IsDebugEnabled)
                     {
-                        _engine.Log.Info($"Candidate {_engine.Tag}: Starting elections");
+                        _engine.Log.Debug($"Candidate {_engine.Tag}: Starting elections");
                     }
                     ClusterTopology clusterTopology;
                     using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -307,9 +307,9 @@ namespace Raven.Server.Rachis
             _running.Lower();
             _stateChange.TrySetResult(null);
             _peersWaiting.Set();
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"Candidate {_engine.Tag}: Dispose");
+                _engine.Log.Debug($"Candidate {_engine.Tag}: Dispose");
             }
 
             if (_longRunningWork != null && _longRunningWork != PoolOfThreads.LongRunningWork.Current)
