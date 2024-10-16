@@ -39,20 +39,13 @@ using System.IO;
 using System.Linq;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
-using System.Numerics;
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
 
 namespace Voron.Impl.FreeSpace
 {
     public sealed class StreamBitArray
     {
-        private const int CountOfWords = 64;
-        private const int BitsInWord = 32;
-        private const int TotalBits = CountOfWords * BitsInWord;
+        readonly int[] _inner = new int[64];
 
-        readonly int[] _inner = new int[CountOfWords];
         public int SetCount { get; private set; }
 
         public StreamBitArray()
@@ -77,6 +70,18 @@ namespace Voron.Impl.FreeSpace
                 }
             }
         }
+
+        public int FirstSetBit()
+        {
+            for (int i = 0; i < _inner.Length; i++)
+            {
+                if (_inner[i] == 0)
+                    continue;
+                return i << 5 | HighestBitSet(_inner[i]);
+            }
+            return -1;
+        }
+        
 
         // Code taken from http://graphics.stanford.edu/~seander/bithacks.html#IntegerLogDeBruijn
         private static readonly int[] MultiplyDeBruijnBitPosition = 
@@ -106,177 +111,6 @@ namespace Voron.Impl.FreeSpace
         public bool Get(int index)
         {
             return (_inner[index >> 5] & (1 << (index & 31))) != 0;
-        }
-
-        public int? GetContinuousRangeStart(int num)
-        {
-            return num switch
-            {
-                1 => FirstSetBit(),
-                < BitsInWord => FindSmallRange(num),
-                < 64 => FindLargeRange<int>(num),
-                _ => FindLargeRange<long>(num)
-            };
-        }
-
-        private int? FirstSetBit()
-        {
-            for (int i = 0; i < _inner.Length; i += Vector256<uint>.Count)
-            {
-                var a = Vector256.LoadUnsafe(ref _inner[i]).AsUInt32();
-                var gt = Vector256.GreaterThan(a, Vector256<uint>.Zero);
-                if (gt == Vector256<uint>.Zero)
-                    continue;
-
-                var mask = gt.ExtractMostSignificantBits();
-                var idx = BitOperations.TrailingZeroCount(mask) + i;
-                var item = _inner[idx];
-                return idx * BitsInWord + BitOperations.TrailingZeroCount(item);
-            }
-
-            return null;
-        }
-
-        private int? FindSmallRange(int num)
-        {
-            // finding sequences up to 32 bits
-            for (var i = 0; i < _inner.Length; i++)
-            {
-                int current = _inner[i];
-                if (current == 0)
-                    continue;
-
-                if (current == -1)
-                    return i * BitsInWord;
-
-                var currentCopy = current;
-                int numCopy = num - 1;
-
-                // find consecutive range: https://stackoverflow.com/a/37903049/6366
-                // perform AND operations with shifted versions of the number
-                // this will leave 1s only where there were n consecutive 1s
-                while (currentCopy != 0 && numCopy-- > 0)
-                {
-                    currentCopy &= (currentCopy << 1);
-                }
-
-                if (currentCopy != 0)
-                {
-                    int position = BitOperations.TrailingZeroCount(currentCopy);
-                    return i * BitsInWord + position - (num - 1);
-                }
-
-                if (i == _inner.Length - 1)
-                {
-                    // this is the last word, no next word to check with
-                    break;
-                }
-
-                // we didn't find the sequence in the word, let's check it between words
-                int numberOfSetBitsCurrent = BitOperations.LeadingZeroCount((uint)~current);
-                var nextWord = _inner[i + 1];
-                var numberOfSetBitsNext = BitOperations.TrailingZeroCount(~nextWord);
-
-                if (numberOfSetBitsCurrent + numberOfSetBitsNext >= num)
-                    return (i * BitsInWord) + (BitsInWord - numberOfSetBitsCurrent);
-            }
-
-            return null;
-        }
-
-        private unsafe int? FindLargeRange<T>(int num)
-            where T : unmanaged, INumber<T>
-        {
-            // finding sequences larger than 32 bits
-            // the idea is that we look for sequences that bridge across words using leading/trailing zero counts
-            var start = -1;
-            var count = 0;
-
-            int currentBitsInWord = sizeof(T) * 8;
-            var span = MemoryMarshal.Cast<int, T>(_inner);
-
-            for (var i = 0; i < span.Length; i++)
-            {
-                T current = span[i];
-                if (current == T.Zero)
-                {
-                    start = -1;
-                    count = 0;
-                    continue;
-                }
-
-                if (current == -T.One)
-                {
-                    if (start == -1)
-                    {
-                        start = i * currentBitsInWord;
-                    }
-
-                    count += currentBitsInWord;
-                    if (count >= num)
-                        return start;
-
-                    continue;
-                }
-
-                if (start == -1)
-                {
-                    // find trailing ones at the end of the word if no sequence has started
-                    CheckTrailingSequence();
-                }
-                else
-                {
-                    if (count + (TotalBits - i * currentBitsInWord) < num)
-                    {
-                        // impossible to satisfy the continuous bit requirement
-                        return null;
-                    }
-
-                    if (count + (currentBitsInWord - 1) < num)
-                    {
-                        // impossible to satisfy the continuous bit requirement in this word
-                        CheckTrailingSequence();
-                        continue;
-                    }
-
-                    // we look at the beginning of the word
-                    int numberOfSetBits = current switch
-                    {
-                        int integer => BitOperations.TrailingZeroCount(~integer),
-                        long l => BitOperations.TrailingZeroCount(~l),
-                        _ => throw new NotSupportedException()
-                    };
-                    count += numberOfSetBits;
-                    if (count >= num)
-                        return start;
-
-                    // reset for the next sequence
-                    CheckTrailingSequence();
-                }
-
-                void CheckTrailingSequence()
-                {
-                    int numberOfSetBits = current switch
-                    {
-                        int integer => BitOperations.LeadingZeroCount(~(uint)integer),
-                        long l => BitOperations.LeadingZeroCount(~(ulong)l),
-                        _ => throw new NotSupportedException()
-                    };
-                    if (numberOfSetBits == 0)
-                    {
-                        start = -1;
-                        count = 0;
-                    }
-                    else
-                    {
-                        // Calculate the starting bit position in the array
-                        start = (i * currentBitsInWord) + (currentBitsInWord - numberOfSetBits);
-                        count = numberOfSetBits;
-                    }
-                }
-            }
-
-            return null;
         }
 
         public void Set(int index, bool value)
@@ -358,11 +192,6 @@ namespace Voron.Impl.FreeSpace
                 [nameof(SetCount)] = SetCount, 
                 ["Data"] = new DynamicJsonArray(collection) 
             };
-        }
-
-        public override string ToString()
-        {
-            return string.Join(", ", _inner);
         }
     }
 }
