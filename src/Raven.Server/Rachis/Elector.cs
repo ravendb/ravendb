@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -6,6 +7,7 @@ using Raven.Server.Rachis.Commands;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Logging;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Rachis
@@ -54,10 +56,10 @@ namespace Raven.Server.Rachis
                         {
                             var rv = _connection.Read<RequestVote>(context);
 
-                            if (_engine.Log.IsInfoEnabled)
+                            if (_engine.Log.IsDebugEnabled)
                             {
                                 var election = rv.IsTrialElection ? "Trial" : "Real";
-                                _engine.Log.Info($"Received ({election}) 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {current.Term}, " +
+                                _engine.Log.Debug($"Received ({election}) 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {current.Term}, " +
                                                  $"Forced election is {rv.IsForcedElection}. (Sent from:{rv.SendingThread})");
                             }
 
@@ -284,13 +286,16 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e) when (IsExpectedException(e))
             {
+                // ignored
             }
             catch (Exception e)
             {
-                if (_engine.Log.IsWarnEnabled)
-                {
-                    _engine.Log.Warn($"Failed to talk to candidate: {_engine.Tag}", e);
-                }
+                var logLevel = e is IOException 
+                    ? LogLevel.Debug 
+                    : LogLevel.Warn;
+
+                if (_engine.Log.IsEnabled(logLevel))
+                    _engine.Log.Log(logLevel, $"Failed to talk to candidate: {_engine.Tag}", e);
             }
         }
 

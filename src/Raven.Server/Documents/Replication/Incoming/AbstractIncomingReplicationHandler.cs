@@ -338,8 +338,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                     return;
                 }
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed replicating documents {FromToString}.", e);
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"Failed replicating documents {FromToString}.", e);
 
                 //return negative ack
                 returnValue = new DynamicJsonValue

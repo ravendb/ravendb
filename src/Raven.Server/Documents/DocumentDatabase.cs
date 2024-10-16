@@ -1692,8 +1692,8 @@ namespace Raven.Server.Documents
             if (LastValueChangeIndex > index)
             {
                 // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {Name} because it was already precessed.");
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {Name} because it was already precessed.");
                 return true;
             }
 

@@ -856,9 +856,9 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
-                        if (Log.IsInfoEnabled)
+                        if (Log.IsDebugEnabled)
                         {
-                            Log.Info("Before state change invocation function failed.", e);
+                            Log.Debug("Before state change invocation function failed.", e);
                         }
                     }
 
@@ -868,9 +868,9 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
-                        if (Log.IsInfoEnabled)
+                        if (Log.IsDebugEnabled)
                         {
-                            Log.Info("State change invocation function failed.", e);
+                            Log.Debug("State change invocation function failed.", e);
                         }
                     }
 
@@ -920,9 +920,9 @@ namespace Raven.Server.Rachis
                 }
                 catch (Exception e)
                 {
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
-                        Log.Info("Failed to dispose during new rachis state transition", e);
+                        Log.Debug("Failed to dispose during new rachis state transition", e);
                     }
                 }
             });
@@ -1055,8 +1055,8 @@ namespace Raven.Server.Rachis
                 }
                 catch (Exception ex)
                 {
-                    if (Log.IsInfoEnabled)
-                        Log.Info($"Tried to send message to leader (reached: {reachedLeader.Value}), retrying", ex);
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Tried to send message to leader (reached: {reachedLeader.Value}), retrying", ex);
 
                     if (reachedLeader.Value)
                         throw;
@@ -1135,9 +1135,9 @@ namespace Raven.Server.Rachis
                 if (clusterTopology.TopologyId == null ||
                     clusterTopology.AllNodes.ContainsKey(_tag) == false)
                 {
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
-                        Log.Info($"We are not a part of the cluster so moving to passive (candidate because: {reason})");
+                        Log.Debug($"We are not a part of the cluster so moving to passive (candidate because: {reason})");
                     }
 
                     var command = new SetNewStateCommand(this, RachisState.Passive, null, currentTerm, "We are not a part of the cluster so moving to passive");
@@ -1147,9 +1147,9 @@ namespace Raven.Server.Rachis
 
                 if (clusterTopology.Members.ContainsKey(_tag) == false)
                 {
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
-                        Log.Info($"Candidate because: {reason}, but while we are part of the cluster, we aren't a member, so we can't be a candidate.");
+                        Log.Debug($"Candidate because: {reason}, but while we are part of the cluster, we aren't a member, so we can't be a candidate.");
                     }
 
                     // we aren't a member, nothing that we can do here
@@ -1170,9 +1170,9 @@ namespace Raven.Server.Rachis
                 }
 
 
-                if (Log.IsInfoEnabled)
+                if (Log.IsDebugEnabled)
                 {
-                    Log.Info($"Switching to candidate state because {reason} forced: {forced}");
+                    Log.Debug($"Switching to candidate state because {reason} forced: {forced}");
                 }
 
                 var candidate = new Candidate(this) { IsForcedElection = forced };
@@ -1183,9 +1183,9 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
-                if (Log.IsInfoEnabled)
+                if (Log.IsDebugEnabled)
                 {
-                    Log.Info($"An error occurred during switching to candidate state in term {currentTerm:#,#;;0}.", e);
+                    Log.Debug($"An error occurred during switching to candidate state in term {currentTerm:#,#;;0}.", e);
                 }
 
                 Timeout.Start(SwitchToCandidateStateOnTimeout);
@@ -1401,9 +1401,9 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
-                if (Log.IsInfoEnabled)
+                if (Log.IsDebugEnabled)
                 {
-                    Log.Info("Failed to process incoming connection", e);
+                    Log.Debug("Failed to process incoming connection", e);
                 }
 
                 DisposeRemoteConnection(remoteConnection);
@@ -1652,9 +1652,9 @@ namespace Raven.Server.Rachis
                     {
                         //rewind entries with mismatched term
                         lastEntryIndex = Math.Min(entry.Index - 1, lastEntryIndex);
-                        if (Log.IsInfoEnabled)
+                        if (Log.IsDebugEnabled)
                         {
-                            Log.Info($"Got an entry with index={entry.Index:#,#;;0} and term={entry.Term:#,#;;0} while our term for that index is {entryTerm:#,#;;0}," +
+                            Log.Debug($"Got an entry with index={entry.Index:#,#;;0} and term={entry.Term:#,#;;0} while our term for that index is {entryTerm:#,#;;0}," +
                                      $"will rewind last entry index to {lastEntryIndex:#,#;;0}");
                         }
                         break;
@@ -2060,17 +2060,17 @@ namespace Raven.Server.Rachis
             {
                 try
                 {
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
-                        Log.Info($"Disposing the leader because we casted a vote for {votedFor} in {term:#,#;;0}");
+                        Log.Debug($"Disposing the leader because we casted a vote for {votedFor} in {term:#,#;;0}");
                     }
                     currentlyTheLeader.Dispose();
                 }
                 catch (Exception e)
                 {
-                    if (Log.IsInfoEnabled)
+                    if (Log.IsDebugEnabled)
                     {
-                        Log.Info($"Failed to shut down leader after voting in term {term:#,#;;0} for {votedFor}", e);
+                        Log.Debug($"Failed to shut down leader after voting in term {term:#,#;;0} for {votedFor}", e);
                     }
                 }
             }, null);

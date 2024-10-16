@@ -43,9 +43,9 @@ public sealed class FollowerReadAndCommitSnapshotCommand : MergedTransactionComm
         if (_engine.GetSnapshotRequest(context) == false &&
             _snapshot.LastIncludedTerm == lastTerm && _snapshot.LastIncludedIndex < lastCommitIndex)
         {
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info(
+                _engine.Log.Debug(
                     $"{ToString()}: Got installed snapshot with last index={_snapshot.LastIncludedIndex} while our lastCommitIndex={lastCommitIndex}, will just ignore it");
             }
 
@@ -95,9 +95,9 @@ public sealed class FollowerReadAndCommitSnapshotCommand : MergedTransactionComm
 
         using (var topologyJson = context.ReadObject(_snapshot.Topology, "topology"))
         {
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"{ToString()}: topology on install snapshot: {topologyJson}");
+                _engine.Log.Debug($"{ToString()}: topology on install snapshot: {topologyJson}");
             }
 
             var topology = JsonDeserializationRachis<ClusterTopology>.Deserialize(topologyJson);

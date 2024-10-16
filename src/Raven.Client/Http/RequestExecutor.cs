@@ -742,16 +742,20 @@ namespace Raven.Client.Http
             {
                 try
                 {
-                    if(serverNode.ServerRole != ServerNode.Role.Member)
+                    if (serverNode.ServerRole != ServerNode.Role.Member)
                         continue;
 
-                    await requestExecutor.UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) {TimeoutInMs = 0, DebugTag = $"timer-callback-node-{serverNode.ClusterTag}"})
+                    await requestExecutor.UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) { TimeoutInMs = 0, DebugTag = $"timer-callback-node-{serverNode.ClusterTag}" })
                         .ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsWarnEnabled)
-                        Logger.Warn($"Couldn't Update Topology from _updateTopologyTimer task when fetching from node {serverNode.ClusterTag}", e);
+                    var logLevel = e is TimeoutException
+                        ? LogLevel.Debug
+                        : LogLevel.Warn;
+
+                    if (Logger.IsEnabled(logLevel))
+                        Logger.Log(logLevel, $"Couldn't Update Topology from _updateTopologyTimer task when fetching from node {serverNode.ClusterTag}", e);
                 }
             }
         }
@@ -1051,7 +1055,7 @@ namespace Raven.Client.Http
 
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
-                    
+
                     if (sessionInfo != null && response.Headers.TryGetValues(Constants.Headers.DatabaseClusterTransactionId, out var clusterTransactionId))
                     {
                         sessionInfo.ClusterTransactionId = clusterTransactionId.First();
