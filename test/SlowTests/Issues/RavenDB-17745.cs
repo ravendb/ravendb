@@ -7,6 +7,7 @@ using FastTests;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Server;
@@ -72,20 +73,30 @@ namespace SlowTests.Issues
             }))
             {
                 var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                db.ForTestingPurposesOnly().BulkInsertStreamReadTimeout = _readTimeout;
+                db.ForTestingPurposesOnly().BulkInsert_StreamReadTimeout = _readTimeout;
+                db.ForTestingPurposesOnly().BulkInsert_OnHeartBeat += () => Output.WriteLine($"[{DateTime.Now:O}] HeartBeat received");
                 var bulkInsertOptions = new BulkInsertOptions();
                 bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _readTimeout;
-
+                bulkInsertOptions.ForTestingPurposesOnly().OnSendHeartBeat_AfterFlush += () => Output.WriteLine($"[{DateTime.Now:O}] HeartBeat flushed");
+                Output.WriteLine($"[{DateTime.Now:O}] BulkInsert_Start");
                 await using (var bulk = store.BulkInsert(bulkInsertOptions))
                 {
+                    Output.WriteLine($"[{DateTime.Now:O}] Delay1_Before");
                     await Task.Delay(_delay);
+                    Output.WriteLine($"[{DateTime.Now:O}] Delay1_After");
                     await bulk.StoreAsync(new User { Name = "Daniel" }, "users/1");
                     await bulk.StoreAsync(new User { Name = "Yael" }, "users/2");
 
+                    Output.WriteLine($"[{DateTime.Now:O}] Delay2_Before");
                     await Task.Delay(_delay);
+                    Output.WriteLine($"[{DateTime.Now:O}] Delay2_After");
                     await bulk.StoreAsync(new User { Name = "Ido" }, "users/3");
+
+                    Output.WriteLine($"[{DateTime.Now:O}] Delay3_Before");
                     await Task.Delay(_delay);
+                    Output.WriteLine($"[{DateTime.Now:O}] Delay3_After");
                 }
+                Output.WriteLine($"[{DateTime.Now:O}] BulkInsert_End");
 
                 using (var session = store.OpenSession())
                 {
@@ -113,7 +124,7 @@ namespace SlowTests.Issues
             {
                 var mre = new AsyncManualResetEvent();
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                db.ForTestingPurposesOnly().BulkInsertStreamReadTimeout = _readTimeout;
+                db.ForTestingPurposesOnly().BulkInsert_StreamReadTimeout = _readTimeout;
                 var bulkInsertOptions = new BulkInsertOptions();
                 bulkInsertOptions.ForTestingPurposesOnly().OverrideHeartbeatCheckInterval = _readTimeout;
 

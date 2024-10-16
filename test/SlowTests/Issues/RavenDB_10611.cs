@@ -52,6 +52,7 @@ namespace SlowTests.Issues
                 {
                     var countries = session
                         .Query<Order>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.ShipTo.Country)
                         .Select(x => x.ShipTo.Country)
                         .Distinct()
@@ -59,6 +60,7 @@ namespace SlowTests.Issues
 
                     var count = session
                         .Query<Order>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.ShipTo.Country)
                         .Select(x => x.ShipTo.Country)
                         .Distinct()

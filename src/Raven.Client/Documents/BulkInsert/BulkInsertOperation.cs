@@ -265,6 +265,8 @@ namespace Raven.Client.Documents.BulkInsert
                 _writer.Write("{\"Type\":\"HeartBeat\"}");
 
                 await FlushIfNeeded(force: true).ConfigureAwait(false);
+
+                _options.ForTestingPurposes?.OnSendHeartBeat_AfterFlush?.Invoke();
             }
             catch (Exception)
             {

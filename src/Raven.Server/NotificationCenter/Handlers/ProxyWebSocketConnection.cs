@@ -54,7 +54,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
         public Task Establish(X509Certificate2 certificate)
         {
-            var handler = RequestExecutor.CreateHttpMessageHandler(certificate, setSslProtocols: true, DocumentConventions.DefaultForServer.UseHttpDecompression);
+            var handler = DefaultRavenHttpClientFactory.CreateHttpMessageHandler(certificate, setSslProtocols: true, DocumentConventions.DefaultForServer.UseHttpDecompression);
 
             if (certificate != null)
             {
@@ -174,7 +174,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                     {
                         throw;
                     }
-                    
+
                 }
                 catch (Exception ex)
                 {

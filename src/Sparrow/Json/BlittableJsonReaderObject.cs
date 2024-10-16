@@ -44,7 +44,7 @@ namespace Sparrow.Json
 
             ThrowIfDisposedOnDebug(this);
 
-            using (var memoryStream = new MemoryStream())
+            using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 WriteJsonToAsync(memoryStream).AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
                 memoryStream.Position = 0;

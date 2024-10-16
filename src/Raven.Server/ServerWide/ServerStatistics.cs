@@ -6,6 +6,7 @@ using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
@@ -160,7 +161,7 @@ namespace Raven.Server.ServerWide
                     using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        using (var ms = new MemoryStream())
+                        using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
                             WriteTo(writer);

@@ -9,7 +9,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     public abstract unsafe class LuceneAnalyzerAdapter : Analyzer
     {
         private static readonly ITransformer[] NoTransformers = [];
-        protected readonly LuceneAnalyzer Analyzer;
+        public readonly LuceneAnalyzer Analyzer;
+        
+        
         
         protected LuceneAnalyzerAdapter(LuceneAnalyzer analyzer,
             delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8,

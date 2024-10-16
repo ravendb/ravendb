@@ -146,6 +146,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.WellKnownIssuers.Admin", ConfigurationEntryScope.ServerWideOnly)]
         public string[] WellKnownIssuers { get; set; }
 
+        [Description("Will determine whether to validate well known issuer certificate subject alternative names against server domain.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Security.WellKnownIssuers.Admin.ValidateCertificateNames", ConfigurationEntryScope.ServerWideOnly)]
+        public bool ValidateSanForCertificateWithWellKnownIssuer { get; set; }
+
 
         [Description("OBSOLETE: This is no longer supported or used, use 'Security.WellKnownIssuers.Admin' instead.")]
         [DefaultValue(null)]

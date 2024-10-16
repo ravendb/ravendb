@@ -14,6 +14,7 @@ using System.Net;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.IO;
 using Microsoft.Net.Http.Headers;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
@@ -31,6 +32,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
@@ -93,7 +95,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/admin/smuggler/import-dir", "GET", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostImportDirectory()
         {
-            using (var processor = new SmugglerHandlerProcessorForImportDir(this)) 
+            using (var processor = new SmugglerHandlerProcessorForImportDir(this))
                 await processor.ExecuteAsync();
         }
 
@@ -145,8 +147,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext finalContext))
+            using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
-                var memoryStream = new MemoryStream();
                 await SmugglerHandlerProcessorForImport.WriteSmugglerResultAsync(finalContext, finalResult, memoryStream);
                 memoryStream.Position = 0;
                 try

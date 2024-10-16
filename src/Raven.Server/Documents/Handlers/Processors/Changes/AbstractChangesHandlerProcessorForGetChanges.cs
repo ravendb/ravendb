@@ -7,6 +7,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.Changes;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -61,7 +62,7 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
                         if (webSocket.State != WebSocketState.Open)
                             return;
 
-                        await using (var ms = new MemoryStream())
+                        await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                         {
                             await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
                             {

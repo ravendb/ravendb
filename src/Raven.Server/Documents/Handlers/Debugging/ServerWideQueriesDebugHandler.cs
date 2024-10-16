@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Routing;
 using Raven.Server.Web;
+using Sparrow;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
                 var receive = webSocket.ReceiveAsync(receiveBuffer, ServerStore.ServerShutdown);
 
-                await using (var ms = new MemoryStream())
+                await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                 using (var collector = new LiveRunningQueriesCollector(ServerStore, dbNames))
                 {
                     // 1. Send data to webSocket without making UI wait upon opening webSocket

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.IO;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
@@ -76,7 +77,7 @@ namespace Raven.Server.Documents.Subscriptions
         public readonly SubscriptionStatsCollector Stats;
 
         public Task SubscriptionConnectionTask { get; set; }
-        private readonly MemoryStream _buffer = new();
+        private readonly MemoryStream _buffer = RecyclableMemoryStreamFactory.GetMemoryStream();
 
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 

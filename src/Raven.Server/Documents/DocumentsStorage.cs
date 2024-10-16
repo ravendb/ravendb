@@ -1033,7 +1033,7 @@ namespace Raven.Server.Documents
                 {
                     var current = TableValueToTombstone(context, ref tvh.Reader);
                     if (mostRecent == null || 
-                        GetConflictStatus(context, current.ChangeVector, mostRecent.ChangeVector, ChangeVectorMode.Version) == ConflictStatus.Update)
+                        GetConflictStatusForVersion(context, current.ChangeVector, mostRecent.ChangeVector) == ConflictStatus.Update)
                     {
                         using (var _ = mostRecent)
                         {
@@ -2432,14 +2432,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        public ConflictStatus GetConflictStatus(DocumentsOperationContext context, string remote, string local, ChangeVectorMode mode) => GetConflictStatus(context, remote, local, mode, out _);
+        public ConflictStatus GetConflictStatusForVersion(DocumentsOperationContext context, string remote, string local) => GetConflictStatus(context, remote, local, ChangeVectorMode.Version);
+        public ConflictStatus GetConflictStatusForOrder(ChangeVector remote, ChangeVector local) => ChangeVectorUtils.GetConflictStatus(remote, local, mode: ChangeVectorMode.Order);
+        public ConflictStatus GetConflictStatusForOrder(IChangeVectorOperationContext context, string remote, string local) =>
+            GetConflictStatusForOrder(context.GetChangeVector(remote), context.GetChangeVector(local));
 
-        public ConflictStatus GetConflictStatus(DocumentsOperationContext context, string remote, string local, ChangeVectorMode mode, out bool skipValidation)
+        private ConflictStatus GetConflictStatus(DocumentsOperationContext context, string remote, string local, ChangeVectorMode mode)
         {
             var remoteChangeVector = context.GetChangeVector(remote);
             var localChangeVector = context.GetChangeVector(local);
-
-            skipValidation = false;
             var originalStatus = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
 
             // conflicts for document with cluster tx have a special treatment in case of conflict
@@ -2450,7 +2451,12 @@ namespace Raven.Server.Documents
             // case 1: incoming change vector A:10, RAFT:3          -> update    (although it is a conflict) 
             // case 2: incoming change vector A:10, RAFT:2          -> update    (although it is a conflict)
             // case 3: incoming change vector A:10, RAFT:1          -> already merged
-            var partOfClusterTx = remote?.Contains(DocumentDatabase.ClusterTransactionId) == true || local?.Contains(DocumentDatabase.ClusterTransactionId) == true;
+            var partOfClusterTx = false;
+            var clusterTransactionId = DocumentDatabase.ClusterTransactionId;
+            if (string.IsNullOrEmpty(clusterTransactionId) == false)
+            {
+                partOfClusterTx = remote?.Contains(clusterTransactionId) == true || local?.Contains(clusterTransactionId) == true;
+            }
 
             if (originalStatus == ConflictStatus.Conflict && (HasUnusedDatabaseIds() || partOfClusterTx))
             {
@@ -2469,18 +2475,14 @@ namespace Raven.Server.Documents
                 // case 3: incoming change vector A:11, B:10, C:10 -> update                (original: update, after: already merged)
                 // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
 
-                var original = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
-
                 remoteChangeVector = remoteChangeVector.StripTrxnTags(context);
                 localChangeVector = localChangeVector.StripTrxnTags(context);
 
                 remoteChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out remoteChangeVector);
-                skipValidation = localChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out localChangeVector);
-                var after = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
+                var skipValidation = localChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out localChangeVector);
+                context.SkipChangeVectorValidation |= skipValidation;
 
-                if (after == ConflictStatus.AlreadyMerged)
-                    return ConflictStatus.Conflict;
-                return after;
+                return ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
             }
 
             return originalStatus;

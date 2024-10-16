@@ -269,6 +269,23 @@ public class RavenDB_19951 : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Security)]
+    public async Task CanAccessWhoAmIWithBadCertificate()
+    {
+        var certificates = Certificates.SetupServerAuthentication();
+        var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+        var userCert = certificates.ClientCertificate2.Value;
+
+        using (var store = GetDocumentStore(new Options
+               {
+                   AdminCertificate = adminCert, 
+                   ClientCertificate = userCert
+               }))
+        {
+            var client = new TwoFactorClient(store, userCert);
+            await client.WhoAmIRequest();
+        }
+    }
 
     class TwoFactorClient : IDisposable
     {

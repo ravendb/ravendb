@@ -13,6 +13,7 @@ using System.Net.Sockets;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -924,7 +925,7 @@ namespace Raven.Server
                 throw new InvalidOperationException($"Unable to get cpu credits by executing {command} {arguments}. Failed to start process.", e);
             }
 
-            using (var ms = new MemoryStream())
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 var readErrors = process.StandardError.ReadToEndAsync();
                 var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);
@@ -1401,7 +1402,7 @@ namespace Raven.Server
             try
             {
                 refreshedCertificate = CertificateLoaderUtil.CreateCertificate(newCertBytes, flags: CertificateLoaderUtil.FlagsForPersist);
-        }
+            }
             catch (Exception e)
             {
                 throw new InvalidOperationException("Failed to load (and validate) the new certificate which was received during the refresh process.", e);
@@ -1505,7 +1506,7 @@ namespace Raven.Server
                 using (_tempLetsEncryptRefreshCertificate.Certificate)
                 {
                     _tempLetsEncryptRefreshCertificate = default;
-            }
+                }
             }
             catch (Exception e)
             {
@@ -1790,7 +1791,7 @@ namespace Raven.Server
 
             public void SuccessfulTwoFactorAuthentication()
             {
-                    _status = _statusAfterTwoFactorAuth.Value;
+                _status = _statusAfterTwoFactorAuth.Value;
             }
 
             public AuthenticationStatus Status
@@ -1899,15 +1900,41 @@ namespace Raven.Server
             }
             else if (CertificateHasWellKnownIssuer(certificate, out var issuer))
             {
-                if (_auditLogger.IsAuditEnabled)
+                string authLogMessage;
+
+                if (Configuration.Security.ValidateSanForCertificateWithWellKnownIssuer)
                 {
-                    _auditLogger.Audit(
+                    if (AreCertificateSansValid(certificate))
+                    {
+                        authLogMessage =
+                        $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                            "Allowing the connection based on the certificate's *issuer* which is trusted by the cluster and valid SAN matching server domain. " +
+                            $"Registering the new certificate explicitly based on permissions of existing certificate '{issuer}'. Security Clearance: {AuthenticationStatus.ClusterAdmin}";
+                        authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+
+                    }
+                    else
+                    {
+                        authLogMessage =
+                            $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                            "Certificate's *issuer* is trusted by the cluster. " +
+                            "Rejecting the connection based on certificate SAN not matching server domain.";
+                        authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                    }
+                }
+                else
+                {
+                    authLogMessage =
                         $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                         "Allowing the connection based on the certificate's *issuer* which is trusted by the cluster. " +
-                        $"Registering the new certificate explicitly based on permissions of existing certificate '{issuer}'. Security Clearance: {AuthenticationStatus.ClusterAdmin}");
+                        $"Registering the new certificate explicitly based on permissions of existing certificate '{issuer}'. Security Clearance: {AuthenticationStatus.ClusterAdmin}";
+                    authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
                 }
 
-                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+                if (_auditLogger.IsAuditEnabled)
+                {
+                    _auditLogger.Audit(authLogMessage);
+                }
             }
             else
             {
@@ -3179,6 +3206,52 @@ namespace Raven.Server
                 {
                     issuer = knownIssuer.SubjectName.Name + " - " + knownIssuer.Thumbprint;
                     return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool AreCertificateSansValid(X509Certificate2 cert)
+        {
+            var serverDomain = new Uri(ServerStore.GetNodeHttpServerUrl()).Host;
+            var sans = CertificateUtils.GetCertificateAlternativeNames(cert).ToList();
+            if (sans.Count == 0)
+            {
+                if (_auditLogger.IsAuditEnabled)
+                {
+                    _auditLogger.Audit("Certificate does not contain any SAN.");
+                }
+
+                return false;
+            }
+
+            foreach (var san in sans)
+            {
+                if (san.StartsWith("*."))
+                {
+                    var array = san.Split("*.");
+                    if (array.Length != 2)
+                    {
+                        if (_auditLogger.IsAuditEnabled)
+                        {
+                            _auditLogger.Audit($"Certificate {cert.Thumbprint} contains invalid SAN {san}");
+                        }
+
+                        continue;
+                    }
+
+                    if (serverDomain.EndsWith(array[1], StringComparison.OrdinalIgnoreCase) &&
+                        serverDomain.Length > array[1].Length &&
+                        serverDomain[..(serverDomain.Length - array[1].Length - 1)].Contains('.') == false)
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    if (string.Compare(serverDomain, san, StringComparison.OrdinalIgnoreCase) == 0)
+                        return true;
                 }
             }
 

@@ -1039,46 +1039,48 @@ namespace Raven.Server.Utils.Cli
 
         public static string ConvertResultToString(ScriptRunnerResult result)
         {
-            var ms = new MemoryStream();
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
-            using (var writer = new BlittableJsonTextWriter(ctx, ms))
+            using (var ms = new MemoryStream())
             {
-                writer.WriteStartObject();
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                using (var writer = new BlittableJsonTextWriter(ctx, ms))
+                {
+                    writer.WriteStartObject();
 
-                writer.WritePropertyName("Result");
+                    writer.WritePropertyName("Result");
 
-                if (result.IsNull)
-                {
-                    writer.WriteNull();
-                }
-                else if (result.RawJsValue.IsBoolean())
-                {
-                    writer.WriteBool(result.RawJsValue.AsBoolean());
-                }
-                else if (result.RawJsValue.IsString())
-                {
-                    writer.WriteString(result.RawJsValue.AsString());
-                }
-                else if (result.RawJsValue.IsDate())
-                {
-                    var date = result.RawJsValue.AsDate();
-                    writer.WriteString(date.ToDateTime().ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
-                }
-                else if (result.RawJsValue.IsNumber())
-                {
-                    writer.WriteDouble(result.RawJsValue.AsNumber());
-                }
-                else
-                {
-                    writer.WriteObject(result.TranslateToObject(ctx));
+                    if (result.IsNull)
+                    {
+                        writer.WriteNull();
+                    }
+                    else if (result.RawJsValue.IsBoolean())
+                    {
+                        writer.WriteBool(result.RawJsValue.AsBoolean());
+                    }
+                    else if (result.RawJsValue.IsString())
+                    {
+                        writer.WriteString(result.RawJsValue.AsString());
+                    }
+                    else if (result.RawJsValue.IsDate())
+                    {
+                        var date = result.RawJsValue.AsDate();
+                        writer.WriteString(date.ToDateTime().ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                    }
+                    else if (result.RawJsValue.IsNumber())
+                    {
+                        writer.WriteDouble(result.RawJsValue.AsNumber());
+                    }
+                    else
+                    {
+                        writer.WriteObject(result.TranslateToObject(ctx));
+                    }
+
+                    writer.WriteEndObject();
+                    writer.Flush();
                 }
 
-                writer.WriteEndObject();
-                writer.Flush();
+                var str = Encoding.UTF8.GetString(ms.ToArray());
+                return str;
             }
-
-            var str = Encoding.UTF8.GetString(ms.ToArray());
-            return str;
         }
 
         private static bool CommandLowMem(List<string> args, RavenCli cli)

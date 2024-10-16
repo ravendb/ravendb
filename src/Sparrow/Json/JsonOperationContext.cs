@@ -1111,39 +1111,6 @@ namespace Sparrow.Json
             return ArenaAllocator.GrowAllocation(allocation, sizeIncrease);
         }
 
-        public MemoryStream CheckoutMemoryStream()
-        {
-            ThrowIfDisposed(this);
-            
-            if (_cachedMemoryStreams == null || CachedMemoryStreams.Count == 0)
-                return new MemoryStream();
-
-            var stream = CachedMemoryStreams.Pop();
-            _sizeOfMemoryStreamCache -= stream.Capacity;
-
-            return stream;
-        }
-
-        private const long MemoryStreamCacheThreshold = Constants.Size.Megabyte;
-        private const int MemoryStreamCacheMaxCapacityInBytes = 64 * Constants.Size.Megabyte;
-
-        private long _sizeOfMemoryStreamCache;
-
-        public void ReturnMemoryStream(MemoryStream stream)
-        {
-            //We don't want to hold big streams in the cache or have too big of a cache
-            if (stream.Capacity > MemoryStreamCacheThreshold || _sizeOfMemoryStreamCache >= MemoryStreamCacheMaxCapacityInBytes)
-            {
-                return;
-            }
-
-            ThrowIfDisposed(this);
-
-            stream.SetLength(0);
-            CachedMemoryStreams.Push(stream);
-            _sizeOfMemoryStreamCache += stream.Capacity;
-        }
-
         public void ReturnMemory(AllocatedMemoryData allocation)
         {
             ThrowIfDisposed(this);
