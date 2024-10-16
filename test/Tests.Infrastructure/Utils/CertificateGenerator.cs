@@ -1,12 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Operators;
 using Org.BouncyCastle.Math;
+using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
+using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Tests.Infrastructure.Utils;
 
@@ -31,13 +35,31 @@ public static class CertificateGenerator
     }
 
     public static X509Certificate2 GenerateSignedClientCertificate(X509Certificate2 signerCertificate, AsymmetricCipherKeyPair signerKeyPair, string subjectName,
-        int yearsValid, AsymmetricCipherKeyPair clientKeyPair)
+        int yearsValid, AsymmetricCipherKeyPair clientKeyPair, string[] sans = null)
     {
         var keyUsage = new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment);
         var extendedKeyUsage = new ExtendedKeyUsage(new[] { KeyPurposeID.IdKPServerAuth, KeyPurposeID.IdKPClientAuth });
-        var subjectAlternativeName = new GeneralNames(new GeneralName(GeneralName.DnsName, "localhost"));
+        GeneralNames subjectAlternativeNames;
+        if (sans == null)
+        {
+            subjectAlternativeNames = new GeneralNames(new GeneralName(GeneralName.DnsName, "localhost"));
+        }
+        else if (sans.Length == 0)
+        {
+            subjectAlternativeNames = null;
+        }
+        else
+        {
+            var names = new List<GeneralName>(sans.Length);
+            foreach (var san in sans)
+            {
+                names.Add(new GeneralName(GeneralName.DnsName, san));
+            }
 
-        return GenerateCertificate(subjectName, yearsValid, clientKeyPair, keyUsage, extendedKeyUsage, subjectAlternativeName, signerCertificate, signerKeyPair);
+            subjectAlternativeNames = new GeneralNames(names.ToArray());
+        }
+
+        return GenerateCertificate(subjectName, yearsValid, clientKeyPair, keyUsage, extendedKeyUsage, subjectAlternativeNames, signerCertificate, signerKeyPair);
     }
 
     public static X509Certificate2 GenerateSelfSignedClientCertificate(string subjectName, int yearsValid, AsymmetricCipherKeyPair keyPair)
@@ -96,6 +118,22 @@ public static class CertificateGenerator
         var signatureFactory = new Asn1SignatureFactory("SHA256WITHRSA", signerKeyPair != null ? signerKeyPair.Private : keyPair.Private);
         var certificate = certGenerator.Generate(signatureFactory);
 
-        return new X509Certificate2(certificate.GetEncoded());
+        return IncludePrivateKeyWithTheCertificate(certificate, keyPair);
+    }
+
+    private static X509Certificate2 IncludePrivateKeyWithTheCertificate(X509Certificate certificate, AsymmetricCipherKeyPair keyPair)
+    {
+        var random = new SecureRandom();
+        var store = new Pkcs12Store();
+        string friendlyName = certificate.SubjectDN.ToString();
+        var certificateEntry = new X509CertificateEntry(certificate);
+        var keyEntry = new AsymmetricKeyEntry(keyPair.Private);
+
+        store.SetCertificateEntry(friendlyName, certificateEntry);
+        store.SetKeyEntry(friendlyName, keyEntry, new[] { certificateEntry });
+        var stream = new MemoryStream();
+        store.Save(stream, Array.Empty<char>(), random);
+
+        return new X509Certificate2(stream.ToArray());
     }
 }
