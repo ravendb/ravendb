@@ -87,6 +87,10 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         {
         }
 
+        public void Log(LogLevel logLevel, string message, Exception exception)
+        {
+        }
+
         public IRavenLogger WithProperty(string propertyKey, object propertyValue) => this;
     }
 }

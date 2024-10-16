@@ -24,5 +24,6 @@ public interface IRavenLogger
     void Trace(string message, Exception exception);
     bool IsEnabled(LogLevel logLevel);
     void Log(LogLevel logLevel, string message);
+    void Log(LogLevel logLevel, string message, Exception exception);
     IRavenLogger WithProperty(string propertyKey, object propertyValue);
 }

@@ -100,6 +100,11 @@ public sealed class RavenLogger : IRavenLogger
         _logger.Log(logLevel.ToNLogLogLevel(), message);
     }
 
+    public void Log(LogLevel logLevel, string message, Exception exception)
+    {
+        _logger.Log(logLevel.ToNLogLogLevel(), exception, message);
+    }
+
     public IRavenLogger WithProperty(string propertyKey, object propertyValue)
     {
         return new RavenLogger(_logger.WithProperty(propertyKey, propertyValue));

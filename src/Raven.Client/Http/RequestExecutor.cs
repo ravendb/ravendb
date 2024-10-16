@@ -726,8 +726,12 @@ namespace Raven.Client.Http
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsWarnEnabled)
-                        Logger.Warn($"Couldn't Update Topology from _updateTopologyTimer task when fetching from node {serverNode.ClusterTag}", e);
+                    var logLevel = e is TimeoutException
+                        ? LogLevel.Debug
+                        : LogLevel.Warn;
+
+                    if (Logger.IsEnabled(logLevel))
+                        Logger.Log(logLevel, $"Couldn't Update Topology from _updateTopologyTimer task when fetching from node {serverNode.ClusterTag}", e);
                 }
             }
         }

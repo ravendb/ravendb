@@ -477,10 +477,10 @@ namespace Raven.Server.Documents.Replication.Senders
 
             if (skippedReplicationItemsInfo.SkippedItems > 0)
             {
-                if (Log.IsInfoEnabled)
+                if (Log.IsDebugEnabled)
                 {
                     var message = skippedReplicationItemsInfo.GetInfoForDebug(_parent.LastAcceptedChangeVector);
-                    Log.Info(message);
+                    Log.Debug(message);
                 }
 
                 skippedReplicationItemsInfo.Reset();
