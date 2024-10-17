@@ -1229,7 +1229,7 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
         
-        public static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory, float minimumSimilarity = 0.8f)
+        public static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory, float minimumSimilarity = Constants.VectorSearch.MinimumSimilarity)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
             

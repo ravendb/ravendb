@@ -1,3 +1,5 @@
+using Raven.Client.Documents.Indexes.Vector;
+
 namespace Raven.Client
 {
     public static class Constants
@@ -576,6 +578,23 @@ namespace Raven.Client
 
                 public const string ThrowRevisionKeyTooBigFix = "ThrowRevisionKeyTooBigFix";
             }
+        }
+        
+        public static class VectorSearch
+        {
+            private const string EmbeddingPrefix = "embedding.";
+
+            internal const string EmbeddingText = EmbeddingPrefix + "text";
+            internal const string EmbeddingTextInt8 = EmbeddingPrefix + "text_i8";
+            internal const string EmbeddingTextInt1 = EmbeddingPrefix + "text_i1";
+            internal const string EmbeddingSingle = EmbeddingPrefix + "f32";
+            internal const string EmbeddingSingleInt8 = EmbeddingPrefix + "f32_i8";
+            internal const string EmbeddingSingleInt1 = EmbeddingPrefix + "f32_i1";
+            internal const string EmbeddingInt8 = EmbeddingPrefix + "i8";
+            internal const string EmbeddingInt1 = EmbeddingPrefix + "i1";
+
+            public const float MinimumSimilarity = 0.8F;
+            public const EmbeddingType DefaultEmbeddingType = EmbeddingType.Float32;
         }
     }
 }

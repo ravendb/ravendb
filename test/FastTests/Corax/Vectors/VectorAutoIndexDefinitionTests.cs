@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using System.Runtime.InteropServices;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
@@ -51,6 +50,9 @@ public class VectorAutoIndexDefinitionTests(ITestOutputHelper output) : NoDispos
         Assert.IsType<AutoVectorOptions>(vectorOptions);
         Assert.True(vectorOptions is AutoVectorOptions { SourceFieldName: "Name" });
     }
+
+
+    
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
     public void ExtendingIndexWithVectorField()

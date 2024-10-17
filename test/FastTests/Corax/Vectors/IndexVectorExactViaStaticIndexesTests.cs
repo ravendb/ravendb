@@ -22,13 +22,13 @@ public class IndexVectorExactViaStaticIndexesTests : RavenTestBase
 
     [RavenFact(RavenTestCategory.Corax)]
     public async Task AssertIndexDefinictionViaStaticIndexes()
-    {        
+    {
         using var store = CreateDocumentStore();
         var localIndexDefinition = new IndexDefinition()
         {
             Name = "Vector",
             Maps = new HashSet<string>()
-            { 
+            {
                 @"from doc in docs.Vector
 select new 
 {
@@ -53,7 +53,7 @@ select new
                 }
             }
         };
-        
+
         await store.Maintenance.SendAsync(new PutIndexesOperation(localIndexDefinition));
 
         var indexDefinitionFromServer = (await store.Maintenance.SendAsync(new GetIndexesOperation(0, 1))).First();
@@ -82,11 +82,9 @@ select new
 
         {
             using var session = store.OpenAsyncSession();
-            //todo: replace with linq/documentsession when available
-            var results = await session
-                .Advanced
-                .AsyncRawQuery<Document>($"from index '{new TextVectorIndex(embeddingType).IndexName}' where vector.search(Vector, 'animal', {similarity})")
-                .ToListAsync();
+            var res = session.Query<Document, TextVectorIndex>().VectorSearch(x => x.WithField(f => f.Vector), f => f.ByText("animal"), similarity);
+            var results = await res.ToListAsync();
+
             Assert.Equal(1, results.Count);
             Assert.Contains("Cat", results[0].Text);
         }
@@ -108,20 +106,28 @@ select new
 
         await Indexes.WaitForIndexingAsync(store);
         WaitForUserToContinueTheTest(store);
-
     }
 
     private IDocumentStore CreateDocumentStore() => GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
 
     private class TextVectorIndex : AbstractIndexCreationTask<Document>
     {
+        public TextVectorIndex()
+        {
+            //querying
+        }
+
         public TextVectorIndex(EmbeddingType embeddingType)
         {
             Map = docs => from doc in docs
                 select new { Id = doc.Id, Vector = CreateVector(doc.Text) };
 
 
-            VectorIndexes.Add(x => x.Vector, new VectorOptions() { IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Text, DestinationEmbeddingType = embeddingType});
+            VectorIndexes.Add(x => x.Vector,
+                new VectorOptions()
+                {
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Text, DestinationEmbeddingType = embeddingType
+                });
         }
     }
 
@@ -136,7 +142,7 @@ select new
             VectorIndexes.Add(x => x.Vector, new VectorOptions() { IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Float32 });
         }
     }
-    
+
     private class Document
     {
         public string Id { get; set; }
@@ -147,22 +153,22 @@ select new
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void EmbeddingTextSourceTest() => StaticIndexApi<EmbeddingTextSource>();
-    
+
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void MultiEmbeddingTextIndexTest() => StaticIndexApi<MultiEmbeddingTextIndex>();
-    
+
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void EmbeddingSingleIndexTest() => StaticIndexApi<EmbeddingSingleIndex>();
-    
+
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void MultiEmbeddingSingleIndexTest() => StaticIndexApi<MultiEmbeddingSingleIndex>();
-    
+
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void EmbeddingSingleAsBase64IndexTest() => StaticIndexApi<EmbeddingSingleAsBase64Index>();    
-    
+    public void EmbeddingSingleAsBase64IndexTest() => StaticIndexApi<EmbeddingSingleAsBase64Index>();
+
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void MultiEmbeddingSingleAsBase64IndexTest() => StaticIndexApi<MultiEmbeddingSingleAsBase64Index>();
-    
+
     private void StaticIndexApi<TIndex>() where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = CreateDocumentStore();
@@ -188,7 +194,7 @@ select new
         Indexes.WaitForIndexing(store);
 
         Assert.Equal(0, GetErrorCounts());
-        
+
         int GetErrorCounts()
         {
             var errors = store.Maintenance.Send(new GetIndexErrorsOperation());
@@ -213,107 +219,83 @@ select new
     {
         public EmbeddingTextSource()
         {
-            Map = sources => sources.Select(x => new
-            {
-                Vector = CreateVector(x.Text)
-            });
+            Map = sources => sources.Select(x => new { Vector = CreateVector(x.Text) });
 
-            VectorIndexes.Add(source => source.Vector, new VectorOptions()
-            {
-                IndexingStrategy = VectorIndexingStrategy.Exact, 
-                SourceEmbeddingType = EmbeddingType.Text, 
-                DestinationEmbeddingType = EmbeddingType.Float32
-            });
+            VectorIndexes.Add(source => source.Vector,
+                new VectorOptions()
+                {
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Text, DestinationEmbeddingType = EmbeddingType.Float32
+                });
         }
     }
-    
+
     private class MultiEmbeddingTextIndex : AbstractIndexCreationTask<DataSource>
     {
         public MultiEmbeddingTextIndex()
         {
-            Map = sources => sources.Select(x => new
-            {
-                Vector = CreateVector(x.MultiText)
-            });
+            Map = sources => sources.Select(x => new { Vector = CreateVector(x.MultiText) });
 
-            VectorIndexes.Add(source => source.Vector, new VectorOptions()
-            {
-                IndexingStrategy = VectorIndexingStrategy.Exact, 
-                SourceEmbeddingType = EmbeddingType.Text, 
-                DestinationEmbeddingType = EmbeddingType.Float32
-            });
+            VectorIndexes.Add(source => source.Vector,
+                new VectorOptions()
+                {
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Text, DestinationEmbeddingType = EmbeddingType.Float32
+                });
         }
     }
-    
+
     private class EmbeddingSingleIndex : AbstractIndexCreationTask<DataSource>
     {
         public EmbeddingSingleIndex()
         {
-            Map = sources => sources.Select(x => new
-            {
-                Vector = CreateVector(x.Embeddings)
-            });
+            Map = sources => sources.Select(x => new { Vector = CreateVector(x.Embeddings) });
 
-            VectorIndexes.Add(source => source.Vector, new VectorOptions()
-            {
-                IndexingStrategy = VectorIndexingStrategy.Exact, 
-                SourceEmbeddingType = EmbeddingType.Float32, 
-                DestinationEmbeddingType = EmbeddingType.Float32
-            });
+            VectorIndexes.Add(source => source.Vector,
+                new VectorOptions()
+                {
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Float32, DestinationEmbeddingType = EmbeddingType.Float32
+                });
         }
     }
-    
+
     private class MultiEmbeddingSingleIndex : AbstractIndexCreationTask<DataSource>
     {
         public MultiEmbeddingSingleIndex()
         {
-            Map = sources => sources.Select(x => new
-            {
-                Vector = CreateVector(x.MultipleEmbeddings)
-            });
+            Map = sources => sources.Select(x => new { Vector = CreateVector(x.MultipleEmbeddings) });
 
-            VectorIndexes.Add(source => source.Vector, new VectorOptions()
-            {
-                IndexingStrategy = VectorIndexingStrategy.Exact, 
-                SourceEmbeddingType = EmbeddingType.Float32, 
-                DestinationEmbeddingType = EmbeddingType.Float32
-            });
+            VectorIndexes.Add(source => source.Vector,
+                new VectorOptions()
+                {
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Float32, DestinationEmbeddingType = EmbeddingType.Float32
+                });
         }
     }
-    
+
     private class EmbeddingSingleAsBase64Index : AbstractIndexCreationTask<DataSource>
     {
         public EmbeddingSingleAsBase64Index()
         {
-            Map = sources => sources.Select(x => new
-            {
-                Vector = CreateVector(x.EmbeddingAsBase64)
-            });
+            Map = sources => sources.Select(x => new { Vector = CreateVector(x.EmbeddingAsBase64) });
 
-            VectorIndexes.Add(source => source.Vector, new VectorOptions()
-            {
-                IndexingStrategy = VectorIndexingStrategy.Exact, 
-                SourceEmbeddingType = EmbeddingType.Float32, 
-                DestinationEmbeddingType = EmbeddingType.Float32
-            });
+            VectorIndexes.Add(source => source.Vector,
+                new VectorOptions()
+                {
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Float32, DestinationEmbeddingType = EmbeddingType.Float32
+                });
         }
     }
-    
+
     private class MultiEmbeddingSingleAsBase64Index : AbstractIndexCreationTask<DataSource>
     {
         public MultiEmbeddingSingleAsBase64Index()
         {
-            Map = sources => sources.Select(x => new
-            {
-                Vector = CreateVector(x.EmbeddingsAsBase64)
-            });
-            
-            VectorIndexes.Add(source => source.Vector, new VectorOptions()
-            {
-                IndexingStrategy = VectorIndexingStrategy.Exact, 
-                SourceEmbeddingType = EmbeddingType.Float32, 
-                DestinationEmbeddingType = EmbeddingType.Float32
-            });
+            Map = sources => sources.Select(x => new { Vector = CreateVector(x.EmbeddingsAsBase64) });
+
+            VectorIndexes.Add(source => source.Vector,
+                new VectorOptions()
+                {
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Float32, DestinationEmbeddingType = EmbeddingType.Float32
+                });
         }
     }
 }
