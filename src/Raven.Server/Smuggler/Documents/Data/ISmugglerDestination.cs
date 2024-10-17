@@ -65,6 +65,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         ValueTask DeleteDocumentAsync(string id);
         IEnumerable<DocumentItem> GetDocumentsWithDuplicateCollection();
+        ValueTask FlushAsync();
     }
 
     public interface INewCompareExchangeActions
@@ -118,7 +119,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface ICompareExchangeActions : INewCompareExchangeActions, IAsyncDisposable
     {
-        ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument);
+        ValueTask<bool> WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument);
 
         ValueTask WriteTombstoneKeyAsync(string key);
 

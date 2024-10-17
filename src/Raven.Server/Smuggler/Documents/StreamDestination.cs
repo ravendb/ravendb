@@ -1530,6 +1530,11 @@ namespace Raven.Server.Smuggler.Documents
                 yield break;
             }
 
+            public ValueTask FlushAsync()
+            {
+                return ValueTask.CompletedTask;
+            }
+
             public async Task<Stream> GetTempStreamAsync() => _attachmentStreamsTempFile ??= await StreamDestination.GetTempStreamAsync(_options);
 
             private async ValueTask WriteUniqueAttachmentStreamsAsync(Document document, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
@@ -1668,7 +1673,7 @@ namespace Raven.Server.Smuggler.Documents
                 _context = context;
             }
 
-            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
+            public async ValueTask<bool> WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
             {
                 using (value)
                 {
@@ -1686,6 +1691,8 @@ namespace Raven.Server.Smuggler.Documents
 
                     await Writer.MaybeFlushAsync();
                 }
+
+                return false;
             }
 
             public async ValueTask WriteTombstoneKeyAsync(string key)
