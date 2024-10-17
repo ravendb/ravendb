@@ -224,16 +224,15 @@ namespace Raven.Server.Smuggler.Documents
                 _allocator = allocator;
             }
 
-            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
+            public async ValueTask<bool> WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
             {
                 if (ClusterWideTransactionHelper.IsAtomicGuardKey(key, out var docId))
                 {
                     var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, docId);
-                    await _actions[shardNumber].WriteKeyValueAsync(key, value, existingDocument);
-                    return;
+                    return await _actions[shardNumber].WriteKeyValueAsync(key, value, existingDocument);
                 }
 
-                await _last.WriteKeyValueAsync(key, value, existingDocument);
+                return await _last.WriteKeyValueAsync(key, value, existingDocument);
             }
 
             public async ValueTask WriteTombstoneKeyAsync(string key)
@@ -334,6 +333,12 @@ namespace Raven.Server.Smuggler.Documents
             public IEnumerable<DocumentItem> GetDocumentsWithDuplicateCollection()
             {
                 yield break;
+            }
+
+            public async ValueTask FlushAsync()
+            {
+                foreach (var kvp in _actions)
+                    await kvp.Value.FlushAsync();
             }
         }
 
