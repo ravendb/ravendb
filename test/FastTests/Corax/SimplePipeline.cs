@@ -9,10 +9,8 @@ using Xunit.Abstractions;
 namespace FastTests.Corax
 {
 
-    public class SimplePipelineTest : StorageTest
+    public class SimplePipelineTest(ITestOutputHelper output) : StorageTest(output)
     {
-        public SimplePipelineTest(ITestOutputHelper output) : base(output) { }
-
         [Fact]
         public void WhitespaceTokenizer()
         {          
@@ -24,14 +22,16 @@ namespace FastTests.Corax
 
             var tokenizer = new WhitespaceTokenizer();
             var t1 = tokenSlice;
-            Assert.Equal(source.Length, tokenizer.Tokenize(source, ref t1));
+            var consumed = tokenizer.Tokenize(source, ref t1);
+            
+            Assert.Equal(source.Length, consumed);
             Assert.Equal(2, t1.Length);
             Assert.Equal(0, t1[0].Offset);
             Assert.Equal(5u, t1[0].Length);
-            Assert.Equal(TokenType.Word, t1[0].Type);
+            Assert.Equal(TokenType.Word | TokenType.Ascii, t1[0].Type);
             Assert.Equal(6, t1[1].Offset);
             Assert.Equal(5u, t1[1].Length);
-            Assert.Equal(TokenType.Word, t1[1].Type);
+            Assert.Equal(TokenType.Word | TokenType.Ascii, t1[1].Type);
 
             t1 = tokenSlice;
             Assert.Equal(6, tokenizer.Tokenize(source.Slice(0, 6), ref t1));
@@ -58,7 +58,7 @@ namespace FastTests.Corax
         }
 
         [Fact]
-        public void LowerCaseTrasformer()
+        public void LowerCaseTransformer()
         {
             Span<byte> source = Encoding.UTF8.GetBytes("Hello Kitty");
 
@@ -176,7 +176,7 @@ namespace FastTests.Corax
         {
             Span<byte> source = Encoding.UTF8.GetBytes(input);
 
-            var analyzer = Analyzer.Create(this.Allocator, default(KeywordTokenizer), default(LowerCaseTransformer));
+            var analyzer = Analyzer.Create(this.Allocator, default(KeywordTokenizer), default(ExactTransformer));
             analyzer.GetOutputBuffersSize(source.Length, out int bufferSize, out int tokenSize);
 
             Span<byte> buffer = new byte[bufferSize];
