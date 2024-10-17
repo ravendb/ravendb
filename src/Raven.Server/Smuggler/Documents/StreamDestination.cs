@@ -1412,6 +1412,11 @@ namespace Raven.Server.Smuggler.Documents
                 yield break;
             }
 
+            public ValueTask FlushAsync()
+            {
+                return ValueTask.CompletedTask;
+            }
+
             public Stream GetTempStream()
             {
                 throw new NotSupportedException();
@@ -1538,7 +1543,7 @@ namespace Raven.Server.Smuggler.Documents
             {
             }
 
-            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
+            public async ValueTask<bool> WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
             {
                 using (value)
                 {
@@ -1556,6 +1561,8 @@ namespace Raven.Server.Smuggler.Documents
 
                     await Writer.MaybeFlushAsync();
                 }
+
+                return false;
             }
 
             public async ValueTask WriteTombstoneKeyAsync(string key)
