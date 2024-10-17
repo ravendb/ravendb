@@ -101,6 +101,8 @@ namespace Raven.Client.Documents.Identity
 
         public async Task<long> GenerateNextIdForAsync(string collectionName)
         {
+            collectionName = Conventions.TransformTypeCollectionNameToDocumentIdPrefix(collectionName);
+            
             if (_idGeneratorsByTag.TryGetValue(collectionName, out var value))
             {
                 return (await value.GetNextIdAsync().ConfigureAwait(false)).Id;

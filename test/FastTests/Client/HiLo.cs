@@ -151,6 +151,40 @@ namespace FastTests.Client
                 Assert.Equal(count * 4, productsIds.Count);
             }
         }
+        
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task GenerateNextIdAndGenerateDocumentIdUseTheSameHiLoRange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                    // Call GenerateNextIdForAsync methods:
+                    var id1 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, new User());
+                    Assert.Equal(1, id1);
+                    
+                    var id2 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, typeof(User)); 
+                    Assert.Equal(2, id2);
+
+                    var id3 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Users"); 
+                    Assert.Equal(3, id3);
+                    
+                    // Call GenerateDocumentIdAsync:
+                    var fullDocumentId = await store.HiLoIdGenerator.GenerateDocumentIdAsync(null, new User());
+                    Assert.Equal("users/4-A", fullDocumentId);
+
+                    using (var session = store.OpenSession())
+                    {
+                        var user = new User();
+                        session.Store(user);
+                        var userId = session.Advanced.GetDocumentId(user); 
+                        Assert.Equal("users/5-A", userId);
+                    }
+
+                    var id4 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, new User());
+                    var id5 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, typeof(User)); 
+                    var id6 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Users"); 
+                    Assert.Equal(8, id6);
+            }
+        }
 
         [Fact]
         public async Task Capacity_Should_Double()
