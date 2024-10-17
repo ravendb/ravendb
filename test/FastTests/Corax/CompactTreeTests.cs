@@ -123,6 +123,109 @@ public class CompactTreeTests : StorageTest
     }
 
     [Fact]
+    public void TestSeekForBackwardIterator()
+    {
+        using (var wtx = Env.WriteTransaction())
+        {
+            var tree = wtx.LookupFor<Int64LookupKey>("test");
+            tree.Add(new Int64LookupKey(1), 1);
+            tree.Add(new Int64LookupKey(2), 2);
+            tree.Add(new Int64LookupKey(4), 4);
+            tree.Add(new Int64LookupKey(5), 5);
+            wtx.Commit();
+        }
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            var tree = rtx.LookupFor<Int64LookupKey>("test");
+            
+            // 5 4 2 1
+            var it = tree.Iterate<Lookup<Int64LookupKey>.BackwardIterator>();
+
+            bool moveNext;
+            long value;
+            
+            it.Reset();
+            it.Seek<Int64LookupKey>(4);
+            moveNext = it.MoveNext(out value);
+            Assert.True(moveNext);
+            Assert.Equal(4, value);
+            
+            it.Reset();
+            it.Seek<Int64LookupKey>(3);
+            moveNext = it.MoveNext(out value);
+            Assert.True(moveNext);
+            Assert.Equal(2, value);
+            
+            it.Reset();
+            it.Seek<Int64LookupKey>(0);
+            moveNext = it.MoveNext(out value);
+            Assert.False(moveNext);
+            
+            it.Reset();
+            it.Seek<Int64LookupKey>(6);
+            moveNext = it.MoveNext(out value);
+            Assert.True(moveNext);
+            Assert.Equal(5, value);
+        }
+    }
+
+    [Fact]
+    public void TestSeekForBackwardIteratorUsingMultiplePages()
+    {
+        using (var wtx = Env.WriteTransaction())
+        {
+            var tree = wtx.LookupFor<Int64LookupKey>("test");
+
+            for (int i = 0; i < 5_000; i += 2)
+            {
+                tree.Add(new Int64LookupKey(i), i);
+            }
+            
+            wtx.Commit();
+        }
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            var tree = rtx.LookupFor<Int64LookupKey>("test");
+            
+            // 4998 4996 ... 2 0
+            var it = tree.Iterate<Lookup<Int64LookupKey>.BackwardIterator>();
+
+            var numberOfPages = tree.AllPages().Count;
+            
+            Assert.Equal(4, numberOfPages);
+
+            bool moveNext;
+            long value;
+            
+            it.Reset();
+            it.Seek<Int64LookupKey>(2);
+            moveNext = it.MoveNext(out value);
+            Assert.True(moveNext);
+            Assert.Equal(2, value);
+            
+            it.Reset();
+            it.Seek<Int64LookupKey>(1900);
+            moveNext = it.MoveNext(out value);
+            Assert.True(moveNext);
+            Assert.Equal(1900, value);
+            
+            it.Reset();
+            it.Seek<Int64LookupKey>(3);
+            moveNext = it.MoveNext(out value);
+            Assert.True(moveNext);
+            Assert.Equal(2, value);
+            
+            it.Reset();
+            it.Seek<Int64LookupKey>(1899);
+            moveNext = it.MoveNext(out value);
+            Assert.True(moveNext);
+            Assert.Equal(1898, value);
+        }
+    }
+
+    [Fact]
     public void CanProperlyResetIterator()
     {
         using (var wtx = Env.WriteTransaction())
