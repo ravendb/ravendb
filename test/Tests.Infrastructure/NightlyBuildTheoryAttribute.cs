@@ -10,15 +10,27 @@ namespace Tests.Infrastructure
 
         internal static bool IsNightlyBuild = Force;
 
-        internal static string SkipMessage =
-            "Nightly build tests are only working between 21:00 and 6:00 UTC and when 'RAVEN_ENABLE_NIGHTLY_BUILD_TESTS' is set to 'true'. "
-            + "They also can be enforced by setting 'RAVEN_FORCE_NIGHTLY_BUILD_TESTS' to 'true'.";
+        internal static readonly string SkipMessage;
 
         static NightlyBuildTheoryAttribute()
         {
+            int startHourUtc = 16;
+            int endHourUtc = 6;
+
+            var startHourUtcAsString = Environment.GetEnvironmentVariable("RAVEN_NIGHTLY_BUILD_TESTS_START_HOUR");
+            var endHourUtcAsString = Environment.GetEnvironmentVariable("RAVEN_NIGHTLY_BUILD_TESTS_END_HOUR");
+
+            if (startHourUtcAsString != null && int.TryParse(startHourUtcAsString, out var newStartHourUtc))
+                startHourUtc = newStartHourUtc;
+
+            if (endHourUtcAsString != null && int.TryParse(endHourUtcAsString, out var newEndHourUtc))
+                endHourUtc = newEndHourUtc;
+
+            SkipMessage = $"Nightly build tests are only working between {startHourUtc}:00 and {endHourUtc}:00 UTC and when 'RAVEN_ENABLE_NIGHTLY_BUILD_TESTS' is set to 'true'. They also can be enforced by setting 'RAVEN_FORCE_NIGHTLY_BUILD_TESTS' to 'true'.";
+
             if (IsNightlyBuild)
                 return;
-            
+
             var forceVariable = Environment.GetEnvironmentVariable("RAVEN_FORCE_NIGHTLY_BUILD_TESTS");
             if (forceVariable != null && bool.TryParse(forceVariable, out var forceNightlyBuildTests) && forceNightlyBuildTests)
             {
@@ -37,7 +49,7 @@ namespace Tests.Infrastructure
                 return;
 
             var now = SystemTime.UtcNow;
-            IsNightlyBuild = now.Hour >= 18 || now.Hour <= 6;
+            IsNightlyBuild = now.Hour >= startHourUtc || now.Hour <= endHourUtc;
         }
 
         public override string Skip
