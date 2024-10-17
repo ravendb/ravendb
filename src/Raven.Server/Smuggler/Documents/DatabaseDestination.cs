@@ -270,7 +270,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _command.Add(item);
-                return HandleBatchOfDocumentsIfNecessaryAsync(beforeFlushing);
+                return HandleBatchOfDocumentsIfNecessaryAsync(beforeFlushing, force: false);
             }
 
             public async ValueTask WriteTombstoneAsync(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -279,7 +279,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     Tombstone = tombstone
                 });
-                await HandleBatchOfDocumentsIfNecessaryAsync(null);
+                await HandleBatchOfDocumentsIfNecessaryAsync(null, force: false);
             }
 
             public async ValueTask WriteConflictAsync(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -288,7 +288,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     Conflict = conflict
                 });
-                await HandleBatchOfDocumentsIfNecessaryAsync(null);
+                await HandleBatchOfDocumentsIfNecessaryAsync(null, force: false);
             }
 
             public async ValueTask DeleteDocumentAsync(string id)
@@ -310,6 +310,11 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _duplicateDocsHandler._markForDispose = true;
+            }
+
+            public async ValueTask FlushAsync()
+            {
+                await HandleBatchOfDocumentsIfNecessaryAsync(null, force: true);
             }
 
             public Task<Stream> GetTempStreamAsync()
@@ -483,13 +488,13 @@ namespace Raven.Server.Smuggler.Documents
                 _revisionDeleteCommand = null;
             }
 
-            private ValueTask HandleBatchOfDocumentsIfNecessaryAsync(Func<ValueTask> beforeFlush)
+            private ValueTask HandleBatchOfDocumentsIfNecessaryAsync(Func<ValueTask> beforeFlush, bool force)
             {
                 var commandSize = _command.GetCommandAllocationSize();
                 var prevDoneAndHasEnough = commandSize > Constants.Size.Megabyte && _prevCommandTask.IsCompleted;
                 var currentReachedLimit = commandSize > _enqueueThreshold.GetValue(SizeUnit.Bytes);
 
-                if (currentReachedLimit == false && prevDoneAndHasEnough == false)
+                if (currentReachedLimit == false && prevDoneAndHasEnough == false && force == false)
                 {
                     return ValueTask.CompletedTask;
                 }

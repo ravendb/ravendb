@@ -63,25 +63,28 @@ namespace Raven.Server.Smuggler.Documents.Actions
 
         protected abstract bool TryHandleAtomicGuard(string key, string documentId, BlittableJsonReaderObject value, Document existingDocument);
 
-        public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
+        public async ValueTask<bool> WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
         {
+            var anyCommandsSent = false;
             if (_compareExchangeValuesSize >= _compareExchangeValuesBatchSize || _compareExchangeAddOrUpdateCommands.Count >= BatchSize)
             {
-                await SendAddOrUpdateCommandsAsync();
+                anyCommandsSent |= await SendAddOrUpdateCommandsAsync();
                 _compareExchangeValuesSize.Set(0, SizeUnit.Bytes);
             }
 
             if (_clusterTransactionCommandsSize >= _clusterTransactionCommandsBatchSize || _clusterTransactionCommands.Length >= BatchSize)
             {
-                await SendClusterTransactionsAsync();
+                anyCommandsSent |= await SendClusterTransactionsAsync();
                 _clusterTransactionCommandsSize.Set(0, SizeUnit.Bytes);
             }
 
             if (ClusterWideTransactionHelper.IsAtomicGuardKey(key, out var docId) && TryHandleAtomicGuard(key, docId, value, existingDocument))
-                return;
+                return anyCommandsSent;
 
             _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_databaseName, key, value, 0, _context, RaftIdGenerator.DontCareId, fromBackup: true));
             _compareExchangeValuesSize.Add(value.Size, SizeUnit.Bytes);
+
+            return anyCommandsSent;
         }
 
         public async ValueTask WriteTombstoneKeyAsync(string key)
@@ -160,10 +163,10 @@ namespace Raven.Server.Smuggler.Documents.Actions
             }
         }
 
-        private async ValueTask SendAddOrUpdateCommandsAsync()
+        private async ValueTask<bool> SendAddOrUpdateCommandsAsync()
         {
             if (_compareExchangeAddOrUpdateCommands.Count == 0)
-                return;
+                return false;
 
             var addOrUpdateResult = await _serverStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, RaftIdGenerator.DontCareId));
             foreach (var command in _compareExchangeAddOrUpdateCommands)
@@ -173,6 +176,8 @@ namespace Raven.Server.Smuggler.Documents.Actions
             _compareExchangeAddOrUpdateCommands.Clear();
 
             _lastAddOrUpdateOrRemoveResultIndex = addOrUpdateResult.Index;
+
+            return true;
         }
 
         private async ValueTask SendRemoveCommandsAsync()
