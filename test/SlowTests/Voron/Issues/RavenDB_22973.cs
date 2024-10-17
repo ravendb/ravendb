@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests.Voron;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
@@ -115,7 +116,7 @@ public class RavenDB_22973 : StorageTest
                 var p11 = txw.LowLevelTransaction.AllocatePage(1).PageNumber;
 
                 Assert.Equal(p1, p11); // the same page number was returned by free space handling
-                    
+
                 llt.ModifyPage(p11);
 
                 txw.Commit();
@@ -127,5 +128,55 @@ public class RavenDB_22973 : StorageTest
 
             Assert.Equal(readTx.LowLevelTransaction.CurrentStateRecord.ScratchPagesTable.Count, scratchBufferFile.AllocatedPagesCount);
         }
+    }
+
+    [Fact]
+    public void FailureOnUpdatingJournalStateMustNotCauseLeakOfUnreleasedScratchPages()
+    {
+        long p1;
+
+        using (var txw = Env.WriteTransaction())
+        {
+            var llt = txw.LowLevelTransaction;
+
+            p1 = txw.LowLevelTransaction.AllocatePage(1).PageNumber;
+
+            llt.ModifyPage(p1);
+
+            txw.Commit();
+        }
+
+        using (var txw = Env.WriteTransaction())
+        {
+            var llt = txw.LowLevelTransaction;
+            llt.FreePage(p1);
+
+            var p11 = txw.LowLevelTransaction.AllocatePage(1).PageNumber;
+
+            Assert.Equal(p1, p11); // the same page number was returned by free space handling
+
+            llt.ModifyPage(p11);
+
+            txw.Commit();
+        }
+
+        var throwOnUpdatingJournalState = true;
+
+        Env.Journal.Applicator.ForTestingPurposesOnly().OnUpdateJournalStateUnderWriteTransactionLock += () =>
+        {
+            throwOnUpdatingJournalState = false; // do it just once
+
+            throw new InvalidOperationException("For testing purposes");
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => Env.FlushLogToDataFile());
+
+        Assert.Equal("For testing purposes", ex.Message);
+
+        Env.FlushLogToDataFile();
+
+        var scratchBufferFile = Env.ScratchBufferPool.GetScratchBufferFile(0);
+
+        Assert.Equal(0, scratchBufferFile.AllocatedPagesCount);
     }
 }

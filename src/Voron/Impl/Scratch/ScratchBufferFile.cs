@@ -15,8 +15,10 @@ using Voron.Global;
 using Voron.Impl.Paging;
 using Sparrow.Server.Utils;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 using Sparrow.Binary;
 using Sparrow.Server.LowMemory;
+using Voron.Data.BTrees;
 
 namespace Voron.Impl.Scratch
 {
@@ -328,6 +330,26 @@ namespace Voron.Impl.Scratch
                     $"Failed to verify page {pageNumberInDataFile} when reading scratch page {positionInScratchBuffer}, values different!" +
                     $"Page: {pageNumberInDataFile} vs. {allocated.PageNumberInDataFile} ({numberOfPages} vs {allocated.NumberOfPages})!");
 
+        }
+
+        [Conditional("DEBUG")]
+        public void AssertNoPagesAllocatedInTransactionOlderThan(long txId)
+        {
+            foreach (PageFromScratchBuffer p in _allocatedPages.Values)
+            {
+                if (p.AllocatedInTransaction < txId)
+                {
+                    var message =
+                        $"Found page #{p.PageNumberInDataFile} allocated in tx {p.AllocatedInTransaction} (scratch {p.File.Number}, pos in scratch: {p.PositionInScratchBuffer}) while we freed up to tx {txId}";
+
+                    Console.Error.WriteLine(message);
+
+                    Console.WriteLine(message);
+
+                    throw new InvalidOperationException(message);
+
+                }
+            }
         }
     }
 }

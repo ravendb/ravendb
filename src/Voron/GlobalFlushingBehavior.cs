@@ -225,7 +225,11 @@ namespace Voron
                         if (storageEnvironment.Disposed)
                             return;
 
+                        //Console.WriteLine($"{DateTime.Now} Flushing {numberOfNewPagesSinceLastFlush} pages - {storageEnvironment}. Scratch allocations before: {storageEnvironment.ScratchBufferPool.GetNumberOfAllocations(storageEnvironment.ScratchBufferPool._current.Number)}");
+
                         storageEnvironment.BackgroundFlushWritesToDataFile();
+
+                       // Console.WriteLine($"{DateTime.Now} Scratch allocations after: {storageEnvironment.ScratchBufferPool.GetNumberOfAllocations(storageEnvironment.ScratchBufferPool._current.Number)}");
 
                     }
                     catch (Exception e)
