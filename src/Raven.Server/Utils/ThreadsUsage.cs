@@ -111,11 +111,13 @@ namespace Raven.Server.Utils
                                 }
                                 else
                                 {
-                                    threadName = threadStats.Name ?? "Thread Pool Thread";
+                                    threadName = threadStats.Name ?? ThreadHelper.GetThreadName(process.Id, thread.Id) ?? "Thread Pool Thread";
                                 }
 
                                 unmanagedAllocations = threadStats.TotalAllocated;
                             }
+
+                            threadName ??= ThreadHelper.GetThreadName(process.Id, thread.Id);
 
                             var threadState = GetThreadInfoOrDefault<ThreadState?>(() => thread.ThreadState);
                             threadsInfo.List.Add(new ThreadInfo
