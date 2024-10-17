@@ -19,6 +19,7 @@ import downloader = require("common/downloader");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import genUtils = require("common/generalUtils");
 
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent" | "timeSeries";
 type connectedItemType = connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem;
@@ -263,7 +264,7 @@ class connectedDocuments {
                         onValue(timeSeriesItem.numberOfEntries.toLocaleString());
                     } else {
                         const value = column.getCellValue(item);
-                        onValue(value);
+                        onValue(genUtils.escapeHtml(value));
                     }
                 }
             });
