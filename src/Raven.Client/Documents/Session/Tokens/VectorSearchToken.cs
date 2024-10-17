@@ -12,28 +12,33 @@ public sealed class VectorSearchToken : WhereToken
     private float SimilarityThreshold { get; set; }
     private EmbeddingType SourceQuantizationType { get; set; }
     private EmbeddingType TargetQuantizationType { get; set; }
-    private EmbeddingType QueriedVectorQuantizationType { get; set; }
     private bool IsSourceBase64Encoded { get; set; }
     private bool IsVectorBase64Encoded { get; set; }
+    private VectorIndexingStrategy IndexingStrategy { get; set; }
     
-    public VectorSearchToken(string fieldName, string parameterName, EmbeddingType sourceQuantizationType, EmbeddingType targetQuantizationType, EmbeddingType queriedQueriedVectorQuantizationType, bool isSourceBase64Encoded, bool isVectorBase64Encoded, float similarityThreshold)
+    public VectorSearchToken(string fieldName, string parameterName, EmbeddingType sourceQuantizationType, EmbeddingType targetQuantizationType, bool isSourceBase64Encoded, bool isVectorBase64Encoded, float similarityThreshold, VectorIndexingStrategy indexingStrategy)
     {
         FieldName = fieldName;
         ParameterName = parameterName;
         
         SourceQuantizationType = sourceQuantizationType;
         TargetQuantizationType = targetQuantizationType;
-        QueriedVectorQuantizationType = queriedQueriedVectorQuantizationType;
                 
         IsSourceBase64Encoded = isSourceBase64Encoded;
         IsVectorBase64Encoded = isVectorBase64Encoded;
                 
         SimilarityThreshold = similarityThreshold;
+
+        IndexingStrategy = indexingStrategy;
     }
     
     public override void WriteTo(StringBuilder writer)
     {
         writer.Append("vector.search(");
+        
+        if (IndexingStrategy != Constants.VectorSearch.DefaultIndexingStrategy)
+            writer.Append($"{IndexingStrategy}(");
+        
         if (SourceQuantizationType is EmbeddingType.Float32 && TargetQuantizationType is EmbeddingType.Float32)
             writer.Append(FieldName);
         else
@@ -46,7 +51,7 @@ public sealed class VectorSearchToken : WhereToken
                 (EmbeddingType.Text, EmbeddingType.Int8) => Constants.VectorSearch.EmbeddingTextInt8,
                 (EmbeddingType.Text, EmbeddingType.Binary) => Constants.VectorSearch.EmbeddingTextInt1,
                 (EmbeddingType.Int8, EmbeddingType.Int8) => Constants.VectorSearch.EmbeddingInt8,
-                (EmbeddingType.Binary, EmbeddingType.Binary) => Constants.VectorSearch.EmbeddingInt8,
+                (EmbeddingType.Binary, EmbeddingType.Binary) => Constants.VectorSearch.EmbeddingInt1,
                 _ => throw new InvalidOperationException(
                     $"Cannot create vector field with SourceQuantizationType {SourceQuantizationType} and TargetQuantizationType {TargetQuantizationType}")
             };
@@ -54,6 +59,8 @@ public sealed class VectorSearchToken : WhereToken
             writer.Append($"{methodName}({FieldName})");
         }
         
+        if (IndexingStrategy != Constants.VectorSearch.DefaultIndexingStrategy)
+            writer.Append(')');
         
         writer.Append($", ${ParameterName}");
 

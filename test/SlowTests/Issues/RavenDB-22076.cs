@@ -24,21 +24,36 @@ public class RavenDB_22076 : RavenTestBase
             using (var session = store.OpenSession())
             {
                 var q1 = session.Advanced.DocumentQuery<Dto>()
-                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8), factory => factory.ByEmbedding([2.5f, 3.3f], EmbeddingType.Binary), 0.65f).ToString();
+                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString();
 
-                Assert.Equal("from 'Dtos' where vector.search(i8(EmbeddingField), i1($p0), 0.65)", q1);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.i8(EmbeddingField), $p0, 0.65)", q1);
 
                 var q2 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByText("aaaa")).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(VectorField, $p0, 0.8)", q2);
+                Assert.Equal("from 'Dtos' where vector.search(VectorField, $p0)", q2);
                 
-                var q3 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByEmbedding([0.3f, 0.4f, 0.5f], EmbeddingType.Int8)).ToString();
+                var q3 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByEmbedding([0.3f, 0.4f, 0.5f])).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(VectorField, i8($p0), 0.8)", q3);
+                Assert.Equal("from 'Dtos' where vector.search(VectorField, $p0)", q3);
                 
-                var q4 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByBase64("aaaa==", EmbeddingType.Binary)).ToString();
+                var q4 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByBase64("aaaa==")).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(VectorField, base64(i1($p0)), 0.8)", q4);
+                Assert.Equal("from 'Dtos' where vector.search(VectorField, $p0)", q4);
+
+                var q5 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithText("TextField").TargetQuantization(EmbeddingType.Int8),
+                    factory => factory.ByText("aaaa")).ToString();
+                
+                Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField), $p0)", q5);
+                
+                var q6 = session.Advanced.DocumentQuery<Dto>()
+                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8, VectorIndexingStrategy.HNSW), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString();
+
+                Assert.Equal("from 'Dtos' where vector.search(HNSW(embedding.i8(EmbeddingField)), $p0, 0.65)", q6);
+                
+                var q7 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithText("TextField", VectorIndexingStrategy.HNSW).TargetQuantization(EmbeddingType.Int8),
+                    factory => factory.ByText("aaaa")).ToString();
+                
+                Assert.Equal("from 'Dtos' where vector.search(HNSW(embedding.text_i8(TextField)), $p0)", q7);
             }
         }
     }
@@ -52,45 +67,45 @@ public class RavenDB_22076 : RavenTestBase
             using (var session = store.OpenAsyncSession())
             {
                 var ex1 = Assert.Throws<Exception>(() => session.Advanced.AsyncDocumentQuery<Dto>()
-                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8).TargetQuantization(EmbeddingType.Binary), factory => factory.ByEmbedding([2.5f, 3.3f], EmbeddingType.Binary), 0.65f).ToString());
+                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8).TargetQuantization(EmbeddingType.Binary), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString());
                 
                 Assert.Contains("Cannot quantize already quantized embeddings", ex1.Message);
 
                 var ex2 = Assert.Throws<Exception>(() => session.Advanced.AsyncDocumentQuery<Dto>()
-                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8).TargetQuantization(EmbeddingType.Float32), factory => factory.ByEmbedding([2.5f, 3.3f], EmbeddingType.Binary), 0.65f).ToString());
+                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8).TargetQuantization(EmbeddingType.Float32), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString());
                     
-                Assert.Contains("Cannot quantize vector with I8 quantization into None", ex2.Message);
+                Assert.Contains("Cannot quantize vector with Int8 quantization into Float32", ex2.Message);
                 
                 var q1 = session.Advanced.AsyncDocumentQuery<Dto>()
-                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8), factory => factory.ByEmbedding([2.5f, 3.3f], EmbeddingType.Binary), 0.65f).ToString();
+                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString();
 
-                Assert.Equal("from 'Dtos' where vector.search(i8(EmbeddingField), i1($p0), 0.65)", q1);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.i8(EmbeddingField), $p0, 0.65)", q1);
                 
                 var q2 = session.Advanced.AsyncDocumentQuery<Dto>()
-                    .VectorSearch(x => x.WithEmbedding("EmbeddingField").TargetQuantization(EmbeddingType.Int8), factory => factory.ByEmbedding([2.5f, 3.3f], EmbeddingType.Binary), 0.65f).ToString();
+                    .VectorSearch(x => x.WithEmbedding("EmbeddingField").TargetQuantization(EmbeddingType.Int8), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString();
 
-                Assert.Equal("from 'Dtos' where vector.search(f32_i8(EmbeddingField), i1($p0), 0.65)", q2);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.f32_i8(EmbeddingField), $p0, 0.65)", q2);
                 
                 var q3 = session.Advanced.AsyncDocumentQuery<Dto>()
                     .VectorSearch(x => x.WithEmbedding("EmbeddingField").TargetQuantization(EmbeddingType.Int8),
                         factory => factory.ByBase64("abcd=="), 0.75f).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(f32_i8(EmbeddingField), base64($p0), 0.75)", q3);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.f32_i8(EmbeddingField), $p0, 0.75)", q3);
 
                 var q4 = session.Advanced.AsyncDocumentQuery<Dto>()
                     .VectorSearch(x => x.WithText("TextField"), factory => factory.ByText("abc")).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(TextField, $p0, 0.8)", q4);
-                
-                var q5 = session.Advanced.AsyncDocumentQuery<Dto>()
-                    .VectorSearch(x => x.WithBase64("Base64Field", EmbeddingType.Binary), factory => factory.ByBase64("ddddd==", EmbeddingType.Int8), 0.85f).ToString();
+                Assert.Equal("from 'Dtos' where vector.search(embedding.text(TextField), $p0)", q4);
 
-                Assert.Equal("from 'Dtos' where vector.search(base64(i1(Base64Field)), base64(i8($p0)), 0.85)", q5);
+                var q5 = session.Advanced.AsyncDocumentQuery<Dto>()
+                    .VectorSearch(x => x.WithBase64("Base64Field", EmbeddingType.Binary), factory => factory.ByBase64("ddddd=="), 0.85f).ToString();
+
+                Assert.Equal("from 'Dtos' where vector.search(embedding.i1(Base64Field), $p0, 0.85)", q5);
                 
                 var q6 = session.Advanced.AsyncDocumentQuery<Dto>()
                     .VectorSearch(x => x.WithBase64("Base64Field", EmbeddingType.Int8), factory => factory.ByEmbedding([0.2f, 0.3f])).ToString();
 
-                Assert.Equal("from 'Dtos' where vector.search(base64(i8(Base64Field)), $p0, 0.8)", q6);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.i8(Base64Field), $p0)", q6);
             }
         }
     }
@@ -105,27 +120,27 @@ public class RavenDB_22076 : RavenTestBase
             {
                 var q1 = session.Query<Dto>().VectorSearch(x => x.WithText("TextField"), factory => factory.ByText("SomeText")).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(TextField, $p0, 0.8)", q1);
-                
+                Assert.Equal("from 'Dtos' where vector.search(embedding.text(TextField), $p0)", q1);
+
                 var q2 = session.Query<Dto>().VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8), factory => factory.ByEmbedding([0.2f, -0.3f]), 0.75f).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(i8(EmbeddingField), $p0, 0.75)", q2);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.i8(EmbeddingField), $p0, 0.75)", q2);
+
+                var q3 = session.Query<Dto>().VectorSearch(x => x.WithEmbedding("EmbeddingField").TargetQuantization(EmbeddingType.Int8), factory => factory.ByEmbedding([0.2f, -0.3f])).ToString();
                 
-                var q3 = session.Query<Dto>().VectorSearch(x => x.WithEmbedding("EmbeddingField").TargetQuantization(EmbeddingType.Int8), factory => factory.ByEmbedding([0.2f, -0.3f], EmbeddingType.Int8)).ToString();
-                
-                Assert.Equal("from 'Dtos' where vector.search(f32_i8(EmbeddingField), i8($p0), 0.8)", q3);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.f32_i8(EmbeddingField), $p0)", q3);
                 
                 var q4 = session.Query<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByText("aaaa")).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(VectorField, $p0, 0.8)", q4);
+                Assert.Equal("from 'Dtos' where vector.search(VectorField, $p0)", q4);
                 
-                var q5 = session.Query<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByEmbedding([0.3f, 0.4f, 0.5f], EmbeddingType.Int8)).ToString();
+                var q5 = session.Query<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByEmbedding([0.3f, 0.4f, 0.5f])).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(VectorField, i8($p0), 0.8)", q5);
+                Assert.Equal("from 'Dtos' where vector.search(VectorField, $p0)", q5);
                 
-                var q6 = session.Query<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByBase64("aaaa==", EmbeddingType.Binary)).ToString();
+                var q6 = session.Query<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByBase64("aaaa==")).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(VectorField, base64(i1($p0)), 0.8)", q6);
+                Assert.Equal("from 'Dtos' where vector.search(VectorField, $p0)", q6);
             }
         }
     }

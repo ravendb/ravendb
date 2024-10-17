@@ -1520,8 +1520,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var sourceQuantizationType = embeddingFieldFactory.SourceQuantizationType;
             var targetQuantizationType = embeddingFieldFactory.DestinationQuantizationType;
             var isSourceBase64Encoded = embeddingFieldFactory.IsBase64Encoded;
-            
-            var queriedVectorQuantizationType = queriedFactory.EmbeddingType;
+            var indexingStrategy = embeddingFieldFactory.VectorIndexingStrategy;
             
             string queryParameterName;
             var isVectorBase64Encoded = false;
@@ -1541,7 +1540,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 isVectorBase64Encoded = true;
             }
             
-            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, queriedVectorQuantizationType, isSourceBase64Encoded, isVectorBase64Encoded, minimumSimilarity);
+            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, isSourceBase64Encoded, isVectorBase64Encoded, minimumSimilarity, indexingStrategy);
 
             WhereTokens.AddLast(vectorSearchToken);
         }
