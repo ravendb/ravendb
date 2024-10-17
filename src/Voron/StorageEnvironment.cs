@@ -1328,13 +1328,17 @@ namespace Voron
                 CurrentReadTransactionId = CurrentReadTransactionId,
                 PossibleOldestReadTransaction = PossibleOldestReadTransaction(tx),
                 ActiveTransactions = ActiveTransactions.AllTransactions,
+                // TODO arek EnvRecord = _currentStateRecord,
+                //aa = _transactionsToFlush,
                 FlushState = new InMemoryStorageState.FlushStateDetails
                 {
                     LastFlushTime = Journal.Applicator.LastFlushTime,
                     ShouldFlush = Journal.Applicator.ShouldFlush,
                     LastFlushedTransactionId = Journal.Applicator.LastFlushedJournalId,
                     LastFlushedJournalId = Journal.Applicator.LastFlushedJournalId,
-                    JournalsToDelete = Journal.Applicator.JournalsToDelete.Select(x => x.Number).ToList()
+                    JournalsToDelete = Journal.Applicator.JournalsToDelete.Select(x => x.Number).ToList(),
+                   // aaa = _journal.Applicator.TotalCommittedSinceLastFlushPages,
+                    //aa = _transactionsToFlush,
                 },
                 SyncState = new InMemoryStorageState.SyncStateDetails
                 {
@@ -1645,10 +1649,17 @@ namespace Voron
                     if (found == false)
                         return null;
                     Debug.Assert(record is not null);
+
+                   
+
+                        // Console.WriteLine($"Going to release up to: {record.TransactionId}, number of pages: {scratchBuffers.Count}");
+
                     return new ApplyLogsToDataFileState(scratchBuffers, sparseRegions, record);
                 }
                 if (_transactionsToFlush.TryDequeue(out record) == false)
                     throw new InvalidOperationException("Failed to get transaction to flush after already peeked successfully");
+
+               // Console.WriteLine($"--------->>>> will relase up to tx: {record.TransactionId}");
 
                 if (record.SparsePageRanges != null)
                 {
@@ -1657,9 +1668,34 @@ namespace Voron
                 foreach (var (_, pageFromScratch) in record.ScratchPagesTable)
                 {
                     if (pageFromScratch.AllocatedInTransaction != record.TransactionId)
+                    {
+                        //Console.WriteLine($"Filter out #{pageFromScratch.PageNumberInDataFile} (pos in scratch: {pageFromScratch.PositionInScratchBuffer}, scratch num: {pageFromScratch.File.Number}), AllocatedInTransaction: {pageFromScratch.AllocatedInTransaction}, record.TransactionId: {record.TransactionId}, uptoTxIdExclusive: {uptoTxIdExclusive}");
+
+
+                        //string dir = new FileInfo(record.DataPagerState.Pager.FileName).Directory.FullName;
+
+                        //File.AppendAllText(Path.Combine(dir, "Temp", "debug.txt"),
+                        //    $"#{pageFromScratch.PageNumberInDataFile} (pos in scratch: {pageFromScratch.PositionInScratchBuffer}, scratch num: {pageFromScratch.File.Number}), AllocatedInTransaction: {pageFromScratch.AllocatedInTransaction}, record.TransactionId: {record.TransactionId}, uptoTxIdExclusive: {uptoTxIdExclusive} {Environment.NewLine}");
+
                         continue;
+                    }
+                    //Console.WriteLine($"Add to free #{pageFromScratch.PageNumberInDataFile} (pos in scratch: {pageFromScratch.PositionInScratchBuffer}, scratch num: {pageFromScratch.File.Number}), AllocatedInTransaction: {pageFromScratch.AllocatedInTransaction}, record.TransactionId: {record.TransactionId}, uptoTxIdExclusive: {uptoTxIdExclusive}");
+
                     scratchBuffers.Add(pageFromScratch);
                 }
+
+                //Console.WriteLine($"number of scratch pages to free: {scratchBuffers.Count} (scratch pages table size: {record.ScratchPagesTable.Count})");
+
+                //if (record.ScratchPagesTable.Count < 500)
+                //{
+                //    Console.WriteLine("--->> Scratch page table info");
+
+                //    foreach (var p in record.ScratchPagesTable)
+                //    {
+                //        Console.WriteLine($"Scratch page table info: page #{p.Value.PageNumberInDataFile} allocated in tx {p.Value.AllocatedInTransaction} (scratch {p.Value.File.Number}, pos in scratch: {p.Value.PositionInScratchBuffer})");
+
+                //    }
+                //}
 
                 // single thread is reading from this, so we can be sure that peek + take gets the same value
                 Debug.Assert(ReferenceEquals(record, maybe));

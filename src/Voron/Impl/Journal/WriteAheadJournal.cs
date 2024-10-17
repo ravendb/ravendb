@@ -591,6 +591,8 @@ namespace Voron.Impl.Journal
 
             private ApplyLogsToDataFileState _applyLogsToDataFileStateFromPreviousFailedAttempt;
 
+            private bool _failedToUpdateJournalState = false;
+
             public void ApplyLogsToDataFile(CancellationToken token, TimeSpan timeToWait)
             {
                 if (token.IsCancellationRequested)
@@ -622,6 +624,9 @@ namespace Voron.Impl.Journal
                     Interlocked.Exchange(ref FlushInProgress, 1);
 
                     if (_waj._env.Disposed)
+                        return;
+
+                    if (_failedToUpdateJournalState)
                         return;
 
                     _forTestingPurposes?.OnApplyLogsToDataFileUnderFlushingLock?.Invoke();
@@ -679,7 +684,17 @@ namespace Voron.Impl.Journal
 
                     Interlocked.Add(ref TotalCommittedSinceLastFlushPages, -currentTotalCommittedSinceLastFlushPages);
 
-                    ApplyJournalStateAfterFlush(token, currentState.Buffers, currentState.Record, dataPagerState, byteStringContext);
+                    try
+                    {
+                        ApplyJournalStateAfterFlush(token, currentState.Buffers, currentState.Record, dataPagerState, byteStringContext);
+                    }
+                    catch (Exception)
+                    {
+                        _failedToUpdateJournalState = true;
+                        
+                        throw;
+                    }
+                    
 
                     _waj._env.SuggestSyncDataFile();
                 }
@@ -855,6 +870,12 @@ namespace Voron.Impl.Journal
                     throw new ArgumentNullException(nameof(scratchBufferPool));
                 if (bufferOfPageFromScratchBuffersToFree == null)
                     throw new ArgumentNullException(nameof(bufferOfPageFromScratchBuffersToFree));
+//#if DEBUG
+                var freedUpToTx = long.MinValue;
+                var maxScratchNumber = int.MinValue;
+                var minScratchNumber = int.MaxValue;
+//#endif
+
                 foreach (var pageFromScratchBuffer in bufferOfPageFromScratchBuffersToFree)
                 {
                     if (pageFromScratchBuffer == null)
@@ -863,7 +884,27 @@ namespace Voron.Impl.Journal
                         throw new ArgumentNullException(nameof(pageFromScratchBuffer.File));
 
                     scratchBufferPool.Free(txw, pageFromScratchBuffer.File.Number, pageFromScratchBuffer.PositionInScratchBuffer);
+
+//#if DEBUG
+                    freedUpToTx = long.Max(freedUpToTx, pageFromScratchBuffer.AllocatedInTransaction);
+                    maxScratchNumber = int.Max(maxScratchNumber, pageFromScratchBuffer.File.Number);
+                    minScratchNumber = int.Min(minScratchNumber, pageFromScratchBuffer.File.Number);
+//#endif
                 }
+
+//#if DEBUG
+                for (int i = minScratchNumber; i <= maxScratchNumber; i++)
+                {
+                    var scratchBufferFile = scratchBufferPool.GetScratchBufferFile(i);
+
+                    if (scratchBufferFile == null)
+                    {
+                        continue;
+                    }
+
+                    scratchBufferFile.AssertNoPagesAllocatedInTransactionOlderThan(freedUpToTx);
+                }
+//#endif
             }
 
             public void WaitForSyncToCompleteOnDispose()
@@ -1331,11 +1372,7 @@ namespace Voron.Impl.Journal
                         continue; // We already wrote those pages to disk in a previous flush... 
 
                     Debug.Assert(pageValue.AllocatedInTransaction <= record.TransactionId, "pageValue.AllocatedInTransaction <= record.TransactionId");
-                    if (pageValue.IsDeleted)
-                    {
-                        //dataPager.ZeroPage() - hole punching
-                        continue;
-                    }
+                    
                     pageNumsBuffer[index] = pageNum;
                     var page = PreparePage(ref txState, pageValue);
                     pagesBuffer[index] = page;
