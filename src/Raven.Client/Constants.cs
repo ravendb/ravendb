@@ -595,6 +595,7 @@ namespace Raven.Client
 
             public const float MinimumSimilarity = 0.8F;
             public const EmbeddingType DefaultEmbeddingType = EmbeddingType.Float32;
+            public const VectorIndexingStrategy DefaultIndexingStrategy = VectorIndexingStrategy.Exact;
         }
     }
 }
