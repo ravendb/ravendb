@@ -1,6 +1,9 @@
+using System;
+using System.IO;
 using System.Text;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries;
+using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Session.Tokens;
 
@@ -30,56 +33,32 @@ public sealed class VectorSearchToken : WhereToken
     
     public override void WriteTo(StringBuilder writer)
     {
-        bool explicitSourceQuantizationType = false;
-        
         writer.Append("vector.search(");
-
-        if (IsSourceBase64Encoded)
-            writer.Append("base64(");
-        
-        if (SourceQuantizationType == EmbeddingType.None)
+        if (SourceQuantizationType is EmbeddingType.Float32 && TargetQuantizationType is EmbeddingType.Float32)
+            writer.Append(FieldName);
+        else
         {
-            if (TargetQuantizationType != EmbeddingType.None)
+            var methodName = (SourceQuantizationType, TargetQuantizationType) switch
             {
-                // TODO
-                writer.Append($"f32_{TargetQuantizationType.ToString().ToLower()}(");
-
-                explicitSourceQuantizationType = true;
-            }
-        }
-        
-        else if (TargetQuantizationType != EmbeddingType.None)
-        {
-            writer.Append($"{SourceQuantizationType.ToString().ToLower()}(");
+                (EmbeddingType.Float32, EmbeddingType.Int8) => Constants.VectorSearch.EmbeddingSingleInt8,
+                (EmbeddingType.Float32, EmbeddingType.Binary) => Constants.VectorSearch.EmbeddingSingleInt1,
+                (EmbeddingType.Text, EmbeddingType.Float32) => Constants.VectorSearch.EmbeddingText,
+                (EmbeddingType.Text, EmbeddingType.Int8) => Constants.VectorSearch.EmbeddingTextInt8,
+                (EmbeddingType.Text, EmbeddingType.Binary) => Constants.VectorSearch.EmbeddingTextInt1,
+                (EmbeddingType.Int8, EmbeddingType.Int8) => Constants.VectorSearch.EmbeddingInt8,
+                (EmbeddingType.Binary, EmbeddingType.Binary) => Constants.VectorSearch.EmbeddingInt8,
+                _ => throw new InvalidOperationException(
+                    $"Cannot create vector field with SourceQuantizationType {SourceQuantizationType} and TargetQuantizationType {TargetQuantizationType}")
+            };
             
-            explicitSourceQuantizationType = true;
+            writer.Append($"{methodName}({FieldName})");
         }
         
-        writer.Append(FieldName);
-
-        if (IsSourceBase64Encoded)
-            writer.Append(')');
-
-        if (explicitSourceQuantizationType)
-            writer.Append(')');
         
-        writer.Append(", ");
+        writer.Append($", ${ParameterName}");
 
-        if (IsVectorBase64Encoded)
-            writer.Append("base64(");
-
-        if (QueriedVectorQuantizationType != EmbeddingType.Float32)
-            writer.Append($"{QueriedVectorQuantizationType.ToString().ToLower()}(");
-        
-        writer.Append($"${ParameterName}");
-
-        if (QueriedVectorQuantizationType != EmbeddingType.Float32)
-            writer.Append(')');
-
-        if (IsVectorBase64Encoded)
-            writer.Append(')');
-
-        writer.Append($", {SimilarityThreshold}");
+        if (SimilarityThreshold.AlmostEquals(Constants.VectorSearch.MinimumSimilarity) == false)
+            writer.Append($", {SimilarityThreshold}");
         
         writer.Append(')');
     }

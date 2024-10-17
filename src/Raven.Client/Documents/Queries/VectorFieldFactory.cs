@@ -17,21 +17,21 @@ public interface IVectorFieldFactory<T>
     
     public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector);
     
-    public IVectorEmbeddingField WithEmbedding(string fieldName, EmbeddingType storedEmbeddingQuantization = EmbeddingType.None);
+    public IVectorEmbeddingField WithEmbedding(string fieldName, EmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
     
-    public IVectorEmbeddingField WithEmbedding(Expression<Func<T, object>> propertySelector, EmbeddingType storedEmbeddingQuantization = EmbeddingType.None);
-    public IVectorEmbeddingField WithBase64(string fieldName, EmbeddingType storedEmbeddingQuantization = EmbeddingType.None);
+    public IVectorEmbeddingField WithEmbedding(Expression<Func<T, object>> propertySelector, EmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
+    public IVectorEmbeddingField WithBase64(string fieldName, EmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
     
-    public IVectorEmbeddingField WithBase64(Expression<Func<T, object>> propertySelector, EmbeddingType storedEmbeddingQuantization = EmbeddingType.None);
+    public IVectorEmbeddingField WithBase64(Expression<Func<T, object>> propertySelector, EmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
 
-    public IVectorField WithField(string fieldName, EmbeddingType storedEmbeddingQuantization = EmbeddingType.None);
+    public IVectorField WithField(string fieldName, EmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
     
-    public IVectorField WithField(Expression<Func<T, object>> propertySelector, EmbeddingType storedEmbeddingQuantization = EmbeddingType.None);
+    public IVectorField WithField(Expression<Func<T, object>> propertySelector, EmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
 }
 
 public interface IVectorEmbeddingTextField
 {
-    
+    public IVectorEmbeddingTextField TargetQuantization(EmbeddingType targetEmbeddingQuantization);
 }
 
 public interface IVectorEmbeddingField
@@ -47,21 +47,25 @@ public interface IVectorField : IVectorEmbeddingField, IVectorEmbeddingTextField
 internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, IVectorField
 {
     internal string FieldName { get; set; }
-    internal EmbeddingType SourceQuantizationType { get; set; }
-    internal EmbeddingType DestinationQuantizationType { get; set; }
+    internal EmbeddingType SourceQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
+    internal EmbeddingType DestinationQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
     internal bool IsBase64Encoded { get; set; }
     
     IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(Expression<Func<T, object>> propertySelector)
     {
         FieldName = propertySelector.ToPropertyPath(DocumentConventions.Default);
-
+        SourceQuantizationType = EmbeddingType.Text;
+        DestinationQuantizationType = EmbeddingType.Float32;
+        
         return this;
     }
     
     IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(string fieldName)
     {
         FieldName = fieldName;
-
+        SourceQuantizationType = EmbeddingType.Text;
+        DestinationQuantizationType = EmbeddingType.Float32;
+        
         return this;
     }
 
@@ -125,12 +129,21 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
     {
         DestinationQuantizationType = targetEmbeddingQuantization;
         
-        if (DestinationQuantizationType < SourceQuantizationType)
-            throw new Exception($"Cannot quantize vector with {SourceQuantizationType} quantization into {DestinationQuantizationType}");
-
-        if (SourceQuantizationType == EmbeddingType.Int8 && DestinationQuantizationType == EmbeddingType.Binary)
-            throw new Exception("Cannot quantize already quantized embeddings");
+        if (SourceQuantizationType is EmbeddingType.Int8 or EmbeddingType.Binary && DestinationQuantizationType != SourceQuantizationType)
+            throw new InvalidDataException("Cannot quantize already quantized embeddings");
         
+        if (DestinationQuantizationType == EmbeddingType.Text)
+            throw new InvalidDataException("Cannot quantize the embedding to Text. This option is only for SourceQuantizationType.");
+        
+        return this;
+    }
+
+    public IVectorEmbeddingTextField TargetQuantization(EmbeddingType targetEmbeddingQuantization)
+    {
+        if (DestinationQuantizationType == EmbeddingType.Text)
+            throw new InvalidDataException("Cannot quantize the embedding to Text. This option is only for SourceQuantizationType.");
+        DestinationQuantizationType = targetEmbeddingQuantization;
+
         return this;
     }
 }
@@ -142,13 +155,13 @@ public interface IVectorEmbeddingTextFieldValueFactory
 
 public interface IVectorEmbeddingFieldValueFactory
 {
-    public void ByEmbedding<T>(IEnumerable<T> embedding, EmbeddingType queriedEmbeddingQuantization = EmbeddingType.None) where T : unmanaged
+    public void ByEmbedding<T>(IEnumerable<T> embedding, EmbeddingType queriedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType) where T : unmanaged
 #if NET7_0_OR_GREATER
         , INumber<T>
 #endif
     ;
     
-    public void ByBase64(string base64Embedding, EmbeddingType queriedEmbeddingQuantization = EmbeddingType.None);
+    public void ByBase64(string base64Embedding, EmbeddingType queriedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
 }
 
 public interface IVectorFieldValueFactory : IVectorEmbeddingTextFieldValueFactory, IVectorEmbeddingFieldValueFactory

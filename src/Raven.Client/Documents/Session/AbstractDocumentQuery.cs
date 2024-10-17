@@ -1535,7 +1535,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             {
                 queryParameterName = AddQueryParameter(queriedFactory.Embedding);
             }
-
             else
             {
                 queryParameterName = AddQueryParameter(queriedFactory.Base64Embedding);
