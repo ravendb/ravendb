@@ -2,8 +2,9 @@
 
 namespace Raven.Client.Documents.Indexes.Vector;
 
-public enum EmbeddingType : byte
+public enum EmbeddingType
 {
+    None = Float32,
     //Floating values
     Float32 = 0,
     //Int8
