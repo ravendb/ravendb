@@ -322,7 +322,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _command.Add(item);
-                return HandleBatchOfDocumentsIfNecessaryAsync(beforeFlushing);
+                return HandleBatchOfDocumentsIfNecessaryAsync(beforeFlushing, force: false);
             }
 
             public async ValueTask WriteTombstoneAsync(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -331,7 +331,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     Tombstone = tombstone
                 });
-                await HandleBatchOfDocumentsIfNecessaryAsync(null);
+                await HandleBatchOfDocumentsIfNecessaryAsync(null, force: false);
             }
 
             public async ValueTask WriteConflictAsync(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -340,7 +340,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     Conflict = conflict
                 });
-                await HandleBatchOfDocumentsIfNecessaryAsync(null);
+                await HandleBatchOfDocumentsIfNecessaryAsync(null, force: false);
             }
 
             public async ValueTask DeleteDocumentAsync(string id)
@@ -362,6 +362,11 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _duplicateDocsHandler._markForDispose = true;
+            }
+
+            public async ValueTask FlushAsync()
+            {
+                await HandleBatchOfDocumentsIfNecessaryAsync(null, force: true);
             }
 
             public Stream GetTempStream()
@@ -535,13 +540,13 @@ namespace Raven.Server.Smuggler.Documents
                 _revisionDeleteCommand = null;
             }
 
-            private ValueTask HandleBatchOfDocumentsIfNecessaryAsync(Func<ValueTask> beforeFlush)
+            private ValueTask HandleBatchOfDocumentsIfNecessaryAsync(Func<ValueTask> beforeFlush, bool force)
             {
                 var commandSize = _command.GetCommandAllocationSize();
                 var prevDoneAndHasEnough = commandSize > Constants.Size.Megabyte && _prevCommandTask.IsCompleted;
                 var currentReachedLimit = commandSize > _enqueueThreshold.GetValue(SizeUnit.Bytes);
 
-                if (currentReachedLimit == false && prevDoneAndHasEnough == false)
+                if (currentReachedLimit == false && prevDoneAndHasEnough == false && force == false)
                 {
                     return ValueTask.CompletedTask;
                 }
@@ -642,17 +647,18 @@ namespace Raven.Server.Smuggler.Documents
                 _onProgress = onProgress;
             }
 
-            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
+            public async ValueTask<bool> WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
             {
+                var anyCommandsSent = false;
                 if (_compareExchangeValuesSize >= _compareExchangeValuesBatchSize || _compareExchangeAddOrUpdateCommands.Count >= BatchSize)
                 {
-                    await SendAddOrUpdateCommandsAsync(_context);
+                    anyCommandsSent |= await SendAddOrUpdateCommandsAsync();
                     _compareExchangeValuesSize.Set(0, SizeUnit.Bytes);
                 }
 
                 if (_clusterTransactionCommandsSize >= _clusterTransactionCommandsBatchSize || _clusterTransactionCommands.Length >= BatchSize)
                 {
-                    await SendClusterTransactionsAsync();
+                    anyCommandsSent |= await SendClusterTransactionsAsync();
                     _clusterTransactionCommandsSize.Set(0, SizeUnit.Bytes);
                 }
 
@@ -679,13 +685,13 @@ namespace Raven.Server.Smuggler.Documents
                             {
                                 var result = _database.ServerStore.Cluster.GetCompareExchangeValue(context, CompareExchangeKey.GetStorageKey(_database.Name, key));
                                 if (result.Value != null)
-                                    return;
+                                    return anyCommandsSent;
                             }
                         }
 
                         doc = _database.DocumentsStorage.Get(ctx, docId, DocumentFields.Data | DocumentFields.ChangeVector | DocumentFields.Id);
                         if (doc == null)
-                            return;
+                            return anyCommandsSent;
                     }
 
                     _clusterTransactionCommands.Push(new ClusterTransactionCommand.ClusterTransactionDataCommand
@@ -706,6 +712,8 @@ namespace Raven.Server.Smuggler.Documents
 
                     _compareExchangeValuesSize.Add(value.Size, SizeUnit.Bytes);
                 }
+
+                return anyCommandsSent;
             }
 
             public async ValueTask WriteTombstoneKeyAsync(string key)
@@ -716,7 +724,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_compareExchangeRemoveCommands.Count < BatchSize)
                     return;
 
-                await SendRemoveCommandsAsync(_context);
+                await SendRemoveCommandsAsync();
             }
 
             public async ValueTask DisposeAsync()
@@ -725,8 +733,8 @@ namespace Raven.Server.Smuggler.Documents
                 using (_clusterTransactionCommands)
                 {
                     await SendClusterTransactionsAsync();
-                    await SendAddOrUpdateCommandsAsync(_context);
-                    await SendRemoveCommandsAsync(_context);
+                    await SendAddOrUpdateCommandsAsync();
+                    await SendRemoveCommandsAsync();
 
                     if (_lastAddOrUpdateOrRemoveResultIndex != null)
                         await _database.ServerStore.Cluster.WaitForIndexNotification(_lastAddOrUpdateOrRemoveResultIndex.Value, TimeSpan.FromMinutes(1));
@@ -782,14 +790,14 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            private ValueTask SendClusterTransactionsAsync()
+            private ValueTask<bool> SendClusterTransactionsAsync()
             {
                 if (_clusterTransactionCommands.Length == 0)
-                    return ValueTask.CompletedTask;
+                    return ValueTask.FromResult(false);
 
-                return new ValueTask(AsyncWork());
+                return new ValueTask<bool>(AsyncWork());
 
-                async Task AsyncWork()
+                async Task<bool> AsyncWork()
                 {
                     var parsedCommands = _clusterTransactionCommands.GetArraySegment();
 
@@ -818,13 +826,15 @@ namespace Raven.Server.Smuggler.Documents
                         };
 
                     _lastClusterTransactionIndex = clusterTransactionResult.Index;
+
+                    return true;
                 }
             }
 
-            private async ValueTask SendAddOrUpdateCommandsAsync(JsonOperationContext context)
+            private async ValueTask<bool> SendAddOrUpdateCommandsAsync()
             {
                 if (_compareExchangeAddOrUpdateCommands.Count == 0)
-                    return;
+                    return false;
 
                 var addOrUpdateResult = await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, RaftIdGenerator.DontCareId));
                 foreach (var command in _compareExchangeAddOrUpdateCommands)
@@ -834,9 +844,11 @@ namespace Raven.Server.Smuggler.Documents
                 _compareExchangeAddOrUpdateCommands.Clear();
 
                 _lastAddOrUpdateOrRemoveResultIndex = addOrUpdateResult.Index;
+
+                return true;
             }
 
-            private async ValueTask SendRemoveCommandsAsync(JsonOperationContext context)
+            private async ValueTask SendRemoveCommandsAsync()
             {
                 if (_compareExchangeRemoveCommands.Count == 0)
                     return;
@@ -851,9 +863,9 @@ namespace Raven.Server.Smuggler.Documents
                 return _context;
             }
 
-            public ValueTask FlushAsync()
+            public async ValueTask FlushAsync()
             {
-                return SendClusterTransactionsAsync();
+                await SendClusterTransactionsAsync();
             }
 
             private struct DisposableReturnedArray<T> : IDisposable
