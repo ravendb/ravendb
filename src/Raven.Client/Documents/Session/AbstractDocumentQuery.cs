@@ -1521,7 +1521,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var targetQuantizationType = embeddingFieldFactory.DestinationQuantizationType;
             var isSourceBase64Encoded = embeddingFieldFactory.IsBase64Encoded;
             
-            var queriedVectorQuantizationType = queriedFactory.EmbeddingQuantizationType;
+            var queriedVectorQuantizationType = queriedFactory.EmbeddingType;
             
             string queryParameterName;
             var isVectorBase64Encoded = false;

@@ -1,4 +1,5 @@
 using System.Text;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries;
 
 namespace Raven.Client.Documents.Session.Tokens;
@@ -6,13 +7,13 @@ namespace Raven.Client.Documents.Session.Tokens;
 public sealed class VectorSearchToken : WhereToken
 {
     private float SimilarityThreshold { get; set; }
-    private EmbeddingQuantizationType SourceQuantizationType { get; set; }
-    private EmbeddingQuantizationType TargetQuantizationType { get; set; }
-    private EmbeddingQuantizationType QueriedVectorQuantizationType { get; set; }
+    private EmbeddingType SourceQuantizationType { get; set; }
+    private EmbeddingType TargetQuantizationType { get; set; }
+    private EmbeddingType QueriedVectorQuantizationType { get; set; }
     private bool IsSourceBase64Encoded { get; set; }
     private bool IsVectorBase64Encoded { get; set; }
     
-    public VectorSearchToken(string fieldName, string parameterName, EmbeddingQuantizationType sourceQuantizationType, EmbeddingQuantizationType targetQuantizationType, EmbeddingQuantizationType queriedQueriedVectorQuantizationType, bool isSourceBase64Encoded, bool isVectorBase64Encoded, float similarityThreshold)
+    public VectorSearchToken(string fieldName, string parameterName, EmbeddingType sourceQuantizationType, EmbeddingType targetQuantizationType, EmbeddingType queriedQueriedVectorQuantizationType, bool isSourceBase64Encoded, bool isVectorBase64Encoded, float similarityThreshold)
     {
         FieldName = fieldName;
         ParameterName = parameterName;
@@ -36,9 +37,9 @@ public sealed class VectorSearchToken : WhereToken
         if (IsSourceBase64Encoded)
             writer.Append("base64(");
         
-        if (SourceQuantizationType == EmbeddingQuantizationType.None)
+        if (SourceQuantizationType == EmbeddingType.None)
         {
-            if (TargetQuantizationType != EmbeddingQuantizationType.None)
+            if (TargetQuantizationType != EmbeddingType.None)
             {
                 // TODO
                 writer.Append($"f32_{TargetQuantizationType.ToString().ToLower()}(");
@@ -47,7 +48,7 @@ public sealed class VectorSearchToken : WhereToken
             }
         }
         
-        else if (TargetQuantizationType != EmbeddingQuantizationType.None)
+        else if (TargetQuantizationType != EmbeddingType.None)
         {
             writer.Append($"{SourceQuantizationType.ToString().ToLower()}(");
             
@@ -67,12 +68,12 @@ public sealed class VectorSearchToken : WhereToken
         if (IsVectorBase64Encoded)
             writer.Append("base64(");
 
-        if (QueriedVectorQuantizationType != EmbeddingQuantizationType.F32)
+        if (QueriedVectorQuantizationType != EmbeddingType.Float32)
             writer.Append($"{QueriedVectorQuantizationType.ToString().ToLower()}(");
         
         writer.Append($"${ParameterName}");
 
-        if (QueriedVectorQuantizationType != EmbeddingQuantizationType.F32)
+        if (QueriedVectorQuantizationType != EmbeddingType.Float32)
             writer.Append(')');
 
         if (IsVectorBase64Encoded)
