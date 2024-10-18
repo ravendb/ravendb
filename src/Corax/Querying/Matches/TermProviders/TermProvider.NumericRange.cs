@@ -32,7 +32,7 @@ namespace Corax.Querying.Matches.TermProviders
         private readonly FieldMetadata _field;
         private TVal _low, _high;
         private TLookupIterator _iterator;
-        private readonly bool _skipRangeCheck;
+        private bool _skipRangeCheck;
         private long _lastTermId = -1;
         private bool _includeLastTerm = true;
         private bool _isEmpty;
@@ -59,56 +59,74 @@ namespace Corax.Querying.Matches.TermProviders
             PrepareKeys();
             Reset();
         }
-
+        
         private void PrepareKeys()
         {
+            // We want to rewrite the range, so it starts and ends with elements that are presented in our data source
             TVal startKey = _iterator.IsForward ? _low : _high;
             TVal finalKey = _iterator.IsForward ? _high : _low;
 
             _iterator.Seek(startKey);
-            if (_iterator.MoveNext(out TVal key, out _, out _) == false)
+            
+            // The iterator may be positioned at:
+            // - Element equal to startKey
+            // - Element succeeding the startKey
+            // - End of the collection if no elements match
+            if (_iterator.MoveNext(out TVal currentKey, out _, out _) == false)
             {
+                // When MoveNext returns false it means we jumped over all values stored inside a lookup tree
                 _isEmpty = true;
                 return;
             }
 
-            var skipFirst = _iterator.IsForward switch
-            {
-                true when typeof(TLow) == typeof(Range.Exclusive) && key.IsEqual(_low) => true,
-                false when typeof(THigh) == typeof(Range.Exclusive) && _high.CompareTo(key) <= 0 => true,
-                false when typeof(THigh) == typeof(Range.Inclusive) && _high.CompareTo(key) < 0 => true,
-                _ => false
-            };
-
+            // The first element may be equal to the startKey. For exclusive range start we want to skip it
+            var skipFirst = (_iterator.IsForward ? typeof(TLow) : typeof(THigh)) == typeof(Range.Exclusive) 
+                            && startKey.IsEqual(currentKey);
+            
+            // If we're supposed to skip first element, we rewrite the range to start from element succeeding startKey
             if (skipFirst)
             {
-                if (_iterator.MoveNext(out key, out _, out _) == false)
+                if (_iterator.MoveNext(out currentKey, out _, out _) == false)
                 {
+                    // We moved past queried range, nothing matches the query
                     _isEmpty = true;
                     return;
                 }
-                
-                if (_iterator.IsForward)
-                    _low = key;
-                else
-                    _high = key;
             }
+            
+            // Update the range accordingly to the iterator option
+            if (_iterator.IsForward)
+                _low = currentKey;
+            else
+                _high = currentKey;
             
             if (_skipRangeCheck)
-                return; // to the end
+                return;
             
-            //Now seek to the last key
             _iterator.Seek(finalKey);
-            if (_iterator.MoveNext(out key, out _lastTermId, out var hasPreviousValue) == false)
+            
+            // The iterator may be positioned at:
+            // - Element equal to finalKey
+            // - Element succeeding the finalKey
+            // - End of the collection if no elements match
+            if (_iterator.MoveNext(out currentKey, out _lastTermId, out _) == false)
             {
-                _includeLastTerm = false;
+                // We jumped over all data stored in the tree. Other side of the range is unbound
+                _skipRangeCheck = true;
                 return;
             }
-
+            
             _includeLastTerm = true;
+            
+            // Compare the range boundary (finalKey) with the current element (currentKey)
+            // Result:
+            //   1  - Range boundary is greater than the current element
+            //   0  - Range boundary is equal to the current element
+            //  -1  - Range boundary is less than the current element (not expected)
+            var cmp = finalKey.CompareTo(currentKey);
+            
             if (_iterator.IsForward)
             {
-                var cmp = _high.CompareTo(key);
                 if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= 0 ||
                     typeof(THigh) == typeof(Range.Inclusive) && cmp < 0)
                 {
@@ -117,7 +135,6 @@ namespace Corax.Querying.Matches.TermProviders
             }
             else
             {
-                var cmp = _low.CompareTo(key);
                 if (typeof(TLow) == typeof(Range.Exclusive) && cmp >= 0 ||
                     typeof(TLow) == typeof(Range.Inclusive) && cmp > 0)
                     _includeLastTerm = false;
