@@ -1638,6 +1638,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             
                             break;
                         }
+                        case Func<IVectorFieldFactory<T>, IVectorField> fieldFactory:
+                        {
+                            LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var embeddingFieldValueFactoryObject);
+
+                            fieldFactory.Invoke(fieldBuilder);
+
+                            if (embeddingFieldValueFactoryObject is not Action<IVectorFieldValueFactory> fieldValueFactory)
+                                throw new Exception();
+
+                            fieldValueFactory.Invoke(valueBuilder);
+                            
+                            break;
+                        }
+                        
                         default:
                             throw new Exception();
                     }
