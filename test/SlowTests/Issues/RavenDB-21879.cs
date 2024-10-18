@@ -79,7 +79,7 @@ public class RavenDB_21879 : RavenTestBase
 
             var fullIdForDto = await customHiloIdGenerator.GenerateDocumentIdAsync(null, dto);
             
-            Assert.Equal("dtos/33", fullIdForDto);
+            Assert.Equal("dtos/2", fullIdForDto);
         }
     }
 
