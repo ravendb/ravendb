@@ -2,8 +2,8 @@
   <PropertyGroup>
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.10</RuntimeFrameworkVersion>
+    <TargetFramework>net9.0</TargetFramework>
+    <RuntimeFrameworkVersion></RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -74,7 +74,7 @@
     <PackageReference Include="AWSSDK.S3" Version="3.7.404.4" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.22.1" />
     <PackageReference Include="Azure.Identity" Version="1.12.1" />
-    <PackageReference Include="Azure.Storage.Queues" Version="12.18.0" />
+    <PackageReference Include="Azure.Storage.Queues" Version="12.20.0" />
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.8.0" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.8.0" />
@@ -96,14 +96,6 @@
     <PackageReference Include="Lucene.Net" Version="3.0.60010" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60010" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.11.0" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.1" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.0-rc.2.24473.5" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0-2.final" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.12.0-2.final" />
@@ -134,24 +126,13 @@
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Snappier" Version="1.1.6" />
-    <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
-    <PackageReference Include="System.Formats.Asn1" Version="8.0.1" />
-    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
-    <PackageReference Include="System.Net.Http" Version="4.3.4" />
-    <PackageReference Include="System.Private.Uri" Version="4.3.2" />
-    <PackageReference Include="System.Reflection.Metadata" Version="8.0.1" />
-    <PackageReference Include="System.Runtime.Caching" Version="8.0.1" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
-    <PackageReference Include="System.Reflection.Metadata" Version="9.0.0-rc.1.24431.7" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0-rc.1.24431.7" />
-    <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
     <PackageReference Include="System.Collections.Immutable" Version="9.0.0-rc.2.24473.5" />
     <PackageReference Include="System.Formats.Asn1" Version="9.0.0-rc.2.24473.5" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="System.Private.Uri" Version="4.3.2" />
     <PackageReference Include="System.Reflection.Metadata" Version="9.0.0-rc.2.24473.5" />
+    <PackageReference Include="System.Runtime.Caching" Version="9.0.0-rc.2.24473.5" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0-rc.2.24473.5" />
     <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
     <PackageReference Include="System.Text.Json" Version="9.0.0-rc.2.24473.5" />
