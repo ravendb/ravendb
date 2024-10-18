@@ -66,13 +66,12 @@ namespace Corax.Querying.Matches.TermProviders
             TVal startKey = _iterator.IsForward ? _low : _high;
             TVal finalKey = _iterator.IsForward ? _high : _low;
 
-            // Seek for startKey in the iterator
             _iterator.Seek(startKey);
             
-            // We get either
-            // currentKey equal to startKey
-            // currentKey equal to element succeeding startKey
-            // MoveNext returns false
+            // The iterator may be positioned at:
+            // - Element equal to startKey
+            // - Element succeeding the startKey
+            // - End of the collection if no elements match
             if (_iterator.MoveNext(out TVal currentKey, out _, out _) == false)
             {
                 // When MoveNext returns false it means we jumped over all values stored inside a lookup tree
@@ -104,13 +103,12 @@ namespace Corax.Querying.Matches.TermProviders
             if (_skipRangeCheck)
                 return;
             
-            // Seek for finalKey in the iterator
             _iterator.Seek(finalKey);
             
-            // We get either
-            // currentKey equal to finalKey
-            // currentKey equal to element succeeding finalKey
-            // MoveNext returns false
+            // The iterator may be positioned at:
+            // - Element equal to finalKey
+            // - Element succeeding the finalKey
+            // - End of the collection if no elements match
             if (_iterator.MoveNext(out currentKey, out _lastTermId, out _) == false)
             {
                 // We jumped over all data stored in the tree. Other side of the range is unbound
@@ -120,9 +118,11 @@ namespace Corax.Querying.Matches.TermProviders
             
             _includeLastTerm = true;
             
-            // 1 - finalKey > currentKey
-            // 0 - finalKey == currentKey
-            // -1 - finalKey < currentKey (not possible)
+            // Compare the range boundary (finalKey) with the current element (currentKey)
+            // Result:
+            //   1  - Range boundary is greater than the current element
+            //   0  - Range boundary is equal to the current element
+            //  -1  - Range boundary is less than the current element (not expected)
             var cmp = finalKey.CompareTo(currentKey);
             
             if (_iterator.IsForward)
