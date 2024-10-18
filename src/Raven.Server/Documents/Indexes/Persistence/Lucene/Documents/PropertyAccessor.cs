@@ -243,10 +243,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     var property = _enumerable.Current;
                     var propertyAsString = property.Key.AsString();
 
-                    CompiledIndexField field = null;
-                    var isGroupByField = _groupByFields?.TryGetValue(propertyAsString, out field) ?? false;
+                    CompiledIndexField @field = null;
+                    var isGroupByField = _groupByFields?.TryGetValue(propertyAsString, out @field) ?? false;
 
-                    return new PropertyItem(propertyAsString, GetValue(property.Value.Value), field, isGroupByField);
+                    return new PropertyItem(propertyAsString, GetValue(property.Value.Value), @field, isGroupByField);
                 }
             }
 
