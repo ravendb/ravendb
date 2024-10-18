@@ -1323,18 +1323,37 @@ namespace Voron
 
         public InMemoryStorageState GetInMemoryStorageState(LowLevelTransaction tx)
         {
+            var envStateRecord = _currentStateRecord;
+
             var state = new InMemoryStorageState
             {
                 CurrentReadTransactionId = CurrentReadTransactionId,
                 PossibleOldestReadTransaction = PossibleOldestReadTransaction(tx),
                 ActiveTransactions = ActiveTransactions.AllTransactions,
+                EnvironmentStateRecord = new InMemoryStorageState.EnvironmentStateRecordDetails
+                {
+                    TransactionId = envStateRecord.TransactionId,
+                    ScratchPagesTable = GetScratchTableSummary(envStateRecord.ScratchPagesTable),
+                    NextPageNumber = envStateRecord.NextPageNumber,
+                    WrittenToJournalNumber = envStateRecord.WrittenToJournalNumber,
+                    ClientStateType = envStateRecord.ClientState?.GetType().ToString()
+                },
+                TransactionsToFlush = _transactionsToFlush.ToList().Select(x => new InMemoryStorageState.EnvironmentStateRecordDetails
+                {
+                    TransactionId = x.TransactionId,
+                    ScratchPagesTable = GetScratchTableSummary(x.ScratchPagesTable),
+                    NextPageNumber = x.NextPageNumber,
+                    WrittenToJournalNumber = x.WrittenToJournalNumber,
+                    ClientStateType = x.ClientState?.GetType().ToString()
+                }).ToList(),
                 FlushState = new InMemoryStorageState.FlushStateDetails
                 {
                     LastFlushTime = Journal.Applicator.LastFlushTime,
                     ShouldFlush = Journal.Applicator.ShouldFlush,
-                    LastFlushedTransactionId = Journal.Applicator.LastFlushedJournalId,
+                    LastFlushedTransactionId = Journal.Applicator.LastFlushedTransactionId,
                     LastFlushedJournalId = Journal.Applicator.LastFlushedJournalId,
-                    JournalsToDelete = Journal.Applicator.JournalsToDelete.Select(x => x.Number).ToList()
+                    JournalsToDelete = Journal.Applicator.JournalsToDelete.Select(x => x.Number).ToList(),
+                    TotalCommittedSinceLastFlushPages = _journal.Applicator.TotalCommittedSinceLastFlushPages,
                 },
                 SyncState = new InMemoryStorageState.SyncStateDetails
                 {
@@ -1345,6 +1364,34 @@ namespace Voron
             };
 
             return state;
+        }
+
+        private InMemoryStorageState.ScratchTableDetails GetScratchTableSummary(ImmutableDictionary<long, PageFromScratchBuffer> scratchTable)
+        {
+            var maxAllocatedInTransaction = long.MinValue;
+            var minAllocatedInTransaction = long.MaxValue;
+            var maxScratchNumber = int.MinValue;
+            var minScratchNumber = int.MaxValue;
+
+            foreach (var item in scratchTable)
+            {
+                var pageFromScratchBuffer = item.Value;
+
+                maxAllocatedInTransaction = long.Max(maxAllocatedInTransaction, pageFromScratchBuffer.AllocatedInTransaction);
+                minAllocatedInTransaction = long.Min(minAllocatedInTransaction, pageFromScratchBuffer.AllocatedInTransaction);
+
+                maxScratchNumber = int.Max(maxScratchNumber, pageFromScratchBuffer.File.Number);
+                minScratchNumber = int.Min(minScratchNumber, pageFromScratchBuffer.File.Number);
+            }
+
+            return new InMemoryStorageState.ScratchTableDetails()
+            {
+                NumberOfPages = scratchTable.Count,
+                MaxAllocatedInTransaction = maxAllocatedInTransaction,
+                MinAllocatedInTransaction = minAllocatedInTransaction,
+                MinScratchNumber = minScratchNumber,
+                MaxScratchNumber = maxScratchNumber
+            };
         }
 
         private Size GetTotalCryptoBufferSize()
