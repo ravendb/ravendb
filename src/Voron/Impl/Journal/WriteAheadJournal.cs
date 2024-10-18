@@ -1306,11 +1306,15 @@ namespace Voron.Impl.Journal
                         {
                             for (int i = 0; i < pages.Length; i++)
                             {
-                                Debug.Assert(pages[i].PageNumber + pages[i].GetNumberOfPages() <= dataPagerState.NumberOfAllocatedPages,
+                                int numberOfPages = pages[i].GetNumberOfPages();
+
+                                Debug.Assert(pages[i].PageNumber + numberOfPages <= dataPagerState.NumberOfAllocatedPages,
                                     "pages[i].PageNumber + pages[i].GetNumberOfPagesUpdateStateOnCommit() <= dataPagerState.NumberOfAllocatedPages");
 
-                                var span = new Span<byte>(pages[i].Pointer, pages[i].GetNumberOfPages() * Constants.Storage.PageSize);
+                                var span = new Span<byte>(pages[i].Pointer, numberOfPages * Constants.Storage.PageSize);
                                 RandomAccess.Write(fileHandle, span, pages[i].PageNumber * Constants.Storage.PageSize);
+
+                                written += numberOfPages * Constants.Storage.PageSize;
                             }
                         }
                     }
