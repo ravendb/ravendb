@@ -10,6 +10,7 @@ using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
+using Raven.Client.Util;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Tests.Infrastructure.Utils;
@@ -134,6 +135,6 @@ public static class CertificateGenerator
         var stream = new MemoryStream();
         store.Save(stream, Array.Empty<char>(), random);
 
-        return new X509Certificate2(stream.ToArray());
+        return CertificateHelper.CreateCertificate(stream.ToArray());
 }
 }

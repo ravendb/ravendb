@@ -1,4 +1,4 @@
-﻿FROM mcr.microsoft.com/dotnet/core/sdk:8.0 AS build
+﻿FROM mcr.microsoft.com/dotnet/core/sdk:9.0 AS build
 WORKDIR /app
 
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
@@ -13,11 +13,11 @@ RUN ls && du -sh ./src/* && du -sh ./src/Raven.Server/*
 
 RUN dotnet restore ./src/Raven.Server/Raven.Server.csproj
 RUN dotnet build ./src/Raven.Server/Raven.Server.csproj && \
-    echo '{}' > ./src/Raven.Server/bin/Debug/net8.0/settings.json
+    echo '{}' > ./src/Raven.Server/bin/Debug/net9.0/settings.json
 
 COPY tools/ ./tools
 RUN dotnet build ./tools/TypingsGenerator/TypingsGenerator.csproj \
     && cd src/Raven.Studio \
     && npm install && npm run gulp restore && npm run gulp compile
 
-ENTRYPOINT [ "dotnet", "./src/Raven.Server/bin/Debug/net8.0/Raven.Server.dll" ]
+ENTRYPOINT [ "dotnet", "./src/Raven.Server/bin/Debug/net9.0/Raven.Server.dll" ]

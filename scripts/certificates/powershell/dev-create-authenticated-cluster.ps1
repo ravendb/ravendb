@@ -23,7 +23,7 @@ dotnet build -c $conf
 popd 
 
 # load servers with a certificate 
-pushd "$serverDir\src\Raven.Server\bin\$conf\net8.0" 
+pushd "$serverDir\src\Raven.Server\bin\$conf\net9.0" 
 
 # clean old directoty
 for($i=1; $i -le $nodeCount; $i++){
@@ -40,7 +40,7 @@ $commonArgs = "--Cluster.TimeBeforeAddingReplicaInSec=15"
 $authArgs = "--Security.Certificate.Path=$serverDir\scripts\certificates\powershell\server.pfx --Security.Certificate.Password=$CertificatePassword" 
 
 for($i=1; $i -le $nodeCount; $i++){    
-    start powershell "-NoExit -NoProfile dotnet run -p .\src\Raven.Server\Raven.Server.csproj --ServerUrl=https://localhost:808$i --DataDir=$serverDir\src\Raven.Server\bin\$conf\net8.0\$i --Logs.Path=$serverDir\src\Raven.Server\bin\$conf\net8.0\$i --License.Path=$licensePath $commonArgs $authArgs" 
+    start powershell "-NoExit -NoProfile dotnet run -p .\src\Raven.Server\Raven.Server.csproj --ServerUrl=https://localhost:808$i --DataDir=$serverDir\src\Raven.Server\bin\$conf\net9.0\$i --Logs.Path=$serverDir\src\Raven.Server\bin\$conf\net9.0\$i --License.Path=$licensePath $commonArgs $authArgs" 
     sleep -Milliseconds 500
 } 
 popd 

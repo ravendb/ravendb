@@ -31,7 +31,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Sort(Span<T> keys, int index, int length)
         {
-            Debug.Assert(keys != null, "Check the arguments in the caller!");
+            Debug.Assert(keys != Span<T>.Empty, "Check the arguments in the caller!");
             Debug.Assert(index >= 0 && length >= 0 && (keys.Length - index >= length), "Check the arguments in the caller!");
             if (length < 2)
                 return;
@@ -87,7 +87,7 @@ namespace Sparrow
 
         private void IntroSort(Span<T> keys, int lo, int hi, int depthLimit)
         {
-            Contract.Requires(keys != null);
+            Contract.Requires(keys != Span<T>.Empty);
             Contract.Requires(lo >= 0);
             Contract.Requires(hi < keys.Length);
 
@@ -195,7 +195,7 @@ namespace Sparrow
 
         private void HeapSort(Span<T> keys, int lo, int hi)
         {
-            Contract.Requires(keys != null);
+            Contract.Requires(keys != Span<T>.Empty);
             Contract.Requires(lo >= 0);
             Contract.Requires(hi > lo);
             Contract.Requires(hi < keys.Length);
@@ -215,7 +215,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DownHeap(Span<T> keys, int i, int n, int lo)
         {
-            Contract.Requires(keys != null);
+            Contract.Requires(keys != Span<T>.Empty);
             Contract.Requires(lo >= 0);
             Contract.Requires(lo < keys.Length);
 
@@ -242,7 +242,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void InsertionSort(Span<T> keys, int lo, int hi)
         {
-            Contract.Requires(keys != null);
+            Contract.Requires(keys != Span<T>.Empty);
             Contract.Requires(lo >= 0);
             Contract.Requires(hi >= lo);
             Contract.Requires(hi <= keys.Length);
@@ -285,7 +285,7 @@ namespace Sparrow
 
         public void Sort(Span<T> keys, Span<V> values, int index, int length)
         {
-            Debug.Assert(keys != null, "Check the arguments in the caller!");
+            Debug.Assert(keys != Span<T>.Empty, "Check the arguments in the caller!");
             Debug.Assert(index >= 0 && length >= 0 && (keys.Length - index >= length), "Check the arguments in the caller!");
             if (length < 2)
                 return;
@@ -351,7 +351,7 @@ namespace Sparrow
 
         private void IntroSort(Span<T> keys, Span<V> values, int lo, int hi, int depthLimit)
         {
-            Contract.Requires(keys != null);
+            Contract.Requires(keys != Span<T>.Empty);
             Contract.Requires(lo >= 0);
             Contract.Requires(hi < keys.Length);
 
@@ -436,7 +436,7 @@ namespace Sparrow
 
         private int PickPivotAndPartitionUnlikely(Span<T> keys, Span<V> values, int lo, int hi, int middle)
         {
-            Contract.Requires(keys != null);
+            Contract.Requires(keys != Span<T>.Empty);
             Contract.Requires(lo >= 0);
             Contract.Requires(hi > lo);
             Contract.Requires(hi < keys.Length);
@@ -478,7 +478,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DownHeap(Span<T> keys, Span<V> values, int i, int n, int lo)
         {
-            Contract.Requires(keys != null);
+            Contract.Requires(keys != Span<T>.Empty);
             Contract.Requires(lo >= 0);
             Contract.Requires(lo < keys.Length);
 
@@ -509,7 +509,7 @@ namespace Sparrow
 
         private void InsertionSort(Span<T> keys, Span<V> values, int lo, int hi)
         {
-            Contract.Requires(keys != null);
+            Contract.Requires(keys != Span<T>.Empty);
             Contract.Requires(lo >= 0);
             Contract.Requires(hi >= lo);
             Contract.Requires(hi <= keys.Length);

@@ -2,6 +2,7 @@
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
@@ -44,7 +45,7 @@ internal class RavenServerHttpClientFactory : IRavenHttpClientFactory
 
     private sealed class RavenDynamicHttpClientFactoryConfiguration : IConfigureNamedOptions<HttpClientFactoryOptions>
     {
-        private readonly object _locker = new object();
+        private readonly Lock _locker = new();
 
         private FrozenDictionary<string, HttpClientCacheKey> _registeredConfigurations = FrozenDictionary<string, HttpClientCacheKey>.Empty;
 
@@ -53,7 +54,7 @@ internal class RavenServerHttpClientFactory : IRavenHttpClientFactory
             if (_registeredConfigurations.ContainsKey(key.AsString))
                 return;
 
-            lock (_locker)
+            using (_locker.EnterScope())
             {
                 _registeredConfigurations = new Dictionary<string, HttpClientCacheKey>(_registeredConfigurations)
                 {
