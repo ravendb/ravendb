@@ -1693,7 +1693,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                                     StartsWith = u.Name.StartsWith("J"),
                                     EndsWith = u.Name.EndsWith("b"),
                                     Substr = u.Name.Substring(0, 2),
-                                    Join = string.Join(", ", new[] { u.Name, u.LastName, u.IdNumber.ToString() }),
+                                    Join = string.Join(", ", new object[] { u.Name, u.LastName, u.IdNumber }),
                                     ArrayJoin = string.Join("-", u.Roles),
                                     Trim = u.Name.Trim(),
                                     ToUpper = u.Name.ToUpper(),
