@@ -106,6 +106,8 @@ public class RavenDB_22076 : RavenTestBase
                     .VectorSearch(x => x.WithBase64("Base64Field", EmbeddingType.Int8), factory => factory.ByEmbedding([0.2f, 0.3f])).ToString();
 
                 Assert.Equal("from 'Dtos' where vector.search(embedding.i8(Base64Field), $p0)", q6);
+
+                session.Advanced.AsyncDocumentQuery<Dto>().VectorSearch(x => x.WithField("aaa"), factory => factory.ByEmbedding([0.2f, 0.3f]));
             }
         }
     }
