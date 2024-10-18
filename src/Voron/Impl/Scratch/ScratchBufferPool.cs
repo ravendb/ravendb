@@ -578,7 +578,8 @@ namespace Voron.Impl.Scratch
                     scratchFileUsage.MostAvailableFreePages.Add(new MostAvailableFreePagesBySize
                     {
                         Size = freePage.Key,
-                        ValidAfterTransactionId = freePage.Value
+                        ValidAfterTransactionId = freePage.Value.ValidAfterTransactionId,
+                        AllocatedInTransaction = freePage.Value.AllocatedInTransaction
                     });
                 }
 
@@ -589,6 +590,7 @@ namespace Voron.Impl.Scratch
                         NumberOfPages = allocatedPage.NumberOfPages,
                         PositionInScratchBuffer = allocatedPage.PositionInScratchBuffer,
                         ScratchFileNumber = allocatedPage.File.Number,
+                        AllocatedInTransaction = allocatedPage.AllocatedInTransaction,
                     });
                 }
 

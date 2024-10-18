@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,6 +25,7 @@ namespace Voron.Impl.Scratch
         {
             public long Page;
             public long ValidAfterTransactionId;
+            public long AllocatedInTransaction;
         }
 
         private readonly Pager _scratchPager;
@@ -211,7 +211,8 @@ namespace Voron.Impl.Scratch
             list.AddFirst(new PendingPage
             {
                 Page = value.PositionInScratchBuffer,
-                ValidAfterTransactionId = asOfTxId
+                ValidAfterTransactionId = asOfTxId,
+                AllocatedInTransaction = value.AllocatedInTransaction,
             });
 
             _txIdAfterWhichLatestFreePagesBecomeAvailable = asOfTxId;
@@ -277,18 +278,18 @@ namespace Voron.Impl.Scratch
 
             public long LastAsOfTxIdWhenFree { get; set; }
 
-            internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
+            internal Dictionary<long, (long ValidAfterTransactionId, long AllocatedInTransaction)> GetMostAvailableFreePagesBySize()
             {
                 return _parent._freePagesBySize.Keys.ToDictionary(size => size, size =>
                 {
                     if (_parent._freePagesBySize.TryGetValue(size, out var pendingPages) == false)
-                        return -1;
+                        return (-1, -1);
 
                     var value = pendingPages.Last?.Value;
                     if (value == null)
-                        return -1;
+                        return (-1, -1);
 
-                    return value.ValidAfterTransactionId;
+                    return (value.ValidAfterTransactionId, value.AllocatedInTransaction);
                 });
             }
 
@@ -326,6 +327,26 @@ namespace Voron.Impl.Scratch
                     $"Failed to verify page {pageNumberInDataFile} when reading scratch page {positionInScratchBuffer}, values different!" +
                     $"Page: {pageNumberInDataFile} vs. {allocated.PageNumberInDataFile} ({numberOfPages} vs {allocated.NumberOfPages})!");
 
+        }
+
+        [Conditional("DEBUG")]
+        public void AssertNoPagesAllocatedInTransactionOlderThan(long txId)
+        {
+            foreach (PageFromScratchBuffer p in _allocatedPages.Values)
+            {
+                if (p.AllocatedInTransaction < txId)
+                {
+                    var message =
+                        $"Found page #{p.PageNumberInDataFile} allocated in tx {p.AllocatedInTransaction} (scratch {p.File.Number}, pos in scratch: {p.PositionInScratchBuffer}) while we freed up to tx {txId}";
+
+                    Console.Error.WriteLine(message);
+
+                    Console.WriteLine(message);
+
+                    throw new InvalidOperationException(message);
+
+                }
+            }
         }
     }
 }
