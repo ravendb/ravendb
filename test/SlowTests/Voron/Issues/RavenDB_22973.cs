@@ -193,4 +193,27 @@ public class RavenDB_22973 : StorageTest
 
         Assert.False(flushWasCalled);
     }
+
+
+    [Fact]
+    public void FlushingMustIncrementTotalWrittenButUnsyncedBytes()
+    {
+        long p1;
+
+        using (var txw = Env.WriteTransaction())
+        {
+            var llt = txw.LowLevelTransaction;
+
+            p1 = txw.LowLevelTransaction.AllocatePage(1).PageNumber;
+
+            llt.ModifyPage(p1);
+
+            txw.Commit();
+        }
+
+
+        Env.FlushLogToDataFile();
+
+        Assert.True(Env.Journal.Applicator.TotalWrittenButUnsyncedBytes > 0);
+    }
 }
