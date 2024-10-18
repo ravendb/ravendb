@@ -11,6 +11,11 @@ namespace Raven.Client.Documents.Queries
         {
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
+        
+        public static string Id(object documentInstance)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
 
         public static IEnumerable<T> Load<T>(IEnumerable<string> ids)
         {
