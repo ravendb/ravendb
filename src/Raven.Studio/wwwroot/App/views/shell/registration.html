@@ -73,14 +73,6 @@
                     <small data-bind="visible: !renewMessage() && renewWhenNotExpired()">
                         Paste here the renewed license key that you will receive in the email after clicking Renew.
                     </small>
-                    <div data-bind="visible: letsEncryptMode() && licenseType() !== 'None'" class="text-warning">
-                        <i class="icon-warning"></i>
-                        <small>Your certificate is from Let's Encrypt and is bound to your current license id:</small><br>
-                        <strong class="text-warning" data-bind="text: licenseId"></strong><br>
-                        <small>In order to be able to renew your Let's Encrypt certificate in the future,</small><br>
-                        <small>the new license must have the same id as the current one.</small><br>
-                        <small>Please contact support if you need to replace the license with a new id.</small>
-                    </div>
                     <div class="form-horizontal margin-top">
                         <div class="form-group" data-bind="validationElement: licenseKeyModel().key">
                             <div class="col-sm-12">
