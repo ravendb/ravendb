@@ -14,15 +14,15 @@ namespace Voron.Data.Lookups
         bool MoveNext<TLookupKey>(out TLookupKey key, out long value, out bool hasPreviousValue);
         
         /// <summary>
-        /// Moves iterator to the element equal to key parameter
+        /// If an element equal to the key exists, the iterator is positioned at that element.
         /// 
-        /// If equal element doesn't exist, moves iterator to element that succeeds it:
-        /// Forward - the smallest element that's bigger than key parameter
-        /// Backward - the biggest element that's smaller than key parameter
+        /// If an equal element doesn't exist:
+        /// - ForwardIterator - positions at the smallest element greater than the key.
+        /// - BackwardIterator - positions at the biggest element smaller than the key.
         /// 
-        /// If succeeding element doesn't exist, moves iterator (LastSearchPosition) to:
-        /// ForwardIterator - position n, where n is the number of elements (effectively moving one position after actual data)
-        /// BackwardIterator - position -1
+        /// If succeeding element doesn't exist, positions iterator (LastSearchPosition) at:
+        /// - ForwardIterator - position n, where n is the number of elements (effectively moving one position after actual data)
+        /// - BackwardIterator - position n - 1
         /// </summary>
         /// <param name="key">Lookup key</param>
         /// <typeparam name="TLookupKey">Type of lookup key used for seek.</typeparam>

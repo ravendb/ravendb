@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Xunit;
@@ -122,7 +123,7 @@ public class CompactTreeTests : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void TestSeekForBackwardIterator()
     {
         using (var wtx = Env.WriteTransaction())
@@ -170,7 +171,7 @@ public class CompactTreeTests : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void TestSeekForBackwardIteratorUsingMultiplePages()
     {
         using (var wtx = Env.WriteTransaction())
