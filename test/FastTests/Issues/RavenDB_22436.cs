@@ -44,8 +44,7 @@ public class RavenDB_22436 : NoDisposalNeeded
         var handler2 = (DelegatingHandler)getHandler.GetValue(httpClient2);
         handler2 = (DelegatingHandler)handler2.InnerHandler;
         handler2 = (DelegatingHandler)handler2.InnerHandler;
-        handler = (HttpClientHandler)handler2.InnerHandler;
-        socketsHttpHandler = (SocketsHttpHandler)getUnderlyingHandler.GetValue(handler);
+        socketsHttpHandler = (SocketsHttpHandler)handler2.InnerHandler;
         AssertHttpHandler(socketsHttpHandler);
 
         return;

@@ -25,13 +25,13 @@ internal static class CertificateLoaderUtil
         Exception exception = null;
         try
         {
-            collection.Import(rawData, password, f);
+            collection.Add(CertificateHelper.CreateCertificate(rawData, password, f));
         }
         catch (Exception e)
         {
             exception = e;
             f = AddMachineKeySet(flags);
-            collection.Import(rawData, password, f);
+            collection.Add(CertificateHelper.CreateCertificate(rawData, password, f));
         }
 
         LogIfNeeded(nameof(Import), f, exception);
@@ -39,12 +39,12 @@ internal static class CertificateLoaderUtil
 
     public static X509Certificate2 CreateCertificate(byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
     {
-        return CreateCertificate(f => new X509Certificate2(rawData, password, f), flags);
+        return CreateCertificate(f => CertificateHelper.CreateCertificate(rawData, password, f), flags);
     }
 
     internal static X509Certificate2 CreateCertificate(string fileName, string password = null, X509KeyStorageFlags? flags = null)
     {
-        return CreateCertificate(f => new X509Certificate2(fileName, password, f), flags);
+        return CreateCertificate(f => CertificateHelper.CreateCertificate(fileName, password, f), flags);
     }
 
     private static X509Certificate2 CreateCertificate(Func<X509KeyStorageFlags, X509Certificate2> creator, X509KeyStorageFlags? flag)
