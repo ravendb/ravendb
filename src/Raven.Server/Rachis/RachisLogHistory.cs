@@ -353,6 +353,37 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public IEnumerable<Table.TableValueHolder> GetHistoryLogs(ClusterOperationContext context, long fromIndex)
+        {
+            var reveredNextIndex = Bits.SwapBytes(fromIndex);
+            Span<byte> span = stackalloc byte[sizeof(long)];
+            if (BitConverter.TryWriteBytes(span, reveredNextIndex) == false)
+                throw new InvalidOperationException($"Couldn't convert {fromIndex} to span<byte>");
+
+            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+            using (Slice.From(context.Allocator, span, out Slice key))
+            {
+                foreach (var entryHolder in table.SeekBackwardFrom(LogHistoryTable.Indexes[LogHistoryIndexSlice], key))
+                {
+                    yield return entryHolder.Result;
+                }
+            }
+        }
+
+        public static RachisConsensus.RachisDebugLogEntry CreateFromHistory(Table.TableValueHolder value)
+        {
+            RachisConsensus.RachisDebugLogEntry entry = new()
+            {
+                Index = ReadIndex(value),
+                Term = ReadTerm(value),
+                Flags = RachisEntryFlags.StateMachineCommand,
+                CommandType = ReadType(value),
+                CreateAt = ReadCreateAt(value)
+            };
+
+            return entry;
+        }
+
         public unsafe List<DynamicJsonValue> GetLogByIndex(ClusterOperationContext context, long index)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
@@ -377,8 +408,7 @@ namespace Raven.Server.Rachis
         {
             var djv = new DynamicJsonValue();
 
-            var ticks = Bits.SwapBytes(*(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Ticks), out _));
-            djv["Date"] = new DateTime(ticks);
+            djv["Date"] = ReadCreateAt(entryHolder);
 
             int size;
             djv[nameof(LogHistoryColumn.Guid)] = ReadGuid(entryHolder);
@@ -442,6 +472,12 @@ namespace Raven.Server.Rachis
             var guidPtr = entryHolder.Reader.Read((int)(LogHistoryColumn.Guid), out var size);
             var guid = Encoding.UTF8.GetString(guidPtr, size);
             return guid;
+        }
+
+        private static unsafe DateTime ReadCreateAt(Table.TableValueHolder entryHolder)
+        {
+            var ticks = Bits.SwapBytes(*(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.Ticks), out _));
+            return new DateTime(ticks);
         }
 
         public bool ContainsCommandId(ClusterOperationContext context, string guid)
