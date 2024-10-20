@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Util;
 
@@ -105,7 +106,7 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
         {
             httpMessageHandler.AutomaticDecompression =
                 useCompression ?
-                    DecompressionMethods.GZip 
+                    DecompressionMethods.GZip
                     | DecompressionMethods.Deflate
 #if FEATURE_BROTLI_SUPPORT
                     | DecompressionMethods.Brotli
@@ -140,6 +141,40 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
             ValidateClientKeyUsages(certificate);
         }
     }
+
+#if NETCOREAPP3_1_OR_GREATER
+    internal static void ConfigureHttpMessageHandler(SocketsHttpHandler httpMessageHandler, X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false, TimeSpan? pooledConnectionLifetime = null, TimeSpan? pooledConnectionIdleTimeout = null)
+    {
+        httpMessageHandler.MaxConnectionsPerServer = RequestExecutor.DefaultConnectionLimit;
+
+        HttpClientHandlerHelper.Configure(httpMessageHandler, pooledConnectionLifetime, pooledConnectionIdleTimeout);
+
+        httpMessageHandler.AutomaticDecompression =
+            useCompression ?
+                DecompressionMethods.GZip
+                | DecompressionMethods.Deflate
+#if FEATURE_BROTLI_SUPPORT
+                | DecompressionMethods.Brotli
+#endif
+                : DecompressionMethods.None;
+
+        if (RequestExecutor.ServerCertificateCustomValidationCallbackRegistrationException == null)
+            httpMessageHandler.SslOptions.RemoteCertificateValidationCallback += RequestExecutor.OnServerCertificateCustomValidationCallback;
+
+        if (certificate != null)
+        {
+            httpMessageHandler.SslOptions.ClientCertificates = new X509CertificateCollection
+            {
+                certificate
+            };
+
+            if (setSslProtocols)
+                httpMessageHandler.SslOptions.EnabledSslProtocols = TcpUtils.SupportedSslProtocols;
+
+            ValidateClientKeyUsages(certificate);
+        }
+    }
+#endif
 
     private static void ValidateClientKeyUsages(X509Certificate2 certificate)
     {
