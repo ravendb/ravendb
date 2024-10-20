@@ -28,41 +28,41 @@ namespace FastTests
                 var raw = configuration.RawPolicy;
                 configuration.ValidateAndInitialize();
 
-                await WaitForValueAsync(() =>
+                using (var session = store.OpenAsyncSession())
                 {
-                    using (var session = store.OpenSession())
+                    var ts = (await session.TimeSeriesFor("users/karmel", rawName)
+                        .GetAsync())?
+                        .ToList();
+
+                    Assert.NotNull(ts);
+                    if (raw != null)
+                        Assert.Equal(((TimeSpan)raw.RetentionTime).TotalMinutes, ts.Count);
+                    var policiesList = policies ?? configuration.Policies;
+                    foreach (var policy in policiesList)
                     {
-                        var ts = session.TimeSeriesFor("users/karmel", rawName)
-                            .Get()?
+                        ts = (await session.TimeSeriesFor("users/karmel", policy.GetTimeSeriesName(rawName))
+                            .GetAsync())?
                             .ToList();
 
-                        Assert.NotNull(ts);
-                        if (raw != null)
-                            Assert.Equal(((TimeSpan)raw.RetentionTime).TotalMinutes, ts.Count);
-                        var policiesList = policies ?? configuration.Policies;
-                        foreach (var policy in policiesList)
+                        TimeValue retentionTime = policy.RetentionTime;
+                        if (retentionTime == TimeValue.MaxValue)
                         {
-                            ts = session.TimeSeriesFor("users/karmel", policy.GetTimeSeriesName(rawName))
-                                .Get()?
-                                .ToList();
+                            var seconds = TimeSpan.FromDays(retentionNumberOfDays).TotalSeconds;
+                            var x = Math.Ceiling(seconds / policy.AggregationTime.Value);
+                            var max = Math.Max(x * policy.AggregationTime.Value, seconds);
+                            retentionTime = TimeSpan.FromSeconds(max);
+                        }
 
-                            TimeValue retentionTime = policy.RetentionTime;
-                            if (retentionTime == TimeValue.MaxValue)
-                            {
-                                var seconds = TimeSpan.FromDays(retentionNumberOfDays).TotalSeconds;
-                                var x = Math.Ceiling(seconds / policy.AggregationTime.Value);
-                                var max = Math.Max(x * policy.AggregationTime.Value, seconds);
-                                retentionTime = TimeSpan.FromSeconds(max);
-                            }
-
-                            Assert.NotNull(ts);
-                            var expected = ((TimeSpan)retentionTime).TotalMinutes / ((TimeSpan)policy.AggregationTime).TotalMinutes;
-                            if ((int)expected != ts.Count && Math.Ceiling(expected) != ts.Count)
-                                Assert.False(true, $"Expected {expected}, but got {ts.Count}");
+                        Assert.NotNull(ts);
+                        var expected = ((TimeSpan)retentionTime).TotalMinutes / ((TimeSpan)policy.AggregationTime).TotalMinutes;
+                        if ((int)expected != ts.Count && Math.Ceiling(expected) != ts.Count)
+                        {
+                            Assert.False(true, $"Policy '{policy.Name}' failed. Expected {expected}, but got {ts.Count} " +
+                                               $"(Math.Ceiling(expected) result: {Math.Ceiling(expected)}).{Environment.NewLine}" +
+                                               $"Existing timestamps: {string.Join(", ", ts.Select(t => t.Timestamp))}.");
                         }
                     }
-                    return true;
-                }, true);
+                }
             }
 
             public async Task WaitForPolicyRunnerAsync(DocumentDatabase database)
