@@ -628,6 +628,9 @@ namespace Voron.Impl.Journal
 
                     if (_failedToUpdateJournalState)
                     {
+                        // we have failed to update the journal state during the last flush, the environment is considered to be in faulty state (hence it's going to be restarted)
+                        // we need to refrain from executing more flushes since we cannot relay neither on in-memory nor data date of the environment
+
                         if (_waj._logger.IsWarnEnabled)
                         {
                             _waj._logger.Warn("Ignoring the flush due to failure in updating the journal state. This is a catastrophic failure so the environment is going to be restarted.");
