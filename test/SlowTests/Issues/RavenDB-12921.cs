@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(3)]
         [InlineData(5)]
         [InlineData(7)]
@@ -71,7 +71,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(3)]
         [InlineData(5)]
         [InlineData(7)]

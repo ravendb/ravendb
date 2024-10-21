@@ -9,6 +9,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -144,7 +145,7 @@ namespace SlowTests.Authentication
                 $"Should contain \"{string.Join(", ", shouldContainButNot)}\", Should not contain \"{string.Join(", ", shouldNotContainButDo)}\"");
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task CanGetDatabaseRecordInDebugPackageFromUnsecuredServerWithoutClientCert()
         {
             DoNotReuseServer();
@@ -170,7 +171,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task GetOnlyOperatorAccessDebugPackageInfoFromSecuredServer()
         {
             DoNotReuseServer();
