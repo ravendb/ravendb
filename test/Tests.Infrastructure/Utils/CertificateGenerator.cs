@@ -135,6 +135,6 @@ public static class CertificateGenerator
         var stream = new MemoryStream();
         store.Save(stream, Array.Empty<char>(), random);
 
-        return CertificateHelper.CreateCertificate(stream.ToArray());
+        return CertificateLoaderUtil.CreateCertificateFromAny(stream.ToArray());
 }
 }

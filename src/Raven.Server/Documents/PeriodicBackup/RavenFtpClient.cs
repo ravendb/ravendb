@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 try
                 {
-                    var x509Certificate = CertificateHelper.CreateCertificate(byteArray);
+                    var x509Certificate = CertificateLoaderUtil.CreateCertificateFromAny(byteArray);
                     client.Config.EncryptionMode = FtpEncryptionMode.Explicit;
                     client.Config.ClientCertificates.Add(x509Certificate);
                     client.ValidateCertificate += OnValidateCertificate;

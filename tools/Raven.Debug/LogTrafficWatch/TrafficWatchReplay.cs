@@ -296,7 +296,7 @@ namespace Raven.Debug.LogTrafficWatch
                 {
                     ClientCertificates =
                     {
-                        CertificateHelper.CreateCertificate(certPath, certPass, X509KeyStorageFlags.MachineKeySet)
+                        CertificateHelper.CreateCertificateFromPfx(certPath, certPass, X509KeyStorageFlags.MachineKeySet)
                     }
                 });
                 return;

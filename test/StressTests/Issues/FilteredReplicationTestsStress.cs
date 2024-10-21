@@ -86,7 +86,7 @@ namespace StressTests.Issues
                 await s.SaveChangesAsync();
             }
 
-            var pullCert = CertificateHelper.CreateCertificate(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificateFromPfx(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -237,7 +237,7 @@ namespace StressTests.Issues
                 await s.SaveChangesAsync();
             }
 
-            var pullCert = CertificateHelper.CreateCertificate(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificateFromPfx(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition

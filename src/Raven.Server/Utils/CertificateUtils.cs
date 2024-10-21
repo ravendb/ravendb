@@ -470,7 +470,7 @@ namespace Raven.Server.Utils
             var stream = new MemoryStream();
             store.Save(stream, Array.Empty<char>(), random);
 
-            return CertificateHelper.CreateCertificate(stream.ToArray(), (string)null, CertificateLoaderUtil.FlagsForExport);
+            return CertificateHelper.CreateCertificateFromPfx(stream.ToArray(), (string)null, CertificateLoaderUtil.FlagsForExport);
         }
 
         // generating this can take a while, so we cache that at the process level, to significantly speed up the tests

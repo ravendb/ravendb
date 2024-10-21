@@ -337,8 +337,8 @@ namespace rvn
                     }
 
                     
-                    X509Certificate2 clientCertificate = CertificateHelper.CreateCertificate(clientCertificatePathArg.Value);
-                    X509Certificate2 serverCertificate = CertificateHelper.CreateCertificate(serverCertificatePathArg.Value);
+                    X509Certificate2 clientCertificate = CertificateLoaderUtil.CreateCertificateFromAny(clientCertificatePathArg.Value);
+                    X509Certificate2 serverCertificate = CertificateLoaderUtil.CreateCertificateFromAny(serverCertificatePathArg.Value);
                     var name = Path.GetFileNameWithoutExtension(clientCertificatePathArg.Value);
                     try
                     {

@@ -20,11 +20,12 @@ internal static class CertificateHelper
         AllowDuplicateAttributes = new Pkcs12LoaderLimits(Pkcs12LoaderLimits.Defaults);
 
         var allowDuplicateAttributesProperty = AllowDuplicateAttributes.GetType().GetProperty(nameof(AllowDuplicateAttributes), BindingFlags.Instance | BindingFlags.NonPublic);
+        Debug.Assert(allowDuplicateAttributesProperty != null, $"{nameof(allowDuplicateAttributesProperty)} != null");
         allowDuplicateAttributesProperty.SetValue(AllowDuplicateAttributes, true);
     }
 #endif
 
-    public static X509Certificate2 CreateCertificate(byte[] rawData)
+    public static X509Certificate2 CreateCertificateFromCert(byte[] rawData)
     {
         ValidateContentType(rawData, X509ContentType.Cert);
 
@@ -38,7 +39,7 @@ internal static class CertificateHelper
         return certificate;
     }
 
-    public static X509Certificate2 CreateCertificate(string fileName)
+    public static X509Certificate2 CreateCertificateFromCert(string fileName)
     {
         ValidateContentType(fileName, X509ContentType.Cert);
 
@@ -52,7 +53,7 @@ internal static class CertificateHelper
         return certificate;
     }
 
-    public static X509Certificate2 CreateCertificate(byte[] rawData, string? password, X509KeyStorageFlags keyStorageFlags)
+    public static X509Certificate2 CreateCertificateFromPfx(byte[] rawData, string? password, X509KeyStorageFlags keyStorageFlags)
     {
         ValidateContentType(rawData, X509ContentType.Pfx);
 
@@ -66,10 +67,10 @@ internal static class CertificateHelper
         return certificate;
     }
 
-    public static X509Certificate2 CreateCertificate(string path, string? password, X509KeyStorageFlags keyStorageFlags)
+    public static X509Certificate2 CreateCertificateFromPfx(string path, string? password, X509KeyStorageFlags keyStorageFlags)
     {
         var certBytes = File.ReadAllBytes(path);
-        return CreateCertificate(certBytes, password, keyStorageFlags);
+        return CreateCertificateFromPfx(certBytes, password, keyStorageFlags);
     }
 
     [Conditional("DEBUG")]

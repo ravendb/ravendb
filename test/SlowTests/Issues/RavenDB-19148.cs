@@ -34,7 +34,7 @@ public class RavenDB_19148 : ClusterTestBase
         using (var store = new DocumentStore
         {
             Urls = new[] { result.Leader.WebUrl },
-            Certificate = CertificateHelper.CreateCertificate(certBytes),
+            Certificate = CertificateLoaderUtil.CreateCertificateFromAny(certBytes),
             Conventions =
             {
                 DisposeCertificate = false

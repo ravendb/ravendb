@@ -63,8 +63,8 @@ namespace SlowTests.Issues
 
             await CreateDatabaseInCluster(hubStore.Database, replicationFactor: 3, leadersUrl: hubCluster.Leader.WebUrl, certificate: hubClusterCert);
 
-            var pullCert1 = CertificateHelper.CreateCertificate(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
-            var pullCert2 = CertificateHelper.CreateCertificate(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate3Path), (string)null, X509KeyStorageFlags.Exportable);
+            var pullCert1 = CertificateHelper.CreateCertificateFromPfx(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
+            var pullCert2 = CertificateHelper.CreateCertificateFromPfx(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate3Path), (string)null, X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
@@ -135,7 +135,7 @@ namespace SlowTests.Issues
             await CreateDatabaseInCluster(hubStore.Database, replicationFactor: 3, leadersUrl: hubCluster.Leader.WebUrl, certificate: hubClusterCert);
             await CreateDatabaseInCluster(sinkStore.Database, replicationFactor: 3, leadersUrl: sinkCluster.Leader.WebUrl, certificate: sinkClusterCert);
 
-            var pullCert = CertificateHelper.CreateCertificate(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
+            var pullCert = CertificateHelper.CreateCertificateFromPfx(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
 
             var pullDefinition = new PullReplicationDefinition
             {
@@ -241,7 +241,7 @@ namespace SlowTests.Issues
             await CreateDatabaseInCluster(hubStore.Database, replicationFactor: 1, leadersUrl: hubCluster.Leader.WebUrl, certificate: hubClusterCert);
             await CreateDatabaseInCluster(sinkStore.Database, replicationFactor: 3, leadersUrl: sinkCluster.Leader.WebUrl, certificate: sinkClusterCert);
 
-            var pullCert = CertificateHelper.CreateCertificate(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
+            var pullCert = CertificateHelper.CreateCertificateFromPfx(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {

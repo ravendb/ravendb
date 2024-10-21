@@ -3285,7 +3285,7 @@ namespace Raven.Server
                 {
                     try
                     {
-                        certificate = CertificateHelper.CreateCertificate(buffer[0..read]);
+                        certificate = CertificateLoaderUtil.CreateCertificateFromAny(buffer[0..read]);
                     }
                     catch (Exception e)
                     {
@@ -3298,7 +3298,7 @@ namespace Raven.Server
                 {
                     try
                     {
-                        certificate = CertificateHelper.CreateCertificate(issuer);
+                        certificate = CertificateLoaderUtil.CreateCertificateFromAny(issuer);
                     }
                     catch (Exception e)
                     {

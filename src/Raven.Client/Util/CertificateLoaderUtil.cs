@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography.X509Certificates;
@@ -35,7 +36,7 @@ internal static class CertificateLoaderUtil
 
     public static void ImportCert(X509Certificate2Collection collection, byte[] rawData)
     {
-        collection.Add(CertificateHelper.CreateCertificate(rawData));
+        collection.Add(CertificateHelper.CreateCertificateFromCert(rawData));
     }
 
     public static void ImportPfx(X509Certificate2Collection collection, byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
@@ -46,16 +47,22 @@ internal static class CertificateLoaderUtil
         Exception exception = null;
         try
         {
-            collection.Add(CertificateHelper.CreateCertificate(rawData, password, f));
+            collection.Add(CertificateHelper.CreateCertificateFromPfx(rawData, password, f));
         }
         catch (Exception e)
         {
             exception = e;
             f = AddMachineKeySet(flags);
-            collection.Add(CertificateHelper.CreateCertificate(rawData, password, f));
+            collection.Add(CertificateHelper.CreateCertificateFromPfx(rawData, password, f));
         }
 
         LogIfNeeded(nameof(ImportPfx), f, exception);
+    }
+
+    public static X509Certificate2 CreateCertificateFromAny(string fileName, string password = null, X509KeyStorageFlags? flags = null)
+    {
+        var certBytes = File.ReadAllBytes(fileName);
+        return CreateCertificateFromAny(certBytes, password, flags);
     }
 
     public static X509Certificate2 CreateCertificateFromAny(byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
@@ -63,7 +70,7 @@ internal static class CertificateLoaderUtil
         var certContentType = X509Certificate2.GetCertContentType(rawData);
         return certContentType switch
         {
-            X509ContentType.Cert => CertificateHelper.CreateCertificate(rawData),
+            X509ContentType.Cert => CertificateHelper.CreateCertificateFromCert(rawData),
             X509ContentType.Pfx => CreateCertificateFromPfx(rawData, password, flags), // this is Pkcs12
             _ => throw new ArgumentOutOfRangeException(nameof(certContentType), certContentType, "Not supported certificate type.")
         };
@@ -71,12 +78,12 @@ internal static class CertificateLoaderUtil
 
     public static X509Certificate2 CreateCertificateFromPfx(byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
     {
-        return CreateCertificateFromPfx(f => CertificateHelper.CreateCertificate(rawData, password, f), flags);
+        return CreateCertificateFromPfx(f => CertificateHelper.CreateCertificateFromPfx(rawData, password, f), flags);
     }
 
     internal static X509Certificate2 CreateCertificateFromPfx(string fileName, string password = null, X509KeyStorageFlags? flags = null)
     {
-        return CreateCertificateFromPfx(f => CertificateHelper.CreateCertificate(fileName, password, f), flags);
+        return CreateCertificateFromPfx(f => CertificateHelper.CreateCertificateFromPfx(fileName, password, f), flags);
     }
 
     private static X509Certificate2 CreateCertificateFromPfx(Func<X509KeyStorageFlags, X509Certificate2> creator, X509KeyStorageFlags? flag)

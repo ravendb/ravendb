@@ -57,7 +57,7 @@ namespace SlowTests.Server.Replication
             //setup expiration
             await SetupExpiration(sinkStore);
 
-            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificateFromPfx(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -195,7 +195,7 @@ namespace SlowTests.Server.Replication
                 ModifyDatabaseName = x => sinkDatabase
             });
 
-            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificateFromPfx(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -333,7 +333,7 @@ namespace SlowTests.Server.Replication
             //setup expiration
             await SetupExpiration(sinkStore);
 
-            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificateFromPfx(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -444,7 +444,7 @@ namespace SlowTests.Server.Replication
             //setup expiration
             await SetupExpiration(sinkStore);
 
-            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificateFromPfx(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -598,7 +598,7 @@ namespace SlowTests.Server.Replication
             }
 
             //setup pull replication
-            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificateFromPfx(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -685,7 +685,7 @@ namespace SlowTests.Server.Replication
             //setup expiration
             await SetupExpiration(sinkStore);
 
-            var pullCert = CertificateHelper.CreateCertificate(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = CertificateHelper.CreateCertificateFromPfx(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
