@@ -4,11 +4,78 @@ using System.IO;
 using System.Numerics.Tensors;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Jint;
+using Jint.Native;
 using Raven.Client.Documents.Indexes.Vector;
 using SmartComponents.LocalEmbeddings;
 using Sparrow;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.VectorSearch;
+
+public static class VectorUtils
+{
+    public static T GetNumerical<T>(object value)
+    {
+        switch (value)
+        {
+            case LazyStringValue lsv when typeof(T) == typeof(float):
+                return (T)(object)(float)lsv;
+            case LazyStringValue lsv when typeof(sbyte) == typeof(T):
+                return (T)(object)Convert.ToSByte((int)lsv);
+            case LazyStringValue lsv when typeof(byte) == typeof(T):
+                return (T)(object)(byte)Convert.ToByte((int)lsv);
+            case long l when typeof(T) == typeof(float):
+                return (T)(object)Convert.ToSingle(l);
+            case long l when typeof(sbyte) == typeof(T):
+                return (T)(object)Convert.ToSByte(l);
+            case long l when typeof(byte) == typeof(T):
+                return (T)(object)Convert.ToByte(l);
+            case float f when typeof(T) == typeof(float):
+                return (T)(object)f;
+            case float f when typeof(sbyte) == typeof(T):
+                return (T)(object)Convert.ToSByte(f);
+            case float f when typeof(byte) == typeof(T):
+                return (T)(object)Convert.ToByte(f);
+            case byte b when typeof(T) == typeof(float):
+                return (T)(object)Convert.ToSingle(b);
+            case byte b when typeof(sbyte) == typeof(T):
+                return (T)(object)Convert.ToSByte(b);
+            case byte b when typeof(byte) == typeof(T):
+                return (T)(object)Convert.ToByte(b);
+            case sbyte sb when typeof(T) == typeof(float):
+                return (T)(object)Convert.ToSingle(sb);
+            case sbyte sb when typeof(sbyte) == typeof(T):
+                return (T)(object)Convert.ToSByte(sb);
+            case sbyte sb when typeof(byte) == typeof(T):
+                return (T)(object)Convert.ToByte(sb);
+            case LazyNumberValue lnv when typeof(T) == typeof(float):
+                return (T)(object)Convert.ToSingle((float)lnv);
+            case LazyNumberValue lnv when typeof(sbyte) == typeof(T):
+                return (T)(object)Convert.ToSByte((sbyte)lnv);
+            case LazyNumberValue lnv when typeof(byte) == typeof(T):
+                return (T)(object)Convert.ToByte((byte)(sbyte)lnv);
+            case JsValue jsn:
+                value = jsn.AsNumber();
+                break;
+        }
+
+        if (value is double d)
+        {
+            if (typeof(T) == typeof(float))
+                return (T)(object)Convert.ToSingle(d);
+
+            if (typeof(sbyte) == typeof(T))
+                return (T)(object)Convert.ToSByte(d);
+
+            if (typeof(byte) == typeof(T))
+                return (T)(object)Convert.ToByte(d);
+        }
+
+        PortableExceptions.Throw<InvalidDataException>($"Type of T is expected to be (float, sbyte, byte). Got (Input: {value.GetType().FullName}.");
+        return default(T);
+    }
+}
 
 public static class GenerateEmbeddings
 {
@@ -25,20 +92,23 @@ public static class GenerateEmbeddings
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static VectorValue FromText(in EmbeddingType embeddingType, in string text)
+    public static VectorValue FromText(in VectorOptions options, in string text)
     {
-        return embeddingType switch
+        return options.DestinationEmbeddingType switch
         {
             EmbeddingType.Float32 => CreateSmartComponentsLocalEmbedding<EmbeddingF32>(text, F32Size),
             EmbeddingType.Int8 => CreateSmartComponentsLocalEmbedding<EmbeddingI8>(text, I8Size),
             EmbeddingType.Binary => CreateSmartComponentsLocalEmbedding<EmbeddingI1>(text, I1Size),
-            _ => throw new ArgumentOutOfRangeException(nameof(embeddingType), embeddingType, null)
+            _ => throw new ArgumentOutOfRangeException(nameof(options.DestinationEmbeddingType), options.DestinationEmbeddingType, null)
         };
     }
 
-    public static unsafe VectorValue FromArray<T>(in EmbeddingType embeddingSourceType, in EmbeddingType embeddingDestinationType, in T[] array)
+    public static unsafe VectorValue FromArray<T>(in VectorOptions options, in T[] array)
         where T : unmanaged
     {
+        var embeddingSourceType = options.SourceEmbeddingType;
+        var embeddingDestinationType = options.DestinationEmbeddingType;
+        
         if (embeddingSourceType is EmbeddingType.Binary)
         {
             PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(byte), $"Data already quantized in '{EmbeddingType.Binary}' form should be of type 'byte'.");
@@ -47,6 +117,10 @@ public static class GenerateEmbeddings
         
         if (embeddingSourceType is EmbeddingType.Int8)
         {
+            if (typeof(T) == typeof(byte))
+                return new VectorValue(arrayPool: null, (byte[])(object)array, new Memory<byte>((byte[])(object)array, 0, array.Length));
+
+            
             PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(sbyte), $"Data already quantized in '{EmbeddingType.Int8}' form should be of type 'sbyte'.");
             var bytes = MemoryMarshal.Cast<T, byte>(array);
             var allocator = Allocator ??= ArrayPool<byte>.Create();
@@ -71,6 +145,11 @@ public static class GenerateEmbeddings
             }
             default:
             {
+                if (typeof(T) == typeof(byte))
+                {
+                    return new VectorValue(arrayPool:null, (byte[])(object)array, (byte[])(object)array);
+                }
+                
                 var embeddings = (float[])(object)array;
                 var currentAllocator = Allocator ??= ArrayPool<byte>.Create();
                 int bytesRequires = embeddings.Length * sizeof(float); //todo store norm

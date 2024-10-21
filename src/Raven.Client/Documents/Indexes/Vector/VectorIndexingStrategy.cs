@@ -8,10 +8,10 @@ public enum VectorIndexingStrategy
     /// <summary>
     /// Exact stores vector inside index entry and during querying time compare queried vector to each vector.
     /// </summary>
-    Exact = 1,
+    Exact = 0,
     
     /// <summary>
     /// Uses Hierarchical navigable small world to index
     /// </summary>
-    HNSW = 2,
+    HNSW = 1,
 }

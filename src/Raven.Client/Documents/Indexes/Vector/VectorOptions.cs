@@ -50,6 +50,7 @@ public class VectorOptions
         PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Text && Dimensions is not null, "Dimensions are set internally by the embedder.");
         PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Int8 && DestinationEmbeddingType is not EmbeddingType.Int8, "We cannot perform quantization on already quantized vector.");
         PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Binary && DestinationEmbeddingType is not EmbeddingType.Binary, "We cannot perform quantization on already quantized vector.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(IndexingStrategy is not (VectorIndexingStrategy.Exact or VectorIndexingStrategy.HNSW), $"Unknown indexing strategy. Expected {VectorIndexingStrategy.Exact} or {VectorIndexingStrategy.HNSW} but was {IndexingStrategy}.");
     }
     
     public override bool Equals(object obj)

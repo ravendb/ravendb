@@ -25,7 +25,7 @@ namespace Corax.Querying.Matches
         private readonly PageLocator _pageLocator = new();
         private Dictionary<long, float> _scores = new();
         
-        private readonly delegate*<Span<byte>, Span<byte>, float> _similarityFunc;
+        private readonly delegate*<ref ExactVectorSearchMatch, Span<byte>, Span<byte>, float> _similarityFunc;
 
         private readonly IndexSearcher _searcher;
         private readonly Transaction _tx;
@@ -112,7 +112,7 @@ namespace Corax.Querying.Matches
                 if (vector.Length != _vectorToSearch.Length)
                     continue;
 
-                var similarity = _similarityFunc(_vectorToSearch.Span, vector);
+                var similarity = _similarityFunc(ref this, _vectorToSearch.Span, vector);
                 _scores[id] = similarity;
                 if (similarity > _minimumMatch)
                     return true;
@@ -121,13 +121,19 @@ namespace Corax.Querying.Matches
             return false;
         }
 
-        private static float SimilarityI8(Span<byte> lhs, Span<byte> rhs)
+        private static float SimilarityI8(ref ExactVectorSearchMatch term, Span<byte> lhs, Span<byte> rhs)
         {
-            PortableExceptions.Throw<NotImplementedException>($"{nameof(SimilarityI8)}: Not implemented");
-            return 0;
+            using var _ = term._searcher.Allocator.Allocate(2 * lhs.Length, out Span<Half> mem);
+            var idX = 0;
+            foreach (var v in MemoryMarshal.Cast<byte, sbyte>(lhs))
+                mem[idX++] = v;
+            foreach (var v in MemoryMarshal.Cast<byte, sbyte>(rhs))
+                mem[idX++] = v;
+            
+            return (float)TensorPrimitives.CosineSimilarity<Half>(mem.Slice(0, lhs.Length), mem.Slice(lhs.Length));
         }
         
-        private static float SimilarityCosine(Span<byte> lhs, Span<byte> rhs)
+        private static float SimilarityCosine(ref ExactVectorSearchMatch term, Span<byte> lhs, Span<byte> rhs)
         {
             Debug.Assert(lhs.Length == rhs.Length, "lhs.Length == rhs.Length");
             var lhsAsFloat = MemoryMarshal.Cast<byte, float>(lhs);
@@ -135,7 +141,7 @@ namespace Corax.Querying.Matches
             return TensorPrimitives.CosineSimilarity(lhsAsFloat, rhsAsFloat);
         }
 
-        private static float SimilarityI1(Span<byte> lhs, Span<byte> rhs)
+        private static float SimilarityI1(ref ExactVectorSearchMatch term, Span<byte> lhs, Span<byte> rhs)
         {
             Debug.Assert(lhs.Length == rhs.Length, "lhs.Length == rhs.Length");
             var differences = TensorPrimitives.HammingBitDistance<byte>(lhs, rhs);

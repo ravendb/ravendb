@@ -468,49 +468,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             
         _nonExistingFieldsOfDocument.Clear();
     }
-
-    [SkipLocalsInit]
-    protected void InsertVectorFields<TBuilder>(IndexField field, object value, TBuilder builder, object sourceDocument)
-        where TBuilder : IIndexEntryBuilder
-    {
-        var path = field.Name;
-        var fieldId = field.Id;
-
-        var vectorOptions = field.Vector;
-        ValueType valueType = GetValueType(value);
-        switch (valueType)
-        {
-            case ValueType.Enumerable:
-                RuntimeHelpers.EnsureSufficientExecutionStack();
-                var iterator = (IEnumerable)value;
-                builder.IncrementList();
-                foreach (var item in iterator)
-                {
-                    InsertVectorFields(field, item, builder, sourceDocument);
-                }
-                builder.DecrementList();
-                break;
-            case ValueType.String:
-                PortableExceptions.ThrowIf<InvalidOperationException>(vectorOptions.SourceEmbeddingType != EmbeddingType.Text,
-                    $"Expected string as input, but instead got {valueType}");
-
-                var val = (string)value;
-                using (var vectorField = GenerateEmbeddings.FromText(VectorOptions.Default.DestinationEmbeddingType, val))
-                    builder.WriteExactVector(fieldId, path, vectorField.Embedding.Span);
-                break;
-            case ValueType.LazyString:
-            case ValueType.LazyCompressedString:
-                PortableExceptions.ThrowIf<InvalidOperationException>(vectorOptions.SourceEmbeddingType != EmbeddingType.Text,
-                    $"Expected string as input, but instead got {valueType}");
-                    //TODO: Allocations
-                    var str = value.ToString();
-                    using (var vectorField = GenerateEmbeddings.FromText(vectorOptions.DestinationEmbeddingType, str))
-                        builder.WriteExactVector(fieldId, path, vectorField.Embedding.Span);
-                    break;
-            
-            // Everything else we ignore
-        }
-    }
     
     [DoesNotReturn]
     private static void ThrowFieldIsNoIndexedAndStored(IndexField field)
