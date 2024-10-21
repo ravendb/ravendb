@@ -339,12 +339,7 @@ namespace Voron.Impl.Scratch
                     var message =
                         $"Found page #{p.PageNumberInDataFile} allocated in tx {p.AllocatedInTransaction} (scratch {p.File.Number}, pos in scratch: {p.PositionInScratchBuffer}) while we freed up to tx {txId}";
 
-                    Console.Error.WriteLine(message);
-
-                    Console.WriteLine(message);
-
                     throw new InvalidOperationException(message);
-
                 }
             }
         }
