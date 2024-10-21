@@ -1068,7 +1068,7 @@ namespace Raven.Server.Web.Authentication
                         X509Certificate2 newCertificate;
                         try
                         {
-                            newCertificate = CertificateLoaderUtil.CreateCertificateFromPfx(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
+                            newCertificate = CertificateLoaderUtil.CreateCertificateFromAny(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
                         }
                         catch (Exception e)
                         {

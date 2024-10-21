@@ -6,6 +6,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Raven.Client.Util;
@@ -22,6 +23,28 @@ internal static class CertificateHelper
         var allowDuplicateAttributesProperty = AllowDuplicateAttributes.GetType().GetProperty(nameof(AllowDuplicateAttributes), BindingFlags.Instance | BindingFlags.NonPublic);
         Debug.Assert(allowDuplicateAttributesProperty != null, $"{nameof(allowDuplicateAttributesProperty)} != null");
         allowDuplicateAttributesProperty.SetValue(AllowDuplicateAttributes, true);
+    }
+
+
+    public static RSAParameters GetRsaParametersSafely(this RSA rsa)
+    {
+        // workaround for https://github.com/dotnet/runtime/issues/109059#issuecomment-2426833907
+        using (RSA tempRsa = RSA.Create())
+        {
+            var tempPassword = "TempPassword";
+            var pbeParameters = new PbeParameters(PbeEncryptionAlgorithm.Aes128Cbc, HashAlgorithmName.SHA256, 1);
+            tempRsa.ImportEncryptedPkcs8PrivateKey(tempPassword, rsa.ExportEncryptedPkcs8PrivateKey(tempPassword, pbeParameters), out _);
+            return tempRsa.ExportParameters(true);
+        }
+    }
+
+    public static RSAParameters GetRsaParametersSafely(this X509Certificate2 certificate)
+    {
+        var rsa = certificate.GetRSAPrivateKey();
+        if (rsa == null)
+            throw new InvalidOperationException("Could not extract RSA Private Key from the certificate.");
+
+        return rsa.GetRsaParametersSafely();
     }
 #endif
 
