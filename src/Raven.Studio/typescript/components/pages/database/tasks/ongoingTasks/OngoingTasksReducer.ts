@@ -10,7 +10,7 @@ import {
     OngoingTaskKafkaSinkSharedInfo,
     OngoingTaskNodeInfo,
     OngoingTaskNodeInfoDetails,
-    OngoingTaskNodeProgressDetails,
+    OngoingTaskNodeEtlProgressDetails,
     OngoingTaskOlapEtlSharedInfo,
     OngoingTaskPeriodicBackupNodeInfoDetails,
     OngoingTaskPeriodicBackupSharedInfo,
@@ -23,6 +23,8 @@ import {
     OngoingTaskSqlEtlSharedInfo,
     OngoingTaskSubscriptionInfo,
     OngoingTaskSubscriptionSharedInfo,
+    OngoingReplicationProgressAwareTaskNodeInfo,
+    OngoingTaskNodeReplicationProgressDetails,
 } from "components/models/tasks";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
@@ -46,6 +48,8 @@ import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.Ongoin
 import SubscriptionConnectionsDetails = Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails;
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { DatabaseSharedInfo } from "components/models/databases";
+import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
+import ReplicationProcessProgress = Raven.Server.Documents.Replication.Stats.ReplicationProcessProgress;
 
 interface ActionTasksLoaded {
     location: databaseLocationSpecifier;
@@ -66,10 +70,16 @@ interface ActionSubscriptionConnectionDetailsLoaded {
     details?: SubscriptionConnectionsDetails;
 }
 
-interface ActionProgressLoaded {
+interface ActionEtlProgressLoaded {
     location: databaseLocationSpecifier;
     progress: EtlTaskProgress[];
-    type: "ProgressLoaded";
+    type: "EtlProgressLoaded";
+}
+
+interface ActionReplicationProgressLoaded {
+    location: databaseLocationSpecifier;
+    progress: ReplicationTaskProgress[];
+    type: "ReplicationProgressLoaded";
 }
 
 interface ActionTasksLoadError {
@@ -94,14 +104,15 @@ export type SubscriptionConnectionsDetailsWithId = SubscriptionConnectionsDetail
 
 type OngoingTaskReducerAction =
     | ActionTasksLoaded
-    | ActionProgressLoaded
+    | ActionEtlProgressLoaded
+    | ActionReplicationProgressLoaded
     | ActionTasksLoadError
     | ActionTaskLoaded
     | ActionSubscriptionConnectionDetailsLoaded;
 
 const serverWidePrefix = "Server Wide";
 
-function mapProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeProgressDetails {
+function mapEtlProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeEtlProgressDetails {
     const totalItems =
         taskProgress.TotalNumberOfDocuments +
         taskProgress.TotalNumberOfDocumentTombstones +
@@ -161,6 +172,10 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 delayReplicationTime: incoming.DelayReplicationFor
                     ? genUtils.timeSpanToSeconds(incoming.DelayReplicationFor)
                     : null,
+                fromToString: incoming.FromToString,
+                lastAcceptedChangeVectorFromDestination: incoming.LastAcceptedChangeVectorFromDestination,
+                lastSentEtag: incoming.LastSentEtag,
+                sourceDatabaseChangeVector: incoming.SourceDatabaseChangeVector,
             };
             return result;
         }
@@ -559,7 +574,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
             });
         }
 
-        case "ProgressLoaded": {
+        case "EtlProgressLoaded": {
             const incomingProgress = action.progress;
             const incomingLocation = action.location;
 

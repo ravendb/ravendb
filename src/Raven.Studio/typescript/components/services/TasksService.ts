@@ -27,6 +27,7 @@ import { ConnectionStringDto } from "components/pages/database/settings/connecti
 import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptionsCommand";
 import getBackupLocationCommand from "commands/database/tasks/getBackupLocationCommand";
 import testAzureQueueStorageServerConnectionCommand from "commands/database/cluster/testAzureQueueStorageServerConnectionCommand";
+import replicationProgressCommand from "commands/database/tasks/replicationProgressCommand";
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -66,8 +67,12 @@ export default class TasksService {
         return new toggleOngoingTaskCommand(databaseName, taskType, task.taskId, task.taskName, !enable).execute();
     }
 
-    async getProgress(databaseName: string, location: databaseLocationSpecifier) {
+    async getEtlProgress(databaseName: string, location: databaseLocationSpecifier) {
         return new etlProgressCommand(databaseName, location, false).execute();
+    }
+
+    async getReplicationProgress(databaseName: string, location: databaseLocationSpecifier) {
+        return new replicationProgressCommand(databaseName, location, false).execute();
     }
 
     async getManualBackup(databaseName: string) {

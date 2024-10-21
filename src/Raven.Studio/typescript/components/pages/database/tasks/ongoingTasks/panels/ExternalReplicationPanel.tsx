@@ -116,6 +116,7 @@ export function ExternalReplicationPanel(props: ExternalReplicationPanelProps) {
             </RichPanelHeader>
             <Collapse isOpen={detailsVisible}>
                 <Details {...props} canEdit={canEdit} />
+                <ReplicationTaskDistribution task={data} />
             </Collapse>
         </RichPanel>
     );
