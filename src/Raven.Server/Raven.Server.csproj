@@ -240,4 +240,11 @@
   <PropertyGroup Condition="'$(RAVEN_BuildOptions)' != ''">
     <DefineConstants>$(DefineConstants);$(RAVEN_BuildOptions)</DefineConstants>
   </PropertyGroup>
+  
+  <Target Name="ExcludeRuntimeConfigFromBundle" AfterTargets="ComputeResolvedFilesToPublishList" BeforeTargets="PrepareForBundle">
+  <ItemGroup>
+    <ResolvedFileToPublish ExcludeFromSingleFile="true"
+                           Condition="'%(ResolvedFileToPublish.Identity)' == '$(ProjectRuntimeConfigFilePath)'" />
+  </ItemGroup>
+</Target>
 </Project>
