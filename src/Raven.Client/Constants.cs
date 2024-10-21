@@ -389,6 +389,8 @@ namespace Raven.Client
                         public const string SpatialPropertyName = "$spatial";
 
                         public const string BoostPropertyName = "$boost";
+                        
+                        public const string VectorPropertyName = "$vector";
                     }
                 }
 

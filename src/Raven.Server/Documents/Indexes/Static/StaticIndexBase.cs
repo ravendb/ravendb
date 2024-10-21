@@ -7,6 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Jint;
+using Jint.Native;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -18,6 +20,7 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Logging;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.Rachis.Commands;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -367,29 +370,25 @@ namespace Raven.Server.Documents.Indexes.Static
             var vectorOptions = currentIndexingField.Vector;
             PortableExceptions.ThrowIf<InvalidDataException>(value is DynamicNullObject or null, $"Cannot index data from a null value!");
             
-            // We're expecting input in some-kind of numerical form (based on field's configuration). If not we can assume this is base64 form.
             if (value is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject)
                 return GenerateEmbeddingForBase64(value.ToString());
 
-            // if (value is BlittableJsonReaderArray blittableJsonReaderArray)
-            // {
-            //     return GenerateEmbeddingsFromDynamicArray(blittableJsonReaderArray);
-            // }
-            
-            if (value is DynamicArray or BlittableJsonReaderArray)
+            if (value is DynamicArray or BlittableJsonReaderArray or JsArray)
             {
                 var da = value as DynamicArray;
                 var bjra = value as BlittableJsonReaderArray;
-                object firstElement = (da?[0] ?? bjra?[0]);
+                var jsa = value as JsArray;
+                
+                object firstElement = (da?[0] ?? bjra?[0] ?? jsa?[0]);
                 PortableExceptions.ThrowIf<InvalidDataException>(firstElement is null, $"There is no element in the vector!");
                 
-                var isEnumerableDynamicArray = firstElement is DynamicArray or BlittableJsonReaderArray; // should be safe since vector at least should have 1 dimension
-                var isBase64 = firstElement is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject;
+                var isEnumerableDynamicArray = firstElement is DynamicArray or BlittableJsonReaderArray or JsArray; // should be safe since vector at least should have 1 dimension
+                var isBase64 = firstElement is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject or JsString;
 
                 // For float[][] we've to wrap it inside List<VectorValue>
                 if (isEnumerableDynamicArray)
                 {
-                    var enumerable = (IEnumerable)da ?? (IEnumerable)bjra;
+                    var enumerable = (IEnumerable)da ?? (IEnumerable)bjra ?? (IEnumerable)jsa;
                     var vectorList = new List<VectorValue>();
                     foreach (var item in enumerable)
                         vectorList.Add(GenerateEmbeddingsFromDynamicArray((IEnumerable)item));
@@ -399,10 +398,17 @@ namespace Raven.Server.Documents.Indexes.Static
                 // For string[] as well
                 if (isBase64)
                 {
-                        var enumerable = (IEnumerable)da ?? (IEnumerable)bjra;
+                        var enumerable = (IEnumerable)da ?? (IEnumerable)bjra ?? jsa;
                         var vectorList = new List<VectorValue>();
                         foreach (var item in enumerable)
-                            vectorList.Add(GenerateEmbeddingForBase64(item.ToString()));
+                        {
+                            var str = item switch
+                            {
+                                JsObject jso => jso.AsString(),
+                                _ => item.ToString()
+                            };
+                            vectorList.Add(GenerateEmbeddingForBase64(str));
+                        }
 
                         return vectorList;
                 }
@@ -410,7 +416,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (da != null)
                     return GenerateEmbeddingsFromDynamicArray(da);
                 
-                return GenerateEmbeddingsFromDynamicArray(bjra);
+                if (bjra != null)
+                    return GenerateEmbeddingsFromDynamicArray(bjra);
+
+                return GenerateEmbeddingsFromDynamicArray(jsa);
             }
             
             throw new InvalidDataException($"Not supported vector value: {value?.GetType().FullName}");
@@ -429,40 +438,25 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 foreach (var item in dynamicArray)
                 {
-                    object num = (item, vectorOptions.SourceEmbeddingType) switch
-                    {
-                        (LazyNumberValue lNV, EmbeddingType.Float32) => Convert.ToSingle((float)lNV),
-                        (LazyNumberValue lNV, EmbeddingType.Int8) => Convert.ToSByte((sbyte)lNV),
-                        (float, EmbeddingType.Float32) => Convert.ToSingle(item),
-                        (double d, EmbeddingType.Float32) => Convert.ToSingle(d),
-                        (long l, EmbeddingType.Float32) => Convert.ToSingle(l),
-                        (int i, EmbeddingType.Float32) => Convert.ToSingle(i),
-                        (_, EmbeddingType.Binary) => Convert.ToByte(item),
-                        (long l, EmbeddingType.Int8) => Convert.ToSByte(l),
-                        (int i, EmbeddingType.Int8) => Convert.ToSByte(i),
-                        
-                        _ => throw new NotSupportedException($"Vector.Search() on ({item.GetType().FullName}, {vectorOptions.SourceEmbeddingType}) is not supported.")
-                    };
-
                     switch (vectorOptions.SourceEmbeddingType)
                     {
                         case EmbeddingType.Float32:
-                            embeddings.Add((float)num);
+                            embeddings.Add(VectorUtils.GetNumerical<float>(item));
                             break;
                         case EmbeddingType.Int8:
-                            embeddings.Add(Convert.ToSByte(num));
+                            embeddings.Add(VectorUtils.GetNumerical<sbyte>(item));
                             break;
                         default:
-                            embeddings.Add((byte)num);
+                            embeddings.Add(VectorUtils.GetNumerical<byte>(item));
                             break;
                     }
                 }
 
                 return embeddings switch
                 {
-                    List<float> vectorOfSingles => GenerateEmbeddings.FromArray(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType, vectorOfSingles.ToArray()),
-                    List<byte> vectorOfBytes => GenerateEmbeddings.FromArray(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType, vectorOfBytes.ToArray()),
-                    List<sbyte> vectorOfSbytes => GenerateEmbeddings.FromArray(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType, vectorOfSbytes.ToArray()),
+                    List<float> vectorOfSingles => GenerateEmbeddings.FromArray(vectorOptions, vectorOfSingles.ToArray()),
+                    List<byte> vectorOfBytes => GenerateEmbeddings.FromArray(vectorOptions, vectorOfBytes.ToArray()),
+                    List<sbyte> vectorOfSbytes => GenerateEmbeddings.FromArray(vectorOptions, vectorOfSbytes.ToArray()),
                     _ => throw new InvalidDataException($"Vector values must be either float, byte, or sbyte. Received `{embeddings.GetType().FullName}`.")
                 };
             }
@@ -473,10 +467,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (vectorOptions.SourceEmbeddingType is EmbeddingType.Float32)
                 {
                     var embeddings = MemoryMarshal.Cast<byte, float>(decodedBase);
-                    return GenerateEmbeddings.FromArray(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType, embeddings.ToArray());
+                    return GenerateEmbeddings.FromArray(vectorOptions, embeddings.ToArray());
                 }
 
-                return GenerateEmbeddings.FromArray(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType, decodedBase);
+                return GenerateEmbeddings.FromArray(vectorOptions, decodedBase);
             }
         }
 
@@ -497,22 +491,22 @@ namespace Raven.Server.Documents.Indexes.Static
             PortableExceptions.ThrowIf<InvalidDataException>(embedding is null, $"Tried to convert text into embeddings but got type {value?.GetType().FullName} which is not supported.");
             return embedding;
 
-            VectorValue CreateVectorValue(object value)
+            VectorValue CreateVectorValue(object valueToProcess)
             {
-                var str = value switch
+                var str = valueToProcess switch
                 {
                     LazyStringValue lsv => (string)lsv,
                     LazyCompressedStringValue lcsv => lcsv,
                     string s => s,
                     DynamicNullObject => null,
                     null => null,
-                    _ => throw new NotSupportedException("Only strings are supported, but got: " + value?.GetType().FullName)
+                    _ => throw new NotSupportedException("Only strings are supported, but got: " + valueToProcess?.GetType().FullName)
                 };
 
                 if (str == null)
-                    throw new InvalidDataException($"Unsupported vector value type: {value?.GetType().FullName}");
+                    throw new InvalidDataException($"Unsupported vector value type: {valueToProcess?.GetType().FullName}");
 
-                return GenerateEmbeddings.FromText(indexField.Vector.DestinationEmbeddingType, str);
+                return GenerateEmbeddings.FromText(indexField.Vector, str);
             }
         }
 
@@ -883,6 +877,14 @@ namespace Raven.Server.Documents.Indexes.Static
                 return null;
 
             return CurrentIndexingScope.Current.GetOrCreateSpatialField(name);
+        }
+        
+        internal static IndexField GetOrCreateVectorField(string name)
+        {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException("Indexing scope was not initialized.");
+
+            return CurrentIndexingScope.Current.GetOrCreateVectorField(name);
         }
 
         private static double? ConvertToDouble(object value)

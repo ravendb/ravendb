@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Linq;
+using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -45,10 +46,10 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
     
     [RavenFact(RavenTestCategory.Vector)]
     public void Int1Test() => AutoIndexingTestingBase(
-        autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.i8(Binary))",
-        rql: "from 'AutoVecDocs' where vector.search(embedding.i8(Binary), $p0)",
+        autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.i1(Binary))",
+        rql: "from 'AutoVecDocs' where vector.search(embedding.i1(Binary), $p0)",
         vectorWhere: docs => docs.
-            VectorSearch(field => field.WithEmbedding(f => f.Int8, EmbeddingType.Int8), 
+            VectorSearch(field => field.WithEmbedding(f => f.Binary, EmbeddingType.Binary), 
                 value => value.ByEmbedding(new byte[]{0b1111_1111})));
     
     [RavenFact(RavenTestCategory.Vector)]

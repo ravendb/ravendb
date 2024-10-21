@@ -586,6 +586,10 @@ function createField(name, value, options) {
 function boost(value, boost) {
     return { $value: value, $boost: boost }
 }
+
+function createVectorSearch(value) {
+    return { $vector: {$value: value} }
+}
 ";
 
         protected readonly IndexDefinition Definition;
