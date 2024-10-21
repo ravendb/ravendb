@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
@@ -126,7 +127,7 @@ namespace SlowTests.Issues
             {
                 var srcDocumentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store1);
                 var destDocumentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store2);
-                
+
                 // Documents creation
                 var documentCreationTasks = new Task[DocumentsCount];
                 using (var session = store1.OpenSession())
@@ -343,14 +344,14 @@ namespace SlowTests.Issues
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.OlapEtl;
                         break;
                     case EtlType.ElasticSearch:
-                        var elasticConnectionString = new ElasticSearchConnectionString { Name = store.Identifier, Nodes = new[] { "http://127.0.0.1:8080"} };
+                        var elasticConnectionString = new ElasticSearchConnectionString { Name = store.Identifier, Nodes = new[] { "http://127.0.0.1:8080" } };
                         var elasticConfiguration = new ElasticSearchEtlConfiguration { Name = _customTaskName, ConnectionStringName = elasticConnectionString.Name, Transforms = { transforms } };
                         taskId = await AddEtlAndDisableIt(store, elasticConnectionString, elasticConfiguration, OngoingTaskType.ElasticSearchEtl);
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.ElasticSearchEtl;
                         break;
                     case EtlType.Queue:
                         var queueConnectionString = new QueueConnectionString { Name = store.Identifier, BrokerType = QueueBrokerType.RabbitMq, RabbitMqConnectionSettings = new RabbitMqConnectionSettings { ConnectionString = "test" } };
-                        var queueConfiguration = new QueueEtlConfiguration { Name = _customTaskName, ConnectionStringName = queueConnectionString.Name, Transforms = { transforms }, BrokerType = QueueBrokerType.RabbitMq};
+                        var queueConfiguration = new QueueEtlConfiguration { Name = _customTaskName, ConnectionStringName = queueConnectionString.Name, Transforms = { transforms }, BrokerType = QueueBrokerType.RabbitMq };
                         taskId = await AddEtlAndDisableIt(store, queueConnectionString, queueConfiguration, OngoingTaskType.QueueEtl);
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.QueueEtl;
                         break;
@@ -372,7 +373,7 @@ namespace SlowTests.Issues
                 var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
 
-                Assert.True(documentDatabase.NotificationCenter.Exists(_notificationId));
+                Assert.True(await WaitForValueAsync(() => documentDatabase.NotificationCenter.Exists(_notificationId), expectedVal: true));
 
                 var notificationDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, notificationDetails.Count);
@@ -380,7 +381,7 @@ namespace SlowTests.Issues
                 Assert.Equal(_customTaskName, notificationDetails.First().Source);
                 Assert.Equal(taskId, notificationDetails.First().BlockerTaskId);
                 Assert.Equal(blockerType, notificationDetails.First().BlockerType);
-                Assert.True(notificationDetails.First().SizeOfTombstonesInBytes > 0, 
+                Assert.True(notificationDetails.First().SizeOfTombstonesInBytes > 0,
                     $"Expected the size of tombstones to be greater than 0, but it was {notificationDetails.First().SizeOfTombstonesInBytes}");
 
                 Assert.Equal(TombstonesCount, notificationDetails.First().NumberOfTombstones);
@@ -391,8 +392,13 @@ namespace SlowTests.Issues
                 var putResult = store.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
                 Assert.NotNull(putResult.RaftCommandIndex);
 
+                configuration.Disabled = true;
+
                 var addResult = store.Maintenance.Send(new AddEtlOperation<T>(configuration));
                 await store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(addResult.TaskId, type, disable: true));
+
+                var result = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(addResult.TaskId, type));
+                Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
 
                 return addResult.TaskId;
             }
@@ -417,9 +423,9 @@ namespace SlowTests.Issues
                 }
 
                 var config = Backup.CreateBackupConfiguration(
-                    backupPath: backupPath, 
-                    backupType: BackupType.Backup, 
-                    incrementalBackupFrequency: "0 0 1 1 *", 
+                    backupPath: backupPath,
+                    backupType: BackupType.Backup,
+                    incrementalBackupFrequency: "0 0 1 1 *",
                     name: _customTaskName);
 
                 config.TaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, isFullBackup: true);
@@ -537,10 +543,10 @@ namespace SlowTests.Issues
             public UserByName()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        user.Name
-                    };
+                               select new
+                               {
+                                   user.Name
+                               };
             }
         }
 
@@ -549,10 +555,10 @@ namespace SlowTests.Issues
             public ErroredIndex()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        Count = 3 / user.Count
-                    };
+                               select new
+                               {
+                                   Count = 3 / user.Count
+                               };
             }
         }
     }
