@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests.Voron.FixedSize;
+using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Sparrow;
 using Tests.Infrastructure;
@@ -12,7 +13,7 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron.RawData
 {
-    public unsafe class SmallDataSection : StorageTest
+    public class SmallDataSection : StorageTest
     {
         public SmallDataSection(ITestOutputHelper output) : base(output)
         {
@@ -41,8 +42,8 @@ namespace FastTests.Voron.RawData
             using (var tx = Env.ReadTransaction())
             {
                 var section = new ActiveRawDataSmallSection(tx, pageNumber);
-                
-                AssertValueMatches(section,id, "Hello There");
+
+                AssertValueMatches(section, id, "Hello There");
             }
         }
 
@@ -66,7 +67,7 @@ namespace FastTests.Voron.RawData
                 using (var tx = Env.WriteTransaction())
                 {
                     var section = new ActiveRawDataSmallSection(tx, pageNumber);
-                    Assert.True(section.TryAllocate(random.Next(16,256), out id));
+                    Assert.True(section.TryAllocate(random.Next(16, 256), out id));
                     WriteValue(section, id, i.ToString("0000000000000"));
                     dic[id] = i;
                     tx.Commit();
@@ -90,7 +91,7 @@ namespace FastTests.Voron.RawData
         }
 
         [Fact]
-        public void CanAllocateEnoughToFillEntireSection()
+        public unsafe void CanAllocateEnoughToFillEntireSection()
         {
             long pageNumber;
             using (var tx = Env.WriteTransaction())
@@ -117,8 +118,8 @@ namespace FastTests.Voron.RawData
 
                 Assert.False(section.TryAllocate(allocationSize, out id));
 
-                var idToFree = list[list.Count/2];
-                 
+                var idToFree = list[list.Count / 2];
+
                 section.Free(idToFree);
 
                 Assert.True(section.TryAllocate(allocationSize, out id));
@@ -154,10 +155,10 @@ namespace FastTests.Voron.RawData
                 var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
 
                 long id;
-            
+
                 Assert.True(section.TryAllocate(15, out id));
                 WriteValue(section, id, "Hello There");
-          
+
 
                 AssertValueMatches(section, id, "Hello There");
 
@@ -167,7 +168,7 @@ namespace FastTests.Voron.RawData
         }
 
         [Fact]
-        public void CanReadAndWriteFromSection_AfterFlush_MixedFlushDuringTransaction()
+        public async Task CanReadAndWriteFromSection_AfterFlush_MixedFlushDuringTransaction()
         {
             Options.ManualFlushing = true;
             long pageNumber;
@@ -178,15 +179,15 @@ namespace FastTests.Voron.RawData
                 var section = ActiveRawDataSmallSection.Create(tx, "test", (byte)TableType.None);
                 pageNumber = section.PageNumber;
 
-                t = Task.Run(() => Env.FlushLogToDataFile());    
+                t = Task.Run(() => Env.FlushLogToDataFile());
                 //var section = new RawDataSmallSection(tx, pageNumber);
                 Assert.True(section.TryAllocate(15, out id));
                 WriteValue(section, id, "Hello There");
                 tx.Commit();
             }
 
-            t.Wait();
-            
+            await t.WaitAndThrowOnTimeout(TimeSpan.FromSeconds(30));
+
             Env.FlushLogToDataFile();
 
             using (var tx = Env.ReadTransaction())
@@ -282,7 +283,7 @@ namespace FastTests.Voron.RawData
                 WriteValue(section, idWhichIsGoingToBeDeleted1, 1.ToString("0000000000000"));
                 Assert.True(section.TryAllocate(2000, out idWhichIsGoingToBeDeleted2));
                 WriteValue(section, idWhichIsGoingToBeDeleted2, 2.ToString("0000000000000"));
-                
+
                 Assert.True(section.TryAllocate(2000, out existingId));
                 WriteValue(section, existingId, 3.ToString("0000000000000"));
                 tx.Commit();
@@ -309,7 +310,7 @@ namespace FastTests.Voron.RawData
             }
         }
 
-        private static void WriteValue(ActiveRawDataSmallSection section, long id, string value)
+        private static unsafe void WriteValue(ActiveRawDataSmallSection section, long id, string value)
         {
             var bytes = Encoding.UTF8.GetBytes(value);
             fixed (byte* p = bytes)
@@ -318,7 +319,7 @@ namespace FastTests.Voron.RawData
             }
         }
 
-        private static void AssertValueMatches(ActiveRawDataSmallSection section, long id, string expected)
+        private static unsafe void AssertValueMatches(ActiveRawDataSmallSection section, long id, string expected)
         {
             int size;
             var p = section.DirectRead(id, out size, out var compressed);
@@ -328,7 +329,7 @@ namespace FastTests.Voron.RawData
                 Memory.Copy(bp, p, size);
             }
             var actual = Encoding.UTF8.GetString(buffer, 0, size);
-            Assert.Equal(expected,actual);
+            Assert.Equal(expected, actual);
         }
     }
 }
