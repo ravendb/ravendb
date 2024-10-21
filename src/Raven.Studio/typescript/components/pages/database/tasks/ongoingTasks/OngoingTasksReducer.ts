@@ -16,6 +16,7 @@ import {
     OngoingTaskRabbitMqEtlSharedInfo,
     OngoingTaskRabbitMqSinkSharedInfo,
     OngoingTaskRavenEtlSharedInfo,
+    OngoingTaskReplicationHubInfo,
     OngoingTaskReplicationHubSharedInfo,
     OngoingTaskReplicationSinkSharedInfo,
     OngoingTaskSharedInfo,
@@ -99,6 +100,32 @@ type OngoingTaskReducerAction =
     | ActionSubscriptionConnectionDetailsLoaded;
 
 const serverWidePrefix = "Server Wide";
+
+// for external replication hubs we might have multiple tasks with same taskId
+// thus we need better comparator for those items
+const uniqueIdExtractor = (task: OngoingTaskInfo) => {
+    if (task.shared.taskType !== "PullReplicationAsHub") {
+        return task.shared.taskId;
+    }
+    const hubTask = task as OngoingTaskReplicationHubInfo;
+    return (
+        hubTask.shared.taskId +
+        "_" +
+        (hubTask.shared.destinationDatabase ?? "??") +
+        "_" +
+        (hubTask.shared.destinationUrl ?? "??")
+    );
+};
+
+const uniqueIdExtractorRaw = (task: OngoingTask) => {
+    if (task.TaskType !== "PullReplicationAsHub") {
+        return task.TaskId;
+    }
+
+    const hubTask = task as OngoingTaskPullReplicationAsHub;
+
+    return hubTask.TaskId + "_" + (hubTask.DestinationDatabase ?? "??") + "_" + (hubTask.DestinationUrl ?? "??");
+};
 
 function mapProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeProgressDetails {
     const totalItems =
@@ -365,7 +392,7 @@ const mapTask = (incomingTask: OngoingTask, incomingLocation: databaseLocationSp
 
     const existingTasksSource = incomingTask.TaskType === "Subscription" ? state.subscriptions : state.tasks;
     const existingTask = existingTasksSource.find(
-        (x) => x.shared.taskType === incomingTaskType && x.shared.taskId === incomingTask.TaskId
+        (x) => x.shared.taskType === incomingTaskType && uniqueIdExtractor(x) === uniqueIdExtractorRaw(incomingTask)
     );
 
     const nodesInfo = existingTask
@@ -444,7 +471,9 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                     const tasksWithoutSubscriptions = newTasks.filter((x) => x.shared.taskType !== "Subscription");
 
                     tasksWithoutSubscriptions.forEach((task) => {
-                        const draftTaskIdx = draft.tasks.findIndex((x) => x.shared.taskId === task.shared.taskId);
+                        const draftTaskIdx = draft.tasks.findIndex(
+                            (x) => uniqueIdExtractor(x) === uniqueIdExtractor(task)
+                        );
 
                         if (draftTaskIdx !== -1) {
                             const draftNodeInfoIdx = draft.tasks[draftTaskIdx].nodesInfo.findIndex((x) =>
@@ -471,7 +500,9 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                             task.nodesInfo.find((x) => databaseLocationComparator(x.location, incomingLocation))
                                 .status !== "idle"
                         ) {
-                            const draftTaskIdx = draft.tasks.findIndex((x) => x.shared.taskId === task.shared.taskId);
+                            const draftTaskIdx = draft.tasks.findIndex(
+                                (x) => uniqueIdExtractor(x) === uniqueIdExtractor(task)
+                            );
                             draft.tasks.splice(draftTaskIdx, 1);
                         }
                     });
