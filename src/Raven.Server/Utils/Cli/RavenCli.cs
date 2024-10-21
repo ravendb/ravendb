@@ -642,7 +642,7 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 cert;
             try
             {
-                cert = CertificateLoaderUtil.CreateCertificate(path, args.Count == 3 ? args[2] : null);
+                cert = CertificateLoaderUtil.CreateCertificateFromPfx(path, args.Count == 3 ? args[2] : null);
             }
             catch (Exception e)
             {
@@ -733,7 +733,7 @@ namespace Raven.Server.Utils.Cli
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert = CertificateLoaderUtil.CreateCertificate(certBytes, password);
+                cert = CertificateLoaderUtil.CreateCertificateFromPfx(certBytes, password);
             }
             catch (Exception e)
             {
@@ -886,7 +886,7 @@ namespace Raven.Server.Utils.Cli
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                CertificateLoaderUtil.Import(cert, certBytes, password, CertificateLoaderUtil.FlagsForExport);
+                CertificateLoaderUtil.ImportPfx(cert, certBytes, password, CertificateLoaderUtil.FlagsForExport);
             }
             catch (Exception e)
             {
@@ -913,7 +913,7 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 loadedCert;
             try
             {
-                loadedCert = CertificateLoaderUtil.CreateCertificate(certBytes, flags:CertificateLoaderUtil.FlagsForPersist);
+                loadedCert = CertificateLoaderUtil.CreateCertificateFromPfx(certBytes, flags:CertificateLoaderUtil.FlagsForPersist);
             }
             catch (Exception e)
             {

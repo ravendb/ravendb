@@ -1,16 +1,33 @@
 ﻿#nullable enable
-#if NET9_0_OR_GREATER2
+#if NET9_0_OR_GREATER
 #define FEATURE_X509CERTIFICATELOADER_SUPPORT
 #endif
+using System;
 using System.Diagnostics;
+using System.IO;
+using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Raven.Client.Util;
 
 internal static class CertificateHelper
 {
+#if FEATURE_X509CERTIFICATELOADER_SUPPORT
+    private static readonly Pkcs12LoaderLimits AllowDuplicateAttributes;
+
+    static CertificateHelper()
+    {
+        AllowDuplicateAttributes = new Pkcs12LoaderLimits(Pkcs12LoaderLimits.Defaults);
+
+        var allowDuplicateAttributesProperty = AllowDuplicateAttributes.GetType().GetProperty(nameof(AllowDuplicateAttributes), BindingFlags.Instance | BindingFlags.NonPublic);
+        allowDuplicateAttributesProperty.SetValue(AllowDuplicateAttributes, true);
+    }
+#endif
+
     public static X509Certificate2 CreateCertificate(byte[] rawData)
     {
+        ValidateContentType(rawData, X509ContentType.Cert);
+
 #if FEATURE_X509CERTIFICATELOADER_SUPPORT
         var certificate = X509CertificateLoader.LoadCertificate(rawData);
 #else
@@ -23,6 +40,8 @@ internal static class CertificateHelper
 
     public static X509Certificate2 CreateCertificate(string fileName)
     {
+        ValidateContentType(fileName, X509ContentType.Cert);
+
 #if FEATURE_X509CERTIFICATELOADER_SUPPORT
         var certificate = X509CertificateLoader.LoadCertificateFromFile(fileName);
 #else
@@ -35,8 +54,10 @@ internal static class CertificateHelper
 
     public static X509Certificate2 CreateCertificate(byte[] rawData, string? password, X509KeyStorageFlags keyStorageFlags)
     {
+        ValidateContentType(rawData, X509ContentType.Pfx);
+
 #if FEATURE_X509CERTIFICATELOADER_SUPPORT
-        var certificate = X509CertificateLoader.LoadPkcs12(rawData, password, keyStorageFlags);
+        var certificate = X509CertificateLoader.LoadPkcs12(rawData, password, keyStorageFlags, AllowDuplicateAttributes);
 #else
         var certificate = new X509Certificate2(rawData, password, keyStorageFlags);
 #endif
@@ -47,14 +68,24 @@ internal static class CertificateHelper
 
     public static X509Certificate2 CreateCertificate(string path, string? password, X509KeyStorageFlags keyStorageFlags)
     {
-#if FEATURE_X509CERTIFICATELOADER_SUPPORT
-        var certificate = X509CertificateLoader.LoadPkcs12FromFile(path, password, keyStorageFlags);
-#else
-        var certificate = new X509Certificate2(path, password, keyStorageFlags);
-#endif
+        var certBytes = File.ReadAllBytes(path);
+        return CreateCertificate(certBytes, password, keyStorageFlags);
+    }
 
-        AssertCertificate(certificate);
-        return certificate;
+    [Conditional("DEBUG")]
+    private static void ValidateContentType(byte[] rawData, X509ContentType expectedContentType)
+    {
+        var contentType = X509Certificate2.GetCertContentType(rawData);
+        if (contentType != expectedContentType)
+            throw new InvalidOperationException($"Was expecting '{expectedContentType}' but got '{contentType}'.");
+    }
+
+    [Conditional("DEBUG")]
+    private static void ValidateContentType(string fileName, X509ContentType expectedContentType)
+    {
+        var contentType = X509Certificate2.GetCertContentType(fileName);
+        if (contentType != expectedContentType)
+            throw new InvalidOperationException($"Was expecting '{expectedContentType}' but got '{contentType}'.");
     }
 
     [Conditional("DEBUG")]

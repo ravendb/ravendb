@@ -1516,7 +1516,7 @@ namespace Raven.Server.ServerWide
                     if (cert.TryGet(nameof(CertificateReplacement.Certificate), out string base64Cert) == false)
                         throw new InvalidOperationException($"Invalid 'server/cert' value, expected to get '{nameof(CertificateReplacement.Certificate)}' property");
 
-                    var certificate = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(base64Cert));
+                    var certificate = CertificateLoaderUtil.CreateCertificateFromPfx(Convert.FromBase64String(base64Cert));
 
                     var now = Server.Time.GetUtcNow();
                     if (certificate.NotBefore.ToUniversalTime() > now)
@@ -1615,7 +1615,7 @@ namespace Raven.Server.ServerWide
                     // Save the received certificate
 
                     var bytesToSave = Convert.FromBase64String(certBase64);
-                    var newClusterCertificate = CertificateLoaderUtil.CreateCertificate(bytesToSave, flags: CertificateLoaderUtil.FlagsForExport);
+                    var newClusterCertificate = CertificateLoaderUtil.CreateCertificateFromPfx(bytesToSave, flags: CertificateLoaderUtil.FlagsForExport);
 
                     if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
                     {
