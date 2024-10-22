@@ -46,10 +46,10 @@ public class VectorOptions
     internal void Validate()
     {
         PortableExceptions.ThrowIf<InvalidOperationException>(DestinationEmbeddingType is EmbeddingType.Text, "Destination embedding type cannot be Text.");
-        PortableExceptions.ThrowIf<InvalidOperationException>(Dimensions is <= 0, "Vector cannot have a negative dimensions.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(Dimensions is <= 0, "Number of vector dimensions has to be positive.");
         PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Text && Dimensions is not null, "Dimensions are set internally by the embedder.");
-        PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Int8 && DestinationEmbeddingType is not EmbeddingType.Int8, "We cannot perform quantization on already quantized vector.");
-        PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Binary && DestinationEmbeddingType is not EmbeddingType.Binary, "We cannot perform quantization on already quantized vector.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Int8 && DestinationEmbeddingType is not EmbeddingType.Int8, "Quantization cannot be performed on already quantized vector.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Binary && DestinationEmbeddingType is not EmbeddingType.Binary, "Quantization cannot be performed on already quantized vector.");
         PortableExceptions.ThrowIf<InvalidOperationException>(IndexingStrategy is not (VectorIndexingStrategy.Exact or VectorIndexingStrategy.HNSW), $"Unknown indexing strategy. Expected {VectorIndexingStrategy.Exact} or {VectorIndexingStrategy.HNSW} but was {IndexingStrategy}.");
     }
     

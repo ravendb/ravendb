@@ -588,7 +588,7 @@ function boost(value, boost) {
 }
 
 function createVectorSearch(value) {
-    return { $vector: {$value: value} }
+    return { $vector: { $value: value } }
 }
 ";
 

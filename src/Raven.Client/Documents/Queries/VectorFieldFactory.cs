@@ -138,7 +138,7 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
         DestinationQuantizationType = targetEmbeddingQuantization;
         
         if (SourceQuantizationType is EmbeddingType.Int8 or EmbeddingType.Binary && DestinationQuantizationType != SourceQuantizationType)
-            throw new InvalidDataException("Cannot quantize already quantized embeddings");
+            throw new InvalidDataException("Cannot quantize already quantized embeddings.");
         
         if (DestinationQuantizationType == EmbeddingType.Text)
             throw new InvalidDataException("Cannot quantize the embedding to Text. This option is only for SourceQuantizationType.");
@@ -146,10 +146,11 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
         return this;
     }
 
-    public IVectorEmbeddingTextField TargetQuantization(EmbeddingType targetEmbeddingQuantization)
+    IVectorEmbeddingTextField IVectorEmbeddingTextField.TargetQuantization(EmbeddingType targetEmbeddingQuantization)
     {
         if (DestinationQuantizationType == EmbeddingType.Text)
             throw new InvalidDataException("Cannot quantize the embedding to Text. This option is only for SourceQuantizationType.");
+        
         DestinationQuantizationType = targetEmbeddingQuantization;
 
         return this;
