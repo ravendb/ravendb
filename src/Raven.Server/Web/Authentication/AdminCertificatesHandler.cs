@@ -572,7 +572,7 @@ namespace Raven.Server.Web.Authentication
                 {
                     // NotBefore will be null if the certificate was generated prior to adding the NotBefore property to class CertificateMetadata
                     // So we are manually extracting this info - See issue RavenDB-18519
-                    var tempCertificate = CertificateLoaderUtil.CreateCertificateFromPfx(Convert.FromBase64String(def.Certificate));
+                    var tempCertificate = CertificateLoaderUtil.CreateCertificateFromAny(Convert.FromBase64String(def.Certificate));
                     using (tempCertificate)
                     {
                         def.NotBefore = tempCertificate.NotBefore;
@@ -797,7 +797,7 @@ namespace Raven.Server.Web.Authentication
 
                             foreach (var cert in clusterNodes)
                             {
-                                var x509Certificate2 = CertificateLoaderUtil.CreateCertificateFromPfx(Convert.FromBase64String(cert.Certificate));
+                                var x509Certificate2 = CertificateLoaderUtil.CreateCertificateFromAny(Convert.FromBase64String(cert.Certificate));
 
                                 if (collection.Contains(x509Certificate2) == false)
                                     CertificateLoaderUtil.ImportPfx(collection, x509Certificate2.Export(X509ContentType.Cert));

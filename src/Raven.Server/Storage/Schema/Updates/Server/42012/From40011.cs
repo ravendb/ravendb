@@ -96,7 +96,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                         using (localCertificate)
                         {
                             var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
-                            def.PublicKeyPinningHash = CertificateLoaderUtil.CreateCertificateFromPfx(Convert.FromBase64String(def.Certificate)).GetPublicKeyPinningHash();
+                            def.PublicKeyPinningHash = CertificateLoaderUtil.CreateCertificateFromAny(Convert.FromBase64String(def.Certificate)).GetPublicKeyPinningHash();
 
                             using (var cert = context.ReadObject(def.ToJson(), "updated/certificate"))
                                 PutLocalState(step.WriteTx, localCertKey, cert);
@@ -112,7 +112,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                     using (cert.Value)
                     {
                         var def = JsonDeserializationServer.CertificateDefinition(cert.Value);
-                        def.PublicKeyPinningHash = CertificateLoaderUtil.CreateCertificateFromPfx(Convert.FromBase64String(def.Certificate)).GetPublicKeyPinningHash();
+                        def.PublicKeyPinningHash = CertificateLoaderUtil.CreateCertificateFromAny(Convert.FromBase64String(def.Certificate)).GetPublicKeyPinningHash();
 
                         using (Slice.From(step.WriteTx.Allocator, def.PublicKeyPinningHash, out Slice hashSlice))
                         using (Slice.From(step.WriteTx.Allocator, cert.ItemName, out Slice oldKeySlice)) // includes the 'certificates/' prefix

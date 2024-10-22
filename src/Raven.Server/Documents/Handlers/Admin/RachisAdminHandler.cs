@@ -416,7 +416,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         if (nodeInfo.Certificate == null)
                             throw new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because it has no certificate while trying to use HTTPS");
 
-                        certificate = CertificateLoaderUtil.CreateCertificateFromPfx(Convert.FromBase64String(nodeInfo.Certificate));
+                        certificate = CertificateLoaderUtil.CreateCertificateFromAny(Convert.FromBase64String(nodeInfo.Certificate));
 
                         var now = DateTime.UtcNow;
                         if (certificate.NotBefore.ToUniversalTime() > now)

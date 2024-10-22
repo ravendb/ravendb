@@ -1991,7 +1991,7 @@ namespace Raven.Server
             foreach (var certDef in certificatesWithSameHash.OrderByDescending(x => x.NotAfter))
             {
                 // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
-                using (var goodKnownCert = CertificateLoaderUtil.CreateCertificateFromPfx(Convert.FromBase64String(certDef.Certificate)))
+                using (var goodKnownCert = CertificateLoaderUtil.CreateCertificateFromAny(Convert.FromBase64String(certDef.Certificate)))
                 {
                     if (CertificateUtils.CertHasKnownIssuer(certificate, goodKnownCert, Configuration.Security))
                     {
