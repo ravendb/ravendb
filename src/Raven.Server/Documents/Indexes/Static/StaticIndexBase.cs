@@ -368,7 +368,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private static object VectorFromEmbedding(IndexField currentIndexingField, object value)
         {
             var vectorOptions = currentIndexingField.Vector;
-            PortableExceptions.ThrowIf<InvalidDataException>(value is DynamicNullObject or null, $"Cannot index data from a null value!");
+            PortableExceptions.ThrowIf<InvalidDataException>(value is DynamicNullObject or null, "Cannot index data from a null value.");
             
             if (value is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject)
                 return GenerateEmbeddingForBase64(value.ToString());
@@ -500,7 +500,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     string s => s,
                     DynamicNullObject => null,
                     null => null,
-                    _ => throw new NotSupportedException("Only strings are supported, but got: " + valueToProcess?.GetType().FullName)
+                    _ => throw new NotSupportedException("Only strings are supported, but got: " + valueToProcess.GetType().FullName)
                 };
 
                 if (str == null)

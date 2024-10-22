@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public sealed class CoraxIndexPersistence : IndexPersistenceBase
 {
-    private const bool DisableDictionaryTraining = false; // [DEBUG ONLY]: disable training.
+    private const bool DisableDictionaryTraining = true; // [DEBUG ONLY]: disable training.
     private readonly RavenLogger _logger;
     private readonly CoraxDocumentConverterBase _converter;
     public CoraxIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)

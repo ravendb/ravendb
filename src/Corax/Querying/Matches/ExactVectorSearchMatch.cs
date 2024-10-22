@@ -42,7 +42,7 @@ namespace Corax.Querying.Matches
                 VectorSimilarityType.I1 => &SimilarityI1,
                 VectorSimilarityType.I8 => &SimilarityI8,
                 VectorSimilarityType.Cosine => &SimilarityCosine,
-                _ => throw new ArgumentOutOfRangeException(nameof(similarityType), similarityType, null)
+                _ => throw new NotSupportedException($"Unsupported {nameof(similarityType)}: {similarityType}")
             };
             _searcher = searcher;
             _tx = tx;
@@ -51,8 +51,7 @@ namespace Corax.Querying.Matches
             _similarityType = similarityType;
             _vectorToSearch = vectorToSearch;
         }
-
-
+        
         public SkipSortingResult AttemptToSkipSorting()
         {
             return SkipSortingResult.SortingIsRequired;
@@ -123,14 +122,15 @@ namespace Corax.Querying.Matches
 
         private static float SimilarityI8(ref ExactVectorSearchMatch term, Span<byte> lhs, Span<byte> rhs)
         {
-            using var _ = term._searcher.Allocator.Allocate(2 * lhs.Length, out Span<Half> mem);
+            using var _ = term._searcher.Allocator.Allocate(2 * lhs.Length, out Span<float> mem);
+            
             var idX = 0;
             foreach (var v in MemoryMarshal.Cast<byte, sbyte>(lhs))
                 mem[idX++] = v;
             foreach (var v in MemoryMarshal.Cast<byte, sbyte>(rhs))
                 mem[idX++] = v;
             
-            return (float)TensorPrimitives.CosineSimilarity<Half>(mem.Slice(0, lhs.Length), mem.Slice(lhs.Length));
+            return TensorPrimitives.CosineSimilarity(mem.Slice(0, lhs.Length), mem.Slice(lhs.Length));
         }
         
         private static float SimilarityCosine(ref ExactVectorSearchMatch term, Span<byte> lhs, Span<byte> rhs)
@@ -186,7 +186,7 @@ namespace Corax.Querying.Matches
             return new QueryInspectionNode(nameof(ExactVectorSearchMatch),
                 parameters: new Dictionary<string, string>()
                 {
-                    {Corax.Constants.QueryInspectionNode.FieldName, fieldName.ToString()},
+                    {Constants.QueryInspectionNode.FieldName, fieldName.ToString()},
                     {nameof(VectorSimilarityType), _similarityType.ToString()},
                     {"minimumMatch", _minimumMatch.ToString()}
                 });

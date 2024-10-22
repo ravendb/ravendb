@@ -664,7 +664,7 @@ public static class CoraxQueryBuilder
                 EmbeddingType.Float32 => GetVector<float>(),
                 EmbeddingType.Int8 => GetVector<sbyte>(),
                 EmbeddingType.Binary => GetVector<byte>(),
-                _ => throw new ArgumentOutOfRangeException()
+                _ => throw new NotSupportedException($"Unsupported {nameof(vectorOptions.SourceEmbeddingType)}: {vectorOptions.SourceEmbeddingType}")
             };
             
             Memory<byte> GetVector<T>() where T : unmanaged, INumber<T>
@@ -677,7 +677,7 @@ public static class CoraxQueryBuilder
             }
         }
         
-        var minimumMatch = Client.Constants.VectorSearch.MinimumSimilarity;
+        var minimumMatch = RavenConstants.VectorSearch.MinimumSimilarity;
         if (me.Arguments.Count > 2)
         {
             (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[2]);
