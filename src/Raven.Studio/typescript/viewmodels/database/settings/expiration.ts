@@ -19,9 +19,14 @@ class expiration extends viewModelBase {
         }
     };
     
+    static readonly defaultItemsToProcess = 65536;
+    
     enabled = ko.observable<boolean>(false);
     specifyDeleteFrequency = ko.observable<boolean>();
     deleteFrequencyInSec = ko.observable<number>();
+    
+    limitMaxItemsToProcess = ko.observable<boolean>();
+    maxItemsToProcess = ko.observable<number>();
     
     expirationSampleFormatted: string;
 
@@ -43,10 +48,21 @@ class expiration extends viewModelBase {
         });
         
         this.enabled.subscribe(enabled => {
-            if (!enabled) {
+            if (enabled) {
+                this.limitMaxItemsToProcess(true);
+            } else {
                 this.specifyDeleteFrequency(false);
+                this.limitMaxItemsToProcess(false);
             }
         });
+        
+        this.limitMaxItemsToProcess.subscribe(hasLimit => {
+            if (hasLimit) {
+                this.maxItemsToProcess(expiration.defaultItemsToProcess);
+            } else {
+                this.maxItemsToProcess(null);
+            }
+        })
         
         this.expirationSampleFormatted = highlight(JSON.stringify(expiration.expirationSample, null, 4), languages.javascript, "js");
     }
@@ -69,7 +85,7 @@ class expiration extends viewModelBase {
 
         this.initValidation();
         
-        this.dirtyFlag = new ko.DirtyFlag([this.enabled, this.specifyDeleteFrequency, this.deleteFrequencyInSec]);
+        this.dirtyFlag = new ko.DirtyFlag([this.enabled, this.specifyDeleteFrequency, this.deleteFrequencyInSec, this.limitMaxItemsToProcess, this.maxItemsToProcess]);
         this.isSaveEnabled = ko.pureComputed<boolean>(() => {
             const dirty = this.dirtyFlag().isDirty();
             const saving = this.spinners.save();
@@ -84,9 +100,16 @@ class expiration extends viewModelBase {
             },
             digit: true
         });
+        this.maxItemsToProcess.extend({
+            required: {
+                onlyIf: () => this.limitMaxItemsToProcess()
+            },
+            digit: true
+        });
 
         this.validationGroup = ko.validatedObservable({
-            deleteFrequencyInSec: this.deleteFrequencyInSec
+            deleteFrequencyInSec: this.deleteFrequencyInSec,
+            maxItemsToProcess: this.maxItemsToProcess
         });
     }
 
@@ -103,6 +126,9 @@ class expiration extends viewModelBase {
             this.enabled(!data.Disabled);
             this.specifyDeleteFrequency(data.DeleteFrequencyInSec != null);
             this.deleteFrequencyInSec(data.DeleteFrequencyInSec);
+            
+            this.limitMaxItemsToProcess(data.MaxItemsToProcess != null);
+            this.maxItemsToProcess(data.MaxItemsToProcess);
 
             this.dirtyFlag().reset();
         } else {
@@ -114,13 +140,13 @@ class expiration extends viewModelBase {
     toDto() : Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration {
         return {
             Disabled: !this.enabled(),
-            DeleteFrequencyInSec: this.specifyDeleteFrequency() ? this.deleteFrequencyInSec() : null
+            DeleteFrequencyInSec: this.specifyDeleteFrequency() ? this.deleteFrequencyInSec() : null,
+            MaxItemsToProcess: this.limitMaxItemsToProcess() ? this.maxItemsToProcess() : null,
         };
     }
 
     saveChanges() {
         if (this.isValid(this.validationGroup)) {
-
             this.spinners.save(true);
 
             eventsCollector.default.reportEvent("expiration-configuration", "save");

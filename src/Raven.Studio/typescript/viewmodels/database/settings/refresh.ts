@@ -19,9 +19,14 @@ class refresh extends viewModelBase {
         }
     };
     
+    static readonly defaultItemsToProcess = 65536;
+    
     enabled = ko.observable<boolean>(false);
     specifyRefreshFrequency = ko.observable<boolean>();
     refreshFrequencyInSec = ko.observable<number>();
+
+    limitMaxItemsToProcess = ko.observable<boolean>();
+    maxItemsToProcess = ko.observable<number>();
     
     refreshSampleFormatted: string;
 
@@ -43,10 +48,21 @@ class refresh extends viewModelBase {
         });
         
         this.enabled.subscribe(enabled => {
-            if (!enabled) {
+            if (enabled) {
+                this.limitMaxItemsToProcess(true);
+            } else {
                 this.specifyRefreshFrequency(false);
+                this.limitMaxItemsToProcess(false);
             }
         });
+
+        this.limitMaxItemsToProcess.subscribe(hasLimit => {
+            if (hasLimit) {
+                this.maxItemsToProcess(refresh.defaultItemsToProcess);
+            } else {
+                this.maxItemsToProcess(null);
+            }
+        })
         
         this.refreshSampleFormatted = highlight(JSON.stringify(refresh.refreshSample, null, 4), languages.javascript, "js");
     }
@@ -69,7 +85,7 @@ class refresh extends viewModelBase {
 
         this.initValidation();
         
-        this.dirtyFlag = new ko.DirtyFlag([this.enabled, this.specifyRefreshFrequency, this.refreshFrequencyInSec]);
+        this.dirtyFlag = new ko.DirtyFlag([this.enabled, this.specifyRefreshFrequency, this.refreshFrequencyInSec, this.limitMaxItemsToProcess, this.maxItemsToProcess]);
         this.isSaveEnabled = ko.pureComputed<boolean>(() => {
             const dirty = this.dirtyFlag().isDirty();
             const saving = this.spinners.save();
@@ -84,9 +100,16 @@ class refresh extends viewModelBase {
             },
             digit: true
         });
+        this.maxItemsToProcess.extend({
+            required: {
+                onlyIf: () => this.limitMaxItemsToProcess()
+            },
+            digit: true
+        });
 
         this.validationGroup = ko.validatedObservable({
-            deleteFrequencyInSec: this.refreshFrequencyInSec
+            deleteFrequencyInSec: this.refreshFrequencyInSec,
+            maxItemsToProcess: this.maxItemsToProcess
         });
     }
 
@@ -104,6 +127,9 @@ class refresh extends viewModelBase {
             this.specifyRefreshFrequency(data.RefreshFrequencyInSec != null);
             this.refreshFrequencyInSec(data.RefreshFrequencyInSec);
 
+            this.limitMaxItemsToProcess(data.MaxItemsToProcess != null);
+            this.maxItemsToProcess(data.MaxItemsToProcess);
+
             this.dirtyFlag().reset();
         } else {
             this.enabled(false);
@@ -114,7 +140,8 @@ class refresh extends viewModelBase {
     toDto() : Raven.Client.Documents.Operations.Refresh.RefreshConfiguration {
         return {
             Disabled: !this.enabled(),
-            RefreshFrequencyInSec: this.specifyRefreshFrequency() ? this.refreshFrequencyInSec() : null
+            RefreshFrequencyInSec: this.specifyRefreshFrequency() ? this.refreshFrequencyInSec() : null,
+            MaxItemsToProcess: this.limitMaxItemsToProcess() ? this.maxItemsToProcess() : null,
         };
     }
 
