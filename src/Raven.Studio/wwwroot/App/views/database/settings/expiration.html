@@ -15,26 +15,49 @@
                                 Enable document expiration
                             </label>
                         </div>
-                        <div class="flex-horizontal">
-                            <div class="flex-start" >
-                                <div class="checkbox">
-                                    <input id="specifyDeleteFrequency" class="styled" type="checkbox"
-                                           data-bind="checked: specifyDeleteFrequency, enable: enabled, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
-                                    <label for="specifyDeleteFrequency">
-                                        Set delete frequency
-                                    </label>
+                        <div class="margin-left margin-left-lg">
+                            <div class="flex-horizontal margin-bottom margin-bottom-sm">
+                                <div class="flex-start" >
+                                    <div class="checkbox">
+                                        <input id="specifyDeleteFrequency" class="styled" type="checkbox"
+                                               data-bind="checked: specifyDeleteFrequency, enable: enabled, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
+                                        <label for="specifyDeleteFrequency">
+                                            Set delete frequency
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="flex-grow" data-bind="validationElement: deleteFrequencyInSec">
+                                    <div class="input-group">
+                                        <input class="form-control" type="number" min="0" placeholder="Default (60)"
+                                               data-bind="numericInput: deleteFrequencyInSec, enable: specifyDeleteFrequency, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }" />
+                                        <div class="input-group-addon">
+                                            seconds
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex-grow" data-bind="validationElement: deleteFrequencyInSec">
-                                <div class="input-group">
-                                    <input class="form-control" type="number" min="0" placeholder="Default (60)"
-                                           data-bind="numericInput: deleteFrequencyInSec, enable: specifyDeleteFrequency, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }" />
-                                    <div class="input-group-addon">
-                                        seconds
+                            <div class="flex-horizontal">
+                                <div class="flex-start" >
+                                    <div class="checkbox">
+                                        <input id="toggleLimitMaxItemsToProcess" class="styled" type="checkbox"
+                                               data-bind="checked: limitMaxItemsToProcess, enable: enabled, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
+                                        <label for="toggleLimitMaxItemsToProcess">
+                                            Set max number of documents to process in a single run
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="flex-grow" data-bind="validationElement: maxItemsToProcess">
+                                    <div class="input-group">
+                                        <input class="form-control" type="number" min="0" 
+                                               data-bind="numericInput: maxItemsToProcess, enable: limitMaxItemsToProcess, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }" />
+                                        <div class="input-group-addon">
+                                            items
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        
                     </div>
                 </div>
                 <div class="col-sm-5">
