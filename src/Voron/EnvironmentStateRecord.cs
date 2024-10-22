@@ -18,3 +18,8 @@ public record EnvironmentStateRecord(
     (JournalFile Current, long Last4KWritePosition) Journal,
     object ClientState,
     List<long> SparsePageRanges);
+
+internal sealed class EnvironmentStateRecordHolder
+{
+    public EnvironmentStateRecord EnvStateRecord;
+}
