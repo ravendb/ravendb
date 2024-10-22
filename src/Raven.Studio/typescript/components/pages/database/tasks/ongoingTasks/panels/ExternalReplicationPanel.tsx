@@ -1,4 +1,4 @@
-﻿import React from "react";
+﻿import React, { useState } from "react";
 import { OngoingTaskExternalReplicationInfo } from "components/models/tasks";
 import {
     RichPanel,
@@ -19,10 +19,15 @@ import {
 import { useAppUrls } from "hooks/useAppUrls";
 import { BaseOngoingTaskPanelProps, useTasksOperations } from "../../shared/shared";
 import genUtils from "common/generalUtils";
-import { Collapse, Input } from "reactstrap";
+import { Button, Collapse, Input, Table } from "reactstrap";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import changeVectorUtils from "common/changeVectorUtils";
+import { PopoverWithHover } from "components/common/PopoverWithHover";
+import { Icon } from "components/common/Icon";
+import copyToClipboard from "common/copyToClipboard";
+import { ReplicationTaskDistribution } from "components/pages/database/tasks/ongoingTasks/panels/ReplicationTaskDistribution";
 
 type ExternalReplicationPanelProps = BaseOngoingTaskPanelProps<OngoingTaskExternalReplicationInfo>;
 
@@ -35,6 +40,7 @@ function Details(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
     const { appUrl } = useAppUrls();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Raven", data.shared.connectionStringName);
+    const [valuePopover, setValuePopover] = useState<HTMLElement>();
 
     return (
         <RichPanelDetails>
@@ -66,7 +72,95 @@ function Details(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
                     {data.shared.topologyDiscoveryUrls.join(", ")}
                 </RichPanelDetailItem>
             )}
+            <PopoverWithHover target={valuePopover} placement="top">
+                <ChangeVectorDetails
+                    lastAcceptedChangeVectorFromDestination={data.shared.lastAcceptedChangeVectorFromDestination}
+                    sourceDatabaseChangeVector={data.shared.sourceDatabaseChangeVector}
+                />
+            </PopoverWithHover>
         </RichPanelDetails>
+    );
+}
+
+interface ChangeVectorDetailsProps {
+    sourceDatabaseChangeVector: string;
+    lastAcceptedChangeVectorFromDestination: string;
+}
+
+function ChangeVectorDetails(props: ChangeVectorDetailsProps) {
+    const { sourceDatabaseChangeVector, lastAcceptedChangeVectorFromDestination } = props;
+
+    const handleCopyToClipboard = (value: string) => {
+        copyToClipboard.copy(value, "Item has been copied to clipboard");
+    };
+
+    const sourceDatabaseChangeVectorFormatted = sourceDatabaseChangeVector
+        ? changeVectorUtils.formatChangeVector(sourceDatabaseChangeVector, true)
+        : null;
+    const lastAcceptedChangeVectorFromDestinationFormatted = lastAcceptedChangeVectorFromDestination
+        ? changeVectorUtils.formatChangeVector(lastAcceptedChangeVectorFromDestination, true)
+        : null;
+
+    return (
+        <div className="p-2">
+            <Table>
+                <tbody>
+                    {sourceDatabaseChangeVectorFormatted && (
+                        <tr>
+                            <td>Source database CV</td>
+                            <td>
+                                <div className="d-flex gap-1">
+                                    <div>
+                                        {sourceDatabaseChangeVectorFormatted.map((x) => x.shortFormat).join(", ")}
+                                    </div>
+                                    <Button
+                                        onClick={() =>
+                                            handleCopyToClipboard(
+                                                sourceDatabaseChangeVectorFormatted.map((x) => x.fullFormat).join(",")
+                                            )
+                                        }
+                                        color="primary"
+                                        size="sm"
+                                        title="Copy to clipboard"
+                                    >
+                                        <Icon icon="copy-to-clipboard" margin="m-0" />
+                                    </Button>
+                                </div>
+                            </td>
+                        </tr>
+                    )}
+
+                    {lastAcceptedChangeVectorFromDestinationFormatted && (
+                        <tr>
+                            <td>Last accepted CV (from destination)</td>
+                            <td>
+                                <div className="d-flex gap-1">
+                                    <div>
+                                        {lastAcceptedChangeVectorFromDestinationFormatted
+                                            .map((x) => x.shortFormat)
+                                            .join(", ")}
+                                    </div>
+                                    <Button
+                                        onClick={() =>
+                                            handleCopyToClipboard(
+                                                lastAcceptedChangeVectorFromDestinationFormatted
+                                                    .map((x) => x.fullFormat)
+                                                    .join(",")
+                                            )
+                                        }
+                                        color="primary"
+                                        size="sm"
+                                        title="Copy to clipboard"
+                                    >
+                                        <Icon icon="copy-to-clipboard" margin="m-0" />
+                                    </Button>
+                                </div>
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+            </Table>
+        </div>
     );
 }
 
