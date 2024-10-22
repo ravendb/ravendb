@@ -29,6 +29,26 @@
             </div>
         </div>
     </div>
+    <div class="property-container">
+        <h4>Avg Request Time</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                        <div class="nodes-item-header">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: avgRequestTimeFormatted"></span>
+                                <span class="supplementary-info">ms</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container avg-request-time-chart">
+            </div>
+        </div>
+    </div>
     <div class="property-container" data-bind="css: { 'property-collapse': !showWritesDetails() }">
         <h4>Writes/s</h4>
         <div class="property">
