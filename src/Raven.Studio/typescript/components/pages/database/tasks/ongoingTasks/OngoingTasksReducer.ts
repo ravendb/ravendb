@@ -173,6 +173,63 @@ function mapEtlProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeEtlPro
         transactionalId: taskProgress.TransactionalId,
     };
 }
+
+function mapReplicationProgress(taskProgress: ReplicationProcessProgress): OngoingTaskNodeReplicationProgressDetails {
+    // TODO: some to process are missing: NumberOfAttachmentTombstones, NumberOfRevisionTombstones, but available in total
+
+    const totalItems =
+        taskProgress.TotalNumberOfAttachments +
+        // TODO: ?? taskProgress.TotalNumberOfAttachmentTombstones +
+        taskProgress.TotalNumberOfCounterGroups +
+        taskProgress.TotalNumberOfDocuments +
+        taskProgress.TotalNumberOfDocumentTombstones +
+        taskProgress.TotalNumberOfRevisions +
+        //TODO ?? taskProgress.TotalNumberOfRevisionTombstones +
+        taskProgress.TotalNumberOfTimeSeriesDeletedRanges +
+        taskProgress.TotalNumberOfTimeSeriesSegments;
+
+    return {
+        completed: taskProgress.Completed,
+        global: {
+            processed:
+                totalItems -
+                taskProgress.NumberOfAttachmentsToProcess -
+                //TODO: ?? TotalNumberOfAttachmentTombstones
+                taskProgress.NumberOfCounterGroupsToProcess -
+                taskProgress.NumberOfDocumentsToProcess -
+                taskProgress.NumberOfDocumentTombstonesToProcess -
+                taskProgress.NumberOfRevisionsToProcess -
+                //TODO: ?? TotalNumberOfRevisionTombstones
+                taskProgress.NumberOfTimeSeriesDeletedRangesToProcess -
+                taskProgress.NumberOfTimeSeriesSegmentsToProcess,
+            total: totalItems,
+        },
+        documents: {
+            processed: taskProgress.TotalNumberOfDocuments - taskProgress.NumberOfDocumentsToProcess,
+            total: taskProgress.TotalNumberOfDocuments,
+        },
+        documentTombstones: {
+            processed: taskProgress.TotalNumberOfDocumentTombstones - taskProgress.NumberOfDocumentTombstonesToProcess,
+            total: taskProgress.TotalNumberOfDocumentTombstones,
+        },
+        counterGroups: {
+            processed: taskProgress.TotalNumberOfCounterGroups - taskProgress.NumberOfCounterGroupsToProcess,
+            total: taskProgress.TotalNumberOfCounterGroups,
+        },
+        //TODO: other types: attachments, attachment tombstones, revisions, revision tombstones, time series deleted ranges, time series
+    };
+
+    // TODO: some to process are missing: NumberOfAttachmentTombstones, NumberOfRevisionTombstones
+
+    /* TODO
+    AverageProcessedPerSecond: number;
+		DestinationChangeVector: string;
+		SourceChangeVector: string;
+		FromToString: string;
+		LastEtagSent: number;		
+     */
+}
+
 function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
     const taskType = task.TaskType;
 
@@ -621,7 +678,33 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                             x.TaskName === task.shared.taskName
                     );
                     (perLocationDraft as Draft<OngoingEtlTaskNodeInfo>).etlProgress = progressToApply
-                        ? progressToApply.ProcessesProgress.map(mapProgress)
+                        ? progressToApply.ProcessesProgress.map(mapEtlProgress)
+                        : null;
+                });
+            });
+        }
+
+        case "ReplicationProgressLoaded": {
+            const incomingProgress = action.progress;
+            const incomingLocation = action.location;
+
+            return produce(state, (draft) => {
+                draft.tasks.forEach((task) => {
+                    const perLocationDraft = task.nodesInfo.find((x) =>
+                        databaseLocationComparator(x.location, incomingLocation)
+                    );
+
+                    //TODO: handle types different then external replication!
+                    //TODO for hub we don't have unique anchor
+
+                    const progressToApply = incomingProgress.find(
+                        (x) =>
+                            (x.ReplicationType === "External" && x.TaskName === task.shared.taskName) ||
+                            (x.ReplicationType === "PullAsHub" && x.TaskName === task.shared.taskName) //TODO: for hub it isn't unique selector!
+                    );
+
+                    (perLocationDraft as Draft<OngoingReplicationProgressAwareTaskNodeInfo>).progress = progressToApply
+                        ? progressToApply.ProcessesProgress.map(mapReplicationProgress)
                         : null;
                 });
             });

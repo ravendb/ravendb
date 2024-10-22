@@ -162,6 +162,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string LastAcceptedChangeVectorFromDestination { get; set; }
         public string SourceDatabaseChangeVector { get; set; }
         public long LastSentEtag { get; set; }
+        //TODO: last etag
 
         public override DynamicJsonValue ToJson()
         {

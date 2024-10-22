@@ -42,6 +42,12 @@ function Details(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
     const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Raven", data.shared.connectionStringName);
     const [valuePopover, setValuePopover] = useState<HTMLElement>();
 
+    //TODO: show fromTosTring only in internal replication
+    //TODO expose Last Database ETag from db stats
+    //TODO: hide source/destination
+
+    //TODO: format tooltip contents
+
     return (
         <RichPanelDetails>
             {showDelayReplication && (
@@ -72,6 +78,10 @@ function Details(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
                     {data.shared.topologyDiscoveryUrls.join(", ")}
                 </RichPanelDetailItem>
             )}
+
+            <RichPanelDetailItem ref={setValuePopover} label="Last ETag (local/replication)">
+                TODO / {data.shared.lastSentEtag}
+            </RichPanelDetailItem>
             <PopoverWithHover target={valuePopover} placement="top">
                 <ChangeVectorDetails
                     lastAcceptedChangeVectorFromDestination={data.shared.lastAcceptedChangeVectorFromDestination}
