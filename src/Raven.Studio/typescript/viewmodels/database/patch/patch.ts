@@ -129,7 +129,7 @@ class patch extends shardViewModelBase {
     patchDebugActionsModifiedView = require("views/database/patch/patchDebugActionsModified.html");
     patchDebugActionsDeletedView = require("views/database/patch/patchDebugActionsDeleted.html");
 
-    staleIndexBehavior = ko.observable("patchStale"); 
+    staleIndexBehavior = ko.observable<"patchStale" | "timeoutDefined">("patchStale"); 
     staleTimeout = ko.observable<number>(60);
 
     maxOperationsPerSecond = ko.observable<number>();
@@ -426,20 +426,36 @@ class patch extends shardViewModelBase {
 
         const patchQuestion = `<div>Are you sure you want to apply this patch to matching documents?</div>`;
         
-        const warningMessage = `<li>
-                                 <small>Actual number of processed documents might be smaller if documents are filtered by the 'update' script</small>
-                             </li>`;
+        const warningMessage = 
+            `<li>
+                 <small>Actual number of processed documents might be smaller if documents are filtered by the 'update' script</small>
+             </li>`;
         
+        const timeoutMessage = this.staleIndexBehavior() === "timeoutDefined" ? `<li><small>
+                Timeout to wait for index to become non-stale: <strong class="margin-left margin-left-sm">${generalUtils.formatTimeSpan(this.staleTimeout() * 1000, true)}</strong>
+            </small></li>` : "";
+        const autoIndexCreation = this.disableAutoIndexCreation() ? "<li><small>Auto-Index won't be created</small></li>" : "";
+        const ignoreMaxSteps = this.ignoreMaxStepsForScript() ? "<li><small>Maximum number of steps for script will be ignored</small></li>" : "";
+        const operationsLimit = this.defineMaxOperationsPerSecond() ? `
+            <li>
+                <small>Number of operations limit: <strong class="margin-left margin-left-sm">${this.maxOperationsPerSecond().toLocaleString()}/s</strong></small>
+            </li>
+        ` : "";
+
         const patchMessage = matchingDocuments > -1 ?
-                             `<div class="margin-bottom margin-bottom-lg text-info bg-info padding padding-xs">
-                                 <ul class="margin-top-sm">
-                                     <li>
-                                         <small>Number of documents matching the Patch Query: <strong class="margin-left margin-left-sm">${matchingDocuments.toLocaleString()}</strong></small>
-                                     </li>
-                                     ${matchingDocuments > 0 ? warningMessage : ''}
-                                 </ul>
-                              </div>
-                              ${patchQuestion}` : `${patchQuestion}`;
+             `<div class="margin-bottom margin-bottom-sm margin-top margin-top-sm text-info bg-info padding">
+                 <ul class="no-margin">
+                     <li>
+                         <small>Number of documents matching the Patch Query: <strong class="margin-left margin-left-sm">${matchingDocuments.toLocaleString()}</strong></small>
+                     </li>
+                     ${matchingDocuments > 0 ? warningMessage : ''}
+                     ${timeoutMessage}
+                     ${autoIndexCreation}
+                     ${ignoreMaxSteps}
+                     ${operationsLimit}
+                 </ul>
+              </div>
+              ${patchQuestion}` : `${patchQuestion}`;
 
         this.confirmationMessage("Patch", patchMessage, {
             buttons: ["Cancel", "Patch all"],
