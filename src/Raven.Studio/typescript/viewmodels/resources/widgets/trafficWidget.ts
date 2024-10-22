@@ -16,6 +16,7 @@ class trafficWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard
     showDataWrittenDetails = ko.observable<boolean>(false);
     
     requestsChart: lineChart;
+    avgRequestTimeChart: lineChart;
     writesChart: lineChart;
     dataWrittenChart: lineChart;
     
@@ -54,6 +55,14 @@ class trafficWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard
             tooltipProvider: date => trafficWidget.tooltipContent(date),
             onMouseMove: date => this.onMouseMove(date)
         });
+
+        const avgRequestTimeContainer = this.container.querySelector(".avg-request-time-chart");
+        this.avgRequestTimeChart = new lineChart(avgRequestTimeContainer, {
+            grid: true,
+            fillData: true,
+            tooltipProvider: date => trafficWidget.tooltipContent(date),
+            onMouseMove: date => this.onMouseMove(date)
+        });
         
         const writesChartContainer = this.container.querySelector(".writes-chart");
         this.writesChart = new lineChart(writesChartContainer, {
@@ -71,12 +80,14 @@ class trafficWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard
             onMouseMove: date => this.onMouseMove(date)
         });
         
-        return [this.requestsChart, this.writesChart, this.dataWrittenChart];
+        return [this.requestsChart, this.avgRequestTimeChart, this.writesChart, this.dataWrittenChart];
     }
 
     protected extractDataForChart(chart: lineChart, data: Raven.Server.Dashboard.Cluster.Notifications.TrafficWatchPayload): number {
         if (chart === this.requestsChart) {
             return data.RequestsPerSecond;
+        } else if (chart === this.avgRequestTimeChart) {
+            return data.AverageRequestDuration;
         } else if (chart === this.writesChart) {
             return data.DocumentWritesPerSecond + data.AttachmentWritesPerSecond + data.CounterWritesPerSecond + data.TimeSeriesWritesPerSecond;
         } else if (chart === this.dataWrittenChart) {
