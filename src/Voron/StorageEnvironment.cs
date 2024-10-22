@@ -118,7 +118,7 @@ namespace Voron
 
         internal TestingStuff _forTestingPurposes;
         private EnvironmentStateRecord _currentStateRecord;
-        private readonly ConcurrentQueue<EnvironmentStateRecord> _transactionsToFlush = new();
+        private readonly ConcurrentQueue<EnvironmentStateRecordHolder> _transactionsToFlush = new();
 
         internal EnvironmentStateRecord CurrentStateRecord => _currentStateRecord;
 
@@ -1338,13 +1338,18 @@ namespace Voron
                     WrittenToJournalNumber = envStateRecord.WrittenToJournalNumber,
                     ClientStateType = envStateRecord.ClientState?.GetType().ToString()
                 },
-                TransactionsToFlush = _transactionsToFlush.ToList().Select(x => new InMemoryStorageState.EnvironmentStateRecordDetails
+                TransactionsToFlush = _transactionsToFlush.ToList().Select(x =>
                 {
-                    TransactionId = x.TransactionId,
-                    ScratchPagesTable = GetScratchTableSummary(x.ScratchPagesTable),
-                    NextPageNumber = x.NextPageNumber,
-                    WrittenToJournalNumber = x.WrittenToJournalNumber,
-                    ClientStateType = x.ClientState?.GetType().ToString()
+                    var record = x.EnvStateRecord;
+
+                    return new InMemoryStorageState.EnvironmentStateRecordDetails
+                    {
+                        TransactionId = record.TransactionId,
+                        ScratchPagesTable = GetScratchTableSummary(record.ScratchPagesTable),
+                        NextPageNumber = record.NextPageNumber,
+                        WrittenToJournalNumber = record.WrittenToJournalNumber,
+                        ClientStateType = record.ClientState?.GetType().ToString()
+                    };
                 }).ToList(),
                 FlushState = new InMemoryStorageState.FlushStateDetails
                 {
@@ -1661,12 +1666,12 @@ namespace Voron
 
             // we don't _have_ to make it using interlocked, but let's publish it immediately
             Interlocked.Exchange(ref _currentStateRecord, updatedState);
-            
+
             // We only want to flush to data pager transactions that have been flushed to the journal.
             // Transactions that _haven't_ been flushed are mostly book-keeping (updating scratch table, etc)
             if (tx.WrittenToJournalNumber >= 0)
             {
-                _transactionsToFlush.Enqueue(updatedState);
+                _transactionsToFlush.Enqueue(new EnvironmentStateRecordHolder { EnvStateRecord = updatedState });
             }
         }
 
@@ -1687,15 +1692,23 @@ namespace Voron
             while (true)
             {
                 if (_transactionsToFlush.TryPeek(out var maybe) == false ||
-                    maybe.TransactionId >= uptoTxIdExclusive)
+                    maybe.EnvStateRecord.TransactionId >= uptoTxIdExclusive)
                 {
                     if (found == false)
                         return null;
                     Debug.Assert(record is not null);
                     return new ApplyLogsToDataFileState(scratchBuffers, sparseRegions, record);
                 }
-                if (_transactionsToFlush.TryDequeue(out record) == false)
+
+                if (_transactionsToFlush.TryDequeue(out EnvironmentStateRecordHolder recordHolder) == false)
                     throw new InvalidOperationException("Failed to get transaction to flush after already peeked successfully");
+
+                record = recordHolder.EnvStateRecord;
+
+                // single thread is reading from this, so we can be sure that peek + take gets the same value
+                Debug.Assert(ReferenceEquals(record, maybe.EnvStateRecord));
+
+                recordHolder.EnvStateRecord = null; // this way we ensure that _transactionsToFlush won't hold reference in its internal slots preventing GC on EnvironmentStateRecord.ClientState object
 
                 if (record.SparsePageRanges != null)
                 {
@@ -1708,8 +1721,6 @@ namespace Voron
                     scratchBuffers.Add(pageFromScratch);
                 }
 
-                // single thread is reading from this, so we can be sure that peek + take gets the same value
-                Debug.Assert(ReferenceEquals(record, maybe));
                 found = true;
             }
         }
