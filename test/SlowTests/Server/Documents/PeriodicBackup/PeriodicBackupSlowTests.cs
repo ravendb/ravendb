@@ -2942,7 +2942,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         // Performing backup Delay to the time:
         [InlineData(1)] // until the next scheduled backup time.
         [InlineData(5)] // after the next scheduled backup.
-        [Theory, Trait("Category", "Smuggler")]
+        [NightlyBuildTheory, Trait("Category", "Smuggler")]
         public async Task ShouldProperlyPlaceOriginalBackupTimePropertyWithDelay(int delayDurationInMinutes)
         {
             const string fullBackupFrequency = "*/2 * * * *";

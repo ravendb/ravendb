@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -372,7 +373,7 @@ namespace SlowTests.Issues
                 var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
 
-                Assert.True(documentDatabase.NotificationCenter.Exists(_notificationId));
+                Assert.True(await WaitForValueAsync(() => documentDatabase.NotificationCenter.Exists(_notificationId), expectedVal: true));
 
                 var notificationDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(_notificationId);
                 Assert.Equal(1, notificationDetails.Count);
@@ -391,8 +392,13 @@ namespace SlowTests.Issues
                 var putResult = store.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
                 Assert.NotNull(putResult.RaftCommandIndex);
 
+                configuration.Disabled = true;
+
                 var addResult = store.Maintenance.Send(new AddEtlOperation<T>(configuration));
                 await store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(addResult.TaskId, type, disable: true));
+
+                var result = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(addResult.TaskId, type));
+                Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
 
                 return addResult.TaskId;
             }

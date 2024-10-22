@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (context.OpenReadTransaction())
             {
                 var entry = Server.ServerStore.Engine.GetLogEntries(context, fromIndex, take: 1, detailed: true).SingleOrDefault();
-                if (entry == default)
+                if (entry == default || entry.Index != fromIndex)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return;
