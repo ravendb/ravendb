@@ -9,6 +9,8 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
 
         public int RequestsPerSecond { get; set; }
 
+        public double AverageRequestDuration { get; set; }
+
         public int DocumentWritesPerSecond { get; set; }
 
         public int AttachmentWritesPerSecond { get; set; }
@@ -32,6 +34,8 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
             var result = new TrafficWatchPayload();
             
             result.RequestsPerSecond = RequestsPerSecond;
+            result.AverageRequestDuration = AverageRequestDuration;
+
             foreach (TrafficWatchItem item in TrafficPerDatabase)
             {
                 result.Add(item);
@@ -60,6 +64,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
             var json = base.ToJson();
 
             json[nameof(RequestsPerSecond)] = RequestsPerSecond;
+            json[nameof(AverageRequestDuration)] = AverageRequestDuration;
             json[nameof(DocumentWritesPerSecond)] = DocumentWritesPerSecond;
             json[nameof(AttachmentWritesPerSecond)] = AttachmentWritesPerSecond;
             json[nameof(CounterWritesPerSecond)] = CounterWritesPerSecond;

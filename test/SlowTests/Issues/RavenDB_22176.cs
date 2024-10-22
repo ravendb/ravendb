@@ -42,31 +42,30 @@ public sealed class RavenDB_22176 : RavenDB_17068_Base
             session.SaveChanges();
             var index = new DummyIndex();
             await index.ExecuteAsync(store);
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             //filter nonexisting one
-            var notifications = store.Maintenance.Send(new GetNotifications(alertType: NotificationTypeParameter.PerformanceHint, testAsNumber: typeAsNumber));
+            var notifications = await store.Maintenance.SendAsync(new GetNotificationsOperation(alertType: NotificationTypeParameter.PerformanceHint, testAsNumber: typeAsNumber));
             Assert.Empty(notifications.Results);
-            
+
             //Notification should be raised soon, let's get it as json from get
-            notifications = store.Maintenance.Send(new GetNotifications(alertType: NotificationTypeParameter.Alert, testAsNumber: typeAsNumber));
-            Assert.Equal(1, notifications.TotalResults);
+            Assert.Equal(1, await WaitForValueAsync(async () => (notifications = await store.Maintenance.SendAsync(new GetNotificationsOperation(alertType: NotificationTypeParameter.Alert, testAsNumber: typeAsNumber))).TotalResults, expectedVal: 1));
 
             //paging test:
             {
-                var notificationsTemp = store.Maintenance.Send(new GetNotifications(pageSize: 0, alertType: NotificationTypeParameter.Alert, testAsNumber: typeAsNumber));
+                var notificationsTemp = await store.Maintenance.SendAsync(new GetNotificationsOperation(pageSize: 0, alertType: NotificationTypeParameter.Alert, testAsNumber: typeAsNumber));
                 Assert.Equal(1, notificationsTemp.TotalResults);
                 Assert.Empty(notificationsTemp.Results);
-                
-                notificationsTemp = store.Maintenance.Send(new GetNotifications(pageSize: 1, pageStart: 1, alertType: NotificationTypeParameter.Alert, testAsNumber: typeAsNumber));
+
+                notificationsTemp = await store.Maintenance.SendAsync(new GetNotificationsOperation(pageSize: 1, pageStart: 1, alertType: NotificationTypeParameter.Alert, testAsNumber: typeAsNumber));
                 Assert.Equal(1, notificationsTemp.TotalResults);
                 Assert.Empty(notificationsTemp.Results);
-                
-                notificationsTemp = store.Maintenance.Send(new GetNotifications(pageSize: 1, pageStart: 0, alertType: NotificationTypeParameter.Alert, testAsNumber: typeAsNumber));
+
+                notificationsTemp = await store.Maintenance.SendAsync(new GetNotificationsOperation(pageSize: 1, pageStart: 0, alertType: NotificationTypeParameter.Alert, testAsNumber: typeAsNumber));
                 Assert.Equal(1, notificationsTemp.TotalResults);
                 Assert.NotEmpty(notificationsTemp.Results);
             }
-            
+
             Tuple<bool, DynamicJsonValue> alertRaised;
             do
             {
@@ -77,7 +76,7 @@ public sealed class RavenDB_22176 : RavenDB_17068_Base
             //Should be dequeued
             Assert_CheckIfMismatchesAreRemovedOnMatchingLoad(details);
             db.NotificationCenter.Dismiss("AlertRaised/MismatchedReferenceLoad/Indexing");
-            notifications = store.Maintenance.Send(new GetNotifications(alertType: NotificationTypeParameter.Alert, testAsNumber: typeAsNumber));
+            notifications = await store.Maintenance.SendAsync(new GetNotificationsOperation(alertType: NotificationTypeParameter.Alert, testAsNumber: typeAsNumber));
             Assert.Equal(0, notifications.Results.Count);
         }
     }
@@ -109,55 +108,55 @@ public sealed class RavenDB_22176 : RavenDB_17068_Base
                 db.NotificationCenter.Add(notificationEndpointDto);
             }
 
-            var result = store.Maintenance.Send(new GetNotifications(pageSize: 10, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
+            var result = store.Maintenance.Send(new GetNotificationsOperation(pageSize: 10, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
             NotificationEndpointDto copyForAssertion = result;
             Assert.Equal(5, result.Results.Count(x => x.Type == notificationType));
-            
-            result = store.Maintenance.Send(new GetNotifications(pageSize: 0, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
+
+            result = store.Maintenance.Send(new GetNotificationsOperation(pageSize: 0, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
             Assert.Equal(5, result.TotalResults);
             Assert.Empty(result.Results);
 
             //paging
             {
-                result = store.Maintenance.Send(new GetNotifications(pageStart: 0, pageSize: 2, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
+                result = store.Maintenance.Send(new GetNotificationsOperation(pageStart: 0, pageSize: 2, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
                 Assert.Equal(5, result.TotalResults);
                 Assert.Equal(2, result.Results.Count);
                 Assert.Equal(copyForAssertion.Results[0].Title, result.Results[0].Title);
                 Assert.Equal(copyForAssertion.Results[1].Title, result.Results[1].Title);
 
-                result = store.Maintenance.Send(new GetNotifications(pageStart: 2, pageSize: 2, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
+                result = store.Maintenance.Send(new GetNotificationsOperation(pageStart: 2, pageSize: 2, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
                 Assert.Equal(5, result.TotalResults);
                 Assert.Equal(2, result.Results.Count);
                 Assert.Equal(copyForAssertion.Results[2].Title, result.Results[0].Title);
                 Assert.Equal(copyForAssertion.Results[3].Title, result.Results[1].Title);
-                
-                
-                result = store.Maintenance.Send(new GetNotifications(pageStart: 4, pageSize: 2, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
+
+
+                result = store.Maintenance.Send(new GetNotificationsOperation(pageStart: 4, pageSize: 2, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
                 Assert.Equal(5, result.TotalResults);
                 Assert.Equal(1, result.Results.Count);
                 Assert.Equal(copyForAssertion.Results[4].Title, result.Results[0].Title);
-                
-                
-                result = store.Maintenance.Send(new GetNotifications(pageStart: 6, pageSize: 2, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
+
+
+                result = store.Maintenance.Send(new GetNotificationsOperation(pageStart: 6, pageSize: 2, alertType: notificationTypeParameter, testAsNumber: flagAsInt));
                 Assert.Equal(5, result.TotalResults);
                 Assert.Equal(0, result.Results.Count);
             }
-            
-            result = store.Maintenance.Send(new GetNotifications(pageStart: 0, pageSize: 12, testAsNumber: flagAsInt));
+
+            result = store.Maintenance.Send(new GetNotificationsOperation(pageStart: 0, pageSize: 12, testAsNumber: flagAsInt));
             Assert.Equal(10, result.TotalResults);
             Assert.Equal(10, result.Results.Count);
-            
-            result = store.Maintenance.Send(new GetNotifications(pageSize: 0, testAsNumber: flagAsInt));
+
+            result = store.Maintenance.Send(new GetNotificationsOperation(pageSize: 0, testAsNumber: flagAsInt));
             Assert.Equal(10, result.TotalResults);
             Assert.Equal(0, result.Results.Count);
-            
+
             //Flags
-            result = store.Maintenance.Send(new GetNotifications(pageStart: 0, pageSize: 12, alertType: NotificationTypeParameter.Alert | NotificationTypeParameter.PerformanceHint, testAsNumber: flagAsInt));
+            result = store.Maintenance.Send(new GetNotificationsOperation(pageStart: 0, pageSize: 12, alertType: NotificationTypeParameter.Alert | NotificationTypeParameter.PerformanceHint, testAsNumber: flagAsInt));
             Assert.Equal(10, result.TotalResults);
             Assert.Equal(10, result.Results.Count);
-            
+
             //Exception
-            var ex = Assert.ThrowsAny<Exception>(() => store.Maintenance.Send(new GetNotifications(alertType: NotificationTypeParameter.NonExistingFlag, testAsNumber: flagAsInt)));
+            var ex = Assert.ThrowsAny<Exception>(() => store.Maintenance.Send(new GetNotificationsOperation(alertType: NotificationTypeParameter.NonExistingFlag, testAsNumber: flagAsInt)));
             Assert.Contains("Accepted values for type parameter are: [Alert, PerformanceHint]", ex.Message);
             Assert.Contains("BadRequestException", ex.Message);
         }
@@ -166,7 +165,7 @@ public sealed class RavenDB_22176 : RavenDB_17068_Base
     public RavenDB_22176(ITestOutputHelper output) : base(output)
     {
     }
-    
+
     // ReSharper disable once ClassNeverInstantiated.Local
     private class SerializableNotification : Notification
     {
@@ -176,10 +175,11 @@ public sealed class RavenDB_22176 : RavenDB_17068_Base
 
         public override string Id { get; }
     }
+
     private class NotificationEndpointDto
     {
         public int TotalResults { get; set; }
-        public List<SerializableNotification> Results { get; set; } 
+        public List<SerializableNotification> Results { get; set; }
     }
 
     [Flags]
@@ -190,15 +190,16 @@ public sealed class RavenDB_22176 : RavenDB_17068_Base
         PerformanceHint = 1 << 1,
         NonExistingFlag = 1 << 2,
     }
-    private class GetNotifications : IMaintenanceOperation<NotificationEndpointDto>
+
+    private class GetNotificationsOperation : IMaintenanceOperation<NotificationEndpointDto>
     {
         private readonly NotificationTypeParameter _alertType;
         private readonly bool _testAsNumber;
         private readonly bool _includeDefaultFilter;
         private readonly int? _pageStart;
         private readonly int? _pageSize;
-        
-        public GetNotifications(int? pageStart = null, int? pageSize = null, NotificationTypeParameter alertType = NotificationTypeParameter.All, bool testAsNumber = false, bool includeDefaultFilter = false)
+
+        public GetNotificationsOperation(int? pageStart = null, int? pageSize = null, NotificationTypeParameter alertType = NotificationTypeParameter.All, bool testAsNumber = false, bool includeDefaultFilter = false)
         {
             _pageStart = pageStart;
             _pageSize = pageSize;
@@ -236,19 +237,19 @@ public sealed class RavenDB_22176 : RavenDB_17068_Base
 
                 if (_alertType != NotificationTypeParameter.All || _includeDefaultFilter)
                 {
-                    var type = _typeAsNumber 
-                        ? ((short)_alertType).ToString() 
+                    var type = _typeAsNumber
+                        ? ((short)_alertType).ToString()
                         : UrlEncode(_alertType.ToString());
-                    
+
                     url += $"&type={type}";
                 }
 
                 if (_pageSize != null)
                     url += $"&pageSize={_pageSize.Value}";
-                
+
                 if (_pageStart != null)
                     url += $"&pageStart={_pageStart.Value}";
-                
+
                 return new HttpRequestMessage { Method = HttpMethod.Get };
             }
 
