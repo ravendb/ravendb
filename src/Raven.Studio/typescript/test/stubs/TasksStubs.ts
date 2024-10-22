@@ -47,7 +47,7 @@ export class TasksStubs {
         };
     }
 
-    static getTasksProgress(): resultsDto<EtlTaskProgress> {
+    static getEtlTasksProgress(): resultsDto<EtlTaskProgress> {
         return {
             Results: [
                 TasksStubs.getRavenEtlProgress(),
@@ -213,6 +213,10 @@ export class TasksStubs {
             TopologyDiscoveryUrls: ["http://target-raven:8080"],
             DestinationDatabase: "r-ext",
             PinToMentorNode: false,
+            FromToString: "from src at A to [dst @ http://localhost:8080]",
+            LastAcceptedChangeVectorFromDestination: "A:1-1DY5O5W9RUCDrntDONmNmw",
+            LastSentEtag: 1,
+            SourceDatabaseChangeVector: "A:1-1DY5O5W9RUCDrntDONmNmw",
         };
     }
 

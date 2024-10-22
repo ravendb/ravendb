@@ -10,19 +10,22 @@ import {
     OngoingTaskKafkaSinkSharedInfo,
     OngoingTaskNodeInfo,
     OngoingTaskNodeInfoDetails,
-    OngoingTaskNodeProgressDetails,
+    OngoingTaskNodeEtlProgressDetails,
     OngoingTaskOlapEtlSharedInfo,
     OngoingTaskPeriodicBackupNodeInfoDetails,
     OngoingTaskPeriodicBackupSharedInfo,
     OngoingTaskRabbitMqEtlSharedInfo,
     OngoingTaskRabbitMqSinkSharedInfo,
     OngoingTaskRavenEtlSharedInfo,
+    OngoingTaskReplicationHubInfo,
     OngoingTaskReplicationHubSharedInfo,
     OngoingTaskReplicationSinkSharedInfo,
     OngoingTaskSharedInfo,
     OngoingTaskSqlEtlSharedInfo,
     OngoingTaskSubscriptionInfo,
     OngoingTaskSubscriptionSharedInfo,
+    OngoingReplicationProgressAwareTaskNodeInfo,
+    OngoingTaskNodeReplicationProgressDetails,
 } from "components/models/tasks";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
@@ -46,6 +49,8 @@ import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.Ongoin
 import SubscriptionConnectionsDetails = Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails;
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { DatabaseSharedInfo } from "components/models/databases";
+import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
+import ReplicationProcessProgress = Raven.Server.Documents.Replication.Stats.ReplicationProcessProgress;
 
 interface ActionTasksLoaded {
     location: databaseLocationSpecifier;
@@ -66,10 +71,16 @@ interface ActionSubscriptionConnectionDetailsLoaded {
     details?: SubscriptionConnectionsDetails;
 }
 
-interface ActionProgressLoaded {
+interface ActionEtlProgressLoaded {
     location: databaseLocationSpecifier;
     progress: EtlTaskProgress[];
-    type: "ProgressLoaded";
+    type: "EtlProgressLoaded";
+}
+
+interface ActionReplicationProgressLoaded {
+    location: databaseLocationSpecifier;
+    progress: ReplicationTaskProgress[];
+    type: "ReplicationProgressLoaded";
 }
 
 interface ActionTasksLoadError {
@@ -94,14 +105,41 @@ export type SubscriptionConnectionsDetailsWithId = SubscriptionConnectionsDetail
 
 type OngoingTaskReducerAction =
     | ActionTasksLoaded
-    | ActionProgressLoaded
+    | ActionEtlProgressLoaded
+    | ActionReplicationProgressLoaded
     | ActionTasksLoadError
     | ActionTaskLoaded
     | ActionSubscriptionConnectionDetailsLoaded;
 
 const serverWidePrefix = "Server Wide";
 
-function mapProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeProgressDetails {
+// for external replication hubs we might have multiple tasks with same taskId
+// thus we need better comparator for those items
+const uniqueIdExtractor = (task: OngoingTaskInfo) => {
+    if (task.shared.taskType !== "PullReplicationAsHub") {
+        return task.shared.taskId;
+    }
+    const hubTask = task as OngoingTaskReplicationHubInfo;
+    return (
+        hubTask.shared.taskId +
+        "_" +
+        (hubTask.shared.destinationDatabase ?? "??") +
+        "_" +
+        (hubTask.shared.destinationUrl ?? "??")
+    );
+};
+
+const uniqueIdExtractorRaw = (task: OngoingTask) => {
+    if (task.TaskType !== "PullReplicationAsHub") {
+        return task.TaskId;
+    }
+
+    const hubTask = task as OngoingTaskPullReplicationAsHub;
+
+    return hubTask.TaskId + "_" + (hubTask.DestinationDatabase ?? "??") + "_" + (hubTask.DestinationUrl ?? "??");
+};
+
+function mapEtlProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeEtlProgressDetails {
     const totalItems =
         taskProgress.TotalNumberOfDocuments +
         taskProgress.TotalNumberOfDocumentTombstones +
@@ -135,6 +173,63 @@ function mapProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeProgressD
         transactionalId: taskProgress.TransactionalId,
     };
 }
+
+function mapReplicationProgress(taskProgress: ReplicationProcessProgress): OngoingTaskNodeReplicationProgressDetails {
+    // TODO: some to process are missing: NumberOfAttachmentTombstones, NumberOfRevisionTombstones, but available in total
+
+    const totalItems =
+        taskProgress.TotalNumberOfAttachments +
+        // TODO: ?? taskProgress.TotalNumberOfAttachmentTombstones +
+        taskProgress.TotalNumberOfCounterGroups +
+        taskProgress.TotalNumberOfDocuments +
+        taskProgress.TotalNumberOfDocumentTombstones +
+        taskProgress.TotalNumberOfRevisions +
+        //TODO ?? taskProgress.TotalNumberOfRevisionTombstones +
+        taskProgress.TotalNumberOfTimeSeriesDeletedRanges +
+        taskProgress.TotalNumberOfTimeSeriesSegments;
+
+    return {
+        completed: taskProgress.Completed,
+        global: {
+            processed:
+                totalItems -
+                taskProgress.NumberOfAttachmentsToProcess -
+                //TODO: ?? TotalNumberOfAttachmentTombstones
+                taskProgress.NumberOfCounterGroupsToProcess -
+                taskProgress.NumberOfDocumentsToProcess -
+                taskProgress.NumberOfDocumentTombstonesToProcess -
+                taskProgress.NumberOfRevisionsToProcess -
+                //TODO: ?? TotalNumberOfRevisionTombstones
+                taskProgress.NumberOfTimeSeriesDeletedRangesToProcess -
+                taskProgress.NumberOfTimeSeriesSegmentsToProcess,
+            total: totalItems,
+        },
+        documents: {
+            processed: taskProgress.TotalNumberOfDocuments - taskProgress.NumberOfDocumentsToProcess,
+            total: taskProgress.TotalNumberOfDocuments,
+        },
+        documentTombstones: {
+            processed: taskProgress.TotalNumberOfDocumentTombstones - taskProgress.NumberOfDocumentTombstonesToProcess,
+            total: taskProgress.TotalNumberOfDocumentTombstones,
+        },
+        counterGroups: {
+            processed: taskProgress.TotalNumberOfCounterGroups - taskProgress.NumberOfCounterGroupsToProcess,
+            total: taskProgress.TotalNumberOfCounterGroups,
+        },
+        //TODO: other types: attachments, attachment tombstones, revisions, revision tombstones, time series deleted ranges, time series
+    };
+
+    // TODO: some to process are missing: NumberOfAttachmentTombstones, NumberOfRevisionTombstones
+
+    /* TODO
+    AverageProcessedPerSecond: number;
+		DestinationChangeVector: string;
+		SourceChangeVector: string;
+		FromToString: string;
+		LastEtagSent: number;		
+     */
+}
+
 function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
     const taskType = task.TaskType;
 
@@ -161,6 +256,10 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 delayReplicationTime: incoming.DelayReplicationFor
                     ? genUtils.timeSpanToSeconds(incoming.DelayReplicationFor)
                     : null,
+                fromToString: incoming.FromToString,
+                lastAcceptedChangeVectorFromDestination: incoming.LastAcceptedChangeVectorFromDestination,
+                lastSentEtag: incoming.LastSentEtag,
+                sourceDatabaseChangeVector: incoming.SourceDatabaseChangeVector,
             };
             return result;
         }
@@ -375,7 +474,7 @@ const mapTask = (incomingTask: OngoingTask, incomingLocation: databaseLocationSp
 
     const existingTasksSource = incomingTask.TaskType === "Subscription" ? state.subscriptions : state.tasks;
     const existingTask = existingTasksSource.find(
-        (x) => x.shared.taskType === incomingTaskType && x.shared.taskId === incomingTask.TaskId
+        (x) => x.shared.taskType === incomingTaskType && uniqueIdExtractor(x) === uniqueIdExtractorRaw(incomingTask)
     );
 
     const nodesInfo = existingTask
@@ -454,7 +553,9 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                     const tasksWithoutSubscriptions = newTasks.filter((x) => x.shared.taskType !== "Subscription");
 
                     tasksWithoutSubscriptions.forEach((task) => {
-                        const draftTaskIdx = draft.tasks.findIndex((x) => x.shared.taskId === task.shared.taskId);
+                        const draftTaskIdx = draft.tasks.findIndex(
+                            (x) => uniqueIdExtractor(x) === uniqueIdExtractor(task)
+                        );
 
                         if (draftTaskIdx !== -1) {
                             const draftNodeInfoIdx = draft.tasks[draftTaskIdx].nodesInfo.findIndex((x) =>
@@ -481,7 +582,9 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                             task.nodesInfo.find((x) => databaseLocationComparator(x.location, incomingLocation))
                                 .status !== "idle"
                         ) {
-                            const draftTaskIdx = draft.tasks.findIndex((x) => x.shared.taskId === task.shared.taskId);
+                            const draftTaskIdx = draft.tasks.findIndex(
+                                (x) => uniqueIdExtractor(x) === uniqueIdExtractor(task)
+                            );
                             draft.tasks.splice(draftTaskIdx, 1);
                         }
                     });
@@ -559,7 +662,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
             });
         }
 
-        case "ProgressLoaded": {
+        case "EtlProgressLoaded": {
             const incomingProgress = action.progress;
             const incomingLocation = action.location;
 
@@ -575,7 +678,33 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                             x.TaskName === task.shared.taskName
                     );
                     (perLocationDraft as Draft<OngoingEtlTaskNodeInfo>).etlProgress = progressToApply
-                        ? progressToApply.ProcessesProgress.map(mapProgress)
+                        ? progressToApply.ProcessesProgress.map(mapEtlProgress)
+                        : null;
+                });
+            });
+        }
+
+        case "ReplicationProgressLoaded": {
+            const incomingProgress = action.progress;
+            const incomingLocation = action.location;
+
+            return produce(state, (draft) => {
+                draft.tasks.forEach((task) => {
+                    const perLocationDraft = task.nodesInfo.find((x) =>
+                        databaseLocationComparator(x.location, incomingLocation)
+                    );
+
+                    //TODO: handle types different then external replication!
+                    //TODO for hub we don't have unique anchor
+
+                    const progressToApply = incomingProgress.find(
+                        (x) =>
+                            (x.ReplicationType === "External" && x.TaskName === task.shared.taskName) ||
+                            (x.ReplicationType === "PullAsHub" && x.TaskName === task.shared.taskName) //TODO: for hub it isn't unique selector!
+                    );
+
+                    (perLocationDraft as Draft<OngoingReplicationProgressAwareTaskNodeInfo>).progress = progressToApply
+                        ? progressToApply.ProcessesProgress.map(mapReplicationProgress)
                         : null;
                 });
             });

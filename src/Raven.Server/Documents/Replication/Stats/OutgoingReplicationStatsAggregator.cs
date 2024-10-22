@@ -228,6 +228,18 @@ namespace Raven.Server.Documents.Replication.Stats
         {
             _stats.AddError(exception);
         }
+
+        public long GetTotalOutputItemsCount()
+        {
+            return _stats.DocumentOutputCount + 
+                   _stats.DocumentTombstoneOutputCount +
+                   _stats.AttachmentOutputCount + 
+                   _stats.AttachmentTombstoneOutputCount +
+                   _stats.CounterOutputCount + 
+                   _stats.RevisionOutputCount +
+                   _stats.TimeSeriesOutputCount + 
+                   _stats.TimeSeriesDeletedRangeOutputCount;
+        }
     }
 
     public sealed class OutgoingReplicationRunStats : ReplicationRunStatsBase

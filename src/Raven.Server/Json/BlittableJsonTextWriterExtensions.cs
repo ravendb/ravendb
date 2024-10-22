@@ -26,6 +26,7 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Documents.Sharding.Queries.Suggestions;
@@ -268,6 +269,122 @@ namespace Raven.Server.Json
 
                 w.WriteEndObject();
             });
+            writer.WriteEndObject();
+        }
+
+        public static void WriteReplicationTaskProgress<TWriter>(this TWriter writer, JsonOperationContext context, IEnumerable<ReplicationTaskProgress> progress)
+        where TWriter : IBlittableJsonTextWriter
+        {
+            writer.WriteStartObject();
+            writer.WriteArray(context, "Results", progress, (w, c, taskStats) =>
+            {
+                w.WriteStartObject();
+
+                w.WritePropertyName(nameof(taskStats.TaskName));
+                w.WriteString(taskStats.TaskName);
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(taskStats.ReplicationType));
+                w.WriteString(taskStats.ReplicationType.ToString());
+                w.WriteComma();
+
+                writer.WriteArray(context, nameof(taskStats.ProcessesProgress), taskStats.ProcessesProgress, (w, c, processProgress) =>
+                {
+                    w.WriteStartObject();
+
+                    w.WritePropertyName(nameof(processProgress.FromToString));
+                    w.WriteString(processProgress.FromToString);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.Completed));
+                    w.WriteBool(processProgress.Completed);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.AverageProcessedPerSecond));
+                    w.WriteDouble(processProgress.AverageProcessedPerSecond);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.LastEtagSent));
+                    w.WriteInteger(processProgress.LastEtagSent);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.DestinationChangeVector));
+                    w.WriteString(processProgress.DestinationChangeVector);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.SourceChangeVector));
+                    w.WriteString(processProgress.SourceChangeVector);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.NumberOfDocumentsToProcess));
+                    w.WriteInteger(processProgress.NumberOfDocumentsToProcess);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.TotalNumberOfDocuments));
+                    w.WriteInteger(processProgress.TotalNumberOfDocuments);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.NumberOfDocumentTombstonesToProcess));
+                    w.WriteInteger(processProgress.NumberOfDocumentTombstonesToProcess);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.TotalNumberOfDocumentTombstones));
+                    w.WriteInteger(processProgress.TotalNumberOfDocumentTombstones);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.NumberOfCounterGroupsToProcess));
+                    w.WriteInteger(processProgress.NumberOfCounterGroupsToProcess);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.TotalNumberOfCounterGroups));
+                    w.WriteInteger(processProgress.TotalNumberOfCounterGroups);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.NumberOfTimeSeriesSegmentsToProcess));
+                    w.WriteInteger(processProgress.NumberOfTimeSeriesSegmentsToProcess);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.TotalNumberOfTimeSeriesSegments));
+                    w.WriteInteger(processProgress.TotalNumberOfTimeSeriesSegments);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.NumberOfTimeSeriesDeletedRangesToProcess));
+                    w.WriteInteger(processProgress.NumberOfTimeSeriesDeletedRangesToProcess);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.TotalNumberOfTimeSeriesDeletedRanges));
+                    w.WriteInteger(processProgress.TotalNumberOfTimeSeriesDeletedRanges);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.NumberOfRevisionsToProcess));
+                    w.WriteInteger(processProgress.NumberOfRevisionsToProcess);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.TotalNumberOfRevisions));
+                    w.WriteInteger(processProgress.TotalNumberOfRevisions);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.TotalNumberOfRevisionTombstones));
+                    w.WriteInteger(processProgress.TotalNumberOfRevisionTombstones);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.NumberOfAttachmentsToProcess));
+                    w.WriteInteger(processProgress.NumberOfAttachmentsToProcess);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.TotalNumberOfAttachments));
+                    w.WriteInteger(processProgress.TotalNumberOfAttachments);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(processProgress.TotalNumberOfAttachmentTombstones));
+                    w.WriteInteger(processProgress.TotalNumberOfAttachmentTombstones);
+
+                    w.WriteEndObject();
+                });
+
+                w.WriteEndObject();
+            });
+
             writer.WriteEndObject();
         }
 

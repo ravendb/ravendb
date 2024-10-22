@@ -14,7 +14,7 @@ interface Progress {
     processed: number;
 }
 
-export interface OngoingTaskNodeProgressDetails {
+export interface OngoingTaskNodeEtlProgressDetails {
     global: Progress;
     documents: Progress;
     documentTombstones: Progress;
@@ -24,6 +24,15 @@ export interface OngoingTaskNodeProgressDetails {
     completed: boolean;
     processedPerSecond: number;
     transactionalId?: string;
+}
+
+export interface OngoingTaskNodeReplicationProgressDetails {
+    completed: boolean;
+    global: Progress;
+    documents: Progress;
+    documentTombstones: Progress;
+    counterGroups: Progress;
+    //TODO:
 }
 
 export interface OngoingTaskNodeInfoDetails {
@@ -40,7 +49,13 @@ export interface OngoingTaskNodeInfo<TNodeInfo extends OngoingTaskNodeInfoDetail
 
 export interface OngoingEtlTaskNodeInfo<TNodeInfo extends OngoingTaskNodeInfoDetails = OngoingTaskNodeInfoDetails>
     extends OngoingTaskNodeInfo<TNodeInfo> {
-    etlProgress: OngoingTaskNodeProgressDetails[];
+    etlProgress: OngoingTaskNodeEtlProgressDetails[];
+}
+
+export interface OngoingReplicationProgressAwareTaskNodeInfo<
+    TNodeInfo extends OngoingTaskNodeInfoDetails = OngoingTaskNodeInfoDetails,
+> extends OngoingTaskNodeInfo<TNodeInfo> {
+    progress: OngoingTaskNodeReplicationProgressDetails[];
 }
 
 export type OngoingSubscriptionTaskNodeInfo = OngoingTaskNodeInfo<OngoingTaskSubscriptionNodeInfoDetails>;
@@ -66,6 +81,10 @@ export interface OngoingTaskExternalReplicationSharedInfo extends OngoingTaskSha
     connectionStringName: string;
     topologyDiscoveryUrls: string[];
     delayReplicationTime: number;
+    fromToString: string;
+    lastAcceptedChangeVectorFromDestination: string;
+    sourceDatabaseChangeVector: string;
+    lastSentEtag: number;
 }
 
 export interface OngoingTaskOlapEtlSharedInfo extends OngoingTaskSharedInfo {
@@ -193,7 +212,7 @@ export type OngoingTaskElasticSearchEtlInfo = OngoingTaskInfo<
 
 export type OngoingTaskExternalReplicationInfo = OngoingTaskInfo<
     OngoingTaskExternalReplicationSharedInfo,
-    OngoingTaskNodeInfo<OngoingTaskExternalReplicationNodeInfoDetails>
+    OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskExternalReplicationNodeInfoDetails>
 >;
 
 export type OngoingTaskOlapEtlInfo = OngoingTaskInfo<

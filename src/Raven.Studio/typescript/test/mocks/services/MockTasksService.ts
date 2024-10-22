@@ -17,8 +17,8 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getOngoingTasks, dto, TasksStubs.getTasksList());
     }
 
-    withGetProgress(dto?: MockedValue<resultsDto<EtlTaskProgress>>) {
-        return this.mockResolvedValue(this.mocks.getProgress, dto, TasksStubs.getTasksProgress());
+    withGetEtlProgress(dto?: MockedValue<resultsDto<EtlTaskProgress>>) {
+        return this.mockResolvedValue(this.mocks.getEtlProgress, dto, TasksStubs.getEtlTasksProgress());
     }
 
     withGetManualBackup(dto?: MockedValue<GetPeriodicBackupStatusOperationResult>) {

@@ -82,4 +82,11 @@ public sealed class ShardedReplicationHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedReplicationHandlerProcessorForGetOutgoingReconnectionQueue(this))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/replication/progress", "GET")]
+    public async Task GetReplicationProgress()
+    {
+        using (var processor = new ShardedReplicationHandlerProcessorForGetOngoingTasksProgress(this))
+            await processor.ExecuteAsync();
+    }
 }

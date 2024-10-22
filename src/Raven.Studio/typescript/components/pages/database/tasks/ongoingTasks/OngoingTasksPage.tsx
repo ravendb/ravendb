@@ -65,6 +65,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { compareSets } from "common/typeUtils";
 import RichAlert from "components/common/RichAlert";
+import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
 
 export function OngoingTasksPage() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -129,7 +130,18 @@ export function OngoingTasksPage() {
     const onEtlProgress = useCallback(
         (progress: EtlTaskProgress[], location: databaseLocationSpecifier) => {
             dispatch({
-                type: "ProgressLoaded",
+                type: "EtlProgressLoaded",
+                progress,
+                location,
+            });
+        },
+        [dispatch]
+    );
+
+    const onReplicationProgress = useCallback(
+        (progress: ReplicationTaskProgress[], location: databaseLocationSpecifier) => {
+            dispatch({
+                type: "ReplicationProgressLoaded",
                 progress,
                 location,
             });
@@ -212,6 +224,8 @@ export function OngoingTasksPage() {
 
             return task;
         });
+
+        //TODO: replication hub can work in hub to sink and sink to hub mode!
 
         const taskInfoSettledResult = await Promise.allSettled(loadTasks);
 
@@ -348,7 +362,12 @@ export function OngoingTasksPage() {
                 </RichAlert>
             )}
 
-            {progressEnabled && <OngoingTaskProgressProvider onEtlProgress={onEtlProgress} />}
+            {progressEnabled && (
+                <OngoingTaskProgressProvider
+                    onEtlProgress={onEtlProgress}
+                    onReplicationProgress={onReplicationProgress}
+                />
+            )}
             {operationConfirm && <OngoingTaskOperationConfirm {...operationConfirm} toggle={cancelOperationConfirm} />}
             <StickyHeader>
                 <div className="hstack gap-3 flex-wrap">
@@ -465,7 +484,12 @@ export function OngoingTasksPage() {
                                 </HrHeader>
 
                                 {externalReplications.map((x) => (
-                                    <ExternalReplicationPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                                    <ExternalReplicationPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingProgress}
+                                    />
                                 ))}
                             </div>
                         )}
@@ -715,6 +739,7 @@ export function OngoingTasksPage() {
                                         {...sharedPanelProps}
                                         key={taskKey(def.shared)}
                                         data={def}
+                                        onToggleDetails={startTrackingProgress}
                                         connectedSinks={replicationHubs.filter(
                                             (x) => x.shared.taskId === def.shared.taskId
                                         )}
@@ -731,7 +756,12 @@ export function OngoingTasksPage() {
                                 </HrHeader>
 
                                 {replicationSinks.map((x) => (
-                                    <ReplicationSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                                    <ReplicationSinkPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        onToggleDetails={startTrackingProgress}
+                                        data={x}
+                                    />
                                 ))}
                             </div>
                         )}

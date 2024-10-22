@@ -126,5 +126,20 @@ namespace Raven.Server.Documents.Handlers
                 });
             }
         }
+
+
+        [RavenAction("/databases/*/replication/progress", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task GetReplicationProgress()
+        {
+            using (var processor = new ReplicationHandlerProcessorForGetOngoingTasksProgress(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/databases/*/outgoing-internal-replication/progress", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task GetOutgoingInternalReplicationProgress()
+        {
+            using (var processor = new ReplicationHandlerProcessorForGetOutgoingInternalReplicationProgress(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

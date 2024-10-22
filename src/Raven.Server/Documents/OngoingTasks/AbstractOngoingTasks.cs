@@ -18,6 +18,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -279,14 +280,17 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
     
     protected abstract OngoingTaskConnectionStatus GetQueueSinkTaskConnectionStatus(DatabaseRecord record, QueueSinkConfiguration config, out string tag, out string error);
 
-    protected abstract (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, T replication, Dictionary<string, RavenConnectionString> connectionStrings, out string responsibleNodeTag, out RavenConnectionString connection)
+    protected abstract (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology,
+        T replication, Dictionary<string, RavenConnectionString> connectionStrings, out ExternalReplicationState replicationState, 
+        out string responsibleNodeTag, out RavenConnectionString connection)
         where T : ExternalReplicationBase;
 
     protected abstract PeriodicBackupStatus GetBackupStatus(long taskId, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag, out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted);
 
     private OngoingTaskReplication CreateExternalReplicationTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, ExternalReplication watcher)
     {
-        var res = GetReplicationTaskConnectionStatus(GetDatabaseTopology(databaseRecord), clusterTopology, watcher, databaseRecord.RavenConnectionStrings, out var tag, out var connection);
+        var res = GetReplicationTaskConnectionStatus(GetDatabaseTopology(databaseRecord), clusterTopology, watcher, 
+            databaseRecord.RavenConnectionStrings, out var replicationState, out var tag, out var connection);
 
         NodeId responsibleNode = null;
         if (tag != null)
@@ -300,12 +304,16 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             ConnectionStringName = watcher.ConnectionStringName,
             TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
             DestinationDatabase = connection?.Database,
+            FromToString = replicationState?.FromToString,
             DestinationUrl = res.Url,
             TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
             MentorNode = watcher.MentorNode,
             PinToMentorNode = watcher.PinToMentorNode,
             TaskConnectionStatus = res.Status,
-            DelayReplicationFor = watcher.DelayReplicationFor
+            DelayReplicationFor = watcher.DelayReplicationFor,
+            LastAcceptedChangeVectorFromDestination = replicationState?.DestinationChangeVector,
+            SourceDatabaseChangeVector = replicationState?.SourceChangeVector,
+            LastSentEtag = replicationState?.LastSentEtag ?? 0
         };
     }
 
@@ -482,7 +490,8 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
 
     private OngoingTaskPullReplicationAsSink CreatePullReplicationAsSinkTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, PullReplicationAsSink sinkReplication)
     {
-        var sinkReplicationStatus = GetReplicationTaskConnectionStatus(GetDatabaseTopology(databaseRecord), clusterTopology, sinkReplication, databaseRecord.RavenConnectionStrings, out var sinkReplicationTag, out var sinkReplicationConnection);
+        var sinkReplicationStatus = GetReplicationTaskConnectionStatus(GetDatabaseTopology(databaseRecord), clusterTopology, sinkReplication, 
+            databaseRecord.RavenConnectionStrings, out _, out var sinkReplicationTag, out var sinkReplicationConnection);
 
         NodeId responsibleNode = null;
         if (sinkReplicationTag != null)

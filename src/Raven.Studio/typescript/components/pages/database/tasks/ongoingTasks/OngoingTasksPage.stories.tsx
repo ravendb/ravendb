@@ -53,7 +53,7 @@ export const EmptyView: StoryFn = () => {
         dto.OngoingTasks = [];
         dto.PullReplications = [];
     });
-    tasksService.withGetProgress((dto) => {
+    tasksService.withGetEtlProgress((dto) => {
         dto.Results = [];
     });
 
@@ -66,7 +66,7 @@ export const FullView: StoryFn = () => {
     const { tasksService } = mockServices;
 
     tasksService.withGetTasks();
-    tasksService.withGetProgress();
+    tasksService.withGetEtlProgress();
 
     return <OngoingTasksPage />;
 };
@@ -610,7 +610,7 @@ export const PeriodicBackupEnabledEncrypted = boundCopy(PeriodicBackupTemplate, 
 
 function mockEtlProgress(tasksService: MockTasksService, completed: boolean, disabled: boolean, emptyScript: boolean) {
     if (completed) {
-        tasksService.withGetProgress((dto) => {
+        tasksService.withGetEtlProgress((dto) => {
             dto.Results.forEach((x) => {
                 x.ProcessesProgress.forEach((progress) => {
                     progress.Completed = true;
@@ -631,7 +631,7 @@ function mockEtlProgress(tasksService: MockTasksService, completed: boolean, dis
             });
         });
     } else {
-        tasksService.withGetProgress((dto) => {
+        tasksService.withGetEtlProgress((dto) => {
             dto.Results.forEach((x) => {
                 x.ProcessesProgress.forEach((progress) => {
                     progress.Disabled = disabled;

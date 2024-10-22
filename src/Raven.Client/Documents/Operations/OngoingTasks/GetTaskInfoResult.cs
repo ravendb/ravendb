@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.DataArchival;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
@@ -155,20 +153,29 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             TaskType = OngoingTaskType.Replication;
         }
 
+        public string FromToString { get; set; }
         public string DestinationUrl { get; set; }
         public string[] TopologyDiscoveryUrls { get; set; }
         public string DestinationDatabase { get; set; }
         public string ConnectionStringName { get; set; }
         public TimeSpan DelayReplicationFor { get; set; }
+        public string LastAcceptedChangeVectorFromDestination { get; set; }
+        public string SourceDatabaseChangeVector { get; set; }
+        public long LastSentEtag { get; set; }
+        //TODO: last etag
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
+            json[nameof(FromToString)] = FromToString;
             json[nameof(DestinationUrl)] = DestinationUrl;
             json[nameof(TopologyDiscoveryUrls)] = TopologyDiscoveryUrls;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(DelayReplicationFor)] = DelayReplicationFor;
+            json[nameof(LastAcceptedChangeVectorFromDestination)] = LastAcceptedChangeVectorFromDestination;
+            json[nameof(SourceDatabaseChangeVector)] = SourceDatabaseChangeVector;
+            json[nameof(LastSentEtag)] = LastSentEtag;
             return json;
         }
     }

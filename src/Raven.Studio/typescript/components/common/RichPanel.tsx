@@ -1,4 +1,4 @@
-﻿import React, { HTMLAttributes, ReactNode } from "react";
+﻿import React, { ForwardedRef, forwardRef, HTMLAttributes, LegacyRef, ReactNode } from "react";
 import "./RichPanel.scss";
 import classNames from "classnames";
 import { Badge, Card, CardHeader } from "reactstrap";
@@ -113,15 +113,18 @@ interface RichPanelDetailItemProps {
     className?: string;
     label?: ReactNode | ReactNode[];
     title?: string;
+    ref?: LegacyRef<HTMLDivElement>;
 }
 
-export function RichPanelDetailItem(props: RichPanelDetailItemProps) {
+function RichPanelDetailItemInternal(props: RichPanelDetailItemProps, ref: ForwardedRef<HTMLDivElement>) {
     const { children, className, size, label, ...rest } = props;
     const panelClass = size ? "rich-panel-detail-item" + "-" + size : "rich-panel-detail-item";
     return (
-        <div className={classNames(panelClass, className)} {...rest}>
+        <div className={classNames(panelClass, className)} ref={ref} {...rest}>
             {label && <div className="small-label">{label}</div>}
             <div className="detail-item-content">{children}</div>
         </div>
     );
 }
+
+export const RichPanelDetailItem = forwardRef(RichPanelDetailItemInternal);
