@@ -11,17 +11,33 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DocumentRefresh>;
 
-function commonInit() {
+function commonInit(hasConfiguration: boolean) {
     const { databasesService } = mockServices;
     const { databases } = mockStore;
-    databasesService.withRefreshConfiguration();
+    if (hasConfiguration) {
+        databasesService.withRefreshConfiguration();
+    } else {
+        databasesService.withoutRefreshConfiguration();
+    }
+
     databases.withActiveDatabase_NonSharded_SingleNode();
 }
 
 export const DefaultDocumentRefresh: StoryObj<typeof DocumentRefresh> = {
     name: "Document Refresh",
     render: () => {
-        commonInit();
+        commonInit(true);
+
+        const { license } = mockStore;
+        license.with_License();
+
+        return <DocumentRefresh />;
+    },
+};
+
+export const InitialDocumentRefresh: StoryObj<typeof DocumentRefresh> = {
+    render: () => {
+        commonInit(false);
 
         const { license } = mockStore;
         license.with_License();
@@ -32,7 +48,7 @@ export const DefaultDocumentRefresh: StoryObj<typeof DocumentRefresh> = {
 
 export const LicenseRestricted: StoryObj<typeof DocumentRefresh> = {
     render: () => {
-        commonInit();
+        commonInit(true);
 
         const { license } = mockStore;
         license.with_LicenseLimited();

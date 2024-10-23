@@ -4,7 +4,7 @@ import { rtlRender } from "test/rtlTestUtils";
 import * as stories from "./DocumentRefresh.stories";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
-const { DefaultDocumentRefresh, LicenseRestricted } = composeStories(stories);
+const { DefaultDocumentRefresh, LicenseRestricted, InitialDocumentRefresh } = composeStories(stories);
 
 describe("DocumentRefresh", () => {
     it("can render", async () => {
@@ -25,6 +25,21 @@ describe("DocumentRefresh", () => {
         const refreshFrequencyAfter = screen.getByName("refreshFrequency");
         expect(refreshFrequencyAfter).toBeDisabled();
         expect(refreshFrequencyAfter).toHaveValue(null);
+    });
+
+    it("can set default batch size", async () => {
+        const { screen, fireClick } = rtlRender(<InitialDocumentRefresh />);
+        const enableButton = await screen.findByRole("checkbox", { name: "Enable Document Refresh" });
+
+        expect(enableButton).not.toBeChecked();
+
+        await fireClick(enableButton);
+
+        const setMaxNumberOfDocumentToProcessCheckbox = await screen.findByLabelText(
+            "Set max number of documents to process in a single run"
+        );
+        expect(setMaxNumberOfDocumentToProcessCheckbox).toBeChecked();
+        expect(await screen.findByName("maxItemsToProcess")).toHaveValue(65536);
     });
 
     it("is license restricted", async () => {
