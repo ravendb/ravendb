@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Linq;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron;
+using Voron.Global;
+using Voron.Impl.Scratch;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -129,7 +132,7 @@ public class RavenDB_22973 : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void FailureOnUpdatingJournalStateMustIgnoreFurtherFlushes()
     {
         long p1;
@@ -195,7 +198,7 @@ public class RavenDB_22973 : StorageTest
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void FlushingMustIncrementTotalWrittenButUnsyncedBytes()
     {
         long p1;
@@ -215,5 +218,72 @@ public class RavenDB_22973 : StorageTest
         Env.FlushLogToDataFile();
 
         Assert.True(Env.Journal.Applicator.TotalWrittenButUnsyncedBytes > 0);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void Overflow_should_reuse_shrinked_page_that_got_freed()
+    {
+        var shrinkedPageNumber = -1L;
+        PageFromScratchBuffer shrinkedPageInScratch = null;
+
+        using (var tx = Env.WriteTransaction())
+        {
+            var overflowSize = 4 * Constants.Storage.PageSize;
+            var page = tx.LowLevelTransaction.AllocateOverflowRawPage(overflowSize, out _, zeroPage: false);
+
+            var allocatedPagesCount = Env.ScratchBufferPool._current.File.AllocatedPagesCount;
+
+            var reducedOverflowSize = 2 * Constants.Storage.PageSize;
+
+            tx.LowLevelTransaction.ShrinkOverflowPage(page.PageNumber, reducedOverflowSize, tx.LowLevelTransaction.RootObjects);
+
+            shrinkedPageNumber = page.PageNumber;
+
+            var shrinkPages = (overflowSize - reducedOverflowSize) / Constants.Storage.PageSize;
+
+            Assert.Equal(allocatedPagesCount - shrinkPages + 1 /* + 1 because free space handling allocated one page during shrink */,
+                Env.ScratchBufferPool._current.File.AllocatedPagesCount);
+
+            var pageFromScratchBuffers = tx.LowLevelTransaction.GetTransactionPages();
+
+            shrinkedPageInScratch = pageFromScratchBuffers.First(x => x.NumberOfPages == 3); //after shrinking
+
+            tx.Commit();
+        }
+
+        using (var tx = Env.WriteTransaction())
+        {
+            tx.LowLevelTransaction.FreePage(shrinkedPageNumber);
+        }
+
+        Env.FlushLogToDataFile();
+
+        using (var tx = Env.WriteTransaction())
+        {
+            tx.LowLevelTransaction.ModifyPage(0);
+
+            tx.Commit();
+        }
+
+        using (var tx = Env.WriteTransaction())
+        {
+            tx.LowLevelTransaction.ModifyPage(0);
+
+            tx.Commit();
+        }
+
+        using (var tx = Env.WriteTransaction())
+        {
+            var overflowSize = 4 * Constants.Storage.PageSize;
+            var page = tx.LowLevelTransaction.AllocateOverflowRawPage(overflowSize, out _, zeroPage: false);
+
+            var pageFromScratchBuffers = tx.LowLevelTransaction.GetTransactionPages();
+
+            // this page should be taken from freed pages available in scratch file
+
+            var overflowScratchPage = pageFromScratchBuffers.First(x => x.NumberOfPages == 5); // overflow is 4 pages + header so 5 pages in total
+
+            Assert.Equal(shrinkedPageInScratch.PositionInScratchBuffer, overflowScratchPage.PositionInScratchBuffer);
+        }
     }
 }

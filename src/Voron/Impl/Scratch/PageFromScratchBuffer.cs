@@ -16,14 +16,14 @@ namespace Voron.Impl.Scratch
             if (x == y) return true;
             if (x == null || y == null) return false;            
 
-            return x.PositionInScratchBuffer == y.PositionInScratchBuffer && x.NumberOfPages == y.NumberOfPages && x.File == y.File;
+            return x.PositionInScratchBuffer == y.PositionInScratchBuffer && x.Size == y.Size && x.NumberOfPages == y.NumberOfPages && x.File.Number == y.File.Number;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(PageFromScratchBuffer obj)
         {
             int v = Hashing.Combine(obj.NumberOfPages, obj.File.Number);
-            int w = Hashing.Combine(obj.PositionInScratchBuffer.GetHashCode(), obj.PageNumberInDataFile.GetHashCode());
+            int w = Hashing.Combine(obj.Size.GetHashCode(), obj.PositionInScratchBuffer.GetHashCode());
             return Hashing.Combine(v, w);
         }
     }
@@ -36,6 +36,7 @@ namespace Voron.Impl.Scratch
         long PositionInScratchBuffer,
         long PageNumberInDataFile,
         Page PreviousVersion,
+        long Size,
         int NumberOfPages
     )
     {

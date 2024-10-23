@@ -113,7 +113,7 @@ namespace Voron.Impl.Scratch
         {
             _scratchPager.EnsureContinuous(ref _scratchPagerState, _lastUsedPage, sizeToAllocate);
             
-            var result = new PageFromScratchBuffer(this,_scratchPagerState, tx.Id, _lastUsedPage, pageNumber, previousVersion, numberOfPages);
+            var result = new PageFromScratchBuffer(this,_scratchPagerState, tx.Id, _lastUsedPage, pageNumber, previousVersion, sizeToAllocate, numberOfPages);
 
             _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(_lastUsedPage, result);
@@ -144,7 +144,7 @@ namespace Voron.Impl.Scratch
             _scratchPager.UnprotectPageRange(freePageBySizePointer, freePageBySizeSize, true);
 #endif
 
-            result = new PageFromScratchBuffer(this, _scratchPagerState, tx.Id,val.Page, pageNumber, previousVersion, numberOfPages);
+            result = new PageFromScratchBuffer(this, _scratchPagerState, tx.Id,val.Page, pageNumber, previousVersion, size, numberOfPages);
 
             _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(val.Page, result);
@@ -199,13 +199,10 @@ namespace Voron.Impl.Scratch
 
             Debug.Assert(value.NumberOfPages > 0);
 
-        
-            // We are freeing with the pages being 'visible' to any party (for ex. commits)
-            var size = Bits.PowerOf2(value.NumberOfPages);
-            if (_freePagesBySize.TryGetValue(size, out LinkedList<PendingPage> list) == false)
+            if (_freePagesBySize.TryGetValue(value.Size, out LinkedList<PendingPage> list) == false)
             {
                 list = new LinkedList<PendingPage>();
-                _freePagesBySize[size] = list;
+                _freePagesBySize[value.Size] = list;
             }
 
             list.AddFirst(new PendingPage
