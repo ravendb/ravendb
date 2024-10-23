@@ -37,7 +37,6 @@ using Circle = Raven.Server.Documents.Indexes.Spatial.Circle;
 using System.Diagnostics.CodeAnalysis;
 using Acornima;
 using Acornima.Ast;
-using Amqp.Framing;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.Indexes;
 
