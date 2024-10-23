@@ -26,7 +26,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         rql: "from 'AutoVecDocs' where vector.search(embedding.f32_i8(Singles), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithEmbedding(f => f.Singles).TargetQuantization(EmbeddingType.Int8), 
-                value => value.ByEmbedding(new sbyte[]{-1, 1})));
+                value => value.ByEmbedding([0.1f, 0.1f])));
     
     [RavenFact(RavenTestCategory.Vector)]
     public void SinglesToBinaryTest() => AutoIndexingTestingBase(
@@ -34,7 +34,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         rql: "from 'AutoVecDocs' where vector.search(embedding.f32_i1(Singles), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithEmbedding(f => f.Singles).TargetQuantization(EmbeddingType.Binary), 
-                value => value.ByEmbedding(new byte[]{0b_1111_1111})));
+                value => value.ByEmbedding([0.1f, 0.1f])));
 
     [RavenFact(RavenTestCategory.Vector)]
     public void Int8Test() => AutoIndexingTestingBase(
@@ -42,7 +42,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         rql: "from 'AutoVecDocs' where vector.search(embedding.i8(Int8), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithEmbedding(f => f.Int8, EmbeddingType.Int8), 
-                value => value.ByEmbedding(new sbyte[]{-1, 1})));
+                value => value.ByEmbedding([0.1f, 0.1f])));
     
     [RavenFact(RavenTestCategory.Vector)]
     public void Int1Test() => AutoIndexingTestingBase(
@@ -50,7 +50,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         rql: "from 'AutoVecDocs' where vector.search(embedding.i1(Binary), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithEmbedding(f => f.Binary, EmbeddingType.Binary), 
-                value => value.ByEmbedding(new byte[]{0b1111_1111})));
+                value => value.ByEmbedding([0.1f, 0.1f])));
     
     [RavenFact(RavenTestCategory.Vector)]
     public void TextToSinglesTest() => AutoIndexingTestingBase(

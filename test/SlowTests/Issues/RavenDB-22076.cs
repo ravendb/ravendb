@@ -149,8 +149,7 @@ public class RavenDB_22076 : RavenTestBase
         }
     }
 
-<<<<<<< HEAD
-=======
+
     [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestQuantizers(Options options)
@@ -168,7 +167,6 @@ public class RavenDB_22076 : RavenTestBase
         Assert.Equal([217, 217, 128], int1Embedding);
     }
 
->>>>>>> 843c0ea2e4a (RavenDB-22076 Adjusted exceptions, changed ExactVectorSearchMatch.SimilarityI8)
     private class Dto
     {
         public string Name { get; set; }
