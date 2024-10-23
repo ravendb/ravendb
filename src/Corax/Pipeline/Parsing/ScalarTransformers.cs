@@ -111,7 +111,7 @@ namespace Corax.Pipeline.Parsing
                     // From here on, we know we are dealing with a codepoint that is ASCII.
 
                     // We are testing !((ch & CASE_MASK) ^ ('A' & CASE_MASK)) which means character requires transformation.
-                    if (((v1 & ParsingConstants.UppercaseUInt64Mask) ^ (0x4141414141414141 & ParsingConstants.UppercaseUInt64Mask)) != 0x2020202020202020)
+                    if (((v1 & ParsingConstants.UppercaseUInt64Mask) ^ (0x4141414141414141 & ParsingConstants.UppercaseUInt64Mask)) != ParsingConstants.SpaceCharactersUInt64)
                         goto LOWERCASE_ASCII;
 
                     Unsafe.WriteUnaligned<ulong>(ref Unsafe.AddByteOffset(ref destStart, destPos), v1);
@@ -119,7 +119,7 @@ namespace Corax.Pipeline.Parsing
                     destPos += N64;
 
                     // We are testing !((ch & CASE_MASK) ^ ('A' & CASE_MASK)) which means character requires transformation.
-                    if (((v2 & ParsingConstants.UppercaseUInt64Mask) ^ (0x4141414141414141 & ParsingConstants.UppercaseUInt64Mask)) != 0x2020202020202020)
+                    if (((v2 & ParsingConstants.UppercaseUInt64Mask) ^ (0x4141414141414141 & ParsingConstants.UppercaseUInt64Mask)) != ParsingConstants.SpaceCharactersUInt64)
                         goto LOWERCASE_ASCII;
 
                     Unsafe.WriteUnaligned<ulong>(ref Unsafe.AddByteOffset(ref destStart, destPos), v2);

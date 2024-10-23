@@ -11,6 +11,10 @@ namespace Corax.Pipeline.Parsing
         // U+0020  space 
         public const byte SpaceCharacter = 0x20;
 
+        public const uint SpaceCharactersUInt32 = 0x20202020;
+
+        public const ulong SpaceCharactersUInt64 = 0x2020202020202020;
+
         // U+0080  first non-ascii character in the table, it also works as a mask to detect non-ascii characters.
         public const byte NonAsciiMask = 0x80;
 
@@ -29,6 +33,7 @@ namespace Corax.Pipeline.Parsing
         // The mask that allow us to detect uppercase characters inside a packed 8 bytes word. 
         public const ulong UppercaseUInt64Mask = (ulong)UppercaseUInt32Mask << 32 | UppercaseUInt32Mask;
 
+        
         // U+0009  character tabulation
         // U+000A  line feed
         // U+000B  line tabulation
@@ -43,7 +48,7 @@ namespace Corax.Pipeline.Parsing
         // PERF: These tables are bitmaps that mark with 1 whenever a character in the ASCII range between 0 and 63 can be
         // considered as a whitespace. By checking if the bit is 1 or 0 which only involves a MOV, a SHIFT and a AND assembler
         // opcode, and then we can verify this property without any branches. 
-        internal const long SingleByteWhitespaceTable =
+        public const long SingleByteWhitespaceTable =
             1L << 0x09 | 1L << 0x0A | 1L << 0x0B | 1L << 0x0C | 1L << 0x0D |
             1L << 0x1C | 1L << 0x1D | 1L << 0x1E | 1L << 0x1F | 1L << 0x20;
 
@@ -68,7 +73,7 @@ namespace Corax.Pipeline.Parsing
         // PERF: These tables are bitmaps that mark with 1 whenever a character in the ASCII range between the U+2000 and U+202F can be
         // considered as a whitespace. By knowing that the first byte is 20 and the value is between 0 and 64 we can check if the bit
         // is 1 or 0 which only involves a MOV, a SHIFT and a AND assembler opcode, and then we can verify this property without any branches. 
-        internal const long SecondByte20WhitespaceTable =
+        public const long SecondByte20WhitespaceTable =
             1L << 0x00 | 1L << 0x01 | 1L << 0x02 | 1L << 0x03 | 1L << 0x04 | 1L << 0x05 | 1L << 0x06 | 1L << 0x07 |
             1L << 0x08 | 1L << 0x09 | 1L << 0x0A | 1L << 0x0B | 1L << 0x0C | 1L << 0x0D | 1L << 0x28 | 1L << 0x29 |
             1L << 0x2F;

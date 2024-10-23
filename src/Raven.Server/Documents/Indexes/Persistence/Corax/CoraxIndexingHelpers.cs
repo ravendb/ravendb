@@ -185,7 +185,15 @@ public static class CoraxIndexingHelpers
         CoraxAnalyzer CreateDefaultAnalyzer(string fieldName, Type analyzerType, bool isForQuerying)
         {
             if (analyzerType == typeof(LowerCaseKeywordAnalyzer))
+            {
+                if (indexDefinition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxUnicodeAnalyzers_62)
+                {
+                    // BACKWARD COMPATIBILITY. Remove in v7.0
+                    return CoraxAnalyzer.Create(context, default(KeywordTokenizer), default(LowerCaseTransformerPre22999));
+                }
+                
                 return CoraxAnalyzer.Create(context, default(KeywordTokenizer), default(LowerCaseTransformer));
+            }
 
             return LuceneAnalyzerAdapter.Create(LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType), isForQuerying);
         }

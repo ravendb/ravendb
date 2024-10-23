@@ -22,7 +22,7 @@ namespace Corax.Pipeline.Parsing
                 ulong v2 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.Add(ref bufferStart, (int)pos + sizeof(ulong)));
                 ulong v = v1 | v2;
 
-                if ((v & 0x8080808080808080) != 0)
+                if ((v & ParsingConstants.NonAsciiUInt64Mask) != 0)
                     break;
                 
                 pos += 16;

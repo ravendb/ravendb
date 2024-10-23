@@ -29,7 +29,7 @@ namespace Corax.Pipeline.Parsing
                     Vector512<byte> v2 = Vector512.LoadUnsafe(ref Unsafe.AddByteOffset(ref bufferStart, pos + N512));
                     var v = Vector512.BitwiseOr(v1, v2);
 
-                    Vector512<byte> mask = Vector512.Create((byte)0x80);
+                    Vector512<byte> mask = Vector512.Create(ParsingConstants.NonAsciiMask);
                     Vector512<byte> result = Vector512.BitwiseAnd(v, mask);
 
                     if (result != Vector512<byte>.Zero)
@@ -48,7 +48,7 @@ namespace Corax.Pipeline.Parsing
                     Vector256<byte> v2 = Vector256.LoadUnsafe(ref Unsafe.AddByteOffset(ref bufferStart, pos + N256));
                     var v = Vector256.BitwiseOr(v1, v2);
 
-                    Vector256<byte> mask = Vector256.Create((byte)0x80);
+                    Vector256<byte> mask = Vector256.Create(ParsingConstants.NonAsciiMask);
                     Vector256<byte> result = Vector256.BitwiseAnd(v, mask);
 
                     if (result != Vector256<byte>.Zero)
@@ -65,7 +65,7 @@ namespace Corax.Pipeline.Parsing
                 Vector128<byte> v2 = Vector128.LoadUnsafe(ref Unsafe.AddByteOffset(ref bufferStart, pos + N128));
                 var v = Vector128.BitwiseOr(v1, v2);
 
-                Vector128<byte> mask = Vector128.Create((byte)0x80);
+                Vector128<byte> mask = Vector128.Create(ParsingConstants.NonAsciiMask);
                 Vector128<byte> result = Vector128.BitwiseAnd(v, mask);
 
                 if (result != Vector128<byte>.Zero)
@@ -75,7 +75,7 @@ namespace Corax.Pipeline.Parsing
             // process the tail byte-by-byte
             for (; pos < len; pos++)
             {
-                if (Unsafe.Add(ref bufferStart, (int)pos) >= 0x80)
+                if (Unsafe.Add(ref bufferStart, (int)pos) >= ParsingConstants.NonAsciiMask)
                     return (int)pos;
             }
 

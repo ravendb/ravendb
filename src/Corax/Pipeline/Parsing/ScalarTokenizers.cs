@@ -18,7 +18,7 @@ namespace Corax.Pipeline.Parsing
             {
                 byte b = Unsafe.Add(ref bufferStart, idx);
 
-                if (b > 0x20 || ((ParsingConstants.SingleByteWhitespaceTable >> b) & 1) == 0)
+                if (b > ParsingConstants.SpaceCharacter || ((ParsingConstants.SingleByteWhitespaceTable >> b) & 1) == 0)
                 {
                     size++;
                     continue;
@@ -83,7 +83,7 @@ namespace Corax.Pipeline.Parsing
                         break;
                 }
                 
-                if (b > 0x20 || ((ParsingConstants.SingleByteWhitespaceTable >> b) & 1) == 0)
+                if (b > ParsingConstants.SpaceCharacter || ((ParsingConstants.SingleByteWhitespaceTable >> b) & 1) == 0)
                 {
                     // U+00A0  no-break space
                     if (b == 0xA0)
@@ -185,7 +185,7 @@ namespace Corax.Pipeline.Parsing
                     {
                         // U+0085  next line
                         // U+00A0  no-break space
-                        if (bb > 0x20 || ((ParsingConstants.SingleByteWhitespaceTable >> bb) & 1) == 0)
+                        if (bb > ParsingConstants.SpaceCharacter || ((ParsingConstants.SingleByteWhitespaceTable >> bb) & 1) == 0)
                         {
                             size++;
                             continue;
@@ -203,7 +203,7 @@ namespace Corax.Pipeline.Parsing
                         // U+180E  mongolian vowel separator
                         break;
                     }
-                    case (0x20, _):
+                    case (ParsingConstants.SpaceCharacter, _):
                     {
                         // U+205F  medium mathematical space
                         // U+2060  word joiner
