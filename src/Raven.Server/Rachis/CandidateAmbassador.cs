@@ -144,9 +144,9 @@ namespace Raven.Server.Rachis
                             LastException = e;
                             Status = AmbassadorStatus.FailedToConnect;
                             StatusMessage = $"Failed to obtain connection with {_tag}.";
-                            if (_engine.Log.IsInfoEnabled)
+                            if (_engine.Log.IsDebugEnabled)
                             {
-                                _engine.Log.Info($"CandidateAmbassador for {_tag}: Failed to connect to remote peer: " + _url, e);
+                                _engine.Log.Debug($"CandidateAmbassador for {_tag}: Failed to connect to remote peer: " + _url, e);
                             }
 
                             // wait a bit
@@ -220,9 +220,9 @@ namespace Raven.Server.Rachis
                                             $"Candidate ambassador for {_tag}: found election term {rvr.Term:#,#;;0} that is higher than ours {currentElectionTerm:#,#;;0}";
                                         // we need to abort the current elections
 
-                                        if (_engine.Log.IsInfoEnabled)
+                                        if (_engine.Log.IsDebugEnabled)
                                         {
-                                            _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
+                                            _engine.Log.Debug($"CandidateAmbassador for {_tag}: {message}");
                                         }
 
                                         _engine.FoundAboutHigherTerm(rvr.Term, "Higher term found from node " + Tag);
@@ -246,9 +246,9 @@ namespace Raven.Server.Rachis
                                         continue;
                                     }
 
-                                    if (_engine.Log.IsInfoEnabled)
+                                    if (_engine.Log.IsDebugEnabled)
                                     {
-                                        _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a positive response " +
+                                        _engine.Log.Debug($"CandidateAmbassador for {_tag}: Got a positive response " +
                                                          $"for trial elections from {_tag} in {rvr.Term:#,#;;0}: {rvr.Message}");
                                     }
 
@@ -272,16 +272,16 @@ namespace Raven.Server.Rachis
                                 rvr = _connection.Read<RequestVoteResponse>(context);
                                 ClusterCommandsVersion = rvr.ClusterCommandsVersion ?? 400;
 
-                                if (_engine.Log.IsInfoEnabled)
-                                    _engine.Log.Info($"Candidate RequestVote real vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
+                                if (_engine.Log.IsDebugEnabled)
+                                    _engine.Log.Debug($"Candidate RequestVote real vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
                                 if (rvr.Term > currentElectionTerm)
                                 {
                                     var message = $"CandidateAmbassador for {_tag}: found election term {rvr.Term:#,#;;0} " +
                                                   $"that is higher than ours {currentElectionTerm:#,#;;0}";
-                                    if (_engine.Log.IsInfoEnabled)
+                                    if (_engine.Log.IsDebugEnabled)
                                     {
-                                        _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
+                                        _engine.Log.Debug($"CandidateAmbassador for {_tag}: {message}");
                                     }
 
                                     // we need to abort the current elections
@@ -293,9 +293,9 @@ namespace Raven.Server.Rachis
                                 NotInTopology = rvr.NotInTopology;
                                 if (rvr.VoteGranted == false)
                                 {
-                                    if (_engine.Log.IsInfoEnabled)
+                                    if (_engine.Log.IsDebugEnabled)
                                     {
-                                        _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a negative response " +
+                                        _engine.Log.Debug($"CandidateAmbassador for {_tag}: Got a negative response " +
                                                          $"from {_tag} in {rvr.Term:#,#;;0} reason: {rvr.Message}");
                                     }
 
@@ -306,9 +306,9 @@ namespace Raven.Server.Rachis
                                     continue;
                                 }
 
-                                if (_engine.Log.IsInfoEnabled)
+                                if (_engine.Log.IsDebugEnabled)
                                 {
-                                    _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a positive response " +
+                                    _engine.Log.Debug($"CandidateAmbassador for {_tag}: Got a positive response " +
                                                      $"from {_tag} in {rvr.Term:#,#;;0}: {rvr.Message}");
                                 }
 
@@ -321,9 +321,9 @@ namespace Raven.Server.Rachis
 
                                 if (Interlocked.CompareExchange(ref _publishedConnection, null, copy) != copy)
                                 {
-                                    if (_engine.Log.IsInfoEnabled)
+                                    if (_engine.Log.IsDebugEnabled)
                                     {
-                                        _engine.Log.Info($"The candidate ambassador connection for {_tag} will be reused.");
+                                        _engine.Log.Debug($"The candidate ambassador connection for {_tag} will be reused.");
                                     }
 
                                     // we won the election so our connection is being reused.
@@ -352,9 +352,9 @@ namespace Raven.Server.Rachis
                         LastException = e;
                         Status = AmbassadorStatus.FailedToConnect;
                         StatusMessage = $"Failed to get vote from {_tag}.";
-                        if (_engine.Log.IsInfoEnabled)
+                        if (_engine.Log.IsDebugEnabled)
                         {
-                            _engine.Log.Info($"CandidateAmbassador for {_tag}: Failed to get vote from remote peer url={_url} tag={_tag}", e);
+                            _engine.Log.Debug($"CandidateAmbassador for {_tag}: Failed to get vote from remote peer url={_url} tag={_tag}", e);
                         }
 
                         _connection?.Dispose();
@@ -367,9 +367,9 @@ namespace Raven.Server.Rachis
                 LastException = e;
                 Status = AmbassadorStatus.FailedToConnect;
                 StatusMessage = $"Failed to talk to {_url}.";
-                if (_engine.Log.IsInfoEnabled)
+                if (_engine.Log.IsDebugEnabled)
                 {
-                    _engine.Log.Info("Failed to talk to remote peer: " + _url, e);
+                    _engine.Log.Debug("Failed to talk to remote peer: " + _url, e);
                 }
             }
             finally
@@ -432,9 +432,9 @@ namespace Raven.Server.Rachis
         {
             using (engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
-                if (engine.Log.IsInfoEnabled)
+                if (engine.Log.IsDebugEnabled)
                 {
-                    engine.Log.Info($"Sending from {connection.Source} to {connection.Dest} the election result: " +
+                    engine.Log.Debug($"Sending from {connection.Source} to {connection.Dest} the election result: " +
                                      $"'{result}' at term {currentElectionTerm:#,#;;0}");
                 }
                 connection.Send(context, new RequestVote
