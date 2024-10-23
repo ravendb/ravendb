@@ -2727,19 +2727,26 @@ namespace Raven.Server.ServerWide
 
                     foreach (var databaseKvp in DatabasesLandlord.LastRecentlyUsed.ForceEnumerateInThreadSafeManner())
                     {
-                        if (CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics: null, out DocumentDatabase database) == false)
-                            continue;
-
-                        var dbIdEtagDictionary = new Dictionary<string, long>();
-                        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
-                        using (documentsContext.OpenReadTransaction())
+                        try
                         {
-                            foreach (var kvp in DocumentsStorage.GetAllReplicatedEtags(documentsContext))
-                                dbIdEtagDictionary[kvp.Key] = kvp.Value;
-                        }
+                            if (CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics: null, out DocumentDatabase database) == false)
+                                continue;
 
-                        if (DatabasesLandlord.UnloadDirectly(databaseKvp.Key, database.PeriodicBackupRunner.GetNextIdleDatabaseActivity(database.Name)))
-                            IdleDatabases[database.Name] = dbIdEtagDictionary;
+                            var dbIdEtagDictionary = new Dictionary<string, long>();
+                            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+                            using (documentsContext.OpenReadTransaction())
+                            {
+                                foreach (var kvp in DocumentsStorage.GetAllReplicatedEtags(documentsContext))
+                                    dbIdEtagDictionary[kvp.Key] = kvp.Value;
+                            }
+
+                            if (DatabasesLandlord.UnloadDirectly(databaseKvp.Key, database.PeriodicBackupRunner.GetNextIdleDatabaseActivity(database.Name)))
+                                IdleDatabases[database.Name] = dbIdEtagDictionary;
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // database is being disposed
+                        }
                     }
                 }
                 catch (Exception e)
