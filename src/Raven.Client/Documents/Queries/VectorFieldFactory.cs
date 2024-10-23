@@ -169,6 +169,12 @@ public interface IVectorEmbeddingFieldValueFactory
 #endif
     ;
     
+    public void ByEmbedding<T>(T[] embedding) where T : unmanaged
+#if NET7_0_OR_GREATER
+        , INumber<T>
+#endif
+    ;
+    
     public void ByBase64(string base64Embedding);
 }
 
@@ -185,6 +191,18 @@ internal class VectorFieldValueFactory : IVectorFieldValueFactory
     
     void IVectorEmbeddingFieldValueFactory.ByEmbedding<T>(IEnumerable<T> embedding)
     {
+        AssertEmbeddingType<T>();
+        Embedding = embedding;
+    }
+
+    void IVectorEmbeddingFieldValueFactory.ByEmbedding<T>(T[] embedding)
+    {
+        AssertEmbeddingType<T>();
+        Embedding = embedding;
+    }
+
+    private static void AssertEmbeddingType<T>()
+    {
 #if NET7_0_OR_GREATER == FALSE
         // For >=NET7, INumber<T> is the guardian.
         var isKnownType = typeof(T) == typeof(float) || typeof(T) == typeof(double) || typeof(T) == typeof(decimal) || typeof(T) == typeof(sbyte) || typeof(T) == typeof(byte) || typeof(T) == typeof(int) || typeof(T) == typeof(uint) || typeof(T) == typeof(long) || typeof(T) == typeof(ulong);
@@ -192,10 +210,8 @@ internal class VectorFieldValueFactory : IVectorFieldValueFactory
         if (isKnownType == false)
             throw new InvalidDataException($"The type of embedding must be numeric. Supported types are: float, double, decimal, sbyte, byte, int, uint, long, ulong. Received: {typeof(T).FullName}.");
 #endif
-        
-        Embedding = embedding;
     }
-
+    
     void IVectorEmbeddingFieldValueFactory.ByBase64(string base64Embedding)
     {
         Base64Embedding = base64Embedding;

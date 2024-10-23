@@ -130,7 +130,6 @@ public static class GenerateEmbeddings
             return new VectorValue(arrayPool: allocator, (byte[])(object)buffer, new Memory<byte>(buffer, 0, array.Length));
         }
         
-        PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(float), $"Not quantized data ('{nameof(VectorOptions.SourceEmbeddingType)}': '{EmbeddingType.Float32}') should be stored as floats (or floats encoded into base64).");
         switch (embeddingDestinationType)
         {
             case EmbeddingType.Binary:
