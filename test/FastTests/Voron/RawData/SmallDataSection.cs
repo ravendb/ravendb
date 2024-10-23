@@ -167,7 +167,7 @@ namespace FastTests.Voron.RawData
             Env.FlushLogToDataFile();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task CanReadAndWriteFromSection_AfterFlush_MixedFlushDuringTransaction()
         {
             Options.ManualFlushing = true;

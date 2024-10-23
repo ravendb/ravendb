@@ -5,9 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Tests.Infrastructure;
 using Voron.Impl.Scratch;
 using Xunit;
 using Xunit.Abstractions;
@@ -20,7 +20,7 @@ namespace SlowTests.Voron.Storage
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void UncommittedTransactionShouldFreeScratchPagesThatWillBeReusedFutureTransactions()
         {
             var random = new Random();
@@ -50,13 +50,13 @@ namespace SlowTests.Voron.Storage
             }
 
             Env.FlushLogToDataFile();
-            
+
             using (var tx = Env.WriteTransaction())
             {
                 tx.LowLevelTransaction.AllocatePage(1);
                 tx.Commit();
             }
-            
+
             PageFromScratchBuffer[] scratchPagesOfCommittedTransaction;
 
             using (var tx = Env.WriteTransaction())

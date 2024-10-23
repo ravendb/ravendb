@@ -43,13 +43,13 @@ namespace SlowTests.Authentication
         public AuthenticationLetsEncryptTests(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         [RavenIntegrationRetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanGetPebbleCertificate()
         {
             var acmeUrl = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_URL") ?? string.Empty;
             Assert.NotEmpty(acmeUrl);
-            
+
             RemoveAcmeCache(acmeUrl);
 
             SetupLocalServer();
@@ -64,7 +64,7 @@ namespace SlowTests.Authentication
         public async Task CanGetLetsEncryptCertificateAndRenewIt()
         {
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
-            
+
             SetupLocalServer();
             SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
 
@@ -82,7 +82,7 @@ namespace SlowTests.Authentication
 
                 var cluster = Server.ServerStore.Cluster.GetCertificateThumbprintsFromCluster(context).ToList();
                 Assert.Equal(0, cluster.Count);
-        }
+            }
         }
 
         [RavenIntegrationRetryFact(delayBetweenRetriesMs: 1000)]
@@ -94,18 +94,18 @@ namespace SlowTests.Authentication
             await CanGetLetsEncryptCertificateAndRenewAfterFailure(acmeUrl);
         }
 
-        [RetryFact(delayBetweenRetriesMs: 1000)]
+        [RavenRetryFact(RavenTestCategory.Certificates, delayBetweenRetriesMs: 1000)]
         public async Task CanGetLetsEncryptCertificateAndRenewAfterFailure()
         {
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
             await CanGetLetsEncryptCertificateAndRenewAfterFailure(acmeUrl);
         }
 
-        [RetryFact(delayBetweenRetriesMs: 1000)]
+        [RavenRetryFact(RavenTestCategory.Certificates, delayBetweenRetriesMs: 1000)]
         public async Task ReplaceCertificateWithPrivateKey()
         {
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
-            
+
             SetupLocalServer();
             SetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
 
@@ -414,7 +414,7 @@ namespace SlowTests.Authentication
             File.Copy(defaultSettingsPath, settingPath, true);
 
             UseNewLocalServer(customConfigPath: settingPath);
-            
+
             Server.Configuration.Core.AcmeUrl = acmeStagingUrl;
             Server.ServerStore.Configuration.Core.SetupMode = SetupMode.Initial;
 
