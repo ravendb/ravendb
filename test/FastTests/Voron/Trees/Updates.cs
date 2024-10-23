@@ -3,6 +3,7 @@ using System.IO;
 using Xunit;
 using Voron.Global;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.Trees
 {
@@ -11,8 +12,8 @@ namespace FastTests.Voron.Trees
         public Updates(ITestOutputHelper output) : base(output)
         {
         }
-        
-        [Fact]
+
+        [RavenFact(RavenTestCategory.Voron)]
         public void HandleReadingValuesWhenWeGrowTheFileSize()
         {
             Options.ManualFlushing = true;

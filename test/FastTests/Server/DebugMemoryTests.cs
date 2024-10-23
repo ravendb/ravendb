@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Server.EventListener;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ public class DebugMemoryTests : NoDisposalNeeded
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void Debug_Events()
     {
         Assert.True(Environment.Version.Major == 8 && EventListener.Constants.EventNames.GC.GCStart == "GCStart_V2",

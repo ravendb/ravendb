@@ -94,11 +94,10 @@ namespace SlowTests.Tests
 
             var array = types.ToArray();
 
-
-            if (array.Length > 0)
+            if (array.Length == 0)
                 return;
 
-            var userMessage = $"We have detected '{array.Length}' test(s) that do not have {nameof(RavenFactAttribute)} or {nameof(RavenTheoryAttribute)} attribute. Please check if tests that you have added have those attributes. List of test files:{Environment.NewLine}{string.Join(Environment.NewLine, array.Select(x => GetTestName(x)))}";
+            var userMessage = $"We have detected '{array.Length}' test(s) that do not have {nameof(RavenFactAttribute)} or {nameof(RavenTheoryAttribute)} attribute. Please check if tests that you have added have those attributes. List of test files:{Environment.NewLine}{string.Join(Environment.NewLine, array.Select(GetTestName))}";
             throw new Exception(userMessage);
 
             static string GetTestName(MethodInfo method)

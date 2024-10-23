@@ -129,7 +129,7 @@ public class RavenDB_22973 : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void FailureOnUpdatingJournalStateMustIgnoreFurtherFlushes()
     {
         long p1;
@@ -195,7 +195,7 @@ public class RavenDB_22973 : StorageTest
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void FlushingMustIncrementTotalWrittenButUnsyncedBytes()
     {
         long p1;
