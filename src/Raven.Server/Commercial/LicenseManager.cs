@@ -535,7 +535,7 @@ namespace Raven.Server.Commercial
         {
             var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense);
 
-            var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/lease",
+            var response = await ApiHttpClient.PostAsync("/api/v2/license/lease",
                     new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"), _serverStore.ServerShutdown)
                 .ConfigureAwait(false);
 
@@ -733,7 +733,7 @@ namespace Raven.Server.Commercial
             if (license == null)
                 throw new InvalidOperationException("License not found");
 
-            var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/renew",
+            var response = await ApiHttpClient.PostAsync("/api/v2/license/renew",
                     new StringContent(JsonConvert.SerializeObject(license), Encoding.UTF8, "application/json"))
                 .ConfigureAwait(false);
 
@@ -1791,7 +1791,7 @@ namespace Raven.Server.Commercial
             {
                 using (var cts = new CancellationTokenSource(timeoutInSec * 1000))
                 {
-                    var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/support",
+                    var response = await ApiHttpClient.PostAsync("/api/v2/license/support",
                             new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"), cts.Token)
                         .ConfigureAwait(false);
 
