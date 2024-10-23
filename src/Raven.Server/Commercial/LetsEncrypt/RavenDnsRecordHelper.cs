@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -10,10 +11,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 
-public class RavenDnsRecordHelper
+public static class RavenDnsRecordHelper
 {
     private const string GoogleDnsApi = "https://dns.google.com";
 
@@ -73,7 +75,7 @@ public class RavenDnsRecordHelper
                 parameters.Progress?.AddInfo("Please wait between 30 seconds and a few minutes.");
                 parameters.OnProgress?.Invoke(parameters.Progress);
 
-                response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/register",
+                response = await ApiHttpClient.PostAsync("api/v1/dns-n-cert/register",
                     new StringContent(serializeObject, Encoding.UTF8, "application/json"), parameters.Token).ConfigureAwait(false);
 
                 parameters.Progress?.AddInfo("Waiting for DNS records to update...");
@@ -107,13 +109,13 @@ public class RavenDnsRecordHelper
             try
             {
                 RegistrationResult registrationResult;
-                var i = 1;
+                var sw = Stopwatch.StartNew();
                 do
                 {
                     try
                     {
-                        await Task.Delay(1000, cts.Token);
-                        response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/registration-result?id=" + id, new StringContent(serializeObject, Encoding.UTF8, "application/json"), cts.Token).ConfigureAwait(false);
+                        await TimeoutManager.WaitFor(TimeSpan.FromSeconds(5), cts.Token);
+                        response = await ApiHttpClient.PostAsync($"api/v1/dns-n-cert/registration-result?id={id}", new StringContent(serializeObject, Encoding.UTF8, "application/json"), cts.Token).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
@@ -128,20 +130,27 @@ public class RavenDnsRecordHelper
                     }
 
                     registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
-                    if (i % 120 == 0)
-                        parameters.Progress?.AddInfo("This is taking too long, you might want to abort and restart if this goes on like this...");
-                    else if (i % 45 == 0)
-                        parameters.Progress?.AddInfo("If everything goes all right, we should be nearly there...");
-                    else if (i % 30 == 0)
-                        parameters.Progress?.AddInfo("The DNS update is still pending, carry on just a little bit longer...");
-                    else if (i % 15 == 0)
-                        parameters.Progress?.AddInfo("Please be patient, updating DNS records takes time...");
-                    else if (i % 5 == 0)
-                        parameters.Progress?.AddInfo("Waiting...");
+                    switch (sw.Elapsed.TotalSeconds)
+                    {
+                        case >= 120:
+                            parameters.Progress?.AddInfo("This is taking too long, you might want to abort and restart if this goes on like this...");
+                            break;
+                        case >= 45:
+                            parameters.Progress?.AddInfo("If everything goes all right, we should be nearly there...");
+                            break;
+                        case >= 30:
+                            parameters.Progress?.AddInfo("The DNS update is still pending, carry on just a little bit longer...");
+                            break;
+                        case >= 15:
+                            parameters.Progress?.AddInfo("Please be patient, updating DNS records takes time...");
+                            break;
+                        case >= 5:
+                            parameters.Progress?.AddInfo("Waiting...");
+                            break;
+                    }
 
                     parameters.OnProgress?.Invoke(parameters.Progress);
 
-                    i++;
                 } while (registrationResult?.Status == "PENDING");
 
                 parameters.Progress?.AddInfo("Got successful response from api.ravendb.net.");
@@ -266,7 +275,7 @@ public class RavenDnsRecordHelper
             HttpResponseMessage response;
             try
             {
-                response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/register", new StringContent(serializeObject, Encoding.UTF8, "application/json"), token).ConfigureAwait(false);
+                response = await ApiHttpClient.PostAsync("api/v1/dns-n-cert/register", new StringContent(serializeObject, Encoding.UTF8, "application/json"), token).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -289,8 +298,8 @@ public class RavenDnsRecordHelper
                 {
                     try
                     {
-                        await Task.Delay(1000, cts.Token);
-                        response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/registration-result?id=" + id, new StringContent(serializeObject, Encoding.UTF8, "application/json"), cts.Token).ConfigureAwait(false);
+                        await TimeoutManager.WaitFor(TimeSpan.FromSeconds(5), cts.Token);
+                        response = await ApiHttpClient.PostAsync($"api/v1/dns-n-cert/registration-result?id={id}", new StringContent(serializeObject, Encoding.UTF8, "application/json"), cts.Token).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {

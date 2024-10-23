@@ -11,7 +11,7 @@ namespace Raven.Server.Commercial
     {
         public async Task SendFeedback(FeedbackForm feedback)
         {
-            var response = await ApiHttpClient.Instance.PostAsync("api/v1/feedback",
+            var response = await ApiHttpClient.PostAsync("api/v1/feedback",
                     new StringContent(JsonConvert.SerializeObject(feedback), Encoding.UTF8, "application/json"))
                 .ConfigureAwait(false);
 

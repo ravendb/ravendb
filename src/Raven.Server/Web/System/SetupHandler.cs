@@ -67,7 +67,7 @@ namespace Raven.Server.Web.System
 
                     try
                     {
-                        var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/" + action, content).ConfigureAwait(false);
+                        var response = await ApiHttpClient.PostAsync("/api/v1/dns-n-cert/" + action, content).ConfigureAwait(false);
 
                         HttpContext.Response.StatusCode = (int)response.StatusCode;
                         responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -147,7 +147,7 @@ namespace Raven.Server.Web.System
 
                     try
                     {
-                        var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
+                        var response = await ApiHttpClient.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
                         HttpContext.Response.StatusCode = (int)response.StatusCode;
                         responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
