@@ -31,7 +31,7 @@ public static class SetupWizardUtils
             {
                 var base64 = parameters.SetupInfo.Certificate;
                 serverCertBytes = Convert.FromBase64String(base64);
-                serverCert = CertificateLoaderUtil.CreateCertificate(serverCertBytes, parameters.SetupInfo.Password, CertificateLoaderUtil.FlagsForExport);
+                serverCert = CertificateLoaderUtil.CreateCertificateFromPfx(serverCertBytes, parameters.SetupInfo.Password, CertificateLoaderUtil.FlagsForExport);
 
                 var localNodeTag = parameters.SetupInfo.LocalNodeTag ?? parameters.SetupInfo.NodeSetupInfos.Keys.FirstOrDefault();
                 if (localNodeTag is null)
@@ -108,7 +108,7 @@ public static class SetupWizardUtils
                 if (parameters.PutCertificateInCluster != null && parameters.SetupInfo.RegisterClientCert && parameters.SetupInfo.ZipOnly == false)
                     await parameters.PutCertificateInCluster(selfSignedCertificate, certificateDefinition);
 
-                clientCert = CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
+                clientCert = CertificateLoaderUtil.CreateCertificateFromPfx(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
             }
             catch (Exception e)
             {

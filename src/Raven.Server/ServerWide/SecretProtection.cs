@@ -514,7 +514,7 @@ namespace Raven.Server.ServerWide
             try
             {
                 // may need to send this over the cluster, so use exportable here
-                loadedCertificate = CertificateLoaderUtil.CreateCertificate(rawData, (string)null, CertificateLoaderUtil.FlagsForExport);
+                loadedCertificate = CertificateLoaderUtil.CreateCertificateFromPfx(rawData, (string)null, CertificateLoaderUtil.FlagsForExport);
                 ValidateExpiration(executable, loadedCertificate, licenseType, throwOnExpired: false);
                 ValidatePrivateKey(executable, null, rawData, out privateKey);
                 ValidateKeyUsages(executable, loadedCertificate, certificateValidationKeyUsages);
@@ -688,10 +688,7 @@ namespace Raven.Server.ServerWide
 
             var collection = new X509Certificate2Collection();
 
-            if (string.IsNullOrEmpty(password))
-                CertificateLoaderUtil.Import(collection, rawBytes);
-            else
-                CertificateLoaderUtil.Import(collection, rawBytes, password);
+            CertificateLoaderUtil.ImportAny(collection, rawBytes);
 
             var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.CertificateAuthority;
             using (var userIntermediateStore = new X509Store(storeName, StoreLocation.CurrentUser,
@@ -760,7 +757,7 @@ namespace Raven.Server.ServerWide
                 var rawData = File.ReadAllBytes(path);
 
                 // we need to load it as exportable because we might need to send it over the cluster
-                var loadedCertificate = CertificateLoaderUtil.CreateCertificate(rawData, password, CertificateLoaderUtil.FlagsForExport);
+                var loadedCertificate = CertificateLoaderUtil.CreateCertificateFromPfx(rawData, password, CertificateLoaderUtil.FlagsForExport);
 
                 ValidateExpiration(path, loadedCertificate, licenseType, throwOnExpired: false);
 
@@ -781,7 +778,7 @@ namespace Raven.Server.ServerWide
             ValidateExpiration("ValidateCertificateBeforeReplacement", certificate, licenseType, throwOnExpired: true);
 
             ValidatePrivateKey("ValidateCertificateBeforeReplacement", password, certificate.Export(X509ContentType.Pkcs12), out _);
-            
+
             ValidateKeyUsages("ValidateCertificateBeforeReplacement", certificate, certificateValidationKeyUsages);
         }
 

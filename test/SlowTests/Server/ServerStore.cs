@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -24,7 +25,7 @@ namespace SlowTests.Server
         {
             using (GetDocumentStore())
             {
-                var certificate = new X509Certificate2(Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
+                var certificate = CertificateHelper.CreateCertificateFromPfx(Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
 
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -59,7 +60,7 @@ namespace SlowTests.Server
         {
             using (GetDocumentStore())
             {
-                var certificate = new X509Certificate2(Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
+                var certificate = CertificateHelper.CreateCertificateFromPfx(Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
 
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))

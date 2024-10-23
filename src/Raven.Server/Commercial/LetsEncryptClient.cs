@@ -403,7 +403,7 @@ namespace Raven.Server.Commercial
             // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
             var (pem, _) = await SendAsync<string>(HttpMethod.Post, response.Certificate, string.Empty, token);
 
-            var cert = CertificateLoaderUtil.CreateCertificate(Encoding.UTF8.GetBytes(pem));
+            var cert = CertificateLoaderUtil.CreateCertificateFromAny(Encoding.UTF8.GetBytes(pem));
 
             byte[] blob = null;
             switch (key)
@@ -413,10 +413,7 @@ namespace Raven.Server.Commercial
                     if (PlatformDetails.RunningOnPosix)
                         throw new PlatformNotSupportedException($"The private key of the current server certificate is {nameof(RSACng)} which is only supported in Windows.");
 
-#pragma warning disable CA1416 // Validate platform compatibility
-                    var parameters = rsaCng.ExportParameters(true);
-#pragma warning restore CA1416 // Validate platform compatibility
-
+                    RSAParameters parameters = rsaCng.GetRsaParametersSafely();
                     var newRsaCsp = new RSACryptoServiceProvider();
                     newRsaCsp.ImportParameters(parameters);
                     blob = newRsaCsp.ExportCspBlob(true);
@@ -472,7 +469,7 @@ namespace Raven.Server.Commercial
             if (cache.Private == null || cache.Cert == null)
                 return false;
 
-            var cert = CertificateLoaderUtil.CreateCertificate(Encoding.UTF8.GetBytes(cache.Cert));
+            var cert = CertificateLoaderUtil.CreateCertificateFromAny(Encoding.UTF8.GetBytes(cache.Cert));
 
             // if it is about to expire, we need to refresh
             if ((cert.NotAfter - DateTime.UtcNow).TotalDays < 14)

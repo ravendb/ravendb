@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography.X509Certificates;
@@ -17,39 +18,77 @@ internal static class CertificateLoaderUtil
 
     public static X509KeyStorageFlags FlagsForPersist => X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet;
 
-    public static void Import(X509Certificate2Collection collection, byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
+    public static void ImportAny(X509Certificate2Collection collection, byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
     {
-        DebugAssertDoesntContainKeySet(flags);
+        var certContentType = X509Certificate2.GetCertContentType(rawData);
+        switch (certContentType)
+        {
+            case X509ContentType.Cert:
+                ImportCert(collection, rawData);
+                break;
+            case X509ContentType.Pfx: // this is Pkcs12
+                ImportPfx(collection, rawData, password, flags);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(certContentType), certContentType, "Not supported certificate type.");
+        }
+    }
+
+    public static void ImportCert(X509Certificate2Collection collection, byte[] rawData)
+    {
+        collection.Add(CertificateHelper.CreateCertificateFromCert(rawData));
+    }
+
+    public static void ImportPfx(X509Certificate2Collection collection, byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
+    {
+        DebugAssertDoesNotContainKeySet(flags);
         var f = AddUserKeySet(flags);
 
         Exception exception = null;
         try
         {
-            collection.Import(rawData, password, f);
+            collection.Add(CertificateHelper.CreateCertificateFromPfx(rawData, password, f));
         }
         catch (Exception e)
         {
             exception = e;
             f = AddMachineKeySet(flags);
-            collection.Import(rawData, password, f);
+            collection.Add(CertificateHelper.CreateCertificateFromPfx(rawData, password, f));
         }
 
-        LogIfNeeded(nameof(Import), f, exception);
+        LogIfNeeded(nameof(ImportPfx), f, exception);
     }
 
-    public static X509Certificate2 CreateCertificate(byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
+    public static X509Certificate2 CreateCertificateFromAny(string fileName, string password = null, X509KeyStorageFlags? flags = null)
     {
-        return CreateCertificate(f => new X509Certificate2(rawData, password, f), flags);
+        var certBytes = File.ReadAllBytes(fileName);
+        return CreateCertificateFromAny(certBytes, password, flags);
     }
 
-    internal static X509Certificate2 CreateCertificate(string fileName, string password = null, X509KeyStorageFlags? flags = null)
+    public static X509Certificate2 CreateCertificateFromAny(byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
     {
-        return CreateCertificate(f => new X509Certificate2(fileName, password, f), flags);
+        var certContentType = X509Certificate2.GetCertContentType(rawData);
+        return certContentType switch
+        {
+            X509ContentType.Cert => CertificateHelper.CreateCertificateFromCert(rawData),
+            X509ContentType.Pfx => CreateCertificateFromPfx(rawData, password, flags), // this is Pkcs12
+            _ => throw new ArgumentOutOfRangeException(nameof(certContentType), certContentType, "Not supported certificate type.")
+        };
     }
 
-    private static X509Certificate2 CreateCertificate(Func<X509KeyStorageFlags, X509Certificate2> creator, X509KeyStorageFlags? flag)
+    public static X509Certificate2 CreateCertificateFromPfx(byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
     {
-        DebugAssertDoesntContainKeySet(flag);
+        return CreateCertificateFromPfx(f => CertificateHelper.CreateCertificateFromPfx(rawData, password, f), flags);
+    }
+
+    internal static X509Certificate2 CreateCertificateFromPfx(string fileName, string password = null, X509KeyStorageFlags? flags = null)
+    {
+        return CreateCertificateFromPfx(f => CertificateHelper.CreateCertificateFromPfx(fileName, password, f), flags);
+    }
+
+    private static X509Certificate2 CreateCertificateFromPfx(Func<X509KeyStorageFlags, X509Certificate2> creator, X509KeyStorageFlags? flag)
+    {
+        DebugAssertDoesNotContainKeySet(flag);
         var f = AddUserKeySet(flag);
 
         Exception exception = null;
@@ -65,7 +104,7 @@ internal static class CertificateLoaderUtil
             certificate = creator(f);
         }
 
-        LogIfNeeded(nameof(CreateCertificate), f, exception);
+        LogIfNeeded(nameof(CreateCertificateFromPfx), f, exception);
 
         CertificateCleaner.RegisterForDisposalDuringFinalization(certificate);
 
@@ -76,13 +115,14 @@ internal static class CertificateLoaderUtil
     {
         return (flag ?? X509KeyStorageFlags.DefaultKeySet) | X509KeyStorageFlags.UserKeySet;
     }
+
     private static X509KeyStorageFlags AddMachineKeySet(X509KeyStorageFlags? flag)
     {
         return (flag ?? X509KeyStorageFlags.DefaultKeySet) | X509KeyStorageFlags.MachineKeySet;
     }
 
     [Conditional("DEBUG")]
-    private static void DebugAssertDoesntContainKeySet(X509KeyStorageFlags? flags)
+    private static void DebugAssertDoesNotContainKeySet(X509KeyStorageFlags? flags)
     {
         const X509KeyStorageFlags keyStorageFlags =
 #if NETCOREAPP3_1_OR_GREATER 

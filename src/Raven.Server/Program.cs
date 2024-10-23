@@ -41,21 +41,21 @@ namespace Raven.Server
 
         static Program()
         {
-            bool useLegacyHttpClientFactory = false;
-            var useLegacyHttpClientFactoryAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_USELEGACYHTTPCLIENTFACTORY");
-            if (useLegacyHttpClientFactoryAsString != null && bool.TryParse(useLegacyHttpClientFactoryAsString, out useLegacyHttpClientFactory) == false)
-                throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_USELEGACYHTTPCLIENTFACTORY' env variable with value '{useLegacyHttpClientFactoryAsString}'.");
-
-            RequestExecutor.HttpClientFactory = useLegacyHttpClientFactory 
-                ? DefaultRavenHttpClientFactory.Instance 
-                : RavenServerHttpClientFactory.Instance;
-
             RavenLogManager.Set(RavenNLogLogManager.Instance);
             Logger = RavenLogManager.Instance.GetLoggerForServer<Program>();
         }
 
         public static unsafe int Main(string[] args)
         {
+            bool useLegacyHttpClientFactory = false;
+            var useLegacyHttpClientFactoryAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_USELEGACYHTTPCLIENTFACTORY");
+            if (useLegacyHttpClientFactoryAsString != null && bool.TryParse(useLegacyHttpClientFactoryAsString, out useLegacyHttpClientFactory) == false)
+                throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_USELEGACYHTTPCLIENTFACTORY' env variable with value '{useLegacyHttpClientFactoryAsString}'.");
+
+            RequestExecutor.HttpClientFactory = useLegacyHttpClientFactory
+                ? DefaultRavenHttpClientFactory.Instance
+                : RavenServerHttpClientFactory.Instance;
+
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
 

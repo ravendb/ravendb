@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Util;
 using OperationCanceledException = System.OperationCanceledException;
 
 namespace Raven.Debug.LogTrafficWatch
@@ -295,7 +296,7 @@ namespace Raven.Debug.LogTrafficWatch
                 {
                     ClientCertificates =
                     {
-                        new X509Certificate2(certPath, certPass, X509KeyStorageFlags.MachineKeySet)
+                        CertificateHelper.CreateCertificateFromPfx(certPath, certPass, X509KeyStorageFlags.MachineKeySet)
                     }
                 });
                 return;

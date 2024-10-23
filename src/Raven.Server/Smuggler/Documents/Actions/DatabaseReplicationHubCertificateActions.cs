@@ -42,7 +42,7 @@ public sealed class DatabaseReplicationHubCertificateActions : IReplicationHubCe
         const int batchSize = 128;
 
         byte[] buffer = Convert.FromBase64String(access.CertificateBase64);
-        using var cert = new X509Certificate2(buffer);
+        using var cert = CertificateLoaderUtil.CreateCertificateFromAny(buffer);
 
         _commands.Add(new RegisterReplicationHubAccessCommand(_name, hub, access, cert, RaftIdGenerator.DontCareId));
 

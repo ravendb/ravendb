@@ -40,7 +40,7 @@ namespace SlowTests.Bugs.Indexing
                 Map = docs => from foo in docs
                               select new
                               {
-                                  Text = string.Join("\n\r\'\b\"\\\t\v\u0013\u1567\0", foo.Title, foo.Description),
+                                  Text = string.Join("\n\r\'\b\"\\\t\v\u0013\u1567\0", new[] { foo.Title, foo.Description }),
 
                                   Chars = new[]
                                   {

@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.Replication
             if (pullReplication.CertificateWithPrivateKey != null)
             {
                 var certBytes = Convert.FromBase64String(pullReplication.CertificateWithPrivateKey);
-                using (var certificate = CertificateLoaderUtil.CreateCertificate(certBytes,
+                using (var certificate = CertificateLoaderUtil.CreateCertificateFromPfx(certBytes,
                     pullReplication.CertificatePassword,
                     CertificateLoaderUtil.FlagsForExport))
                 {

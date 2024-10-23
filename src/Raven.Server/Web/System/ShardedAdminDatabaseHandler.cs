@@ -219,7 +219,7 @@ namespace Raven.Server.Web.System
             foreach (var node in nodes)
             {
                 if (nodesList.Contains(node))
-                    throw new InvalidOperationException($"Cannot add a new shard to database {database}. The provided list of nodes contains duplicates {string.Join(",", nodes)}");
+                    throw new InvalidOperationException($"Cannot add a new shard to database {database}. The provided list of nodes contains duplicates {string.Join(",", nodes.ToArray())}");
 
                 nodesList.Add(node.Trim());
             }

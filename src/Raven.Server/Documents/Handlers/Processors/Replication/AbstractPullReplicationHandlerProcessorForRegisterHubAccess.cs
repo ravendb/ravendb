@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Json.Serialization;
+using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             var access = JsonDeserializationClient.ReplicationHubAccess(configuration);
             access.Validate(_hubDefinition.WithFiltering);
 
-            using var cert = new X509Certificate2(Convert.FromBase64String(access.CertificateBase64));
+            using var cert = CertificateLoaderUtil.CreateCertificateFromAny(Convert.FromBase64String(access.CertificateBase64));
 
             var command = new RegisterReplicationHubAccessCommand(RequestHandler.DatabaseName, _hubTaskName, access, cert, raftRequestId);
             return await RequestHandler.Server.ServerStore.SendToLeaderAsync(command);
