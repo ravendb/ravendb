@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
@@ -1532,7 +1533,22 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             else if (queriedFactory.Embedding != null)
             {
-                queryParameterName = AddQueryParameter(queriedFactory.Embedding);
+                // for well-known types we can convert the array into Base64
+                queryParameterName = AddQueryParameter(queriedFactory.Embedding switch
+                {
+                    float[] fa => Convert.ToBase64String(MemoryMarshal.Cast<float, byte>(fa)
+#if NETCOREAPP3_1_OR_GREATER == FALSE
+                        .ToArray() // For newer frameworks we use Span overload in Convert.
+#endif
+                    ),
+                    byte[] ba => Convert.ToBase64String(ba),
+                    sbyte[] sb => Convert.ToBase64String(MemoryMarshal.Cast<sbyte, byte>(sb)
+#if NETCOREAPP3_1_OR_GREATER == FALSE
+                        .ToArray()
+#endif
+                    ),
+                    _  => queriedFactory.Embedding,
+                });
             }
             else
             {
