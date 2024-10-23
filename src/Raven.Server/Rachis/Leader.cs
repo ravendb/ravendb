@@ -217,9 +217,9 @@ namespace Raven.Server.Rachis
                     var ambassador = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, connection);
                     _voters[voter.Key] = ambassador;
                     _engine.AppendStateDisposable(this, ambassador);
-                    if (_engine.Log.IsInfoEnabled)
+                    if (_engine.Log.IsDebugEnabled)
                     {
-                        _engine.Log.Info($"{ToString()}: starting ambassador for voter {voter.Key} {voter.Value}");
+                        _engine.Log.Debug($"{ToString()}: starting ambassador for voter {voter.Key} {voter.Value}");
                     }
                     ambassador.Start();
                 }
@@ -420,9 +420,9 @@ namespace Raven.Server.Rachis
         {
             const string msg = "Error when running leader behavior";
 
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info(msg, e);
+                _engine.Log.Debug(msg, e);
             }
 
             if (e is VoronErrorException)
@@ -802,9 +802,9 @@ namespace Raven.Server.Rachis
                     _promotableUpdated.Dispose();
                     _shutdownRequested.Dispose();
                     _noop.Dispose();
-                    if (_engine.Log.IsInfoEnabled)
+                    if (_engine.Log.IsDebugEnabled)
                     {
-                        _engine.Log.Info($"Leader {_engine.Tag} of term {Term} was disposed");
+                        _engine.Log.Debug($"Leader {_engine.Tag} of term {Term} was disposed");
                     }
                 }
                 finally

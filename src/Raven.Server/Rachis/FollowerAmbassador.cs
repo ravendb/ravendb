@@ -175,9 +175,9 @@ namespace Raven.Server.Rachis
                             if (needNewConnection)
                             {
                                 _debugRecorder.Record("Creating new connection to follower");
-                                if (_engine.Log.IsInfoEnabled)
+                                if (_engine.Log.IsDebugEnabled)
                                 {
-                                    _engine.Log.Info($"FollowerAmbassador for {_tag}: Creating new connection to {_tag}");
+                                    _engine.Log.Debug($"FollowerAmbassador for {_tag}: Creating new connection to {_tag}");
                                 }
 
                                 using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -207,9 +207,9 @@ namespace Raven.Server.Rachis
                             else
                             {
                                 // if we are here we have won the elections, let's notify the elector about it.
-                                if (_engine.Log.IsInfoEnabled)
+                                if (_engine.Log.IsDebugEnabled)
                                 {
-                                    _engine.Log.Info($"Follower ambassador reuses the connection for {_tag} and send a winning message to his elector.");
+                                    _engine.Log.Debug($"Follower ambassador reuses the connection for {_tag} and send a winning message to his elector.");
                                 }
 
                                 CandidateAmbassador.SendElectionResult(_engine, _connection, _term, ElectionResult.Won);
@@ -337,10 +337,10 @@ namespace Raven.Server.Rachis
                                     {
                                         if (readWatcher.Elapsed > _engine.ElectionTimeout / 2)
                                         {
-                                            if (_engine.Log.IsInfoEnabled)
+                                            if (_engine.Log.IsDebugEnabled)
                                             {
                                                 var msg = aer?.Success == true ? "successfully" : "failed";
-                                                _engine.Log.Info(
+                                                _engine.Log.Debug(
                                                     $"{ToString()}: waited long time ({readWatcher.ElapsedMilliseconds}) to read a single response from stream ({msg}).");
                                             }
                                         }
@@ -358,9 +358,9 @@ namespace Raven.Server.Rachis
                                     var msg =
                                         "A negative Append Entries Response after the connection has been established shouldn't happen. Message: " +
                                         aer.Message;
-                                    if (_engine.Log.IsInfoEnabled)
+                                    if (_engine.Log.IsDebugEnabled)
                                     {
-                                        _engine.Log.Info($"{ToString()}: failure to append entries to {_tag} because: " + msg);
+                                        _engine.Log.Debug($"{ToString()}: failure to append entries to {_tag} because: " + msg);
                                     }
 
                                     RachisInvalidOperationException.Throw(msg);
@@ -371,9 +371,9 @@ namespace Raven.Server.Rachis
                                     var msg = $"The current engine term has changed " +
                                               $"({aer.CurrentTerm:#,#;;0} -> {_term:#,#;;0}), " +
                                               $"this ambassador term is no longer valid";
-                                    if (_engine.Log.IsInfoEnabled)
+                                    if (_engine.Log.IsDebugEnabled)
                                     {
-                                        _engine.Log.Info($"{ToString()}: failure to append entries to {_tag} because: {msg}");
+                                        _engine.Log.Debug($"{ToString()}: failure to append entries to {_tag} because: {msg}");
                                     }
 
                                     RachisConcurrencyException.Throw(msg);
@@ -460,17 +460,17 @@ namespace Raven.Server.Rachis
                 StatusMessage = $"Failed to talk with {_tag}.{Environment.NewLine}" + e.Message;
                 Status = AmbassadorStatus.FailedToConnect;
 
-                if (_engine.Log.IsInfoEnabled)
+                if (_engine.Log.IsDebugEnabled)
                 {
-                    _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
+                    _engine.Log.Debug("Failed to talk to remote follower: " + _tag, e);
                 }
             }
             finally
             {
                 _debugRecorder.Record(StatusMessage);
-                if (_engine.Log.IsInfoEnabled)
+                if (_engine.Log.IsDebugEnabled)
                 {
-                    _engine.Log.Info($"{ToString()}: Node {_tag} is finished with the message '{StatusMessage}'.");
+                    _engine.Log.Debug($"{ToString()}: Node {_tag} is finished with the message '{StatusMessage}'.");
                 }
                 _connection?.Dispose();
             }
@@ -515,9 +515,9 @@ namespace Raven.Server.Rachis
                     Status = AmbassadorStatus.FailedToConnect;
                     StatusMessage = $"{message}.{Environment.NewLine}" + e;
 
-                    if (_engine.Log.IsInfoEnabled)
+                    if (_engine.Log.IsDebugEnabled)
                     {
-                        _engine.Log.Info(message, e);
+                        _engine.Log.Debug(message, e);
                     }
 
                     _leader?.NotifyAboutException(_tag, $"Node {_tag} encountered an error", message, e);
@@ -902,9 +902,9 @@ namespace Raven.Server.Rachis
 
                     if (llr.Status == LogLengthNegotiationResponse.ResponseStatus.Acceptable)
                     {
-                        if (_engine.Log.IsInfoEnabled)
+                        if (_engine.Log.IsDebugEnabled)
                         {
-                            _engine.Log.Info($"{ToString()}: {_tag} agreed on term={llr.CurrentTerm:#,#;;0} index={llr.LastLogIndex:#,#;;0}");
+                            _engine.Log.Debug($"{ToString()}: {_tag} agreed on term={llr.CurrentTerm:#,#;;0} index={llr.LastLogIndex:#,#;;0}");
                         }
                         return llr.LastLogIndex;
                     }
@@ -912,9 +912,9 @@ namespace Raven.Server.Rachis
                     if (llr.Status == LogLengthNegotiationResponse.ResponseStatus.Rejected)
                     {
                         var message = "Failed to get acceptable status from " + _tag + " because " + llr.Message;
-                        if (_engine.Log.IsInfoEnabled)
+                        if (_engine.Log.IsDebugEnabled)
                         {
-                            _engine.Log.Info($"{ToString()}: {message}");
+                            _engine.Log.Debug($"{ToString()}: {message}");
                         }
                         RachisInvalidOperationException.Throw(message);
                     }
@@ -956,9 +956,9 @@ namespace Raven.Server.Rachis
                             PrevLogTerm = termFor ?? 0,
                             Truncated = truncated
                         };
-                        if (_engine.Log.IsInfoEnabled)
+                        if (_engine.Log.IsDebugEnabled)
                         {
-                            _engine.Log.Info($"Sending LogLengthNegotiation to {_tag} with term {lln.Term:#,#;;0} " +
+                            _engine.Log.Debug($"Sending LogLengthNegotiation to {_tag} with term {lln.Term:#,#;;0} " +
                                              $"({lln.PrevLogIndex:#,#;;0} / {lln.PrevLogTerm:#,#;;0}) - Truncated {lln.Truncated}");
                         }
                     }
@@ -985,9 +985,9 @@ namespace Raven.Server.Rachis
         private void SendHello(ClusterOperationContext context, ClusterTopology clusterTopology)
         {
             UpdateLastSend("Hello");
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"{ToString()}: sending Rachis hello to {_tag}");
+                _engine.Log.Debug($"{ToString()}: sending Rachis hello to {_tag}");
             }
             _connection.Send(context, new RachisHello
             {
@@ -1017,9 +1017,9 @@ namespace Raven.Server.Rachis
         public void Dispose()
         {
             _running.Lower();
-            if (_engine.Log.IsInfoEnabled)
+            if (_engine.Log.IsDebugEnabled)
             {
-                _engine.Log.Info($"Dispose {ToString()}");
+                _engine.Log.Debug($"Dispose {ToString()}");
             }
             if (_followerAmbassadorLongRunningOperation != null && _followerAmbassadorLongRunningOperation.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
             {
@@ -1027,9 +1027,9 @@ namespace Raven.Server.Rachis
 
                 while (_followerAmbassadorLongRunningOperation.Join(1000) == false)
                 {
-                    if (_engine.Log.IsInfoEnabled)
+                    if (_engine.Log.IsDebugEnabled)
                     {
-                        _engine.Log.Info($"{ToString()}: Waited for a full second for thread {_followerAmbassadorLongRunningOperation.ManagedThreadId} ({(_followerAmbassadorLongRunningOperation.Join(0) ? "Running" : "Finished")}) to close, disposing connection and trying");
+                        _engine.Log.Debug($"{ToString()}: Waited for a full second for thread {_followerAmbassadorLongRunningOperation.ManagedThreadId} ({(_followerAmbassadorLongRunningOperation.Join(0) ? "Running" : "Finished")}) to close, disposing connection and trying");
                     }
                     // the thread may have create a new connection, so need
                     // to dispose that as well
