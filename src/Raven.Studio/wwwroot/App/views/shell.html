@@ -325,6 +325,9 @@
             <span class="global-spinner spinner-sm"></span> <strong>Loading, please wait</strong>
         </div>
         <div class="footer-right">
+            <div class="footer-item bg-info" data-bind="visible: $root.clusterManager.votingInProgress">
+                <a data-bind="attr: { href: $root.urlForCluster() }" title="Voting in progress"><i class="icon-cluster-node"></i><span>Voting in progress</span></a>
+            </div>
             <div class="footer-item">
                 <button class="btn btn-primary" title="Continue Test" data-bind="click: $root.continueTest.continue, visible: $root.continueTest.showContinueButton">
                     <i class="icon-play"></i> <span>Continue test</span>
@@ -334,9 +337,6 @@
                 <a class="btn btn-2fa btn-sm lh-1" title="End current 2FA session" data-bind="click: logout">
                     <i class="icon-logout"></i> <span class="me-0">End session</span>
                 </a>
-            </div>
-            <div class="footer-item bg-info" data-bind="visible: $root.clusterManager.votingInProgress">
-                <a data-bind="attr: { href: $root.urlForCluster() }" title="Voting in progress"><i class="icon-cluster-node"></i><span>Voting in progress</span></a>
             </div>
             <div class="footer-item" data-bind="visible: !$root.clientCertificate()">
                 <a class="btn btn-danger btn-sm js-client-cert" data-bind="attr: { href: $root.urlForCertificates() }">
