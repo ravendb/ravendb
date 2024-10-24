@@ -11,18 +11,33 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof DocumentExpiration>;
 
-function commonInit() {
+function commonInit(hasConfiguration: boolean) {
     const { databasesService } = mockServices;
     const { databases } = mockStore;
 
-    databasesService.withExpirationConfiguration();
+    if (hasConfiguration) {
+        databasesService.withExpirationConfiguration();
+    } else {
+        databasesService.withoutExpirationConfiguration();
+    }
     databases.withActiveDatabase_NonSharded_SingleNode();
 }
 
 export const DefaultDocumentExpiration: StoryObj<typeof DocumentExpiration> = {
     name: "Document Expiration",
     render: () => {
-        commonInit();
+        commonInit(true);
+
+        const { license } = mockStore;
+        license.with_License();
+
+        return <DocumentExpiration />;
+    },
+};
+
+export const InitialDocumentExpiration: StoryObj<typeof DocumentExpiration> = {
+    render: () => {
+        commonInit(false);
 
         const { license } = mockStore;
         license.with_License();
@@ -33,7 +48,7 @@ export const DefaultDocumentExpiration: StoryObj<typeof DocumentExpiration> = {
 
 export const LicenseRestricted: StoryObj<typeof DocumentExpiration> = {
     render: () => {
-        commonInit();
+        commonInit(true);
 
         const { license } = mockStore;
         license.with_LicenseLimited();

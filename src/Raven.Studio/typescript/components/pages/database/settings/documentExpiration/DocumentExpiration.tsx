@@ -28,6 +28,8 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import RichAlert from "components/common/RichAlert";
 
+const defaultItemsToProcess = 65536;
+
 export default function DocumentExpiration() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
@@ -36,7 +38,7 @@ export default function DocumentExpiration() {
         mapToFormData(await databasesService.getExpirationConfiguration(databaseName))
     );
 
-    const { handleSubmit, control, formState, reset, setValue } = useForm<DocumentExpirationFormData>({
+    const { handleSubmit, control, formState, reset, setValue, watch } = useForm<DocumentExpirationFormData>({
         resolver: documentExpirationYupResolver,
         mode: "all",
         defaultValues: asyncGetExpirationConfiguration.execute,
@@ -68,18 +70,35 @@ export default function DocumentExpiration() {
         deleteFrequencyInHours < minPeriodForExpirationInHours;
 
     useEffect(() => {
-        if (!formValues.isDeleteFrequencyEnabled && formValues.deleteFrequency !== null) {
-            setValue("deleteFrequency", null, { shouldValidate: true });
-        }
-        if (!formValues.isDocumentExpirationEnabled && formValues.isDeleteFrequencyEnabled) {
-            setValue("isDeleteFrequencyEnabled", false, { shouldValidate: true });
-        }
-    }, [
-        formValues.isDocumentExpirationEnabled,
-        formValues.isDeleteFrequencyEnabled,
-        formValues.deleteFrequency,
-        setValue,
-    ]);
+        const { unsubscribe } = watch((values, { name }) => {
+            switch (name) {
+                case "isDocumentExpirationEnabled": {
+                    if (values.isDocumentExpirationEnabled) {
+                        setValue("isLimitMaxItemsToProcessEnabled", true, { shouldValidate: true });
+                    } else {
+                        setValue("isLimitMaxItemsToProcessEnabled", false, { shouldValidate: true });
+                        setValue("isDeleteFrequencyEnabled", false, { shouldValidate: true });
+                    }
+                    break;
+                }
+                case "isLimitMaxItemsToProcessEnabled": {
+                    if (values.isLimitMaxItemsToProcessEnabled) {
+                        setValue("maxItemsToProcess", defaultItemsToProcess, { shouldValidate: true });
+                    } else {
+                        setValue("maxItemsToProcess", null, { shouldValidate: true });
+                    }
+                    break;
+                }
+                case "isDeleteFrequencyEnabled": {
+                    if (!values.isDeleteFrequencyEnabled) {
+                        setValue("deleteFrequency", null, { shouldValidate: true });
+                    }
+                    break;
+                }
+            }
+        });
+        return () => unsubscribe();
+    }, [setValue, watch]);
 
     const onSave: SubmitHandler<DocumentExpirationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -88,6 +107,7 @@ export default function DocumentExpiration() {
             await databasesService.saveExpirationConfiguration(databaseName, {
                 Disabled: !formData.isDocumentExpirationEnabled,
                 DeleteFrequencyInSec: formData.isDeleteFrequencyEnabled ? formData.deleteFrequency : null,
+                MaxItemsToProcess: formData.isLimitMaxItemsToProcessEnabled ? formData.maxItemsToProcess : null,
             });
 
             messagePublisher.reportSuccess("Expiration configuration saved successfully");
@@ -173,6 +193,29 @@ export default function DocumentExpiration() {
                                                     </RichAlert>
                                                 )}
                                             </div>
+                                            <div>
+                                                <FormSwitch
+                                                    name="isLimitMaxItemsToProcessEnabled"
+                                                    control={control}
+                                                    className="mb-3"
+                                                    disabled={
+                                                        formState.isSubmitting ||
+                                                        !formValues.isDocumentExpirationEnabled
+                                                    }
+                                                >
+                                                    Set max number of documents to process in a single run
+                                                </FormSwitch>
+                                                <FormInput
+                                                    name="maxItemsToProcess"
+                                                    control={control}
+                                                    type="number"
+                                                    disabled={
+                                                        formState.isSubmitting ||
+                                                        !formValues.isLimitMaxItemsToProcessEnabled
+                                                    }
+                                                    addon="items"
+                                                />
+                                            </div>
                                         </div>
                                     </CardBody>
                                 </Card>
@@ -228,6 +271,8 @@ function mapToFormData(dto: ServerExpirationConfiguration): DocumentExpirationFo
             isDocumentExpirationEnabled: false,
             isDeleteFrequencyEnabled: false,
             deleteFrequency: null,
+            isLimitMaxItemsToProcessEnabled: false,
+            maxItemsToProcess: null,
         };
     }
 
@@ -235,6 +280,8 @@ function mapToFormData(dto: ServerExpirationConfiguration): DocumentExpirationFo
         isDocumentExpirationEnabled: !dto.Disabled,
         isDeleteFrequencyEnabled: dto.DeleteFrequencyInSec != null,
         deleteFrequency: dto.DeleteFrequencyInSec,
+        isLimitMaxItemsToProcessEnabled: dto.MaxItemsToProcess != null,
+        maxItemsToProcess: dto.MaxItemsToProcess,
     };
 }
 

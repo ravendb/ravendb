@@ -10,6 +10,7 @@ class serverTraffic extends historyAwareNodeStats<Raven.Server.Dashboard.Cluster
     documentsWriteBytesPerSecond = this.conditionalDataExtractor(x => generalUtils.formatBytesToSize(x.DocumentsWriteBytesPerSecond) + "/s", { customNoData: "n/a" });
     documentWritesPerSecond = this.conditionalDataExtractor(x => x.DocumentWritesPerSecond.toLocaleString() + "/s", { customNoData: "n/a" });
     requestsPerSecond = this.dataExtractor(x => x.RequestsPerSecond);
+    avgRequestTime = this.dataExtractor(x => x.AverageRequestDuration);
     timeSeriesWriteBytesPerSecond = this.conditionalDataExtractor(x => generalUtils.formatBytesToSize(x.TimeSeriesWriteBytesPerSecond) + "/s", { customNoData: "n/a" });
     timeSeriesWritesPerSecond = this.conditionalDataExtractor(x => x.TimeSeriesWritesPerSecond.toLocaleString() + "/s", { customNoData: "n/a" });
     
@@ -29,7 +30,8 @@ class serverTraffic extends historyAwareNodeStats<Raven.Server.Dashboard.Cluster
     totalWriteBytesPerSecondUnit = this.conditionalDataExtractor(() => generalUtils.formatBytesToSize(this.totalWriteBytesPerSecond(), 2, true)[1], { customNoData: "-" });
     
     requestsFormatted: KnockoutComputed<string>;
-
+    avgRequestTimeFormatted: KnockoutComputed<string>;
+    
     constructor(tag: string) {
         super(tag);
         
@@ -39,6 +41,14 @@ class serverTraffic extends historyAwareNodeStats<Raven.Server.Dashboard.Cluster
                 return noData;
             }
             return this.requestsPerSecond().toLocaleString();
+        });
+        
+        this.avgRequestTimeFormatted = ko.pureComputed(() => {
+            const noData = this.noDataText();
+            if (noData) {
+                return noData;
+            }
+            return Math.round(this.avgRequestTime()).toLocaleString(); 
         });
     }
 }

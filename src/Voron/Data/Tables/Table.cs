@@ -1635,6 +1635,28 @@ namespace Voron.Data.Tables
             }
         }
 
+        public IEnumerable<TableValueHolder> SeekBackwardByPrimaryKey(Slice value, long skip)
+        {
+            var pk = _schema.Key;
+            var tree = GetTree(pk);
+            using (var it = tree.Iterate(true))
+            {
+                if (it.Seek(value) == false)
+                    yield break;
+
+                if (it.Skip(-skip) == false)
+                    yield break;
+
+                var result = new TableValueHolder();
+                do
+                {
+                    GetTableValueReader(it, out result.Reader);
+                    yield return result;
+                }
+                while (it.MovePrev());
+            }
+        }
+
         public bool SeekOneBackwardByPrimaryKeyPrefix(Slice prefix, Slice value, out TableValueReader reader, bool excludeValueFromSeek = false)
         {
             reader = default;
