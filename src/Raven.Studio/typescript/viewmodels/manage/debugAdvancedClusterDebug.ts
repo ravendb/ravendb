@@ -57,14 +57,23 @@ class clusterDebug extends viewModelBase {
         super();
         
         this.bindToCurrentInstance("refresh", "customInlinePreview", "deleteLogEntry", "openInstallationDetails", "openCriticalError", "showConnectionDetails");
-        
+
+        this.queueLength = ko.pureComputed(() => {
+            const log = this.clusterLog();
+            if (!log || log.Log.Logs.length === 0) {
+                return 0;
+            }
+
+            return log.Log.LastLogEntryIndex - log.Log.CommitIndex;
+        });
+
         this.chokedCluster = ko.pureComputed(() => {
             const log = this.clusterLog();
             if (!log) {
                 return false;
             }
             
-            const queueSizeCheck = log.Log.Logs.length >= 5;
+            const queueSizeCheck = this.queueLength() >= 5;
             const lastCommit = moment.utc(log.Log.LastCommitedTime);
             const lastCommitAgoInMs = moment.utc().diff(lastCommit);
             const lastCommitCheck = lastCommitAgoInMs >= 2 * 60 * 1_000; // 2 minutes
@@ -146,15 +155,7 @@ class clusterDebug extends viewModelBase {
             return log.Role === "Follower" && (log as FollowerDebugView).Phase === "Snapshot";
         });
         
-        this.queueLength = ko.pureComputed(() => {
-            const log = this.clusterLog();
-            if (!log || log.Log.Logs.length === 0) {
-                return 0;
-            }
-            
-            return log.Log.LastLogEntryIndex - log.Log.CommitIndex;
-        });
-        
+       
         this.progress = ko.pureComputed(() => {
             const log = this.clusterLog();
             if (!log) {
@@ -165,7 +166,7 @@ class clusterDebug extends viewModelBase {
             const last = log.Log.LastLogEntryIndex;
 
             if (!first && !last) {
-                return 0;
+                return 100;
             }
             
             const logLength = last - first + 1;
@@ -206,25 +207,46 @@ class clusterDebug extends viewModelBase {
     compositionComplete(): void {
         super.compositionComplete();
         
-        const fetcher = () => {
+        const fetcher = (skip: number, pageSize: number) => {
+            const lastLogIndex = this.clusterLog().Log.LastLogEntryIndex;
+            const totalItems = lastLogIndex > 0 ? lastLogIndex : this.clusterLog().Log.CommitIndex; 
             const log = this.clusterLog().Log;
             const data = log.Logs;
 
-            return $.when({
-                totalResultCount: data.length,
-                items: data.map(x => {
-                    return {
-                        ...x,
-                        Status: clusterDebug.mapStatus(x, log.CommitIndex)
-                    }
-                })
-            } as pagedResult<LogEntry>);
+            if (skip === 0) {
+                // we have preloaded data
+                return $.when({
+                    totalResultCount: totalItems,
+                    items: data.map(x => {
+                        return {
+                            ...x,
+                            Status: clusterDebug.mapStatus(x, log.CommitIndex)
+                        }
+                    })
+                } as pagedResult<LogEntry>);
+            } else {
+                const from = totalItems - skip;
+                return new getClusterLogCommand(from, pageSize)
+                    .execute()
+                    .then(data => {
+                        return {
+                            totalResultCount: totalItems,
+                            items: data.Log.Logs.map(x => {
+                                return {
+                                    ...x,
+                                    Status: clusterDebug.mapStatus(x, log.CommitIndex)
+                                }
+                            })
+                        } as pagedResult<LogEntry>;
+                    });
+            }
         };
 
         const previewColumn = new actionColumn<LogEntry>(this.gridController(),
             log => this.customInlinePreview(log), "Preview", `<i class="icon-preview"></i>`, "75px",
             {
                 title: () => 'Show item preview',
+                extraClass: item => item.Index <= this.clusterLog().Log.CommitIndex ? "invisible" : ""
             });
 
         const grid = this.gridController();
@@ -256,8 +278,8 @@ class clusterDebug extends viewModelBase {
                     `<i class="icon-trash"></i>`,
                     "35px",
                     {
-                        extraClass: () => 'file-trash btn-danger',
                         title: () => 'Delete Log Entry',
+                        extraClass: item => item.Index <= this.clusterLog().Log.CommitIndex ? "file-trash btn-danger invisible" : "file-trash btn-danger"
                     })
             ]
         );
@@ -298,7 +320,7 @@ class clusterDebug extends viewModelBase {
     }
     
     private fetchClusterLog() {
-        return new getClusterLogCommand()
+        return new getClusterLogCommand(undefined, 1024)
             .execute()
             .done(log => {
                 this.clusterLog(log);
