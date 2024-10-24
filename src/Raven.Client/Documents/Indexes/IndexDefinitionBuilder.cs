@@ -12,6 +12,7 @@ using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Extensions;
 
@@ -85,10 +86,22 @@ namespace Raven.Client.Documents.Indexes
         public IDictionary<Expression<Func<TReduceResult, object>>, SpatialOptions> SpatialIndexes { get; set; }
 
         /// <summary>
+        /// Gets or sets the vector options
+        /// </summary>
+        /// <value>The vector options.</value>
+        public IDictionary<Expression<Func<TReduceResult, object>>, VectorOptions> VectorIndexes { get; set; }
+        
+        /// <summary>
         /// Gets or sets the spatial options
         /// </summary>
         /// <value>The spatial options.</value>
         public IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the vector options
+        /// </summary>
+        /// <value>The vector options.</value>
+        public IDictionary<string, VectorOptions> VectorIndexesStrings { get; set; }
 
         /// <summary>
         /// Gets or sets the index lock mode
@@ -164,6 +177,8 @@ namespace Raven.Client.Documents.Indexes
             TermVectorsStrings = new Dictionary<string, FieldTermVector>();
             SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
+            VectorIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, VectorOptions>();
+            VectorIndexesStrings = new Dictionary<string, VectorOptions>();
             CompoundFields = new List<Expression<Func<TReduceResult, object>>[]>();
             Configuration = new IndexConfiguration();
         }
@@ -201,7 +216,10 @@ namespace Raven.Client.Documents.Indexes
                 var suggestionsOptions = ConvertToStringSet(conventions, SuggestionsOptions).ToDictionary(x => x, x => true);
                 var termVectors = ConvertToStringDictionary(conventions,TermVectors);
                 var spatialOptions = ConvertToStringDictionary(conventions,SpatialIndexes);
-
+                var vectorOptions = ConvertToStringDictionary(conventions, VectorIndexes);
+                foreach (var vectorOption in VectorIndexes.Values)
+                    vectorOption.Validate();
+                
                 foreach (var indexesString in IndexesStrings)
                 {
                     if (indexes.ContainsKey(indexesString.Key))
@@ -237,6 +255,15 @@ namespace Raven.Client.Documents.Indexes
                     spatialOptions.Add(spatialString);
                 }
 
+                foreach (var vectorString in VectorIndexesStrings)
+                {
+                    if (vectorOptions.ContainsKey(vectorString.Key))
+                        throw new InvalidOperationException("There is a duplicate key in vector indexes: " + vectorString.Key);
+                    
+                    vectorString.Value.Validate();
+                    vectorOptions.Add(vectorString);
+                }
+
                 foreach (var compoundField in CompoundFields)
                 {
                     CompoundFieldsStrings.Add(compoundField
@@ -249,6 +276,7 @@ namespace Raven.Client.Documents.Indexes
                 ApplyValues(indexDefinition, analyzers, (options, value) => options.Analyzer = value);
                 ApplyValues(indexDefinition, termVectors, (options, value) => options.TermVector = value);
                 ApplyValues(indexDefinition, spatialOptions, (options, value) => options.Spatial = value);
+                ApplyValues(indexDefinition, vectorOptions, (options, value) => options.Vector = value);
                 ApplyValues(indexDefinition, suggestionsOptions, (options, value) => options.Suggestions = value);
 
                 indexDefinition.AdditionalSources = AdditionalSources;

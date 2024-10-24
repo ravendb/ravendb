@@ -1597,6 +1597,67 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case nameof(LinqExtensions.Skip):
                     VisitQueryableMethodCall(expression);
                     break;
+                case nameof(LinqExtensions.VectorSearch):
+                    VisitExpression(expression.Arguments[0]);
+                    
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var minimumSimilarityObject);
+
+                    if (minimumSimilarityObject is not float minimumSimilarity || minimumSimilarity is <= 0f or > 1.0f)
+                        throw new NotSupportedException($"The minimum similarity parameter should be a float in the range [0, 1]. However, it was '{minimumSimilarityObject.GetType().FullName}' with the value '{minimumSimilarityObject.ToString()}'.");
+                    
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var fieldFactoryObject);
+                    
+                    var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
+                    var valueBuilder = new VectorFieldValueFactory();
+
+                    switch (fieldFactoryObject)
+                    {
+                        case Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory:
+                        {
+                            LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var textFieldValueFactoryObject);
+                        
+                            textFieldFactory.Invoke(fieldBuilder);
+
+                            if (textFieldValueFactoryObject is not Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory)
+                                throw new Exception();
+                        
+                            textValueFactory.Invoke(valueBuilder);
+                            
+                            break;
+                        }
+                        case Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory:
+                        {
+                            LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var embeddingFieldValueFactoryObject);
+
+                            embeddingFieldFactory.Invoke(fieldBuilder);
+
+                            if (embeddingFieldValueFactoryObject is not Action<IVectorEmbeddingFieldValueFactory> embeddingValueFactory)
+                                throw new Exception();
+
+                            embeddingValueFactory.Invoke(valueBuilder);
+                            
+                            break;
+                        }
+                        case Func<IVectorFieldFactory<T>, IVectorField> fieldFactory:
+                        {
+                            LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var embeddingFieldValueFactoryObject);
+
+                            fieldFactory.Invoke(fieldBuilder);
+
+                            if (embeddingFieldValueFactoryObject is not Action<IVectorFieldValueFactory> fieldValueFactory)
+                                throw new Exception();
+
+                            fieldValueFactory.Invoke(valueBuilder);
+                            
+                            break;
+                        }
+                        
+                        default:
+                            throw new Exception();
+                    }
+                    
+                    DocumentQuery.VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity);
+                    break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);
             }

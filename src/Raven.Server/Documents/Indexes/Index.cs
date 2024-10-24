@@ -17,6 +17,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -247,7 +248,8 @@ namespace Raven.Server.Documents.Indexes
         private readonly MultipleUseFlag _definitionChanged = new MultipleUseFlag();
         private Size _initialManagedAllocations;
 
-        private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new ConcurrentDictionary<string, SpatialField>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, IndexField> _vectorFields = new(StringComparer.OrdinalIgnoreCase);
 
         internal readonly QueryBuilderFactories _queryBuilderFactories;
 
@@ -691,7 +693,7 @@ namespace Raven.Server.Documents.Indexes
 
         public CurrentIndexingScope CreateIndexingScope(TransactionOperationContext indexContext, QueryOperationContext queryContext)
         {
-            return new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, queryContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool);
+            return new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, queryContext, Definition, indexContext, GetOrAddSpatialField, GetOrAddVectorField, _unmanagedBuffersPool);
         }
 
         private StorageEnvironmentOptions CreateStorageEnvironmentOptions(DocumentDatabase documentDatabase, IndexingConfiguration configuration)
@@ -5210,6 +5212,29 @@ namespace Raven.Server.Documents.Indexes
                     return new SpatialField(name, staticField.Spatial ?? new SpatialOptions());
 
                 return new SpatialField(name, new SpatialOptions());
+            });
+        }
+
+        private IndexField GetOrAddVectorField(string name, bool isText)
+        {
+            return _vectorFields.GetOrAdd(name, _ =>
+            {
+                if (Definition.MapFields.TryGetValue(name, out var field) == false)
+                    return IndexField.Create(name, new IndexFieldOptions() { Vector = isText ? VectorOptions.Default : VectorOptions.DefaultText}, null, Corax.Constants.IndexWriter.DynamicField);
+
+                // Setting default values when the user hasn't explicitly configured them
+                if (field is IndexField { Vector: null } storedField)
+                {
+                    storedField.Vector = isText ? VectorOptions.DefaultText : VectorOptions.Default;
+                }
+                
+                return field switch
+                {
+                    //todo: revisit it later
+                    AutoIndexField autoField => throw new InvalidDataException($"{nameof(AutoIndexField)} should not be in this codepath!)"),
+                    IndexField staticField => staticField,
+                    _ => throw new InvalidDataException("Cannot create an vector field without specific configuration!")
+                };
             });
         }
 

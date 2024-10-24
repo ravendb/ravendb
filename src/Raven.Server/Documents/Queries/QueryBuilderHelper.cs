@@ -137,7 +137,7 @@ public static class QueryBuilderHelper
     }
 
     public static (object Value, ValueTokenType Type) GetValue(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryExpression expression,
-        bool allowObjectsInParameters = false)
+        bool allowObjectsInParameters = false, bool allowArraysInParameters = false)
     {
         var value = expression as ValueExpression;
         if (value == null)
@@ -153,6 +153,9 @@ public static class QueryBuilderHelper
             if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
                 ThrowParameterValueWasNotProvided(parameterName, metadata.QueryText, parameters);
 
+            if (allowArraysInParameters && parameterValue is BlittableJsonReaderArray)
+                return (parameterValue, ValueTokenType.Parameter);
+            
             if (allowObjectsInParameters && parameterValue is BlittableJsonReaderObject)
                 return (parameterValue, ValueTokenType.Parameter);
 
@@ -525,7 +528,7 @@ public static class QueryBuilderHelper
         RuntimeHelpers.EnsureSufficientExecutionStack();
         FieldMetadata metadata;
 
-        //Sometimes index can contians Id property and its different than real document ID. We've to 
+        //Sometimes index can contains Id property and its different than real document ID. We've to 
         if ((fieldName.Equals(Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase) && indexMapping.ContainsField(fieldName)) == false &&
             fieldName is Constants.Documents.Indexing.Fields.DocumentIdFieldName)
         {

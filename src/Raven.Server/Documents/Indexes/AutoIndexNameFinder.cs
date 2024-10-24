@@ -75,14 +75,14 @@ namespace Raven.Server.Documents.Indexes
             if (x.GroupByArrayBehavior == GroupByArrayBehavior.ByContent)
                 name = AutoIndexField.GetGroupByArrayContentAutoIndexFieldName(name).ToUpperFirstLetter();
 
-            if (x.Indexing == AutoFieldIndexing.Default || x.Indexing == AutoFieldIndexing.No)
+            if (x.Indexing is AutoFieldIndexing.Default or AutoFieldIndexing.No)
             {
-                if (x.Spatial != null)
+                if (x.Spatial != null || x.Vector != null)
                     return name
                         .Replace(",", "|")
                         .Replace(" ", string.Empty)
                         .ToUpperFirstLetter();
-
+                
                 if (x.HasSuggestions)
                     return AutoIndexField.GetSuggestionsAutoIndexFieldName(name).ToUpperFirstLetter();
 
@@ -93,6 +93,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (x.Indexing.HasFlag(AutoFieldIndexing.Search))
                 functions.Add(AutoIndexField.GetSearchAutoIndexFieldName(name).ToUpperFirstLetter());
+
 
             if (x.Indexing.HasFlag(AutoFieldIndexing.Highlighting))
                 functions.Add(AutoIndexField.GetHighlightingAutoIndexFieldName(name).ToUpperFirstLetter());

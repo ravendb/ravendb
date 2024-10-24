@@ -121,6 +121,53 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
+    
+    public EntryTermsReaderEnumerator GetEntryTermsReader(Span<long> ids, PageLocator pageLocator)
+    {
+        InitializeSpecialTermsMarkers();
+
+        return new EntryTermsReaderEnumerator(this, ids, pageLocator);
+    }
+
+    public ref struct EntryTermsReaderEnumerator
+    {
+        private readonly IndexSearcher _searcher;
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope _scope;
+        private readonly Span<UnmanagedSpan> _spans;
+        private int _index;
+
+        public EntryTermsReaderEnumerator(IndexSearcher searcher,Span<long> ids, PageLocator pageLocator)
+        {
+            _searcher = searcher;
+            _scope = searcher._transaction.Allocator.AllocateDirect(sizeof(UnmanagedSpan) * ids.Length, out var spanBuffer);
+            _spans = spanBuffer.ToSpan<UnmanagedSpan>();
+            
+            using var _ = searcher._transaction.Allocator.AllocateDirect(sizeof(long) * ids.Length, out var locationsBuffer);
+            var locations = locationsBuffer.ToSpan<long>();
+            searcher._entryIdToLocation.GetFor(ids, locations, -1);
+            Container.GetAll(searcher._transaction.LowLevelTransaction, locations, (UnmanagedSpan*)spanBuffer.Ptr, -1, pageLocator);
+            _index = -1;
+            Current = new(searcher._transaction.LowLevelTransaction, searcher._nullTermsMarkers, searcher._nonExistingTermsMarkers, searcher._dictionaryId);
+        }
+
+        public bool MoveNext()
+        {
+            if (++_index >= _spans.Length)
+                return false;
+            
+            Current.Reuse(_spans[_index].Address, _spans[_index].Length);
+            return true;
+        }
+
+        public EntryTermsReader Current;
+
+        public void Dispose()
+        {
+            Current.Reset();
+            _scope.Dispose();
+        }
+    } 
+    
     public void GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader, CompactKey existingKey)
     {
         PortableExceptions.ThrowIfNullOnDebug(existingKey);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Sparrow.Json;
@@ -32,7 +33,14 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
         {
             object value;
             bool innerShouldSkip = false;
-            if (indexField.Spatial is AutoSpatialOptions spatialOptions)
+            if (indexField.Vector != null)
+            {
+                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, ((AutoVectorOptions)indexField.Vector).SourceFieldName, out value) == false)
+                    continue;
+                var vector = AbstractStaticIndexBase.CreateVector(indexField, value);
+                InsertRegularField(indexField, vector, indexContext, builder, sourceDocument,  out innerShouldSkip);
+            }
+            else if (indexField.Spatial is AutoSpatialOptions spatialOptions)
             {
                 var spatialField = CurrentIndexingScope.Current.GetOrCreateSpatialField(indexField.Name);
 
@@ -62,9 +70,11 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
             else
             {
                 var successfulRead = BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value);
-            
+
                 if (successfulRead)
-                    InsertRegularField(indexField, value, indexContext, builder, sourceDocument, out innerShouldSkip);
+                {
+                    InsertRegularField(indexField, value, indexContext, builder, sourceDocument,  out innerShouldSkip);
+                }
 
                 if (successfulRead == false || innerShouldSkip)
                     RegisterMissingFieldFor(indexField);

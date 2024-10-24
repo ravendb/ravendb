@@ -10,12 +10,15 @@ using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using CoraxLib = global::Corax;
 using JavaScriptFieldName = Raven.Client.Constants.Documents.Indexing.Fields.JavaScript;
@@ -181,6 +184,10 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     {
                         actualValue = val; //Here we populate the dynamic spatial field that will be handled below.
                     }
+                    else if (val.IsObject() && val.AsObject().TryGetValue(JavaScriptFieldName.VectorPropertyName, out _))
+                    {
+                        actualValue = val;
+                    }
                     else
                     {
                         value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true,
@@ -235,6 +242,27 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     shouldProcessAsBlittable = false;
                     return;
                 }
+
+                if (objectValue.HasOwnProperty(JavaScriptFieldName.VectorPropertyName) &&
+                    objectValue.TryGetValue(JavaScriptFieldName.VectorPropertyName, out var vector))
+                {
+                    PortableExceptions.ThrowIf<InvalidDataException>(vector.IsObject() == false);
+                    var obj = vector.AsObject();
+                    JsValue valueJsv = null;
+                    if (obj.HasOwnProperty(JavaScriptFieldName.ValuePropertyName) == false 
+                        || obj.TryGetValue(JavaScriptFieldName.ValuePropertyName, out valueJsv) == false)
+                    {
+                        PortableExceptions.Throw<InvalidDataException>("Name field doesn't exist but is required.");
+                    }
+
+                    var indexField = GetFieldObjectForProcessing(field.Name, indexingScope);
+                    object objectForIndexing = AbstractStaticIndexBase.CreateVector(indexField, valueJsv.IsString() ? valueJsv.AsString() : (object)valueJsv);
+
+                    InsertRegularField(indexField, objectForIndexing, indexContext, builder, sourceDocument, out shouldSkip);
+                    shouldProcessAsBlittable = false;
+                    return;
+                }
+
             }
 
             shouldProcessAsBlittable = true;

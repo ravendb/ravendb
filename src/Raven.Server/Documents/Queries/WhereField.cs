@@ -1,20 +1,14 @@
 ﻿using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 
 namespace Raven.Server.Documents.Queries
 {
-    public sealed class WhereField
+    public sealed class WhereField(bool isFullTextSearch, bool isExactSearch, AutoSpatialOptions spatial, AutoVectorOptions vector)
     {
-        public readonly AutoSpatialOptions Spatial;
+        public readonly AutoSpatialOptions Spatial = spatial;
+        public readonly AutoVectorOptions Vector = vector;
 
-        public readonly bool IsFullTextSearch;
-
-        public readonly bool IsExactSearch;
-
-        public WhereField(bool isFullTextSearch, bool isExactSearch, AutoSpatialOptions spatial)
-        {
-            Spatial = spatial;
-            IsFullTextSearch = isFullTextSearch;
-            IsExactSearch = isExactSearch;
-        }
+        public readonly bool IsFullTextSearch = isFullTextSearch;
+        public readonly bool IsExactSearch = isExactSearch;
     }
 }

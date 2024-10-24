@@ -26,7 +26,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using Corax.Indexing;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Sparrow.Binary;
 using static Raven.Server.Config.Categories.IndexingConfiguration;
 
@@ -75,7 +77,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         var currentIndexingScope = CurrentIndexingScope.Current;
 
         return SetDocumentFields(key, sourceDocumentId, doc, indexContext, builder, currentIndexingScope?.Source);
-
     }
     
     protected CoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName, string storeValueFieldName, bool canContainSourceDocumentId, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
@@ -305,6 +306,22 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
                 builder.Write(fieldId, path,  iConvertible.ToString(CultureInfo.InvariantCulture), @long, @double);
                 break;
+            
+            case ValueType.Vector:
+                using (var vectorField = (VectorValue)value)
+                {
+                    switch (field.Vector.IndexingStrategy)
+                    {
+                        case VectorIndexingStrategy.Exact:
+                            builder.WriteExactVector(fieldId, path, vectorField.Embedding.Span);
+                            break;
+                        case VectorIndexingStrategy.HNSW:
+                            throw new NotImplementedException("HNSW is not yet implemented.");
+                        default:
+                            throw new InvalidDataException($"Unknown vector indexing strategy: '{field.Vector.IndexingStrategy}'.");
+                    }
+                }
+                break;
 
             case ValueType.Enumerable:
                 RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -408,10 +425,13 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 builder.WriteSpatial(fieldId, path,  (CoraxSpatialPointEntry)value);
                 break;
             case ValueType.CoraxDynamicItem:
-                var cdi = (CoraxDynamicItem)value;
-                //we want to unpack item here.
                 var old = builder.ResetList(); // For lists of CreatedField(), we ignoring the list
-                InsertRegularField(cdi!.Field, cdi.Value, indexContext, builder, sourceDocument, out shouldSkip);
+                if (value is CoraxDynamicItem standardCdi)
+                    InsertRegularField(standardCdi.Field, standardCdi.Value, indexContext, builder, sourceDocument, out shouldSkip);
+                else
+                    throw new NotSupportedInCoraxException($"Unknown path for `CoraxDynamicItem`. Got type: {value.GetType().FullName}");
+                
+                //we want to unpack item here.
                 builder.RestoreList(old);
                 break;
             case ValueType.Stream:
@@ -447,7 +467,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             
         _nonExistingFieldsOfDocument.Clear();
     }
-
+    
     [DoesNotReturn]
     private static void ThrowFieldIsNoIndexedAndStored(IndexField field)
     {

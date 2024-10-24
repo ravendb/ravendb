@@ -1228,6 +1228,42 @@ namespace Raven.Client.Documents
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(count)));
             return (IRavenQueryable<T>)queryable;
         }
+        
+        public static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory, float minimumSimilarity = Constants.VectorSearch.MinimumSimilarity)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+            
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(source);
+            
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(textFieldFactory), Expression.Constant(textValueFactory), Expression.Constant(minimumSimilarity)));
+            
+            return (IRavenQueryable<T>)queryable;
+        }
+        
+        public static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> embeddingValueFactory, float minimumSimilarity = Constants.VectorSearch.MinimumSimilarity)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+            
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(source);
+            
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(embeddingFieldFactory), Expression.Constant(embeddingValueFactory), Expression.Constant(minimumSimilarity)));
+            
+            return (IRavenQueryable<T>)queryable;
+        }
+        
+        public static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, Func<IVectorFieldFactory<T>, IVectorField> embeddingFieldFactory, Action<IVectorFieldValueFactory> embeddingValueFactory, float minimumSimilarity = Constants.VectorSearch.MinimumSimilarity)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+            
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(source);
+            
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(embeddingFieldFactory), Expression.Constant(embeddingValueFactory), Expression.Constant(minimumSimilarity)));
+            
+            return (IRavenQueryable<T>)queryable;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Expression ConvertExpressionIfNecessary<T>(IQueryable<T> source)

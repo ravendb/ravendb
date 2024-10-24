@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes
@@ -36,6 +38,8 @@ namespace Raven.Server.Documents.Indexes
         public FieldTermVector TermVector { get; set; }
 
         public SpatialOptions Spatial { get; set; }
+        
+        public VectorOptions Vector { get; set; }
 
         public IndexField()
         {
@@ -77,6 +81,9 @@ namespace Raven.Server.Documents.Indexes
             if (options.Spatial != null)
                 field.Spatial = new SpatialOptions(options.Spatial);
 
+            if (options.Vector != null)
+                field.Vector = new(options.Vector);
+
             return field;
         }
 
@@ -87,7 +94,11 @@ namespace Raven.Server.Documents.Indexes
                 && string.Equals(Analyzer, other.Analyzer, StringComparison.Ordinal)
                 && Storage == other.Storage
                 && Indexing == other.Indexing
-                && TermVector == other.TermVector;
+                && SpatialOptions.Equals(Spatial, other.Spatial)
+                && VectorOptions.Equals(Vector, other.Vector)
+                && TermVector == other.TermVector
+                //todo: should we add spatial & vector as well here?
+                ;
         }
 
         public override bool Equals(object obj)
@@ -118,6 +129,9 @@ namespace Raven.Server.Documents.Indexes
                 hashCode = (hashCode * 397) ^ (int)Indexing;
                 hashCode = (hashCode * 397) ^ (int)TermVector;
                 hashCode = (hashCode * 397) ^ (HasSuggestions ? 233 : 343);
+                hashCode = (hashCode * 397) ^ (Spatial?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Vector?.GetHashCode() ?? 0);
+                //todo: vector & spatial as well?
                 return hashCode;
             }
         }
@@ -136,7 +150,8 @@ namespace Raven.Server.Documents.Indexes
                 Storage = Storage,
                 TermVector = TermVector,
                 Suggestions = HasSuggestions,
-                Spatial = Spatial
+                Spatial = Spatial,
+                Vector = Vector
             };
         }
     }
@@ -161,6 +176,8 @@ namespace Raven.Server.Documents.Indexes
         public int Id { get; set; }
 
         public AutoSpatialOptions Spatial { get; set; }
+        
+        public AutoVectorOptions Vector { get; set; }
 
         public bool SamePathToArrayAsGroupByField { get; set; }
 
@@ -180,6 +197,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (options.Spatial != null)
                 field.Spatial = new AutoSpatialOptions(options.Spatial);
+
+            if (options.Vector != null)
+                field.Vector = new AutoVectorOptions(options.Vector);
 
             if (options.Suggestions.HasValue)
                 field.HasSuggestions = options.Suggestions.Value;
@@ -204,6 +224,24 @@ namespace Raven.Server.Documents.Indexes
                     Storage = Storage,
                     HasSuggestions = HasSuggestions,
                     Spatial = new AutoSpatialOptions(Spatial),
+                    Vector = null,
+                    Id = Id
+                });
+
+                return fields;
+            }
+
+            if (Vector != null)
+            {
+                var vector = new AutoVectorOptions(Vector);
+                fields.Add(new IndexField
+                {
+                    Indexing = FieldIndexing.Default,
+                    Name =  Name,
+                    Storage = Storage,
+                    HasSuggestions = HasSuggestions,
+                    Spatial = null,
+                    Vector = vector,
                     Id = Id
                 });
 
@@ -229,7 +267,7 @@ namespace Raven.Server.Documents.Indexes
                 return fields;
 
             var hasHighlighting = Indexing.HasFlag(AutoFieldIndexing.Highlighting);
-
+            
             if (Indexing.HasFlag(AutoFieldIndexing.Search) || hasHighlighting)
             {
                 fields.Add(new IndexField
@@ -303,6 +341,25 @@ namespace Raven.Server.Documents.Indexes
             return $"search({name})";
         }
 
+        public static string GetVectorAutoIndexFieldName(string name, VectorOptions vectorOptions)
+        {
+            var innerMethod = (vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType) switch
+            {
+                (EmbeddingType.Text, EmbeddingType.Single) => "text",
+                (EmbeddingType.Text, EmbeddingType.Int8) => "text_i8",
+                (EmbeddingType.Text, EmbeddingType.Binary) => "text_i1",
+                (EmbeddingType.Single, EmbeddingType.Single) => string.Empty,
+                (EmbeddingType.Single, EmbeddingType.Int8) => "f32_i8",
+                (EmbeddingType.Single, EmbeddingType.Binary) => "f32_i1",
+                (EmbeddingType.Int8, EmbeddingType.Int8) => "i8",
+                (EmbeddingType.Binary, EmbeddingType.Binary) => "i1",
+                _ => throw new NotSupportedException($"Unsupported embedding type: ({vectorOptions.SourceEmbeddingType} => {vectorOptions.DestinationEmbeddingType})"),
+            };
+            
+            var inner = innerMethod == string.Empty ? name : $"embedding.{innerMethod}({name})";
+            return $"vector.search({inner})";
+        }
+        
         public static string GetExactAutoIndexFieldName(string name)
         {
             return $"exact({name})";

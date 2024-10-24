@@ -98,7 +98,6 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             }
 
             wrapper.InitializeForEnumeration(mapResults, indexContext, stats);
-
             return PutMapResults(indexItem.LowerId, indexItem.SourceDocumentId, wrapper, indexContext, stats);
         }
 

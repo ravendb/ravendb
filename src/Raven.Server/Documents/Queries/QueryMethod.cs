@@ -50,6 +50,33 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "sum", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Sum;
 
+            if (string.Equals(methodName, "vector.search", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Vector_Search;
+            
+            if (string.Equals(methodName, Client.Constants.VectorSearch.EmbeddingText, StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_Text;            
+            
+            if (string.Equals(methodName, Client.Constants.VectorSearch.EmbeddingTextInt8, StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_Text_I8;            
+            
+            if (string.Equals(methodName, Client.Constants.VectorSearch.EmbeddingTextInt1, StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_Text_I1;
+            
+            if (string.Equals(methodName, Client.Constants.VectorSearch.EmbeddingSingleInt8, StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_F32_I8;
+            
+            if (string.Equals(methodName, Client.Constants.VectorSearch.EmbeddingSingleInt1, StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_F32_I1;
+
+            if (string.Equals(methodName, Client.Constants.VectorSearch.EmbeddingSingle, StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_F32;
+            
+            if (string.Equals(methodName, Client.Constants.VectorSearch.EmbeddingInt8, StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_I8;
+            
+            if (string.Equals(methodName, Client.Constants.VectorSearch.EmbeddingInt1, StringComparison.OrdinalIgnoreCase))
+                return MethodType.Embedding_I1;
+            
             if (string.Equals(methodName, "spatial.within", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Spatial_Within;
 

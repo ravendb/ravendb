@@ -1,5 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import spatialOptions = require("models/database/index/spatialOptions");
+import vectorOptions = require("models/database/index/vectorOptions");
 import jsonUtil = require("common/jsonUtil");
 
 function labelMatcher<T>(labels: Array<valueAndLabelItem<T, string>>): (arg: T) => string {
@@ -134,6 +135,9 @@ class indexFieldOptions {
     spatial = ko.observable<spatialOptions>();
     hasSpatialOptions = ko.observable<boolean>(false);
 
+    vector = ko.observable<vectorOptions>();
+    hasVectorOptions = ko.observable<boolean>(false);
+
     indexOrStore: KnockoutComputed<boolean>;
     indexDefinitionHasReduce: KnockoutObservable<boolean>;
     
@@ -204,6 +208,12 @@ class indexFieldOptions {
             this.spatial(new spatialOptions(dto.Spatial));
         } else {
             this.spatial(spatialOptions.empty());
+        }
+        
+        if (this.hasVectorOptions()) {
+            this.vector(new vectorOptions(dto.Vector));
+        } else {
+            this.vector(vectorOptions.empty());
         }
 
         this.computeAnalyzer();
@@ -513,6 +523,7 @@ class indexFieldOptions {
             Analyzer: "StandardAnalyzer",
             Suggestions: false,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
+            Vector: null as Raven.Client.Documents.Indexes.Vector.VectorOptions,
             TermVector: "No"
         }, indexHasReduce, engineType);
         
@@ -529,6 +540,7 @@ class indexFieldOptions {
             Analyzer: null,
             Suggestions: null,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
+            Vector: null as Raven.Client.Documents.Indexes.Vector.VectorOptions,
             TermVector: null
         };
     }
@@ -578,7 +590,8 @@ class indexFieldOptions {
             Storage: this.storage(),
             Suggestions: this.suggestions(),
             TermVector: this.termVector(),
-            Spatial: this.hasSpatialOptions() ? this.spatial().toDto() : undefined
+            Spatial: this.hasSpatialOptions() ? this.spatial().toDto() : undefined,
+            Vector: this.hasVectorOptions() ? this.vector().toDto() : undefined,
         }
     }
 }

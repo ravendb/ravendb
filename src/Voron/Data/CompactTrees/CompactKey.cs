@@ -60,7 +60,18 @@ public sealed unsafe class CompactKey : IDisposable
     public void Initialize(LowLevelTransaction tx)
     {
         _owner = tx;
+        
+        StoragePool ??= ArrayPool<byte>.Create();
+        KeyMappingPool ??= ArrayPool<long>.Create();
 
+        _storage = StoragePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
+        _keyMappingCache = KeyMappingPool.Rent(2 * MappingTableMask);
+        
+        Reuse();
+    }
+
+    public void Reuse()
+    {
         Dictionary = Invalid;
         _currentKeyIdx = Invalid;
         _decodedKeyIdx = Invalid;

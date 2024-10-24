@@ -238,6 +238,33 @@ namespace Raven.Server.Json.Sync
             else
                 writer.WriteNull();
 
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(options.Vector));
+            if (options.Vector != null)
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(options.Vector.Dimensions));
+                if (options.Vector.Dimensions.HasValue)
+                    writer.WriteInteger(options.Vector.Dimensions.Value);
+                else
+                    writer.WriteNull();
+                writer.WriteComma();
+                
+                writer.WritePropertyName(nameof(options.Vector.IndexingStrategy));
+                writer.WriteString(options.Vector.IndexingStrategy.ToString());
+                writer.WriteComma();
+                
+                writer.WritePropertyName(nameof(options.Vector.SourceEmbeddingType));
+                writer.WriteString(options.Vector.SourceEmbeddingType.ToString());
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(options.Vector.DestinationEmbeddingType));
+                writer.WriteString(options.Vector.DestinationEmbeddingType.ToString());
+            }
+            else
+                writer.WriteNull();
+            
             writer.WriteEndObject();
         }
 

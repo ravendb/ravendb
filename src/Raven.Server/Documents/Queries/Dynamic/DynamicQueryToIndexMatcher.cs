@@ -188,6 +188,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (definition.TryGetField(field.Name, out var indexField))
                 {
+                    if (field.Vector != null)
+                    {
+                        if (field.Vector.Equals(indexField.Vector) == false)
+                        {
+                            explanations?.Add(new Explanation(indexName,
+                                $"The following field is not vector searchable {indexField.Name}, while the query needs to vector.search() on it"));
+                            return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Partial);
+                        }
+                    }
                     if (field.IsFullTextSearch && indexField.Indexing.HasFlag(AutoFieldIndexing.Search) == false)
                     {
                         explanations?.Add(new Explanation(indexName, $"The following field is not searchable {indexField.Name}, while the query needs to search() on it"));
