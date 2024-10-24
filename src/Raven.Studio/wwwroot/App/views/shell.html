@@ -330,13 +330,13 @@
                     <i class="icon-play"></i> <span>Continue test</span>
                 </button>
             </div>
+            <div class="footer-item bg-info" data-bind="visible: $root.clusterManager.votingInProgress">
+                <a data-bind="attr: { href: $root.urlForCluster() }" title="Voting in progress"><i class="icon-cluster-node"></i><span>Voting in progress</span></a>
+            </div>
             <div class="footer-item" data-bind="visible: twoFactorSessionExpiration">
                 <a class="btn btn-2fa btn-sm lh-1" title="End current 2FA session" data-bind="click: logout">
                     <i class="icon-logout"></i> <span class="me-0">End session</span>
                 </a>
-            </div>
-            <div class="footer-item bg-info" data-bind="visible: $root.clusterManager.votingInProgress">
-                <a data-bind="attr: { href: $root.urlForCluster() }" title="Voting in progress"><i class="icon-cluster-node"></i><span>Voting in progress</span></a>
             </div>
             <div class="footer-item" data-bind="visible: !$root.clientCertificate()">
                 <a class="btn btn-danger btn-sm js-client-cert" data-bind="attr: { href: $root.urlForCertificates() }">
