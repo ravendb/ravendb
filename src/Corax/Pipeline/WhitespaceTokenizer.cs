@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using System.Text.Unicode;
+using Corax.Pipeline.Parsing;
 
 namespace Corax.Pipeline
 {
@@ -11,67 +13,18 @@ namespace Corax.Pipeline
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Tokenize(ReadOnlySpan<byte> source, ref Span<Token> tokens)
         {
-            // TODO: These are placeholder implementations in order to ensure that pipeline functionality is sound arquitecturally
-            //       proper implementations are needed for production and running full test suit using the Corax engine. 
-
-            int i = 0;
-            int currentToken = 0;
-
-            while (i < source.Length)
+            if (StandardParsers.IsAscii(source))
             {
-                while (i < source.Length && source[i] == ' ')
-                    i++;
-
-                int start = i;
-                while (i < source.Length && source[i] != ' ')
-                    i++;
-
-                if (start != i)
-                {
-                    ref var token = ref tokens[currentToken];
-                    token.Offset = start;
-                    token.Length = (uint)(i - start);
-                    token.Type = TokenType.Word;
-
-                    currentToken++;
-                }
+                return StandardTokenizers.TokenizeWhitespaceAscii(source, ref tokens);
             }
-
-            tokens = tokens.Slice(0, currentToken);
-            return i;
+            return StandardTokenizers.TokenizeWhitespace(source, ref tokens);
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Tokenize(ReadOnlySpan<char> source, ref Span<Token> tokens)
         {
-            // TODO: These are placeholder implementations in order to ensure that pipeline functionality is sound arquitecturally
-            //       proper implementations are needed for production and running full test suit using the Corax engine. 
-
-            int i = 0;
-            int currentToken = 0;
-
-            while (i < source.Length)
-            {
-                while (i < source.Length && source[i] == ' ')
-                    i++;
-
-                int start = i;
-                while (i < source.Length && source[i] != ' ')
-                    i++;
-
-                if (start != i)
-                {
-                    ref var token = ref tokens[currentToken];
-                    token.Offset = start;
-                    token.Length = (uint)(i - start);
-                    token.Type = TokenType.Word;
-
-                    currentToken++;
-                }
-            }
-
-            tokens = tokens.Slice(0, currentToken);
-            return i;
+            return ScalarTokenizers.TokenizeWhitespace(source, ref tokens);
         }
 
         public void Dispose() { }

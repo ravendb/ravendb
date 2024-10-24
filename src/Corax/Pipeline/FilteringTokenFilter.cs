@@ -11,23 +11,15 @@ namespace Corax.Pipeline
         bool Accept(ReadOnlySpan<char> source, in Token token);
     }
 
-    public struct FilteringTokenFilter<TFilter> : IFilter
+    public readonly struct FilteringTokenFilter<TFilter>(TFilter filter) : IFilter
         where TFilter : struct, ITokenFilter
-    {        
-
-        private readonly TFilter _filter;
-
-        public bool SupportUtf8 => _filter.SupportUtf8;
-
-        public FilteringTokenFilter(TFilter filter)
-        {
-            _filter = filter;
-        }
+    {
+        public bool SupportUtf8 => filter.SupportUtf8;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Filter(ReadOnlySpan<byte> source, ref Span<Token> tokens)
         {
-            if (!_filter.SupportUtf8)
+            if (!filter.SupportUtf8)
                 throw new NotSupportedException("This filter does not support UTF8");
 
             int storeIdx = 0;
@@ -35,7 +27,7 @@ namespace Corax.Pipeline
             {
                 ref var token = ref tokens[i];
 
-                if (_filter.Accept(source.Slice(token.Offset, (int)token.Length), token))
+                if (filter.Accept(source.Slice(token.Offset, (int)token.Length), token))
                 {
                     tokens[storeIdx] = token;
                     storeIdx++;
@@ -54,7 +46,7 @@ namespace Corax.Pipeline
             {
                 ref var token = ref tokens[i];
 
-                if (_filter.Accept(source.Slice(token.Offset, (int)token.Length), token))
+                if (filter.Accept(source.Slice(token.Offset, (int)token.Length), token))
                 {
                     tokens[storeIdx] = token;
                     storeIdx++;
