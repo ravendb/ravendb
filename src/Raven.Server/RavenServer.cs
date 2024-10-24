@@ -1521,7 +1521,7 @@ namespace Raven.Server
                 });
                 var content = new StringContent(licensePayload, Encoding.UTF8, "application/json");
 
-                response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
+                response = await ApiHttpClient.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
                 response.EnsureSuccessStatusCode();
             }
