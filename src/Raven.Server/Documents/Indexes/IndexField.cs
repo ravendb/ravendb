@@ -94,7 +94,8 @@ namespace Raven.Server.Documents.Indexes
                 && string.Equals(Analyzer, other.Analyzer, StringComparison.Ordinal)
                 && Storage == other.Storage
                 && Indexing == other.Indexing
-                && Vector == other.Vector
+                && SpatialOptions.Equals(Spatial, other.Spatial)
+                && VectorOptions.Equals(Vector, other.Vector)
                 && TermVector == other.TermVector
                 //todo: should we add spatial & vector as well here?
                 ;
@@ -128,6 +129,8 @@ namespace Raven.Server.Documents.Indexes
                 hashCode = (hashCode * 397) ^ (int)Indexing;
                 hashCode = (hashCode * 397) ^ (int)TermVector;
                 hashCode = (hashCode * 397) ^ (HasSuggestions ? 233 : 343);
+                hashCode = (hashCode * 397) ^ (Spatial?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Vector?.GetHashCode() ?? 0);
                 //todo: vector & spatial as well?
                 return hashCode;
             }
@@ -332,7 +335,7 @@ namespace Raven.Server.Documents.Indexes
                 return hashCode;
             }
         }
-        
+
         public static string GetSearchAutoIndexFieldName(string name)
         {
             return $"search({name})";
@@ -342,15 +345,15 @@ namespace Raven.Server.Documents.Indexes
         {
             var innerMethod = (vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType) switch
             {
-                (EmbeddingType.Text, EmbeddingType.Float32) => "text",
+                (EmbeddingType.Text, EmbeddingType.Single) => "text",
                 (EmbeddingType.Text, EmbeddingType.Int8) => "text_i8",
                 (EmbeddingType.Text, EmbeddingType.Binary) => "text_i1",
-                (EmbeddingType.Float32, EmbeddingType.Float32) => string.Empty,
-                (EmbeddingType.Float32, EmbeddingType.Int8) => "f32_i8",
-                (EmbeddingType.Float32, EmbeddingType.Binary) => "f32_i1",
+                (EmbeddingType.Single, EmbeddingType.Single) => string.Empty,
+                (EmbeddingType.Single, EmbeddingType.Int8) => "f32_i8",
+                (EmbeddingType.Single, EmbeddingType.Binary) => "f32_i1",
                 (EmbeddingType.Int8, EmbeddingType.Int8) => "i8",
                 (EmbeddingType.Binary, EmbeddingType.Binary) => "i1",
-                _ => throw new NotImplementedException(),
+                _ => throw new NotSupportedException($"Unsupported embedding type: ({vectorOptions.SourceEmbeddingType} => {vectorOptions.DestinationEmbeddingType})"),
             };
             
             var inner = innerMethod == string.Empty ? name : $"embedding.{innerMethod}({name})";

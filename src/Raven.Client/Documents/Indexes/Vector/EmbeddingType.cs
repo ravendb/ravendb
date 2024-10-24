@@ -6,6 +6,6 @@ public enum EmbeddingType
 {
     Binary,
     Int8,
-    Float32,
+    Single,
     Text,
 }

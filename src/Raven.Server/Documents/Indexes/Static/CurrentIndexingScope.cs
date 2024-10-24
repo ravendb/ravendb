@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public Dictionary<string, IndexField> DynamicFields;
 
         private readonly Func<string, SpatialField> _getSpatialField;
-        private readonly Func<string, IndexField> _getVectorField;
+        private readonly Func<string, bool, IndexField> _getVectorField;
 
 
         /// [collection: [key: [referenceKeys]]]
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public LuceneDocumentConverter CreateFieldConverter;
 
-        public CurrentIndexingScope(Index index, DocumentsStorage documentsStorage, QueryOperationContext queryContext, IndexDefinitionBaseServerSide indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, Func<string, IndexField> getVectorField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
+        public CurrentIndexingScope(Index index, DocumentsStorage documentsStorage, QueryOperationContext queryContext, IndexDefinitionBaseServerSide indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, Func<string, bool, IndexField> getVectorField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
         {
             _documentsStorage = documentsStorage;
             QueryContext = queryContext;
@@ -374,9 +374,9 @@ namespace Raven.Server.Documents.Indexes.Static
             return _getSpatialField(name);
         }
 
-        public IndexField GetOrCreateVectorField(string name)
+        public IndexField GetOrCreateVectorField(string name, bool isText)
         {
-            return _getVectorField(name);
+            return _getVectorField(name, isText);
         }
 
         public void RegisterJavaScriptUtils(JavaScriptUtils javaScriptUtils)

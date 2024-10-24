@@ -23,6 +23,8 @@ public sealed class VectorFieldRewriter : CSharpSyntaxRewriter
         {
             case $"this.{nameof(StaticIndexBase.CreateVector)}":
             case $"{nameof(StaticIndexBase.CreateVector)}":
+            case $"{nameof(StaticIndexBase.CreateVectorSearch)}":
+            case $"this.{nameof(StaticIndexBase.CreateVectorSearch)}":
                 var parent = GetAnonymousObjectMemberDeclaratorSyntax(node);
                 var name = parent.NameEquals.Name.Identifier.Text;
 

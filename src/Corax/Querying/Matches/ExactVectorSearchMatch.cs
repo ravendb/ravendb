@@ -32,23 +32,23 @@ namespace Corax.Querying.Matches
         private readonly long _fieldRootPage;
         private readonly Memory<byte> _vectorToSearch;
         private readonly float _minimumMatch;
-        private readonly VectorSimilarityType _similarityType;
+        private readonly SimilarityMethod _similarityMethod;
 
-        public ExactVectorSearchMatch(IndexSearcher searcher, Transaction tx, long fieldRootPage, Memory<byte> vectorToSearch, float minimumMatch, VectorSimilarityType similarityType)
+        public ExactVectorSearchMatch(IndexSearcher searcher, Transaction tx, long fieldRootPage, Memory<byte> vectorToSearch, float minimumMatch, SimilarityMethod similarityMethod)
         {
             _count = searcher.NumberOfEntries;
-            _similarityFunc = similarityType switch
+            _similarityFunc = similarityMethod switch
             {
-                VectorSimilarityType.I1 => &SimilarityI1,
-                VectorSimilarityType.I8 => &SimilarityI8,
-                VectorSimilarityType.Cosine => &SimilarityCosine,
-                _ => throw new NotSupportedException($"Unsupported {nameof(similarityType)}: {similarityType}")
+                SimilarityMethod.Hamming => &SimilarityI1,
+                SimilarityMethod.CosineSbyte => &SimilarityI8,
+                SimilarityMethod.CosineFloat => &SimilarityCosine,
+                _ => throw new NotSupportedException($"Unsupported {nameof(similarityMethod)}: {similarityMethod}")
             };
             _searcher = searcher;
             _tx = tx;
             _fieldRootPage = fieldRootPage;
             _minimumMatch = minimumMatch;
-            _similarityType = similarityType;
+            _similarityMethod = similarityMethod;
             _vectorToSearch = vectorToSearch;
         }
         
@@ -187,7 +187,7 @@ namespace Corax.Querying.Matches
                 parameters: new Dictionary<string, string>()
                 {
                     {Constants.QueryInspectionNode.FieldName, fieldName.ToString()},
-                    {nameof(VectorSimilarityType), _similarityType.ToString()},
+                    {nameof(SimilarityMethod), _similarityMethod.ToString()},
                     {"minimumMatch", _minimumMatch.ToString()}
                 });
         }

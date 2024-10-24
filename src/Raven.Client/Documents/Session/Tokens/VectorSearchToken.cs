@@ -39,15 +39,15 @@ public sealed class VectorSearchToken : WhereToken
         if (IndexingStrategy != Constants.VectorSearch.DefaultIndexingStrategy)
             writer.Append($"{IndexingStrategy}(");
         
-        if (SourceQuantizationType is EmbeddingType.Float32 && TargetQuantizationType is EmbeddingType.Float32)
+        if (SourceQuantizationType is EmbeddingType.Single && TargetQuantizationType is EmbeddingType.Single)
             writer.Append(FieldName);
         else
         {
             var methodName = (SourceQuantizationType, TargetQuantizationType) switch
             {
-                (EmbeddingType.Float32, EmbeddingType.Int8) => Constants.VectorSearch.EmbeddingSingleInt8,
-                (EmbeddingType.Float32, EmbeddingType.Binary) => Constants.VectorSearch.EmbeddingSingleInt1,
-                (EmbeddingType.Text, EmbeddingType.Float32) => Constants.VectorSearch.EmbeddingText,
+                (EmbeddingType.Single, EmbeddingType.Int8) => Constants.VectorSearch.EmbeddingSingleInt8,
+                (EmbeddingType.Single, EmbeddingType.Binary) => Constants.VectorSearch.EmbeddingSingleInt1,
+                (EmbeddingType.Text, EmbeddingType.Single) => Constants.VectorSearch.EmbeddingText,
                 (EmbeddingType.Text, EmbeddingType.Int8) => Constants.VectorSearch.EmbeddingTextInt8,
                 (EmbeddingType.Text, EmbeddingType.Binary) => Constants.VectorSearch.EmbeddingTextInt1,
                 (EmbeddingType.Int8, EmbeddingType.Int8) => Constants.VectorSearch.EmbeddingInt8,

@@ -2510,11 +2510,11 @@ function execute(doc, args){
                             parameters);
 
                     fieldName = _metadata.ExtractFieldNameFromArgument(argument, withoutAlias, methodName, parameters, QueryText);
-                    _metadata.AddWhereField(new QueryFieldName(fieldName, false), parameters, exact: _insideExact > 0);
+                    _metadata.AddWhereField(new QueryFieldName(AliasHandling(fieldName), false), parameters, exact: _insideExact > 0);
                 }
                 else
                 {
-                    var embedding = (Source: EmbeddingType.Float32, Destination: EmbeddingType.Float32);
+                    var embedding = (Source: EmbeddingType.Single, Destination: EmbeddingType.Single);
                     //vector.search(SRC_DST(Field))
                     if (arguments.Count > 0 && arguments[0] is MethodExpression embeddingMethod)
                     {
@@ -2530,12 +2530,7 @@ function execute(doc, args){
                     
                     
                     //HANDLE ALIASED:
-                    var split = fieldName.Value.Split(".");
-                    if (split.Length > 1 && _metadata.NotInRootAliasPaths(split[0]))
-                    {
-                        _metadata.ThrowUnknownAlias(split[0], parameters);
-                    }
-                    fieldName = _metadata.GetIndexFieldName(fieldName, parameters);
+                    fieldName = AliasHandling(fieldName);
                     
                     var vectorOptions = new AutoVectorOptions()
                     {
@@ -2547,11 +2542,26 @@ function execute(doc, args){
                     
                     _metadata.AddWhereField(new(AutoIndexField.GetVectorAutoIndexFieldName(fieldName, vectorOptions), false), parameters, exact: _insideExact > 0, vector: vectorOptions);
                 }
+
+                QueryFieldName AliasHandling(in QueryFieldName qfn)
+                {
+                    if (qfn.Value.Contains('.'))
+                    {
+                        var split = qfn.Value.Split(".");
+                        if (split.Length > 1 && _metadata.NotInRootAliasPaths(split[0]))
+                        {
+                            _metadata.ThrowUnknownAlias(split[0], parameters);
+                        }
+                        return _metadata.GetIndexFieldName(qfn, parameters);
+                    }
+
+                    return qfn;
+                }
           
                 (EmbeddingType Source, EmbeddingType Destination) MethodTypeToEmbeddingType(MethodType embeddingType)
                 {
-                    var sourceEmbedding = EmbeddingType.Float32;
-                    var destinationEmbedding = EmbeddingType.Float32;
+                    var sourceEmbedding = EmbeddingType.Single;
+                    var destinationEmbedding = EmbeddingType.Single;
                     
                     switch (embeddingType)
                     {

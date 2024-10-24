@@ -596,7 +596,7 @@ namespace Raven.Client
             internal const string EmbeddingInt1 = EmbeddingPrefix + "i1";
 
             public const float MinimumSimilarity = 0.8F;
-            public const EmbeddingType DefaultEmbeddingType = EmbeddingType.Float32;
+            public const EmbeddingType DefaultEmbeddingType = EmbeddingType.Single;
             public const VectorIndexingStrategy DefaultIndexingStrategy = VectorIndexingStrategy.Exact;
         }
     }

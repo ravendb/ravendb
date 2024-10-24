@@ -661,7 +661,7 @@ public static class CoraxQueryBuilder
             var underlyingEnumerable = (BlittableJsonReaderArray)value;
             transformedEmbedding = vectorOptions.SourceEmbeddingType switch
             {
-                EmbeddingType.Float32 => GetVector<float>(),
+                EmbeddingType.Single => GetVector<float>(),
                 EmbeddingType.Int8 => GetVector<sbyte>(),
                 EmbeddingType.Binary => GetVector<byte>(),
                 _ => throw new NotSupportedException($"Unsupported {nameof(vectorOptions.SourceEmbeddingType)}: {vectorOptions.SourceEmbeddingType}")
@@ -691,9 +691,9 @@ public static class CoraxQueryBuilder
         
         var similarityType = (vectorOptions.DestinationEmbeddingType) switch
         {
-            EmbeddingType.Binary => VectorSimilarityType.I1,
-            EmbeddingType.Int8 => VectorSimilarityType.I8,
-            _ => VectorSimilarityType.Cosine,
+            EmbeddingType.Binary => SimilarityMethod.Hamming,
+            EmbeddingType.Int8 => SimilarityMethod.CosineSbyte,
+            _ => SimilarityMethod.CosineFloat,
         };
         
         return builderParameters.IndexSearcher.VectorQuery(fieldMetadata, transformedEmbedding, minimumMatch, similarityType);

@@ -1602,8 +1602,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var minimumSimilarityObject);
 
-                    if (minimumSimilarityObject is not float minimumSimilarity)
-                        throw new Exception();
+                    if (minimumSimilarityObject is not float minimumSimilarity || minimumSimilarity is <= 0f or > 1.0f)
+                        throw new NotSupportedException($"The minimum similarity parameter should be a float in the range [0, 1]. However, it was '{minimumSimilarityObject.GetType().FullName}' with the value '{minimumSimilarityObject.ToString()}'.");
                     
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var fieldFactoryObject);
                     

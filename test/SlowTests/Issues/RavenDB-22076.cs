@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Vector;
@@ -66,15 +67,15 @@ public class RavenDB_22076 : RavenTestBase
         {
             using (var session = store.OpenAsyncSession())
             {
-                var ex1 = Assert.Throws<Exception>(() => session.Advanced.AsyncDocumentQuery<Dto>()
+                var ex1 = Assert.Throws<InvalidDataException>(() => session.Advanced.AsyncDocumentQuery<Dto>()
                     .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8).TargetQuantization(EmbeddingType.Binary), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString());
                 
                 Assert.Contains("Cannot quantize already quantized embeddings", ex1.Message);
 
-                var ex2 = Assert.Throws<Exception>(() => session.Advanced.AsyncDocumentQuery<Dto>()
-                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8).TargetQuantization(EmbeddingType.Float32), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString());
+                var ex2 = Assert.Throws<InvalidDataException>(() => session.Advanced.AsyncDocumentQuery<Dto>()
+                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8).TargetQuantization(EmbeddingType.Single), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString());
                     
-                Assert.Contains("Cannot quantize vector with Int8 quantization into Float32", ex2.Message);
+                Assert.Contains("Cannot quantize already quantized embeddings", ex2.Message);
                 
                 var q1 = session.Advanced.AsyncDocumentQuery<Dto>()
                     .VectorSearch(x => x.WithEmbedding("EmbeddingField", EmbeddingType.Int8), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString();
@@ -149,10 +150,9 @@ public class RavenDB_22076 : RavenTestBase
         }
     }
 
-
     [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TestQuantizers(Options options)
+    public void TestQuantizer(Options options)
     {
         float[] rawEmbedding = [0.2f, 0.3f, -2.0f, 1.0f, 0.5f, -1.0f, -1.75f, 0.0f, 0.2f, 0.3f, -2.0f, 1.0f, 0.5f, -1.0f, -1.75f, 0.0f, 1.2f];
         

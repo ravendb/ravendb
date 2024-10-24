@@ -13,20 +13,20 @@ public class VectorAutoIndexDefinitionTests(ITestOutputHelper output) : NoDispos
     private DynamicQueryMapping _sut;
 
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    [InlineData("embedding.text", EmbeddingType.Text, EmbeddingType.Float32, false)]
+    [InlineData("embedding.text", EmbeddingType.Text, EmbeddingType.Single, false)]
     [InlineData("embedding.text_i8", EmbeddingType.Text, EmbeddingType.Int8, false)]
     [InlineData("embedding.text_i1", EmbeddingType.Text, EmbeddingType.Binary, false)]
-    [InlineData(null, EmbeddingType.Float32, EmbeddingType.Float32, false)]
-    [InlineData("embedding.f32_i8", EmbeddingType.Float32, EmbeddingType.Int8, false)]
-    [InlineData("embedding.f32_i1", EmbeddingType.Float32, EmbeddingType.Binary, false)]
+    [InlineData(null, EmbeddingType.Single, EmbeddingType.Single, false)]
+    [InlineData("embedding.f32_i8", EmbeddingType.Single, EmbeddingType.Int8, false)]
+    [InlineData("embedding.f32_i1", EmbeddingType.Single, EmbeddingType.Binary, false)]
     [InlineData("embedding.i8", EmbeddingType.Int8, EmbeddingType.Int8, false)]
     [InlineData("embedding.i1", EmbeddingType.Binary, EmbeddingType.Binary, false)]
-    [InlineData("embedding.text", EmbeddingType.Text, EmbeddingType.Float32, true)]
+    [InlineData("embedding.text", EmbeddingType.Text, EmbeddingType.Single, true)]
     [InlineData("embedding.text_i8", EmbeddingType.Text, EmbeddingType.Int8, true)]
     [InlineData("embedding.text_i1", EmbeddingType.Text, EmbeddingType.Binary, true)]
-    [InlineData(null, EmbeddingType.Float32, EmbeddingType.Float32, true)]
-    [InlineData("embedding.f32_i8", EmbeddingType.Float32, EmbeddingType.Int8, true)]
-    [InlineData("embedding.f32_i1", EmbeddingType.Float32, EmbeddingType.Binary, true)]
+    [InlineData(null, EmbeddingType.Single, EmbeddingType.Single, true)]
+    [InlineData("embedding.f32_i8", EmbeddingType.Single, EmbeddingType.Int8, true)]
+    [InlineData("embedding.f32_i1", EmbeddingType.Single, EmbeddingType.Binary, true)]
     [InlineData("embedding.i8", EmbeddingType.Int8, EmbeddingType.Int8, true)]
     [InlineData("embedding.i1", EmbeddingType.Binary, EmbeddingType.Binary, true)]
     public void CreateVectorFieldWithMethod(string fieldEmbeddingName, EmbeddingType sourceType, EmbeddingType destinationType, bool aliased)
@@ -62,12 +62,12 @@ public class VectorAutoIndexDefinitionTests(ITestOutputHelper output) : NoDispos
 
         
         (string fieldEmbeddingName, EmbeddingType sourceType, EmbeddingType destinationType)[] fields = {
-            ("embedding.text", EmbeddingType.Text, EmbeddingType.Float32), 
+            ("embedding.text", EmbeddingType.Text, EmbeddingType.Single), 
             ("embedding.text_i8", EmbeddingType.Text, EmbeddingType.Int8),
             ("embedding.text_i1", EmbeddingType.Text, EmbeddingType.Binary),
-            (null, EmbeddingType.Float32, EmbeddingType.Float32), 
-            ("embedding.f32_i8", EmbeddingType.Float32, EmbeddingType.Int8),
-            ("embedding.f32_i1", EmbeddingType.Float32, EmbeddingType.Binary), 
+            (null, EmbeddingType.Single, EmbeddingType.Single), 
+            ("embedding.f32_i8", EmbeddingType.Single, EmbeddingType.Int8),
+            ("embedding.f32_i1", EmbeddingType.Single, EmbeddingType.Binary), 
             ("embedding.i8", EmbeddingType.Int8, EmbeddingType.Int8),
             ("embedding.i1", EmbeddingType.Binary, EmbeddingType.Binary)
         };

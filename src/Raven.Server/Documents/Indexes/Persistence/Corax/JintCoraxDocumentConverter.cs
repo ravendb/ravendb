@@ -184,8 +184,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     {
                         actualValue = val; //Here we populate the dynamic spatial field that will be handled below.
                     }
-
-                    if (val.IsObject() && val.AsObject().TryGetValue(JavaScriptFieldName.VectorPropertyName, out _))
+                    else if (val.IsObject() && val.AsObject().TryGetValue(JavaScriptFieldName.VectorPropertyName, out _))
                     {
                         actualValue = val;
                     }
@@ -256,7 +255,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                         PortableExceptions.Throw<InvalidDataException>("Name field doesn't exist but is required.");
                     }
 
-                    var indexField = AbstractStaticIndexBase.GetOrCreateVectorField(field.Name);
+                    var indexField = GetFieldObjectForProcessing(field.Name, indexingScope);
                     object objectForIndexing = AbstractStaticIndexBase.CreateVector(indexField, valueJsv.IsString() ? valueJsv.AsString() : (object)valueJsv);
 
                     InsertRegularField(indexField, objectForIndexing, indexContext, builder, sourceDocument, out shouldSkip);

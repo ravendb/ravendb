@@ -20,7 +20,7 @@ public class VectorJavaScriptIndexing : RavenTestBase
     }
     
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void TextToSinglesTest() => JsIndexingTestingBase(nameof(VecDoc.Text), EmbeddingType.Text, EmbeddingType.Float32, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
+    public void TextToSinglesTest() => JsIndexingTestingBase(nameof(VecDoc.Text), EmbeddingType.Text, EmbeddingType.Single, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
     
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void TextToInt8Test() => JsIndexingTestingBase(nameof(VecDoc.Text), EmbeddingType.Text, EmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
@@ -34,21 +34,21 @@ public class VectorJavaScriptIndexing : RavenTestBase
     [InlineData(nameof(VecDoc.SinglesBase64))]
     [InlineData(nameof(VecDoc.SinglesEnumerable))]
     [InlineData(nameof(VecDoc.SinglesEnumerableBase64))]
-    public void SinglesToSinglesTest(string fieldName) => JsIndexingTestingBase(fieldName, EmbeddingType.Float32, EmbeddingType.Float32, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
+    public void SinglesToSinglesTest(string fieldName) => JsIndexingTestingBase(fieldName, EmbeddingType.Single, EmbeddingType.Single, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
     
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     [InlineData(nameof(VecDoc.Singles))]
     [InlineData(nameof(VecDoc.SinglesBase64))]
     [InlineData(nameof(VecDoc.SinglesEnumerable))]
     [InlineData(nameof(VecDoc.SinglesEnumerableBase64))]
-    public void SinglesToInt8Test(string fieldName) => JsIndexingTestingBase(fieldName, EmbeddingType.Float32, EmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
+    public void SinglesToInt8Test(string fieldName) => JsIndexingTestingBase(fieldName, EmbeddingType.Single, EmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
     
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     [InlineData(nameof(VecDoc.Singles))]
     [InlineData(nameof(VecDoc.SinglesBase64))]
     [InlineData(nameof(VecDoc.SinglesEnumerable))]
     [InlineData(nameof(VecDoc.SinglesEnumerableBase64))]
-    public void SinglesToInt1Test(string fieldName) => JsIndexingTestingBase(fieldName, EmbeddingType.Float32, EmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
+    public void SinglesToInt1Test(string fieldName) => JsIndexingTestingBase(fieldName, EmbeddingType.Single, EmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
     
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     [InlineData(nameof(VecDoc.Int8))]

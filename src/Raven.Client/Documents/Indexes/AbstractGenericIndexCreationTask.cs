@@ -169,7 +169,7 @@ namespace Raven.Client.Documents.Indexes
         }
         
         /// <summary>
-        /// Register a field to be spatially indexed
+        /// Register a field to be vector indexed
         /// </summary>
         protected void Vector(string field, Func<VectorOptionsFactory, VectorOptions> indexing)
         {

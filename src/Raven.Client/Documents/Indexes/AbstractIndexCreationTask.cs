@@ -211,68 +211,48 @@ namespace Raven.Client.Documents.Indexes
         {
             throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         }
-
-        /// <summary>
-        /// Generates a vector field in the index, generating embeddings from the provided value
-        /// </summary>
-        /// <param name="value">Source of text to generate tokens</param>
-        public object CreateVectorSearch(string value)
-        {
-            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        }
         
         /// <summary>
-        /// Generates a vector field in the index, generating embeddings from the provided value
+        /// Creates a vector field in the index, generating embeddings from the provided value
         /// </summary>
         /// <param name="value">Source of text to generate tokens</param>
-        public object CreateVectorSearch(string fieldName, string value)
-        {
-            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        }
-
-
-        /// <inheritdoc cref="VectorSearch(string)"/>
-        /// <param name="values">Enumerable of text to generate tokens</param>
-        public object CreateVectorSearch(IEnumerable<string> values)
-        {
-            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        }
+        public object CreateVectorSearch(string value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         
         /// <summary>
-        /// Generates a vector field in the index, generating embeddings from the provided value
+        /// Creates a vector field in the index, generating embeddings from the provided value
         /// </summary>
-        /// <param name="value">Source of text to generate tokens</param>
-        public object CreateVector(float[] value)
-        {
-            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        }
+        /// <param name="value">Source of texts to generate tokens</param>
+        public object CreateVectorSearch(IEnumerable<string> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         
         /// <summary>
-        /// Generates a vector field in the index, generating embeddings from the provided value
+        /// Creates a vector field in the index from the provided value
         /// </summary>
-        /// <param name="value">Source of text to generate tokens</param>
-        public object CreateVector(IEnumerable<float[]> value)
-        {
-            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        }
+        /// <param name="value">Source of embedding</param>
+        public object CreateVector(IEnumerable<float> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         
         /// <summary>
-        /// Generates a vector field in the index, generating embeddings from the provided value
+        /// Creates a vector field in the index from the provided values
         /// </summary>
-        /// <param name="value">Source of text to generate tokens</param>
-        public object CreateVector(string value)
-        {
-            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        }
+        /// <param name="value">Source of embeddings</param>
+        public object CreateVector(IEnumerable<IEnumerable<float>> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         
-        /// <summary>
-        /// Generates a vector field in the index, generating embeddings from the provided value
-        /// </summary>
-        /// <param name="value">Source of text to generate tokens</param>
-        public object CreateVector(IEnumerable<string> value)
-        {
-            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        }
+        /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{float})"/>
+        public object CreateVector(IEnumerable<sbyte> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{System.Collections.Generic.IEnumerable{float}})"/>
+        public object CreateVector(IEnumerable<IEnumerable<sbyte>> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{float})"/>
+        public object CreateVector(IEnumerable<byte> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{System.Collections.Generic.IEnumerable{float}})"/>
+        public object CreateVector(IEnumerable<IEnumerable<byte>> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{float})"/>
+        public object CreateVector(string value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        /// <inheritdoc cref="CreateVector(System.Collections.Generic.IEnumerable{System.Collections.Generic.IEnumerable{float}})"/>
+        public object CreateVector(IEnumerable<string> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         
         /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions

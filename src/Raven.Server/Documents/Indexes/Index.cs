@@ -5215,13 +5215,19 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        private IndexField GetOrAddVectorField(string name)
+        private IndexField GetOrAddVectorField(string name, bool isText)
         {
             return _vectorFields.GetOrAdd(name, _ =>
             {
                 if (Definition.MapFields.TryGetValue(name, out var field) == false)
-                    return IndexField.Create(name, new IndexFieldOptions() { Vector = VectorOptions.Default }, null, Corax.Constants.IndexWriter.DynamicField);
+                    return IndexField.Create(name, new IndexFieldOptions() { Vector = isText ? VectorOptions.Default : VectorOptions.DefaultText}, null, Corax.Constants.IndexWriter.DynamicField);
 
+                // Setting default values when the user hasn't explicitly configured them
+                if (field is IndexField { Vector: null } storedField)
+                {
+                    storedField.Vector = isText ? VectorOptions.DefaultText : VectorOptions.Default;
+                }
+                
                 return field switch
                 {
                     //todo: revisit it later
