@@ -25,9 +25,9 @@ public interface IVectorFieldFactory<T>
     
     public IVectorEmbeddingField WithBase64(Expression<Func<T, object>> propertySelector, EmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
 
-    public IVectorField WithField(string fieldName, EmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
+    public IVectorField WithField(string fieldName);
     
-    public IVectorField WithField(Expression<Func<T, object>> propertySelector, EmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
+    public IVectorField WithField(Expression<Func<T, object>> propertySelector);
 }
 
 public interface IVectorEmbeddingTextField
@@ -47,6 +47,8 @@ public interface IVectorField
 
 internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, IVectorField, IVectorEmbeddingField, IVectorEmbeddingTextField
 {
+    private bool _byFieldMethodUsed;
+
     internal string FieldName { get; set; }
     internal EmbeddingType SourceQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
     internal EmbeddingType DestinationQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
@@ -114,40 +116,40 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
 
         return this;
     }
-
-    IVectorField IVectorFieldFactory<T>.WithField(string fieldName, EmbeddingType storedEmbeddingQuantization)
+    
+    IVectorField IVectorFieldFactory<T>.WithField(string fieldName)
     {
         FieldName = fieldName;
-        SourceQuantizationType = Constants.VectorSearch.DefaultEmbeddingType;
-        DestinationQuantizationType = SourceQuantizationType;
-        
+        _byFieldMethodUsed = true;        
         return this;
     }
 
-    IVectorField IVectorFieldFactory<T>.WithField(Expression<Func<T, object>> propertySelector, EmbeddingType storedEmbeddingQuantization)
+    IVectorField IVectorFieldFactory<T>.WithField(Expression<Func<T, object>> propertySelector)
     {
         FieldName = propertySelector.ToPropertyPath(DocumentConventions.Default);
-        SourceQuantizationType = Constants.VectorSearch.DefaultEmbeddingType;
-        DestinationQuantizationType = SourceQuantizationType;
-        
+        _byFieldMethodUsed = true;
         return this;
     }
 
     IVectorEmbeddingField IVectorEmbeddingField.TargetQuantization(EmbeddingType targetEmbeddingQuantization)
     {
+        PortableExceptions.ThrowIf<InvalidOperationException>(_byFieldMethodUsed, $"Cannot use method {nameof(IVectorEmbeddingField.TargetQuantization)} with {nameof(IVectorFieldFactory<T>.WithField)} since quantization is already done by the index.");
+        
         DestinationQuantizationType = targetEmbeddingQuantization;
         
         if (SourceQuantizationType is EmbeddingType.Int8 or EmbeddingType.Binary && DestinationQuantizationType != SourceQuantizationType)
-            throw new InvalidDataException("Cannot quantize already quantized embeddings.");
+            throw new InvalidOperationException("Cannot quantize already quantized embeddings.");
         
         if (DestinationQuantizationType == EmbeddingType.Text)
-            throw new InvalidDataException("Cannot quantize the embedding to Text. This option is only for SourceQuantizationType.");
+            throw new InvalidOperationException("Cannot quantize the embedding to Text. This option is only for SourceQuantizationType.");
         
         return this;
     }
 
     IVectorEmbeddingTextField IVectorEmbeddingTextField.TargetQuantization(EmbeddingType targetEmbeddingQuantization)
     {
+        PortableExceptions.ThrowIf<InvalidOperationException>(_byFieldMethodUsed, $"Cannot use method {nameof(IVectorEmbeddingField.TargetQuantization)} with {nameof(IVectorFieldFactory<T>.WithField)} since quantization is already done by the index.");
+        
         if (DestinationQuantizationType == EmbeddingType.Text)
             throw new InvalidDataException("Cannot quantize the embedding to Text. This option is only for SourceQuantizationType.");
         

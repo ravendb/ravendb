@@ -66,7 +66,7 @@ select new
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Vector)]
     [InlineData(EmbeddingType.Binary, 0.7f)]
     [InlineData(EmbeddingType.Int8, 0.55f)]
-    [InlineData(EmbeddingType.Float32, 0.6f)]
+    [InlineData(EmbeddingType.Single, 0.6f)]
     public async Task CanCreateVectorIndexFromCSharp(EmbeddingType embeddingType, float similarity)
     {
         using var store = CreateDocumentStore();
@@ -101,7 +101,7 @@ select new
             await session.StoreAsync(new Document() { Embeddings = [0.1f, 0.1f] });
             await session.StoreAsync(new Document() { Embeddings = [-0.1f, -0.1f] });
             await session.SaveChangesAsync();
-            await new NumericalVectorIndex(EmbeddingType.Float32).ExecuteAsync(store);
+            await new NumericalVectorIndex(EmbeddingType.Single).ExecuteAsync(store);
         }
 
         await Indexes.WaitForIndexingAsync(store);
@@ -139,7 +139,7 @@ select new
                 select new { Id = doc.Id, Vector = CreateVector(doc.Embeddings) };
 
 
-            VectorIndexes.Add(x => x.Vector, new VectorOptions() { IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Float32 });
+            VectorIndexes.Add(x => x.Vector, new VectorOptions() { IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Single });
         }
     }
 
@@ -224,7 +224,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Text, DestinationEmbeddingType = EmbeddingType.Float32
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Text, DestinationEmbeddingType = EmbeddingType.Single
                 });
         }
     }
@@ -238,7 +238,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Text, DestinationEmbeddingType = EmbeddingType.Float32
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Text, DestinationEmbeddingType = EmbeddingType.Single
                 });
         }
     }
@@ -252,7 +252,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Float32, DestinationEmbeddingType = EmbeddingType.Float32
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Single, DestinationEmbeddingType = EmbeddingType.Single
                 });
         }
     }
@@ -266,7 +266,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Float32, DestinationEmbeddingType = EmbeddingType.Float32
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Single, DestinationEmbeddingType = EmbeddingType.Single
                 });
         }
     }
@@ -280,7 +280,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Float32, DestinationEmbeddingType = EmbeddingType.Float32
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Single, DestinationEmbeddingType = EmbeddingType.Single
                 });
         }
     }
@@ -294,7 +294,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Float32, DestinationEmbeddingType = EmbeddingType.Float32
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Single, DestinationEmbeddingType = EmbeddingType.Single
                 });
         }
     }

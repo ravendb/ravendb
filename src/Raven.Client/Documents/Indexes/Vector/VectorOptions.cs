@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using Sparrow;
 
@@ -21,7 +22,21 @@ public class VectorOptions
         DestinationEmbeddingType = options.DestinationEmbeddingType;
     }
     
-    public static readonly VectorOptions Default = new() {Dimensions = null, IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Float32, DestinationEmbeddingType = EmbeddingType.Float32};
+    public static readonly VectorOptions Default = new()
+    {
+        Dimensions = null, 
+        IndexingStrategy = VectorIndexingStrategy.Exact, 
+        SourceEmbeddingType = EmbeddingType.Single, 
+        DestinationEmbeddingType = EmbeddingType.Single
+    };
+    
+    public static readonly VectorOptions DefaultText = new()
+    {
+        Dimensions = null, 
+        IndexingStrategy = VectorIndexingStrategy.Exact, 
+        SourceEmbeddingType = EmbeddingType.Text, 
+        DestinationEmbeddingType = EmbeddingType.Single
+    };
     
     /// <summary>
     /// Defines dimensions size of embedding. When null we're locking the space to size we got from first item indexed.
@@ -43,6 +58,9 @@ public class VectorOptions
     /// </summary>
     public EmbeddingType DestinationEmbeddingType { get; set; }
 
+    [Conditional("DEBUG")]
+    internal void ValidateDebug() => Validate();
+    
     internal void Validate()
     {
         PortableExceptions.ThrowIf<InvalidOperationException>(DestinationEmbeddingType is EmbeddingType.Text, "Destination embedding type cannot be Text.");
@@ -51,6 +69,14 @@ public class VectorOptions
         PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Int8 && DestinationEmbeddingType is not EmbeddingType.Int8, "Quantization cannot be performed on already quantized vector.");
         PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is EmbeddingType.Binary && DestinationEmbeddingType is not EmbeddingType.Binary, "Quantization cannot be performed on already quantized vector.");
         PortableExceptions.ThrowIf<InvalidOperationException>(IndexingStrategy is not (VectorIndexingStrategy.Exact or VectorIndexingStrategy.HNSW), $"Unknown indexing strategy. Expected {VectorIndexingStrategy.Exact} or {VectorIndexingStrategy.HNSW} but was {IndexingStrategy}.");
+    }
+    
+    public static bool Equals(VectorOptions left, VectorOptions right)
+    {
+        if (left is null && right is null)
+            return true;
+
+        return left?.Equals(right) ?? false;
     }
     
     public override bool Equals(object obj)

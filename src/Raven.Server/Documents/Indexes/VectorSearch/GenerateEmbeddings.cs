@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Queries;
 using SmartComponents.LocalEmbeddings;
 using Sparrow;
 using Sparrow.Json;
@@ -94,7 +95,7 @@ public static class GenerateEmbeddings
     {
         return options.DestinationEmbeddingType switch
         {
-            EmbeddingType.Float32 => CreateSmartComponentsLocalEmbedding<EmbeddingF32>(text, F32Size),
+            EmbeddingType.Single => CreateSmartComponentsLocalEmbedding<EmbeddingF32>(text, F32Size),
             EmbeddingType.Int8 => CreateSmartComponentsLocalEmbedding<EmbeddingI8>(text, I8Size),
             EmbeddingType.Binary => CreateSmartComponentsLocalEmbedding<EmbeddingI1>(text, I1Size),
             _ => throw new NotSupportedException($"Unsupported {nameof(options.DestinationEmbeddingType)}: {options.DestinationEmbeddingType}")

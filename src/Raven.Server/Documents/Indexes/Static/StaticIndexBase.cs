@@ -340,11 +340,22 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public object CreateVector(string fieldName, object value)
         {
-            var currentIndexingField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName);
+            var currentIndexingField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, false);
             PortableExceptions.ThrowIf<InvalidDataException>(currentIndexingField?.Vector is null,
                 $"Field '{fieldName}' does not exist in this indexing scope. Cannot index as vector.");
 
+            currentIndexingField!.Vector!.ValidateDebug();
             return CreateVector(currentIndexingField, value);
+        }
+        
+        public object CreateVectorSearch(string fieldName, object value)
+        {
+            var currentIndexingField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, true);
+            PortableExceptions.ThrowIf<InvalidDataException>(currentIndexingField?.Vector is null,
+                $"Field '{fieldName}' does not exist in this indexing scope. Cannot index as vector.");
+            
+            currentIndexingField!.Vector!.ValidateDebug();
+            return VectorFromText(currentIndexingField, value);
         }
 
         /// <summary>
@@ -355,10 +366,6 @@ namespace Raven.Server.Documents.Indexes.Static
         /// <returns></returns>
         internal static object CreateVector(IndexField indexField, object value)
         {
-#if DEBUG
-            indexField.Vector.Validate();
-#endif
-            
             if (indexField!.Vector!.SourceEmbeddingType is EmbeddingType.Text)
                 return VectorFromText(indexField, value);
             
@@ -430,7 +437,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 IList embeddings = null;
                 embeddings = vectorOptions.SourceEmbeddingType switch
                 {
-                    EmbeddingType.Float32 => new List<float>(),
+                    EmbeddingType.Single => new List<float>(),
                     EmbeddingType.Int8 => new List<sbyte>(),
                     EmbeddingType.Binary => new List<byte>(),
                     _ => throw new ArgumentOutOfRangeException()
@@ -440,7 +447,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     switch (vectorOptions.SourceEmbeddingType)
                     {
-                        case EmbeddingType.Float32:
+                        case EmbeddingType.Single:
                             embeddings.Add(VectorUtils.GetNumerical<float>(item));
                             break;
                         case EmbeddingType.Int8:
@@ -464,7 +471,7 @@ namespace Raven.Server.Documents.Indexes.Static
             VectorValue GenerateEmbeddingForBase64(string source)
             {
                 var decodedBase = Convert.FromBase64String(source);
-                if (vectorOptions.SourceEmbeddingType is EmbeddingType.Float32)
+                if (vectorOptions.SourceEmbeddingType is EmbeddingType.Single)
                 {
                     var embeddings = MemoryMarshal.Cast<byte, float>(decodedBase);
                     return GenerateEmbeddings.FromArray(vectorOptions, embeddings.ToArray());
@@ -879,13 +886,13 @@ namespace Raven.Server.Documents.Indexes.Static
             return CurrentIndexingScope.Current.GetOrCreateSpatialField(name);
         }
         
-        internal static IndexField GetOrCreateVectorField(string name)
-        {
-            if (CurrentIndexingScope.Current == null)
-                throw new InvalidOperationException("Indexing scope was not initialized.");
-
-            return CurrentIndexingScope.Current.GetOrCreateVectorField(name);
-        }
+        // internal static IndexField GetOrCreateVectorField(string name)
+        // {
+        //     if (CurrentIndexingScope.Current == null)
+        //         throw new InvalidOperationException("Indexing scope was not initialized.");
+        //
+        //     return CurrentIndexingScope.Current.GetOrCreateVectorField(name);
+        // }
 
         private static double? ConvertToDouble(object value)
         {
