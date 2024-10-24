@@ -54,7 +54,7 @@ public static class LetsEncryptSetupUtils
                 try
                 {
                     var content = new StringContent(serializeObject, Encoding.UTF8, "application/json");
-                    var response = await ApiHttpClient.Instance.PostAsync($"/api/v1/dns-n-cert/claim", content, token).ConfigureAwait(false);
+                    var response = await ApiHttpClient.PostAsync($"/api/v1/dns-n-cert/claim", content, token).ConfigureAwait(false);
                     response.EnsureSuccessStatusCode();
                     progress?.AddInfo($"Successfully claimed this domain: {setupInfo.Domain}.");
                 }

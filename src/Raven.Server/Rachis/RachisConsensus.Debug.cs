@@ -119,9 +119,16 @@ public abstract partial class RachisConsensus
     {
         GetLastTruncated(context, out var index, out var term);
         var range = GetLogEntriesRange(context);
+        var commitIndex = GetLastCommitIndex(context);
+
+        if (fromIndex.HasValue == false)
+        {
+            fromIndex = range.Max > 0 ? range.Max : commitIndex;
+        }
+
         return new LogSummary
         {
-            CommitIndex = GetLastCommitIndex(context),
+            CommitIndex = commitIndex,
             LastTruncatedIndex = index,
             LastTruncatedTerm = term,
             FirstEntryIndex = range.Min,
@@ -129,7 +136,7 @@ public abstract partial class RachisConsensus
             LastAppendedTime = LastAppended,
             LastCommitedTime = LastCommitted,
             CriticalError = GetUnrecoverableClusterError(),
-            Logs = GetLogEntries(context, fromIndex ?? range.Min, take, detailed),
+            Logs = GetLogEntries(context, fromIndex.Value, take, detailed),
         };
     }
 
@@ -143,12 +150,12 @@ public abstract partial class RachisConsensus
         var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
         using (Slice.From(context.Allocator, span, out Slice key))
         {
-            foreach (var value in table.SeekByPrimaryKey(key, 0))
+            foreach (var value in table.SeekBackwardByPrimaryKey(key, 0))
             {
                 if (take-- <= 0)
                     yield break;
 
-                var entry = RachisDebugLogEntry.Create(context, value);
+                var entry = RachisDebugLogEntry.CreateFromLog(context, value);
                 if (detailed == false)
                 {
                     entry.Entry.Dispose();
@@ -156,6 +163,15 @@ public abstract partial class RachisConsensus
                 }
 
                 yield return entry;
+                fromIndex = entry.Index - 1;
+            }
+
+            foreach (var value in LogHistory.GetHistoryLogs(context, fromIndex))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                yield return RachisLogHistory.CreateFromHistory(value);
             }
         }
     }
@@ -224,7 +240,7 @@ public abstract partial class RachisConsensus
             };
         }
 
-        internal static unsafe RachisDebugLogEntry Create(ClusterOperationContext context, Table.TableValueHolder value)
+        internal static unsafe RachisDebugLogEntry CreateFromLog(ClusterOperationContext context, Table.TableValueHolder value)
         {
             RachisDebugLogEntry entry = new()
             {

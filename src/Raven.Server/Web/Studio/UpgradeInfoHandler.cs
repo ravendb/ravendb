@@ -61,7 +61,7 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
 
             try
             {
-                var upgradeInfoResponse = await ApiHttpClient.Instance.PostAsync("api/v1/upgrade/info", content);
+                var upgradeInfoResponse = await ApiHttpClient.PostAsync("api/v1/upgrade/info", content);
 
                 if (upgradeInfoResponse.IsSuccessStatusCode == false)
                 {
