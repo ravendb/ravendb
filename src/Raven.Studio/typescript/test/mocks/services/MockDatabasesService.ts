@@ -65,12 +65,20 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         return this.mockResolvedValue(this.mocks.getRefreshConfiguration, dto, DatabasesStubs.refreshConfiguration());
     }
 
+    withoutRefreshConfiguration() {
+        return this.mockResolvedValue(this.mocks.getRefreshConfiguration, () => null, undefined);
+    }
+
     withExpirationConfiguration(dto?: RefreshConfiguration) {
         return this.mockResolvedValue(
             this.mocks.getExpirationConfiguration,
             dto,
             DatabasesStubs.expirationConfiguration()
         );
+    }
+
+    withoutExpirationConfiguration() {
+        return this.mockResolvedValue(this.mocks.getExpirationConfiguration, () => null, undefined);
     }
 
     withTombstonesState(dto?: TombstonesStateOnWire) {

@@ -37,20 +37,17 @@ namespace Raven.Server
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Server");
 
-        static Program()
+        public static unsafe int Main(string[] args)
         {
             bool useLegacyHttpClientFactory = false;
             var useLegacyHttpClientFactoryAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_USELEGACYHTTPCLIENTFACTORY");
             if (useLegacyHttpClientFactoryAsString != null && bool.TryParse(useLegacyHttpClientFactoryAsString, out useLegacyHttpClientFactory) == false)
                 throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_USELEGACYHTTPCLIENTFACTORY' env variable with value '{useLegacyHttpClientFactoryAsString}'.");
 
-            RequestExecutor.HttpClientFactory = useLegacyHttpClientFactory 
-                ? DefaultRavenHttpClientFactory.Instance 
+            RequestExecutor.HttpClientFactory = useLegacyHttpClientFactory
+                ? DefaultRavenHttpClientFactory.Instance
                 : RavenServerHttpClientFactory.Instance;
-        }
 
-        public static unsafe int Main(string[] args)
-        {
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
 
@@ -313,7 +310,7 @@ namespace Raven.Server
                                 message =
                                     $"{Environment.NewLine}In Linux low-level port (below 1024) will need a special permission, " +
                                     $"if this is your case please run{Environment.NewLine}" +
-                                    $"sudo setcap CAP_NET_BIND_SERVICE=+eip {Path.Combine(AppContext.BaseDirectory, "Raven.Server")}{Environment.NewLine}" + 
+                                    $"sudo setcap CAP_NET_BIND_SERVICE=+eip {Path.Combine(AppContext.BaseDirectory, "Raven.Server")}{Environment.NewLine}" +
                                     $"Urls: [{urls}]";
                             }
                             else if (e.InnerException is LicenseExpiredException)
