@@ -35,6 +35,8 @@ namespace Raven.Client.Documents.Operations
     public class Operation : IObserver<OperationStatusChange>
     {
         private readonly RequestExecutor _requestExecutor;
+        private readonly TimeSpan? _requestExecutorDefaultTimeout;
+
         private readonly Func<IDatabaseChanges> _changes;
         private readonly DocumentConventions _conventions;
         private readonly Task _afterOperationCompleted;
@@ -61,6 +63,7 @@ namespace Raven.Client.Documents.Operations
         internal Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, string nodeTag, Task afterOperationCompleted)
         {
             _requestExecutor = requestExecutor;
+            _requestExecutorDefaultTimeout = requestExecutor.DefaultTimeout;
             _changes = changes;
             _conventions = conventions;
             _afterOperationCompleted = afterOperationCompleted ?? Task.CompletedTask;
@@ -119,7 +122,7 @@ namespace Raven.Client.Documents.Operations
                     // We start the operation before we subscribe,
                     // so if we subscribe after the operation was already completed we will miss the notification for it. 
                     await FetchOperationStatus().ConfigureAwait(false);
-                    
+
                     break;
                 case OperationStatusFetchMode.Polling:
                     while (_isProcessing)
@@ -361,10 +364,20 @@ namespace Raven.Client.Documents.Operations
                         await _afterOperationCompleted.WithCancellation(token).ConfigureAwait(false);
 #endif
                     }
-                    catch (TaskCanceledException e) when (token.IsCancellationRequested)
+                    catch (TaskCanceledException e)
                     {
                         await StopProcessingUnderLock().ConfigureAwait(false);
-                        throw new TimeoutException($"Did not get a reply for operation '{_id}'.", e);
+
+                        var msg = token.IsCancellationRequested
+                            ? $"Did not get a reply for operation '{_id}'."
+                            : $"Operation '{_id}' was canceled.";
+
+                        msg = AddTimeoutReasonMessageIfNecessary(msg);
+
+                        if (token.IsCancellationRequested)
+                            throw new TimeoutException(msg, e);
+
+                        throw new TaskCanceledException(msg, e);
                     }
                     catch (Exception ex)
                     {
@@ -384,6 +397,14 @@ namespace Raven.Client.Documents.Operations
                         // ignored
                     }
                 }
+            }
+
+            string AddTimeoutReasonMessageIfNecessary(string message)
+            {
+                if (_requestExecutorDefaultTimeout != null && _requestExecutorDefaultTimeout != RequestExecutor.GlobalHttpClientTimeout)
+                    return $"{message} We noticed that request executor is set to timeout by default after '{_requestExecutorDefaultTimeout}' which might be a reason of the failure. This setting might be controlled via {nameof(DocumentConventions)}.{nameof(DocumentConventions.RequestTimeout)} convention, {nameof(DocumentStore)}.{nameof(DocumentStore.SetRequestTimeout)} method or directly via {nameof(RequestExecutor)}.{nameof(RequestExecutor.DefaultTimeout)} property.";
+
+                return message;
             }
         }
 
