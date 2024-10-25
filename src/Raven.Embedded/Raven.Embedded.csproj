@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <Version></Version>
+    <Version>
+    </Version>
     <Description>RavenDB Embedded library to run ravendb in embedded way</Description>
     <Authors>Hibernating Rhinos</Authors>
     <OutputType>Library</OutputType>
@@ -13,18 +13,15 @@
     <CodeAnalysisRuleSet>..\..\RavenDB.Client.ruleset</CodeAnalysisRuleSet>
     <Configurations>Debug;Release;Validate</Configurations>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <TargetFrameworks>netstandard2.0;net462</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>
   </PropertyGroup>
-
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Remove="Properties\AssemblyInfo.Linux.cs" />
     <Compile Include="..\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />
@@ -37,19 +34,16 @@
     <None Include="..\..\LICENSE.txt" Pack="true" Visible="false" PackagePath="" />
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" />
   </ItemGroup>
-
   <ItemGroup>
-    <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
+    <PackageReference Include="Raven.CodeAnalysis">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
   </ItemGroup>
-
   <ItemGroup Condition="$(TargetFramework) == 'netstandard2.0'">
-    <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
+    <PackageReference Include="System.Runtime.Loader" />
   </ItemGroup>
 </Project>

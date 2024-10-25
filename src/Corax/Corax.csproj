@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <Description>Corax - Low level indexing engine</Description>
     <Authors>Hibernating Rhinos</Authors>
@@ -27,16 +26,14 @@
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Spatial4n" Version="0.4.1.1" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Spatial4n" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" />
     <ProjectReference Include="..\Voron\Voron.csproj" />
   </ItemGroup>
-
   <PropertyGroup Condition=" '$(Configuration)' == 'Validate' ">
     <DefineConstants>$(DefineConstants);VALIDATE;VALIDATE_PAGES</DefineConstants>
     <Optimize>true</Optimize>

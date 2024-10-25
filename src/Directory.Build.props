@@ -1,28 +1,24 @@
 ﻿<Project>
   <PropertyGroup>
-    <Version></Version>
+    <Version>
+    </Version>
     <LangVersion>preview</LangVersion>
     <DebugType>embedded</DebugType>
     <PackageIconUrl>http://static.ravendb.net/logo-for-nuget.png</PackageIconUrl>
     <PackageIcon>icon.png</PackageIcon>
     <PackageProjectUrl>https://ravendb.net</PackageProjectUrl>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/ravendb/ravendb</RepositoryUrl>
-
     <WarningsAsErrors>true</WarningsAsErrors>
-
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
-
     <SignAssembly Condition="'$(OS)' == 'Windows_NT'">true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\..\RavenDB.snk</AssemblyOriginatorKeyFile>
-
     <NoWarn>CS0419,CS1591,CS1572,CS1573,CS1574,CS1723</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp3.1' OR '$(TargetFramework)' == 'net5.0'">
@@ -115,6 +111,6 @@
     <None Include="..\..\scripts\assets\icon.png" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="SourceLink.Create.CommandLine" Version="2.8.3" PrivateAssets="All" /> 
+    <PackageReference Include="SourceLink.Create.CommandLine" PrivateAssets="All" />
   </ItemGroup>
 </Project>

@@ -13,7 +13,7 @@
     <GenerateRequiresPreviewFeaturesAttribute>True</GenerateRequiresPreviewFeaturesAttribute>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="TypeScripter" Version="0.5.4" />
+    <PackageReference Include="TypeScripter" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />

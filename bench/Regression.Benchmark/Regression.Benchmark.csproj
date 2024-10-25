@@ -15,16 +15,16 @@
     <EmbeddedResource Include="Data\*.json" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-    <PackageReference Include="Microsoft.NETCore.Jit" Version="2.0.8" />
-    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.NETCore.Jit" />
+    <PackageReference Include="System.Text.RegularExpressions" />
+    <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.DotNet.xunit.performance" Version="1.0.0-alpha-build0041" />
-    <PackageReference Include="Microsoft.DotNet.xunit.performance.runner.cli" Version="1.0.0-alpha-build0041" />
-    <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="Microsoft.DotNet.xunit.performance" />
+    <PackageReference Include="Microsoft.DotNet.xunit.performance.runner.cli" />
+    <PackageReference Include="xunit" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />

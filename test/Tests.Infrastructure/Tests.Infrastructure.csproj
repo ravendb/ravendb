@@ -23,13 +23,13 @@
     <EmbeddedResource Include="Data\Northwind.4.2.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="JunitXml.TestLogger" Version="4.0.254" />
-    <PackageReference Include="MongoDB.Driver" Version="2.29.0" />
-    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
-    <PackageReference Include="xRetry" Version="1.9.0" />
-    <PackageReference Include="xunit" Version="2.4.2" />
-    <PackageReference Include="xunit.runner.utility" Version="2.4.2" />
-    <PackageReference Include="XunitLogger" Version="4.0.991" />
+    <PackageReference Include="JunitXml.TestLogger" />
+    <PackageReference Include="MongoDB.Driver" />
+    <PackageReference Include="System.Text.RegularExpressions" />
+    <PackageReference Include="xRetry" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.utility" />
+    <PackageReference Include="XunitLogger" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />

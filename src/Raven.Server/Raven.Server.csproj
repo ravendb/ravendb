@@ -151,66 +151,66 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Core" Version="3.7.400.31" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.400.31" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.404.3" />
-    <PackageReference Include="Azure.Identity" Version="1.12.1" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.22.1" />
-    <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.8.0" />
-    <PackageReference Include="CloudNative.CloudEvents" Version="2.8.0" />    
-    <PackageReference Include="CloudNative.CloudEvents.Amqp" Version="2.8.0" />
-    <PackageReference Include="CloudNative.CloudEvents.Kafka" Version="2.8.0" />
-    <PackageReference Include="Confluent.Kafka" Version="2.5.3" />
-    <PackageReference Include="CsvHelper" Version="33.0.1" />
-    <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
-    <PackageReference Include="JetBrains.Annotations" Version="2024.2.0">
+    <PackageReference Include="AWSSDK.Core" />
+    <PackageReference Include="AWSSDK.Glacier" />
+    <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Azure.Storage.Blobs" />
+    <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" />
+    <PackageReference Include="CloudNative.CloudEvents" />
+    <PackageReference Include="CloudNative.CloudEvents.Amqp" />
+    <PackageReference Include="CloudNative.CloudEvents.Kafka" />
+    <PackageReference Include="Confluent.Kafka" />
+    <PackageReference Include="CsvHelper" />
+    <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" />
+    <PackageReference Include="JetBrains.Annotations">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Jint" Version="3.0.32-ravendb" />
-    <PackageReference Include="Google.Api.Gax.Rest" Version="4.9.0" />
-    <PackageReference Include="Google.Cloud.Storage.V1" Version="4.10.0" />
-    <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
-    <PackageReference Include="librdkafka.redist" Version="2.5.3" />
-    <PackageReference Include="Lucene.Net" Version="3.0.54011" />
-    <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.54011" />
-    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.7.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.7.0" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
-    <PackageReference Include="MySqlConnector" Version="2.3.7" />
-    <PackageReference Include="NCrontab.Advanced" Version="1.3.28" />
-    <PackageReference Include="NEST" Version="7.17.5" />
-    <PackageReference Include="Npgsql" Version="8.0.4" />
-    <PackageReference Include="NuGet.Commands" Version="6.11.1" Alias="NGC" />
-    <PackageReference Include="NuGet.ProjectModel" Version="6.11.1" />
-    <PackageReference Include="NuGet.Resolver" Version="6.11.1" />
-    <PackageReference Include="NuGet.PackageManagement" Version="6.11.1" />
-    <PackageReference Include="NuGet.Protocol" Version="6.11.1" />
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.6.0" />
-    <PackageReference Include="Parquet.Net" Version="3.10.0" />
-    <PackageReference Include="Polly" Version="8.4.2" />
-    <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
-    <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
-    <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
+    <PackageReference Include="Jint" />
+    <PackageReference Include="Google.Api.Gax.Rest" />
+    <PackageReference Include="Google.Cloud.Storage.V1" />
+    <PackageReference Include="Lextm.SharpSnmpLib.Engine" />
+    <PackageReference Include="librdkafka.redist" />
+    <PackageReference Include="Lucene.Net" />
+    <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" />
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
+    <PackageReference Include="Microsoft.Win32.Registry" />
+    <PackageReference Include="MySqlConnector" />
+    <PackageReference Include="NCrontab.Advanced" />
+    <PackageReference Include="NEST" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="NuGet.Commands" Alias="NGC" />
+    <PackageReference Include="NuGet.ProjectModel" />
+    <PackageReference Include="NuGet.Resolver" />
+    <PackageReference Include="NuGet.PackageManagement" />
+    <PackageReference Include="NuGet.Protocol" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" />
+    <PackageReference Include="Parquet.Net" />
+    <PackageReference Include="Polly" />
+    <PackageReference Include="Portable.BouncyCastle" />
+    <PackageReference Include="RabbitMQ.Client" />
+    <PackageReference Include="Raven.CodeAnalysis">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
-    <PackageReference Include="System.Formats.Asn1" Version="8.0.1" />
-    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
-    <PackageReference Include="System.Net.Http" Version="4.3.4" />
-    <PackageReference Include="System.Private.Uri" Version="4.3.2" />
-    <PackageReference Include="System.Reflection.Metadata" Version="8.0.1" />
-    <PackageReference Include="System.Runtime.Caching" Version="8.0.1" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
-    <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
-    <PackageReference Include="ZstdSharp.Port" Version="0.8.1" />
+    <PackageReference Include="System.Collections.Immutable" />
+    <PackageReference Include="System.Formats.Asn1" />
+    <PackageReference Include="System.Linq.Async" />
+    <PackageReference Include="System.Net.Http" />
+    <PackageReference Include="System.Private.Uri" />
+    <PackageReference Include="System.Reflection.Metadata" />
+    <PackageReference Include="System.Runtime.Caching" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+    <PackageReference Include="System.Security.Cryptography.X509Certificates" />
+    <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="ZstdSharp.Port" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Properties\Settings\settings_posix.json">
@@ -234,11 +234,9 @@
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>
   </PropertyGroup>
-
   <Target Name="PlatformMessage" AfterTargets="Build">
     <Message Text="Building for platform: $(Platform)" Importance="high" />
   </Target>
-
   <PropertyGroup Condition="'$(Platform)' != 'x86'">
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>

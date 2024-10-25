@@ -1,23 +1,20 @@
 ﻿<Project>
   <PropertyGroup>
-    <Version></Version>
+    <Version>
+    </Version>
     <LangVersion>preview</LangVersion>
-
     <DebugType>embedded</DebugType>
     <WarningsAsErrors>true</WarningsAsErrors>
-
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
-
     <SignAssembly Condition="'$(OS)' == 'Windows_NT'">true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\..\RavenDB.snk</AssemblyOriginatorKeyFile>
-    
   </PropertyGroup>
-    <PropertyGroup Condition="'$(RuntimeIdentifier)' == ''">
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == ''">
     <IsAnyOS>true</IsAnyOS>
     <IsLinux64>false</IsLinux64>
     <IsLinuxArm32>false</IsLinuxArm32>
@@ -98,6 +95,6 @@
     <IsMacOSArm64>false</IsMacOSArm64>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="SourceLink.Create.CommandLine" Version="2.8.3" PrivateAssets="All" /> 
+    <PackageReference Include="SourceLink.Create.CommandLine" PrivateAssets="All" />
   </ItemGroup>
 </Project>
