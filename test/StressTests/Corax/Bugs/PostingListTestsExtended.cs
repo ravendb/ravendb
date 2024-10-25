@@ -27,17 +27,18 @@ public class PostingListTestsExtended : NoDisposalNoOutputNeeded
     [InlineData(511767612, 4172)]
     [InlineData(439188321, 502627)]
     [InlineData(506431817, 2)]
+    public void CanDeleteAndInsertInRandomOrder(int seed, int size) => CanDeleteAndInsertInRandomOrderBase(seed, size);
+
+    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Voron, RavenArchitecture.X64)]
     [InlineData(1477187726, 1828658)]
     [MemberData("Configuration")]
-    public void CanDeleteAndInsertInRandomOrder(int seed, int size)
-    {
-        using var testClass = new FastTests.Voron.PostingLists.PostingListTests(Output);
-        testClass.CanDeleteAndInsertInRandomOrder(seed, size, 10);
-    }
-
-    [RavenMultiplatformTheory(RavenTestCategory.Voron | RavenTestCategory.Corax, RavenPlatform.Windows)]
+    public void CanDeleteAndInsertInRandomOrderX64Only(int seed, int size) => CanDeleteAndInsertInRandomOrderBase(seed, size);
+    
+    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Voron, RavenPlatform.Windows, RavenArchitecture.X64)]
     [InlineData(391060845, 31707323)]
-    public void CanDeleteAndInsertInRandomOrderWindows(int seed, int size)
+    public void CanDeleteAndInsertInRandomOrderWindows(int seed, int size) => CanDeleteAndInsertInRandomOrderBase(seed, size);
+
+    private void CanDeleteAndInsertInRandomOrderBase(int seed, int size)
     {
         using var testClass = new FastTests.Voron.PostingLists.PostingListTests(Output);
         testClass.CanDeleteAndInsertInRandomOrder(seed, size, 10);
