@@ -16,9 +16,9 @@
             {
             }
 
-            internal const string DefaultHeaderAndFooterLayout = "Date|Level|Resource|Component|Logger|Message|Data";
+            internal const string DefaultHeaderAndFooterLayout = "Date|Level|ThreadID|Resource|Component|Logger|Message|Data";
 
-            internal const string DefaultLayout = "${longdate}|${level:uppercase=true}|${event-properties:item=Resource}|${event-properties:item=Component}|${logger}|${message:withexception=true}|${event-properties:item=Data}";
+            internal const string DefaultLayout = "${longdate}|${level:uppercase=true}|${threadid}|${event-properties:item=Resource}|${event-properties:item=Component}|${logger}|${message:withexception=true}|${event-properties:item=Data}";
 
             internal class Properties
             {

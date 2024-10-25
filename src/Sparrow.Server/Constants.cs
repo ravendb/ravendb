@@ -22,6 +22,7 @@ namespace Sparrow.Server.Global
             {
                 new JsonAttribute("Date", "${longdate}"),
                 new JsonAttribute("Level", "${level:uppercase=true}"),
+                new JsonAttribute("ThreadID", "${threadid}"),
                 new JsonAttribute("Resource", "${event-properties:item=Resource}"),
                 new JsonAttribute("Component", "${event-properties:item=Component}"),
                 new JsonAttribute("Logger", "${logger}"),
