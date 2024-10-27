@@ -157,10 +157,13 @@ public abstract partial class RachisConsensus
         {
             foreach (var value in table.SeekBackwardByPrimaryKey(key, 0))
             {
+                var entry = RachisDebugLogEntry.CreateFromLog(context, value);
+                if (entry.Index > fromIndex)
+                    break;
+
                 if (take-- <= 0)
                     yield break;
 
-                var entry = RachisDebugLogEntry.CreateFromLog(context, value);
                 if (detailed == false)
                 {
                     entry.Entry.Dispose();
@@ -173,10 +176,14 @@ public abstract partial class RachisConsensus
 
             foreach (var value in LogHistory.GetHistoryLogs(context, fromIndex))
             {
+                var entry = RachisLogHistory.CreateFromHistory(value);
+                if (entry.Index > fromIndex)
+                    yield break;
+
                 if (take-- <= 0)
                     yield break;
 
-                yield return RachisLogHistory.CreateFromHistory(value);
+                yield return entry;
             }
         }
     }
@@ -255,9 +262,6 @@ public abstract partial class RachisConsensus
                 SizeInBytes = size,
                 Flags = *(RachisEntryFlags*)value.Reader.Read(3, out size)
             };
-
-            if (entry.Flags != RachisEntryFlags.StateMachineCommand) 
-                return entry;
 
             entry.Entry.TryGet(nameof(CommandBase.Type), out string commandType);
             entry.CommandType = commandType;
