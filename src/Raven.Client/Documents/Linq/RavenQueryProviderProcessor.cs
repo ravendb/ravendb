@@ -2815,7 +2815,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     if (LinqPathProvider.IsIdCall(mce))
                     {
-                        HandleSelectId( GetSelectPath(newExpression.Members[index]));
+                        HandleSelectId(GetSelectPath(newExpression.Members[index]));
                         continue;
                     }
                 }
@@ -2908,9 +2908,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
             AddToFieldsToFetch(path, alias);
         }
 
-        private void HandleSelectId( string alias = null)
+        private void HandleSelectId(string alias = null)
         {
-            string path = $"{Constants.Documents.Indexing.Fields.DocumentIdFieldName}";
+            string path = Constants.Documents.Indexing.Fields.DocumentIdFieldName;
 
             AddToFieldsToFetch(path, alias);
         }
