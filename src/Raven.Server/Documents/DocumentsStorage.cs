@@ -2318,6 +2318,11 @@ namespace Raven.Server.Documents
             }
         }
 
+        public List<string> GetCollectionsNames(DocumentsOperationContext context)
+        {
+            return _collectionsCache.Keys.ToList();
+        }
+
         public CollectionDetails GetCollectionDetails(DocumentsOperationContext context, string collection)
         {
             CollectionDetails collectionDetails = new CollectionDetails

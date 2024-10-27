@@ -7,7 +7,9 @@ using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Documents.Revisions;
 using Sparrow.Json;
+using Enum = System.Enum;
 
 namespace Raven.Server.Web.Studio.Processors;
 
@@ -15,14 +17,30 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
+    protected const int TotalResultsUnsupported = -1;
 
     protected readonly JsonContextPoolBase<TOperationContext> ContextPool;
 
-    protected string Collection;
+    protected readonly string Collection;
+
+    protected readonly RevisionsStorage.RevisionType Type;
 
     protected AbstractStudioCollectionsHandlerProcessorForPreviewRevisions([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
         ContextPool = RequestHandler.ContextPool;
+        Collection = RequestHandler.GetStringQueryString("collection", required: false);
+        var type = RequestHandler.GetStringQueryString("type", required: false);
+        if (type == null)
+        {
+            Type = RevisionsStorage.RevisionType.All;
+            return;
+        }
+
+        if (Enum.TryParse(type, true, out Type) == false)
+        {
+            throw new ArgumentException(
+                $"Invalid value '{type}' provided for 'type'. Please use one of the following options: {string.Join(", ", Enum.GetNames(typeof(RevisionsStorage.RevisionType)))}.");
+        }
     }
 
     public override async ValueTask ExecuteAsync()
@@ -48,9 +66,12 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(nameof(PreviewRevisionsResult.TotalResults));
-                writer.WriteInteger(count);
-                writer.WriteComma();
+                if (count >= 0)
+                {
+                    writer.WritePropertyName(nameof(PreviewRevisionsResult.TotalResults));
+                    writer.WriteInteger(count);
+                    writer.WriteComma();
+                }
 
                 writer.WritePropertyName(nameof(PreviewRevisionsResult.Results));
                 await WriteItemsAsync(context, writer);
@@ -69,17 +90,13 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
 
     protected abstract Task WriteItemsAsync(TOperationContext context, AsyncBlittableJsonTextWriter writer);
 
-    protected virtual Task InitializeAsync(TOperationContext context, CancellationToken token)
-    {
-        Collection = RequestHandler.GetStringQueryString("collection", required: false);
-
-        return Task.CompletedTask;
-    }
+    protected abstract Task InitializeAsync(TOperationContext context, CancellationToken token);
 
     protected sealed class PreviewRevisionsResult
     {
         public List<Document> Results;
         public long TotalResults;
     }
+
 }
 
