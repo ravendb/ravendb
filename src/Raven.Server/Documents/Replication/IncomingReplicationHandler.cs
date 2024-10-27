@@ -372,6 +372,11 @@ namespace Raven.Server.Documents.Replication
                                 lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
                             }
 
+                            var isHub = _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub;
+                            if (isHub && string.IsNullOrEmpty(changeVector) == false)
+                            {
+                                changeVector = MergedDocumentReplicationCommand.ReplaceUnknownEntriesWithSinkTag(documentsContext, ref changeVector);
+                            }
                             var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
                             if (status == ConflictStatus.Update || _lastDocumentEtag > lastEtag)
                             {
@@ -383,7 +388,7 @@ namespace Raven.Server.Documents.Replication
                                 }
 
                                 var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo,
-                                    _replicationFromAnotherSource, _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub);
+                                    _replicationFromAnotherSource, isHub);
 
                                 if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
                                 {
@@ -1519,7 +1524,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            private static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
+            internal static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
             {
                 var globalDbIds = context.LastDatabaseChangeVector?.ToChangeVectorList()?.Select(x => x.DbId).ToList();
                 var incoming = changeVector.ToChangeVectorList();
