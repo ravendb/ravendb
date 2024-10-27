@@ -123,10 +123,13 @@ public abstract partial class RachisConsensus
         var range = GetLogEntriesRange(context);
         var commitIndex = GetLastCommitIndex(context);
 
-        if (fromIndex.HasValue == false)
+        if (range.Max == 0) // no logs in the table
         {
-            fromIndex = range.Max > 0 ? range.Max : commitIndex;
+            range.Max = commitIndex;
+            range.Min = commitIndex;
         }
+        
+        fromIndex ??= range.Max;
 
         return new LogSummary
         {
