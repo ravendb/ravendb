@@ -37,19 +37,19 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </summary>
         /// <param name="id">The ID of the document to revert.</param>
         /// <param name="cv">The change vector of the revision to which the document should be reverted.</param>
-        public RevertRevisionsByIdOperation(string id, string cv)
+        public RevertRevisionsByIdOperation(string id, string changeVector)
         {
             if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentException("id cannot be null or empty.", nameof(id));
             }
 
-            if (string.IsNullOrEmpty(cv))
+            if (string.IsNullOrEmpty(changeVector))
             {
-                throw new ArgumentException("cv cannot be null or empty.", nameof(cv));
+                throw new ArgumentException("cv cannot be null or empty.", nameof(changeVector));
             }
 
-            _idToChangeVector = new Dictionary<string, string>() { { id, cv } };
+            _idToChangeVector = new Dictionary<string, string>() { { id, changeVector } };
         }
 
         public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache) => new RevertRevisionsByIdCommand(_idToChangeVector);
