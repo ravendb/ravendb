@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
 
         private async Task<NuGetPackage> DownloadPackageAsync(PackageIdentity identity, bool allowPreleasePackages, CancellationToken token)
         {
-            var settings = Settings.LoadDefaultSettings(_rootPath);
+            var settings = new NullSettings();
             var packageSourceProvider = new PackageSourceProvider(settings);
             var sourceRepositoryProvider = new SourceRepositoryProvider(packageSourceProvider, Repository.Provider.GetCoreV3());
             var project = new FolderNuGetProject(_rootPath);
