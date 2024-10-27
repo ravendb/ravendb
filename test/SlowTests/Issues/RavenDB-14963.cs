@@ -261,6 +261,7 @@ public class RavenDB_14963 : RavenTestBase
         public DateTime LastModified { get; set; }
         public string ChangeVector { get; set; }
         public DocumentFlags Flags { get; set; }
+        public string Collection { get; set; }
         public int? ShardNumber { get; set; }
     }
 

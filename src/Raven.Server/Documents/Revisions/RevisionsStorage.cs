@@ -1178,23 +1178,26 @@ namespace Raven.Server.Documents.Revisions
         {
             return GetRevisionsInReverseEtagOrderInternal(context,
                 table: new Table(RevisionsSchema, context.Transaction.InnerTransaction),
-                index: RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], skip, take);
+                index: RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], includeData: true, skip, take);
         }
 
         public IEnumerable<Document> GetRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, string collection, int skip, int take)
         {
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName, out var revisionsSchema);
-            return GetRevisionsInReverseEtagOrderInternal(context, table, index: revisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], skip, take);
+            return GetRevisionsInReverseEtagOrderInternal(context, table, index: revisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false, skip, take);
         }
 
-        private IEnumerable<Document> GetRevisionsInReverseEtagOrderInternal(DocumentsOperationContext context, Table table, TableSchema.FixedSizeKeyIndexDef index, int skip, int take)
+        private IEnumerable<Document> GetRevisionsInReverseEtagOrderInternal(DocumentsOperationContext context, Table table, TableSchema.FixedSizeKeyIndexDef index, bool includeData, int skip, int take)
         {
             int i = 0;
             foreach (var tvh in table.SeekBackwardFromLast(index, skip))
             {
                 var tvr = tvh.Reader;
-                var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.ChangeVector);
+                var fields = DocumentFields.Id | DocumentFields.ChangeVector;
+                if(includeData)
+                    fields |= DocumentFields.Data;
+                var revision = TableValueToRevision(context, ref tvr, fields);
                 yield return revision;
 
                 if (++i >= take)

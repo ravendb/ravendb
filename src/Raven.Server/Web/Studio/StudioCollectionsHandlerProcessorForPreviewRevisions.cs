@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -43,9 +44,20 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
 
         if (_totalResults > 0)
         {
-            var revisions = string.IsNullOrEmpty(Collection)
-                ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrder(context, _start, _pageSize)
-                : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrderForCollection(context, Collection, _start, _pageSize);
+            IEnumerable<Document> revisions;
+            Func<DocumentsOperationContext, Document, string> getCollection;
+
+            if (string.IsNullOrEmpty(Collection))
+            {
+                revisions = RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrder(context, _start, _pageSize);
+                getCollection = (ctx, revision) => RequestHandler.Database.DocumentsStorage.ExtractCollectionName(ctx, revision.Data).Name;
+                
+            }
+            else
+            {
+                revisions = RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrderForCollection(context, Collection, _start, _pageSize);
+                getCollection = (ctx, revision) => Collection;
+            }
 
             var first = true;
             foreach (var revision in revisions)
@@ -75,6 +87,10 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
 
                 writer.WritePropertyName(nameof(Document.Flags));
                 writer.WriteString(revision.Flags.ToString());
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(Collection));
+                writer.WriteString(getCollection(context, revision));
 
                 writer.WriteEndObject();
             }

@@ -71,6 +71,9 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
             if (json.TryGet(nameof(Document.Flags), out DocumentFlags flags) == false)
                 throw new InvalidOperationException($"Revision of \"{id}\" and change vector '{changeVector}' does not contain 'Flags' field.");
 
+            if (json.TryGet(nameof(Collection), out string collection) == false)
+                throw new InvalidOperationException($"Revision of \"{id}\" and change vector '{changeVector}' does not contain 'Collection' field.");
+
             writer.WriteStartObject();
 
             writer.WritePropertyName(nameof(Document.Id));
@@ -91,6 +94,10 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
 
             writer.WritePropertyName(nameof(Document.Flags));
             writer.WriteString(flags.ToString());
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(Collection));
+            writer.WriteString(collection);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(ShardStreamItem<BlittableJsonReaderObject>.ShardNumber));
