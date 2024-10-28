@@ -36,8 +36,8 @@ export default function IndexCleanupAboutView() {
                 </p>
                 <p className="mb-0">
                     To counter these performance issues, RavenDB recommends a set of actions to optimize the number of
-                    indexes. Note that you need to update the index reference in your application when merging or
-                    removing indexes.
+                    indexes. Note that when merging or removing indexes, you need to update the index reference in your
+                    application.
                 </p>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper isUnlimited={hasIndexCleanup} data={featureAvailability} />
