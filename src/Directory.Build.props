@@ -1,7 +1,6 @@
 ﻿<Project>
   <PropertyGroup>
-    <Version>
-    </Version>
+    <Version></Version>
     <LangVersion>preview</LangVersion>
     <DebugType>embedded</DebugType>
     <PackageIconUrl>http://static.ravendb.net/logo-for-nuget.png</PackageIconUrl>
