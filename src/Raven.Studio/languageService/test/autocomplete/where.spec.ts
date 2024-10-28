@@ -4,7 +4,7 @@ import {EmptyMetadataProvider} from "./EmptyMetadataProvider";
 
 const specialFunctions = [
     "fuzzy", "search", "facet", "boost", "startsWith", "lucene", "exists",
-    "endsWith", "moreLikeThis", "intersect", "exact", "regex", "proximity"
+    "endsWith", "moreLikeThis", "intersect", "exact", "regex", "proximity", "vector.search"
 ];
 
 describe("can complete where", function () {
@@ -23,6 +23,15 @@ describe("can complete where", function () {
 
         for (let specialFunction of specialFunctions) {
             const matchingItem = suggestions.find(x => x.value.startsWith(specialFunction + "("));
+            expect(matchingItem)
+                .toBeTruthy();
+        }
+    });
+
+    it("vector.search <- suggest field or embedding method  - collection doesn't have fields", async () => {
+        const suggestions = await autocomplete("from CollectionWithoutDefinedFields where vector.search(|", new EmptyMetadataProvider());
+        for (let specialFunction of ['embedding.text(', 'embedding.text_i8(', 'embedding.text_i1(', 'embedding.f32_i8(', 'embedding.f32_i1(', 'embedding.i8(', 'embedding.i1']) {
+            const matchingItem = suggestions.find(x => x.value.startsWith(specialFunction));
             expect(matchingItem)
                 .toBeTruthy();
         }
@@ -46,6 +55,16 @@ describe("can complete where", function () {
     
     it("doesn't complete functions inside functions", async () => {
         const suggestions = await autocomplete("from Orders where search(|");
+
+        for (let specialFunction of specialFunctions) {
+            const matchingItem = suggestions.find(x => x.value.startsWith(specialFunction + "("));
+            expect(matchingItem)
+                .toBeFalsy();
+        }
+    });
+
+    it("doesn't complete functions inside functions vec", async () => {
+        const suggestions = await autocomplete("from Orders where vector(|");
 
         for (let specialFunction of specialFunctions) {
             const matchingItem = suggestions.find(x => x.value.startsWith(specialFunction + "("));

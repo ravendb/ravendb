@@ -16,6 +16,7 @@ import { EqualExpressionContext } from "./BaseRqlParser";
 import { MathExpressionContext } from "./BaseRqlParser";
 import { SpecialFunctionstContext } from "./BaseRqlParser";
 import { InExprContext } from "./BaseRqlParser";
+import { VecExprContext } from "./BaseRqlParser";
 import { BetweenExprContext } from "./BaseRqlParser";
 import { NormalFuncContext } from "./BaseRqlParser";
 import { BooleanExpressionContext } from "./BaseRqlParser";
@@ -52,6 +53,8 @@ import { InFunctionContext } from "./BaseRqlParser";
 import { BetweenFunctionContext } from "./BaseRqlParser";
 import { SpecialFunctionsContext } from "./BaseRqlParser";
 import { SpecialFunctionNameContext } from "./BaseRqlParser";
+import { VectorSearchContext } from "./BaseRqlParser";
+import { VectorSearchParamContext } from "./BaseRqlParser";
 import { SpecialParamContext } from "./BaseRqlParser";
 import { LoadModeContext } from "./BaseRqlParser";
 import { LoadStatementContext } from "./BaseRqlParser";
@@ -237,6 +240,14 @@ export interface BaseRqlParserVisitor<Result> extends ParseTreeVisitor<Result> {
 	 * @return the visitor result
 	 */
 	visitInExpr?: (ctx: InExprContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by the `vecExpr`
+	 * labeled alternative in `BaseRqlParser.expr`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitVecExpr?: (ctx: VecExprContext) => Result;
 
 	/**
 	 * Visit a parse tree produced by the `betweenExpr`
@@ -505,6 +516,20 @@ export interface BaseRqlParserVisitor<Result> extends ParseTreeVisitor<Result> {
 	 * @return the visitor result
 	 */
 	visitSpecialFunctionName?: (ctx: SpecialFunctionNameContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.vectorSearch`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitVectorSearch?: (ctx: VectorSearchContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.vectorSearchParam`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitVectorSearchParam?: (ctx: VectorSearchParamContext) => Result;
 
 	/**
 	 * Visit a parse tree produced by `BaseRqlParser.specialParam`.

@@ -76,6 +76,7 @@ expr
    | left = exprValue MATH right = exprValue # mathExpression
    | specialFunctions # specialFunctionst
    | inFunction # inExpr
+   | vectorSearch # vecExpr
    | betweenFunction # betweenExpr
    | funcExpr=function # normalFunc
    | TRUE AND NOT? expr # booleanExpression
@@ -117,6 +118,14 @@ specialFunctionName
    | INTERSECT
    | EXACT
    ;
+
+vectorSearch
+    : VECTOR_SEARCH vectorSearchParam
+    ;
+
+vectorSearchParam
+    : OP_PAR ((EMBEDDING OP_PAR variable CL_PAR) | literal) COMMA literal CL_PAR
+    ;
 
 specialParam
    : OP_PAR specialParam CL_PAR
