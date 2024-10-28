@@ -1178,17 +1178,17 @@ namespace Raven.Server.Documents.Revisions
         {
             return GetRevisionsInReverseEtagOrderInternal(context,
                 table: new Table(RevisionsSchema, context.Transaction.InnerTransaction),
-                index: RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], includeData: true, skip, take);
+                index: RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], includeData: true, shouldSkip: null, skip, take);
         }
 
         public IEnumerable<Document> GetRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, string collection, int skip, int take)
         {
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName, out var revisionsSchema);
-            return GetRevisionsInReverseEtagOrderInternal(context, table, index: revisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false, skip, take);
+            return GetRevisionsInReverseEtagOrderInternal(context, table, index: revisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false, shouldSkip: null, skip, take);
         }
 
-        private IEnumerable<Document> GetRevisionsInReverseEtagOrderInternal(DocumentsOperationContext context, Table table, TableSchema.FixedSizeKeyIndexDef index, bool includeData, int skip, int take)
+        private IEnumerable<Document> GetRevisionsInReverseEtagOrderInternal(DocumentsOperationContext context, Table table, TableSchema.FixedSizeKeyIndexDef index, bool includeData, Func<Document, bool> shouldSkip, int skip, int take)
         {
             int i = 0;
             foreach (var tvh in table.SeekBackwardFromLast(index, skip))
@@ -1198,11 +1198,64 @@ namespace Raven.Server.Documents.Revisions
                 if(includeData)
                     fields |= DocumentFields.Data;
                 var revision = TableValueToRevision(context, ref tvr, fields);
+                if (shouldSkip!=null && shouldSkip(revision))
+                    continue;
+
                 yield return revision;
 
                 if (++i >= take)
                     yield break;
             }
+        }
+
+        public IEnumerable<Document> GetDeletedRevisionsInReverseEtagOrder(DocumentsOperationContext context, long skip, long take)
+        {
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+
+            foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], null, Slices.AfterAllKeys, skip))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr.Result.Reader);
+                if (etag == NotDeletedRevisionMarker)
+                    yield break;
+
+                yield return TableValueToRevision(context, ref tvr.Result.Reader);
+            }
+        }
+
+        public IEnumerable<Document> GetDeletedRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, string collection, int skip, int take)
+        {
+            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
+            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName, out var revisionsSchema);
+            return GetRevisionsInReverseEtagOrderInternal(context, table, index: revisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false,
+                shouldSkip: revision => revision.Flags.Contain(DocumentFlags.DeleteRevision) == false, 
+                skip, take);
+        }
+
+        public IEnumerable<Document> GetNotDeletedRevisionsInReverseEtagOrder(DocumentsOperationContext context, long skip, long take)
+        {
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            using (GetEtagAsSlice(context, 0, out var startSlice))
+            {
+                foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], null, startSlice, skip))
+                {
+                    if (take-- <= 0)
+                        yield break;
+
+                    yield return TableValueToRevision(context, ref tvr.Result.Reader);
+                }
+            }
+        }
+
+        public IEnumerable<Document> GetNotDeletedRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, string collection, int skip, int take)
+        {
+            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
+            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName, out var revisionsSchema);
+            return GetRevisionsInReverseEtagOrderInternal(context, table, index: revisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false,
+                shouldSkip: revision => revision.Flags.Contain(DocumentFlags.DeleteRevision),
+                skip, take);
         }
 
         private IEnumerable<Document> GetAllRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,
@@ -2810,6 +2863,19 @@ namespace Raven.Server.Documents.Revisions
             if (table == null)
                 return 0;
             return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice]);
+        }
+
+        public long GetNumberOfNonDeletedRevisions(DocumentsOperationContext context)
+        {
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var index = RevisionsSchema.Indexes[DeleteRevisionEtagSlice];
+            var lastEtag = 0;
+            using (GetEtagAsSlice(context, lastEtag, out var lastEtagSlice))
+            {
+                var tree = table.GetTree(index);
+                var fstIndex = table.GetFixedSizeTree(tree, lastEtagSlice, 0, index.IsGlobal);
+                return fstIndex.NumberOfEntries;
+            }
         }
 
         private Table GetExistingTable(Transaction tx, CollectionName collection)
