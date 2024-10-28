@@ -121,7 +121,7 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
 
         var expectedEtag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
 
-        var op = new ShardedRevisionsCollectionPreviewOperation(RequestHandler, Collection, expectedEtag, _continuationToken);
+        var op = new ShardedRevisionsCollectionPreviewOperation(RequestHandler, Collection, Type, expectedEtag, _continuationToken);
         var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, token);
         if (result.StatusCode != (int)HttpStatusCode.NotModified)
             _combinedReadState = await result.Result.InitializeAsync(RequestHandler.DatabaseContext, RequestHandler.AbortRequestToken);
@@ -132,6 +132,9 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
 
     protected override async ValueTask<long> GetTotalCountAsync()
     {
+        if (Type != RevisionsType.All && string.IsNullOrEmpty(Collection) == false)
+            return -1;
+
         var result = await RequestHandler.DatabaseContext.Streaming.ReadCombinedLongAsync(_combinedReadState, nameof(PreviewRevisionsResult.TotalResults));
         var total = 0L;
         for (int i = 0; i < result.Span.Length; i++)
@@ -167,11 +170,13 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
         private readonly ShardedDatabaseRequestHandler _handler;
         private readonly string _collection;
         private readonly ShardedPagingContinuation _continuationToken;
+        private readonly RevisionsType _type;
 
-        public ShardedRevisionsCollectionPreviewOperation(ShardedDatabaseRequestHandler handler, string collection, string etag, ShardedPagingContinuation continuationToken)
+        public ShardedRevisionsCollectionPreviewOperation(ShardedDatabaseRequestHandler handler, string collection, RevisionsType type, string etag, ShardedPagingContinuation continuationToken)
         {
             _handler = handler;
             _collection = collection;
+            _type = type;
             _continuationToken = continuationToken;
             ExpectedEtag = etag;
         }
@@ -180,18 +185,20 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
 
         public RavenCommand<StreamResult> CreateCommandForShard(int shardNumber)
         {
-            return new ShardedRevisionsPreviewCommand(_collection, _continuationToken.Pages[shardNumber].Start, _continuationToken.PageSize);
+            return new ShardedRevisionsPreviewCommand(_collection, _type, _continuationToken.Pages[shardNumber].Start, _continuationToken.PageSize);
         }
 
         private sealed class ShardedRevisionsPreviewCommand : RavenCommand<StreamResult>
         {
             private readonly string _collection;
+            private readonly RevisionsType _type;
             private readonly int _start;
             private readonly int _pageSize;
 
-            public ShardedRevisionsPreviewCommand(string collection, int start, int pageSize)
+            public ShardedRevisionsPreviewCommand(string collection, RevisionsType type, int start, int pageSize)
             {
                 _collection = collection;
+                _type = type;
                 _start = start;
                 _pageSize = pageSize;
             }
@@ -204,6 +211,8 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
 
                 if (string.IsNullOrEmpty(_collection) == false)
                     url += $"&collection={Uri.EscapeDataString(_collection)}";
+
+                url += $"&type={_type.ToString().ToLower()}";
 
                 var message = new HttpRequestMessage
                 {
