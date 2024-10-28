@@ -21,12 +21,12 @@ export default function UnmergableIndexesNavItem({ carousel, unmergable }: Unmer
                 className={classNames("p-3", "card-tab", { active: carousel.activeTab === 3 })}
                 onClick={() => carousel.setActiveTab(3)}
             >
-                <img src={unmergableIndexesImg} alt="Unmergable indexes" />
+                <img src={unmergableIndexesImg} alt="Unmergeable indexes" />
                 <Badge className="rounded-pill fs-5" color={unmergable.data.length !== 0 ? "primary" : "secondary"}>
                     {hasIndexCleanup ? unmergable.data.length : "?"}
                 </Badge>
                 <h4 className="text-center">
-                    Unmergable
+                    Unmergeable
                     <br />
                     indexes
                 </h4>

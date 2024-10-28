@@ -17,13 +17,13 @@ export default function UnmergableIndexesCard({ unmergable }: UnmergableIndexesC
         <Card>
             <Card className="bg-faded-primary m-1 p-4">
                 <div className="text-limit-width">
-                    <h2>Unmergable indexes</h2>
+                    <h2>Unmergeable indexes</h2>
                     The following indexes cannot be merged. See the specific reason explanation provided for each index.
                 </div>
             </Card>
 
             {unmergable.data.length === 0 ? (
-                <EmptySet>No unmergable indexes</EmptySet>
+                <EmptySet>No unmergeable indexes</EmptySet>
             ) : (
                 <MainPanel unmergable={unmergable} />
             )}
@@ -46,7 +46,7 @@ function MainPanel({ unmergable }: UnmergableIndexesCardProps) {
                                 </td>
 
                                 <td>
-                                    <div className="small-label">Unmergable reason</div>
+                                    <div className="small-label">Unmergeable reason</div>
                                 </td>
                             </tr>
                         </thead>

@@ -32,7 +32,7 @@ describe("IndexCleanup", function () {
         expect(screen.getByRole("heading", { level: 2, name: /Merge indexes/ })).toBeInTheDocument();
         expect(screen.getByRole("heading", { level: 2, name: /Remove sub-indexes/ })).toBeInTheDocument();
         expect(screen.getByRole("heading", { level: 2, name: /Remove unused indexes/ })).toBeInTheDocument();
-        expect(screen.getByRole("heading", { level: 2, name: /Unmergable indexes/ })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { level: 2, name: /Unmergeable indexes/ })).toBeInTheDocument();
         expect(screen.getByRole("heading", { level: 2, name: /Merge suggestions errors/ })).toBeInTheDocument();
     });
 });
