@@ -1183,9 +1183,12 @@ namespace Raven.Server.Documents.Revisions
 
         public IEnumerable<Document> GetRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, string collection, int skip, int take)
         {
-            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
-            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName, out var revisionsSchema);
-            return GetRevisionsInReverseEtagOrderInternal(context, table, index: revisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false, shouldSkip: null, skip, take);
+            var collectionName = new CollectionName(collection);
+            var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+            var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+            if(table == null)
+                return Enumerable.Empty<Document>();
+            return GetRevisionsInReverseEtagOrderInternal(context, table, index: RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false, shouldSkip: null, skip, take);
         }
 
         private IEnumerable<Document> GetRevisionsInReverseEtagOrderInternal(DocumentsOperationContext context, Table table, TableSchema.FixedSizeKeyIndexDef index, bool includeData, Func<Document, bool> shouldSkip, int skip, int take)
@@ -1227,10 +1230,13 @@ namespace Raven.Server.Documents.Revisions
 
         public IEnumerable<Document> GetDeletedRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, string collection, int skip, int take)
         {
-            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
-            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName, out var revisionsSchema);
-            return GetRevisionsInReverseEtagOrderInternal(context, table, index: revisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false,
-                shouldSkip: revision => revision.Flags.Contain(DocumentFlags.DeleteRevision) == false, 
+            var collectionName = new CollectionName(collection);
+            var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+            var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+            if (table == null)
+                return Enumerable.Empty<Document>();
+            return GetRevisionsInReverseEtagOrderInternal(context, table, index: RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false,
+                shouldSkip: revision => revision.Flags.Contain(DocumentFlags.DeleteRevision) == false,
                 skip, take);
         }
 
@@ -1251,9 +1257,12 @@ namespace Raven.Server.Documents.Revisions
 
         public IEnumerable<Document> GetNotDeletedRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, string collection, int skip, int take)
         {
-            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
-            var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName, out var revisionsSchema);
-            return GetRevisionsInReverseEtagOrderInternal(context, table, index: revisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false,
+            var collectionName = new CollectionName(collection);
+            var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+            var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+            if (table == null)
+                return Enumerable.Empty<Document>();
+            return GetRevisionsInReverseEtagOrderInternal(context, table, index: RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false,
                 shouldSkip: revision => revision.Flags.Contain(DocumentFlags.DeleteRevision),
                 skip, take);
         }
@@ -2869,11 +2878,12 @@ namespace Raven.Server.Documents.Revisions
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
             var index = RevisionsSchema.Indexes[DeleteRevisionEtagSlice];
-            var lastEtag = 0;
-            using (GetEtagAsSlice(context, lastEtag, out var lastEtagSlice))
+            using (GetEtagAsSlice(context, NotDeletedRevisionMarker, out var nonDeletedSlice))
             {
                 var tree = table.GetTree(index);
-                var fstIndex = table.GetFixedSizeTree(tree, lastEtagSlice, 0, index.IsGlobal);
+                if (tree == null)
+                    return 0;
+                var fstIndex = table.GetFixedSizeTree(tree, nonDeletedSlice, 0, index.IsGlobal);
                 return fstIndex.NumberOfEntries;
             }
         }
