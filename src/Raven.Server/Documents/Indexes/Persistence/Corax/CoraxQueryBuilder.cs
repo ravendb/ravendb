@@ -642,7 +642,7 @@ public static class CoraxQueryBuilder
             PortableExceptions.Throw<InvalidDataException>($"Cannot find `{fieldName}` field in the index.");
         
         Memory<byte> transformedEmbedding;
-        if (vectorOptions.SourceEmbeddingType is EmbeddingType.Text)
+        if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Text)
         {
             var valueAsString = valueType switch
             {
@@ -661,9 +661,9 @@ public static class CoraxQueryBuilder
             var underlyingEnumerable = (BlittableJsonReaderArray)value;
             transformedEmbedding = vectorOptions.SourceEmbeddingType switch
             {
-                EmbeddingType.Single => GetVector<float>(),
-                EmbeddingType.Int8 => GetVector<sbyte>(),
-                EmbeddingType.Binary => GetVector<byte>(),
+                VectorEmbeddingType.Single => GetVector<float>(),
+                VectorEmbeddingType.Int8 => GetVector<sbyte>(),
+                VectorEmbeddingType.Binary => GetVector<byte>(),
                 _ => throw new NotSupportedException($"Unsupported {nameof(vectorOptions.SourceEmbeddingType)}: {vectorOptions.SourceEmbeddingType}")
             };
             
@@ -677,7 +677,7 @@ public static class CoraxQueryBuilder
             }
         }
         
-        var minimumMatch = RavenConstants.VectorSearch.MinimumSimilarity;
+        var minimumMatch = RavenConstants.VectorSearch.DefaultMinimumSimilarity;
         if (me.Arguments.Count > 2)
         {
             (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[2]);
@@ -691,8 +691,8 @@ public static class CoraxQueryBuilder
         
         var similarityType = (vectorOptions.DestinationEmbeddingType) switch
         {
-            EmbeddingType.Binary => SimilarityMethod.Hamming,
-            EmbeddingType.Int8 => SimilarityMethod.CosineSbyte,
+            VectorEmbeddingType.Binary => SimilarityMethod.Hamming,
+            VectorEmbeddingType.Int8 => SimilarityMethod.CosineSbyte,
             _ => SimilarityMethod.CosineFloat,
         };
         

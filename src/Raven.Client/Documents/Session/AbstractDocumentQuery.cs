@@ -1514,7 +1514,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             return propertyName;
         }
 
-        internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory queriedFactory,
+        internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory embeddingValueFactory,
             float minimumSimilarity)
         {
             var fieldName = embeddingFieldFactory.FieldName;
@@ -1526,33 +1526,33 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             string queryParameterName;
             var isVectorBase64Encoded = false;
             
-            if (queriedFactory.Text != null)
+            if (embeddingValueFactory.Text != null)
             {
-                queryParameterName = AddQueryParameter(queriedFactory.Text);
+                queryParameterName = AddQueryParameter(embeddingValueFactory.Text);
             }
 
-            else if (queriedFactory.Embedding != null)
+            else if (embeddingValueFactory.Embedding != null)
             {
                 // for well-known types we can convert the array into Base64
-                queryParameterName = AddQueryParameter(queriedFactory.Embedding switch
+                queryParameterName = AddQueryParameter(embeddingValueFactory.Embedding switch
                 {
                     float[] fa => Convert.ToBase64String(MemoryMarshal.Cast<float, byte>(fa)
-#if NETCOREAPP3_1_OR_GREATER == FALSE
+#if !NETCOREAPP3_1_OR_GREATER
                         .ToArray() // For newer frameworks we use Span overload in Convert.
 #endif
                     ),
                     byte[] ba => Convert.ToBase64String(ba),
                     sbyte[] sb => Convert.ToBase64String(MemoryMarshal.Cast<sbyte, byte>(sb)
-#if NETCOREAPP3_1_OR_GREATER == FALSE
+#if !NETCOREAPP3_1_OR_GREATER
                         .ToArray()
 #endif
                     ),
-                    _  => queriedFactory.Embedding,
+                    _  => embeddingValueFactory.Embedding,
                 });
             }
             else
             {
-                queryParameterName = AddQueryParameter(queriedFactory.Base64Embedding);
+                queryParameterName = AddQueryParameter(embeddingValueFactory.Base64Embedding);
                 isVectorBase64Encoded = true;
             }
             

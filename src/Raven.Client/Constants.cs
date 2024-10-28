@@ -1,3 +1,4 @@
+using System;
 using Raven.Client.Documents.Indexes.Vector;
 
 namespace Raven.Client
@@ -587,7 +588,7 @@ namespace Raven.Client
             }
         }
         
-        public static class VectorSearch
+        internal static class VectorSearch
         {
             private const string EmbeddingPrefix = "embedding.";
 
@@ -600,8 +601,22 @@ namespace Raven.Client
             internal const string EmbeddingInt8 = EmbeddingPrefix + "i8";
             internal const string EmbeddingInt1 = EmbeddingPrefix + "i1";
 
-            public const float MinimumSimilarity = 0.8F;
-            public const EmbeddingType DefaultEmbeddingType = EmbeddingType.Single;
+            internal static string ConfigurationToMethodName(VectorEmbeddingType source, VectorEmbeddingType dest) => (source, dest) switch
+            {
+                (VectorEmbeddingType.Single, VectorEmbeddingType.Single) => string.Empty,
+                (VectorEmbeddingType.Single, VectorEmbeddingType.Int8) => EmbeddingSingleInt8,
+                (VectorEmbeddingType.Single, VectorEmbeddingType.Binary) => EmbeddingSingleInt1,
+                (VectorEmbeddingType.Text, VectorEmbeddingType.Single) => EmbeddingText,
+                (VectorEmbeddingType.Text, VectorEmbeddingType.Int8) => EmbeddingTextInt8,
+                (VectorEmbeddingType.Text, VectorEmbeddingType.Binary) => EmbeddingTextInt1,
+                (VectorEmbeddingType.Int8, VectorEmbeddingType.Int8) => EmbeddingInt8,
+                (VectorEmbeddingType.Binary, VectorEmbeddingType.Binary) => EmbeddingInt1,
+                _ => throw new InvalidOperationException($"Invalid embedding configuration. SourceEmbedding: {source}, DestinationEmbedding: {dest}")
+            };
+            
+
+            public const float DefaultMinimumSimilarity = 0.8F;
+            public const VectorEmbeddingType DefaultEmbeddingType = VectorEmbeddingType.Single;
             public const VectorIndexingStrategy DefaultIndexingStrategy = VectorIndexingStrategy.Exact;
         }
     }

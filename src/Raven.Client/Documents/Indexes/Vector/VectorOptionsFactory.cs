@@ -1,59 +1,48 @@
 ﻿namespace Raven.Client.Documents.Indexes.Vector;
 
-public sealed class VectorOptionsFactory(VectorOptions options)
+public sealed class VectorOptionsFactory
 {
-    internal VectorOptions VectorOptions = options;
+    internal VectorOptions _vectorOptions;
+    internal VectorOptionsFactory Default => new VectorOptionsFactory(VectorOptions.Default);
 
-    public VectorOptionsFactory Default => new VectorOptionsFactory(VectorOptions.Default);
+    private VectorOptionsFactory(VectorOptions vectorOptions)
+    {
+        _vectorOptions = vectorOptions;
+    }
     
-    public VectorOptionsFactory() : this(new VectorOptions())
+    internal VectorOptionsFactory() : this(new VectorOptions())
     {
     }
 
-    public VectorOptionsFactory SourceEmbedding(EmbeddingType sourceType)
+    public VectorOptionsFactory SourceEmbedding(VectorEmbeddingType sourceType)
     {
-        var newOptions = new VectorOptions(VectorOptions)
+        _vectorOptions.SourceEmbeddingType = sourceType;
+        _vectorOptions.DestinationEmbeddingType = sourceType switch
         {
-            SourceEmbeddingType = sourceType,
-            DestinationEmbeddingType = sourceType switch
-            {
-                EmbeddingType.Int8 => EmbeddingType.Int8,
-                EmbeddingType.Binary => EmbeddingType.Binary,
-                _ => default(EmbeddingType) // default.
-            }
+            VectorEmbeddingType.Int8 => VectorEmbeddingType.Int8,
+            VectorEmbeddingType.Binary => VectorEmbeddingType.Binary,
+            _ => default(VectorEmbeddingType) // default.
         };
         
-        return new VectorOptionsFactory(newOptions);
+        return this;
     }
     
-    public VectorOptionsFactory DestinationEmbedding(EmbeddingType destinationType)
+    public VectorOptionsFactory DestinationEmbedding(VectorEmbeddingType destinationType)
     {
-        var newOptions = new VectorOptions(VectorOptions)
-        {
-            DestinationEmbeddingType = destinationType
-        };
-        
-        return new VectorOptionsFactory(newOptions);
+        _vectorOptions.DestinationEmbeddingType = destinationType;
+        return this;
     }
 
     public VectorOptionsFactory Dimensions(int? dimensions)
     {
-        var newOptions = new VectorOptions(VectorOptions)
-        {
-            Dimensions = dimensions
-        };
-        
-        return new VectorOptionsFactory(newOptions);
+        _vectorOptions.Dimensions = dimensions;
+        return this;
     }
     
     public VectorOptionsFactory IndexingStrategy(VectorIndexingStrategy indexingStrategy)
     {
-        var newOptions = new VectorOptions(VectorOptions)
-        {
-            IndexingStrategy = indexingStrategy
-        };
-        
-        return new VectorOptionsFactory(newOptions);
+        _vectorOptions.IndexingStrategy = indexingStrategy;
+        return this;
     }
 }
 

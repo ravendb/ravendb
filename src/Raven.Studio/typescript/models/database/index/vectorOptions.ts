@@ -27,8 +27,8 @@ class vectorOptions {
     static empty() : vectorOptions {
         const dto : Raven.Client.Documents.Indexes.Vector.VectorOptions = {
             Dimensions: undefined,
-            SourceEmbeddingType: "Float32",
-            DestinationEmbeddingType: "Float32",
+            SourceEmbeddingType: "Single",
+            DestinationEmbeddingType: "Single",
             IndexingStrategy: "Exact"
         };
         

@@ -5242,9 +5242,22 @@ namespace Raven.Server.Documents.Indexes
                     return IndexField.Create(name, new IndexFieldOptions() { Vector = isText ? VectorOptions.Default : VectorOptions.DefaultText}, null, Corax.Constants.IndexWriter.DynamicField);
 
                 // Setting default values when the user hasn't explicitly configured them
-                if (field is IndexField { Vector: null } storedField)
+                if (field is IndexField { Vector: null } indexField)
                 {
-                    storedField.Vector = isText ? VectorOptions.DefaultText : VectorOptions.Default;
+                    var vector = isText ? VectorOptions.DefaultText : VectorOptions.Default;
+                    field = new IndexField()
+                    {
+                        Indexing = indexField.Indexing,
+                        Storage = indexField.Storage,
+                        Vector = vector,
+                        Id = indexField.Id,
+                        Name = indexField.Name,
+                        HasSuggestions = indexField.HasSuggestions,
+                        Spatial = indexField.Spatial,
+                        Analyzer = indexField.Analyzer,
+                        OriginalName = indexField.OriginalName,
+                        TermVector = indexField.TermVector
+                    };
                 }
                 
                 return field switch

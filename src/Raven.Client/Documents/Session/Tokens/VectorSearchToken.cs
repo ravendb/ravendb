@@ -10,13 +10,13 @@ namespace Raven.Client.Documents.Session.Tokens;
 public sealed class VectorSearchToken : WhereToken
 {
     private float SimilarityThreshold { get; set; }
-    private EmbeddingType SourceQuantizationType { get; set; }
-    private EmbeddingType TargetQuantizationType { get; set; }
+    private VectorEmbeddingType SourceQuantizationType { get; set; }
+    private VectorEmbeddingType TargetQuantizationType { get; set; }
     private bool IsSourceBase64Encoded { get; set; }
     private bool IsVectorBase64Encoded { get; set; }
     private VectorIndexingStrategy IndexingStrategy { get; set; }
     
-    public VectorSearchToken(string fieldName, string parameterName, EmbeddingType sourceQuantizationType, EmbeddingType targetQuantizationType, bool isSourceBase64Encoded, bool isVectorBase64Encoded, float similarityThreshold, VectorIndexingStrategy indexingStrategy)
+    public VectorSearchToken(string fieldName, string parameterName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, bool isSourceBase64Encoded, bool isVectorBase64Encoded, float similarityThreshold, VectorIndexingStrategy indexingStrategy)
     {
         FieldName = fieldName;
         ParameterName = parameterName;
@@ -39,23 +39,11 @@ public sealed class VectorSearchToken : WhereToken
         if (IndexingStrategy != Constants.VectorSearch.DefaultIndexingStrategy)
             writer.Append($"{IndexingStrategy}(");
         
-        if (SourceQuantizationType is EmbeddingType.Single && TargetQuantizationType is EmbeddingType.Single)
+        if (SourceQuantizationType is VectorEmbeddingType.Single && TargetQuantizationType is VectorEmbeddingType.Single)
             writer.Append(FieldName);
         else
         {
-            var methodName = (SourceQuantizationType, TargetQuantizationType) switch
-            {
-                (EmbeddingType.Single, EmbeddingType.Int8) => Constants.VectorSearch.EmbeddingSingleInt8,
-                (EmbeddingType.Single, EmbeddingType.Binary) => Constants.VectorSearch.EmbeddingSingleInt1,
-                (EmbeddingType.Text, EmbeddingType.Single) => Constants.VectorSearch.EmbeddingText,
-                (EmbeddingType.Text, EmbeddingType.Int8) => Constants.VectorSearch.EmbeddingTextInt8,
-                (EmbeddingType.Text, EmbeddingType.Binary) => Constants.VectorSearch.EmbeddingTextInt1,
-                (EmbeddingType.Int8, EmbeddingType.Int8) => Constants.VectorSearch.EmbeddingInt8,
-                (EmbeddingType.Binary, EmbeddingType.Binary) => Constants.VectorSearch.EmbeddingInt1,
-                _ => throw new InvalidOperationException(
-                    $"Cannot create vector field with SourceQuantizationType {SourceQuantizationType} and TargetQuantizationType {TargetQuantizationType}")
-            };
-            
+            var methodName = Constants.VectorSearch.ConfigurationToMethodName(SourceQuantizationType, TargetQuantizationType);
             writer.Append($"{methodName}({FieldName})");
         }
         
@@ -64,7 +52,7 @@ public sealed class VectorSearchToken : WhereToken
         
         writer.Append($", ${ParameterName}");
 
-        if (SimilarityThreshold.AlmostEquals(Constants.VectorSearch.MinimumSimilarity) == false)
+        if (SimilarityThreshold.AlmostEquals(Constants.VectorSearch.DefaultMinimumSimilarity) == false)
             writer.Append($", {SimilarityThreshold}");
         
         writer.Append(')');

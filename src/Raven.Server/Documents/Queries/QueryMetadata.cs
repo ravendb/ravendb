@@ -2514,7 +2514,7 @@ function execute(doc, args){
                 }
                 else
                 {
-                    var embedding = (Source: EmbeddingType.Single, Destination: EmbeddingType.Single);
+                    var embedding = (Source: VectorEmbeddingType.Single, Destination: VectorEmbeddingType.Single);
                     //vector.search(SRC_DST(Field))
                     if (arguments.Count > 0 && arguments[0] is MethodExpression embeddingMethod)
                     {
@@ -2558,42 +2558,42 @@ function execute(doc, args){
                     return qfn;
                 }
           
-                (EmbeddingType Source, EmbeddingType Destination) MethodTypeToEmbeddingType(MethodType embeddingType)
+                (VectorEmbeddingType Source, VectorEmbeddingType Destination) MethodTypeToEmbeddingType(MethodType embeddingType)
                 {
-                    var sourceEmbedding = EmbeddingType.Single;
-                    var destinationEmbedding = EmbeddingType.Single;
+                    var sourceEmbedding = VectorEmbeddingType.Single;
+                    var destinationEmbedding = VectorEmbeddingType.Single;
                     
                     switch (embeddingType)
                     {
                         case MethodType.Embedding_Text:
-                            sourceEmbedding = EmbeddingType.Text;
+                            sourceEmbedding = VectorEmbeddingType.Text;
                             break;
                         case MethodType.Embedding_Text_I8:
-                            sourceEmbedding = EmbeddingType.Text;
-                            destinationEmbedding = EmbeddingType.Int8;
+                            sourceEmbedding = VectorEmbeddingType.Text;
+                            destinationEmbedding = VectorEmbeddingType.Int8;
                             break;
                         case MethodType.Embedding_Text_I1:
-                            sourceEmbedding = EmbeddingType.Text;
-                            destinationEmbedding = EmbeddingType.Binary;
+                            sourceEmbedding = VectorEmbeddingType.Text;
+                            destinationEmbedding = VectorEmbeddingType.Binary;
                             break;
                         case MethodType.Embedding_F32:
                             break;
                         case MethodType.Embedding_F32_I8:
-                            destinationEmbedding = EmbeddingType.Int8;
+                            destinationEmbedding = VectorEmbeddingType.Int8;
                             break;
                         case MethodType.Embedding_F32_I1:
-                            destinationEmbedding = EmbeddingType.Binary;
+                            destinationEmbedding = VectorEmbeddingType.Binary;
                             break;
                         case MethodType.Embedding_I8:
-                            sourceEmbedding = EmbeddingType.Int8;
-                            destinationEmbedding = EmbeddingType.Int8;
+                            sourceEmbedding = VectorEmbeddingType.Int8;
+                            destinationEmbedding = VectorEmbeddingType.Int8;
                             break;
                         case MethodType.Embedding_I1:
-                            sourceEmbedding = EmbeddingType.Binary;
-                            destinationEmbedding = EmbeddingType.Binary;
+                            sourceEmbedding = VectorEmbeddingType.Binary;
+                            destinationEmbedding = VectorEmbeddingType.Binary;
                             break;
                         default:
-                            throw new InvalidDataException("todo");
+                            throw new InvalidOperationException($"Unknown embedding method type. Supported: [{MethodType.Embedding_Text}, {MethodType.Embedding_Text_I8}, {MethodType.Embedding_Text_I1}, {MethodType.Embedding_F32}, {MethodType.Embedding_F32_I8}, {MethodType.Embedding_F32_I1}, {MethodType.Embedding_I8}, {MethodType.Embedding_I1}] but got `{embeddingType}`.");
                     }
 
                     return (sourceEmbedding, destinationEmbedding);

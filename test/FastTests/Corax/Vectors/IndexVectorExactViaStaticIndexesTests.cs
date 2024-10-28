@@ -44,8 +44,8 @@ select new
                     {
                         Vector = new VectorOptions()
                         {
-                            DestinationEmbeddingType = EmbeddingType.Binary,
-                            SourceEmbeddingType = EmbeddingType.Binary,
+                            DestinationEmbeddingType = VectorEmbeddingType.Binary,
+                            SourceEmbeddingType = VectorEmbeddingType.Binary,
                             Dimensions = 1,
                             IndexingStrategy = VectorIndexingStrategy.HNSW
                         }
@@ -64,10 +64,10 @@ select new
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    [InlineData(EmbeddingType.Binary, 0.7f)]
-    [InlineData(EmbeddingType.Int8, 0.55f)]
-    [InlineData(EmbeddingType.Single, 0.6f)]
-    public async Task CanCreateVectorIndexFromCSharp(EmbeddingType embeddingType, float similarity)
+    [InlineData(VectorEmbeddingType.Binary, 0.7f)]
+    [InlineData(VectorEmbeddingType.Int8, 0.55f)]
+    [InlineData(VectorEmbeddingType.Single, 0.6f)]
+    public async Task CanCreateVectorIndexFromCSharp(VectorEmbeddingType vectorEmbeddingType, float similarity)
     {
         using var store = CreateDocumentStore();
         {
@@ -77,7 +77,7 @@ select new
             await session.SaveChangesAsync();
         }
 
-        await new TextVectorIndex(embeddingType).ExecuteAsync(store);
+        await new TextVectorIndex(vectorEmbeddingType).ExecuteAsync(store);
         await Indexes.WaitForIndexingAsync(store);
 
         {
@@ -101,7 +101,7 @@ select new
             await session.StoreAsync(new Document() { Embeddings = [0.1f, 0.1f] });
             await session.StoreAsync(new Document() { Embeddings = [-0.1f, -0.1f] });
             await session.SaveChangesAsync();
-            await new NumericalVectorIndex(EmbeddingType.Single).ExecuteAsync(store);
+            await new NumericalVectorIndex(VectorEmbeddingType.Single).ExecuteAsync(store);
         }
 
         await Indexes.WaitForIndexingAsync(store);
@@ -117,7 +117,7 @@ select new
             //querying
         }
 
-        public TextVectorIndex(EmbeddingType embeddingType)
+        public TextVectorIndex(VectorEmbeddingType vectorEmbeddingType)
         {
             Map = docs => from doc in docs
                 select new { Id = doc.Id, Vector = CreateVector(doc.Text) };
@@ -126,20 +126,20 @@ select new
             VectorIndexes.Add(x => x.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Text, DestinationEmbeddingType = embeddingType
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Text, DestinationEmbeddingType = vectorEmbeddingType
                 });
         }
     }
 
     private class NumericalVectorIndex : AbstractIndexCreationTask<Document>
     {
-        public NumericalVectorIndex(EmbeddingType embeddingType)
+        public NumericalVectorIndex(VectorEmbeddingType vectorEmbeddingType)
         {
             Map = docs => from doc in docs
                 select new { Id = doc.Id, Vector = CreateVector(doc.Embeddings) };
 
 
-            VectorIndexes.Add(x => x.Vector, new VectorOptions() { IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Single });
+            VectorIndexes.Add(x => x.Vector, new VectorOptions() { IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Single });
         }
     }
 
@@ -224,7 +224,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Text, DestinationEmbeddingType = EmbeddingType.Single
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Text, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
         }
     }
@@ -238,7 +238,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Text, DestinationEmbeddingType = EmbeddingType.Single
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Text, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
         }
     }
@@ -252,7 +252,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Single, DestinationEmbeddingType = EmbeddingType.Single
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
         }
     }
@@ -266,7 +266,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Single, DestinationEmbeddingType = EmbeddingType.Single
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
         }
     }
@@ -280,7 +280,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Single, DestinationEmbeddingType = EmbeddingType.Single
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
         }
     }
@@ -294,7 +294,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = EmbeddingType.Single, DestinationEmbeddingType = EmbeddingType.Single
+                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
         }
     }

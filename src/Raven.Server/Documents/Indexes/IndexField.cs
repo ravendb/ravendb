@@ -343,20 +343,8 @@ namespace Raven.Server.Documents.Indexes
 
         public static string GetVectorAutoIndexFieldName(string name, VectorOptions vectorOptions)
         {
-            var innerMethod = (vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType) switch
-            {
-                (EmbeddingType.Text, EmbeddingType.Single) => "text",
-                (EmbeddingType.Text, EmbeddingType.Int8) => "text_i8",
-                (EmbeddingType.Text, EmbeddingType.Binary) => "text_i1",
-                (EmbeddingType.Single, EmbeddingType.Single) => string.Empty,
-                (EmbeddingType.Single, EmbeddingType.Int8) => "f32_i8",
-                (EmbeddingType.Single, EmbeddingType.Binary) => "f32_i1",
-                (EmbeddingType.Int8, EmbeddingType.Int8) => "i8",
-                (EmbeddingType.Binary, EmbeddingType.Binary) => "i1",
-                _ => throw new NotSupportedException($"Unsupported embedding type: ({vectorOptions.SourceEmbeddingType} => {vectorOptions.DestinationEmbeddingType})"),
-            };
-            
-            var inner = innerMethod == string.Empty ? name : $"embedding.{innerMethod}({name})";
+            var methodName = Constants.VectorSearch.ConfigurationToMethodName(vectorOptions.SourceEmbeddingType, vectorOptions.DestinationEmbeddingType);
+            var inner = methodName == string.Empty ? name : $"{methodName}({name})";
             return $"vector.search({inner})";
         }
         

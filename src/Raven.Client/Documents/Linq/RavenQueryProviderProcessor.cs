@@ -1603,7 +1603,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var minimumSimilarityObject);
 
                     if (minimumSimilarityObject is not float minimumSimilarity || minimumSimilarity is <= 0f or > 1.0f)
-                        throw new NotSupportedException($"The minimum similarity parameter should be a float in the range [0, 1]. However, it was '{minimumSimilarityObject.GetType().FullName}' with the value '{minimumSimilarityObject.ToString()}'.");
+                        throw new NotSupportedException($"The minimum similarity parameter should be a float in the range (0, 1]. However, it was '{minimumSimilarityObject.GetType().FullName}' with the value '{minimumSimilarityObject.ToString()}'.");
                     
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var fieldFactoryObject);
                     
@@ -1619,8 +1619,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             textFieldFactory.Invoke(fieldBuilder);
 
                             if (textFieldValueFactoryObject is not Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory)
-                                throw new Exception();
-                        
+                                throw new InvalidOperationException($"Excepted {nameof(Action<IVectorEmbeddingTextFieldValueFactory>)} object as the embedding field value factory, however it was '{textFieldFactory.GetType().FullName}'. ");
+                            
                             textValueFactory.Invoke(valueBuilder);
                             
                             break;
@@ -1632,7 +1632,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             embeddingFieldFactory.Invoke(fieldBuilder);
 
                             if (embeddingFieldValueFactoryObject is not Action<IVectorEmbeddingFieldValueFactory> embeddingValueFactory)
-                                throw new Exception();
+                                throw new InvalidOperationException($"Excepted {nameof(Action<IVectorEmbeddingFieldValueFactory>)} object as the embedding field value factory, however it was '{embeddingFieldValueFactoryObject.GetType().FullName}'. ");
 
                             embeddingValueFactory.Invoke(valueBuilder);
                             
@@ -1645,15 +1645,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             fieldFactory.Invoke(fieldBuilder);
 
                             if (embeddingFieldValueFactoryObject is not Action<IVectorFieldValueFactory> fieldValueFactory)
-                                throw new Exception();
+                                throw new InvalidOperationException($"Excepted {nameof(Action<IVectorFieldValueFactory>)} object as the embedding field value factory, however it was '{embeddingFieldValueFactoryObject.GetType().FullName}'. ");
 
                             fieldValueFactory.Invoke(valueBuilder);
                             
                             break;
                         }
-                        
                         default:
-                            throw new Exception();
+                            throw new InvalidOperationException($"Unknown field factory type: {fieldFactoryObject.GetType().FullName}.");
                     }
                     
                     DocumentQuery.VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity);

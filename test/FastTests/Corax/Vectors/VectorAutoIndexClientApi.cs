@@ -25,7 +25,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.f32_i8(Singles))",
         rql: "from 'AutoVecDocs' where vector.search(embedding.f32_i8(Singles), $p0)",
         vectorWhere: docs => docs.
-            VectorSearch(field => field.WithEmbedding(f => f.Singles).TargetQuantization(EmbeddingType.Int8), 
+            VectorSearch(field => field.WithEmbedding(f => f.Singles).TargetQuantization(VectorEmbeddingType.Int8), 
                 value => value.ByEmbedding([0.1f, 0.1f])));
     
     [RavenFact(RavenTestCategory.Vector)]
@@ -33,7 +33,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.f32_i1(Singles))",
         rql: "from 'AutoVecDocs' where vector.search(embedding.f32_i1(Singles), $p0)",
         vectorWhere: docs => docs.
-            VectorSearch(field => field.WithEmbedding(f => f.Singles).TargetQuantization(EmbeddingType.Binary), 
+            VectorSearch(field => field.WithEmbedding(f => f.Singles).TargetQuantization(VectorEmbeddingType.Binary), 
                 value => value.ByEmbedding([0.1f, 0.1f])));
 
     [RavenFact(RavenTestCategory.Vector)]
@@ -41,7 +41,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.i8(Int8))",
         rql: "from 'AutoVecDocs' where vector.search(embedding.i8(Int8), $p0)",
         vectorWhere: docs => docs.
-            VectorSearch(field => field.WithEmbedding(f => f.Int8, EmbeddingType.Int8), 
+            VectorSearch(field => field.WithEmbedding(f => f.Int8, VectorEmbeddingType.Int8), 
                 value => value.ByEmbedding([0.1f, 0.1f])));
     
     [RavenFact(RavenTestCategory.Vector)]
@@ -49,7 +49,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.i1(Binary))",
         rql: "from 'AutoVecDocs' where vector.search(embedding.i1(Binary), $p0)",
         vectorWhere: docs => docs.
-            VectorSearch(field => field.WithEmbedding(f => f.Binary, EmbeddingType.Binary), 
+            VectorSearch(field => field.WithEmbedding(f => f.Binary, VectorEmbeddingType.Binary), 
                 value => value.ByEmbedding([0.1f, 0.1f])));
     
     [RavenFact(RavenTestCategory.Vector)]
@@ -65,7 +65,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.text_i8(Text))",
         rql: "from 'AutoVecDocs' where vector.search(embedding.text_i8(Text), $p0)",
         vectorWhere: docs => docs.
-            VectorSearch(field => field.WithText(x => x.Text).TargetQuantization(EmbeddingType.Int8), 
+            VectorSearch(field => field.WithText(x => x.Text).TargetQuantization(VectorEmbeddingType.Int8), 
                 value => value.ByText("test")));
     
     [RavenFact(RavenTestCategory.Vector)]
@@ -73,7 +73,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.text_i1(Text))",
         rql: "from 'AutoVecDocs' where vector.search(embedding.text_i1(Text), $p0)",
         vectorWhere: docs => docs.
-            VectorSearch(field => field.WithText(x => x.Text).TargetQuantization(EmbeddingType.Binary), 
+            VectorSearch(field => field.WithText(x => x.Text).TargetQuantization(VectorEmbeddingType.Binary), 
                 value => value.ByText("test")));
     
     private void AutoIndexingTestingBase(string autoIndexName, string rql, Func<IRavenQueryable<AutoVecDoc>, IRavenQueryable<AutoVecDoc>> vectorWhere)

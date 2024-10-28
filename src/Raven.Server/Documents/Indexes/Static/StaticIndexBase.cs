@@ -366,7 +366,7 @@ namespace Raven.Server.Documents.Indexes.Static
         /// <returns></returns>
         internal static object CreateVector(IndexField indexField, object value)
         {
-            if (indexField!.Vector!.SourceEmbeddingType is EmbeddingType.Text)
+            if (indexField!.Vector!.SourceEmbeddingType is VectorEmbeddingType.Text)
                 return VectorFromText(indexField, value);
             
             return VectorFromEmbedding(indexField, value);
@@ -437,9 +437,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 IList embeddings = null;
                 embeddings = vectorOptions.SourceEmbeddingType switch
                 {
-                    EmbeddingType.Single => new List<float>(),
-                    EmbeddingType.Int8 => new List<sbyte>(),
-                    EmbeddingType.Binary => new List<byte>(),
+                    VectorEmbeddingType.Single => new List<float>(),
+                    VectorEmbeddingType.Int8 => new List<sbyte>(),
+                    VectorEmbeddingType.Binary => new List<byte>(),
                     _ => throw new ArgumentOutOfRangeException()
                 };
 
@@ -447,10 +447,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     switch (vectorOptions.SourceEmbeddingType)
                     {
-                        case EmbeddingType.Single:
+                        case VectorEmbeddingType.Single:
                             embeddings.Add(VectorUtils.GetNumerical<float>(item));
                             break;
-                        case EmbeddingType.Int8:
+                        case VectorEmbeddingType.Int8:
                             embeddings.Add(VectorUtils.GetNumerical<sbyte>(item));
                             break;
                         default:
@@ -471,7 +471,7 @@ namespace Raven.Server.Documents.Indexes.Static
             VectorValue GenerateEmbeddingForBase64(string source)
             {
                 var decodedBase = Convert.FromBase64String(source);
-                if (vectorOptions.SourceEmbeddingType is EmbeddingType.Single)
+                if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Single)
                 {
                     var embeddings = MemoryMarshal.Cast<byte, float>(decodedBase);
                     return GenerateEmbeddings.FromArray(vectorOptions, embeddings.ToArray());

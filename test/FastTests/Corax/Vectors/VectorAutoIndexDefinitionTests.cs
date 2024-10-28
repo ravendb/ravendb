@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
@@ -11,25 +12,24 @@ namespace FastTests.Corax.Vectors;
 public class VectorAutoIndexDefinitionTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     private DynamicQueryMapping _sut;
-
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    [InlineData("embedding.text", EmbeddingType.Text, EmbeddingType.Single, false)]
-    [InlineData("embedding.text_i8", EmbeddingType.Text, EmbeddingType.Int8, false)]
-    [InlineData("embedding.text_i1", EmbeddingType.Text, EmbeddingType.Binary, false)]
-    [InlineData(null, EmbeddingType.Single, EmbeddingType.Single, false)]
-    [InlineData("embedding.f32_i8", EmbeddingType.Single, EmbeddingType.Int8, false)]
-    [InlineData("embedding.f32_i1", EmbeddingType.Single, EmbeddingType.Binary, false)]
-    [InlineData("embedding.i8", EmbeddingType.Int8, EmbeddingType.Int8, false)]
-    [InlineData("embedding.i1", EmbeddingType.Binary, EmbeddingType.Binary, false)]
-    [InlineData("embedding.text", EmbeddingType.Text, EmbeddingType.Single, true)]
-    [InlineData("embedding.text_i8", EmbeddingType.Text, EmbeddingType.Int8, true)]
-    [InlineData("embedding.text_i1", EmbeddingType.Text, EmbeddingType.Binary, true)]
-    [InlineData(null, EmbeddingType.Single, EmbeddingType.Single, true)]
-    [InlineData("embedding.f32_i8", EmbeddingType.Single, EmbeddingType.Int8, true)]
-    [InlineData("embedding.f32_i1", EmbeddingType.Single, EmbeddingType.Binary, true)]
-    [InlineData("embedding.i8", EmbeddingType.Int8, EmbeddingType.Int8, true)]
-    [InlineData("embedding.i1", EmbeddingType.Binary, EmbeddingType.Binary, true)]
-    public void CreateVectorFieldWithMethod(string fieldEmbeddingName, EmbeddingType sourceType, EmbeddingType destinationType, bool aliased)
+    [InlineData(Constants.VectorSearch.EmbeddingText, VectorEmbeddingType.Text, VectorEmbeddingType.Single, false)]
+    [InlineData(Constants.VectorSearch.EmbeddingTextInt8, VectorEmbeddingType.Text, VectorEmbeddingType.Int8, false)]
+    [InlineData(Constants.VectorSearch.EmbeddingTextInt1, VectorEmbeddingType.Text, VectorEmbeddingType.Binary, false)]
+    [InlineData(null, VectorEmbeddingType.Single, VectorEmbeddingType.Single, false)]
+    [InlineData(Constants.VectorSearch.EmbeddingSingleInt8, VectorEmbeddingType.Single, VectorEmbeddingType.Int8, false)]
+    [InlineData(Constants.VectorSearch.EmbeddingSingleInt1, VectorEmbeddingType.Single, VectorEmbeddingType.Binary, false)]
+    [InlineData(Constants.VectorSearch.EmbeddingInt8, VectorEmbeddingType.Int8, VectorEmbeddingType.Int8, false)]
+    [InlineData(Constants.VectorSearch.EmbeddingInt1, VectorEmbeddingType.Binary, VectorEmbeddingType.Binary, false)]
+    [InlineData(Constants.VectorSearch.EmbeddingText, VectorEmbeddingType.Text, VectorEmbeddingType.Single, true)]
+    [InlineData(Constants.VectorSearch.EmbeddingTextInt8, VectorEmbeddingType.Text, VectorEmbeddingType.Int8, true)]
+    [InlineData(Constants.VectorSearch.EmbeddingTextInt1, VectorEmbeddingType.Text, VectorEmbeddingType.Binary, true)]
+    [InlineData(null, VectorEmbeddingType.Single, VectorEmbeddingType.Single, true)]
+    [InlineData(Constants.VectorSearch.EmbeddingSingleInt8, VectorEmbeddingType.Single, VectorEmbeddingType.Int8, true)]
+    [InlineData(Constants.VectorSearch.EmbeddingSingleInt1, VectorEmbeddingType.Single, VectorEmbeddingType.Binary, true)]
+    [InlineData(Constants.VectorSearch.EmbeddingInt8, VectorEmbeddingType.Int8, VectorEmbeddingType.Int8, true)]
+    [InlineData(Constants.VectorSearch.EmbeddingInt1, VectorEmbeddingType.Binary, VectorEmbeddingType.Binary, true)]
+    public void CreateVectorFieldWithMethod(string fieldEmbeddingName, VectorEmbeddingType sourceType, VectorEmbeddingType destinationType, bool aliased)
     {
         var aliasPrefix = (aliased ? "u." : string.Empty);
         var innerNameForQuery = fieldEmbeddingName is null ? $"{aliasPrefix}Name" : $"{fieldEmbeddingName}({aliasPrefix}Name)";
@@ -61,15 +61,15 @@ public class VectorAutoIndexDefinitionTests(ITestOutputHelper output) : NoDispos
         var existingDefinition = _sut.CreateAutoIndexDefinition();
 
         
-        (string fieldEmbeddingName, EmbeddingType sourceType, EmbeddingType destinationType)[] fields = {
-            ("embedding.text", EmbeddingType.Text, EmbeddingType.Single), 
-            ("embedding.text_i8", EmbeddingType.Text, EmbeddingType.Int8),
-            ("embedding.text_i1", EmbeddingType.Text, EmbeddingType.Binary),
-            (null, EmbeddingType.Single, EmbeddingType.Single), 
-            ("embedding.f32_i8", EmbeddingType.Single, EmbeddingType.Int8),
-            ("embedding.f32_i1", EmbeddingType.Single, EmbeddingType.Binary), 
-            ("embedding.i8", EmbeddingType.Int8, EmbeddingType.Int8),
-            ("embedding.i1", EmbeddingType.Binary, EmbeddingType.Binary)
+        (string fieldEmbeddingName, VectorEmbeddingType sourceType, VectorEmbeddingType destinationType)[] fields = {
+            (Constants.VectorSearch.EmbeddingText, VectorEmbeddingType.Text, VectorEmbeddingType.Single), 
+            (Constants.VectorSearch.EmbeddingTextInt8, VectorEmbeddingType.Text, VectorEmbeddingType.Int8),
+            (Constants.VectorSearch.EmbeddingTextInt1, VectorEmbeddingType.Text, VectorEmbeddingType.Binary),
+            (null, VectorEmbeddingType.Single, VectorEmbeddingType.Single), 
+            (Constants.VectorSearch.EmbeddingSingleInt8, VectorEmbeddingType.Single, VectorEmbeddingType.Int8),
+            (Constants.VectorSearch.EmbeddingSingleInt1, VectorEmbeddingType.Single, VectorEmbeddingType.Binary), 
+            (Constants.VectorSearch.EmbeddingInt8, VectorEmbeddingType.Int8, VectorEmbeddingType.Int8),
+            (Constants.VectorSearch.EmbeddingInt1, VectorEmbeddingType.Binary, VectorEmbeddingType.Binary)
         };
 
         for (var i = 0; i < fields.Length; ++i)

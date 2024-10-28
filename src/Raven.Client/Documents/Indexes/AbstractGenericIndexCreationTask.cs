@@ -165,7 +165,7 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         protected void Vector(Expression<Func<TReduceResult, object>> field, Func<VectorOptionsFactory, VectorOptionsFactory> indexing)
         {
-            VectorIndexes.Add(field, indexing(new VectorOptionsFactory()).VectorOptions);
+            VectorIndexes.Add(field, indexing(new VectorOptionsFactory())._vectorOptions);
         }
         
         /// <summary>

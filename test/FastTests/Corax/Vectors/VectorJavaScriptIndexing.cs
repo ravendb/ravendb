@@ -20,13 +20,13 @@ public class VectorJavaScriptIndexing : RavenTestBase
     }
     
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void TextToSinglesTest() => JsIndexingTestingBase(nameof(VecDoc.Text), EmbeddingType.Text, EmbeddingType.Single, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
+    public void TextToSinglesTest() => JsIndexingTestingBase(nameof(VecDoc.Text), VectorEmbeddingType.Text, VectorEmbeddingType.Single, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
     
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void TextToInt8Test() => JsIndexingTestingBase(nameof(VecDoc.Text), EmbeddingType.Text, EmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
+    public void TextToInt8Test() => JsIndexingTestingBase(nameof(VecDoc.Text), VectorEmbeddingType.Text, VectorEmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
     
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void TextToInt1Test() => JsIndexingTestingBase(nameof(VecDoc.Text), EmbeddingType.Text, EmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
+    public void TextToInt1Test() => JsIndexingTestingBase(nameof(VecDoc.Text), VectorEmbeddingType.Text, VectorEmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
     
     
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
@@ -34,37 +34,37 @@ public class VectorJavaScriptIndexing : RavenTestBase
     [InlineData(nameof(VecDoc.SinglesBase64))]
     [InlineData(nameof(VecDoc.SinglesEnumerable))]
     [InlineData(nameof(VecDoc.SinglesEnumerableBase64))]
-    public void SinglesToSinglesTest(string fieldName) => JsIndexingTestingBase(fieldName, EmbeddingType.Single, EmbeddingType.Single, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
+    public void SinglesToSinglesTest(string fieldName) => JsIndexingTestingBase(fieldName, VectorEmbeddingType.Single, VectorEmbeddingType.Single, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
     
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     [InlineData(nameof(VecDoc.Singles))]
     [InlineData(nameof(VecDoc.SinglesBase64))]
     [InlineData(nameof(VecDoc.SinglesEnumerable))]
     [InlineData(nameof(VecDoc.SinglesEnumerableBase64))]
-    public void SinglesToInt8Test(string fieldName) => JsIndexingTestingBase(fieldName, EmbeddingType.Single, EmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
+    public void SinglesToInt8Test(string fieldName) => JsIndexingTestingBase(fieldName, VectorEmbeddingType.Single, VectorEmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
     
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     [InlineData(nameof(VecDoc.Singles))]
     [InlineData(nameof(VecDoc.SinglesBase64))]
     [InlineData(nameof(VecDoc.SinglesEnumerable))]
     [InlineData(nameof(VecDoc.SinglesEnumerableBase64))]
-    public void SinglesToInt1Test(string fieldName) => JsIndexingTestingBase(fieldName, EmbeddingType.Single, EmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
+    public void SinglesToInt1Test(string fieldName) => JsIndexingTestingBase(fieldName, VectorEmbeddingType.Single, VectorEmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
     
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     [InlineData(nameof(VecDoc.Int8))]
     [InlineData(nameof(VecDoc.Int8Base64))]
     [InlineData(nameof(VecDoc.Int8Enumerable))]
     [InlineData(nameof(VecDoc.Int8EnumerableBase64))]
-    public void Int8Test(string fieldName) => JsIndexingTestingBase(fieldName, EmbeddingType.Int8, EmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([-1, 1])));
+    public void Int8Test(string fieldName) => JsIndexingTestingBase(fieldName, VectorEmbeddingType.Int8, VectorEmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([-1, 1])));
         
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     [InlineData(nameof(VecDoc.Binary))]
     [InlineData(nameof(VecDoc.BinaryBase64))]
     [InlineData(nameof(VecDoc.BinaryEnumerable))]
     [InlineData(nameof(VecDoc.BinaryEnumerableBase64))]
-    public void Int1Test(string fieldName) => JsIndexingTestingBase(fieldName, EmbeddingType.Binary, EmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1, 0])));
+    public void Int1Test(string fieldName) => JsIndexingTestingBase(fieldName, VectorEmbeddingType.Binary, VectorEmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1, 0])));
     
-    private void JsIndexingTestingBase(string fieldName, EmbeddingType src, EmbeddingType dest, Func<IRavenQueryable<VecDoc>, IRavenQueryable<VecDoc>> vectorWhere)
+    private void JsIndexingTestingBase(string fieldName, VectorEmbeddingType src, VectorEmbeddingType dest, Func<IRavenQueryable<VecDoc>, IRavenQueryable<VecDoc>> vectorWhere)
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         using var session = store.OpenSession();
@@ -106,7 +106,7 @@ public class VectorJavaScriptIndexing : RavenTestBase
             //querying    
         }
         
-        public VectorIndex(string fieldName, EmbeddingType source, EmbeddingType destination)
+        public VectorIndex(string fieldName, VectorEmbeddingType source, VectorEmbeddingType destination)
         {
             Maps = [@$"map('VecDocs', function (e) {{
     return {{ 

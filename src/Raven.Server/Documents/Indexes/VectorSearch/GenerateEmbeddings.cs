@@ -95,9 +95,9 @@ public static class GenerateEmbeddings
     {
         return options.DestinationEmbeddingType switch
         {
-            EmbeddingType.Single => CreateSmartComponentsLocalEmbedding<EmbeddingF32>(text, F32Size),
-            EmbeddingType.Int8 => CreateSmartComponentsLocalEmbedding<EmbeddingI8>(text, I8Size),
-            EmbeddingType.Binary => CreateSmartComponentsLocalEmbedding<EmbeddingI1>(text, I1Size),
+            VectorEmbeddingType.Single => CreateSmartComponentsLocalEmbedding<EmbeddingF32>(text, F32Size),
+            VectorEmbeddingType.Int8 => CreateSmartComponentsLocalEmbedding<EmbeddingI8>(text, I8Size),
+            VectorEmbeddingType.Binary => CreateSmartComponentsLocalEmbedding<EmbeddingI1>(text, I1Size),
             _ => throw new NotSupportedException($"Unsupported {nameof(options.DestinationEmbeddingType)}: {options.DestinationEmbeddingType}")
         };
     }
@@ -108,18 +108,18 @@ public static class GenerateEmbeddings
         var embeddingSourceType = options.SourceEmbeddingType;
         var embeddingDestinationType = options.DestinationEmbeddingType;
         
-        if (embeddingSourceType is EmbeddingType.Binary)
+        if (embeddingSourceType is VectorEmbeddingType.Binary)
         {
-            PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(byte), $"Data already quantized in '{EmbeddingType.Binary}' form should be of type '{typeof(byte)}'.");
+            PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(byte), $"Data already quantized in '{VectorEmbeddingType.Binary}' form should be of type '{typeof(byte)}'.");
             return new VectorValue(arrayPool: null, (byte[])(object)array, (byte[])(object)array);
         }
         
-        if (embeddingSourceType is EmbeddingType.Int8)
+        if (embeddingSourceType is VectorEmbeddingType.Int8)
         {
             if (typeof(T) == typeof(byte))
                 return new VectorValue(arrayPool: null, (byte[])(object)array, new Memory<byte>((byte[])(object)array, 0, array.Length));
             
-            PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(sbyte), $"Data already quantized in '{EmbeddingType.Int8}' form should be of type '{typeof(sbyte)}'.");
+            PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(sbyte), $"Data already quantized in '{VectorEmbeddingType.Int8}' form should be of type '{typeof(sbyte)}'.");
             var bytes = MemoryMarshal.Cast<T, byte>(array);
             var allocator = Allocator ??= ArrayPool<byte>.Create();
             var buffer = allocator.Rent(bytes.Length);
@@ -130,21 +130,35 @@ public static class GenerateEmbeddings
         
         switch (embeddingDestinationType)
         {
-            case EmbeddingType.Binary:
+            case VectorEmbeddingType.Binary:
             {
-                PortableExceptions.Throw<NotSupportedException>("TODO");
-                return default;
+                ReadOnlySpan<float> input;
+                if (array is float[] af)
+                    input = af;
+                else
+                    input = MemoryMarshal.Cast<T, float>(array);
+                
+                var binaryEmbedding = VectorQuantizer.ToInt1(input);
+
+                return new VectorValue(arrayPool: null, binaryEmbedding, binaryEmbedding);
             }
-            case EmbeddingType.Int8:
+            case VectorEmbeddingType.Int8:
             {
-                PortableExceptions.Throw<NotSupportedException>("TODO");
-                return default;
+                ReadOnlySpan<float> input;
+                if (array is float[] af)
+                    input = af;
+                else
+                    input = MemoryMarshal.Cast<T, float>(array);
+                
+                var int8Embedding = VectorQuantizer.ToInt8(input);
+                
+                return new VectorValue(arrayPool: null, (byte[])(object)int8Embedding, (byte[])(object)int8Embedding);
             }
             default:
             {
                 if (typeof(T) == typeof(byte))
                 {
-                    return new VectorValue(arrayPool:null, (byte[])(object)array, (byte[])(object)array);
+                    return new VectorValue(arrayPool: null, (byte[])(object)array, (byte[])(object)array);
                 }
                 
                 var embeddings = (float[])(object)array;
