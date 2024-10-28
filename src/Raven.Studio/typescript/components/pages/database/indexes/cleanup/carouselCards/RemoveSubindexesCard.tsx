@@ -105,7 +105,7 @@ function MainPanel({ surpassing }: RemoveSubindexesCardProps) {
                                         </div>
                                     </td>
                                     <td>
-                                        <div>⊇</div>
+                                        <div>⊆</div>
                                     </td>
                                     <td>
                                         <div>
