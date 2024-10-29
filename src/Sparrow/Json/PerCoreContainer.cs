@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Utils;
 
@@ -12,13 +13,13 @@ namespace Sparrow.Json
     {
         private readonly int _numberOfSlotsPerCore;
         private readonly T[][] _perCoreArrays;
-        private readonly int[] _perCoreArrayLength;
+        private readonly PaddedInt[] _perCoreArrayLength;
 
         public PerCoreContainer(int numberOfSlotsPerCore = 64)
         {
             _numberOfSlotsPerCore = numberOfSlotsPerCore;
             _perCoreArrays = new T[Environment.ProcessorCount][];
-            _perCoreArrayLength = new int[Environment.ProcessorCount];
+            _perCoreArrayLength = new PaddedInt[Environment.ProcessorCount];
 
             for (int i = 0; i < _perCoreArrays.Length; i++)
             {
@@ -29,7 +30,7 @@ namespace Sparrow.Json
         public bool TryPull(out T output)
         {
             int currentProcessorId = CurrentProcessorIdHelper.GetCurrentProcessorId() % _perCoreArrays.Length;
-            if (_perCoreArrayLength[currentProcessorId] <= 0)
+            if (_perCoreArrayLength[currentProcessorId].Value <= 0)
             {
                 output = default;
                 return false;
@@ -46,7 +47,7 @@ namespace Sparrow.Json
                 if (Interlocked.CompareExchange(ref coreItems[i], null, cur) != cur)
                     continue;
 
-                Interlocked.Decrement(ref _perCoreArrayLength[currentProcessorId]);
+                Interlocked.Decrement(ref _perCoreArrayLength[currentProcessorId].Value);
                 output = cur;
                 return true;
             }
@@ -58,7 +59,7 @@ namespace Sparrow.Json
         public bool TryPush(T cur)
         {
             int currentProcessorId = CurrentProcessorIdHelper.GetCurrentProcessorId() % _perCoreArrays.Length;
-            if (_perCoreArrayLength[currentProcessorId] >= _numberOfSlotsPerCore)
+            if (_perCoreArrayLength[currentProcessorId].Value >= _numberOfSlotsPerCore)
                 return false;
 
             var core = _perCoreArrays[currentProcessorId];
@@ -70,7 +71,7 @@ namespace Sparrow.Json
 
                 if (Interlocked.CompareExchange(ref core[i], cur, null) == null)
                 {
-                    Interlocked.Increment(ref _perCoreArrayLength[currentProcessorId]);
+                    Interlocked.Increment(ref _perCoreArrayLength[currentProcessorId].Value);
                     return true;
                 }
             }
@@ -91,7 +92,7 @@ namespace Sparrow.Json
                     if (Interlocked.CompareExchange(ref array[li], null, copy) != copy)
                         continue;
 
-                    Interlocked.Decrement(ref _perCoreArrayLength[gi]);
+                    Interlocked.Decrement(ref _perCoreArrayLength[gi].Value);
                     yield return copy;
                 }
             }
@@ -124,11 +125,20 @@ namespace Sparrow.Json
 
             if (Interlocked.CompareExchange(ref array[pos.Item2], null, item) == item)
             {
-                Interlocked.Decrement(ref _perCoreArrayLength[pos.Item1]);
+                Interlocked.Decrement(ref _perCoreArrayLength[pos.Item1].Value);
                 return true;
             }
 
             return false;
         }
+
+        
+    }
+
+    [StructLayout(LayoutKind.Explicit, Size = 64)]
+    internal struct PaddedInt
+    {
+        [FieldOffset(0)]
+        public int Value;
     }
 }
