@@ -10,6 +10,7 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Corax.Utils;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.PostingLists;
@@ -536,7 +537,7 @@ public partial class IndexSearcher
         return a;
     }
 
-    public IQueryMatch VectorQuery(in FieldMetadata fieldMetadata, Memory<byte> vectorToSearch, in float minimumMatch, in SimilarityMethod similarityMethod)
+    public IQueryMatch VectorQuery(in FieldMetadata fieldMetadata, VectorValue vectorToSearch, in float minimumMatch, in SimilarityMethod similarityMethod)
     {
         long rootPageByFieldName = GetRootPageByFieldName(fieldMetadata.FieldName);
         if (rootPageByFieldName is -1)

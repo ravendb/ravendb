@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Corax;
@@ -641,7 +642,7 @@ public static class CoraxQueryBuilder
         else
             PortableExceptions.Throw<InvalidDataException>($"Cannot find `{fieldName}` field in the index.");
         
-        Memory<byte> transformedEmbedding;
+        VectorValue transformedEmbedding;
         if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Text)
         {
             var valueAsString = valueType switch
@@ -649,37 +650,44 @@ public static class CoraxQueryBuilder
                 ValueTokenType.String => value.ToString(),
                 _ => throw new NotSupportedException("Vector.Search() on " + valueType)
             };
-            transformedEmbedding = GenerateEmbeddings.FromText(vectorOptions, valueAsString).Embedding;
+            transformedEmbedding = GenerateEmbeddings.FromText(vectorOptions, valueAsString);
         }
         else if (value is string s)
         {
-            var embeddings = GenerateEmbeddings.FromArray(vectorOptions, Convert.FromBase64String(s));
-            transformedEmbedding = embeddings.EmbeddingAsBytes;
+            transformedEmbedding= GenerateEmbeddings.FromArray(vectorOptions, builderParameters.Allocator, s);
         }
         else if (value is StringSegment stringSegment)
         {
-            var embeddings = GenerateEmbeddings.FromArray(vectorOptions, Convert.FromBase64String(stringSegment.ToString()));
-            transformedEmbedding = embeddings.EmbeddingAsBytes;
+            transformedEmbedding = default;
+            // var embeddings = GenerateEmbeddings.FromArray(vectorOptions, Convert.FromBase64String(stringSegment.ToString()));
+            // transformedEmbedding = embeddings.EmbeddingAsBytes;
         }
         else
         {
             var underlyingEnumerable = (BlittableJsonReaderArray)value;
-            transformedEmbedding = vectorOptions.SourceEmbeddingType switch
-            {
-                VectorEmbeddingType.Single => GetVector<float>(),
-                VectorEmbeddingType.Int8 => GetVector<sbyte>(),
-                VectorEmbeddingType.Binary => GetVector<byte>(),
-                _ => throw new NotSupportedException($"Unsupported {nameof(vectorOptions.SourceEmbeddingType)}: {vectorOptions.SourceEmbeddingType}")
-            };
-            
-            Memory<byte> GetVector<T>() where T : unmanaged, INumber<T>
-            {
-                var f = new T[underlyingEnumerable.Length];
-                for (int i = 0; i < underlyingEnumerable.Length; i++)
-                    f[i] = VectorUtils.GetNumerical<T>(underlyingEnumerable[i]);
+            var bytesUsed = underlyingEnumerable.Length * (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Single ? sizeof(float) : 1);
+            var memScope = builderParameters.Allocator.Allocate(bytesUsed, out ByteString mem);
+            ref var floatRef = ref MemoryMarshal.GetReference(mem.ToSpan<float>());
+            ref var sbyteRef = ref MemoryMarshal.GetReference(mem.ToSpan<sbyte>());
+            ref var byteRef = ref MemoryMarshal.GetReference(mem.ToSpan<byte>());
                 
-                return GenerateEmbeddings.FromArray<T>(vectorOptions, f).Embedding;
+            for (int i = 0; i < underlyingEnumerable.Length; ++i)
+            {
+                switch (vectorOptions.SourceEmbeddingType)
+                {
+                    case VectorEmbeddingType.Single:
+                        Unsafe.Add(ref floatRef, i) = underlyingEnumerable.GetByIndex<float>(i);
+                        break;
+                    case VectorEmbeddingType.Int8:
+                        Unsafe.Add(ref sbyteRef, i) = underlyingEnumerable.GetByIndex<sbyte>(i);
+                        break;
+                    default:
+                        Unsafe.AddByteOffset(ref byteRef, i) = underlyingEnumerable.GetByIndex<byte>(i);
+                        break;
+                }
             }
+
+            transformedEmbedding = GenerateEmbeddings.FromArray(vectorOptions, memScope, mem, bytesUsed);
         }
         
         var minimumMatch = RavenConstants.VectorSearch.DefaultMinimumSimilarity;

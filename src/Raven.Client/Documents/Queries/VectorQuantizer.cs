@@ -1,51 +1,83 @@
 using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Sparrow;
 namespace Raven.Client.Documents.Queries;
 
 public class VectorQuantizer
 {
-    public static unsafe sbyte[] ToInt8(float[] rawEmbedding)
+    private static ReadOnlySpan<byte> _binaryQuantizerLookup => [0b_1000_0000, 0b_0100_0000, 0b_0010_0000, 0b_0001_0000, 0b_0000_1000, 0b_0000_0100, 0b_0000_0010, 0b_0000_0001];
+
+    public static unsafe bool TryToInt8(ReadOnlySpan<float> rawEmbedding, ReadOnlySpan<sbyte> destination, out int usedBytes)
     {
-        var maxComponent = rawEmbedding.Select(Math.Abs).Max();
-        var scaleFactor = 127f / maxComponent;
+        usedBytes = 0;
+        if (destination.Length < rawEmbedding.Length + sizeof(float))
+            return false;
+        ref var sourceRef = ref MemoryMarshal.GetReference(rawEmbedding);
+        var maxComponent = float.MinValue;
+        for (int i = 0; i < rawEmbedding.Length; i++)
+            maxComponent = Math.Max(maxComponent, Math.Abs(Unsafe.Add(ref sourceRef, i)));
         
+        var scaleFactor = 127f / maxComponent;
         long sumOfSquaredMagnitudes = 0;
         
-        sbyte[] embeddingRepresentation = new sbyte[rawEmbedding.Length + sizeof(float)];
-        
+        ref var destinationRef = ref MemoryMarshal.GetReference(destination);
         for (var i = 0; i < rawEmbedding.Length; i++)
         {
-            var scaledValue = rawEmbedding[i] * scaleFactor;
+            var scaledValue = Unsafe.Add(ref sourceRef, i) * scaleFactor;
             
             sumOfSquaredMagnitudes += (long)(scaledValue * scaledValue);
             
-            embeddingRepresentation[i] = Convert.ToSByte(scaledValue);
+            Unsafe.Add(ref destinationRef, i) = Convert.ToSByte(scaledValue);
         }
         
-        *(float*)Unsafe.AsPointer(ref embeddingRepresentation[rawEmbedding.Length]) = (float)Math.Sqrt(sumOfSquaredMagnitudes);
+        Unsafe.AsRef<float>(Unsafe.Add(ref destinationRef, rawEmbedding.Length)) = (float)Math.Sqrt(sumOfSquaredMagnitudes);
         
-        return embeddingRepresentation;
+        usedBytes = rawEmbedding.Length + sizeof(float);
+        return true;
     }
 
-    public static sbyte[] ToInt8(ReadOnlySpan<float> rawEmbedding) => ToInt8(rawEmbedding.ToArray());
-    
-    public static byte[] ToInt1(float[] embedding)
+    public static sbyte[] ToInt8(float[] rawEmbedding)
     {
-        byte[] lookup = [0b_1000_0000, 0b_0100_0000, 0b_0010_0000, 0b_0001_0000, 0b_0000_1000, 0b_0000_0100, 0b_0000_0010, 0b_0000_0001];
-        
-        var inputLength = embedding.Length;
-        var outputLength = inputLength % 8 == 0 ? inputLength / 8 : inputLength / 8 + 1;
-        
-        byte[] result = new byte[outputLength];
-        
-        for (var j = 0; j < inputLength; j++)
-        {
-            result[j / 8] |= embedding[j] >= 0 ? lookup[j % 8] : (byte)0;
-        }
-        
-        return result;
+        var mem = new sbyte[rawEmbedding.Length + sizeof(float)];
+        TryToInt8(rawEmbedding, mem, out _);
+        return mem;
     }
     
-    public static byte[] ToInt1(ReadOnlySpan<float> rawEmbedding) => ToInt1(rawEmbedding.ToArray());
+    public static byte[] ToInt1(ReadOnlySpan<float> rawEmbedding)
+    {
+        const byte dimensionsInOneByte = 8;
+        var outputLength = ((int)rawEmbedding.Length / dimensionsInOneByte + (rawEmbedding.Length % dimensionsInOneByte != 0).ToInt32());
+        var bytes = new byte[outputLength];
+        TryToInt1(rawEmbedding, bytes, out _);
+        return bytes;
+    }
+    
+    internal static bool TryToInt1(ReadOnlySpan<float> source, ReadOnlySpan<byte> destination, out int usedBytes)
+    {
+        const byte dimensionsInOneByte = 8;
+        var inputLength = (nuint)source.Length;
+        var outputLength = (nuint)((int)inputLength / dimensionsInOneByte + ((int)inputLength % dimensionsInOneByte != 0).ToInt32());
+
+        if ((int)outputLength > destination.Length)
+        {
+            usedBytes = 0;
+            return false;
+        }
+        
+        ref var resultRef = ref MemoryMarshal.GetReference(destination);
+        ref var embeddingRef = ref MemoryMarshal.GetReference(source);
+        ref var lookupTableRef = ref MemoryMarshal.GetReference(_binaryQuantizerLookup);
+        for (nuint j = 0; j < inputLength; j++)
+        {
+            Unsafe.AddByteOffset(ref resultRef, j / dimensionsInOneByte) |= 
+                Unsafe.Add(ref embeddingRef, j) >= 0 
+                    ? Unsafe.AddByteOffset(ref lookupTableRef, j % dimensionsInOneByte) 
+                    : byte.MinValue;
+        }
+
+        usedBytes = (int)outputLength;
+        return true;
+    }
 }

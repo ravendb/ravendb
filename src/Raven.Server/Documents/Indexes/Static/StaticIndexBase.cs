@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Utils;
 using Jint;
 using Jint.Native;
 using Lucene.Net.Documents;
@@ -24,6 +25,7 @@ using Raven.Server.Rachis.Commands;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Spatial4n.Shapes;
 
@@ -375,110 +377,150 @@ namespace Raven.Server.Documents.Indexes.Static
         private static object VectorFromEmbedding(IndexField currentIndexingField, object value)
         {
             var vectorOptions = currentIndexingField.Vector;
+            var allocator = CurrentIndexingScope.Current.IndexContext.Allocator;
             PortableExceptions.ThrowIf<InvalidDataException>(value is DynamicNullObject or null, "Cannot index data from a null value.");
-            
             if (value is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject)
-                return GenerateEmbeddingForBase64(value.ToString());
+                return Base64ToVector(value);
 
-            if (value is DynamicArray or BlittableJsonReaderArray or JsArray)
+            if (value is BlittableJsonReaderArray || value is DynamicArray { Inner: BlittableJsonReaderArray })
             {
-                var da = value as DynamicArray;
-                var bjra = value as BlittableJsonReaderArray;
-                var jsa = value as JsArray;
-                
-                object firstElement = (da?[0] ?? bjra?[0] ?? jsa?[0]);
-                PortableExceptions.ThrowIf<InvalidDataException>(firstElement is null, $"There is no element in the vector!");
-                
-                var isEnumerableDynamicArray = firstElement is DynamicArray or BlittableJsonReaderArray or JsArray; // should be safe since vector at least should have 1 dimension
-                var isBase64 = firstElement is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject or JsString;
-
-                // For float[][] we've to wrap it inside List<VectorValue>
-                if (isEnumerableDynamicArray)
-                {
-                    var enumerable = (IEnumerable)da ?? (IEnumerable)bjra ?? (IEnumerable)jsa;
-                    var vectorList = new List<VectorValue>();
-                    foreach (var item in enumerable)
-                        vectorList.Add(GenerateEmbeddingsFromDynamicArray((IEnumerable)item));
-                    return vectorList;
-                }
-                
-                // For string[] as well
-                if (isBase64)
-                {
-                        var enumerable = (IEnumerable)da ?? (IEnumerable)bjra ?? jsa;
-                        var vectorList = new List<VectorValue>();
-                        foreach (var item in enumerable)
-                        {
-                            var str = item switch
-                            {
-                                JsObject jso => jso.AsString(),
-                                _ => item.ToString()
-                            };
-                            vectorList.Add(GenerateEmbeddingForBase64(str));
-                        }
-
-                        return vectorList;
-                }
-
-                if (da != null)
-                    return GenerateEmbeddingsFromDynamicArray(da);
-                
-                if (bjra != null)
-                    return GenerateEmbeddingsFromDynamicArray(bjra);
-
-                return GenerateEmbeddingsFromDynamicArray(jsa);
+                var bjra = value as BlittableJsonReaderArray ?? (BlittableJsonReaderArray)((DynamicArray)value).Inner;
+                return HandleBlittableJsonReaderArray(bjra);
             }
-            
-            throw new InvalidDataException($"Not supported vector value: {value?.GetType().FullName}");
 
-            VectorValue GenerateEmbeddingsFromDynamicArray<TEnumerable>(TEnumerable dynamicArray) where TEnumerable : IEnumerable
+            if (value is JsArray js)
+                return HandleJsArray(js);
+
+            throw new InvalidOperationException($"Unknown type.");
+
+            //TODO: this is invalid
+            object Base64ToVector(object base64)
             {
-                //Todo: we could use some kind of growable buffer instead list to avoid allocations
-                IList embeddings = null;
-                embeddings = vectorOptions.SourceEmbeddingType switch
+                throw new NotImplementedException("BASE64");
+                if (base64 is LazyStringValue lsv)
                 {
-                    VectorEmbeddingType.Single => new List<float>(),
-                    VectorEmbeddingType.Int8 => new List<sbyte>(),
-                    VectorEmbeddingType.Binary => new List<byte>(),
-                    _ => throw new ArgumentOutOfRangeException()
+                    var floatArr = MemoryMarshal.Cast<byte, float>(lsv.AsSpan());
+                    var memScope = allocator.Allocate(floatArr.Length * sizeof(float), out ByteString mem);
+                    unsafe
+                    {
+                        lsv.CopyTo(mem.Ptr);
+                    }
+                    
+                    return GenerateEmbeddings.FromArray(vectorOptions, memScope, mem, floatArr.Length * sizeof(float));
+                }
+
+                throw new Exception();
+            }
+            object HandleBlittableJsonReaderArray(BlittableJsonReaderArray data)
+            {
+                var first = data[0];
+                
+                //Array of base64s
+                if (IsBase64(first))
+                {
+                    var values = new object[data.Length];
+                    for (var i = 0; i < data.Length; i++)
+                        values[i] = Base64ToVector(data[i].ToString());
+
+                    return values;
+                }
+                
+                //Array of arrays
+                if (first is BlittableJsonReaderArray)
+                {
+                    var values = new object[data.Length];
+                    for (var i = 0; i < data.Length; i++)
+                        values[i] = HandleBlittableJsonReaderArray((BlittableJsonReaderArray)data[i]);
+
+                    return values;
+                }
+
+                var len = data.Length;
+                var bufferSize = data.Length * (vectorOptions.SourceEmbeddingType) switch
+                {
+                    VectorEmbeddingType.Single => sizeof(float),
+                    _ => sizeof(byte)
                 };
 
-                foreach (var item in dynamicArray)
+                var memScope = allocator.Allocate(bufferSize, out ByteString mem);
+                ref var floatRef = ref MemoryMarshal.GetReference(mem.ToSpan<float>());
+                ref var sbyteRef = ref MemoryMarshal.GetReference(mem.ToSpan<sbyte>());
+                ref var byteRef = ref MemoryMarshal.GetReference(mem.ToSpan<byte>());
+                
+                for (int i = 0; i < len; ++i)
                 {
                     switch (vectorOptions.SourceEmbeddingType)
                     {
                         case VectorEmbeddingType.Single:
-                            embeddings.Add(VectorUtils.GetNumerical<float>(item));
+                            Unsafe.Add(ref floatRef, i) = data.GetByIndex<float>(i);
                             break;
                         case VectorEmbeddingType.Int8:
-                            embeddings.Add(VectorUtils.GetNumerical<sbyte>(item));
+                            Unsafe.Add(ref sbyteRef, i) = data.GetByIndex<sbyte>(i);
                             break;
                         default:
-                            embeddings.Add(VectorUtils.GetNumerical<byte>(item));
+                            Unsafe.AddByteOffset(ref byteRef, i) = data.GetByIndex<byte>(i);
                             break;
                     }
                 }
 
-                return embeddings switch
-                {
-                    List<float> vectorOfSingles => GenerateEmbeddings.FromArray(vectorOptions, vectorOfSingles.ToArray()),
-                    List<byte> vectorOfBytes => GenerateEmbeddings.FromArray(vectorOptions, vectorOfBytes.ToArray()),
-                    List<sbyte> vectorOfSbytes => GenerateEmbeddings.FromArray(vectorOptions, vectorOfSbytes.ToArray()),
-                    _ => throw new InvalidDataException($"Vector values must be either float, byte, or sbyte. Received `{embeddings.GetType().FullName}`.")
-                };
+                return GenerateEmbeddings.FromArray(vectorOptions, memScope, mem, bufferSize);
             }
 
-            VectorValue GenerateEmbeddingForBase64(string source)
+            object HandleJsArray(JsArray jsArray)
             {
-                var decodedBase = Convert.FromBase64String(source);
-                if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Single)
+                var firstItem = jsArray[0];
+                if (firstItem.IsString())
                 {
-                    var embeddings = MemoryMarshal.Cast<byte, float>(decodedBase);
-                    return GenerateEmbeddings.FromArray(vectorOptions, embeddings.ToArray());
+                    var values = new object[jsArray.Length];
+                    for (var i = 0; i < jsArray.Length; i++)
+                        values[i] = GenerateEmbeddings.FromArray(vectorOptions, allocator, jsArray[i].AsString());
+
+                    return values;
                 }
 
-                return GenerateEmbeddings.FromArray(vectorOptions, decodedBase);
+                if (firstItem is JsArray)
+                {
+                    var values = new object[jsArray.Length];
+                    for (var i = 0; i < jsArray.Length; i++)
+                        values[i] = HandleJsArray(jsArray[i] as JsArray);
+
+                    return values;
+                }
+
+                var len = (int)jsArray.Length;
+                var bufferSize = len * (vectorOptions.SourceEmbeddingType) switch
+                {
+                    VectorEmbeddingType.Single => sizeof(float),
+                    _ => sizeof(byte)
+                };
+
+                var memScope = allocator.Allocate(bufferSize, out ByteString mem);
+                ref var floatRef = ref MemoryMarshal.GetReference(mem.ToSpan<float>());
+                ref var sbyteRef = ref MemoryMarshal.GetReference(mem.ToSpan<sbyte>());
+                ref var byteRef = ref MemoryMarshal.GetReference(mem.ToSpan<byte>());
+                
+                for (int i = 0; i < len; ++i)
+                {
+                    var num = jsArray[i].AsNumber();
+                    switch (vectorOptions.SourceEmbeddingType)
+                    {
+                        case VectorEmbeddingType.Single:
+                            Unsafe.Add(ref floatRef, i) = (float)num;
+                            break;
+                        case VectorEmbeddingType.Int8:
+                            Unsafe.Add(ref sbyteRef, i) = Convert.ToSByte(num);
+                            break;
+                        default:
+                            Unsafe.AddByteOffset(ref byteRef, i) = Convert.ToByte(num);
+                            break;
+                    }
+                }
+                
+                
+                return GenerateEmbeddings.FromArray(vectorOptions, memScope, mem, bufferSize);
             }
+            
+            bool IsBase64(object val) => val is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject or JsString;
         }
 
         private static object VectorFromText(IndexField indexField, object value)

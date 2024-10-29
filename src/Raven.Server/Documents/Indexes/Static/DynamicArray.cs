@@ -14,6 +14,8 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly IEnumerable<object> _inner;
 
+        internal IEnumerable<object> Inner => _inner;
+        
         public DynamicArray(IEnumerable inner)
             : this(inner.Cast<object>())
         {

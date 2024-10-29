@@ -25,16 +25,16 @@ namespace Corax.Querying.Matches
         private readonly PageLocator _pageLocator = new();
         private Dictionary<long, float> _scores = new();
         
-        private readonly delegate*<ref ExactVectorSearchMatch, Span<byte>, Span<byte>, float> _similarityFunc;
+        private readonly delegate*<ref ExactVectorSearchMatch, ReadOnlySpan<byte>, ReadOnlySpan<byte>, float> _similarityFunc;
 
         private readonly IndexSearcher _searcher;
         private readonly Transaction _tx;
         private readonly long _fieldRootPage;
-        private readonly Memory<byte> _vectorToSearch;
+        private readonly VectorValue _vectorToSearch;
         private readonly float _minimumMatch;
         private readonly SimilarityMethod _similarityMethod;
 
-        public ExactVectorSearchMatch(IndexSearcher searcher, Transaction tx, long fieldRootPage, Memory<byte> vectorToSearch, float minimumMatch, SimilarityMethod similarityMethod)
+        public ExactVectorSearchMatch(IndexSearcher searcher, Transaction tx, long fieldRootPage, VectorValue vectorToSearch, float minimumMatch, SimilarityMethod similarityMethod)
         {
             _count = searcher.NumberOfEntries;
             _similarityFunc = similarityMethod switch
@@ -111,7 +111,7 @@ namespace Corax.Querying.Matches
                 if (vector.Length != _vectorToSearch.Length)
                     continue;
 
-                var similarity = _similarityFunc(ref this, _vectorToSearch.Span, vector);
+                var similarity = _similarityFunc(ref this, _vectorToSearch.GetEmbedding(), vector);
                 _scores[id] = similarity;
                 if (similarity > _minimumMatch)
                     return true;
@@ -120,7 +120,7 @@ namespace Corax.Querying.Matches
             return false;
         }
 
-        private static float SimilarityI8(ref ExactVectorSearchMatch term, Span<byte> lhs, Span<byte> rhs)
+        private static float SimilarityI8(ref ExactVectorSearchMatch term, ReadOnlySpan<byte> lhs, ReadOnlySpan<byte> rhs)
         {
             using var _ = term._searcher.Allocator.Allocate(2 * lhs.Length, out Span<float> mem);
             
@@ -133,7 +133,7 @@ namespace Corax.Querying.Matches
             return TensorPrimitives.CosineSimilarity(mem.Slice(0, lhs.Length), mem.Slice(lhs.Length));
         }
         
-        private static float SimilarityCosine(ref ExactVectorSearchMatch term, Span<byte> lhs, Span<byte> rhs)
+        private static float SimilarityCosine(ref ExactVectorSearchMatch term, ReadOnlySpan<byte> lhs, ReadOnlySpan<byte> rhs)
         {
             Debug.Assert(lhs.Length == rhs.Length, "lhs.Length == rhs.Length");
             var lhsAsFloat = MemoryMarshal.Cast<byte, float>(lhs);
@@ -141,7 +141,7 @@ namespace Corax.Querying.Matches
             return TensorPrimitives.CosineSimilarity(lhsAsFloat, rhsAsFloat);
         }
 
-        private static float SimilarityI1(ref ExactVectorSearchMatch term, Span<byte> lhs, Span<byte> rhs)
+        private static float SimilarityI1(ref ExactVectorSearchMatch term, ReadOnlySpan<byte> lhs, ReadOnlySpan<byte> rhs)
         {
             Debug.Assert(lhs.Length == rhs.Length, "lhs.Length == rhs.Length");
             var differences = TensorPrimitives.HammingBitDistance<byte>(lhs, rhs);

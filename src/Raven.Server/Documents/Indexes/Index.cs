@@ -5245,19 +5245,7 @@ namespace Raven.Server.Documents.Indexes
                 if (field is IndexField { Vector: null } indexField)
                 {
                     var vector = isText ? VectorOptions.DefaultText : VectorOptions.Default;
-                    field = new IndexField()
-                    {
-                        Indexing = indexField.Indexing,
-                        Storage = indexField.Storage,
-                        Vector = vector,
-                        Id = indexField.Id,
-                        Name = indexField.Name,
-                        HasSuggestions = indexField.HasSuggestions,
-                        Spatial = indexField.Spatial,
-                        Analyzer = indexField.Analyzer,
-                        OriginalName = indexField.OriginalName,
-                        TermVector = indexField.TermVector
-                    };
+                    indexField.Vector = vector;
                 }
                 
                 return field switch

@@ -1,9 +1,9 @@
 using System;
 using System.Buffers;
 using System.IO;
-using System.Numerics.Tensors;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Utils;
 using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Indexes.Vector;
@@ -11,72 +11,9 @@ using Raven.Client.Documents.Queries;
 using SmartComponents.LocalEmbeddings;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.VectorSearch;
-
-public static class VectorUtils
-{
-    public static T GetNumerical<T>(object value)
-    {
-        switch (value)
-        {
-            case LazyStringValue lsv when typeof(T) == typeof(float):
-                return (T)(object)(float)lsv;
-            case LazyStringValue lsv when typeof(sbyte) == typeof(T):
-                return (T)(object)Convert.ToSByte((int)lsv);
-            case LazyStringValue lsv when typeof(byte) == typeof(T):
-                return (T)(object)(byte)Convert.ToByte((int)lsv);
-            case long l when typeof(T) == typeof(float):
-                return (T)(object)Convert.ToSingle(l);
-            case long l when typeof(sbyte) == typeof(T):
-                return (T)(object)Convert.ToSByte(l);
-            case long l when typeof(byte) == typeof(T):
-                return (T)(object)Convert.ToByte(l);
-            case float f when typeof(T) == typeof(float):
-                return (T)(object)f;
-            case float f when typeof(sbyte) == typeof(T):
-                return (T)(object)Convert.ToSByte(f);
-            case float f when typeof(byte) == typeof(T):
-                return (T)(object)Convert.ToByte(f);
-            case byte b when typeof(T) == typeof(float):
-                return (T)(object)Convert.ToSingle(b);
-            case byte b when typeof(sbyte) == typeof(T):
-                return (T)(object)Convert.ToSByte(b);
-            case byte b when typeof(byte) == typeof(T):
-                return (T)(object)Convert.ToByte(b);
-            case sbyte sb when typeof(T) == typeof(float):
-                return (T)(object)Convert.ToSingle(sb);
-            case sbyte sb when typeof(sbyte) == typeof(T):
-                return (T)(object)Convert.ToSByte(sb);
-            case sbyte sb when typeof(byte) == typeof(T):
-                return (T)(object)Convert.ToByte(sb);
-            case LazyNumberValue lnv when typeof(T) == typeof(float):
-                return (T)(object)Convert.ToSingle((float)lnv);
-            case LazyNumberValue lnv when typeof(sbyte) == typeof(T):
-                return (T)(object)Convert.ToSByte((sbyte)lnv);
-            case LazyNumberValue lnv when typeof(byte) == typeof(T):
-                return (T)(object)Convert.ToByte((byte)(sbyte)lnv);
-            case JsValue jsn:
-                value = jsn.AsNumber();
-                break;
-        }
-
-        if (value is double d)
-        {
-            if (typeof(T) == typeof(float))
-                return (T)(object)Convert.ToSingle(d);
-
-            if (typeof(sbyte) == typeof(T))
-                return (T)(object)Convert.ToSByte(d);
-
-            if (typeof(byte) == typeof(T))
-                return (T)(object)Convert.ToByte(d);
-        }
-
-        PortableExceptions.Throw<InvalidDataException>($"Type of T is expected to be either {typeof(float)}, {typeof(sbyte)} or {typeof(byte)}. Got {value.GetType().FullName} instead.");
-        return default;
-    }
-}
 
 public static class GenerateEmbeddings
 {
@@ -93,82 +30,77 @@ public static class GenerateEmbeddings
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static VectorValue FromText(in VectorOptions options, in string text)
     {
-        return options.DestinationEmbeddingType switch
+        var embeddings = CreateSmartComponentsLocalEmbedding<EmbeddingF32>(text, F32Size);
+
+        switch (options.DestinationEmbeddingType)
         {
-            VectorEmbeddingType.Single => CreateSmartComponentsLocalEmbedding<EmbeddingF32>(text, F32Size),
-            VectorEmbeddingType.Int8 => CreateSmartComponentsLocalEmbedding<EmbeddingI8>(text, I8Size),
-            VectorEmbeddingType.Binary => CreateSmartComponentsLocalEmbedding<EmbeddingI1>(text, I1Size),
-            _ => throw new NotSupportedException($"Unsupported {nameof(options.DestinationEmbeddingType)}: {options.DestinationEmbeddingType}")
-        };
+            case VectorEmbeddingType.Int8:
+            {
+                var source = MemoryMarshal.Cast<byte, float>(embeddings.GetEmbedding());
+                var dest = MemoryMarshal.Cast<byte, sbyte>(embeddings.GetEmbedding());
+                VectorQuantizer.TryToInt8(source, dest, out int usedBytes);
+                embeddings.OverrideLength(usedBytes);
+                break;
+            }
+            case VectorEmbeddingType.Binary:
+            {
+                var source = MemoryMarshal.Cast<byte, float>(embeddings.GetEmbedding());
+                var dest = MemoryMarshal.Cast<byte, byte>(embeddings.GetEmbedding());
+                VectorQuantizer.TryToInt1(source, dest, out int usedBytes);
+                embeddings.OverrideLength(usedBytes);
+                break;
+            }
+        }
+
+        return embeddings;
     }
 
-    public static unsafe VectorValue FromArray<T>(in VectorOptions options, in T[] array)
-        where T : unmanaged
+    public static VectorValue FromArray(in VectorOptions options, ByteStringContext allocator, string base64)
+    {
+        var bytesRequired = (base64.Length * 3) / 4; //this is approximation
+        var memScope = allocator.Allocate(bytesRequired, out ByteString mem);
+        var result = Convert.TryFromBase64String(base64, mem.ToSpan(), out var bytesWritten);
+        PortableExceptions.ThrowIf<InvalidDataException>(result == false, $"Excepted array encoded with base64, however got: '{base64}'");
+        return FromArray(options, memScope, mem, bytesWritten);
+    }
+
+    
+    public static VectorValue FromArray(in VectorOptions options, ByteStringContext<ByteStringMemoryCache>.InternalScope disposable, ByteString mem, int usedBytes)
     {
         var embeddingSourceType = options.SourceEmbeddingType;
         var embeddingDestinationType = options.DestinationEmbeddingType;
-        
-        if (embeddingSourceType is VectorEmbeddingType.Binary)
+        if (embeddingSourceType is VectorEmbeddingType.Binary or VectorEmbeddingType.Int8)
         {
-            PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(byte), $"Data already quantized in '{VectorEmbeddingType.Binary}' form should be of type '{typeof(byte)}'.");
-            return new VectorValue(arrayPool: null, (byte[])(object)array, (byte[])(object)array);
-        }
-        
-        if (embeddingSourceType is VectorEmbeddingType.Int8)
-        {
-            if (typeof(T) == typeof(byte))
-                return new VectorValue(arrayPool: null, (byte[])(object)array, new Memory<byte>((byte[])(object)array, 0, array.Length));
-            
-            PortableExceptions.ThrowIf<InvalidDataException>(typeof(T) != typeof(sbyte), $"Data already quantized in '{VectorEmbeddingType.Int8}' form should be of type '{typeof(sbyte)}'.");
-            var bytes = MemoryMarshal.Cast<T, byte>(array);
-            var allocator = Allocator ??= ArrayPool<byte>.Create();
-            var buffer = allocator.Rent(bytes.Length);
-            bytes.CopyTo(buffer.AsSpan());
-            
-            return new VectorValue(arrayPool: allocator, buffer, new Memory<byte>(buffer, 0, array.Length));
+            PortableExceptions.ThrowIf<InvalidDataException>(embeddingDestinationType != embeddingSourceType);
+            return new VectorValue(disposable, mem, usedBytes);
         }
         
         switch (embeddingDestinationType)
         {
-            case VectorEmbeddingType.Binary:
+            case VectorEmbeddingType.Single:
             {
-                ReadOnlySpan<float> input;
-                if (array is float[] af)
-                    input = af;
-                else
-                    input = MemoryMarshal.Cast<T, float>(array);
-                
-                var binaryEmbedding = VectorQuantizer.ToInt1(input);
-
-                return new VectorValue(arrayPool: null, binaryEmbedding, binaryEmbedding);
+                return new VectorValue(disposable, mem, usedBytes);
             }
             case VectorEmbeddingType.Int8:
             {
-                ReadOnlySpan<float> input;
-                if (array is float[] af)
-                    input = af;
-                else
-                    input = MemoryMarshal.Cast<T, float>(array);
-                
-                var int8Embedding = VectorQuantizer.ToInt8(input);
-                
-                return new VectorValue(arrayPool: null, (byte[])(object)int8Embedding, (byte[])(object)int8Embedding);
+                bool result = VectorQuantizer.TryToInt8(mem.ToSpan<float>().Slice(0, usedBytes), mem.ToSpan<sbyte>(), out usedBytes);
+                PortableExceptions.ThrowIf<InvalidDataException>(result, $"Error during quantization of the array.");
+                return new VectorValue(disposable, mem, usedBytes);
+            }
+            case VectorEmbeddingType.Binary:
+            {
+                bool result = VectorQuantizer.TryToInt1(mem.ToSpan<float>().Slice(0, usedBytes), mem.ToSpan<byte>(), out usedBytes);
+                PortableExceptions.ThrowIf<InvalidDataException>(result, $"Error during quantization of the array.");
+                return new VectorValue(disposable, mem, usedBytes);
             }
             default:
-            {
-                if (typeof(T) == typeof(byte))
-                {
-                    return new VectorValue(arrayPool: null, (byte[])(object)array, (byte[])(object)array);
-                }
-                
-                var embeddings = (float[])(object)array;
-                var currentAllocator = Allocator ??= ArrayPool<byte>.Create();
-                int bytesRequires = embeddings.Length * sizeof(float); //todo store norm
-                byte[] buffer = currentAllocator.Rent(bytesRequires);
-                MemoryMarshal.Cast<float, byte>(embeddings).CopyTo(buffer);
-                return new VectorValue(currentAllocator, buffer, new Memory<byte>(buffer, 0, bytesRequires));
-            }
+                throw new ArgumentOutOfRangeException(nameof(embeddingDestinationType), embeddingDestinationType, null);
         }
+    }
+
+    private static void PerformQuantization(in VectorOptions options, ReadOnlySpan<byte> source)
+    {
+        
     }
     
     private static VectorValue CreateSmartComponentsLocalEmbedding<TEmbedding>(in string text, in int dimensions)
