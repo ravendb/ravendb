@@ -26,10 +26,6 @@ export interface EditConnectionStringsProps {
     initialConnection?: Connection;
 }
 
-interface ConnectionStringOption extends SelectOptionWithIcon {
-    licenseRequired: LicenseBadgeText;
-}
-
 export default function EditConnectionStrings(props: EditConnectionStringsProps) {
     const { initialConnection } = props;
 
@@ -84,7 +80,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                     <InputGroup className="gap-1 flex-wrap flex-column">
                         <Select
                             options={availableConnectionStringsOptions}
-                            value={connectionStringsOptions.find((x) => x.value === connectionStringType)}
+                            value={availableConnectionStringsOptions.find((x) => x.value === connectionStringType)}
                             onChange={(x: SelectOptionWithIcon<StudioEtlType>) => setConnectionStringType(x.value)}
                             placeholder="Select a connection string type"
                             isSearchable={false}
@@ -132,14 +128,29 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
     );
 }
 
-const connectionStringsOptions: SelectOptionWithIcon<StudioEtlType>[] = [
-    { value: "Raven", label: "RavenDB", icon: "raven" },
-    { value: "Sql", label: "SQL", icon: "table" },
-    { value: "Olap", label: "OLAP", icon: "olap" },
-    { value: "ElasticSearch", label: "ElasticSearch", icon: "elasticsearch" },
-    { value: "Kafka", label: "Kafka", icon: "kafka" },
-    { value: "RabbitMQ", label: "RabbitMQ", icon: "rabbitmq" },
-];
+function getEditConnectionStringComponent(type: StudioEtlType): (props: EditConnectionStringFormProps) => JSX.Element {
+    switch (type) {
+        case "Raven":
+            return RavenConnectionString;
+        case "Sql":
+            return SqlConnectionString;
+        case "Olap":
+            return OlapConnectionString;
+        case "ElasticSearch":
+            return ElasticSearchConnectionString;
+        case "Kafka":
+            return KafkaConnectionString;
+        case "RabbitMQ":
+            return RabbitMqConnectionString;
+        default:
+            return null;
+    }
+}
+
+interface ConnectionStringOption extends SelectOptionWithIcon<StudioEtlType> {
+    isDisabled: boolean;
+    licenseRequired: LicenseBadgeText;
+}
 
 function getAvailableConnectionStringsOptions(features: ConnectionStringsLicenseFeatures): ConnectionStringOption[] {
     return [
@@ -188,30 +199,11 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
     ];
 }
 
-function getEditConnectionStringComponent(type: StudioEtlType): (props: EditConnectionStringFormProps) => JSX.Element {
-    switch (type) {
-        case "Raven":
-            return RavenConnectionString;
-        case "Sql":
-            return SqlConnectionString;
-        case "Olap":
-            return OlapConnectionString;
-        case "ElasticSearch":
-            return ElasticSearchConnectionString;
-        case "Kafka":
-            return KafkaConnectionString;
-        case "RabbitMQ":
-            return RabbitMqConnectionString;
-        default:
-            return null;
-    }
-}
-
-export function OptionWithIconAndBadge(props: OptionProps<ConnectionStringOption>) {
+function OptionWithIconAndBadge(props: OptionProps<ConnectionStringOption>) {
     const { data, isDisabled } = props;
 
     return (
-        <div style={{ cursor: "pointer" }}>
+        <div className="cursor-pointer">
             <components.Option {...props}>
                 {data.icon && <Icon icon={data.icon} color={data.iconColor} />}
                 <span>{data.label}</span>
