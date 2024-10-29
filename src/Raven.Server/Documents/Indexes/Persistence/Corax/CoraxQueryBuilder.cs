@@ -656,6 +656,11 @@ public static class CoraxQueryBuilder
             var embeddings = GenerateEmbeddings.FromArray(vectorOptions, Convert.FromBase64String(s));
             transformedEmbedding = embeddings.EmbeddingAsBytes;
         }
+        else if (value is StringSegment stringSegment)
+        {
+            var embeddings = GenerateEmbeddings.FromArray(vectorOptions, Convert.FromBase64String(stringSegment.ToString()));
+            transformedEmbedding = embeddings.EmbeddingAsBytes;
+        }
         else
         {
             var underlyingEnumerable = (BlittableJsonReaderArray)value;
