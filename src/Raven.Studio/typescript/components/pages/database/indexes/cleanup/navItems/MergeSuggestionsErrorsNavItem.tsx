@@ -28,9 +28,9 @@ export default function MergeSuggestionsErrorsNavItem({ carousel, errors }: Merg
                     {hasIndexCleanup ? errors.data.length : "?"}
                 </Badge>
                 <h4 className="text-center">
-                    Merge Suggestions
+                    Merge suggestions
                     <br />
-                    Errors
+                    errors
                 </h4>
             </Card>
         </NavItem>
