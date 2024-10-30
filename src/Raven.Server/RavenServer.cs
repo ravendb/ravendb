@@ -2914,17 +2914,17 @@ namespace Raven.Server
 
         public enum AuthenticationStatus
         {
-            None,
-            NoCertificateProvided,
-            UnfamiliarCertificate,
-            UnfamiliarIssuer,
-            Allowed,
-            Operator,
-            ClusterAdmin,
-            Expired,
-            NotYetValid,
-            TwoFactorAuthNotProvided,
-            TwoFactorAuthFromInvalidLimit
+            None = 0,
+            NoCertificateProvided = 1,
+            UnfamiliarCertificate = 2,
+            UnfamiliarIssuer = 3,
+            Allowed = 4,
+            Operator = 5,
+            ClusterAdmin = 6,
+            Expired = 7,
+            NotYetValid = 8,
+            TwoFactorAuthNotProvided = 9,
+            TwoFactorAuthFromInvalidLimit = 10
         }
 
         internal TestingStuff ForTestingPurposesOnly()

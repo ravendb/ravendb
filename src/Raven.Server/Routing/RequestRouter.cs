@@ -470,14 +470,18 @@ namespace Raven.Server.Routing
             {
                 await DrainRequestAsync(ctx, context);
 
+                var resourceType = string.IsNullOrWhiteSpace(database)
+                    ? ResourceType.Server
+                    : ResourceType.Database;
+
                 if (RavenServerStartup.IsHtmlAcceptable(context))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.Redirect;
-                    context.Response.Headers["Location"] = $"/auth-error.html?ae={(int?)feature?.Status}&ao={(int)authorizationStatus}";
+                    context.Response.Headers["Location"] = $"/auth-error.html?ae={(int?)feature?.Status}&ao={(int)authorizationStatus}&rt={resourceType}";
                     return;
                 }
 
-                var message = GetFailedAuthorizationMessage(context, database, feature?.Certificate, feature?.Status ?? AuthenticationStatus.None, authorizationStatus, out var statusCode);
+                var message = GetFailedAuthorizationMessage(context, resourceType, database, feature?.Certificate, feature?.Status ?? AuthenticationStatus.None, authorizationStatus, out var statusCode);
 
                 context.Response.StatusCode = (int)statusCode;
 
@@ -489,7 +493,7 @@ namespace Raven.Server.Routing
             }
         }
 
-        public static string GetFailedAuthorizationMessage(HttpContext context, string database, X509Certificate2 certificate, AuthenticationStatus authenticationStatus, AuthorizationStatus authorizationStatus, out HttpStatusCode statusCode)
+        public static string GetFailedAuthorizationMessage(HttpContext context, ResourceType resourceType, string database, X509Certificate2 certificate, AuthenticationStatus authenticationStatus, AuthorizationStatus authorizationStatus, out HttpStatusCode statusCode)
         {
             string message;
             statusCode = HttpStatusCode.Forbidden;
@@ -519,11 +523,11 @@ namespace Raven.Server.Routing
                 }
                 else if (authenticationStatus == AuthenticationStatus.Allowed)
                 {
-                    message = $"Could not authorize access to {(database ?? "the server")} using provided client certificate '{name}'.";
+                    message = $"Could not authorize access to {GetResourceName()} using provided client certificate '{name}'.";
                 }
                 else if (authenticationStatus == AuthenticationStatus.Operator)
                 {
-                    message = $"Insufficient security clearance to access {(database ?? "the server")} using provided client certificate '{name}'.";
+                    message = $"Insufficient security clearance to access {GetResourceName()} using provided client certificate '{name}'.";
                 }
                 else if (authenticationStatus == AuthenticationStatus.Expired)
                 {
@@ -560,6 +564,15 @@ namespace Raven.Server.Routing
             }
 
             return message;
+
+            string GetResourceName()
+            {
+                return resourceType switch
+                {
+                    ResourceType.Database => string.IsNullOrWhiteSpace(database) ? "database" : $"database '{database}'",
+                    _ => "the server"
+                };
+            }
         }
 
         private bool ShouldRetryToAuthenticateConnection(AuthenticateConnection authenticateConnection) =>

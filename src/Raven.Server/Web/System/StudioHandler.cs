@@ -23,6 +23,7 @@ using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Server.Commercial;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Sparrow.Collections;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -179,12 +180,16 @@ namespace Raven.Server.Web.System
 
             var aeAsString = GetStringQueryString("ae", required: false);
             var aoAsString = GetStringQueryString("ao", required: false);
+            var rtAsString = GetStringQueryString("rt", required: false);
 
-            Enum.TryParse<RavenServer.AuthenticationStatus>(aeAsString, ignoreCase: true, out var authenticationStatus);
+            if (Enum.TryParse<RavenServer.AuthenticationStatus>(aeAsString, ignoreCase: true, out var authenticationStatus) == false)
+                authenticationStatus = RavenServer.AuthenticationStatus.None;
             if (Enum.TryParse<AuthorizationStatus>(aoAsString, ignoreCase: true, out var authorizationStatus) == false)
                 authorizationStatus = AuthorizationStatus.UnauthenticatedClients;
+            if (Enum.TryParse<ResourceType>(aeAsString, ignoreCase: true, out var resourceType) == false)
+                resourceType = ResourceType.Server;
 
-            var message = RequestRouter.GetFailedAuthorizationMessage(HttpContext, database: null, feature?.Certificate, authenticationStatus, authorizationStatus, out _);
+            var message = RequestRouter.GetFailedAuthorizationMessage(HttpContext, resourceType, database: null, feature?.Certificate, authenticationStatus, authorizationStatus, out _);
 
             HttpContext.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
             SetupSecurityHeaders();

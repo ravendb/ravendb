@@ -81,11 +81,11 @@ namespace Raven.Server.Routing
 
     public enum AuthorizationStatus
     {
-        ClusterAdmin,
-        Operator,
-        DatabaseAdmin,
-        ValidUser,
-        UnauthenticatedClients,
-        RestrictedAccess
+        ClusterAdmin = 0,
+        Operator = 1,
+        DatabaseAdmin = 2,
+        ValidUser = 3,
+        UnauthenticatedClients = 4,
+        RestrictedAccess = 5
     }
 }
