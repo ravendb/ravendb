@@ -29,5 +29,12 @@ namespace Raven.Server.Web.Studio
             using (var processor = new StudioCollectionsHandlerProcessorForPreviewRevisions(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenAction("/databases/*/studio/revisions/ids", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetRevisionsIdsByPrefix()
+        {
+            using (var processor = new StudioCollectionsHandlerProcessorForRevisionsIds(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

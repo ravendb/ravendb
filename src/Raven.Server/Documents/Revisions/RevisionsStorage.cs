@@ -853,8 +853,8 @@ namespace Raven.Server.Documents.Revisions
 
         private bool RevisionIsLast(DocumentsOperationContext context, Table table, Slice lowerIdPrefix, long etag)
         {
-            var loweId = new Slice(context.Allocator.Slice(lowerIdPrefix.Content, 0, lowerIdPrefix.Size - 1)); // cut the prefix seperator from the end of the slice
-            using (GetKeyWithEtag(context, loweId, etag, out var compoundPrefix))
+            var lowerId = new Slice(context.Allocator.Slice(lowerIdPrefix.Content, 0, lowerIdPrefix.Size - 1)); // cut the prefix seperator from the end of the slice
+            using (GetKeyWithEtag(context, lowerId, etag, out var compoundPrefix))
             {
                 foreach (var read in table.SeekForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], start: compoundPrefix, prefix: lowerIdPrefix, skip: 1))
                 {
@@ -1265,6 +1265,55 @@ namespace Raven.Server.Documents.Revisions
             return GetRevisionsInReverseEtagOrderInternal(context, table, index: RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false,
                 shouldSkip: revision => revision.Flags.Contain(DocumentFlags.DeleteRevision),
                 skip, take);
+        }
+
+        public IEnumerable<string> GetRevisionsIdsByPrefix(DocumentsOperationContext context, string prefix, int pageSize)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, prefix, out var lowerPrefix))
+            {
+                var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+
+                bool first = true;
+                string lastId = string.Empty;
+
+                while (pageSize > 0)
+                {
+                    if (first)
+                    {
+                        // var tempSlice = new Slice(context.Allocator.Slice(lowerPrefix.Content, 0, lowerPrefix.Size - 1)); // cut the prefix seperator from the end of the slice
+                        if (GetNextRevisionsId(context, table, start: lowerPrefix, lowerPrefix, out lastId) == false)
+                            yield break;
+
+                        first = false;
+                    }
+                    else
+                    {
+                        using (DocumentIdWorker.GetSliceFromId(context, lastId, out var lowerLastId))
+                        using (GetKeyWithEtag(context, lowerLastId, long.MaxValue, out var compoundPrefix))
+                        {
+                            if (GetNextRevisionsId(context, table, start: compoundPrefix, lowerPrefix, out lastId) == false)
+                                yield break;
+                        }
+                    }
+
+                    yield return lastId;
+                    pageSize--;
+                }
+            }
+        }
+
+        private bool GetNextRevisionsId(DocumentsOperationContext context, Table table, Slice start, Slice prefix, out string id)
+        {
+            id = string.Empty;
+
+            foreach (var item in table.SeekForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], start, prefix, skip: 0))
+            {
+                var revision = TableValueToRevision(context, ref item.Result.Reader, DocumentFields.Id);
+                id = revision.Id;
+                return true;
+            }
+
+            return false;
         }
 
         private IEnumerable<Document> GetAllRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,

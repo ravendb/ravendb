@@ -215,21 +215,42 @@ namespace Raven.Server.Documents.Sharding
             {
                 public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
                 {
-                    var xLastModified = GetLatModified(x);
-                    var yLastModified = GetLatModified(y);
+                    var xLastModified = GetLastModified(x);
+                    var yLastModified = GetLastModified(y);
 
                     return yLastModified.CompareTo(xLastModified);
                 }
 
-                private DateTime GetLatModified(ShardStreamItem<BlittableJsonReaderObject> x)
+                private DateTime GetLastModified(ShardStreamItem<BlittableJsonReaderObject> x)
                 {
                     if (x.Item.TryGet(nameof(Document.LastModified), out DateTime lastModified) == false)
-                        throw new InvalidOperationException($"Revision does not contain 'LastModified' field.");
+                        throw new InvalidOperationException("Revision does not contain 'LastModified' field.");
 
                     return lastModified;
                 }
 
                 public static RevisionLastModifiedComparer Instance = new();
+            }
+
+            public sealed class RevisionIdComparer : Comparer<ShardStreamItem<BlittableJsonReaderObject>>
+            {
+                public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
+                {
+                    var xLastModified = GetId(x);
+                    var yLastModified = GetId(y);
+
+                    return xLastModified.CompareTo(yLastModified);
+                }
+
+                private string GetId(ShardStreamItem<BlittableJsonReaderObject> x)
+                {
+                    if (x.Item.TryGet(nameof(Document.Id), out string id) == false)
+                        throw new InvalidOperationException("Revision does not contain 'Id' field.");
+
+                    return id;
+                }
+
+                public static RevisionIdComparer Instance = new();
             }
 
             public IEnumerable<BlittableJsonReaderObject> PagedShardedItemDocumentsByLastModified<TInput>(

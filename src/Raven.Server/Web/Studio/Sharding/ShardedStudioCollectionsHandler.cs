@@ -29,5 +29,12 @@ namespace Raven.Server.Web.Studio.Sharding
             using (var processor = new ShardedStudioCollectionsHandlerProcessorForPreviewRevisions(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/studio/revisions/ids", "GET")]
+        public async Task GetRevisionsIdsByPrefix()
+        {
+            using (var processor = new ShardedStudioCollectionsHandlerProcessorForRevisionsIds(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
