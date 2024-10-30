@@ -17,6 +17,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -59,10 +60,10 @@ public class RavenDB_14963 : RavenTestBase
             using (ctx.OpenReadTransaction())
             {
                 var usersLastCv = db.DocumentsStorage.RevisionsStorage.GetLastRevisionChangeVectorForCollection(ctx, "Users");
-                var docsLastCv = db.DocumentsStorage.RevisionsStorage.GetLastRevisionChangeVectorForCollection(ctx, "Docs");
+                var ordersLastCv = db.DocumentsStorage.RevisionsStorage.GetLastRevisionChangeVectorForCollection(ctx, "Orders");
                 var lastCv = db.DocumentsStorage.RevisionsStorage.GetLastRevisionChangeVector(ctx);
 
-                Assert.Equal(lastCv, docsLastCv);
+                Assert.Equal(lastCv, ordersLastCv);
 
                 var lastEtag = Convert.ToInt64(lastCv.Split(":")[1].Split("-")[0]);
                 var lastUsersEtag = Convert.ToInt64(usersLastCv.Split(":")[1].Split("-")[0]);
@@ -72,23 +73,41 @@ public class RavenDB_14963 : RavenTestBase
             }
         }
 
-        await AssertResultsAsync(store, list, totalResults: 8, start: 0, pageSize: 3);
-        await AssertResultsAsync(store, list, totalResults: 8, start: 1, pageSize: 3);
-        await AssertResultsAsync(store, list, totalResults: 8, start: 2, pageSize: 3);
-        await AssertResultsAsync(store, list, totalResults: 8, start: 0, pageSize: 8);
+        // WaitForUserToContinueTheTest(store, false);
 
-        await AssertResultsAsync(store, list, totalResults: 0, start: 0, pageSize: 8, "Companies");
+        await AssertResultsAsync(store, list, expectedTotalResults: 12, start: 0, pageSize: 3);
+        await AssertResultsAsync(store, list, expectedTotalResults: 12, start: 1, pageSize: 3);
+        await AssertResultsAsync(store, list, expectedTotalResults: 12, start: 2, pageSize: 3);
+        await AssertResultsAsync(store, list, expectedTotalResults: 12, start: 0, pageSize: 8);
+        await AssertResultsAsync(store, list, expectedTotalResults: 2, start: 0, pageSize: 8, type: RevisionsType.Deleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 2, start: 0, pageSize: 1, type: RevisionsType.Deleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 10, start: 0, pageSize: 8, type: RevisionsType.NotDeleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 10, start: 0, pageSize: 1, type: RevisionsType.NotDeleted);
 
-        await AssertResultsAsync(store, list, totalResults: 4, start: 0, pageSize: 2, "Users");
-        await AssertResultsAsync(store, list, totalResults: 4, start: 1, pageSize: 2, "Users");
-        await AssertResultsAsync(store, list, totalResults: 4, start: 2, pageSize: 2, "Users");
-        await AssertResultsAsync(store, list, totalResults: 4, start: 3, pageSize: 2, "Users");
+        await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 8, "Companies");
+        await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 8, "Companies", type: RevisionsType.Deleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 1, "Companies", type: RevisionsType.Deleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 8, "Companies", type: RevisionsType.NotDeleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 1, "Companies", type: RevisionsType.NotDeleted);
 
-        await AssertResultsAsync(store, list, totalResults: 4, start: 0, pageSize: 2, "Docs");
-        await AssertResultsAsync(store, list, totalResults: 4, start: 1, pageSize: 2, "Docs");
-        await AssertResultsAsync(store, list, totalResults: 4, start: 2, pageSize: 2, "Docs");
-        await AssertResultsAsync(store, list, totalResults: 4, start: 3, pageSize: 2, "Docs");
-        await AssertResultsAsync(store, list, totalResults: 4, start: 3, pageSize: 0, "Docs");
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 2, "Users");
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 1, pageSize: 2, "Users");
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 2, pageSize: 2, "Users");
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 3, pageSize: 2, "Users");
+        await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 8, "Users", type: RevisionsType.Deleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 1, "Users", type: RevisionsType.Deleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 8, "Users", type: RevisionsType.NotDeleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 1, "Users", type: RevisionsType.NotDeleted);
+
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 2, "Docs");
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 1, pageSize: 2, "Docs");
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 2, pageSize: 2, "Docs");
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 3, pageSize: 2, "Docs");
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 3, pageSize: 0, "Docs");
+        await AssertResultsAsync(store, list, expectedTotalResults: 2, start: 0, pageSize: 8, "Users", type: RevisionsType.Deleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 1, start: 0, pageSize: 1, "Users", type: RevisionsType.Deleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 2, start: 0, pageSize: 8, "Users", type: RevisionsType.NotDeleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 1, start: 0, pageSize: 1, "Users", type: RevisionsType.NotDeleted);
     }
 
 
@@ -133,22 +152,62 @@ public class RavenDB_14963 : RavenTestBase
             }
         }
 
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Order { Name = "0" }, "Order/1");
+            list.Add(("Order/1", "0"));
+            await session.SaveChangesAsync();
+
+            session.Delete("Order/1");
+            list.Add(("Order/1", null));
+            await session.SaveChangesAsync();
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Order { Name = "0" }, "Order/2");
+            list.Add(("Order/2", "0"));
+            await session.SaveChangesAsync();
+
+            session.Delete("Order/2");
+            list.Add(("Order/2", null));
+            await session.SaveChangesAsync();
+        }
+
         list.Reverse();
 
         return list;
     }
 
     private async Task AssertResultsAsync(DocumentStore store, List<(string Id, string Name)> list,
-        int totalResults, int start, int pageSize, string collection = null)
+        int expectedTotalResults, int start, int pageSize, string collection = null, RevisionsType type = RevisionsType.All)
     {
-        var results = await store.Maintenance.SendAsync(new RevisionsCollectionPreviewOperation(collection, start, pageSize));
-        Assert.Equal(totalResults, results.TotalResults);
+        var results = await store.Maintenance.SendAsync(new RevisionsCollectionPreviewOperation(collection, type, start, pageSize));
+        if (collection == null || type == RevisionsType.All)
+            Assert.Equal(expectedTotalResults, results.TotalResults); // There is no "TotalResults" Property on the response json for collection amd filter
+        
         Assert.True(pageSize >= results.Results.Count);
 
         if (collection != null)
             list = list.Where(info => info.Id.StartsWith(collection)).ToList();
-        
-        list = list.Skip(start).Take(pageSize).ToList();
+
+        IEnumerable<(string Id, string Name)> filter;
+        switch (type)
+        {
+            case RevisionsType.Deleted:
+                filter = list.Where(x => x.Name == null);
+                break;
+            case RevisionsType.NotDeleted:
+                filter = list.Where(x => x.Name != null);
+                break;
+            case RevisionsType.All:
+                filter = list;
+                break;
+            default:
+                throw new InvalidOperationException($"type {type} is Invalid");
+        }
+
+        list = filter.Skip(start).Take(pageSize).ToList();
         Assert.Equal(results.Results.Count, list.Count);
 
         for (int i = 0; i < list.Count; i++)
@@ -157,6 +216,11 @@ public class RavenDB_14963 : RavenTestBase
             var info = list[i];
 
             Assert.Equal(info.Id, result.Id);
+
+            if (info.Name == null)
+            {
+                continue; //Deleted Revision
+            }
 
             string name = null;
 
@@ -292,7 +356,6 @@ public class RavenDB_14963 : RavenTestBase
     }
 
 
-
     private class User
     {
         public string Id { get; set; }
@@ -311,28 +374,30 @@ public class RavenDB_14963 : RavenTestBase
         public string Name { get; set; }
     }
 
+    private class Order
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
+
     private class RevisionsCollectionPreviewOperation : IMaintenanceOperation<RevisionsPreviewResults>
     {
         private readonly string _collection;
         private readonly int _start;
         private readonly int _pageSize;
+        private readonly RevisionsType _type;
 
-        public RevisionsCollectionPreviewOperation(int start, int pageSize)
-        {
-            _start = start;
-            _pageSize = pageSize;
-        }
-
-        public RevisionsCollectionPreviewOperation(string collection, int start, int pageSize)
+        public RevisionsCollectionPreviewOperation(string collection, RevisionsType type, int start, int pageSize)
         {
             _collection = collection;
             _start = start;
             _pageSize = pageSize;
+            _type = type;
         }
 
         public RavenCommand<RevisionsPreviewResults> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new RevisionsPreviewCommand(_collection, _start, _pageSize);
+            return new RevisionsPreviewCommand(_collection, _type, _start, _pageSize);
         }
 
         private sealed class RevisionsPreviewCommand : RavenCommand<RevisionsPreviewResults>
@@ -340,20 +405,22 @@ public class RavenDB_14963 : RavenTestBase
             private readonly string _collection;
             private readonly int _start;
             private readonly int _pageSize;
+            private readonly RevisionsType _type;
 
 
-            public RevisionsPreviewCommand(string collection, int start, int pageSize)
+            public RevisionsPreviewCommand(string collection, RevisionsType type, int start, int pageSize)
             {
                 _collection = collection;
                 _start = start;
                 _pageSize = pageSize;
+                _type = type;
             }
 
             public override bool IsReadRequest => true;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/studio/revisions/preview?{Web.RequestHandler.StartParameter}={_start}&{Web.RequestHandler.PageSizeParameter}={_pageSize}";
+                url = $"{node.Url}/databases/{node.Database}/studio/revisions/preview?{Web.RequestHandler.StartParameter}={_start}&{Web.RequestHandler.PageSizeParameter}={_pageSize}&type={_type.ToString()}";
 
                 if (string.IsNullOrEmpty(_collection) == false)
                     url += $"&collection={Uri.EscapeDataString(_collection)}";
@@ -401,6 +468,13 @@ public class RavenDB_14963 : RavenTestBase
         public List<RevisionInfo> Results { get; set; }
         public string ContinuationToken { get; set; }
 
+    }
+
+    public enum RevisionsType
+    {
+        All,
+        NotDeleted,
+        Deleted
     }
 }
 
