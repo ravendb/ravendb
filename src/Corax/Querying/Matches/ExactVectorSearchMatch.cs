@@ -30,7 +30,7 @@ namespace Corax.Querying.Matches
         private readonly IndexSearcher _searcher;
         private readonly Transaction _tx;
         private readonly long _fieldRootPage;
-        private readonly VectorValue _vectorToSearch;
+        private VectorValue _vectorToSearch;
         private readonly float _minimumMatch;
         private readonly SimilarityMethod _similarityMethod;
 

@@ -120,7 +120,7 @@ select new
         public TextVectorIndex(VectorEmbeddingType vectorEmbeddingType)
         {
             Map = docs => from doc in docs
-                select new { Id = doc.Id, Vector = CreateVector(doc.Text) };
+                select new { Id = doc.Id, Vector = CreateVectorSearch(doc.Text) };
 
 
             VectorIndexes.Add(x => x.Vector,

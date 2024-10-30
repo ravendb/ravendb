@@ -54,17 +54,16 @@ public static class GenerateEmbeddings
 
         return embeddings;
     }
-
+    
     public static VectorValue FromArray(in VectorOptions options, ByteStringContext allocator, string base64)
     {
-        var bytesRequired = (base64.Length * 3) / 4; //this is approximation
+        var bytesRequired = (int)Math.Ceiling((base64.Length * 3) / 4.0); //this is approximation
         var memScope = allocator.Allocate(bytesRequired, out ByteString mem);
         var result = Convert.TryFromBase64String(base64, mem.ToSpan(), out var bytesWritten);
         PortableExceptions.ThrowIf<InvalidDataException>(result == false, $"Excepted array encoded with base64, however got: '{base64}'");
         return FromArray(options, memScope, mem, bytesWritten);
     }
 
-    
     public static VectorValue FromArray(in VectorOptions options, ByteStringContext<ByteStringMemoryCache>.InternalScope disposable, ByteString mem, int usedBytes)
     {
         var embeddingSourceType = options.SourceEmbeddingType;
@@ -83,24 +82,19 @@ public static class GenerateEmbeddings
             }
             case VectorEmbeddingType.Int8:
             {
-                bool result = VectorQuantizer.TryToInt8(mem.ToSpan<float>().Slice(0, usedBytes), mem.ToSpan<sbyte>(), out usedBytes);
-                PortableExceptions.ThrowIf<InvalidDataException>(result, $"Error during quantization of the array.");
+                bool result = VectorQuantizer.TryToInt8(mem.ToSpan<float>().Slice(0, usedBytes / sizeof(float)), mem.ToSpan<sbyte>(), out usedBytes);
+                PortableExceptions.ThrowIfNot<InvalidDataException>(result, $"Error during quantization of the array.");
                 return new VectorValue(disposable, mem, usedBytes);
             }
             case VectorEmbeddingType.Binary:
             {
-                bool result = VectorQuantizer.TryToInt1(mem.ToSpan<float>().Slice(0, usedBytes), mem.ToSpan<byte>(), out usedBytes);
-                PortableExceptions.ThrowIf<InvalidDataException>(result, $"Error during quantization of the array.");
+                bool result = VectorQuantizer.TryToInt1(mem.ToSpan<float>().Slice(0, usedBytes / sizeof(float)), mem.ToSpan<byte>(), out usedBytes);
+                PortableExceptions.ThrowIfNot<InvalidDataException>(result, $"Error during quantization of the array.");
                 return new VectorValue(disposable, mem, usedBytes);
             }
             default:
                 throw new ArgumentOutOfRangeException(nameof(embeddingDestinationType), embeddingDestinationType, null);
         }
-    }
-
-    private static void PerformQuantization(in VectorOptions options, ReadOnlySpan<byte> source)
-    {
-        
     }
     
     private static VectorValue CreateSmartComponentsLocalEmbedding<TEmbedding>(in string text, in int dimensions)

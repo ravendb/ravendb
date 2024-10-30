@@ -35,7 +35,7 @@ public struct VectorValue : IDisposable
         _bufferPool = arrayPool;
         _managedBuffer = buffer;
         _managedMemory = embedding;
-        _length = buffer?.Length ?? embedding.Length;
+        _length = embedding.IsEmpty ? buffer.Length : embedding.Length;
     }
 
     public VectorValue(ByteStringContext<ByteStringMemoryCache>.InternalScope nativeDisposal, ByteString nativeMemory, int usedBytes)

@@ -391,25 +391,12 @@ namespace Raven.Server.Documents.Indexes.Static
             if (value is JsArray js)
                 return HandleJsArray(js);
 
-            throw new InvalidOperationException($"Unknown type.");
+            throw new InvalidOperationException($"Unknown type. Value type: {value.GetType().FullName}");
 
-            //TODO: this is invalid
             object Base64ToVector(object base64)
             {
-                throw new NotImplementedException("BASE64");
-                if (base64 is LazyStringValue lsv)
-                {
-                    var floatArr = MemoryMarshal.Cast<byte, float>(lsv.AsSpan());
-                    var memScope = allocator.Allocate(floatArr.Length * sizeof(float), out ByteString mem);
-                    unsafe
-                    {
-                        lsv.CopyTo(mem.Ptr);
-                    }
-                    
-                    return GenerateEmbeddings.FromArray(vectorOptions, memScope, mem, floatArr.Length * sizeof(float));
-                }
-
-                throw new Exception();
+                var str = base64.ToString();
+                return GenerateEmbeddings.FromArray(vectorOptions, allocator, str);
             }
             object HandleBlittableJsonReaderArray(BlittableJsonReaderArray data)
             {

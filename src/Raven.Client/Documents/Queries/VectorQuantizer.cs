@@ -12,7 +12,7 @@ public class VectorQuantizer
     public static unsafe bool TryToInt8(ReadOnlySpan<float> rawEmbedding, ReadOnlySpan<sbyte> destination, out int usedBytes)
     {
         usedBytes = 0;
-        if (destination.Length < rawEmbedding.Length + sizeof(float))
+        if (destination.Length < rawEmbedding.Length)
             return false;
         ref var sourceRef = ref MemoryMarshal.GetReference(rawEmbedding);
         var maxComponent = float.MinValue;
@@ -20,27 +20,20 @@ public class VectorQuantizer
             maxComponent = Math.Max(maxComponent, Math.Abs(Unsafe.Add(ref sourceRef, i)));
         
         var scaleFactor = 127f / maxComponent;
-        long sumOfSquaredMagnitudes = 0;
-        
         ref var destinationRef = ref MemoryMarshal.GetReference(destination);
         for (var i = 0; i < rawEmbedding.Length; i++)
         {
             var scaledValue = Unsafe.Add(ref sourceRef, i) * scaleFactor;
-            
-            sumOfSquaredMagnitudes += (long)(scaledValue * scaledValue);
-            
             Unsafe.Add(ref destinationRef, i) = Convert.ToSByte(scaledValue);
         }
         
-        Unsafe.AsRef<float>(Unsafe.Add(ref destinationRef, rawEmbedding.Length)) = (float)Math.Sqrt(sumOfSquaredMagnitudes);
-        
-        usedBytes = rawEmbedding.Length + sizeof(float);
+        usedBytes = rawEmbedding.Length;
         return true;
     }
 
     public static sbyte[] ToInt8(float[] rawEmbedding)
     {
-        var mem = new sbyte[rawEmbedding.Length + sizeof(float)];
+        var mem = new sbyte[rawEmbedding.Length];
         TryToInt8(rawEmbedding, mem, out _);
         return mem;
     }
@@ -71,10 +64,15 @@ public class VectorQuantizer
         ref var lookupTableRef = ref MemoryMarshal.GetReference(_binaryQuantizerLookup);
         for (nuint j = 0; j < inputLength; j++)
         {
-            Unsafe.AddByteOffset(ref resultRef, j / dimensionsInOneByte) |= 
-                Unsafe.Add(ref embeddingRef, j) >= 0 
-                    ? Unsafe.AddByteOffset(ref lookupTableRef, j % dimensionsInOneByte) 
-                    : byte.MinValue;
+            var result = Unsafe.Add(ref embeddingRef, j) >= 0 
+                ? Unsafe.AddByteOffset(ref lookupTableRef, j % dimensionsInOneByte) 
+                : byte.MinValue;
+
+            // In case when source and destination is the same memory we've to clean it first
+            if (j % dimensionsInOneByte == 0)
+                Unsafe.AddByteOffset(ref resultRef, j / dimensionsInOneByte) = 0;
+
+            Unsafe.AddByteOffset(ref resultRef, j / dimensionsInOneByte) |= result;
         }
 
         usedBytes = (int)outputLength;
