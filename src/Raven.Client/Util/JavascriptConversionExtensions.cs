@@ -2600,20 +2600,13 @@ namespace Raven.Client.Util
                 if (member.Expression is not MemberExpression innerMember)
                     return false;
 
-                var p = GetParameter(innerMember)?.Name;
-                if (p != null && (p.StartsWith(TransparentIdentifier) || p == parameterName))
-                {
-                    // Handling the projection case where there is a chaining select to access the ID property, ensuring proper extraction of the inner member for projection.
-                    innerExpression = innerMember;
-                    return true;
-                }
-
                 innerExpression = innerMember;
 
                 if (originalQueryType != null && innerExpression?.Type.IsEquivalentTo(originalQueryType) == false && hasTypeInLoadType == false)
                     return false;
                 
-                return false;
+                var p = GetParameter(innerMember)?.Name;
+                return p != null && (p.StartsWith(TransparentIdentifier) || p == parameterName);
             }
         }
 

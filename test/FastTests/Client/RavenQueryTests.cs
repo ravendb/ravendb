@@ -39,15 +39,26 @@ namespace FastTests.Client
 
 
                     //Original case:
-                    var distributed2 =
+                    var distributed1 =
                         from a in session.Query<DistributedAll.Mapping, DistributedAll>().As<DistributedPurchase>()
                         let articleSort = Raven.Client.Documents.Queries.RavenQuery.Load<ArticleSort>(a.ArticleSortId)
                         select new { DistributedId = a.Id };
 
-                    var results = distributed2.ToList();
+                    var resultsString = distributed1.ToString();
 
-                    Assert.Equal("DistributedPurchases/1", results[0].DistributedId);
+                    Assert.Equal("from index 'DistributedAll' as a load a.ArticleSortId as articleSort select { DistributedId : a.Id }", resultsString);
 
+                    //Original case using RavenQuery.Id:
+                    var distributed2 =
+                        from a in session.Query<DistributedAll.Mapping, DistributedAll>().As<DistributedPurchase>()
+                        let articleSort = Raven.Client.Documents.Queries.RavenQuery.Load<ArticleSort>(a.ArticleSortId)
+                        select new { DistributedId = Raven.Client.Documents.Queries.RavenQuery.Id(a) };
+
+                    var results2 = distributed2.ToList();
+                    var resultsString2 = distributed2.ToString();
+
+                    Assert.Equal("from index 'DistributedAll' as a load a.ArticleSortId as articleSort select { DistributedId : id(a) }", resultsString2);
+                    Assert.Equal("DistributedPurchases/1", results2[0].DistributedId);
 
                     //Test 1:
                     var queryUnnamedClass = session.Query<Employees_ByFirstName.IndexEntry, Employees_ByFirstName>()
@@ -141,7 +152,7 @@ namespace FastTests.Client
                     // Test 5:
                     var query = session.Query<Employees_ByFirstName.IndexEntry, Employees_ByFirstName>().As<NewEmployee>()
                         .Select(e => new { Employee = e })
-                        .Select(employee => new EmployeeProjection() { EmployeeId = employee.Employee.Id });
+                        .Select(employee => new EmployeeProjection() { EmployeeId = Raven.Client.Documents.Queries.RavenQuery.Id(employee.Employee) });
 
                     var returnedEmployees5 = query.ToList();
                     var queryString = query.ToString();
