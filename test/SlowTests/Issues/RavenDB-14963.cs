@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
@@ -14,6 +15,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -168,8 +170,98 @@ public class RavenDB_14963 : RavenTestBase
         }
     }
 
+    [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Voron)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task GetRevisionsIdsByPrefixTests(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false } };
+        await RevisionsHelper.SetupRevisionsAsync(store, configuration: configuration);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new User { Name = "1" }, "Users/1");
+            await session.SaveChangesAsync();
+        }
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new User { Name = "11" }, "Users/1");
+            await session.SaveChangesAsync();
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new User { Name = "2" }, "Users/2");
+            await session.SaveChangesAsync();
+        }
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new User { Name = "22" }, "Users/2");
+            await session.SaveChangesAsync();
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Company { Name = "1" }, "Company/1");
+            await session.SaveChangesAsync();
+        }
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Company { Name = "11" }, "Company/1");
+            await session.SaveChangesAsync();
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Company { Name = "2" }, "Company/2");
+            await session.SaveChangesAsync();
+        }
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Company { Name = "22" }, "Company/2");
+            await session.SaveChangesAsync();
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Company { Name = "11" }, "Company/11");
+            await session.SaveChangesAsync();
+        }
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Company { Name = "1111" }, "Company/11");
+            await session.SaveChangesAsync();
+        }
+
+        WaitForUserToContinueTheTest(store, false);
+
+        var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            var ids = db.DocumentsStorage.RevisionsStorage.GetRevisionsIdsByPrefix(context, "Use", 1000).ToList();
+            Assert.Equal(2, ids.Count);
+            Assert.Contains("Users/1", ids);
+            Assert.Contains("Users/2", ids);
+
+            ids = db.DocumentsStorage.RevisionsStorage.GetRevisionsIdsByPrefix(context, "Company/1", 1000).ToList();
+            Assert.Equal(2, ids.Count);
+            Assert.Contains("Company/1", ids);
+            Assert.Contains("Company/11", ids);
+
+            ids = db.DocumentsStorage.RevisionsStorage.GetRevisionsIdsByPrefix(context, "Orders/", 1000).ToList();
+            Assert.Equal(0, ids.Count);
+        }
+    }
 
     private class User
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
+
+    private class Company
     {
         public string Id { get; set; }
         public string Name { get; set; }
