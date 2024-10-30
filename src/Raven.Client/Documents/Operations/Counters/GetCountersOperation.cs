@@ -16,6 +16,13 @@ namespace Raven.Client.Documents.Operations.Counters
         private readonly string[] _counters;
         private readonly bool _returnFullResults;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetCountersOperation"/> class with a specific document ID, 
+        /// an array of counter names, and a flag indicating whether to include counter values from each node in the result.
+        /// </summary>
+        /// <param name="docId">The ID of the document for which to retrieve counters.</param>
+        /// <param name="counters">An array of counter names to retrieve.</param>
+        /// <param name="returnFullResults">A value indicating whether the result should include counter values from each node.</param>
         public GetCountersOperation(string docId, string[] counters, bool returnFullResults = false)
         {
             _docId = docId;
@@ -23,6 +30,12 @@ namespace Raven.Client.Documents.Operations.Counters
             _returnFullResults = returnFullResults;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetCountersOperation"/> class with a specific document ID 
+        /// and a single counter name, along with a flag indicating whether to include counter values from each node in the result.
+        /// </summary>
+        /// <inheritdoc cref="GetCountersOperation(string, string[], bool)"/>
+        /// <param name="counter">The name of the counter to retrieve.</param>
         public GetCountersOperation(string docId, string counter, bool returnFullResults = false)
         {
             _docId = docId;
@@ -30,6 +43,12 @@ namespace Raven.Client.Documents.Operations.Counters
             _returnFullResults = returnFullResults;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetCountersOperation"/> class with a specific document ID 
+        /// and a flag indicating whether to include counter values from each node in the result.
+        /// This operation retrieves all counters associated with the given document.
+        /// </summary>
+        /// <inheritdoc cref="GetCountersOperation(string, string[], bool)"/>
         public GetCountersOperation(string docId, bool returnFullResults = false)
         {
             _docId = docId;

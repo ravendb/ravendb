@@ -18,6 +18,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.TimeSeries
 {
+    /// <summary>
+    /// Represents an individual entry in a time series, storing a timestamp, associated values, and metadata.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="TimeSeriesEntry"/> is used as a base type for time series data projections 
+    /// in operations such as <see cref="GetTimeSeriesOperation{TValues}"/>.
+    /// It contains a timestamp and associated values for a single entry within a time series.
+    /// </remarks>
     public class TimeSeriesEntry : ITimeSeriesQueryStreamEntry
     {
         public DateTime Timestamp { get; set; }

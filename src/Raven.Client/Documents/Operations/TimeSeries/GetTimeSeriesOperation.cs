@@ -14,10 +14,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public sealed class GetTimeSeriesOperation : GetTimeSeriesOperation<TimeSeriesEntry>
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetTimeSeriesOperation"/> class, 
+        /// retrieving multiple entries from a time series associated with a document within a specified date range.
+        /// </summary>
+        /// <inheritdoc select="param" />
         public GetTimeSeriesOperation(string docId, string timeseries, DateTime? @from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, bool returnFullResults = false) : base(docId, timeseries, @from, to, start, pageSize, returnFullResults)
         {
         }
     }
+
 
     public class GetTimeSeriesOperation<TValues> : IOperation<TimeSeriesRangeResult<TValues>> where TValues : TimeSeriesEntry
     {
@@ -27,6 +33,21 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private readonly Action<ITimeSeriesIncludeBuilder> _includes;
         private readonly bool _returnFullResults;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetTimeSeriesOperation{TValues}"/> class, 
+        /// retrieving multiple entries from a time series associated with a document within a specified date range.
+        /// </summary>
+        /// <typeparam name="TValues">
+        /// The type to which each time series entry should be projected. 
+        /// Must be a subtype of <see cref="TimeSeriesEntry"/>.
+        /// </typeparam>
+        /// <param name="docId">The ID of the document that holds the time series.</param>
+        /// <param name="timeseries">The name of the time series to retrieve.</param>
+        /// <param name="from">The start date of the range from which entries should be retrieved. If <c>null</c>, retrieval begins from the earliest entry.</param>
+        /// <param name="to">The end date of the range up to which entries should be retrieved. If <c>null</c>, retrieval continues to the latest entry.</param>
+        /// <param name="start">The start index for pagination of results.</param>
+        /// <param name="pageSize">The number of entries to retrieve. Defaults to <c>int.MaxValue</c> for retrieving all entries within the specified range.</param>
+        /// <param name="returnFullResults">Whether to include detailed information for each entry. If <c>false</c>, retrieves only basic information.</param>
         public GetTimeSeriesOperation(string docId, string timeseries, DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, bool returnFullResults = false) 
             : this(docId, timeseries, from, to, start, pageSize, includes: null, returnFullResults)
         { }

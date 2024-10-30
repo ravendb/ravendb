@@ -115,10 +115,36 @@ namespace Raven.Client.Documents.Session.Loaders
         TBuilder IncludeAllTimeSeries(TimeSeriesRangeType type, int count);
     }
 
+    /// <summary>
+    /// The server is instructed to include revisions of the specified documents when retrieving them.<br/>
+    /// Once loaded into the session, revisions can be accessed without additional server requests, ensuring efficient 
+    /// retrieval of document history.
+    /// </summary>
     public interface IRevisionIncludeBuilder<T, out TBuilder> 
     {
+        /// <summary>
+        /// Include a single revision by specifying the path to the document property that contains the revision's change vector.
+        /// Each time a document is modified, its change vector is updated. By storing the change vector in a dedicated 
+        /// property, you can easily include revisions when the document is loaded.
+        /// </summary>
+        /// <param name="path">An expression indicating the property path containing the revision change vector.</param>
         TBuilder IncludeRevisions(Expression<Func<T, string>> path);
+
+        /// <summary>
+        /// Include multiple revisions by specifying the path to the document property that contains an array of change vectors.
+        /// When modifications are made to the document, the updated change vectors can be stored, allowing you to easily
+        /// include multiple revisions when the document is loaded.
+        /// </summary>
+        /// <param name="path">An expression indicating the property path containing the revision change vectors.</param>
         TBuilder IncludeRevisions(Expression<Func<T, IEnumerable<string>>> path);
+
+        /// <summary>
+        /// Include a single revision by specifying its creation time. 
+        /// The specified time can be in local time or UTC; the server will convert it to UTC.
+        /// If an exact match for the creation time is found, that revision will be included. 
+        /// Otherwise, the first revision preceding the specified time will be returned.
+        /// </summary>
+        /// <param name="before">The creation time of the revision to include.</param>
         TBuilder IncludeRevisions(DateTime before);
 
     }
@@ -137,16 +163,46 @@ namespace Raven.Client.Documents.Session.Loaders
     {
     }
 
+    /// <summary>
+    /// The server is instructed to include Compare Exchange values when retrieving documents.<br/>
+    /// Compare Exchange items can be included both when loading entities and during query execution. 
+    /// The session automatically tracks the included Compare Exchange items, allowing their values 
+    /// to be accessed without making additional calls to the server.
+    /// </summary>
     public interface ICompareExchangeValueIncludeBuilder<T, out TBuilder>
     {
+        /// <summary>
+        /// Include a single Compare Exchange value by specifying its key.
+        /// The key should correspond to the Compare Exchange item you wish to include.
+        /// </summary>
+        /// <param name="path">The key of the Compare Exchange value to include.</param>
         TBuilder IncludeCompareExchangeValue(string path);
 
+        /// <summary>
+        /// Include a single Compare Exchange value by specifying a path to the key.
+        /// This allows for dynamic resolution of the Compare Exchange key based on 
+        /// the document's properties.
+        /// </summary>
+        /// <param name="path">An expression indicating the property path that resolves to the Compare Exchange key.</param>
         TBuilder IncludeCompareExchangeValue(Expression<Func<T, string>> path);
 
+        /// <summary>
+        /// Include multiple Compare Exchange values by specifying a path to a collection of keys.
+        /// This allows for the inclusion of multiple Compare Exchange items in a single call.
+        /// </summary>
+        /// <param name="path">An expression indicating the property path that resolves to an array of Compare Exchange keys.</param>
         TBuilder IncludeCompareExchangeValue(Expression<Func<T, IEnumerable<string>>> path);
         
     }
 
+    /// <summary>
+    /// The server is instructed to include various types of related items when retrieving documents.<br/>
+    /// The items are added to the session unit of work, and subsequent requests to load them are served directly from the session cache,
+    /// without requiring any additional queries to the server.
+    /// This interface combines functionalities for including documents, counters, time series, compare exchange values, and revisions.
+    /// </summary>
+    /// <typeparam name="T">The type of the document being built.</typeparam>
+    /// <typeparam name="TBuilder">The type of the builder being used.</typeparam>
     public interface IIncludeBuilder<T, out TBuilder> : IDocumentIncludeBuilder<T, TBuilder>, ICounterIncludeBuilder<T, TBuilder>, ITimeSeriesIncludeBuilder<T, TBuilder>, ICompareExchangeValueIncludeBuilder<T, TBuilder>, IRevisionIncludeBuilder<T, TBuilder>
     {
     }

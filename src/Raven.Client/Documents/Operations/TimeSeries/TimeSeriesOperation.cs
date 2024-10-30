@@ -8,6 +8,10 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
+    /// <summary>
+    /// Represents a batch operation for time series data, including appends, increments, and deletions, 
+    /// to be performed on a single document’s time series.
+    /// </summary>
     public sealed class TimeSeriesOperation
     {
         private SortedList<long, AppendOperation> _appends;
@@ -291,6 +295,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             };
         }
 
+        /// <summary>
+        /// Represents an append operation in a time series, allowing new data points to be added at specific timestamps.
+        /// </summary>
         public sealed class AppendOperation
         {
             public DateTime Timestamp;
@@ -338,6 +345,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             }
         }
 
+        /// <summary>
+        /// Represents a delete operation in a time series, allowing data points within a specific range to be removed.
+        /// </summary>
         public sealed class DeleteOperation
         {
             public DateTime? From, To;
@@ -364,6 +374,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             }
         }
 
+        /// <summary>
+        /// Represents an increment operation in a time series, allowing values at a specific timestamp to be incremented.
+        /// </summary>
         public sealed class IncrementOperation
         {
             public DateTime Timestamp;

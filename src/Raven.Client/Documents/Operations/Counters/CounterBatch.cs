@@ -7,6 +7,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Counters
 {
+    /// <summary>
+    /// Represents a batch of counter operations on multiple documents, supporting retrieval of counter values across nodes.
+    /// </summary>
     public sealed class CounterBatch
     {
         public bool ReplyWithAllNodesValues;
@@ -14,6 +17,9 @@ namespace Raven.Client.Documents.Operations.Counters
         public bool FromEtl;
     }
 
+    /// <summary>
+    /// Represents counter operations for a specific document, such as increment or set operations on named counters.
+    /// </summary>
     public sealed class DocumentCountersOperation
     {
         public List<CounterOperation> Operations;
@@ -82,6 +88,9 @@ namespace Raven.Client.Documents.Operations.Counters
         GetAll
     }
 
+    /// <summary>
+    /// Represents a single counter operation, which defines actions such as incrementing a counter value, deleting a counter or retrieving a counter value for a specific document and counter name.
+    /// </summary>
     public sealed class CounterOperation
     {
         public CounterOperationType Type;

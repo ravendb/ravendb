@@ -12,6 +12,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private readonly string _documentId;
         private readonly TimeSeriesOperation _operation;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TimeSeriesBatchOperation"/> class, 
+        /// performing batch operations on a time series, including appending or deleting entries.
+        /// </summary>
+        /// <param name="documentId">The ID of the document that holds the time series.</param>
+        /// <param name="operation">The batch of time series operations to be applied.</param>
         public TimeSeriesBatchOperation(string documentId, TimeSeriesOperation operation)
         {
             _documentId = documentId ?? throw new ArgumentNullException(nameof(documentId));

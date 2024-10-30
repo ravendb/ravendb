@@ -21,6 +21,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private readonly Action<ITimeSeriesIncludeBuilder> _includes;
         private readonly bool _returnFullResults;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GetMultipleTimeSeriesOperation"/> class, 
+        /// retrieving entries from multiple time series associated with a document across specified ranges.
+        /// </summary>
+        /// <param name="docId">The ID of the document for which time series entries are requested.</param>
+        /// <param name="ranges">
+        /// A collection of <see cref="TimeSeriesRange"/> objects, each specifying a time series name 
+        /// and a date range (<c>from</c> and <c>to</c>) to retrieve entries from.
+        /// </param>
+        /// <param name="start">The start index for pagination of results.</param>
+        /// <param name="pageSize">The number of entries to retrieve. Defaults to <c>int.MaxValue</c> for all entries.</param>
+        /// <param name="returnFullResults">Whether to include detailed information for each entry. If <c>false</c>, retrieves only basic information.</param>
         public GetMultipleTimeSeriesOperation(string docId, IEnumerable<TimeSeriesRange> ranges, int start = 0, int pageSize = int.MaxValue, bool returnFullResults = false)
             : this(docId, ranges, start, pageSize, includes: null, returnFullResults)
         {

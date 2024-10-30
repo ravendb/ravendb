@@ -12,6 +12,10 @@ namespace Raven.Client.Documents.Operations.Counters
     {
         private readonly CounterBatch _counterBatch;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CounterBatchOperation"/> class with the specified counter batch.
+        /// </summary>
+        /// <param name="counterBatch">The batch of counter operations to be processed.</param>
         public CounterBatchOperation(CounterBatch counterBatch)
         {
             _counterBatch = counterBatch;
