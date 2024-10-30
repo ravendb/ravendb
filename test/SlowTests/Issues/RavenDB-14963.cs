@@ -172,7 +172,7 @@ public class RavenDB_14963 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Voron)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-    public async Task GetRevisionsIdsByPrefixTests(Options options)
+    public async Task GetRevisionsIdsByPrefixAndStatsTests(Options options)
     {
         using var store = GetDocumentStore(options);
         var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false } };
@@ -233,27 +233,86 @@ public class RavenDB_14963 : RavenTestBase
             await session.SaveChangesAsync();
         }
 
-        WaitForUserToContinueTheTest(store, false);
+        var stats = await store.Maintenance.SendAsync(new GetCollectionRevisionsStatisticsOperation());
+        Assert.Equal(10, stats.CountOfRevisions);
+        Assert.Equal(2, stats.Collections.Count);
+        var collections = stats.Collections.Keys;
+        Assert.Contains("Users", collections);
+        Assert.Contains("Companies", collections);
+        Assert.Equal(4, stats.Collections["Users"]);
+        Assert.Equal(6, stats.Collections["Companies"]);
 
-        var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+        var ids = await store.Maintenance.SendAsync(new GetRevisionsIdsByPrefixOperation("Use"));
+        Assert.Equal(2, ids.Count);
+        Assert.Contains("Users/1", ids);
+        Assert.Contains("Users/2", ids);
 
-        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        using (context.OpenReadTransaction())
+        ids = await store.Maintenance.SendAsync(new GetRevisionsIdsByPrefixOperation("Company/1"));
+        Assert.Equal(2, ids.Count);
+        Assert.Contains("Company/1", ids);
+        Assert.Contains("Company/11", ids);
+
+        ids = await store.Maintenance.SendAsync(new GetRevisionsIdsByPrefixOperation("Orders/"));
+        Assert.Equal(0, ids.Count);
+    }
+
+    public sealed class GetRevisionsIdsByPrefixOperation : IMaintenanceOperation<List<string>>
+    {
+        private string _prefix;
+        
+        public GetRevisionsIdsByPrefixOperation(string prefix)
         {
-            var ids = db.DocumentsStorage.RevisionsStorage.GetRevisionsIdsByPrefix(context, "Use", 1000).ToList();
-            Assert.Equal(2, ids.Count);
-            Assert.Contains("Users/1", ids);
-            Assert.Contains("Users/2", ids);
+            _prefix = prefix;
+        }
 
-            ids = db.DocumentsStorage.RevisionsStorage.GetRevisionsIdsByPrefix(context, "Company/1", 1000).ToList();
-            Assert.Equal(2, ids.Count);
-            Assert.Contains("Company/1", ids);
-            Assert.Contains("Company/11", ids);
+        public RavenCommand<List<string>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        {
+            return new GetRevisionsIdsByPrefixCommand(_prefix);
+        }
 
-            ids = db.DocumentsStorage.RevisionsStorage.GetRevisionsIdsByPrefix(context, "Orders/", 1000).ToList();
-            Assert.Equal(0, ids.Count);
+        internal sealed class GetRevisionsIdsByPrefixCommand : RavenCommand<List<string>>
+        {
+            private string _prefix;
+
+            public GetRevisionsIdsByPrefixCommand(string prefix)
+            {
+                _prefix = prefix;
+            }
+
+            public override bool IsReadRequest => true;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/studio/revisions/ids?prefix={_prefix}";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
+
+                var results = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<AllResults>(response);
+                Result = results.Results.Select(x => x.Id).ToList();
+            }
+
+            private class AllResults
+            {
+                public List<SingleResult> Results;
+            }
+
+            private class SingleResult
+            {
+                public string Id { get; set; }
+            }
         }
     }
+
+
 
     private class User
     {
