@@ -1196,6 +1196,9 @@ namespace Raven.Server.Documents.Revisions
             int i = 0;
             foreach (var tvh in table.SeekBackwardFromLast(index, skip))
             {
+                if (i >= take)
+                    yield break;
+
                 var tvr = tvh.Reader;
                 var fields = DocumentFields.Id | DocumentFields.ChangeVector;
                 if(includeData)
@@ -1206,8 +1209,7 @@ namespace Raven.Server.Documents.Revisions
 
                 yield return revision;
 
-                if (++i >= take)
-                    yield break;
+                i++;
             }
         }
 

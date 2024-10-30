@@ -88,6 +88,7 @@ public class RavenDB_14963 : RavenTestBase
         await AssertResultsAsync(store, list, totalResults: 4, start: 1, pageSize: 2, "Docs");
         await AssertResultsAsync(store, list, totalResults: 4, start: 2, pageSize: 2, "Docs");
         await AssertResultsAsync(store, list, totalResults: 4, start: 3, pageSize: 2, "Docs");
+        await AssertResultsAsync(store, list, totalResults: 4, start: 3, pageSize: 0, "Docs");
     }
 
 
@@ -180,56 +181,34 @@ public class RavenDB_14963 : RavenTestBase
 
         using (var session = store.OpenAsyncSession())
         {
-            await session.StoreAsync(new User { Name = "1" }, "Users/1");
+            var u1 = new User { Name = "1" };
+            await session.StoreAsync(u1, "Users/1");
             await session.SaveChangesAsync();
-        }
-        using (var session = store.OpenAsyncSession())
-        {
-            await session.StoreAsync(new User { Name = "11" }, "Users/1");
+            u1.Name = "11";
             await session.SaveChangesAsync();
-        }
 
-        using (var session = store.OpenAsyncSession())
-        {
-            await session.StoreAsync(new User { Name = "2" }, "Users/2");
+            var u2 = new User { Name = "2" };
+            await session.StoreAsync(u2, "Users/2");
             await session.SaveChangesAsync();
-        }
-        using (var session = store.OpenAsyncSession())
-        {
-            await session.StoreAsync(new User { Name = "22" }, "Users/2");
+            u2.Name = "22";
             await session.SaveChangesAsync();
-        }
 
-        using (var session = store.OpenAsyncSession())
-        {
-            await session.StoreAsync(new Company { Name = "1" }, "Company/1");
+            var c1 = new Company { Name = "1" };
+            await session.StoreAsync(c1, "Company/1");
             await session.SaveChangesAsync();
-        }
-        using (var session = store.OpenAsyncSession())
-        {
-            await session.StoreAsync(new Company { Name = "11" }, "Company/1");
+            c1.Name = "11";
             await session.SaveChangesAsync();
-        }
 
-        using (var session = store.OpenAsyncSession())
-        {
-            await session.StoreAsync(new Company { Name = "2" }, "Company/2");
+            var c2 = new Company { Name = "2" };
+            await session.StoreAsync(c2, "Company/2");
             await session.SaveChangesAsync();
-        }
-        using (var session = store.OpenAsyncSession())
-        {
-            await session.StoreAsync(new Company { Name = "22" }, "Company/2");
+            c2.Name = "22";
             await session.SaveChangesAsync();
-        }
 
-        using (var session = store.OpenAsyncSession())
-        {
-            await session.StoreAsync(new Company { Name = "11" }, "Company/11");
+            var c3 = new Company { Name = "11" };
+            await session.StoreAsync(c3, "Company/11");
             await session.SaveChangesAsync();
-        }
-        using (var session = store.OpenAsyncSession())
-        {
-            await session.StoreAsync(new Company { Name = "1111" }, "Company/11");
+            c3.Name = "1111";
             await session.SaveChangesAsync();
         }
 
