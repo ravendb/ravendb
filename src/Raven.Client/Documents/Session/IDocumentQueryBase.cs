@@ -441,10 +441,28 @@ namespace Raven.Client.Documents.Session
         /// <param name="moreLikeThis">Specified MoreLikeThisQuery.</param>
         TSelf MoreLikeThis(MoreLikeThisBase moreLikeThis);
         
+        /// <summary>
+        /// Performs vector search on text data, by queried text.
+        /// </summary>
+        /// <param name="textFieldFactory">Factory creating textual vector field for indexing purposes.</param>
+        /// <param name="textValueFactory">Factory preparing queried data to be used in vector search.</param>
+        /// <param name="minimumSimilarity">Minimum similarity between queried text and text stored in a document to be matched by the query.</param>
         TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory, float minimumSimilarity = Constants.VectorSearch.DefaultMinimumSimilarity);
 
+        /// <summary>
+        /// Performs vector search on embedding data, by queried embedding.
+        /// </summary>
+        /// <param name="embeddingFieldFactory">Factory creating embedding vector field for indexing purposes.</param>
+        /// <param name="embeddingValueFactory">Factory preparing queried data to be used in vector search.</param>
+        /// <param name="minimumSimilarity">Minimum similarity between queried embedding and embedding stored in a document to be matched by the query.</param>
         TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> embeddingValueFactory, float minimumSimilarity = Constants.VectorSearch.DefaultMinimumSimilarity);
         
+        /// <summary>
+        /// Performs vector search on existing vector field.
+        /// </summary>
+        /// <param name="vectorFieldFactory">Factory using existing, already indexed vector field.</param>
+        /// <param name="vectorValueFactory">Factory preparing queried data to be used in vector search.</param>
+        /// <param name="minimumSimilarity">Minimum similarity between queried value and indexed value of a document to be matched by the query.</param>
         TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorField> vectorFieldFactory, Action<IVectorFieldValueFactory> vectorValueFactory, float minimumSimilarity = Constants.VectorSearch.DefaultMinimumSimilarity);
     }
 

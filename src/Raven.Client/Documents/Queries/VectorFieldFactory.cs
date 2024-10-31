@@ -13,30 +13,63 @@ namespace Raven.Client.Documents.Queries;
 
 public interface IVectorFieldFactory<T>
 {
+    /// <summary>
+    /// Defines the text field that vector search will be performed on.
+    /// </summary>
+    /// <param name="fieldName">Name of the document field containing text data.</param>
+    /// <param name="vectorIndexingStrategy">Name of the vector search technique used for finding similar documents.</param>
     public IVectorEmbeddingTextField WithText(string fieldName, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
     
+    /// <inheritdoc cref="WithText(string,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
+    /// <param name="propertySelector">Path to the document field containing text data.</param>
     public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
     
+    /// <summary>
+    /// Defines the embedding field that vector search will be performed on.
+    /// </summary>
+    /// <param name="fieldName">Name of the document field containing embedding data.</param>
+    /// <param name="storedEmbeddingQuantization">Quantization that was performed on stored embeddings.</param>
+    /// <param name="vectorIndexingStrategy">Name of the vector search technique used for finding similar documents.</param>
     public IVectorEmbeddingField WithEmbedding(string fieldName, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
     
+    ///<inheritdoc cref="WithEmbedding(string,Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
+    /// <param name="propertySelector">Path to the document field containing embedding data.</param>
     public IVectorEmbeddingField WithEmbedding(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
     
+    /// <summary>
+    /// Defines the embedding field (encoded as base64) that vector search will be performed on.
+    /// </summary>
+    /// <param name="fieldName">Name of the document field containing base64 encoded embedding data.</param>
+    /// <param name="storedEmbeddingQuantization">Quantization of stored embeddings.</param>
+    /// <param name="vectorIndexingStrategy">Name of the vector search technique used for finding similar documents.</param>
     public IVectorEmbeddingField WithBase64(string fieldName, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
     
+    /// <inheritdoc cref="WithBase64(string,Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
     public IVectorEmbeddingField WithBase64(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
 
+    /// <summary>
+    /// Defines the field (that's already indexed) that vector search will be performed on.
+    /// </summary>
+    /// <param name="fieldName">Name of the document field containing indexed data.</param>
     public IVectorField WithField(string fieldName);
     
+    /// <inheritdoc cref="WithField(string)"/>
+    /// <param name="propertySelector">Path to the document field containing indexed data.</param>
     public IVectorField WithField(Expression<Func<T, object>> propertySelector);
 }
 
 public interface IVectorEmbeddingTextField
 {
+    /// <summary>
+    /// Defines quantization that will be performed on embeddings that are already in the database.
+    /// </summary>
+    /// <param name="targetEmbeddingQuantization">Desired target quantization type.</param>
     public IVectorEmbeddingTextField TargetQuantization(VectorEmbeddingType targetEmbeddingQuantization);
 }
 
 public interface IVectorEmbeddingField
 {
+    /// <inheritdoc cref="IVectorEmbeddingTextField.TargetQuantization(Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType)"/>
     public IVectorEmbeddingField TargetQuantization(VectorEmbeddingType targetEmbeddingQuantization);
 }
 
@@ -161,23 +194,37 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
 
 public interface IVectorEmbeddingTextFieldValueFactory
 {
+    /// <summary>
+    /// Defines queried text.
+    /// </summary>
+    /// <param name="text">Queried text.</param>
     public void ByText(string text);
 }
 
 public interface IVectorEmbeddingFieldValueFactory
 {
+    /// <summary>
+    /// Defines queried embedding.
+    /// </summary>
+    /// <param name="embedding">Enumerable containing embedding values.</param>
     public void ByEmbedding<T>(IEnumerable<T> embedding) where T : unmanaged
 #if NET7_0_OR_GREATER
         , INumber<T>
 #endif
     ;
     
+    /// <inheritdoc cref="ByEmbedding{T}(System.Collections.Generic.IEnumerable{T})"/>
+    /// <param name="embedding">Array containing embedding values.</param>
     public void ByEmbedding<T>(T[] embedding) where T : unmanaged
 #if NET7_0_OR_GREATER
         , INumber<T>
 #endif
     ;
     
+    /// <summary>
+    /// Defines queried embedding in base64 format.
+    /// </summary>
+    /// <param name="base64Embedding">Embedding encoded as base64 string.</param>
     public void ByBase64(string base64Embedding);
 }
 
