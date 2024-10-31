@@ -108,6 +108,8 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
             .VectorSearch(f => f.WithText("NonExistingField"), v => v.ByText("---"))
             .Statistics(out stats)
             .ToList();
+        
+        WaitForUserToContinueTheTest(store);
     }
 
     private record AutoVecDoc(string Text, float[] Singles, sbyte[] Int8, byte[] Binary, string Id = null);
