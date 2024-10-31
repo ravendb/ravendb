@@ -539,8 +539,7 @@ public partial class IndexSearcher
 
     public IQueryMatch VectorQuery(in FieldMetadata fieldMetadata, VectorValue vectorToSearch, in float minimumMatch, in SimilarityMethod similarityMethod)
     {
-        long rootPageByFieldName = GetRootPageByFieldName(fieldMetadata.FieldName);
-        if (rootPageByFieldName is -1)
+        if (TryGetRootPageByFieldName(fieldMetadata.FieldName, out var rootPageByFieldName) == false)
             return EmptyMatch();
         
         return new ExactVectorSearchMatch(this, _transaction, rootPageByFieldName, vectorToSearch, minimumMatch, similarityMethod);

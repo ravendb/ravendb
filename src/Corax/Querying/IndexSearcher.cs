@@ -641,19 +641,20 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             }
         }
     }
-
-    private long GetRootPageByFieldName(Slice fieldName)
+    
+    private bool TryGetRootPageByFieldName(Slice fieldName, out long rootPage)
     {
-        var it = _fieldsTree.Iterate(false);
-
-        if (_fieldsTree.TryRead(fieldName, out var reader) == false)
-            return -1;
+        if (_fieldsTree is null || _fieldsTree.TryRead(fieldName, out var reader) == false)
+        {
+            rootPage = -1;
+            return false;
+        }
         
         var state = (LookupState*)result.Reader.Base;
         Debug.Assert(state->RootObjectType is RootObjectType.Lookup, "state->RootObjectType is RootObjectType.Lookup");
-        return state->RootPage;
+        rootPage = state->RootPage;
+        return true;
     }
-    
     
     private Dictionary<long, Slice> _pageToField;
     public Dictionary<long, Slice> GetIndexedFieldNamesByRootPage()

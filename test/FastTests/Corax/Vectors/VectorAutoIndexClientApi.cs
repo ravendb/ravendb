@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.Indexes;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
@@ -88,6 +89,25 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
 
         Assert.Equal(autoIndexName, stats.IndexName);
         Assert.Equal(rql, baseQuery.ToString());
+    }
+
+    [RavenFact(RavenTestCategory.Vector)]
+    public void NonExistingFieldDoesntEndWithNre()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var session = store.OpenSession();
+        session.SaveChanges();
+
+        var documentQueryNonExistingField = session!.Advanced.DocumentQuery<AutoVecDoc>()
+            .VectorSearch(f => f.WithText("NonExistingField"), v => v.ByText("---"))
+            .Statistics(out var stats)
+            .ToList();
+        store.Maintenance.Send(new DeleteIndexOperation(stats.IndexName));
+
+        var linqQueryNonExistingField = session.Query<AutoVecDoc>()
+            .VectorSearch(f => f.WithText("NonExistingField"), v => v.ByText("---"))
+            .Statistics(out stats)
+            .ToList();
     }
 
     private record AutoVecDoc(string Text, float[] Singles, sbyte[] Int8, byte[] Binary, string Id = null);
