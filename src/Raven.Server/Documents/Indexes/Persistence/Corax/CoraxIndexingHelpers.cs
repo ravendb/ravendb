@@ -188,7 +188,7 @@ public static class CoraxIndexingHelpers
             {
                 if (indexDefinition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxUnicodeAnalyzers_62)
                 {
-                    // BACKWARD COMPATIBILITY. Remove in v7.0
+                    // BACKWARD COMPATIBILITY.
                     return CoraxAnalyzer.Create(context, default(KeywordTokenizer), default(LowerCaseTransformerPre22999));
                 }
                 

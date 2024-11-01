@@ -179,14 +179,13 @@ namespace Raven.Server.Documents.Indexes
             public const long UseNonExistingPostingList_60 = 60_005; // RavenDB-22703
             public const long CoraxSearchWildcardAdjustment_60 = 60_006; // RavenDB-22937
 
-            public const long Base61Version = 61_000;
-            public const long Base62Version = 62_000;
+            public const long Base62Version = 61_000;
 
-            public const long LoadDocumentWithDynamicCollectionNameShouldThrow = Base61Version; // RavenDB-22359
+            public const long LoadDocumentWithDynamicCollectionNameShouldThrow = Base62Version; // RavenDB-22359
             public const long CoraxComplexFieldIndexingBehavior = 61_001;
             public const long UseNonExistingPostingList_61 = 61_002; // RavenDB-22703
             public const long CoraxSearchWildcardAdjustment_61 = 61_003; // RavenDB-22937
-            public const long CoraxUnicodeAnalyzers_62 = Base62Version; // RavenDB-22999
+            public const long CoraxUnicodeAnalyzers_62 = 62_004; // RavenDB-22999
 
             /// <summary>
             /// Remember to bump this
@@ -205,7 +204,7 @@ namespace Raven.Server.Documents.Indexes
 
             public static bool IsNonExistingPostingListSupported(long indexVersion)
             {
-                if (indexVersion >= Base61Version)
+                if (indexVersion >= Base62Version)
                     return indexVersion >= UseNonExistingPostingList_61;
 
                 return indexVersion >= UseNonExistingPostingList_60;
@@ -213,7 +212,7 @@ namespace Raven.Server.Documents.Indexes
 
             public static bool IsCoraxSearchWildcardAdjustmentSupported(long indexVersion)
             {
-                if (indexVersion >= Base61Version)
+                if (indexVersion >= Base62Version)
                     return indexVersion >= CoraxSearchWildcardAdjustment_61;
 
                 return indexVersion >= CoraxSearchWildcardAdjustment_60;
