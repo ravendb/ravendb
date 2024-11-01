@@ -13,20 +13,20 @@ internal class ValueSchemaRuleValidatorFactory(Type classType, Type argType, str
 
     private static readonly Dictionary<string, List<ValueSchemaRuleValidatorFactory>> CashedValuesSchemaRuleValidator =
         GetValuesSchemaRuleValidator();
-    
+
     public static bool TryGetValueSchemaRuleValidatorFactory(string rule, out List<ValueSchemaRuleValidatorFactory> schemaRuleValidator)
     {
         return CashedValuesSchemaRuleValidator.TryGetValue(rule, out schemaRuleValidator);
     }
-    
+
     private static Dictionary<string, List<ValueSchemaRuleValidatorFactory>> GetValuesSchemaRuleValidator()
     {
         var ret = new Dictionary<string, List<ValueSchemaRuleValidatorFactory>>();
-        
+
         var schemaRuleValidators = Assembly.GetExecutingAssembly().GetTypes()
             .Select(x => (Type: x, RuleInfo: x.GetCustomAttribute<SchemaRuleAttribute>()))
             .Where(x => typeof(SchemaRuleValidator).IsAssignableFrom(x.Type) && !x.Type.IsAbstract && x.RuleInfo != null);
-        
+
         foreach (var validator in schemaRuleValidators)
         {
             var rule = validator.RuleInfo.Rule;
@@ -39,17 +39,18 @@ internal class ValueSchemaRuleValidatorFactory(Type classType, Type argType, str
 
         return ret;
     }
-    
+
     private static Type GetGenericSchemaRuleValidatorType(Type type)
     {
         if (type == null || type == typeof(object))
             return null;
-        
+
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(SchemaRuleValidator<>))
             return type.GetGenericArguments()[0];
 
         return GetGenericSchemaRuleValidatorType(type.BaseType);
     }
+
     public bool TryCreate(string path, object[] args, out SchemaRuleValidator validator)
     {
         var ctor = classType.GetConstructors().FirstOrDefault(x => x.GetParameters().Length == args.Length + 1);
@@ -57,7 +58,7 @@ internal class ValueSchemaRuleValidatorFactory(Type classType, Type argType, str
             //TODO To log the error up
             throw new Exception();
 
-        var ctorParams = new List<object>{path};
+        var ctorParams = new List<object> { path };
         var ctorParamInfo = ctor.GetParameters();
         for (int i = 0; i < args.Length; i++)
         {
@@ -66,6 +67,7 @@ internal class ValueSchemaRuleValidatorFactory(Type classType, Type argType, str
                 validator = null;
                 return false;
             }
+
             ctorParams.Add(args[i]);
         }
 
@@ -75,7 +77,7 @@ internal class ValueSchemaRuleValidatorFactory(Type classType, Type argType, str
 
     private static bool TryChangeTypeIfNeeded(ref object arg, Type parameterType)
     {
-        if (arg.GetType() == parameterType)
+        if (arg != null && parameterType.IsInstanceOfType(arg))
             return true;
 
         if (parameterType == typeof(decimal))
@@ -92,14 +94,14 @@ internal class ValueSchemaRuleValidatorFactory(Type classType, Type argType, str
                 return true;
             }
         }
-        else if(parameterType == typeof(string))
+        else if (parameterType == typeof(string))
         {
             if (arg is LazyStringValue or LazyCompressedStringValue)
             {
                 arg = arg.ToString();
                 return true;
             }
-        }        
+        }
 
         return false;
     }
