@@ -351,7 +351,7 @@ public class RavenDB_14963 : RavenTestBase
 
             private class AllResults
             {
-                public List<SingleResult> Results;
+                public List<SingleResult> Results { get; set; }
             }
 
             private class SingleResult

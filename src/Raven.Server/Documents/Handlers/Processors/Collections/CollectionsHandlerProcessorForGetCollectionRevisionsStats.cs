@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
@@ -26,7 +22,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
 
         private DynamicJsonValue GetCollectionStats(DocumentsOperationContext context)
         {
-            DynamicJsonValue collections = new DynamicJsonValue();
+            var collections = new DynamicJsonValue();
 
             foreach (var collection in RequestHandler.Database.DocumentsStorage.GetCollectionsNames(context))
             {
@@ -35,7 +31,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
 
             return new DynamicJsonValue()
             {
-                
                 [nameof(CollectionRevisionsStatistics.CountOfRevisions)] = RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context),
                 [nameof(CollectionRevisionsStatistics.Collections)] = collections
             };

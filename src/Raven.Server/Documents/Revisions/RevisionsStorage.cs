@@ -1186,12 +1186,14 @@ namespace Raven.Server.Documents.Revisions
             var collectionName = new CollectionName(collection);
             var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
             var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
-            if(table == null)
+            if (table == null)
                 return Enumerable.Empty<Document>();
-            return GetRevisionsInReverseEtagOrderInternal(context, table, index: RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false, shouldSkip: null, skip, take);
+            return GetRevisionsInReverseEtagOrderInternal(context, table, index: RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], includeData: false,
+                shouldSkip: null, skip, take);
         }
 
-        private IEnumerable<Document> GetRevisionsInReverseEtagOrderInternal(DocumentsOperationContext context, Table table, TableSchema.FixedSizeKeyIndexDef index, bool includeData, Func<Document, bool> shouldSkip, int skip, int take)
+        private IEnumerable<Document> GetRevisionsInReverseEtagOrderInternal(DocumentsOperationContext context, Table table, TableSchema.FixedSizeKeyIndexDef index,
+            bool includeData, Func<Document, bool> shouldSkip, int skip, int take)
         {
             int i = 0;
             foreach (var tvh in table.SeekBackwardFromLast(index, skip))
@@ -1201,10 +1203,10 @@ namespace Raven.Server.Documents.Revisions
 
                 var tvr = tvh.Reader;
                 var fields = DocumentFields.Id | DocumentFields.ChangeVector;
-                if(includeData)
+                if (includeData)
                     fields |= DocumentFields.Data;
                 var revision = TableValueToRevision(context, ref tvr, fields);
-                if (shouldSkip!=null && shouldSkip(revision))
+                if (shouldSkip != null && shouldSkip(revision))
                     continue;
 
                 yield return revision;

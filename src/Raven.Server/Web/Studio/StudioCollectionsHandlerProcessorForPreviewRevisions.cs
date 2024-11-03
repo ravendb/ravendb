@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
@@ -77,15 +76,13 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
                 case RevisionsType.NotDeleted:
                     revisions = string.IsNullOrEmpty(Collection)
                         ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNotDeletedRevisionsInReverseEtagOrder(context, _start, _pageSize)
-                        : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNotDeletedRevisionsInReverseEtagOrderForCollection(context, Collection, _start,
-                            _pageSize);
+                        : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNotDeletedRevisionsInReverseEtagOrderForCollection(context, Collection, _start, _pageSize);
                     break;
 
                 case RevisionsType.Deleted:
                     revisions = string.IsNullOrEmpty(Collection)
                         ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetDeletedRevisionsInReverseEtagOrder(context, _start, _pageSize)
-                        : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetDeletedRevisionsInReverseEtagOrderForCollection(context, Collection, _start,
-                            _pageSize);
+                        : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetDeletedRevisionsInReverseEtagOrderForCollection(context, Collection, _start, _pageSize);
                     break;
 
                 default:
@@ -102,8 +99,8 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
     private void WriteItemsInternal(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, IEnumerable<Document> revisions)
     {
         Func<DocumentsOperationContext, Document, string> getCollection = string.IsNullOrEmpty(Collection)
-                ? (ctx, revision) => RequestHandler.Database.DocumentsStorage.ExtractCollectionName(ctx, revision.Data).Name
-                : (ctx, revision) => Collection;
+            ? (ctx, revision) => RequestHandler.Database.DocumentsStorage.ExtractCollectionName(ctx, revision.Data).Name
+            : (ctx, revision) => Collection;
 
         var first = true;
         foreach (var revision in revisions)

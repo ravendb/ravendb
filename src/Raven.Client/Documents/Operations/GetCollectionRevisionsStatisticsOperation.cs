@@ -6,10 +6,10 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
-{    
+{
     /// <summary>
     /// Retrieves collection revisions statistics, providing in-depth information for each collection.
-    /// This includes the count of all revisions, and revisions count for each collections.
+    /// This includes the count of all revisions, and revisions count for each collection.
     /// </summary>
     public sealed class GetCollectionRevisionsStatisticsOperation : IMaintenanceOperation<CollectionRevisionsStatistics>
     {
