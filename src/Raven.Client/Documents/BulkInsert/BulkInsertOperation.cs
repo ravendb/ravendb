@@ -190,7 +190,7 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly WeakReferencingTimer _timer;
         private DateTime _lastWriteToStream;
         private readonly SemaphoreSlim _streamLock;
-        private readonly TimeSpan _heartbeatCheckInterval = TimeSpan.FromSeconds(StreamWithTimeout.DefaultReadTimeout.TotalSeconds / 3);
+        private readonly TimeSpan _heartbeatCheckInterval = TimeSpan.FromSeconds(StreamWithTimeout.DefaultReadTimeout.TotalSeconds / 4);
 
         public BulkInsertOperation(string database, IDocumentStore store, BulkInsertOptions options, CancellationToken token = default)
         {
@@ -293,7 +293,7 @@ namespace Raven.Client.Documents.BulkInsert
             _lastWriteToStream = DateTime.UtcNow;
 
             if (_options.ForTestingPurposes?.OverrideHeartbeatCheckInterval > 0)
-                _heartbeatCheckInterval = TimeSpan.FromMilliseconds(_options.ForTestingPurposes.OverrideHeartbeatCheckInterval / 3);
+                _heartbeatCheckInterval = TimeSpan.FromMilliseconds(_options.ForTestingPurposes.OverrideHeartbeatCheckInterval / 4);
 
             _timer = new WeakReferencingTimer(HandleHeartbeat,
                 this,
