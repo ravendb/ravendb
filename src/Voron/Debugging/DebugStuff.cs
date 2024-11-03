@@ -212,6 +212,11 @@ namespace Voron.Debugging
                 sw.Flush();
             }
 
+            OpenBrowser(output);
+        }
+
+        public static void OpenBrowser(string file)
+        {
             if (PlatformDetails.RunningOnPosix == false)
             {
                 string pathToChromeX86 = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe";
@@ -231,7 +236,7 @@ namespace Voron.Debugging
                     StartInfo =
                     {
                         FileName = pathToChrome,
-                        Arguments = output,
+                        Arguments = file,
                         UseShellExecute = false,
                         CreateNoWindow = true,
                         RedirectStandardError = true,
@@ -243,13 +248,12 @@ namespace Voron.Debugging
 
             if (PlatformDetails.RunningOnMacOsx)
             {
-                Process.Start("open", output);
+                Process.Start("open", file);
             }
             else
             {
-                Process.Start("xdg-open", output);
+                Process.Start("xdg-open", file);
             }
-
         }
 
         private static async Task RenderFixedSizeTreePageAsync<TVal>(LowLevelTransaction tx, FixedSizeTreePage<TVal> page, TextWriter sw, FixedSizeTreeSafe.LargeFixedSizeTreeSafe tree, string text, bool open)

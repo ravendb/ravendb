@@ -91,6 +91,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VxSort.Benchmark", "bench\V
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerStoreTxMerger.Benchmark", "bench\ServerStoreTxMerger.Benchmark\ServerStoreTxMerger.Benchmark.csproj", "{F3A0869F-CC53-4E09-9688-7A98A0AF2996}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vector.Benchmark", "bench\Vector.Benchmark\Vector.Benchmark.csproj", "{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -749,6 +751,24 @@ Global
 		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x64.Build.0 = Release|Any CPU
 		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x86.ActiveCfg = Release|Any CPU
 		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x86.Build.0 = Release|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Debug|x64.Build.0 = Debug|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Debug|x86.Build.0 = Debug|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Release|x64.ActiveCfg = Release|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Release|x64.Build.0 = Release|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Release|x86.ActiveCfg = Release|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Release|x86.Build.0 = Release|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Validate|Any CPU.ActiveCfg = Debug|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Validate|Any CPU.Build.0 = Debug|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Validate|x64.ActiveCfg = Debug|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Validate|x64.Build.0 = Debug|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Validate|x86.ActiveCfg = Debug|Any CPU
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E}.Validate|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -790,6 +810,7 @@ Global
 		{4A27BC98-D655-4335-B761-A7084799CB77} = {FAAED88A-1C25-4853-9A1B-C41BCF9BED1F}
 		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
 		{F3A0869F-CC53-4E09-9688-7A98A0AF2996} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
+		{A24030B6-A51C-47B5-8291-DD1DD4B2DA4E} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {032D6274-16A5-43ED-920F-D37BBD4B9628}
