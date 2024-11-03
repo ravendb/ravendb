@@ -97,10 +97,10 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </exception>
 
         /// <param name="from">
-        /// The start of the date range for the revisions to delete.
+        /// The start of the date range (in UTC) for the revisions to delete.
         /// </param>
         /// <param name="to">
-        /// The end of the date range for the revisions to delete. 
+        /// The end of the date range (in UTC) for the revisions to delete. 
         /// </param>
         /// <exception cref="ArgumentException">
         /// Throws an <see cref="ArgumentException"/> if <paramref name="to"/> is before <paramref name="from"/>.
@@ -141,10 +141,10 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </exception>
 
         /// <param name="from">
-        /// The start of the date range for the revisions to delete.
+        /// The start of the date range (in UTC) for the revisions to delete.
         /// </param>
         /// <param name="to">
-        /// The end of the date range for the revisions to delete. 
+        /// The end of the date range (in UTC) for the revisions to delete. 
         /// </param>
         /// <exception cref="ArgumentException">
         /// Throws an <see cref="ArgumentException"/> if <paramref name="to"/> is before <paramref name="from"/>.
