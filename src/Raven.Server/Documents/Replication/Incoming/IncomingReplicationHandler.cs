@@ -104,6 +104,11 @@ namespace Raven.Server.Documents.Replication.Incoming
             return new MergedUpdateDatabaseChangeVectorCommand(changeVector, lastDocumentEtag, connectionInfo, trigger);
         }
 
+        protected virtual string ReplaceUnknownEntriesWithSinkIfNeeded(DocumentsOperationContext context, string changeVector)
+        {
+           return changeVector;
+        }
+
         protected virtual DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
@@ -212,6 +217,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                     lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
                     lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
                 }
+
+                changeVector = ReplaceUnknownEntriesWithSinkIfNeeded(documentsContext, changeVector);
 
                 var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
                 if (status == ConflictStatus.Update || _lastDocumentEtag > lastEtag)

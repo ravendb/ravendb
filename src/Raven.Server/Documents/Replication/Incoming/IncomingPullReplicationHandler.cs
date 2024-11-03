@@ -108,6 +108,17 @@ namespace Raven.Server.Documents.Replication.Incoming
         public override string FromToString => base.FromToString +
                                                $"{(_incomingPullReplicationParams?.Name == null ? null : $"(pull definition: {_incomingPullReplicationParams?.Name})")}";
 
+        protected override string ReplaceUnknownEntriesWithSinkIfNeeded(DocumentsOperationContext context,string changeVector)
+        {
+            var isHub = _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub;
+            if (isHub && string.IsNullOrEmpty(changeVector) == false)
+            {
+                changeVector = MergedDocumentForPullReplicationCommand.ReplaceUnknownEntriesWithSinkTag(context, ref changeVector);
+            }
+
+            return changeVector;
+        }
+
         protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
@@ -175,7 +186,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 }
             }
 
-            private static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
+            internal static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
             {
                 var globalDbIds = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList()?.Select(x => x.DbId).ToList();
                 var incoming = changeVector.ToChangeVectorList();
