@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// This operation allows deletion of revisions.
         /// </summary>
         /// <remarks>
-        /// This is an <c>Admin</c> to operation.
+        /// This is an <c>Admin</c> operation.
         /// </remarks>
 
         /// <param name="documentIds">
@@ -33,8 +33,8 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </exception>
 
         /// <param name="removeForceCreatedRevisions">
-        /// Indicates whether to include force-created revisions in the deletion 
-        /// (Can find more info <see href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
+        /// Indicates whether to include force-created revisions in the deletion. 
+        /// (Can find more info <see href="https://ravendb.net/docs/article-page/latest/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
         /// Default is <c>false</c>.
         /// </param>
 
@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// This operation allows deletion of revisions.
         /// </summary>
         /// <remarks>
-        /// This is an <c>Admin</c> to operation.
+        /// This is an <c>Admin</c> operation.
         /// </remarks>
 
         /// <param name="documentId">
@@ -65,8 +65,8 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </exception>
 
         /// <param name="removeForceCreatedRevisions">
-        /// Indicates whether to include force-created revisions in the deletion 
-        /// (Can find more info <see href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
+        /// Indicates whether to include force-created revisions in the deletion. 
+        /// (Can find more info <see href="https://ravendb.net/docs/article-page/latest/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
         /// Default is <c>false</c>.
         /// </param>
 
@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// This operation allows deletion of revisions.
         /// </summary>
         /// <remarks>
-        /// This is an <c>Admin</c> to operation.
+        /// This is an <c>Admin</c> operation.
         /// </remarks>
 
         /// <param name="documentIds">
@@ -108,7 +108,7 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         /// <param name="removeForceCreatedRevisions">
         /// Indicates whether to include force-created revisions in the deletion.
-        /// (Can find more info <see href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
+        /// (Can find more info <see href="https://ravendb.net/docs/article-page/latest/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
         /// Default is <c>false</c>.
         /// </param>
 
@@ -130,7 +130,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// This operation allows deletion of revisions.
         /// </summary>
         /// <remarks>
-        /// This is an <c>Admin</c> to operation.
+        /// This is an <c>Admin</c> operation.
         /// </remarks>
 
         /// <param name="documentId">
@@ -151,8 +151,8 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </exception>
 
         /// <param name="removeForceCreatedRevisions">
-        /// Indicates whether to include force-created revisions in the deletion 
-        /// (Can find more info <see href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
+        /// Indicates whether to include force-created revisions in the deletion. 
+        /// (Can find more info <see href="https://ravendb.net/docs/article-page/latest/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
         /// Default is <c>false</c>.
         /// </param>
 
@@ -174,7 +174,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// This operation allows deletion of revisions.
         /// </summary>
         /// <remarks>
-        /// This is an <c>Admin</c> to operation.
+        /// This is an <c>Admin</c> operation.
         /// </remarks>
 
         /// <param name="documentId">
@@ -185,15 +185,15 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </exception>
 
         /// <param name="revisionsChangeVectors">
-        /// A list of change vectors corresponding to the revisions that the user wishes to delete.
+        /// A list of change vectors corresponding to the revisions you want to delete.
         /// </param>
         /// <exception cref="ArgumentNullException">
         /// Thrown when the <paramref name="revisionsChangeVectors"/> parameter is null or empty.
         /// </exception>
 
         /// <param name="removeForceCreatedRevisions">
-        /// Indicates whether to include force-created revisions in the deletion 
-        /// (Can find more info <see href="https://ravendb.net/docs/article-page/6.0/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
+        /// Indicates whether to include force-created revisions in the deletion. 
+        /// (Can find more info <see href="https://ravendb.net/docs/article-page/latest/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
         /// Default is <c>false</c>.
         /// </param>
 
@@ -241,7 +241,7 @@ namespace Raven.Client.Documents.Operations.Revisions
                 if (RevisionsChangeVectors.IsNullOrEmpty())
                 {
                     if (From.HasValue && To.HasValue && From >= To)
-                        throw new ArgumentException($"{nameof(From)}, {nameof(To)}", "'After' must be greater then 'Before'.");
+                        throw new ArgumentException($"{nameof(From)}, {nameof(To)}", "'To' must be greater than 'From'.");
                 }
                 else
                 {
