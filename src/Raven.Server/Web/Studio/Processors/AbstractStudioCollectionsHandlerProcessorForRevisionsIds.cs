@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -30,7 +27,6 @@ namespace Raven.Server.Web.Studio.Processors
             {
                 Prefix = RequestHandler.GetStringQueryString("prefix", required: true);
                 PageSize = RequestHandler.GetPageSize();
-
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {

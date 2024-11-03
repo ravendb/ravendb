@@ -20,8 +20,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors
 {
-    internal sealed class ShardedStudioCollectionsHandlerProcessorForRevisionsIds : AbstractStudioCollectionsHandlerProcessorForRevisionsIds<ShardedDatabaseRequestHandler
-        ,
+    internal sealed class ShardedStudioCollectionsHandlerProcessorForRevisionsIds : AbstractStudioCollectionsHandlerProcessorForRevisionsIds<ShardedDatabaseRequestHandler,
         TransactionOperationContext>
     {
         private CombinedReadContinuationState _combinedReadState;
@@ -73,6 +72,7 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
 
                 writer.WriteEndObject();
             }
+
             writer.WriteEndArray();
         }
 

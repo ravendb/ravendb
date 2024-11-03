@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
@@ -63,6 +60,4 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
 
         public RavenCommand<CollectionRevisionsStatistics> CreateCommandForShard(int shardNumber) => new GetCollectionRevisionsStatisticsOperation.GetCollectionRevisionsStatisticsCommand();
     }
-
-
 }
