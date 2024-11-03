@@ -40,7 +40,7 @@ public static class Program
         var sources = EventSource.GetSources();
         var runtime = sources.FirstOrDefault(x => x.Name == "System.Runtime");
         runtime?.Dispose();
-        for (int i = 0; i < 1000; i++)
+        for (int i = 0; i < 2; i++)
         {
             Console.WriteLine($"Starting to run {i}");
 
@@ -50,8 +50,8 @@ public static class Program
                 using (var test = new BasicGraphs(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                   
-                    test.AddItems();
+
+                    test.BasicSearch();
                 }
             }
             catch (Exception e)

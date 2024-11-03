@@ -77,6 +77,12 @@ public unsafe struct NativeList<T>
         ToSpan().Fill(value);
     }
 
+    public void ResetAndCopyFrom(ByteStringContext allocator,Span<T> src)
+    {
+        ResetAndEnsureCapacity(allocator, src.Length);
+        AddRangeUnsafe(src);
+    }
+
     public void AddRangeUnsafe(ReadOnlySpan<T> range)
     {
         Debug.Assert(Count + range.Length <= Capacity);

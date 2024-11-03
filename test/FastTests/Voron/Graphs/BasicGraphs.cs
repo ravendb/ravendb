@@ -1,9 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Numerics.Tensors;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using Jint.Native.Json;
+using Newtonsoft.Json;
+using Parquet;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
 using Xunit;
 using Xunit.Abstractions;
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace FastTests.Voron.Graphs;
 
@@ -24,11 +34,11 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             var options = Hnsw.ReadOptions(txr.LowLevelTransaction, id);
             Assert.Equal(12, options.NumberOfCandidates);
-            Assert.Equal(3, options.NumberOfNeighbors);
+            Assert.Equal(3, options.NumberOfEdges);
             Assert.Equal(0, options.CountOfVectors);
         }
     }
-    
+
     [RavenFact(RavenTestCategory.Voron)]
     public void BasicSearch()
     {
@@ -38,8 +48,8 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         // nearest to v2, then v1
         float[] v3 = [0.25f, 0.35f, 0.45f, 0.55f];
 
-        long  id;
-  
+        long id;
+
         using (var txw = Env.WriteTransaction())
         {
             id = Hnsw.Create(txw.LowLevelTransaction, 16, 3, 12);
@@ -50,7 +60,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
                 registration.Register(12, MemoryMarshal.Cast<float, byte>(v1));
             }
-            
+
             txw.Commit();
         }
 
@@ -58,14 +68,14 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             var options = Hnsw.ReadOptions(txr.LowLevelTransaction, id);
             Assert.Equal(12, options.NumberOfCandidates);
-            Assert.Equal(3, options.NumberOfNeighbors);
+            Assert.Equal(3, options.NumberOfEdges);
             Assert.Equal(2, options.CountOfVectors);
         }
 
         using (var txr = Env.ReadTransaction())
         {
             Span<long> matches = stackalloc long[8];
-            using var nearest = Hnsw.Nearest(txr.LowLevelTransaction, id, 
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, id,
                 numberOfCandidates: 32,
                 MemoryMarshal.Cast<float, byte>(v3));
             int read = nearest.Fill(matches);
