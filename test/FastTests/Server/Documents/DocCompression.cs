@@ -46,6 +46,7 @@ namespace FastTests.Server.Documents
             {
                 Path = path,
                 RunInMemory = false,
+                IgnoreDocumentCompression = true
             });
 
             store.Maintenance.Send(new CreateSampleDataOperation());
@@ -94,6 +95,7 @@ namespace FastTests.Server.Documents
             {
                 Path = path,
                 RunInMemory = false,
+                IgnoreDocumentCompression = true,
                 ModifyDatabaseRecord = r => r.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Orders")
             });
 
@@ -143,7 +145,8 @@ namespace FastTests.Server.Documents
             {
                 Path = path,
                 RunInMemory = false,
-                ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Orders")
+                ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Orders"),
+                IgnoreDocumentCompression = true,
             });
 
             store.Maintenance.Send(new CreateSampleDataOperation());
@@ -179,7 +182,8 @@ namespace FastTests.Server.Documents
             var random = new Random(654);
             using var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users")
+                ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users"),
+                IgnoreDocumentCompression = true,
             });
 
             var rnd = Enumerable.Range(1, 10)
@@ -201,7 +205,10 @@ namespace FastTests.Server.Documents
         public void Can_set_collection_compressed_when_it_has_docs()
         {
             var random = new Random(343);
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options()
+            {
+                IgnoreDocumentCompression = true
+            });
 
             var rnd = Enumerable.Range(1, 10)
                 .Select(i => new string((char)(65 + i), 256))
@@ -255,7 +262,8 @@ namespace FastTests.Server.Documents
             var random = new Random(654);
             using var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users")
+                ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users"),
+                IgnoreDocumentCompression = true,
             });
 
             var rnd = Enumerable.Range(1, 10)
@@ -299,7 +307,8 @@ namespace FastTests.Server.Documents
             var random = new Random(654);
             using var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users")
+                ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users"),
+                IgnoreDocumentCompression = true,
             });
 
             var rnd = Enumerable.Range(1, 10)

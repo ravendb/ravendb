@@ -111,7 +111,8 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = x =>
                 {
                     x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: false, compressAllCollections: true);
-                }
+                },
+                IgnoreDocumentCompression = true
             }))
             {
                 var company = new Company

@@ -49,8 +49,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 LastModifiedTicks = doc.LastModified.Ticks,
             };
 
-            result.ToDispose(new ForgetAboutDecompressionBuffer(doc, context));
-
             return result;
         }
 
@@ -239,23 +237,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             }
 
             return $"{Id} : {ChangeVector} ({type})";
-        }
-
-        private class ForgetAboutDecompressionBuffer : IDisposable
-        {
-            private readonly Document _doc;
-            private readonly DocumentsOperationContext _context;
-
-            public ForgetAboutDecompressionBuffer(Document doc, DocumentsOperationContext context)
-            {
-                _doc = doc;
-                _context = context;
-            }
-
-            public void Dispose()
-            {
-                _context.Transaction.ForgetAbout(_doc);
-            }
         }
     }
 }

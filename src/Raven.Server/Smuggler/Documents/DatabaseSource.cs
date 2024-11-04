@@ -178,7 +178,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
-            var enumerator = new TransactionForgetAboutDocumentEnumerator(new PulsedTransactionEnumerator<Document, DocumentsIterationState>(_context,
+            var enumerator = new PulsedTransactionEnumerator<Document, DocumentsIterationState>(_context,
                 state =>
                 {
                     if (state.StartEtagByCollection.Count != 0)
@@ -190,7 +190,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     StartEtag = _startDocumentEtag,
                     StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
-                }), _context);
+                });
 
             while (enumerator.MoveNext())
             {
@@ -232,7 +232,7 @@ namespace Raven.Server.Smuggler.Documents
 
             var revisionsStorage = _database.DocumentsStorage.RevisionsStorage;
 
-            var enumerator = new TransactionForgetAboutDocumentEnumerator(new PulsedTransactionEnumerator<Document, DocumentsIterationState>(_context,
+            var enumerator = new PulsedTransactionEnumerator<Document, DocumentsIterationState>(_context,
                 state =>
                 {
                     if (state.StartEtagByCollection.Count != 0)
@@ -244,7 +244,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     StartEtag = _startDocumentEtag,
                     StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
-                }), _context);
+                });
 
             while (enumerator.MoveNext())
             {

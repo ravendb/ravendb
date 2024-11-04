@@ -39,7 +39,10 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     var dbrecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
                     dbrecord.DocumentsCompression.CompressRevisions = false;
@@ -60,7 +63,10 @@ namespace SlowTests.Issues
 
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     await ChangeLicense(Server, RL_COMM);
                     var importOperation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
@@ -84,7 +90,10 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", backupType: BackupType.Snapshot);
                     await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
@@ -94,7 +103,10 @@ namespace SlowTests.Issues
 
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     await ChangeLicense(Server, RL_COMM);
 
@@ -123,7 +135,10 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", backupType: BackupType.Snapshot);
                     await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
@@ -135,7 +150,10 @@ namespace SlowTests.Issues
 
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     await ChangeLicense(Server, RL_PRO);
 
@@ -167,7 +185,10 @@ namespace SlowTests.Issues
             var csName = $"cs/{Guid.NewGuid()}";
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     var connectionString = new RavenConnectionString
                     {
@@ -186,7 +207,10 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     await ChangeLicense(Server, RL_COMM);
 
@@ -215,7 +239,10 @@ namespace SlowTests.Issues
             var csName = $"cs/{Guid.NewGuid()}";
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     var connectionString = new RavenConnectionString
                     {
@@ -234,7 +261,10 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     await ChangeLicense(Server, RL_COMM);
 
@@ -261,7 +291,10 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     var salesTsConfig = new TimeSeriesCollectionConfiguration
                     {
@@ -281,7 +314,10 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     await ChangeLicense(Server, RL_COMM);
 
@@ -307,7 +343,10 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     var dbrecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
                     dbrecord.DocumentsCompression.CompressAllCollections = true;
@@ -317,7 +356,10 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     await ChangeLicense(Server, RL_COMM);
 
@@ -343,7 +385,10 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     var dbrecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
                     dbrecord.DocumentsCompression.CompressAllCollections = true;
@@ -353,7 +398,10 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     await ChangeLicense(Server, RL_PRO);
 
@@ -382,7 +430,7 @@ namespace SlowTests.Issues
             var csName = $"cs/{Guid.NewGuid()}";
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options() { IgnoreDocumentCompression = true }))
                 {
                     var pullAsSink = new PullReplicationAsSink(dbName, csName, "hub");
                     var result = await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(pullAsSink));
@@ -392,7 +440,10 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     await ChangeLicense(Server, RL_COMM);
 
@@ -419,7 +470,10 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     store.Maintenance.Send(new PutPullReplicationAsHubOperation("sink"));
 
@@ -427,7 +481,10 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     await ChangeLicense(Server, RL_COMM);
 
@@ -455,7 +512,10 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     store.Maintenance.Send(new PutPullReplicationAsHubOperation("sink"));
 
@@ -463,7 +523,10 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     await ChangeLicense(Server, RL_PRO);
 
@@ -491,7 +554,10 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     var etlConfiguration = new RavenEtlConfiguration
                     {
@@ -514,7 +580,10 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options()
+                       {
+                           IgnoreDocumentCompression = true
+                       }))
                 {
                     await ChangeLicense(Server, RL_COMM);
 

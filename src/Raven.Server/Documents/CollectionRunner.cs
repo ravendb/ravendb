@@ -126,8 +126,6 @@ namespace Raven.Server.Documents
 
                                 startAfterId = document.Id;
                                 ids.Enqueue(document.Id);
-
-                                context.Transaction.ForgetAbout(document);
                             }
                         }
                     }

@@ -79,7 +79,8 @@ namespace SlowTests.Server.Documents.Expiration
                         {
                             record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                         }
-                    }
+                    },
+                    IgnoreDocumentCompression = true
                 }))
                 {
                     await SetupExpiration(store);
@@ -146,7 +147,8 @@ namespace SlowTests.Server.Documents.Expiration
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                }
+                },
+                IgnoreDocumentCompression = true
             }))
             {
                 await SetupExpiration(store);
@@ -199,7 +201,8 @@ namespace SlowTests.Server.Documents.Expiration
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                }
+                },
+                IgnoreDocumentCompression = true
             }))
             {
                 // Insert document with expiration before activating the expiration
@@ -242,7 +245,8 @@ namespace SlowTests.Server.Documents.Expiration
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                }
+                },
+                IgnoreDocumentCompression = true
             }))
             {
                 using (var session = store.OpenAsyncSession())
@@ -294,7 +298,8 @@ namespace SlowTests.Server.Documents.Expiration
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                }
+                },
+                IgnoreDocumentCompression = true
             }))
             {
                 var database = await GetDatabase(store.Database);
@@ -348,7 +353,8 @@ namespace SlowTests.Server.Documents.Expiration
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                }
+                },
+                IgnoreDocumentCompression = true
             }))
             {
                 var expires = SystemTime.UtcNow.AddMinutes(5);
@@ -384,6 +390,7 @@ namespace SlowTests.Server.Documents.Expiration
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanPostAndGetDocumentsExpiration(Options options, bool compressed)
         {
+            options.IgnoreDocumentCompression = true;
             options.ModifyDatabaseRecord = record =>
             {
                 if (compressed)
@@ -633,6 +640,7 @@ namespace SlowTests.Server.Documents.Expiration
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task RefreshWithMaxItemsToProcessConfiguredShouldWork(Options options, bool compressed)
         {
+            options.IgnoreDocumentCompression = true;
             using (var store = GetDocumentStore(options))
             {
                 if (compressed)

@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
                 else
                 {
-                    enumerator = new TransactionForgetAboutDocumentEnumerator(new PulsedTransactionEnumerator<Document, CollectionQueryResultsIterationState>(context.Documents,
+                    enumerator = new PulsedTransactionEnumerator<Document, CollectionQueryResultsIterationState>(context.Documents,
                         state =>
                         {
                             query.Start = state.Start;
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                             Start = query.Start,
                             Take = query.PageSize
-                        }), context.Documents);
+                        });
                 }
 
                 IncludeCountersCommand includeCountersCommand = null;

@@ -233,6 +233,14 @@ namespace FastTests
                     options.ModifyDatabaseRecord?.Invoke(doc);
                     var sharded = doc.IsSharded;
 
+                    if (RavenTestHelper.RunTestsWithDocsCompression && options.IgnoreDocumentCompression == false && doc.DocumentsCompression == null)
+                    {
+                        doc.DocumentsCompression = new DocumentsCompressionConfiguration
+                        {
+                            CompressAllCollections = true,
+                            CompressRevisions = true
+                        };
+                    }
                     var store = new DocumentStore
                     {
                         Database = name,
@@ -784,6 +792,7 @@ namespace FastTests
             private X509Certificate2 _clientCertificate;
             private X509Certificate2 _adminCertificate;
             private bool _createDatabase;
+            private bool _ignoreDocumentCompression;
             private bool _deleteDatabaseOnDispose;
             private TimeSpan? _deleteTimeout;
             private RavenServer _server;
@@ -1018,6 +1027,16 @@ namespace FastTests
                     {
                         ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true;
                     }
+                }
+            }
+
+            public bool IgnoreDocumentCompression
+            {
+                get => _ignoreDocumentCompression;
+                set
+                {
+                    AssertNotFrozen();
+                    _ignoreDocumentCompression = value;
                 }
             }
 

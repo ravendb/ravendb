@@ -31,7 +31,6 @@ namespace Raven.Server.Documents.Expiration
                         return;
 
                     Database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null);
-                    context.Transaction.ForgetAbout(doc); 
                 }
             }
             catch (DocumentConflictException)

@@ -1522,30 +1522,35 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+        private static Document ParseDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields)
         {
             if (fields == DocumentFields.All)
             {
-                return new Document
-                {
-                    StorageId = tvr.Id,
-                    LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
-                    Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
-                    Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
-                    Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context),
-                    ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
-                    LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
-                    Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
-                    TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr),
-                };
+                var doc = new Document(context, tvr.Id);
+                return InitializeDocument(context, doc, ref tvr);
             }
 
             return ParseDocumentPartial(context, ref tvr, fields);
         }
 
-        private static Document ParseDocumentPartial(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+        private static Document InitializeDocument(JsonOperationContext context, Document document, ref TableValueReader tvr)
         {
-            var result = new Document();
+            document.StorageId = tvr.Id;
+            document.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
+            document.Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr);
+            document.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
+            document.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
+            document.ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr);
+            document.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
+            document.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
+            document.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);
+
+            return document;
+        }
+
+        private static Document ParseDocumentPartial(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+        {
+            var result = new Document(context, tvr.Id);
 
             if (fields.Contain(DocumentFields.LowerId))
                 result.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
@@ -1573,8 +1578,9 @@ namespace Raven.Server.Documents
             tvr.Read((int)DocumentsTable.Data, out int size);
             if (size > expectedSize || size <= 0)
                 throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
-
-            return ParseDocument(context, ref tvr, DocumentFields.All);
+            
+            var doc = new Document();
+            return InitializeDocument(context, doc, ref tvr);
         }
 
         public static Tombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)

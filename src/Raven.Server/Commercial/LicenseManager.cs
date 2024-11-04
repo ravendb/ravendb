@@ -87,6 +87,7 @@ namespace Raven.Server.Commercial
         public LicenseStatus LicenseStatus { get; private set; } = new LicenseStatus();
 
         internal static bool IgnoreProcessorAffinityChanges = false;
+        internal static bool IgnoreCompressionLicenseLimit = false;
 
         internal static bool AddLicenseStatusToLicenseLimitsException = false;
 
@@ -1483,6 +1484,9 @@ namespace Raven.Server.Commercial
                 return;
 
             if (hasDocumentsCompression == false)
+                return;
+
+            if (IgnoreCompressionLicenseLimit)
                 return;
 
             var details = $"Your current license ({LicenseStatus.Type}) does not allow documents compression";

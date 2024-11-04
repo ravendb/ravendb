@@ -779,7 +779,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Collections = new[] { "Orders" },
                         CompressRevisions = true
                     };
-                }
+                },
+                IgnoreDocumentCompression = true
             }))
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation());
@@ -830,7 +831,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task can_backup_and_restore_compression_config()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options()
+            {
+                IgnoreDocumentCompression = true
+            }))
             {
                 var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
                 record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users");

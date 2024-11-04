@@ -31,11 +31,14 @@ namespace SlowTests.Issues
         [InlineData(10)]
         public void CompressAndDecompressDocument(int size)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options: new Options()
+            {
+                IgnoreDocumentCompression = true
+            }))
             {
                 var documentsCompression = new DocumentsCompressionConfiguration(true, true, "Orders");
                 store.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(documentsCompression));
-                
+
                 using (var session = store.OpenSession())
                 {
                     var doc = new Order();

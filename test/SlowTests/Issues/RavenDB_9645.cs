@@ -42,7 +42,8 @@ namespace SlowTests.Issues
                             CompressRevisions = true
                         };
                     }
-                }
+                },
+                IgnoreDocumentCompression = compressed
             }))
             {
                 new ClaimsByBillTypeAndMatchingStatus().Execute(store);
