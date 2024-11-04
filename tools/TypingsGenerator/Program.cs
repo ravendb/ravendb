@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -120,7 +121,7 @@ namespace TypingsGenerator
 {
     public class Program
     {
-        public static readonly string[] TargetDirectory = { "../../src/Raven.Studio/", "../../../src/Raven.Studio/", "../../../../src/Raven.Studio/" };
+        public static readonly string TargetDirectory =  "src/Raven.Studio/";
         public const string TypingsDirectory = "typings/server";
 
         public static void Main(string[] args)
@@ -656,8 +657,9 @@ namespace TypingsGenerator
 
         private static string FindStudioDirectory()
         {
-            foreach (string dir in TargetDirectory)
+            for (int i = 1; i < 10; i++)
             {
+                var dir = string.Concat(Enumerable.Repeat("../", i)) + TargetDirectory;
                 var fullPath = Path.GetFullPath(dir);
                 if (Directory.Exists(fullPath))
                     return fullPath;

@@ -21,7 +21,6 @@ namespace Raven.Server.Documents.Indexes.Auto
         {
             using (_documentReadStats.Start())
             {
-                ctx.Transaction.ForgetAbout(_results[0]);
                 _results[0]?.Dispose();
 
                 var moveNext = _itemsEnumerator.MoveNext();

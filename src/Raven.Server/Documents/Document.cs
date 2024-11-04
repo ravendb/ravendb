@@ -36,6 +36,8 @@ namespace Raven.Server.Documents
 
         private bool _metadataEnsured;
         private bool _disposed;
+        private readonly DocumentsOperationContext _docsContext;
+        private readonly long _storageId;
 
         public unsafe ulong DataHash
         {
@@ -46,6 +48,17 @@ namespace Raven.Server.Documents
 
                 return _hash.Value;
             }
+        }
+
+        public Document()
+        {
+
+        }
+
+        public Document(DocumentsOperationContext context, long storageId)
+        {
+            _docsContext = context;
+            _storageId = storageId;
         }
 
         public bool TryGetMetadata(out BlittableJsonReaderObject metadata) =>
@@ -159,6 +172,8 @@ namespace Raven.Server.Documents
 
             Data?.Dispose();
             Data = null;
+
+            _docsContext?.Transaction?.InnerTransaction.ForgetAbout(_storageId);
 
             _disposed = true;
         }

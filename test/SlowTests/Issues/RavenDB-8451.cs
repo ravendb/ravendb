@@ -75,7 +75,8 @@ namespace SlowTests.Issues
                         };
                     }
                 },
-                Path = dbPath
+                Path = dbPath,
+                IgnoreDocumentCompression = compressDocuments
             }))
             {
                 await Samples.CreateLegacyNorthwindDatabaseAsync(store);

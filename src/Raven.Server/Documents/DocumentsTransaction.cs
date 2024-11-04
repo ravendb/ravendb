@@ -156,13 +156,6 @@ namespace Raven.Server.Documents
             _collectionCache.Add(collectionName, name);
         }
 
-        public void ForgetAbout(Document doc)
-        {
-            if (doc == null)
-                return;
-            InnerTransaction.ForgetAbout(doc.StorageId);
-        }
-
         internal void CheckIfShouldDeleteAttachmentStream(Slice hash)
         {
             var clone = hash.Clone(InnerTransaction.Allocator);

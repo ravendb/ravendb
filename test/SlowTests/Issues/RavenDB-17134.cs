@@ -21,7 +21,7 @@ namespace SlowTests.Issues
             public double[] Sum;
         }
 
-        class Dog
+        internal class Dog
         {
             public string Name;
             public int Age;

@@ -38,7 +38,8 @@ namespace SlowTests.Issues
                             CompressRevisions = false
                         };
                     }
-                }
+                },
+                IgnoreDocumentCompression = compressed
             }))
             {
                 // configure revisions for the collection

@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     initialState.Skip = new Reference<long>();
                 }
 
-                var documentsEnumerator = new TransactionForgetAboutDocumentEnumerator(new PulsedTransactionEnumerator<Document, DocsStreamingIterationState>(context, state =>
+                var documentsEnumerator = new PulsedTransactionEnumerator<Document, DocsStreamingIterationState>(context, state =>
                     {
                         if (string.IsNullOrEmpty(state.StartsWith) == false)
                         {
@@ -61,11 +61,12 @@ namespace Raven.Server.Documents.Handlers.Streaming
                         }
 
                         if (state.LastIteratedEtag != null)
-                            return Database.DocumentsStorage.GetDocumentsInReverseEtagOrderFrom(context, state.LastIteratedEtag.Value, state.Take, skip: 1); // we seek to LastIteratedEtag but skip 1 item because we iterated it already
+                            return Database.DocumentsStorage.GetDocumentsInReverseEtagOrderFrom(context, state.LastIteratedEtag.Value, state.Take,
+                                skip: 1); // we seek to LastIteratedEtag but skip 1 item because we iterated it already
 
                         return Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, state.Start, state.Take);
                     },
-                    initialState), context);
+                    initialState);
 
                 using (var token = CreateHttpRequestBoundOperationToken())
                 await using (var writer = GetLoadDocumentsResultsWriter(format, context, ResponseBodyStream()))

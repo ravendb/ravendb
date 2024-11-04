@@ -23,7 +23,8 @@ namespace SlowTests.Server.Documents
             using var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = (name) => dbname,
-                RunInMemory = false
+                RunInMemory = false,
+                IgnoreDocumentCompression = true
             });
 
             using (var session = store.OpenAsyncSession())
@@ -102,7 +103,8 @@ namespace SlowTests.Server.Documents
             using var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = (name) => dbname,
-                RunInMemory = false
+                RunInMemory = false,
+                IgnoreDocumentCompression = true
             });
             
             using (var session = store.OpenAsyncSession())
@@ -182,7 +184,8 @@ namespace SlowTests.Server.Documents
                 ModifyDatabaseRecord = (record) =>
                 {
                     record.DocumentsCompression = new DocumentsCompressionConfiguration(false, true);
-                }
+                },
+                IgnoreDocumentCompression = true
             });
 
             using (var session = store.OpenAsyncSession())
