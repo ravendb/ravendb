@@ -20,6 +20,8 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
     public bool ElasticSearchRequired { get; set; }
 
     public bool AzureQueueStorageRequired { get; set; }
+    
+    public bool AwsSqsRequired { get; set; }
 
     public bool SnowflakeRequired { get; set; }
     
@@ -29,13 +31,14 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
     {
         get
         {
-            return ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, msSqlRequired: MsSqlRequired, elasticSearchRequired: ElasticSearchRequired, azureQueueStorageRequired: AzureQueueStorageRequired, snowflakeRequired: SnowflakeRequired);
+            return ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, msSqlRequired: MsSqlRequired, elasticSearchRequired: ElasticSearchRequired, azureQueueStorageRequired: AzureQueueStorageRequired, snowflakeRequired: SnowflakeRequired, awsSqsRequired: AwsSqsRequired);
         }
 
         set => _skip = value;
     }
 
-    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired, bool azureQueueStorageRequired, bool snowflakeRequired)
+    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired, bool azureQueueStorageRequired)
+    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool msSqlRequired, bool elasticSearchRequired, bool azureQueueStorageRequired, bool snowflakeRequired, bool awsSqsRequired)
     {
         var s = ShouldSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
         if (s != null)
@@ -49,6 +52,8 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
 
         if (azureQueueStorageRequired && AzureQueueStorageHelper.ShouldSkip(out skip))
             return skip;
+        
+        // TODO: implement AwsSqsRequired
 
         if (snowflakeRequired && SnowflakeHelper.ShouldSkip(out skip))
             return skip;

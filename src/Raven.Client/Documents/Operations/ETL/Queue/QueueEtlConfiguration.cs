@@ -52,6 +52,9 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
                 case QueueBrokerType.AzureQueueStorage:
                     return Connection.AzureQueueStorageConnectionSettings.GetStorageUrl()
                         .StartsWith("https", StringComparison.OrdinalIgnoreCase);
+                case QueueBrokerType.AwsSqs:
+                    return Connection.AwsSqsConnectionSettings.GetQueueUrl()
+                        .StartsWith("https", StringComparison.OrdinalIgnoreCase);
                 default:
                     throw new NotSupportedException($"Unknown broker type: {BrokerType}");
             }

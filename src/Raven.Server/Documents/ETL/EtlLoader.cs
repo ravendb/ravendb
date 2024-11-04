@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -19,6 +19,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.Queue;
+using Raven.Server.Documents.ETL.Providers.Queue.AwsSqs;
 using Raven.Server.Documents.ETL.Providers.Queue.AzureQueueStorage;
 using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
 using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
@@ -751,6 +752,29 @@ namespace Raven.Server.Documents.ETL
 
                             break;
                         }
+                    case AwsSqsEtl awsSqsEtl:
+                    {
+                        QueueEtlConfiguration existing = null;
+
+                        foreach (var config in myQueueEtl)
+                        {
+                            var diff = awsSqsEtl.Configuration.Compare(config);
+
+                            if (diff == EtlConfigurationCompareDifferences.None)
+                            {
+                                existing = config;
+                                break;
+                            }
+                        }
+
+                        if (existing != null)
+                        {
+                            toRemove.Remove(processesPerConfig.Key);
+                            myQueueEtl.Remove(existing);
+                        }
+                        
+                        break;
+                    }
                     default:
                         throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
                 }
@@ -893,6 +917,13 @@ namespace Raven.Server.Documents.ETL
 
                 if (existing != null)
                     differences = snowflakeEtl.Configuration.Compare(existing, transformationDiffs);
+            }
+            else if (process is AwsSqsEtl awsSqsEtl)
+            {
+                var existing = myQueueEtl.FirstOrDefault(x => x.Name.Equals(awsSqsEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                    differences = awsSqsEtl.Configuration.Compare(existing, transformationDiffs);
             }
             else
             {

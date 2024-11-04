@@ -15,6 +15,8 @@ public sealed class QueueConnectionString : ConnectionString
 
     public AzureQueueStorageConnectionSettings AzureQueueStorageConnectionSettings { get; set; }
     
+    public AwsSqsConnectionSettings AwsSqsConnectionSettings { get; set; }
+    
     public override ConnectionStringType Type => ConnectionStringType.Queue;
 
     protected override void ValidateImpl(ref List<string> errors)
@@ -37,6 +39,12 @@ public sealed class QueueConnectionString : ConnectionString
                 if (AzureQueueStorageConnectionSettings.IsValidConnection() == false)
                 {
                     errors.Add($"{nameof(AzureQueueStorageConnectionSettings)} has no valid setting.");
+                }
+                break;
+            case QueueBrokerType.AwsSqs:
+                if (AwsSqsConnectionSettings.IsValidConnection() == false)
+                {
+                    errors.Add($"{nameof(AwsSqsConnectionSettings)} has no valid setting.");
                 }
                 break;
             default:
@@ -63,6 +71,9 @@ public sealed class QueueConnectionString : ConnectionString
             case QueueBrokerType.AzureQueueStorage:
                 url = AzureQueueStorageConnectionSettings.GetStorageUrl();
                 break;
+            case QueueBrokerType.AwsSqs:
+                url = AwsSqsConnectionSettings.GetQueueUrl();
+                break;
             default:
                 throw new NotSupportedException($"'{BrokerType}' broker is not supported");
         }
@@ -78,6 +89,7 @@ public sealed class QueueConnectionString : ConnectionString
         json[nameof(KafkaConnectionSettings)] = KafkaConnectionSettings?.ToJson();
         json[nameof(RabbitMqConnectionSettings)] = RabbitMqConnectionSettings?.ToJson();
         json[nameof(AzureQueueStorageConnectionSettings)] = AzureQueueStorageConnectionSettings?.ToJson();
+        json[nameof(AwsSqsConnectionSettings)] = AwsSqsConnectionSettings?.ToJson();
 
         return json;
     }
