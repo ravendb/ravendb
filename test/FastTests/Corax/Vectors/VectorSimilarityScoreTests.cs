@@ -42,7 +42,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         var queryVector = Enumerable.Range(0, dimensions).Select(_ => random.NextSingle()).ToArray();
 
         var query = session.Query<Dto, Index>()
-            .VectorSearch(f => f.WithField(d => d.Singles), v => v.ByEmbedding(queryVector), 0.0001f)
+            .VectorSearch(f => f.WithField(d => d.Singles), v => v.ByEmbedding(queryVector), -1f)
             .OrderByScore();
 
 
@@ -81,7 +81,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         var queryVector = VectorQuantizer.ToInt8(Enumerable.Range(0, dimensions).Select(_ => random.NextSingle()).ToArray());
 
         var query = session.Query<Dto, Index>()
-            .VectorSearch(f => f.WithField(d => d.Int8), v => v.ByEmbedding(queryVector), 0.0001f)
+            .VectorSearch(f => f.WithField(d => d.Int8), v => v.ByEmbedding(queryVector), -1f)
             .OrderByScore();
 
 
@@ -91,7 +91,6 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         Assert.NotNull(streamResults.Current);
         Assert.NotNull(streamResults.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
         var similarity = (float)streamResults.Current.Metadata.GetDouble(Constants.Documents.Metadata.IndexScore);
-
         
         var expectedSimilarity = TensorPrimitives.CosineSimilarity(queryVector.Select(x => (float)x).ToArray(), doc.Int8.Select(x => (float)x).ToArray());
         Assert.Equal(expectedSimilarity, similarity, 0.0001f);
@@ -125,18 +124,16 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         } while (commonsBits <= 0);
 
         var query = session.Query<Dto, Index>()
-            .VectorSearch(f => f.WithField(d => d.Binary), v => v.ByEmbedding(queryVector), 0.0001f)
+            .VectorSearch(f => f.WithField(d => d.Binary), v => v.ByEmbedding(queryVector), -1f)
             .OrderByScore();
-
-
+        
         using IEnumerator<StreamResult<Dto>> streamResults = session.Advanced.Stream(query, out _);
 
         Assert.True(streamResults.MoveNext());
         Assert.NotNull(streamResults.Current);
         Assert.NotNull(streamResults.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
         var similarity = (float)streamResults.Current.Metadata.GetDouble(Constants.Documents.Metadata.IndexScore);
-
-
+        
         var hammingBitDistance = TensorPrimitives.HammingBitDistance<byte>(queryVector, doc.Binary);
         
         var expectedSimilarity = 1.0f - (hammingBitDistance / (queryVector.Length * 8f));
@@ -175,7 +172,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         public Index()
         {
             Map = dtos => from doc in dtos
-                select new { Singles = CreateVector(doc.Singles), Int8 = CreateVector(doc.Int8), Bytes = CreateVector(doc.Binary) };
+                select new { Singles = CreateVector(doc.Singles), Int8 = CreateVector(doc.Int8), Binary = CreateVector(doc.Binary) };
 
             Vector(f => f.Int8, i => i.SourceEmbedding(VectorEmbeddingType.Int8));
             Vector(f => f.Binary, i => i.SourceEmbedding(VectorEmbeddingType.Binary));
