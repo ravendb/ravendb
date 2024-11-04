@@ -11,8 +11,32 @@ public class TransactionForgetAboutDocumentEnumerator : TransactionForgetAboutAb
     {
     }
 
-    protected override void ForgetAbout(Document item)
+    protected override void ForgetAbout(ForgetAboutItem item)
     {
-        DocsContext.Transaction.ForgetAbout(Current);
+        if (item.IsCloned)
+        {
+            using (item.CompressedItem)
+            {
+                DocsContext.Transaction.ForgetAbout(item.CompressedItem);
+            }
+        }
+    }
+
+    protected override ForgetAboutItem CloneCurrent(Document item)
+    {
+        if (DocsContext.Transaction.CanForgetAbout(item))
+        {
+            return new ForgetAboutItem()
+            {
+                Item = item.Clone(DocsContext),
+                CompressedItem = item,
+                IsCloned = true
+            };
+        }
+
+        return new ForgetAboutItem()
+        {
+            Item = item
+        };
     }
 }

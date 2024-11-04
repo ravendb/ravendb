@@ -710,6 +710,14 @@ namespace Voron.Impl
             }
         }
 
+        public bool CanForgetAbout(in long storageId)
+        {
+            if (_cachedDecompressedBuffersByStorageId == null)
+                return false;
+
+            return _cachedDecompressedBuffersByStorageId.ContainsKey(storageId);
+        }
+
         public void Forget(Slice name)
         {
             LowLevelTransaction.RootObjects.Forget(name);

@@ -16,16 +16,27 @@ public abstract class TransactionForgetAboutAbstractEnumerator<T> : IEnumerator<
         DocsContext = docsContext;
     }
 
-    protected abstract void ForgetAbout(T item);
+    protected abstract void ForgetAbout(ForgetAboutItem item);
+    protected abstract ForgetAboutItem CloneCurrent(T item);
+
+    protected struct ForgetAboutItem
+    {
+        public T Item;
+        public T CompressedItem;
+        public bool IsCloned;
+    }
 
     public bool MoveNext()
     {
-        ForgetAbout(Current);
+        ForgetAbout(_current);
 
         if (_innerEnumerator.MoveNext() == false)
             return false;
 
-        Current = _innerEnumerator.Current;
+        // the clone is needed because we are going to forget about the _current document
+        // Current should be disposed by the caller
+        _current = CloneCurrent(_innerEnumerator.Current);
+        Current = _current.Item;
 
         return true;
     }
@@ -35,6 +46,7 @@ public abstract class TransactionForgetAboutAbstractEnumerator<T> : IEnumerator<
         throw new System.NotImplementedException();
     }
 
+    private ForgetAboutItem _current = new ForgetAboutItem();
     public T Current { get; private set; }
 
     object IEnumerator.Current => Current;

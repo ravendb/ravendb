@@ -180,6 +180,13 @@ namespace Raven.Server.Documents
             InnerTransaction.ForgetAbout(doc.StorageId);
         }
 
+        public bool CanForgetAbout(Document doc)
+        {
+            if (doc == null)
+                return false;
+            return InnerTransaction.CanForgetAbout(doc.StorageId);
+        }
+
         internal void CheckIfShouldDeleteAttachmentStream(Slice hash)
         {
             var clone = hash.Clone(InnerTransaction.Allocator);
