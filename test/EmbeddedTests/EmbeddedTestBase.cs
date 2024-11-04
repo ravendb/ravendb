@@ -5,6 +5,7 @@ using System.Threading;
 using EmbeddedTests.Platform;
 using Raven.Embedded;
 using Sparrow.Collections;
+using Sparrow.Utils;
 
 namespace EmbeddedTests
 {
@@ -13,6 +14,13 @@ namespace EmbeddedTests
         private static int _pathCount;
 
         private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+#if NETCOREAPP3_1_OR_GREATER
+        static EmbeddedTestBase()
+        {
+            DynamicNativeLibraryResolver.Register(typeof(ZstdLib).Assembly, ZstdLib.LIBZSTD);
+        }
+#endif
 
         protected string NewDataPath([CallerMemberName] string caller = null)
         {
@@ -82,7 +90,7 @@ namespace EmbeddedTests
             var (severDirectory, dataDirectory) = CopyServer();
             return new ServerOptions { ServerDirectory = severDirectory, DataDirectory = dataDirectory, LogsPath = Path.Combine(severDirectory, "Logs") };
         }
-        
+
         public virtual void Dispose()
         {
             foreach (var path in _localPathsToDelete)

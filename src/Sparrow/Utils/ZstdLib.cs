@@ -12,7 +12,7 @@ namespace Sparrow.Utils
     [SuppressUnmanagedCodeSecurity]
     internal static unsafe class ZstdLib
     {
-        private const string LIBZSTD = @"libzstd";
+        internal const string LIBZSTD = "libzstd";
 
         internal static Func<string, Exception> CreateDictionaryException;
 
