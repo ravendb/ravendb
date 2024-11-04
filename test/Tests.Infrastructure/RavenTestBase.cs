@@ -222,6 +222,15 @@ namespace FastTests
                         }
                     };
 
+                    if (RavenTestHelper.RunTestsWithDocsCompression)
+                    {
+                        doc.DocumentsCompression = new DocumentsCompressionConfiguration
+                        {
+                            CompressAllCollections = true, 
+                            CompressRevisions = true
+                        };
+                    }
+
                     if (options.Encrypted)
                         doc.Encrypted = true;
 
