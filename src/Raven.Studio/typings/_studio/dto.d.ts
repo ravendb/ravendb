@@ -901,6 +901,29 @@ interface cachedDateValue<T> {
 
 type widgetType = Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType | "Welcome" | "License";
 
+type gcType = "Background" | "Ephemeral" | "FullBlocking";
+
+interface Flavoring<FlavorT> {
+    _type?: FlavorT;
+}
+
+type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
+
+type ClusterWidgetUnalignedDate = Flavor<Date, "Unaligned">;  // represents arbitrary date
+type ClusterWidgetAlignedDate = Flavor<Date, "Aligned">; // represents date quantized to nearest data point
+
+interface GcInfoNormalizedData extends Raven.Server.Dashboard.Cluster.AbstractClusterDashboardNotification {
+    memoryInfo: Raven.Server.Dashboard.Cluster.Notifications.GcInfoPayload.GcMemoryInfo;
+    gcType: gcType;
+}
+
+interface GcInfoChartData {
+    Date: string;
+    value: number;
+    Key: string;
+    gcType: gcType;
+}
+
 interface ioStatsWidgetConfig {
     splitIops?: boolean;
     splitThroughput?: boolean;

@@ -55,8 +55,6 @@ class databaseOverviewWidget extends abstractDatabaseAndNodeAwareTableWidget<Rav
     }
 
     protected applyPerDatabaseStripes(items: databaseOverviewItem[]) {
-        // TODO: RavenDB-17013 - stripes not working correctly after scroll
-        
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
             

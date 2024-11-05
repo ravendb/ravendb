@@ -346,20 +346,14 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             this.dataToShow(tempDataToShow);
             }
         }
-    
-    protected applyPerDatabaseStripes(items: taskItem[]) {
-        // TODO: RavenDB-17013 - stripes not working correctly after scroll
 
+    protected applyPerDatabaseStripes(items: taskItem[]) {
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
 
-            if (item.isTitleItem()) {
-                item.even = true;
-        } else {
-                item.even = false;
+            item.even = item.isTitleItem();
         }
     }
-    }
-    }
+}
 
 export = ongoingTasksWidget;

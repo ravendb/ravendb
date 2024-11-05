@@ -562,6 +562,17 @@ namespace Sparrow.Json.Parsing
                     current = dja;
                     continue;
                 }
+                
+                if (current is List<double> dd)
+                {
+                    var dja = new DynamicJsonArray();
+                    foreach (var item in dd)
+                    {
+                        dja.Add(item);
+                    }
+                    current = dja;
+                    continue;
+                }
 
                 if (current is Dictionary<string, long> dsl)
                 {

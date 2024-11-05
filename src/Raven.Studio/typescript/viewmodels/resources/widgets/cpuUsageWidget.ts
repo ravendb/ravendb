@@ -8,8 +8,8 @@ class cpuUsageWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboar
 
     view = require("views/resources/widgets/cpuUsageWidget.html");
     
-    ravenChart: lineChart;
-    serverChart: lineChart;
+    ravenChart: lineChart<Raven.Server.Dashboard.Cluster.Notifications.CpuUsagePayload>;
+    serverChart: lineChart<Raven.Server.Dashboard.Cluster.Notifications.CpuUsagePayload>;
     
     constructor(controller: clusterDashboard) {
         super(controller);
@@ -26,7 +26,7 @@ class cpuUsageWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboar
 
     protected initCharts() {
         const ravenChartContainer = this.container.querySelector(".ravendb-line-chart");
-        this.ravenChart = new lineChart(ravenChartContainer, {
+        this.ravenChart = new lineChart(ravenChartContainer, x => x.ProcessCpuUsage, {
             grid: true,
             yMaxProvider: () => 100,
             topPaddingProvider: () => 2,
@@ -34,7 +34,7 @@ class cpuUsageWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboar
             onMouseMove: date => this.onMouseMove(date)
         });
         const serverChartContainer = this.container.querySelector(".machine-line-chart");
-        this.serverChart = new lineChart(serverChartContainer, {
+        this.serverChart = new lineChart(serverChartContainer, x => x.MachineCpuUsage, {
             grid: true,
             yMaxProvider: () => 100,
             topPaddingProvider: () => 2,
@@ -43,16 +43,6 @@ class cpuUsageWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboar
         });
         
         return [this.ravenChart, this.serverChart];
-    }
-    
-    protected extractDataForChart(chart: lineChart, data: Raven.Server.Dashboard.Cluster.Notifications.CpuUsagePayload): number {
-        if (chart === this.serverChart) {
-            return data.MachineCpuUsage;
-        } else if (chart === this.ravenChart) {
-            return data.ProcessCpuUsage;
-        } else {
-            throw new Error("Unsupported chart: " + chart);
-        }
     }
 }
 

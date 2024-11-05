@@ -17,8 +17,8 @@ class memoryUsageWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashb
     showProcessDetails = ko.observable<boolean>(false);
     showMachineDetails = ko.observable<boolean>(false);
     
-    ravenChart: lineChart;
-    serverChart: lineChart;
+    ravenChart: lineChart<Raven.Server.Dashboard.Cluster.Notifications.MemoryUsagePayload>;
+    serverChart: lineChart<Raven.Server.Dashboard.Cluster.Notifications.MemoryUsagePayload>;
     
     constructor(controller: clusterDashboard) {
         super(controller);
@@ -59,14 +59,14 @@ class memoryUsageWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashb
     
     initCharts() {
         const ravenChartContainer = this.container.querySelector(".ravendb-line-chart");
-        this.ravenChart = new lineChart(ravenChartContainer, {
+        this.ravenChart = new lineChart(ravenChartContainer, x=> x.WorkingSet, {
             grid: true,
             fillData: true,
             tooltipProvider: date => memoryUsageWidget.tooltipContent(date),
             onMouseMove: date => this.onMouseMove(date)
         });
         const serverChartContainer = this.container.querySelector(".machine-line-chart");
-        this.serverChart = new lineChart(serverChartContainer, {
+        this.serverChart = new lineChart(serverChartContainer, x=> x.PhysicalMemory - x.AvailableMemory, {
             grid: true, 
             fillData: true,
             tooltipProvider: date => memoryUsageWidget.tooltipContent(date),
@@ -74,16 +74,6 @@ class memoryUsageWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashb
         });
         
         return [this.ravenChart, this.serverChart];
-    }
-
-    protected extractDataForChart(chart: lineChart, data: Raven.Server.Dashboard.Cluster.Notifications.MemoryUsagePayload): number {
-        if (chart === this.serverChart) {
-            return data.PhysicalMemory - data.AvailableMemory;
-        } else if (chart === this.ravenChart) {
-            return data.WorkingSet;
-        } else {
-            throw new Error("Unsupported chart: " + chart);
-        }
     }
     
     toggleProcessDetails() {

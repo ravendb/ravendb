@@ -10,7 +10,11 @@ public class GcInfoNotificationSender : AbstractClusterDashboardNotificationSend
     {
     }
 
-    protected override TimeSpan NotificationInterval { get; } = TimeSpan.FromSeconds(5);
+    private long _lastEphemeralIndex = -1;
+    private long _lastBackgroundIndex = -1;
+    private long _lastFullBlockingIndex = -1;
+
+    protected override TimeSpan NotificationInterval { get; } = TimeSpan.FromSeconds(3);
 
     private GcInfoPayload.GcMemoryInfo ExtractGcMemoryInfoPayload(GCMemoryInfo info)
     {
@@ -19,6 +23,7 @@ public class GcInfoNotificationSender : AbstractClusterDashboardNotificationSend
             Index = info.Index,
             Compacted = info.Compacted,
             Concurrent = info.Concurrent,
+            Generation = info.Generation,
             PauseTimePercentage = info.PauseTimePercentage,
             PauseDurationsInMs =
             [
@@ -64,11 +69,17 @@ public class GcInfoNotificationSender : AbstractClusterDashboardNotificationSend
         var backgroundGc = GC.GetGCMemoryInfo(GCKind.Background);
         var fullBlockingGc = GC.GetGCMemoryInfo(GCKind.FullBlocking);
 
-        return new GcInfoPayload
+        var payload = new GcInfoPayload
         {
-            Ephemeral = ExtractGcMemoryInfoPayload(ephemeralGc),
-            Background = ExtractGcMemoryInfoPayload(backgroundGc),
-            FullBlocking = ExtractGcMemoryInfoPayload(fullBlockingGc),
+            Ephemeral = _lastEphemeralIndex != ephemeralGc.Index ? ExtractGcMemoryInfoPayload(ephemeralGc) : null,
+            Background = _lastBackgroundIndex != backgroundGc.Index ? ExtractGcMemoryInfoPayload(backgroundGc) : null,
+            FullBlocking = _lastFullBlockingIndex != fullBlockingGc.Index ? ExtractGcMemoryInfoPayload(fullBlockingGc) : null,
         };
+
+        _lastEphemeralIndex = ephemeralGc.Index;
+        _lastBackgroundIndex = backgroundGc.Index;
+        _lastFullBlockingIndex = fullBlockingGc.Index;
+
+        return payload;
     }
 }

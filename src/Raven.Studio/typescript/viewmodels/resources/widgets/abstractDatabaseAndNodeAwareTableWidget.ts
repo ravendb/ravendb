@@ -102,8 +102,6 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
     }
 
     protected applyPerDatabaseStripes(items: databaseAndNodeAwareStats[]) {
-        // TODO: RavenDB-17013 - stripes not working correctly after scroll
-        
         // leave only first database name in group - we don't want to repeat db name
         let currentDbName = "";
         let even = true;

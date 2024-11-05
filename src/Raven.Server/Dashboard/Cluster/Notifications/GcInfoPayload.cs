@@ -1,6 +1,7 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Dashboard.Cluster;
+namespace Raven.Server.Dashboard.Cluster.Notifications;
 
 public class GcInfoPayload : AbstractClusterDashboardNotification
 {
@@ -17,9 +18,9 @@ public class GcInfoPayload : AbstractClusterDashboardNotification
     {
         var json = base.ToJson();
 
-        json[nameof(Ephemeral)] = Ephemeral.ToJson();
-        json[nameof(Background)] = Background.ToJson();
-        json[nameof(FullBlocking)] = FullBlocking.ToJson();
+        json[nameof(Ephemeral)] = Ephemeral?.ToJson();
+        json[nameof(Background)] = Background?.ToJson();
+        json[nameof(FullBlocking)] = FullBlocking?.ToJson();
 
         return json;
     }
@@ -36,10 +37,12 @@ public class GcInfoPayload : AbstractClusterDashboardNotification
         public bool Compacted { get; set; }
 
         public bool Concurrent { get; set; }
+        
+        public int Generation {get; set; }
 
         public double PauseTimePercentage { get; set; }
 
-        public double[] PauseDurationsInMs { get; set; }
+        public List<double> PauseDurationsInMs { get; set; }
 
         public long TotalHeapSizeAfterBytes { get; set; }
 
@@ -60,6 +63,7 @@ public class GcInfoPayload : AbstractClusterDashboardNotification
                 [nameof(Index)] = Index,
                 [nameof(Compacted)] = Compacted,
                 [nameof(Concurrent)] = Concurrent,
+                [nameof(Generation)] = Generation,
                 [nameof(PauseTimePercentage)] = PauseTimePercentage,
                 [nameof(PauseDurationsInMs)] = PauseDurationsInMs,
                 [nameof(TotalHeapSizeAfterBytes)] = TotalHeapSizeAfterBytes,

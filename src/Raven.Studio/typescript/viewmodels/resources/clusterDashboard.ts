@@ -23,6 +23,7 @@ import clusterOverviewWidget = require("viewmodels/resources/widgets/clusterOver
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import Packery = require("packery");
 import Draggabilly = require("draggabilly");
+import gcInfoWidget from "viewmodels/resources/widgets/gcInfoWidget";
 
 interface savedWidgetsLayout {
     widgets: savedWidget[];
@@ -261,6 +262,7 @@ class clusterDashboard extends viewModelBase {
             this.addWidget(new databaseOverviewWidget(this));
             this.addWidget(new ongoingTasksWidget(this));
             this.addWidget(new clusterOverviewWidget(this));
+            this.addWidget(new gcInfoWidget(this));
             
             const initialWidgets = this.widgets();
             
@@ -402,6 +404,9 @@ class clusterDashboard extends viewModelBase {
         let widget: widget<any>;
         
         switch (type) {
+            case "GcInfo":
+                widget = new gcInfoWidget(this);
+                break;
             case "Welcome":
                 widget = new welcomeWidget(this);
                 break;

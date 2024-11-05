@@ -2,8 +2,11 @@
 
 import moment = require("moment");
 
-class historyAwareNodeStats<T extends Raven.Server.Dashboard.Cluster.AbstractClusterDashboardNotification> {
+type matchMode = "closestPrevious" | "exact";
+
+class historyAwareNodeStats<T extends { Date: string }> {
     readonly tag: string;
+    readonly matchMode: matchMode;
 
     connectedAt = ko.observable<Date>();
     currentItem = ko.observable<cachedDateValue<T>>();
@@ -18,8 +21,9 @@ class historyAwareNodeStats<T extends Raven.Server.Dashboard.Cluster.AbstractClu
         return !mouseOver && noData;
     })
 
-    constructor(tag: string) {
+    constructor(tag: string, matchMode: matchMode = "closestPrevious") {
         this.tag = tag;
+        this.matchMode = matchMode;
     }
 
     onConnectionStatusChanged(connected: true, serverTime: Date): void;
@@ -58,7 +62,7 @@ class historyAwareNodeStats<T extends Raven.Server.Dashboard.Cluster.AbstractClu
     }
 
     // null means show latest one
-    showItemAtDate(date: Date|null) {
+    showItemAtDate(date: ClusterWidgetAlignedDate|null, fallbackToCurrent = true) {
         this.mouseOver(!!date);
         if (date) {
             if (!this.wasConnected(date)) {
@@ -69,18 +73,34 @@ class historyAwareNodeStats<T extends Raven.Server.Dashboard.Cluster.AbstractClu
             if (history.length) {
                 for (let i = this.history.length - 1; i >= 0; i--) {
                     const item = this.history[i];
-                    if (item.date.getTime() < time) {
-                        // found index to use
-                        this.currentItem(item);
-                        return;
+                    switch (this.matchMode) {
+                        case "closestPrevious": {
+                            if (item.date.getTime() <= time) {
+                                // found index to use
+                                this.currentItem(item);
+                                return;
+                            }
+                            break;
+                        }
+                        case "exact": {
+                            if (item.date.getTime() === time) {
+                                // found index to use
+                                this.currentItem(item);
+                                return;
+                            }
+                            break;
+                        }
+                        default: 
+                            throw new Error("Unhandled match mode:" + this.matchMode);
                     }
+                    
                 }
             }
 
             this.currentItem(null);
         } else {
-            // use latest data 
-            if (history.length && this.connectedAt()) {
+            // use latest data
+            if (history.length && this.connectedAt() && fallbackToCurrent) {
                 this.currentItem(this.history[this.history.length - 1]);
             } else {
                 this.currentItem(null);

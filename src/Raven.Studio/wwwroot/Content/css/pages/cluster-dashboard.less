@@ -8,6 +8,32 @@
     }
 }
 
+.gc-legend {
+.gc-info-widget {
+    .rect {
+        display: inline-block;
+        width: 15px;
+        height: 15px;
+        margin-left: 3px;
+    }
+    .gen-0 {
+        background-color: @gc-info-gen0;
+    }
+    .gen-1 {
+        background-color: @gc-info-gen1;
+    }
+    .gen-2 {
+        background-color: @gc-info-gen2;
+    }
+    .loh {
+        background-color: @gc-info-loh;
+    }
+    .pinned {
+        background-color: @gc-info-pinned;
+    }
+}
+
+
 .cluster-dashboard-container {
     width: 100%;
     padding-bottom: @gutter;
@@ -499,6 +525,7 @@
             .graph-container {
                 height: 100px;
                 overflow: hidden;
+                
 
                 .grid-line {
                     stroke: @hr-border;
@@ -512,12 +539,71 @@
                 }
 
                 .fill {
-                    fill-opacity: 0.3;
+                    fill-opacity: 0.2;
+                    fill: var(--node-color);
                     stroke: none;
+                }
+                
+                &.gc-size-line-chart {
+                    .fill {
+                        fill-opacity: 0.1;
+                    }
+                    .gc-info-gen0 {
+                        .line {
+                            stroke: @gc-info-gen0;
+                        }
+                        .fill {
+                            fill: @gc-info-gen0;
+                        }
+                    }
+                    .gc-info-gen1 {
+                        .line {
+                            stroke: @gc-info-gen1;
+                        }
+                        .fill {
+                            fill: @gc-info-gen1;
+                        }
+                    }
+                    .gc-info-gen2 {
+                        .line {
+                            stroke: @gc-info-gen2;    
+                        }
+                        .fill {
+                            fill: @gc-info-gen2;
+                        }
+                    }
+                    .gc-info-pinned {
+                        .line {
+                            stroke: @gc-info-pinned;
+                        }
+                        .fill {
+                            fill: @gc-info-pinned;
+                        }
+                    }
+                    .gc-info-loh {
+                        .line {
+                            stroke: @gc-info-loh;
+                        }
+                        .fill {
+                            fill: @gc-info-loh;
+                        }
+                    }
                 }
 
                 &.graph-container-sm {
                     height: 70px;
+                }
+            }
+            
+            .gc-pause-bubble-chart {
+                .point {
+                    fill: var(--node-color);
+                    text {
+                        text-anchor: middle;
+                        pointer-events: none;
+                        font-size: 12px;
+                        fill: white;
+                    }
                 }
             }
         }

@@ -17,13 +17,13 @@ class ioStatsWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard
 
     view = require("views/resources/widgets/ioStatsWidget.html");
     
-    iopsChart: lineChart;
-    iopsReadChart: lineChart;
-    iopsWriteChart: lineChart;
-    throughputChart: lineChart;
-    throughputReadChart: lineChart;
-    throughputWriteChart: lineChart;
-    diskQueueChart: lineChart;
+    iopsChart: lineChart<Raven.Server.Dashboard.Cluster.Notifications.IoStatsPayload>;
+    iopsReadChart: lineChart<Raven.Server.Dashboard.Cluster.Notifications.IoStatsPayload>;
+    iopsWriteChart: lineChart<Raven.Server.Dashboard.Cluster.Notifications.IoStatsPayload>;
+    throughputChart: lineChart<Raven.Server.Dashboard.Cluster.Notifications.IoStatsPayload>;
+    throughputReadChart: lineChart<Raven.Server.Dashboard.Cluster.Notifications.IoStatsPayload>;
+    throughputWriteChart: lineChart<Raven.Server.Dashboard.Cluster.Notifications.IoStatsPayload>;
+    diskQueueChart: lineChart<Raven.Server.Dashboard.Cluster.Notifications.IoStatsPayload>;
 
     splitIops = ko.observable<boolean>(false);
     splitThroughput = ko.observable<boolean>(false);
@@ -79,26 +79,47 @@ class ioStatsWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard
             maxKnownThroughput = Math.max(maxKnownThroughput, d3.max(allCharts.map(data => d3.max(data.ranges.filter(range => range.values.length).map(range => d3.max(range.values.map(values => values.y)))))));
             return maxKnownThroughput;
         }
+
+        const sumUp = (data: Raven.Server.Dashboard.Cluster.Notifications.IoStatsPayload, extractor: (item: IoStatsResult) => number) => {
+            if (!data.Items.length) {
+                return undefined;
+            }
+            return data.Items.map(extractor).reduce((p, c) => p + c, 0);
+        };
         
-        this.iopsChart = new lineChart(this.container.querySelector(".disk-iops-line-chart"), chartsOpts);
-        this.iopsReadChart = new lineChart(this.container.querySelector(".disk-iops-read-line-chart"), { 
-            ...chartsOpts, 
-            yMaxProvider: iopsCommonYProvider
-        });
-        this.iopsWriteChart = new lineChart(this.container.querySelector(".disk-iops-write-line-chart"), { 
-            ...chartsOpts, 
-            yMaxProvider: iopsCommonYProvider
-        });
-        this.throughputChart = new lineChart(this.container.querySelector(".disk-throughput-line-chart"), chartsOpts);
-        this.throughputReadChart = new lineChart(this.container.querySelector(".disk-throughput-read-line-chart"), {
-            ...chartsOpts,
-            yMaxProvider: throughputCommonYProvider
-        });
-        this.throughputWriteChart = new lineChart(this.container.querySelector(".disk-throughput-write-line-chart"), {
-            ...chartsOpts,
-            yMaxProvider: throughputCommonYProvider
-        });
-        this.diskQueueChart = new lineChart(this.container.querySelector(".disk-queue-line-chart"), chartsOpts);
+        this.iopsChart = new lineChart(this.container.querySelector(".disk-iops-line-chart"),
+            data => sumUp(data, x => x.IoReadOperations + x.IoWriteOperations),
+            chartsOpts);
+        this.iopsReadChart = new lineChart(this.container.querySelector(".disk-iops-read-line-chart"),
+            data => sumUp(data, x => x.IoReadOperations),
+            {
+                ...chartsOpts,
+                yMaxProvider: iopsCommonYProvider
+            });
+        this.iopsWriteChart = new lineChart(this.container.querySelector(".disk-iops-write-line-chart"),
+            data => sumUp(data, x => x.IoWriteOperations),
+            {
+                ...chartsOpts,
+                yMaxProvider: iopsCommonYProvider
+            });
+        this.throughputChart = new lineChart(this.container.querySelector(".disk-throughput-line-chart"),
+            data => sumUp(data, x => x.ReadThroughputInKb + x.WriteThroughputInKb),
+            chartsOpts);
+        this.throughputReadChart = new lineChart(this.container.querySelector(".disk-throughput-read-line-chart"),
+            data => sumUp(data, x => x.ReadThroughputInKb),
+            {
+                ...chartsOpts,
+                yMaxProvider: throughputCommonYProvider
+            });
+        this.throughputWriteChart = new lineChart(this.container.querySelector(".disk-throughput-write-line-chart"),
+            data => sumUp(data, x => x.WriteThroughputInKb),
+            {
+                ...chartsOpts,
+                yMaxProvider: throughputCommonYProvider
+            });
+        this.diskQueueChart = new lineChart(this.container.querySelector(".disk-queue-line-chart"),
+            data => sumUp(data, x => x.QueueLength ?? 0),
+            chartsOpts);
         
         return [
             this.iopsChart,
@@ -109,33 +130,6 @@ class ioStatsWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard
             this.throughputWriteChart,
             this.diskQueueChart
         ];
-    }
-    
-    protected extractDataForChart(chart: lineChart, data: Raven.Server.Dashboard.Cluster.Notifications.IoStatsPayload): number | undefined {
-        const sumUp = (extractor: (item: IoStatsResult) => number) => {
-            if (!data.Items.length) {
-                return undefined;
-            }
-            return data.Items.map(extractor).reduce((p, c) => p + c, 0);
-        };
-        
-        if (chart === this.iopsChart) {
-            return sumUp(x => x.IoReadOperations + x.IoWriteOperations);
-        } else if (chart === this.iopsReadChart) {
-            return sumUp(x => x.IoReadOperations);
-        } else if (chart === this.iopsWriteChart) {
-            return sumUp(x => x.IoWriteOperations);
-        } else if (chart === this.throughputChart) {
-            return sumUp(x => x.ReadThroughputInKb + x.WriteThroughputInKb);
-        } else if (chart === this.throughputReadChart) {
-            return sumUp(x => x.ReadThroughputInKb);
-        } else if (chart === this.throughputWriteChart) {
-            return sumUp(x => x.WriteThroughputInKb);
-        } else if (chart === this.diskQueueChart) {
-            return sumUp(x => x.QueueLength ?? 0);
-        } else {
-            throw new Error("Unsupported chart: " + chart);
-        }
     }
     
     getConfiguration(): ioStatsWidgetConfig {

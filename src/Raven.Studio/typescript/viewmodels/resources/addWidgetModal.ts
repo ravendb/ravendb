@@ -70,6 +70,10 @@ class addWidgetModal extends dialogViewModelBase {
             name: "Ongoing Tasks",
             icon: require("../../../wwwroot/Content/img/widgets/list-icon.svg"),
             type: "OngoingTasks"
+        }, {
+            name: "GC",
+            icon: require("../../../wwwroot/Content/img/widgets/graph-icon.svg"),
+            type: "GcInfo"
         }
     ]
     
