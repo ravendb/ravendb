@@ -53,6 +53,9 @@ class clusterDebug extends viewModelBase {
     connections: KnockoutComputed<Raven.Server.Rachis.RaftDebugView.PeerConnection[]>;
     chokedCluster: KnockoutComputed<boolean>;
     
+    private nextIndexToFetch = ko.observable<number>();
+    private totalCount = ko.observable<number>();
+    
     constructor() {
         super();
         
@@ -207,16 +210,21 @@ class clusterDebug extends viewModelBase {
     compositionComplete(): void {
         super.compositionComplete();
         
-        const fetcher = (skip: number, pageSize: number) => {
-            const lastLogIndex = this.clusterLog().Log.LastLogEntryIndex;
-            const totalItems = lastLogIndex > 0 ? lastLogIndex : this.clusterLog().Log.CommitIndex; 
+        const fetcher = (skip: number) => {
             const log = this.clusterLog().Log;
             const data = log.Logs;
-
+            
             if (skip === 0) {
                 // we have preloaded data
+                const logLength = log.Logs.length;
+                const hasMore = logLength !== log.TotalEntries;
+                const total = hasMore ? logLength + 1 : logLength;
+                
+                this.nextIndexToFetch(log.Logs.length ? log.Logs[log.Logs.length - 1].Index - 1 : 0);
+                this.totalCount(data.length);
+              
                 return $.when({
-                    totalResultCount: totalItems,
+                    totalResultCount: total,
                     items: data.map(x => {
                         return {
                             ...x,
@@ -225,12 +233,23 @@ class clusterDebug extends viewModelBase {
                     })
                 } as pagedResult<LogEntry>);
             } else {
-                const from = totalItems - skip;
-                return new getClusterLogCommand(from, pageSize)
+                const chuckSize = 1001;
+                return new getClusterLogCommand(this.nextIndexToFetch(), chuckSize)
                     .execute()
                     .then(data => {
+                        const hasMore = data.Log.Logs.length === chuckSize;
+                        if (hasMore) {
+                            // truncate last item
+                            const lastItem = data.Log.Logs.pop();
+                            this.nextIndexToFetch(lastItem.Index);
+                        }
+                        
+                        this.totalCount(this.totalCount() + data.Log.Logs.length);
+
+                        const total = this.totalCount() + (hasMore ? 1 : 0);
+                        
                         return {
-                            totalResultCount: totalItems,
+                            totalResultCount: total,
                             items: data.Log.Logs.map(x => {
                                 return {
                                     ...x,
@@ -320,10 +339,11 @@ class clusterDebug extends viewModelBase {
     }
     
     private fetchClusterLog() {
-        return new getClusterLogCommand(undefined, 1024)
+        return new getClusterLogCommand(undefined, 1024) 
             .execute()
             .done(log => {
                 this.clusterLog(log);
+                this.nextIndexToFetch(null);
             });
     }
 
