@@ -1,21 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Object;
 
-[SchemaRule("enum")]
-public class EnumSchemaRuleValidator : SchemaRuleValidator<object>
+[SchemaRule("const")]
+public class ConstantSchemaRuleValidator : SchemaRuleValidator<object>
 {
-    private readonly object[] _enum;
+    private readonly object _constantValue;
 
-    public EnumSchemaRuleValidator(string path, IEnumerable<object> @enum) : base(path)
+    public ConstantSchemaRuleValidator(string path, object constantValue) : base(path)
     {
-        _enum = @enum.Select(ConvertType).ToArray();
+        _constantValue = ConvertType(constantValue);
     }
 
-    //TODO Consider defining base class with ConstantSchemaRuleValidator
+    //TODO Consider defining base class with EnumSchemaRuleValidator
     private object ConvertType(object x)
     {
         if (x is LazyNumberValue lnx)
@@ -41,14 +39,14 @@ public class EnumSchemaRuleValidator : SchemaRuleValidator<object>
 
         throw new InvalidOperationException($"The type {x.GetType()} is not supported. {Path}");
     }
-
+    
     protected override void ValidateInternal(object value, IErrorBuilder errorBuilder)
     {
-        if(_enum.Any(x => x.Equals(ConvertType(value))) == false)
+        if(_constantValue.Equals(value) == false)
             //TODO Clear error to differentiate between number and string (15 or "15")
-            errorBuilder.AddError($"The value '{value}' at '{Path}' is not an allowed value. Expected one of: {string.Join(", ", _enum)}.");
+            errorBuilder.AddError($"The value at '{Path}' must be '{_constantValue}', but it is '{value}'.");
     }
-    
+
     protected override bool CheckTypeAndGetValue(object value, out object tValue)
     {
         tValue = ConvertType(value);
