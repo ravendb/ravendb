@@ -208,7 +208,7 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
 
             public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
-                var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
+                var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync(CancellationToken).ConfigureAwait(false);
                 Result = new StreamResult(responseStream, response);
                 return ResponseDisposeHandling.Manually;
             }

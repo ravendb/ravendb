@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Exceptions.Security;
@@ -35,16 +36,16 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportGet<TRequestHan
         operationId ??= GetOperationId();
 
         var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, RequestHandler.GetAuthorizationStatusForSmuggler(RequestHandler.DatabaseName));
-        await using (var file = await GetImportStream())
-        await using (var stream = await BackupUtils.GetDecompressionStreamAsync(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte)))
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
+        await using (var file = await GetImportStream(token.Token))
+        await using (var stream = await BackupUtils.GetDecompressionStreamAsync(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte)))
         {
             var result = await DoImport(context, stream, options, result: null, onProgress: null, operationId.Value, token);
             await WriteSmugglerResultAsync(context, result, RequestHandler.ResponseBodyStream());
         }
     }
 
-    private async Task<Stream> GetImportStream()
+    private async Task<Stream> GetImportStream(CancellationToken token)
     {
         var file = RequestHandler.GetStringQueryString("file", required: false);
         if (string.IsNullOrEmpty(file) == false)
@@ -66,11 +67,11 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportGet<TRequestHan
                     new StreamContent(HttpContext.Request.Body)
                     {
                         Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(HttpContext.Request.ContentType) }
-                    });
-                return await msg.Content.ReadAsStreamWithZstdSupportAsync();
+                    }, token);
+                return await msg.Content.ReadAsStreamWithZstdSupportAsync(token);
             }
 
-            return await SmugglerHandler.HttpClient.GetStreamAsync(url);
+            return await SmugglerHandler.HttpClient.GetStreamAsync(url, token);
         }
 
         return HttpContext.Request.Body;

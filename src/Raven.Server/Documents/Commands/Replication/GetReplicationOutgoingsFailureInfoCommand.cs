@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Commands.Replication
 
         public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
-            await using var stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
+            await using var stream = await response.Content.ReadAsStreamWithZstdSupportAsync(CancellationToken).ConfigureAwait(false);
             await using var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream();
             await stream.CopyToAsync(memoryStream);
 
