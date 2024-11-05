@@ -107,8 +107,6 @@ namespace Raven.Client.Http
 
         protected internal NodeSelector _nodeSelector;
 
-        private TimeSpan? _defaultTimeout;
-
         public long NumberOfServerRequests;
 
         protected readonly string TopologyHash;
@@ -145,45 +143,11 @@ namespace Raven.Client.Http
 
         private AbstractCommandResponseBehavior.CommandUnsuccessfulResponseBehavior _commandUnsuccessfulResponseBehavior = AbstractCommandResponseBehavior.CommandUnsuccessfulResponseBehavior.WrapException;
 
-        public TimeSpan? DefaultTimeout
-        {
-            get => _defaultTimeout;
-            set
-            {
-                if (value.HasValue && value.Value > GlobalHttpClientTimeout && GlobalHttpClientTimeout != Timeout.InfiniteTimeSpan)
-                    ThrowTimeoutTooLarge(value);
+        public TimeSpan? DefaultTimeout { get; set; }
 
-                _defaultTimeout = value;
-            }
-        }
+        public TimeSpan SecondBroadcastAttemptTimeout { get; set; }
 
-        private TimeSpan _secondBroadcastAttemptTimeout;
-
-        public TimeSpan SecondBroadcastAttemptTimeout
-        {
-            get => _secondBroadcastAttemptTimeout;
-            set
-            {
-                if (value > GlobalHttpClientTimeout && GlobalHttpClientTimeout != Timeout.InfiniteTimeSpan)
-                    ThrowTimeoutTooLarge(value);
-
-                _secondBroadcastAttemptTimeout = value;
-            }
-        }
-
-        private TimeSpan _firstBroadcastAttemptTimeout;
-
-        public TimeSpan FirstBroadcastAttemptTimeout
-        {
-            get => _firstBroadcastAttemptTimeout;
-            set
-            {
-                if (value > GlobalHttpClientTimeout && GlobalHttpClientTimeout != Timeout.InfiniteTimeSpan)
-                    ThrowTimeoutTooLarge(value);
-
-                _firstBroadcastAttemptTimeout = value;
-            }
-        }
+        public TimeSpan FirstBroadcastAttemptTimeout { get; set; }
 
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
@@ -1097,13 +1061,10 @@ namespace Raven.Client.Http
                 }
 
                 Interlocked.Increment(ref NumberOfServerRequests);
-                var timeout = command.Timeout ?? _defaultTimeout;
+                var timeout = command.Timeout ?? DefaultTimeout;
                 if (timeout.HasValue)
                 {
-                    if (timeout > GlobalHttpClientTimeout && GlobalHttpClientTimeout != Timeout.InfiniteTimeSpan)
-                        ThrowTimeoutTooLarge(timeout);
-
-                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token))
                     {
                         cts.CancelAfter(timeout.Value);
                         try
@@ -1458,11 +1419,6 @@ namespace Raven.Client.Http
             // of the nodes, in which case we have nothing to do
         }
 
-        private void ThrowTimeoutTooLarge(TimeSpan? timeout)
-        {
-            throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{timeout}'.");
-        }
-
         private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, bool useCache, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
         {
             if (useCache && command.CanCache && command.CanReadFromCache && command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
@@ -1512,7 +1468,7 @@ namespace Raven.Client.Http
 
             if (ShouldBroadcast(command))
             {
-                command.SetTimeout(command.Timeout ?? _firstBroadcastAttemptTimeout);
+                command.SetTimeout(command.Timeout ?? FirstBroadcastAttemptTimeout);
             }
 
             if (Conventions.HttpVersion != null)
@@ -1832,7 +1788,7 @@ namespace Raven.Client.Http
                     Command = (RavenCommand<TResult>)command.PrepareToBroadcast(ctx, Conventions)
                 };
 
-                state.Command.SetTimeout(_secondBroadcastAttemptTimeout);
+                state.Command.SetTimeout(SecondBroadcastAttemptTimeout);
 
                 var task = ExecuteAsync(state.Node, null, ctx, state.Command, shouldRetry: false, sessionInfo, token);
                 tasks.Add(task, state);
