@@ -10,6 +10,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Polly;
+using Polly.Retry;
 using Raven.Client;
 using Raven.Server.Utils;
 using Sparrow.Platform;
@@ -18,6 +20,8 @@ namespace Raven.Server.Commercial
 {
     public class LetsEncryptClient
     {
+        private static readonly AsyncRetryPolicy<HttpResponseMessage> RetryPolicy;
+
         private static readonly JsonSerializerSettings jsonSettings = new JsonSerializerSettings
         {
             NullValueHandling = NullValueHandling.Ignore,
@@ -53,6 +57,30 @@ namespace Raven.Server.Commercial
             }
         }
 
+        static LetsEncryptClient()
+        {
+            var maxRetryAfterDelta = TimeSpan.FromMinutes(1);
+
+            RetryPolicy = Policy
+                .HandleResult<HttpResponseMessage>(message => message.IsSuccessStatusCode == false && message.Headers.RetryAfter != null)
+                .WaitAndRetryAsync(
+                    retryCount: 5,
+                    sleepDurationProvider: (retry, result, _) =>
+                    {
+                        if (result.Result.Headers.RetryAfter.Delta.HasValue)
+                        {
+                            var retryAfter = result.Result.Headers.RetryAfter.Delta.Value;
+                            if (retryAfter > maxRetryAfterDelta)
+                                return maxRetryAfterDelta;
+
+                            return retryAfter;
+                        }
+
+                        return TimeSpan.FromSeconds(retry);
+                    },
+                    onRetryAsync: (_, _, _, _) => Task.CompletedTask);
+        }
+
         /// <summary>
         ///     In our scenario, we assume a single single wizard progressing
         ///     and the locking is basic to the wizard progress. Adding explicit
@@ -78,7 +106,7 @@ namespace Raven.Server.Commercial
         {
             _url = url ?? throw new ArgumentNullException(nameof(url));
             _directoryPath = new Uri(_url).LocalPath.TrimStart('/');
-            if(string.IsNullOrEmpty(_directoryPath))
+            if (string.IsNullOrEmpty(_directoryPath))
                 throw new ArgumentNullException(nameof(_directoryPath), "Url does not contain directory path");
 
             _path = GetCachePath(_url);
@@ -210,7 +238,7 @@ namespace Raven.Server.Commercial
                 HttpResponseMessage response;
                 try
                 {
-                    response = await _client.SendAsync(request, token).ConfigureAwait(false);
+                    response = await RetryPolicy.ExecuteAsync(t => _client.SendAsync(request, t), token, continueOnCapturedContext: false).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -362,7 +390,7 @@ namespace Raven.Server.Commercial
             {
                 await WaitForStatusAsync(authorization, new List<string> { "valid" }, token);
             }
-            
+
             await WaitForStatusAsync(_currentOrder.Location, new List<string> { "ready" }, token);
 
             try
@@ -500,7 +528,7 @@ namespace Raven.Server.Commercial
                 _cache.CachedCerts.Remove(host);
             }
         }
-        
+
         internal static string GetCachePath(string acmeUrl)
         {
             var home = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
