@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace SlowTests.SparrowTests;
 
-public class DownloadLogsCommand : RavenCommand<byte[]>
+public class DownloadLogsCommand : LongRunningRavenCommand<byte[]>
 {
     private readonly DateTime? _startDate;
     private readonly DateTime? _endDate;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using NuGet.Packaging;
@@ -171,7 +172,7 @@ public sealed class ShardedStudioCollectionsHandlerProcessorForPreviewCollection
             return new ShardedCollectionPreviewCommand(_collection, _token.Pages[shardNumber].Start, _token.PageSize);
         }
 
-        private sealed class ShardedCollectionPreviewCommand : RavenCommand<StreamResult>
+        private sealed class ShardedCollectionPreviewCommand : LongRunningRavenCommand<StreamResult>
         {
             private readonly string _collection;
             private readonly int _start;

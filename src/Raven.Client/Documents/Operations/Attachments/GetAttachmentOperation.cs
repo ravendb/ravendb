@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
@@ -74,7 +75,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new GetAttachmentCommand(conventions, context, _documentId, _name, _type, _changeVector, _from, _to);
         }
 
-        internal sealed class GetAttachmentCommand : RavenCommand<AttachmentResult>
+        internal sealed class GetAttachmentCommand : LongRunningRavenCommand<AttachmentResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;

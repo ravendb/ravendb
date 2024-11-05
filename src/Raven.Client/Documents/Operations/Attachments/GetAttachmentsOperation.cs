@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
@@ -45,7 +46,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new GetAttachmentsCommand(conventions, context, _attachments, _type);
         }
 
-        internal sealed class GetAttachmentsCommand : RavenCommand<IEnumerator<AttachmentEnumeratorResult>>
+        internal sealed class GetAttachmentsCommand : LongRunningRavenCommand<IEnumerator<AttachmentEnumeratorResult>>
         {
             private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;

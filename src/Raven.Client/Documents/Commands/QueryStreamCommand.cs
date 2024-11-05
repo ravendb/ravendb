@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public sealed class QueryStreamCommand : RavenCommand<StreamResult>
+    public sealed class QueryStreamCommand : LongRunningRavenCommand<StreamResult>
     {
         private readonly DocumentConventions _conventions;
         private readonly IndexQuery _indexQuery;

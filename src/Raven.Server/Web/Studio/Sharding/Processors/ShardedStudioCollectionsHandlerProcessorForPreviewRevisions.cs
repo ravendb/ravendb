@@ -176,7 +176,7 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
             return new ShardedRevisionsPreviewCommand(_collection, _continuationToken.Pages[shardNumber].Start, _continuationToken.PageSize);
         }
 
-        private sealed class ShardedRevisionsPreviewCommand : RavenCommand<StreamResult>
+        private sealed class ShardedRevisionsPreviewCommand : LongRunningRavenCommand<StreamResult>
         {
             private readonly string _collection;
             private readonly int _start;

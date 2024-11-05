@@ -313,7 +313,7 @@ namespace Raven.Client.Documents.Conventions
             _firstBroadcastAttemptTimeout = TimeSpan.FromSeconds(5);
             _secondBroadcastAttemptTimeout = TimeSpan.FromSeconds(30);
 
-            _globalHttpClientTimeout = TimeSpan.FromHours(12);
+            _globalHttpClientTimeout = TimeSpan.FromMinutes(4);
 
             _waitForIndexesAfterSaveChangesTimeout = TimeSpan.FromSeconds(15);
             _waitForReplicationAfterSaveChangesTimeout = TimeSpan.FromSeconds(15);

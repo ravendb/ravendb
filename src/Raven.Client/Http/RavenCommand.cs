@@ -47,6 +47,16 @@ namespace Raven.Client.Http
         string RaftUniqueRequestId { get; }
     }
 
+    public abstract class LongRunningRavenCommand : RavenCommand
+    {
+        public override TimeSpan? Timeout { get; protected internal set; } = TimeSpan.FromHours(12);
+    }
+
+    public abstract class LongRunningRavenCommand<TResult> : RavenCommand<TResult>
+    {
+        public override TimeSpan? Timeout { get; protected internal set; } = TimeSpan.FromHours(12);
+    }
+
     public abstract class RavenCommand<TResult>
     {
         public CancellationToken CancellationToken = CancellationToken.None;

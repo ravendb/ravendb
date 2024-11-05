@@ -6,13 +6,11 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Util;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Commands.Streaming
 {
-    public sealed class PostQueryStreamCommand : RavenCommand<StreamResult>
+    public sealed class PostQueryStreamCommand : LongRunningRavenCommand<StreamResult>
     {
         private readonly DocumentConventions _conventions;
         private readonly BlittableJsonReaderObject _query;

@@ -109,7 +109,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
         }
 #endif
 #endif
-
+        clientWebSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
         return clientWebSocket;
     }
 

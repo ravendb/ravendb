@@ -2,12 +2,11 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Http;
-using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    internal sealed class StreamCommand : RavenCommand<StreamResult>
+    internal sealed class StreamCommand : LongRunningRavenCommand<StreamResult>
     {
         private readonly string _url;
 

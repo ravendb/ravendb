@@ -319,7 +319,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        private sealed class ExportCommand : RavenCommand
+        private sealed class ExportCommand : LongRunningRavenCommand
         {
             private readonly BlittableJsonReaderObject _options;
             private readonly DocumentConventions _conventions;
@@ -372,7 +372,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        private sealed class ImportCommand : RavenCommand
+        private sealed class ImportCommand : LongRunningRavenCommand
         {
             private readonly BlittableJsonReaderObject _options;
             private readonly DocumentConventions _conventions;
