@@ -437,9 +437,9 @@ namespace Raven.Client.Documents.Smuggler
             }
 #if NET6_0_OR_GREATER
             protected override Task SerializeToStreamAsync(Stream stream, TransportContext context, CancellationToken cancellationToken) => SerializeToStreamAsyncCore(stream, context, cancellationToken);
-#endif
+#else
             protected override Task SerializeToStreamAsync(Stream stream, TransportContext context) => SerializeToStreamAsyncCore(stream, context, CancellationToken.None);
-
+#endif
             private async Task SerializeToStreamAsyncCore(Stream stream, TransportContext context, CancellationToken token)
             {
                 _parent?.ForTestingPurposes?.BeforeSerializeToStreamAsync?.Invoke();
