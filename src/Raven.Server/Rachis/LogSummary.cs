@@ -15,6 +15,7 @@ namespace Raven.Server.Rachis
         public long LastTruncatedTerm { get; set; }
         public long FirstEntryIndex { get; set; }
         public long LastLogEntryIndex { get; set; }
+        public long TotalEntries { get; set; }
         public UnrecoverableClusterError CriticalError { get; set; }
         public IEnumerable<RachisDebugLogEntry> Logs { get; set; }
         public DynamicJsonValue ToJson()
@@ -28,6 +29,7 @@ namespace Raven.Server.Rachis
                 [nameof(LastTruncatedTerm)] = LastTruncatedTerm,
                 [nameof(FirstEntryIndex)] = FirstEntryIndex,
                 [nameof(LastLogEntryIndex)] = LastLogEntryIndex,
+                [nameof(TotalEntries)] = TotalEntries,
                 [nameof(CriticalError)] = CriticalError,
                 [nameof(Logs)] = new DynamicJsonArray(Logs)
             };

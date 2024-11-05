@@ -439,6 +439,9 @@ namespace Raven.Server.Rachis
             return djv;
         }
 
+        public long NumberOfEntries(ClusterOperationContext context) => 
+            context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice).NumberOfEntries;
+
         private static unsafe long ReadCommittedTerm(Table.TableValueHolder entryHolder)
         {
             return *(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.CommittedTerm), out _);

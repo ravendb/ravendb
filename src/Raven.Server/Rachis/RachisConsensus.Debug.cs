@@ -131,6 +131,9 @@ public abstract partial class RachisConsensus
         
         fromIndex ??= range.Max;
 
+        var totalEntries = range.Max - range.Min + 1;
+        totalEntries = Math.Max(totalEntries, LogHistory.NumberOfEntries(context));
+
         return new LogSummary
         {
             CommitIndex = commitIndex,
@@ -140,6 +143,7 @@ public abstract partial class RachisConsensus
             LastLogEntryIndex = range.Max,
             LastAppendedTime = LastAppended,
             LastCommitedTime = LastCommitted,
+            TotalEntries = totalEntries,
             CriticalError = GetUnrecoverableClusterError(),
             Logs = GetLogEntries(context, fromIndex.Value, take, detailed),
         };
