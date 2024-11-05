@@ -261,7 +261,42 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 using var obj = ReadObject(new DynamicJsonValue { ["prop"] = 17.3 });
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("root.prop should be of type Boolean but actual type is Number", errors);
+                AssertError("root.prop should be of type Boolean but actual type is Number.", errors);
+            });
+    }
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public void SchemaValidation_WhenValidateNull()
+    {
+        using var context = JsonOperationContext.ShortTermSingleUse();
+
+        var schemaValidator = new SchemaValidator();
+        var schemaDefinition = new DynamicJsonValue
+        {
+            ["type"] = "object",
+            ["properties"] = new DynamicJsonValue
+            {
+                ["prop"] = new DynamicJsonValue { ["type"] = "null" }
+            }
+        };
+        using (var blitSchemaDefinition = ReadObject(schemaDefinition))
+        {
+            schemaValidator.Init(blitSchemaDefinition);
+        }
+
+        Assert.Multiple(() =>
+            {
+                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = null });
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                using var obj = ReadObject(new DynamicJsonValue { ["prop"] = 17.3 });
+
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("root.prop should be of type Null but actual type is Number.", errors);
             });
     }
 
