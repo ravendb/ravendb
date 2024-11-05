@@ -16,13 +16,9 @@ public abstract class SchemaValidationTestsBase : ParallelTestBase
         _context = JsonOperationContext.ShortTermSingleUse();
     }
     
-    /// <summary>
-    /// Verifies that an expression is true.
-    /// </summary>
-    /// <exception cref="TrueException">Thrown when the condition is false</exception>
     protected void AssertError(string expected, string actual)
     {
-        Assert.True(expected.StartsWith(actual), $"expected: '{expected}', actual: '{actual}'");
+        Assert.True(expected.StartsWith(actual), $"expected: '{expected}', actual: '{actual}'.");
     }
     
     protected BlittableJsonReaderObject ReadObject(DynamicJsonValue obj) => _context.ReadObject(obj,"test object");
