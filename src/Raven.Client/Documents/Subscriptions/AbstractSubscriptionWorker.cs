@@ -246,7 +246,7 @@ namespace Raven.Client.Documents.Subscriptions
                 ).ConfigureAwait(false);
 
                 _tcpClient = result.TcpClient;
-                _stream = new StreamWithTimeout(result.Stream);
+                _stream = result.Stream;
                 _supportedFeatures = result.SupportedFeatures;
 
                 _tcpClient.NoDelay = true;

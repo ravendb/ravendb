@@ -116,13 +116,8 @@ namespace Raven.Server.Web
         {
             if (_requestBodyStream != null)
                 return _requestBodyStream;
-            _requestBodyStream = new StreamWithTimeout(GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers));
 
-            if (TrafficWatchManager.HasRegisteredClients)
-            {
-                HttpContext.Items["RequestStream"] = _requestBodyStream;
-            }
-
+            _requestBodyStream = GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers);
             _context.HttpContext.Response.RegisterForDispose(_requestBodyStream);
 
             return _requestBodyStream;
@@ -131,7 +126,7 @@ namespace Raven.Server.Web
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Stream GetBodyStream(MultipartSection section)
         {
-            Stream stream = new StreamWithTimeout(GetDecompressedStream(section.Body, section.Headers));
+            Stream stream = GetDecompressedStream(section.Body, section.Headers);
             _context.HttpContext.Response.RegisterForDispose(stream);
             return stream;
         }
@@ -239,7 +234,7 @@ namespace Raven.Server.Web
             if (_responseStream != null)
                 return _responseStream;
 
-            _responseStream = new StreamWithTimeout(HttpContext.Response.Body);
+            _responseStream = HttpContext.Response.Body;
 
             _context.HttpContext.Response.RegisterForDispose(_responseStream);
 

@@ -17,13 +17,13 @@ namespace Raven.Server.Config.Categories
         }
 
         [Description("Set Kestrel's minimum required data rate in bytes per second. This option must be configured together with 'Http.MinDataRateGracePeriod'.")]
-        [DefaultValue(null)]
+        [DefaultValue(5)]
         [SizeUnit(SizeUnit.Bytes)]
         [ConfigurationEntry("Http.MinDataRateBytesPerSec", ConfigurationEntryScope.ServerWideOnly)]
         public Size? MinDataRatePerSecond { get; set; }
 
         [Description("Set Kestrel's allowed request and response grace in seconds. This option must be configured together with 'Http.MinDataRateBytesPerSec'.")]
-        [DefaultValue(null)]
+        [DefaultValue(240)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Http.MinDataRateGracePeriodInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting? MinDataRateGracePeriod { get; set; }

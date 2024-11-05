@@ -90,11 +90,9 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                 {
                     currentCtxReset = ContextPool.AllocateOperationContext(out JsonOperationContext docsCtx);
                     var requestBodyStream = RequestHandler.RequestBodyStream();
-
                     if (ForTestingPurposes?.BulkInsert_StreamReadTimeout > 0)
                     {
-                        var streamWithTimeout = (StreamWithTimeout)requestBodyStream;
-                        streamWithTimeout.ReadTimeout = ForTestingPurposes.BulkInsert_StreamReadTimeout;
+                        requestBodyStream.ReadTimeout = ForTestingPurposes.BulkInsert_StreamReadTimeout;
                     }
                     using (var reader = GetCommandsReader(context, requestBodyStream, buffer, CancellationToken))
                     {

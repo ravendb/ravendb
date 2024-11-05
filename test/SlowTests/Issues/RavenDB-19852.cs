@@ -72,9 +72,7 @@ public class RavenDB_19852 : RavenTestBase
 
         public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
-            var streamWithTimeout = (StreamWithTimeout)stream;
-            var innerStream = streamWithTimeout._stream;
-            var contentTypeName = innerStream.GetType().Name;
+            var contentTypeName = stream.GetType().Name;
 
             switch (_compressionAlgorithm)
             {

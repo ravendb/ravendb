@@ -170,16 +170,14 @@ namespace Raven.Client.Http
 
                     // we intentionally don't dispose the reader here, we'll be using it
                     // in the command, any associated memory will be released on context reset
-                    await using (var stream = new StreamWithTimeout(responseStream))
+                    
+                    var json = await context.ReadForMemoryAsync(responseStream, "response/object").ConfigureAwait(false);
+                    if (cache != null) //precaution
                     {
-                        var json = await context.ReadForMemoryAsync(stream, "response/object").ConfigureAwait(false);
-                        if (cache != null) //precaution
-                        {
-                            CacheResponse(cache, url, response, json);
-                        }
-                        SetResponse(context, json, fromCache: false);
-                        return ResponseDisposeHandling.Automatic;
+                        CacheResponse(cache, url, response, json);
                     }
+                    SetResponse(context, json, fromCache: false);
+                    return ResponseDisposeHandling.Automatic;
                 }
 
                 // We do not cache the stream response.
@@ -188,8 +186,7 @@ namespace Raven.Client.Http
 #else
                 await using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
 #endif
-                await using (var stream = new StreamWithTimeout(uncompressedStream))
-                    SetResponseRaw(response, stream, context);
+                    SetResponseRaw(response, uncompressedStream, context);
             }
             return ResponseDisposeHandling.Automatic;
         }

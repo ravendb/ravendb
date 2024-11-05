@@ -172,27 +172,18 @@ namespace Raven.Client.Util
             return tcpClient;
         }
 
-        internal static async Task<Stream> WrapStreamWithSslAsync(
+        private static async Task<Stream> WrapStreamWithSslAsync(
             TcpClient tcpClient,
             TcpConnectionInfo info,
-            X509Certificate2 storeCertificate,
-#if !NETSTANDARD
-            CipherSuitesPolicy cipherSuitesPolicy,
-#endif
-            TimeSpan? timeout
+            X509Certificate2 storeCertificate
 #if !NETSTANDARD
             ,
+            CipherSuitesPolicy cipherSuitesPolicy,
             CancellationToken token = default
 #endif
             )
         {
             var networkStream = tcpClient.GetStream();
-            if (timeout != null)
-            {
-                networkStream.ReadTimeout =
-                    networkStream.WriteTimeout = (int)timeout.Value.TotalMilliseconds;
-            }
-
             if (info.Certificate == null)
                 return networkStream;
 
@@ -321,13 +312,10 @@ namespace Raven.Client.Util
                     stream = await WrapStreamWithSslAsync(
                         tcpClient,
                         info,
-                        cert,
-#if !NETSTANDARD
-                        cipherSuitesPolicy,
-#endif
-                        timeout
+                        cert
 #if !NETSTANDARD
                         ,
+                        cipherSuitesPolicy,
                         token: token
 #endif
                     ).ConfigureAwait(false);

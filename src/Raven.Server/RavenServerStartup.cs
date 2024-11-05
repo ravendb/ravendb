@@ -329,7 +329,6 @@ namespace Raven.Server
                 ((string, TrafficWatchChangeType)?)contextItem ?? ("N/A", TrafficWatchChangeType.None);
 
             var timings = context.Items[nameof(QueryTimings)];
-
             var twn = new TrafficWatchHttpChange
             {
                 TimeStamp = DateTime.UtcNow,
@@ -345,8 +344,8 @@ namespace Raven.Server
                 Type = twTuple.Type,
                 ClientIP = context.Connection.RemoteIpAddress?.ToString(),
                 CertificateThumbprint = context.Connection.ClientCertificate?.Thumbprint,
-                RequestSizeInBytes = ((StreamWithTimeout)context.Items["RequestStream"])?.TotalRead ?? 0,
-                ResponseSizeInBytes = ((StreamWithTimeout)context.Items["ResponseStream"])?.TotalWritten ?? 0,
+                RequestSizeInBytes = context.Request.ContentLength ?? 0,
+                ResponseSizeInBytes = context.Response.ContentLength ?? 0,
             };
 
             TrafficWatchManager.DispatchMessage(twn);
