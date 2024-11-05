@@ -1904,7 +1904,7 @@ namespace Raven.Server.Commercial
                         return GetDefaultLicenseSupportInfo();
                     }
 
-                    var licenseSupportStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
+                    var licenseSupportStream = await response.Content.ReadAsStreamWithZstdSupportAsync(cts.Token).ConfigureAwait(false);
                     using (var context = JsonOperationContext.ShortTermSingleUse())
                     {
                         var json = await context.ReadForMemoryAsync(licenseSupportStream, "license support info");

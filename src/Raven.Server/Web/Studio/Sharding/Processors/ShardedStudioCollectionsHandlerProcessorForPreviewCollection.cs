@@ -205,11 +205,7 @@ public sealed class ShardedStudioCollectionsHandlerProcessorForPreviewCollection
             {
                 var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
 
-                Result = new StreamResult
-                {
-                    Response = response,
-                    Stream = new StreamWithTimeout(responseStream)
-                };
+                Result = new StreamResult(responseStream, response);
 
                 return ResponseDisposeHandling.Manually;
             }

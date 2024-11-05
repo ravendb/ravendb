@@ -28,9 +28,9 @@ namespace Raven.Client.Documents.Commands
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(async stream =>
+                Content = new BlittableJsonContent(async (stream, token) =>
                 {
-                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream, token))
                     {
                         writer.WriteIndexQuery(_conventions, ctx, _indexQuery);
                     }
@@ -43,14 +43,8 @@ namespace Raven.Client.Documents.Commands
 
         public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
-            var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
-
-            Result = new StreamResult
-            {
-                Response = response,
-                Stream = new StreamWithTimeout(responseStream)
-            };
-
+            var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync(CancellationToken).ConfigureAwait(false);
+            Result = new StreamResult(responseStream, response);
             return ResponseDisposeHandling.Manually;
         }
 

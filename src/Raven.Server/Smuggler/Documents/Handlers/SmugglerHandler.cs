@@ -76,6 +76,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             var dirTextXml = await result.Content.ReadAsStringWithZstdSupportAsync();
             var filesListing = XElement.Parse(dirTextXml);
             var ns = XNamespace.Get("http://s3.amazonaws.com/doc/2006-03-01/");
+            using var cts = CreateHttpRequestBoundOperationToken();
             var urls = from content in filesListing.Elements(ns + "Contents")
                        let requestUri = url.TrimEnd('/') + "/" + content.Element(ns + "Key").Value
                        select (Func<Task<Stream>>)(async () =>
@@ -83,8 +84,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                           var response = await HttpClient.GetAsync(requestUri);
                           if (response.IsSuccessStatusCode == false)
                               throw new InvalidOperationException("Request failed on " + requestUri + " with " +
-                                                                  await response.Content.ReadAsStreamWithZstdSupportAsync());
-                          return await response.Content.ReadAsStreamWithZstdSupportAsync();
+                                                                  await response.Content.ReadAsStreamWithZstdSupportAsync(cts.Token));
+                          return await response.Content.ReadAsStreamWithZstdSupportAsync(cts.Token);
                       });
 
             var files = new BlockingCollection<Func<Task<Stream>>>(new ConcurrentQueue<Func<Task<Stream>>>(urls));

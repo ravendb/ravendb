@@ -373,22 +373,19 @@ namespace Raven.Client.Documents.Session.Operations
                 Dispose();
                 return default;
 #else
-                await _response.Stream.DisposeAsync().ConfigureAwait(false);
-
+                await _response.DisposeAsync().ConfigureAwait(false);
                 DisposeInternal();
 #endif
             }
 
             public void Dispose()
             {
-                _response.Stream.Dispose();
-
+                _response.Dispose();
                 DisposeInternal();
             }
 
             private void DisposeInternal()
             {
-                _response.Response.Dispose();
                 _parser.Dispose();
                 _returnBuffer.Dispose();
                 _peepingTomStream.Dispose();

@@ -1,13 +1,50 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Session;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Commands
 {
-    public sealed class StreamResult
+    public class StreamResult : IDisposable, IAsyncDisposable
     {
-        public HttpResponseMessage Response { get; set; }
-        public Stream Stream { get; set; }
+        public StreamResult(Stream stream, HttpResponseMessage response)
+        {
+            Response = response;
+            Stream = new StreamWithTimeout(stream);
+        }
+        public HttpResponseMessage Response { get; }
+        public Stream Stream { get; }
+
+        public void Dispose()
+        {
+            using (Response)
+            using (Stream)
+            {
+            }
+        }
+
+#if NETSTANDARD2_0
+        public ValueTask DisposeAsync()
+        {
+            using (this)
+            {
+
+            }
+
+            return default;
+        }
+#else
+        public async ValueTask DisposeAsync()
+        {
+            using (Response)
+            {
+                await Stream.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+#endif
+
     }
 
     public sealed class StreamResult<TType> : AbstractStreamResult

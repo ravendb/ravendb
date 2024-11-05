@@ -1,5 +1,6 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
+using System.Net.Http;
+using Raven.Client.Documents.Commands;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
@@ -9,22 +10,16 @@ namespace Raven.Client.Documents.Operations.Attachments
     /// <remarks>
     /// This class provides access to the binary content of the attachment and its associated metadata.
     /// </remarks>
-    public sealed class AttachmentResult : IDisposable
+    public sealed class AttachmentResult : StreamResult
     {
-        /// <summary>
-        /// The stream containing the binary content of the attachment.
-        /// </summary>
-        public Stream Stream;
-
         /// <summary>
         /// The details of the attachment, including its metadata.
         /// </summary>
         public AttachmentDetails Details;
 
-        public void Dispose()
+        public AttachmentResult(Stream stream, HttpResponseMessage response) : base(stream, response)
         {
-            Stream?.Dispose();
-            Stream = null;
+
         }
     }
 }

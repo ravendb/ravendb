@@ -103,8 +103,7 @@ namespace Raven.Client.Documents.Session
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
             streamOperation.EnsureIsAcceptable(query.IndexName, command.Result);
 
-            using (command.Result.Response)
-            using (command.Result.Stream)
+            using (command.Result)
             {
                 command.Result.Stream.CopyTo(output);
             }

@@ -69,9 +69,9 @@ namespace Raven.Client.Documents.Operations.Attachments
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Post,
-                    Content = new BlittableJsonContent(async stream =>
+                    Content = new BlittableJsonContent(async (stream, token) =>
                     {
-                        await using (var writer = new AsyncBlittableJsonTextWriter(_context, stream))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(_context, stream, token))
                         {
                             writer.WriteStartObject();
 
@@ -110,7 +110,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
                 var state = new JsonParserState();
-                Stream stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
+                Stream stream = await response.Content.ReadAsStreamWithZstdSupportAsync(CancellationToken).ConfigureAwait(false);
 
                 using (context.GetMemoryBuffer(out var buffer))
                 using (var parser = new UnmanagedJsonParser(context, state, "attachments/receive"))

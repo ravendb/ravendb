@@ -166,8 +166,7 @@ namespace Raven.Client.Documents.Session
 
                 streamOperation.EnsureIsAcceptable(query.IndexName, command.Result);
 
-                using (command.Result.Response)
-                using (command.Result.Stream)
+                await using (command.Result)
                 {
                     await command.Result.Stream.CopyToAsync(output, 16 * 1024, token).ConfigureAwait(false);
                 }

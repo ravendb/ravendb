@@ -29,19 +29,8 @@ namespace Raven.Client.Documents.Commands
 
         public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
-            var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
-
-            var timeout = (int)(Timeout ?? StreamWithTimeout.DefaultReadTimeout).TotalMilliseconds;
-            Result = new StreamResult
-            {
-                Response = response,
-                Stream = new StreamWithTimeout(responseStream)
-                {
-                    ReadTimeout = timeout,
-                    WriteTimeout = timeout
-                }
-            };
-
+            var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync(CancellationToken).ConfigureAwait(false);
+            Result = new StreamResult(responseStream, response);
             return ResponseDisposeHandling.Manually;
         }
 

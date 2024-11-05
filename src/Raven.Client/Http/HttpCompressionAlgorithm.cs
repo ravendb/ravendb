@@ -65,13 +65,11 @@ internal static class HttpCompressionAlgorithmExtensions
 #endif
     }
 
+    internal static async Task<Stream> ReadAsStreamWithZstdSupportAsync(this HttpContent httpContent, CancellationToken token)
+    {
 #if NET6_0_OR_GREATER
-    internal static async Task<Stream> ReadAsStreamWithZstdSupportAsync(this HttpContent httpContent, CancellationToken cancellationToken = default)
-    {
-        var contentStream = await httpContent.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        var contentStream = await httpContent.ReadAsStreamAsync(token).ConfigureAwait(false);
 #else
-    internal static async Task<Stream> ReadAsStreamWithZstdSupportAsync(this HttpContent httpContent)
-    {
         var contentStream = await httpContent.ReadAsStreamAsync().ConfigureAwait(false);
 #endif
         var contentStreamType = contentStream.GetType();

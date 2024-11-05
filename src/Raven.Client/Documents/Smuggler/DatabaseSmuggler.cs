@@ -353,9 +353,9 @@ namespace Raven.Client.Documents.Smuggler
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream =>
+                    Content = new BlittableJsonContent(async (stream, token) =>
                     {
-                        await ctx.WriteAsync(stream, _options).ConfigureAwait(false);
+                        await ctx.WriteAsync(stream, _options, token).ConfigureAwait(false);
                         _tcs.TrySetResult(null);
                     }, _conventions)
                 };
@@ -363,7 +363,7 @@ namespace Raven.Client.Documents.Smuggler
 
             public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
-                using (var stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
+                using (var stream = await response.Content.ReadAsStreamWithZstdSupportAsync(CancellationToken).ConfigureAwait(false))
                 {
                     await _handleStreamResponse(stream).ConfigureAwait(false);
                 }
@@ -409,7 +409,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 var form = new MultipartFormDataContent
                 {
-                    {new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _options).ConfigureAwait(false), _conventions), Constants.Smuggler.ImportOptions},
+                    {new BlittableJsonContent(async (stream, token) => await ctx.WriteAsync(stream, _options, token).ConfigureAwait(false), _conventions), Constants.Smuggler.ImportOptions},
                     {new StreamContentWithConfirmation(_stream, _tcs, _parent), "file", "name"}
                 };
 
@@ -435,17 +435,24 @@ namespace Raven.Client.Documents.Smuggler
                 _tcs = tcs ?? throw new ArgumentNullException(nameof(tcs));
                 _parent = parent;
             }
+#if NET6_0_OR_GREATER
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext context, CancellationToken cancellationToken) => SerializeToStreamAsyncCore(stream, context, cancellationToken);
+#endif
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext context) => SerializeToStreamAsyncCore(stream, context, CancellationToken.None);
 
-            protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+            private async Task SerializeToStreamAsyncCore(Stream stream, TransportContext context, CancellationToken token)
             {
                 _parent?.ForTestingPurposes?.BeforeSerializeToStreamAsync?.Invoke();
 
                 // Immediately flush request stream to send headers
                 // https://github.com/dotnet/corefx/issues/39586#issuecomment-516210081
                 // https://github.com/dotnet/runtime/issues/96223#issuecomment-1865009861
-                await stream.FlushAsync().ConfigureAwait(false);
-
+                await stream.FlushAsync(token).ConfigureAwait(false);
+#if NET6_0_OR_GREATER
+                await base.SerializeToStreamAsync(stream, context, token).ConfigureAwait(false);
+#else
                 await base.SerializeToStreamAsync(stream, context).ConfigureAwait(false);
+#endif
                 _tcs.TrySetResult(null);
             }
         }

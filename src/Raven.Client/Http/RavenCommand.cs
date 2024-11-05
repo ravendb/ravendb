@@ -157,9 +157,9 @@ namespace Raven.Client.Http
                 return ResponseDisposeHandling.Automatic;
 
 #if NETSTANDARD2_0
-            using (var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
+            using (var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync(CancellationToken).ConfigureAwait(false))
 #else
-            await using (var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
+            await using (var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync(CancellationToken).ConfigureAwait(false))
 #endif
             {
                 if (ResponseType == RavenCommandResponseType.Object)

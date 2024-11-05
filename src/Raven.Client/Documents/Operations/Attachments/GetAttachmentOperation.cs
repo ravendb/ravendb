@@ -124,9 +124,9 @@ namespace Raven.Client.Documents.Operations.Attachments
                 {
                     request.Method = HttpMethod.Post;
 
-                    request.Content = new BlittableJsonContent(async stream =>
+                    request.Content = new BlittableJsonContent(async (stream, token) =>
                     {
-                        await using (var writer = new AsyncBlittableJsonTextWriter(_context, stream))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(_context, stream, token))
                         {
                             writer.WriteStartObject();
 
@@ -164,14 +164,12 @@ namespace Raven.Client.Documents.Operations.Attachments
                     DocumentId = _documentId
                 };
 
-                var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
-                var streamReader = new StreamWithTimeout(responseStream);
-                var stream = new AttachmentStream(response, streamReader);
+                var streamResponse = await response.Content.ReadAsStreamWithZstdSupportAsync(CancellationToken).ConfigureAwait(false);
+                var stream = new AttachmentStream(response, streamResponse);
 
-                Result = new AttachmentResult
+                Result = new AttachmentResult(stream, response)
                 {
-                    Stream = stream,
-                    Details = attachmentDetails
+                    Details = attachmentDetails,
                 };
 
                 return ResponseDisposeHandling.Manually;

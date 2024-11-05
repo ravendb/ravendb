@@ -1996,7 +1996,7 @@ namespace Raven.Client.Http
         {
             if (response != null)
             {
-                using (var stream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
+                using (var stream = await response.Content.ReadAsStreamWithZstdSupportAsync(CancellationToken.None).ConfigureAwait(false))
                 using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
                 {
                     await stream.CopyToAsync(ms).ConfigureAwait(false);

@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Commands.Streaming
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post, 
-                Content = new BlittableJsonContent(async (stream) => await ctx.WriteAsync(stream, queryToWrite), _conventions)
+                Content = new BlittableJsonContent(async (stream, token) => await ctx.WriteAsync(stream, queryToWrite, token), _conventions)
             };
 
             var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/streams/queries?");
@@ -58,15 +58,7 @@ namespace Raven.Server.Documents.Commands.Streaming
         public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
-
-            Result = new StreamResult
-            {
-                Response = response,
-                Stream = new StreamWithTimeout(responseStream)
-            };
-
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle possible stream timeout when not reading from stream for a while");
-
+            Result = new StreamResult(responseStream, response);
             return ResponseDisposeHandling.Manually;
         }
     }

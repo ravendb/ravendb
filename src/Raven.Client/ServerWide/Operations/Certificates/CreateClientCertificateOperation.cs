@@ -58,9 +58,9 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                     Method = HttpMethod.Post
                 };
 
-                request.Content = new BlittableJsonContent(async stream =>
+                request.Content = new BlittableJsonContent(async (stream, token) =>
                 {
-                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream, token))
                     {
                         writer.WriteStartObject();
 

@@ -101,8 +101,7 @@ public sealed class ReadContinuationState : IDisposable
 
     public void Dispose()
     {
-        _response.Response.Dispose();
-        _response.Stream.Dispose();
+        _response.Dispose();
         _parser.Dispose();
         _returnBuffer.Dispose();
         _peepingTomStream.Dispose();

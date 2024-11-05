@@ -17,10 +17,16 @@ namespace Raven.Client.Json
 
         private TaskCompletionSource<object> _tcs;
 
-        private readonly Func<Stream, Task> _asyncTaskWriter;
+        private readonly Func<Stream, CancellationToken, Task> _asyncTaskWriter;
         private readonly DocumentConventions _conventions;
 
-        public BlittableJsonContent(Func<Stream, Task> writer, DocumentConventions conventions)
+        [Obsolete("Use the ctor with the token")]
+        public BlittableJsonContent(Func<Stream, Task> writer, DocumentConventions conventions) : this((stream, _) => writer(stream), conventions)
+        {
+
+        }
+
+        public BlittableJsonContent(Func<Stream, CancellationToken, Task> writer, DocumentConventions conventions)
         {
             _asyncTaskWriter = writer ?? throw new ArgumentNullException(nameof(writer));
             _conventions = conventions;
@@ -37,7 +43,12 @@ namespace Raven.Client.Json
                 ? Task.CompletedTask // SerializeToStreamAsync was never called
                 : _tcs!.Task;
 
-        protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+#if NET6_0_OR_GREATER
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext context, CancellationToken token) => SerializeToStreamAsyncCore(stream, context, CancellationToken.None);
+#endif
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext context) => SerializeToStreamAsyncCore(stream, context, CancellationToken.None);
+
+        private async Task SerializeToStreamAsyncCore(Stream stream, TransportContext context, CancellationToken token)
         {
             if (Interlocked.CompareExchange(ref _tcs, new(TaskCreationOptions.RunContinuationsAsynchronously), null) is not null)
                 throw new InvalidOperationException($"Already called previously, or called after {nameof(EnsureCompletedAsync)}");
@@ -47,11 +58,11 @@ namespace Raven.Client.Json
                 // Immediately flush request stream to send headers
                 // https://github.com/dotnet/corefx/issues/39586#issuecomment-516210081
                 // https://github.com/dotnet/runtime/issues/96223#issuecomment-1865009861
-                await stream.FlushAsync().ConfigureAwait(false);
+                await stream.FlushAsync(token).ConfigureAwait(false);
 
                 if (_conventions.UseHttpCompression == false)
                 {
-                    await _asyncTaskWriter(stream).ConfigureAwait(false);
+                    await _asyncTaskWriter(stream, token).ConfigureAwait(false);
                     return;
                 }
 
@@ -64,7 +75,7 @@ namespace Raven.Client.Json
                         await using (var gzipStream = new GZipStream(stream, CompressionLevel.Fastest, leaveOpen: true))
 #endif
                         {
-                            await _asyncTaskWriter(gzipStream).ConfigureAwait(false);
+                            await _asyncTaskWriter(gzipStream, token).ConfigureAwait(false);
                         }
 
                         break;
@@ -72,7 +83,7 @@ namespace Raven.Client.Json
                 case HttpCompressionAlgorithm.Brotli:
                     await using (var brotliStream = new BrotliStream(stream, CompressionLevel.Optimal, leaveOpen: true))
                     {
-                        await _asyncTaskWriter(brotliStream).ConfigureAwait(false);
+                        await _asyncTaskWriter(brotliStream, token).ConfigureAwait(false);
                     }
                     break;
 #endif
@@ -80,7 +91,7 @@ namespace Raven.Client.Json
                     case HttpCompressionAlgorithm.Zstd:
                         await using (var zstdStream = ZstdStream.Compress(stream, CompressionLevel.Fastest, leaveOpen: true))
                         {
-                            await _asyncTaskWriter(zstdStream).ConfigureAwait(false);
+                            await _asyncTaskWriter(zstdStream, token).ConfigureAwait(false);
                         }
 
                         break;
