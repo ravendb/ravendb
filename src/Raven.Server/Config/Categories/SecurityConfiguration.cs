@@ -13,46 +13,50 @@ namespace Raven.Server.Config.Categories
     [ConfigurationCategory(ConfigurationCategoryType.Security)]
     public sealed class SecurityConfiguration : ConfigurationCategory
     {
-        [Description("Disable automatic redirection when listening to HTTPS. By default, when using port 443, RavenDB redirects all incoming HTTP traffic on port 80 to HTTPS on port 443.")]
+        [Description("Disable automatic redirection when listening to HTTPS. " +
+                     "By default, when using port 443, RavenDB redirects all incoming HTTP traffic on port 80 to HTTPS on port 443.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Security.DisableHttpsRedirection", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableHttpsRedirection { get; set; }
         
-        [Description("Disable HTTP Strict Transport Security")]
+        [Description("Disable HTTP Strict Transport Security.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Security.DisableHsts", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableHsts { get; set; }
 
-        [Description("The path to a folder where RavenDB will store the access audit logs")]
+        [Description("The folder path where RavenDB stores audit log files. Setting the path enables writing to the audit log.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.AuditLog.FolderPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting AuditLogPath { get; set; }
 
-        [Description("How far back we should retain audit log entries")]
+        [Description("The number of hours audit logs are kept before they are deleted.")]
         [DefaultValue(365 * 24)]
         [TimeUnit(TimeUnit.Hours)]
         [ConfigurationEntry("Security.AuditLog.RetentionTimeInHours", ConfigurationEntryScope.ServerWideOnly)]
         [ConfigurationEntry("Security.AuditLog.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting AuditLogRetentionTime { get; set; }
 
-        [Description("The maximum size of the audit log after which the old files will be deleted")]
+        [Description("The maximum total size of audit log files, after which older files will be deleted.")]
         [DefaultValue(null)]
         [MinValue(256)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Security.AuditLog.RetentionSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size? AuditLogRetentionSize { get; set; }
 
-        [Description("Will determine whether to compress the audit log files")]
+        [Description("Will determine whether to compress the audit log files.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Security.AuditLog.Compress", ConfigurationEntryScope.ServerWideOnly)]
         public bool AuditLogCompress { get; set; }
 
-        [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1) Path 2) Executable")]
+        [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. " +
+                     "Certificate setting priority order: 1) Path 2) Executable")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Path", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificatePath { get; set; }
 
-        [Description("EXPERT: Whether RavenDB will consider memory lock error to be catastrophic. This is used with encrypted databases to ensure that temporary buffers are never written to disk and are locked to memory. Setting this to true is not recommended and should be done only after proper security analysis has been performed.")]
+        [Description("EXPERT: Whether RavenDB will consider memory lock error to be catastrophic. " +
+                     "This is used with encrypted databases to ensure that temporary buffers are never written to disk and are locked to memory. " +
+                     "Setting this to true is not recommended and should be done only after proper security analysis has been performed.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Security.DoNotConsiderMemoryLockFailureAsCatastrophicError", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DoNotConsiderMemoryLockFailureAsCatastrophicError { get; set; }
@@ -67,17 +71,20 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExec { get; set; }
 
-        [Description("A command or executable providing a .pfx cluster certificate when invoked by RavenDB. If specified, RavenDB will use HTTPS/SSL for all network activities. The certificate path setting takes precedence over executable configuration option.")]
+        [Description("A command or executable providing a .pfx cluster certificate when invoked by RavenDB. If specified, RavenDB will use HTTPS/SSL for all network activities. " +
+                     "The certificate path setting takes precedence over executable configuration option.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Load.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateLoadExec { get; set; }
 
-        [Description("A command or executable to handle automatic renewals, providing a renewed .pfx cluster certificate. The leader node will invoke the executable once every hour and if a new certificate is received, it will be sent to the other nodes. The executable specified in Security.Certificate.Change.Exec will then be used to persist the certificate across the cluster.")]
+        [Description("A command or executable to handle automatic renewals, providing a renewed .pfx cluster certificate. " +
+                     "The leader node will invoke the executable once every hour and if a new certificate is received, it will be sent to the other nodes. " +
+                     "The executable specified in Security.Certificate.Change.Exec will then be used to persist the certificate across the cluster.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Renew.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateRenewExec { get; set; }
 
-        [Description("A command or executable handling a change in the cluster certificate. When invoked, RavenDB will send the new cluster certificate to this executable, giving the follower nodes a way to persist the new certificate.")]
+        [Description("A command or executable that handles cluster certificate changes. When the cluster certificate is updated, this executable will persist the new certificate on all nodes.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Change.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateChangeExec { get; set; }
@@ -113,7 +120,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.MasterKey.Path", ConfigurationEntryScope.ServerWideOnly)]
         public string MasterKeyPath { get; set; }
 
-        [Description("A command or executable to run which will provide a (256-bit) Master Key, If specified, RavenDB will use this key to protect secrets.")]
+        [Description("A command or executable to run which will provide a (256-bit) Master Key. If specified, RavenDB will use this key to protect secrets.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.MasterKey.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string MasterKeyExec { get; set; }
@@ -139,17 +146,16 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.WellKnownCertificates.Admin", ConfigurationEntryScope.ServerWideOnly)]
         public string[] WellKnownAdminCertificates { get; set; }
         
-        
-        [Description("Well known issuer certificate in base 64 format or a file path that will be used to validate a new client certificate when the issuer's certificate has changed.")]
+        [Description("Well-known issuer certificates in Base64 format or file paths to certificate files" +
+                     "that will be used to validate a new client certificate when the issuer's certificate changes.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.WellKnownIssuers.Admin", ConfigurationEntryScope.ServerWideOnly)]
         public string[] WellKnownIssuers { get; set; }
 
-        [Description("Will determine whether to validate well known issuer certificate subject alternative names against server domain.")]
+        [Description("Determine whether the server will validate the subject alternative names (SANs) of well-known issuer certificates against the server's domain name.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Security.WellKnownIssuers.Admin.ValidateCertificateNames", ConfigurationEntryScope.ServerWideOnly)]
         public bool ValidateSanForCertificateWithWellKnownIssuer { get; set; }
-
 
         [Description("OBSOLETE: This is no longer supported or used, use 'Security.WellKnownIssuers.Admin' instead.")]
         [DefaultValue(null)]
@@ -179,7 +185,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.TlsCipherSuites", ConfigurationEntryScope.ServerWideOnly)]
         public TlsCipherSuite[] TlsCipherSuites { get; set; }
 
-        [Description("EXPERT: Indicates if 'KeyUsage' validation of certificates should be turned on or off")]
+        [Description("EXPERT: Indicates if 'KeyUsage' validation of certificates should be turned on or off.")]
         [DefaultValue(true)]
         [ConfigurationEntry("Security.Certificate.Validation.KeyUsages", ConfigurationEntryScope.ServerWideOnly)]
         public bool CertificateValidationKeyUsages { get; set; }
@@ -189,7 +195,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Csrf.Enabled", ConfigurationEntryScope.ServerWideOnly)]
         public bool EnableCsrfFilter { get; set; }
         
-        [Description("List of Trusted Origins for CSRF filter")]
+        [Description("List of Trusted Origins for CSRF filter.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Csrf.TrustedOrigins", ConfigurationEntryScope.ServerWideOnly)]
         public string[] CsrfTrustedOrigins { get; set; }
@@ -199,13 +205,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Csrf.AdditionalOriginHeaders", ConfigurationEntryScope.ServerWideOnly)]
         public string[] CsrfAdditionalOriginHeaders { get; set; }
         
-        [Description("Default (in minutes) two-factor session duration")]
+        [Description("Default (in minutes) two-factor session duration.")]
         [DefaultValue(120)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Security.TwoFactor.DefaultSessionDurationInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting DefaultTwoFactorSessionDuration { get; set; }
         
-        [Description("Maximum (in minutes) two-factor session duration")]
+        [Description("Maximum (in minutes) two-factor session duration.")]
         [DefaultValue(1440)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Security.TwoFactor.MaxSessionDurationInMin", ConfigurationEntryScope.ServerWideOnly)]
