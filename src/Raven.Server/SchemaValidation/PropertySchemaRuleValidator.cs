@@ -81,6 +81,10 @@ internal class PropertySchemaRuleValidator
         {
             yield return BlittableJsonToken.Boolean;
         }
+        else if (equatable.Equals("null"))
+        {
+            yield return BlittableJsonToken.Null;
+        }
     }
 
     private void ReadValueSchemaRuleValidators(BlittableJsonReaderObject propertySchemaDefinition)
@@ -89,7 +93,7 @@ internal class PropertySchemaRuleValidator
         foreach (var rule in propertySchemaDefinition.GetPropertyNames())
         {
             if (rule is SchemaValidatorConstants.type or SchemaValidatorConstants.description)
-                //TODO Check if there more
+                //TODO Check if there are more
                 continue;
 
             if (propertySchemaDefinition.TryGet(rule, out object v) == false)
