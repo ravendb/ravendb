@@ -18,11 +18,13 @@ namespace Raven.Client.Documents.Operations.Revisions
         private readonly Parameters _parameters;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.
+        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.<br/>
         /// This operation allows deletion of revisions.
         /// </summary>
+
         /// <remarks>
-        /// This is an <c>Admin</c> operation.
+        /// This is an <c>Admin</c> operation.<br/>
+        /// To learn how to force revision creation, see:<br/><inheritdoc cref="DocumentationUrls.Session.Revisions.ForceRevisionCreation"/>
         /// </remarks>
 
         /// <param name="documentIds">
@@ -33,8 +35,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </exception>
 
         /// <param name="removeForceCreatedRevisions">
-        /// Indicates whether to include force-created revisions in the deletion. 
-        /// (Can find more info <see href="https://ravendb.net/docs/article-page/latest/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
+        /// Indicates whether to include force-created revisions in the deletion.
         /// Default is <c>false</c>.
         /// </param>
 
@@ -50,11 +51,13 @@ namespace Raven.Client.Documents.Operations.Revisions
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.
+        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.<br/>
         /// This operation allows deletion of revisions.
         /// </summary>
+
         /// <remarks>
-        /// This is an <c>Admin</c> operation.
+        /// This is an <c>Admin</c> operation.<br/>
+        /// To learn how to force revision creation, see:<br/><inheritdoc cref="DocumentationUrls.Session.Revisions.ForceRevisionCreation"/>
         /// </remarks>
 
         /// <param name="documentId">
@@ -65,8 +68,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </exception>
 
         /// <param name="removeForceCreatedRevisions">
-        /// Indicates whether to include force-created revisions in the deletion. 
-        /// (Can find more info <see href="https://ravendb.net/docs/article-page/latest/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
+        /// Indicates whether to include force-created revisions in the deletion.
         /// Default is <c>false</c>.
         /// </param>
 
@@ -82,11 +84,13 @@ namespace Raven.Client.Documents.Operations.Revisions
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.
+        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.<br/>
         /// This operation allows deletion of revisions.
         /// </summary>
+
         /// <remarks>
-        /// This is an <c>Admin</c> operation.
+        /// This is an <c>Admin</c> operation.<br/>
+        /// To learn how to force revision creation, see:<br/><inheritdoc cref="DocumentationUrls.Session.Revisions.ForceRevisionCreation"/>
         /// </remarks>
 
         /// <param name="documentIds">
@@ -108,7 +112,6 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         /// <param name="removeForceCreatedRevisions">
         /// Indicates whether to include force-created revisions in the deletion.
-        /// (Can find more info <see href="https://ravendb.net/docs/article-page/latest/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
         /// Default is <c>false</c>.
         /// </param>
 
@@ -126,11 +129,13 @@ namespace Raven.Client.Documents.Operations.Revisions
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.
+        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.<br/>
         /// This operation allows deletion of revisions.
         /// </summary>
+
         /// <remarks>
-        /// This is an <c>Admin</c> operation.
+        /// This is an <c>Admin</c> operation.<br/>
+        /// To learn how to force revision creation, see:<br/><inheritdoc cref="DocumentationUrls.Session.Revisions.ForceRevisionCreation"/>
         /// </remarks>
 
         /// <param name="documentId">
@@ -152,7 +157,6 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         /// <param name="removeForceCreatedRevisions">
         /// Indicates whether to include force-created revisions in the deletion. 
-        /// (Can find more info <see href="https://ravendb.net/docs/article-page/latest/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
         /// Default is <c>false</c>.
         /// </param>
 
@@ -170,11 +174,13 @@ namespace Raven.Client.Documents.Operations.Revisions
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.
+        /// Initializes a new instance of the <see cref="DeleteRevisionsOperation"/> class.<br/>
         /// This operation allows deletion of revisions.
         /// </summary>
+
         /// <remarks>
-        /// This is an <c>Admin</c> operation.
+        /// This is an <c>Admin</c> operation.<br/>
+        /// To learn how to force revision creation, see:<br/><inheritdoc cref="DocumentationUrls.Session.Revisions.ForceRevisionCreation"/>
         /// </remarks>
 
         /// <param name="documentId">
@@ -193,7 +199,6 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         /// <param name="removeForceCreatedRevisions">
         /// Indicates whether to include force-created revisions in the deletion. 
-        /// (Can find more info <see href="https://ravendb.net/docs/article-page/latest/csharp/document-extensions/revisions/overview#force-revision-creation">here</see>).
         /// Default is <c>false</c>.
         /// </param>
 

@@ -126,7 +126,6 @@ internal static class DocumentationUrls
 
             /// <remarks><see href="https://ravendb.net/docs/article-page/6.2/csharp/client-api/how-to/handle-document-relationships#includes"/></remarks>
             public const string Includes = nameof(Includes);
-
         }
 
         internal static class Counters
@@ -203,6 +202,12 @@ internal static class DocumentationUrls
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.2/csharp/document-extensions/timeseries/rollup-and-retention"/></remarks>
             public const string RollupAndRetention = nameof(RollupAndRetention);
         }
+        
+        internal static class Revisions
+        {
+            ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.2/csharp/document-extensions/revisions/overview#force-revision-creation"/></remarks>
+            public const string ForceRevisionCreation = nameof(ForceRevisionCreation);
+        }
     }
 
     internal static class Operations
@@ -229,8 +234,6 @@ internal static class DocumentationUrls
             
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/6.0/Csharp/client-api/operations/server-wide/toggle-dynamic-database-distribution"/></remarks>
             public static string SetDatabaseDynamicDistributionOperation = nameof(SetDatabaseDynamicDistributionOperation);
-            
-            
         }
     }
 }
