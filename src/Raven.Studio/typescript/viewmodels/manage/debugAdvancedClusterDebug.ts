@@ -265,7 +265,7 @@ class clusterDebug extends viewModelBase {
             log => this.customInlinePreview(log), "Preview", `<i class="icon-preview"></i>`, "75px",
             {
                 title: () => 'Show item preview',
-                extraClass: item => item.Index <= this.clusterLog().Log.CommitIndex ? "invisible" : ""
+                extraClass: item => item.SizeInBytes === 0 ? "invisible" : ""
             });
 
         const grid = this.gridController();
