@@ -6,6 +6,8 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import React from "react";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "hooks/useRavenLink";
 
 export default function IndexCleanupAboutView() {
     const hasIndexCleanup = useAppSelector(licenseSelectors.statusValue("HasIndexCleanup"));
@@ -19,6 +21,8 @@ export default function IndexCleanupAboutView() {
             },
         ],
     });
+
+    const indexCleanupDocsLink = useRavenLink({ hash: "RWQW66" });
 
     return (
         <AboutViewFloating defaultOpen={hasIndexCleanup ? null : "licensing"}>
@@ -39,6 +43,11 @@ export default function IndexCleanupAboutView() {
                     indexes. Note that when merging or removing indexes, you need to update the index reference in your
                     application.
                 </p>
+                <hr />
+                <div className="small-label mb-2">useful links</div>
+                <a href={indexCleanupDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - Index Cleanup
+                </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper isUnlimited={hasIndexCleanup} data={featureAvailability} />
         </AboutViewFloating>
