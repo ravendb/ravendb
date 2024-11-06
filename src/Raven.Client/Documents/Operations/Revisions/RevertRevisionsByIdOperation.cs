@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// Client Operation to revert documents to specified revisions based on provided change vectors.
         /// </summary>
         /// <param name="id">The ID of the document to revert.</param>
-        /// <param name="cv">The change vector of the revision to which the document should be reverted.</param>
+        /// <param name="changeVector">The change vector of the revision to which the document should be reverted.</param>
         public RevertRevisionsByIdOperation(string id, string changeVector)
         {
             if (string.IsNullOrEmpty(id))

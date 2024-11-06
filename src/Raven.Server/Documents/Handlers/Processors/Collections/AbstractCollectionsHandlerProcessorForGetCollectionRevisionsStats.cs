@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -13,15 +14,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
         {
         }
 
-        protected abstract ValueTask<DynamicJsonValue> GetStatsAsync(TOperationContext context);
+        protected abstract ValueTask<DynamicJsonValue> GetStatsAsync(TOperationContext context, CancellationToken tokenToken);
 
         public override async ValueTask ExecuteAsync()
         {
+            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             {
-                DynamicJsonValue result = await GetStatsAsync(context);
+                DynamicJsonValue result = await GetStatsAsync(context, token.Token);
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
                     context.Write(writer, result);
             }
         }

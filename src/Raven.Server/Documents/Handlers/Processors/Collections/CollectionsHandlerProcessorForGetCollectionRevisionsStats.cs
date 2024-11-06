@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
@@ -12,7 +14,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
         {
         }
 
-        protected override ValueTask<DynamicJsonValue> GetStatsAsync(DocumentsOperationContext context)
+        protected override ValueTask<DynamicJsonValue> GetStatsAsync(DocumentsOperationContext context, CancellationToken token)
         {
             using (context.OpenReadTransaction())
             {
@@ -22,18 +24,19 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
 
         private DynamicJsonValue GetCollectionStats(DocumentsOperationContext context)
         {
-            var collections = new DynamicJsonValue();
+            var result = new CollectionRevisionsStatistics
+            {
+                Collections = new Dictionary<string, long>(),
+                CountOfRevisions = RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context)
+            };
 
             foreach (var collection in RequestHandler.Database.DocumentsStorage.GetCollectionsNames(context))
             {
-                collections[collection] = RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocumentsForCollection(context, collection);
+                var count = RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocumentsForCollection(context, collection);
+                result.Collections.Add(collection, count);
             }
 
-            return new DynamicJsonValue()
-            {
-                [nameof(CollectionRevisionsStatistics.CountOfRevisions)] = RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context),
-                [nameof(CollectionRevisionsStatistics.Collections)] = collections
-            };
+            return result.ToJson();
         }
     }
 }

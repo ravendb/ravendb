@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
@@ -30,19 +31,19 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
 
         switch (Type)
         {
-            case RevisionsType.All:
+            case RevisionsStorage.RevisionsType.All:
                 _totalResults = string.IsNullOrEmpty(Collection)
                     ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context)
                     : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocumentsForCollection(context, Collection);
                 break;
 
-            case RevisionsType.NotDeleted:
+            case RevisionsStorage.RevisionsType.NotDeleted:
                 _totalResults = string.IsNullOrEmpty(Collection)
                     ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfNonDeletedRevisions(context)
                     : -1; // Not available for specific collection
                 break;
 
-            case RevisionsType.Deleted:
+            case RevisionsStorage.RevisionsType.Deleted:
                 _totalResults = string.IsNullOrEmpty(Collection)
                     ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context) -
                       RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfNonDeletedRevisions(context)
@@ -64,30 +65,9 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
         writer.WriteStartArray();
         if (_totalResults != 0)
         {
-            IEnumerable<Document> revisions;
-            switch (Type)
-            {
-                case RevisionsType.All:
-                    revisions = string.IsNullOrEmpty(Collection)
-                        ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrder(context, _start, _pageSize)
-                        : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrderForCollection(context, Collection, _start, _pageSize);
-                    break;
-
-                case RevisionsType.NotDeleted:
-                    revisions = string.IsNullOrEmpty(Collection)
-                        ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNotDeletedRevisionsInReverseEtagOrder(context, _start, _pageSize)
-                        : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNotDeletedRevisionsInReverseEtagOrderForCollection(context, Collection, _start, _pageSize);
-                    break;
-
-                case RevisionsType.Deleted:
-                    revisions = string.IsNullOrEmpty(Collection)
-                        ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetDeletedRevisionsInReverseEtagOrder(context, _start, _pageSize)
-                        : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetDeletedRevisionsInReverseEtagOrderForCollection(context, Collection, _start, _pageSize);
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(Type), $"Unsupported revision type: {Type}");
-            }
+            IEnumerable<Document> revisions = string.IsNullOrEmpty(Collection)
+                ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrder(context, Type, _start, _pageSize)
+                : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsInReverseEtagOrderForCollection(context, Type, Collection, _start, _pageSize);
 
             WriteItemsInternal(context, writer, revisions);
         }
