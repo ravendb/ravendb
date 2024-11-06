@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
@@ -18,13 +20,10 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
         {
         }
 
-        protected override async ValueTask<DynamicJsonValue> GetStatsAsync(TransactionOperationContext context)
+        protected override async ValueTask<DynamicJsonValue> GetStatsAsync(TransactionOperationContext context, CancellationToken token)
         {
-            using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
-            {
-                var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(new ShardedCollectionRevisionsStatisticsOperation(HttpContext), token.Token);
-                return stats.ToJson();
-            }
+            var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(new ShardedCollectionRevisionsStatisticsOperation(HttpContext), token);
+            return stats.ToJson();
         }
     }
 
@@ -41,21 +40,23 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
 
         public CollectionRevisionsStatistics Combine(Dictionary<int, ShardExecutionResult<CollectionRevisionsStatistics>> results)
         {
-            var stats = new CollectionRevisionsStatistics() { Collections = new Dictionary<string, long>() };
+            var combined = new CollectionRevisionsStatistics
+            {
+                Collections = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
+            };
 
             foreach (var shardResult in results.Values)
             {
                 var shardStats = shardResult.Result;
-                stats.CountOfRevisions += shardStats.CountOfRevisions;
+                combined.CountOfRevisions += shardStats.CountOfRevisions;
                 foreach (var collectionInfo in shardStats.Collections)
                 {
-                    stats.Collections[collectionInfo.Key] = stats.Collections.ContainsKey(collectionInfo.Key)
-                        ? stats.Collections[collectionInfo.Key] + collectionInfo.Value
-                        : collectionInfo.Value;
+                    combined.Collections.TryAdd(collectionInfo.Key, 0);
+                    combined.Collections[collectionInfo.Key] += collectionInfo.Value;
                 }
             }
 
-            return stats;
+            return combined;
         }
 
         public RavenCommand<CollectionRevisionsStatistics> CreateCommandForShard(int shardNumber) => new GetCollectionRevisionsStatisticsOperation.GetCollectionRevisionsStatisticsCommand();

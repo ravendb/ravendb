@@ -1,9 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Net.Http;
+﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -29,7 +27,7 @@ namespace Raven.Client.Documents.Operations
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/collections/stats/revisions";
+                url = $"{node.Url}/databases/{node.Database}/revisions/collections/stats";
 
                 return new HttpRequestMessage
                 {
@@ -44,27 +42,6 @@ namespace Raven.Client.Documents.Operations
 
                 Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<CollectionRevisionsStatistics>(response);
             }
-        }
-    }
-
-    public class CollectionRevisionsStatistics
-    {
-        public long CountOfRevisions { get; set; }
-        public Dictionary<string, long> Collections { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            DynamicJsonValue collections = new DynamicJsonValue();
-            foreach (var collection in Collections)
-            {
-                collections[collection.Key] = collection.Value;
-            }
-
-            return new DynamicJsonValue()
-            {
-                [nameof(CollectionRevisionsStatistics.CountOfRevisions)] = CountOfRevisions,
-                [nameof(CollectionRevisionsStatistics.Collections)] = collections
-            };
         }
     }
 }

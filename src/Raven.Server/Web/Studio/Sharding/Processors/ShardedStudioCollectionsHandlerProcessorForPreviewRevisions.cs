@@ -11,6 +11,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
@@ -131,7 +132,7 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
 
     protected override async ValueTask<long> GetTotalCountAsync()
     {
-        if (Type != RevisionsType.All && string.IsNullOrEmpty(Collection) == false)
+        if (Type != RevisionsStorage.RevisionsType.All && string.IsNullOrEmpty(Collection) == false)
             return -1;
 
         var result = await RequestHandler.DatabaseContext.Streaming.ReadCombinedLongAsync(_combinedReadState, nameof(PreviewRevisionsResult.TotalResults));
@@ -169,9 +170,9 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
         private readonly ShardedDatabaseRequestHandler _handler;
         private readonly string _collection;
         private readonly ShardedPagingContinuation _continuationToken;
-        private readonly RevisionsType _type;
+        private readonly RevisionsStorage.RevisionsType _type;
 
-        public ShardedRevisionsCollectionPreviewOperation(ShardedDatabaseRequestHandler handler, string collection, RevisionsType type, string etag, ShardedPagingContinuation continuationToken)
+        public ShardedRevisionsCollectionPreviewOperation(ShardedDatabaseRequestHandler handler, string collection, RevisionsStorage.RevisionsType type, string etag, ShardedPagingContinuation continuationToken)
         {
             _handler = handler;
             _collection = collection;
@@ -190,11 +191,11 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
         private sealed class ShardedRevisionsPreviewCommand : RavenCommand<StreamResult>
         {
             private readonly string _collection;
-            private readonly RevisionsType _type;
+            private readonly RevisionsStorage.RevisionsType _type;
             private readonly int _start;
             private readonly int _pageSize;
 
-            public ShardedRevisionsPreviewCommand(string collection, RevisionsType type, int start, int pageSize)
+            public ShardedRevisionsPreviewCommand(string collection, RevisionsStorage.RevisionsType type, int start, int pageSize)
             {
                 _collection = collection;
                 _type = type;

@@ -7,6 +7,7 @@ using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Documents.Revisions;
 using Sparrow.Json;
 using Enum = System.Enum;
 
@@ -21,7 +22,7 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
 
     protected string Collection;
 
-    protected RevisionsType Type;
+    protected RevisionsStorage.RevisionsType Type;
 
     protected AbstractStudioCollectionsHandlerProcessorForPreviewRevisions([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
@@ -82,7 +83,7 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
 
         if (Enum.TryParse(type, true, out Type) == false)
         {
-            throw new ArgumentException($"Invalid value '{type}' provided for 'type'. Please use one of the following options: {string.Join(", ", Enum.GetNames(typeof(RevisionsType)))}.");
+            throw new ArgumentException($"Invalid value '{type}' provided for 'type'. Please use one of the following options: {string.Join(", ", Enum.GetNames(typeof(RevisionsStorage.RevisionsType)))}.");
         }
 
         return Task.CompletedTask;
@@ -92,13 +93,6 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
     {
         public List<Document> Results;
         public long TotalResults;
-    }
-
-    public enum RevisionsType
-    {
-        All,
-        NotDeleted,
-        Deleted
     }
 
 }

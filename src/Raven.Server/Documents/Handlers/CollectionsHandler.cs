@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/collections/stats/revisions", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/revisions/collections/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetRevisionsStats()
         {
             using (var processor = new CollectionsHandlerProcessorForGetCollectionRevisionsStats(this))
