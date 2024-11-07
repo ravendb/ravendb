@@ -194,13 +194,18 @@ export default function DocumentRevisions() {
                                         </ButtonWithSpinner>
                                         <FlexGrow />
 
+                                        <UncontrolledTooltip target="revertCollections">
+                                            {
+                                                "Revert documents in specified collections to their revisions at a specific point in time"
+                                            }
+                                        </UncontrolledTooltip>
                                         <a
+                                            id="revertCollections"
                                             className="btn btn-secondary"
                                             href={urls.revertRevisions()}
-                                            title="Revert all documents in the database to a specific point in time"
                                         >
                                             <Icon icon="revert-revisions" />
-                                            Revert revisions
+                                            Revert collections
                                         </a>
 
                                         <UncontrolledTooltip target="enforceConfiguration">
@@ -379,13 +384,13 @@ export default function DocumentRevisions() {
                                     Define the revisions configuration in this view:
                                     <ul>
                                         <li>
-                                            Under section DEFAULTS:
+                                            Under section <strong>DEFAULTS</strong>:
                                             <br />
                                             Set default revisions configuration for all non-conflicting and conflicting
                                             documents.
                                         </li>
                                         <li>
-                                            Under section COLLECTIONS:
+                                            Under section <strong>COLLECTIONS</strong>:
                                             <br />
                                             Set revisions configuration for specific collections, overriding the
                                             defaults.
@@ -395,8 +400,13 @@ export default function DocumentRevisions() {
                                 <div>
                                     This view also provides these options:
                                     <ul>
-                                        <li>Revert all documents to a specific point in time.</li>
                                         <li>
+                                            <strong>Revert collections</strong>:<br />
+                                            Revert documents in specified collections to their revisions at a specific
+                                            point in time.
+                                        </li>
+                                        <li>
+                                            <strong>Enforce configuration</strong>:<br />
                                             Enforce the current configuration on all existing revisions in the database
                                             per collection.
                                         </li>

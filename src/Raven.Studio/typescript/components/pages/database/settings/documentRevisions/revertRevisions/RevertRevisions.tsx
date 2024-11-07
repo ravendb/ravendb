@@ -22,10 +22,13 @@ import RevertRevisionsRequest = Raven.Server.Documents.Revisions.RevertRevisions
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import { useRavenLink } from "hooks/useRavenLink";
 
 export default function RevertRevisions() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+
+    const revertCollectionsDocsLink = useRavenLink({ hash: "E752O6" });
 
     const { control, formState, handleSubmit, setValue } = useForm<RevertRevisionsFormData>({
         resolver: revertRevisionsYupResolver,
@@ -77,7 +80,7 @@ export default function RevertRevisions() {
     return (
         <Row className="content-margin gy-sm">
             <Col>
-                <AboutViewHeading title="Revert Revisions" icon="revert-revisions" />
+                <AboutViewHeading title="Revert Collections" icon="revert-revisions" />
                 <Form onSubmit={handleSubmit(onRevert)} autoComplete="off">
                     <div className="d-flex justify-content-between align-items-end">
                         <ButtonWithSpinner
@@ -86,6 +89,7 @@ export default function RevertRevisions() {
                             icon="revert-revisions"
                             disabled={!formState.isDirty}
                             isSpinning={asyncRevertRevisions.status === "loading"}
+                            title={"Click to revert the selected collections to the specified point in time"}
                         >
                             Revert
                         </ButtonWithSpinner>
@@ -163,53 +167,64 @@ export default function RevertRevisions() {
                         description="Get additional info on this feature"
                         heading="About this view"
                     >
-                        {pointInTime && (
-                            <div className="flex-horizontal margin-bottom">
-                                <div>
-                                    When &apos;Revert Revisions&apos; is executed the following rules are applied:
-                                    <ul>
-                                        <li>
-                                            Documents
-                                            <strong>
-                                                <em> modified </em>
-                                            </strong>
-                                            after Point in Time:
-                                            <code> {formattedPointInTimeUtc} </code>
-                                            will be reverted (by creating new revision) to latest version before
-                                            <code> {formattedPointInTimeUtc} </code>.
-                                        </li>
-                                        <li>
-                                            If collection has maximum revisions limit and all of them were
-                                            <strong>
-                                                <em> created </em>
-                                            </strong>
-                                            after Point in Time:
-                                            <code> {formattedPointInTimeUtc} </code>
-                                            the oldest revision will be used.
-                                        </li>
-                                        <li>
-                                            Documents
-                                            <strong>
-                                                <em> created </em>
-                                            </strong>
-                                            after Point in Time:
-                                            <code> {formattedPointInTimeUtc} </code>
-                                            will be moved to
-                                            <strong>
-                                                <em> Revisions&nbsp;Bin</em>
-                                            </strong>
-                                            .
-                                        </li>
-                                        <li>Remaining documents will not be modified.</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        )}
-                        <div>
+                        <div className="margin-bottom-sm">
+                            Use this view to revert documents to their revisions as they were at the specified{" "}
+                            <strong>Point in Time</strong>.
+                            <br />
+                            You can choose to revert documents from all collections or only from selected collections.
+                        </div>
+                        <div className="margin-bottom-sm">
                             <strong>Time Window</strong> parameter is used for performance optimization: since revisions
                             are not sorted by date, we stop the revert process when hitting a versioned document outside
                             the window.
                         </div>
+                        {pointInTime && (
+                            <div>
+                                Based on the specified <strong>Point in Time</strong>,
+                                <br />
+                                the following will apply when the revert process takes place:
+                                <ul>
+                                    <li>
+                                        Documents
+                                        <strong>
+                                            <em> modified </em>
+                                        </strong>
+                                        after Point in Time:
+                                        <code> {formattedPointInTimeUtc} </code>
+                                        will be reverted (by creating new revision) to latest version before
+                                        <code> {formattedPointInTimeUtc} </code>.
+                                    </li>
+                                    <li>
+                                        If collection has maximum revisions limit and all of them were
+                                        <strong>
+                                            <em> created </em>
+                                        </strong>
+                                        after Point in Time:
+                                        <code> {formattedPointInTimeUtc} </code>
+                                        the oldest revision will be used.
+                                    </li>
+                                    <li>
+                                        Documents
+                                        <strong>
+                                            <em> created </em>
+                                        </strong>
+                                        after Point in Time:
+                                        <code> {formattedPointInTimeUtc} </code>
+                                        will be moved to
+                                        <strong>
+                                            <em> Revisions&nbsp;Bin</em>
+                                        </strong>
+                                        .
+                                    </li>
+                                    <li>Remaining documents will not be modified.</li>
+                                </ul>
+                            </div>
+                        )}
+                        <hr />
+                        <div className="small-label mb-2">useful links</div>
+                        <a href={revertCollectionsDocsLink} target="_blank">
+                            <Icon icon="newtab" /> Docs - Revert Collections
+                        </a>
                     </AccordionItemWrapper>
                 </AboutViewAnchored>
             </Col>

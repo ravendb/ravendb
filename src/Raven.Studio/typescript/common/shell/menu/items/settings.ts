@@ -133,7 +133,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             route: 'databases/settings/revertRevisions',
             moduleId: bridgeToReact(RevertRevisions, "nonShardedView"),
             shardingMode: "allShards",
-            title: 'Revert Revisions',
+            title: 'Revert Collections',
             nav: false,
             css: 'icon-revert-revisions',
             dynamicHash: appUrls.revertRevisions,
