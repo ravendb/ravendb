@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -373,7 +374,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 description = $"OLAP ETL {_settings.TaskName}";
             }
 
-            return $"{description} for db {_settings.DatabaseName} at {SystemTime.UtcNow}";
+            return $"{description} for db {_settings.DatabaseName} at {SystemTime.UtcNow.ToString(CultureInfo.InvariantCulture)}";
         }
 
         public static string GetBackupDescription(BackupType backupType, bool isFullBackup)
