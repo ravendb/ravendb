@@ -7,7 +7,7 @@ const { DefaultRevertRevisions } = composeStories(stories);
 
 const allCollectionsRadio = "All collections";
 
-describe("RevertCollections", () => {
+describe("RevertRevisions", () => {
     async function waitForLoad(screen: RtlScreen) {
         expect(await screen.findAllByText("Point in Time")).toHaveLength(2);
     }

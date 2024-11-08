@@ -195,9 +195,7 @@ export default function DocumentRevisions() {
                                         <FlexGrow />
 
                                         <UncontrolledTooltip target="revertCollections">
-                                            {
-                                                "Revert documents in specified collections to their revisions at a specific point in time"
-                                            }
+                                            {"Revert documents to their revisions at a specific point in time"}
                                         </UncontrolledTooltip>
                                         <a
                                             id="revertCollections"
@@ -205,7 +203,7 @@ export default function DocumentRevisions() {
                                             href={urls.revertRevisions()}
                                         >
                                             <Icon icon="revert-revisions" />
-                                            Revert collections
+                                            Revert revisions
                                         </a>
 
                                         <UncontrolledTooltip target="enforceConfiguration">
@@ -401,9 +399,8 @@ export default function DocumentRevisions() {
                                     This view also provides these options:
                                     <ul>
                                         <li>
-                                            <strong>Revert collections</strong>:<br />
-                                            Revert documents in specified collections to their revisions at a specific
-                                            point in time.
+                                            <strong>Revert revisions</strong>:<br />
+                                            Revert documents to their revisions at a specific point in time.
                                         </li>
                                         <li>
                                             <strong>Enforce configuration</strong>:<br />

@@ -58,6 +58,10 @@ export default function RevertRevisions() {
         (x) => x !== "@empty" && x !== "@hilo"
     );
 
+    const tooltipMessage = isRevertAllCollections
+        ? "Revert documents from all collections to the specified point in time"
+        : "Revert documents from the selected collections to the specified point in time";
+
     const onRevert = async (formData: RevertRevisionsFormData) => {
         const isConfirmed = await confirm({
             title: `Do you want to revert documents state to date: ${formattedPointInTimeUtc}?`,
@@ -80,7 +84,7 @@ export default function RevertRevisions() {
     return (
         <Row className="content-margin gy-sm">
             <Col>
-                <AboutViewHeading title="Revert Collections" icon="revert-revisions" />
+                <AboutViewHeading title="Revert Documents to Revisions" icon="revert-revisions" />
                 <Form onSubmit={handleSubmit(onRevert)} autoComplete="off">
                     <div className="d-flex justify-content-between align-items-end">
                         <ButtonWithSpinner
@@ -89,7 +93,7 @@ export default function RevertRevisions() {
                             icon="revert-revisions"
                             disabled={!formState.isDirty}
                             isSpinning={asyncRevertRevisions.status === "loading"}
-                            title={"Click to revert the selected collections to the specified point in time"}
+                            title={tooltipMessage}
                         >
                             Revert
                         </ButtonWithSpinner>
@@ -223,7 +227,7 @@ export default function RevertRevisions() {
                         <hr />
                         <div className="small-label mb-2">useful links</div>
                         <a href={revertCollectionsDocsLink} target="_blank">
-                            <Icon icon="newtab" /> Docs - Revert Collections
+                            <Icon icon="newtab" /> Docs - Revert Documents to Revisions
                         </a>
                     </AccordionItemWrapper>
                 </AboutViewAnchored>

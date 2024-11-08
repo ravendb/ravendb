@@ -17,7 +17,7 @@ interface DefaultRevertRevisionsProps {
 }
 
 export const DefaultRevertRevisions: StoryObj<DefaultRevertRevisionsProps> = {
-    name: "Revert Collections",
+    name: "Revert Revisions",
     render: ({ databaseAccess }: DefaultRevertRevisionsProps) => {
         const { collectionsTracker, accessManager, databases } = mockStore;
 
