@@ -156,6 +156,11 @@ public class MetricsProvider
 
         result.TotalDirtyInMb = MemoryInformation.GetDirtyMemoryState().TotalDirty.GetValue(SizeUnit.Megabytes);
 
+        result.AvailableMemoryForProcessingInMb = memoryInfoResult.AvailableMemoryForProcessing.GetValue(SizeUnit.Megabytes);
+        
+        result.ManagedMemoryInBytes = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
+        result.UnmanagedMemoryInBytes = AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes();
+
         return result;
     }
 

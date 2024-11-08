@@ -121,6 +121,9 @@ namespace Raven.Server.Utils.Monitoring
         public long TotalSwapUsageInMb { get; set; }
         public long WorkingSetSwapUsageInMb { get; set; }
         public long TotalDirtyInMb { get; set; }
+        public long AvailableMemoryForProcessingInMb { get; set; }
+        public long ManagedMemoryInBytes { get; set; }
+        public long UnmanagedMemoryInBytes { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -133,7 +136,10 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(TotalSwapSizeInMb)] = TotalSwapSizeInMb,
                 [nameof(TotalSwapUsageInMb)] = TotalSwapUsageInMb,
                 [nameof(WorkingSetSwapUsageInMb)] = WorkingSetSwapUsageInMb,
-                [nameof(TotalDirtyInMb)] = TotalDirtyInMb
+                [nameof(TotalDirtyInMb)] = TotalDirtyInMb,
+                [nameof(AvailableMemoryForProcessingInMb)] = AvailableMemoryForProcessingInMb,
+                [nameof(ManagedMemoryInBytes)] = ManagedMemoryInBytes,
+                [nameof(UnmanagedMemoryInBytes)] = UnmanagedMemoryInBytes
             };
         }
     }
