@@ -10,75 +10,83 @@ string[] Files = [
                  "train-00002-of-00004-ff770df3ab420d14.parquet",
                  "train-00003-of-00004-85b3dbbc960e92ec.parquet"
              ];
-if (Directory.Exists("vectors"))
-{
-    Directory.Delete("vectors", true);
-}
-var options = StorageEnvironmentOptions.ForPathForTests("vectors");
-using var env = new StorageEnvironment(options);
-
+var dbPath = Path.GetFullPath("F:\\ravendb-7.0\\bench\\Vector.Benchmark\\vectors");
+// if (Directory.Exists(dbPath))
+// {
+//     Directory.Delete(dbPath, true);
+// }
 
 var sp = Stopwatch.StartNew();
-//var id = 16416;
-var id = await ImportData(env);
+//await ImportData(dbPath);
 Console.WriteLine(sp.Elapsed);
 sp.Restart();
-await TestRecall(env, id);
+TestRecall(dbPath);
 Console.WriteLine(sp.Elapsed);
 
-async Task TestRecall(StorageEnvironment env, long id)
+void TestRecall(string path)
 {
-    int vectorsCount = 0;
+    var options = StorageEnvironmentOptions.ForPathForTests(path);
+    using var env = new StorageEnvironment(options);
+
     int correctCount = 0;
     int resultsCount = 8;
     int queries = 50;
     var annMatches = new long[resultsCount];
+    var annDistances = new float[resultsCount];
     var ennMatches = new long[resultsCount];
+    var ennDistances = new float[resultsCount];
 
-    Span<float> vector = new float[768];
-    var rnd = new Random(454);
-    for (int i = 0; i < queries; i++)
+    long results = 0;
+    foreach (var file in Files)
     {
-        rnd.NextBytes(MemoryMarshal.AsBytes(vector));
-        using (var txr = env.ReadTransaction())
+        using var txr = env.ReadTransaction();
+        var fullPath = Path.Combine(Path.GetTempPath(), "Vector.Benchmark", file);
+
+        foreach (var (ids, vectors) in YieldVectors(fullPath))
         {
-            var sp = Stopwatch.StartNew();
-            using var enn = Hnsw.ExactNearest(txr.LowLevelTransaction, id, 10, MemoryMarshal.AsBytes(vector));
-            var exactSp = sp.Elapsed;
-            sp.Restart();
-            using var ann = Hnsw.ApproximateNearest(txr.LowLevelTransaction, id, 10, MemoryMarshal.AsBytes(vector));
-            var approxSp = sp.Elapsed;
-            Console.WriteLine($"Exact {exactSp.TotalMilliseconds} - Approximate {approxSp.TotalMilliseconds} -" +
-                $" diff: {Math.Round(exactSp.TotalMilliseconds - approxSp.TotalMilliseconds, 4)} ms");
-
-            vectorsCount++;
-
-            var aRead = ann.Fill(annMatches);
-            var eRead = enn.Fill(ennMatches);
-            if (aRead != eRead)
+            for (int i = 0; i < ids.Length; i++)
             {
-                Console.WriteLine("Mismatch in read count?");
-            }
-            foreach (var annMatch in annMatches)
-            {
-                if (ennMatches.Contains(annMatch))
+                var vector = new Span<float>(vectors, i * 768, 768);
+                
+                using var enn = Hnsw.ExactNearest(txr.LowLevelTransaction, "wiki", 10, MemoryMarshal.AsBytes(vector));
+                using var ann = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "wiki", 64, MemoryMarshal.AsBytes(vector));
+
+                var aRead = ann.Fill(annMatches, annDistances);
+                var eRead = enn.Fill(ennMatches, ennDistances);
+                if (aRead != eRead)
                 {
-                    correctCount++;
+                    Console.WriteLine("Mismatch in read count?");
+                }
+
+                results += aRead;
+                foreach (var annMatch in annMatches)
+                {
+                    if (ennMatches.Contains(annMatch))
+                    {
+                        correctCount++;
+                    }
+                }
+
+                if ((i++ % 100) == 0)
+                {
+                    Console.WriteLine($"{correctCount} - {results} = {correctCount / (float)(results):P} matches");
                 }
             }
         }
 
+        Console.WriteLine($"{correctCount} - {queries * resultsCount} {correctCount / (float)(queries * resultsCount):P} matches");
     }
-    Console.WriteLine($"{correctCount} - {queries*resultsCount} {correctCount / (float)(queries * resultsCount):P} matches");
 }
 
-async Task<long> ImportData(StorageEnvironment env)
+async Task ImportData(string path)
 {
-    long id;
+    var options = StorageEnvironmentOptions.ForPathForTests(path);
+    Console.WriteLine(options.BasePath.FullPath);
+    using var env = new StorageEnvironment(options);
+
     using (var txw = env.WriteTransaction())
     {
-        id = Hnsw.Create(txw.LowLevelTransaction, 768 * 4, 8, 32);
-        Console.WriteLine(id);
+        Hnsw.Create(txw.LowLevelTransaction, "wiki", 768 * 4, 12, 40);
         txw.Commit();
     }
 
@@ -90,13 +98,14 @@ async Task<long> ImportData(StorageEnvironment env)
             await DownloadFile(fullPath);
         }
 
-        await foreach (var (ids, vectors) in YieldVectors(fullPath))
+        foreach (var (ids, vectors) in YieldVectors(fullPath))
         {
             var batch = Stopwatch.StartNew();
             using (var txw = env.WriteTransaction())
             {
-                using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, id))
+                using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "wiki"))
                 {
+                    registration.Random = new Random(454);
                     for (int i = 0; i < ids.Length; i++)
                     {
                         var vector = new Memory<float>(vectors, i * 768, 768);
@@ -108,19 +117,18 @@ async Task<long> ImportData(StorageEnvironment env)
             Console.WriteLine($" * {ids.Length:N0} - {batch.Elapsed}");
         }
     }
-    return id;
 }
 
 
-static async IAsyncEnumerable<(int[], float[])> YieldVectors(string filePath)
+static IEnumerable<(int[], float[])> YieldVectors(string filePath)
 {
-    var file = await ParquetReader.CreateAsync(filePath);
+    var file = ParquetReader.CreateAsync(filePath).Result;
     var schema = file.Schema;
     for (int i = 0; i < file.RowGroupCount; i++)
     {
         var reader = file.OpenRowGroupReader(i);
-        var wikiId = await reader.ReadColumnAsync(schema.DataFields[4]);
-        var vectors = await reader.ReadColumnAsync(schema.DataFields[8]);
+        var wikiId = reader.ReadColumnAsync(schema.DataFields[4]).Result;
+        var vectors = reader.ReadColumnAsync(schema.DataFields[8]).Result;
         var wikiIds = (int[])wikiId.DefinedData;
         var vectorsArr = (float[])vectors.DefinedData;
         yield return (wikiIds, vectorsArr);
@@ -131,6 +139,7 @@ static async Task DownloadFile(string fullPath)
 {
     const string url = "https://huggingface.co/datasets/Cohere/wikipedia-22-12-simple-embeddings/resolve/main/data/";
 
+    Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
     using (HttpClient client = new())
     {
         client.Timeout = TimeSpan.FromHours(1); // Set timeout to a reasonable value for large files

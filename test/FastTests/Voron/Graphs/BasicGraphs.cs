@@ -1,19 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Numerics.Tensors;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using Jint.Native.Json;
-using Newtonsoft.Json;
-using Parquet;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
 using Xunit;
 using Xunit.Abstractions;
-using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace FastTests.Voron.Graphs;
 
@@ -22,17 +12,17 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
     [RavenFact(RavenTestCategory.Voron)]
     public void CanCreateEmptyGraph()
     {
-        long id;
         using (var txw = Env.WriteTransaction())
         {
-            id = Hnsw.Create(txw.LowLevelTransaction, 16, 3, 12);
+            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12);
 
             txw.Commit();
         }
 
         using (var txr = Env.ReadTransaction())
         {
-            var options = Hnsw.ReadOptions(txr.LowLevelTransaction, id);
+            var state = new Hnsw.SearchState(txr.LowLevelTransaction, "test");
+            var options = state.Options;
             Assert.Equal(12, options.NumberOfCandidates);
             Assert.Equal(3, options.NumberOfEdges);
             Assert.Equal(0, options.CountOfVectors);
@@ -48,16 +38,18 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         // nearest to v2, then v1
         float[] v3 = [0.25f, 0.35f, 0.45f, 0.55f];
 
-        long id;
-
         using (var txw = Env.WriteTransaction())
         {
-            id = Hnsw.Create(txw.LowLevelTransaction, 16, 3, 12);
+            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, id))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
             {
                 registration.Register(4, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
+            }
+            
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            {
                 registration.Register(12, MemoryMarshal.Cast<float, byte>(v1));
             }
 
@@ -66,7 +58,8 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var txr = Env.ReadTransaction())
         {
-            var options = Hnsw.ReadOptions(txr.LowLevelTransaction, id);
+            var state = new Hnsw.SearchState(txr.LowLevelTransaction, "test");
+            var options = state.Options;
             Assert.Equal(12, options.NumberOfCandidates);
             Assert.Equal(3, options.NumberOfEdges);
             Assert.Equal(2, options.CountOfVectors);
@@ -75,7 +68,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         using (var txr = Env.ReadTransaction())
         {
             Span<long> matches = stackalloc long[8];
-            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, id,
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
                 numberOfCandidates: 32,
                 MemoryMarshal.Cast<float, byte>(v3));
             int read = nearest.Fill(matches);
