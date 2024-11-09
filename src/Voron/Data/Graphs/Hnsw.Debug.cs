@@ -51,10 +51,17 @@ public unsafe partial class Hnsw
         throw new NotSupportedException();
     }
 
-
-    public static void RenderAndShow(LowLevelTransaction llt, long graphId, Span<byte> vector)
+    public static void RenderAndShow(LowLevelTransaction llt, string name, Span<byte> vector)
     {
-        var searchState = new SearchState(llt, graphId);
+        using (Slice.From(llt.Allocator, name, out var slice))
+        {
+            RenderAndShow(llt, slice, vector);
+        }
+    }
+    
+    public static void RenderAndShow(LowLevelTransaction llt, Slice name, Span<byte> vector)
+    {
+        var searchState = new SearchState(llt, name);
         string fileName = Path.GetTempFileName() + ".html";
         using (var f = File.CreateText(fileName))
         {

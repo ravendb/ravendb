@@ -148,3 +148,4 @@ src/Sparrow.Server/Utils/VxSort/codegen/__pycache__/
 /UpgradeLog.htm
 /src/Raven.Pal/MacOSX12.3.sdk
 /src/Raven.Pal/runtimes/
+/bench/Vector.Benchmark/vectors
