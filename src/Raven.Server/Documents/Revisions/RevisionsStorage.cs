@@ -2115,6 +2115,8 @@ namespace Raven.Server.Documents.Revisions
 
         private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, string collection, OperationCancelToken token)
         {
+            var endEtag = parameters.LastScannedEtag - 1;
+
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
             {
@@ -2141,12 +2143,12 @@ namespace Raven.Server.Documents.Revisions
                         return false;
                     }
 
-                    tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag);
+                    tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], endEtag);
                 }
                 else
                 {
                     var revisions = new Table(RevisionsSchema, readCtx.Transaction.InnerTransaction);
-                    tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], parameters.LastScannedEtag);
+                    tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], endEtag);
                 }
 
                 foreach (var tvr in tvrs)
