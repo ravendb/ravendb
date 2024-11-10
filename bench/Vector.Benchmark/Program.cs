@@ -11,13 +11,13 @@ string[] Files = [
                  "train-00003-of-00004-85b3dbbc960e92ec.parquet"
              ];
 var dbPath = Path.GetFullPath("F:\\ravendb-7.0\\bench\\Vector.Benchmark\\vectors");
-// if (Directory.Exists(dbPath))
-// {
-//     Directory.Delete(dbPath, true);
-// }
+if (Directory.Exists(dbPath))
+{
+    Directory.Delete(dbPath, true);
+}
 
 var sp = Stopwatch.StartNew();
-//await ImportData(dbPath);
+await ImportData(dbPath);
 Console.WriteLine(sp.Elapsed);
 sp.Restart();
 TestRecall(dbPath);

@@ -353,43 +353,38 @@ public unsafe partial class Hnsw
             indexes.ResetAndEnsureCapacity(Llt.Allocator, nodeIds.Count);
             for (int i = 0; i < nodeIds.Count; i++)
             {
-                indexes.AddUnsafe(GetNodeIndexById(nodeIds[i]));
+                if (_nodeIdToIdx.TryGetValue(nodeIds[i], out var index))
+                {
+                    indexes.AddUnsafe(index);
+                    nodeIds[i] = -1;
+                }
             }
-            // for (int i = 0; i < nodeIds.Count; i++)
-            // {
-            //     if (_nodeIdToIdx.TryGetValue(nodeIds[i], out var index))
-            //     {
-            //         indexes.AddUnsafe(index);
-            //         nodeIds[i] = -1;
-            //     }
-            // }
-            //
-            // var matches = indexes.Count;
-            // var keys = nodeIds.ToSpan();
-            // if (keys.Length == matches)
-            //     return;
-            //
-            // keys.Sort();
-            // keys = keys[matches..]; // discard all those we already found
-            // for (int i = 0; i < keys.Length; i++)
-            // {
-            //     var nodeIdx = AllocateNodeIndex(keys[i]);
-            //     _nodes[nodeIdx].NodeId = keys[i];
-            //     indexes.AddUnsafe(nodeIdx);
-            // }
-            // _nodeIdToLocations.GetFor(keys, keys, -1);
-            //
-            // using var _ = Llt.Allocator.AllocateDirect(sizeof(UnmanagedSpan) * keys.Length, out var buffer);
-            // var spans = (UnmanagedSpan*)buffer.Ptr;
-            // Container.GetAll(Llt, keys, spans, -1, Llt.PageLocator);
-            // for (int i = 0; i < keys.Length; i++)
-            // {
-            //     var buf = spans[i].ToSpan();
-            //     if (buf.IsEmpty)
-            //         throw new InvalidOperationException("WTF?");
-            //     var reader = Node.Decode(Llt, buf);
-            //     reader.LoadInto(ref _nodes[indexes[matches + i]]);
-            // }
+            
+            if (indexes.Count == nodeIds.Count)
+                return;
+
+            var matches = indexes.Count;
+            var keys = nodeIds.ToSpan();
+            keys.Sort();
+            keys = keys[matches..]; // discard all those we already found
+            for (int i = 0; i < keys.Length; i++)
+            {
+                var nodeIdx = AllocateNodeIndex(keys[i]);
+                _nodes[nodeIdx].NodeId = keys[i];
+                _nodeIdToIdx[keys[i]] = nodeIdx;
+                indexes.AddUnsafe(nodeIdx);
+            }
+            _nodeIdToLocations.GetFor(keys, keys, -1);
+            
+            using var _ = Llt.Allocator.AllocateDirect(sizeof(UnmanagedSpan) * keys.Length, out var buffer);
+            var spans = (UnmanagedSpan*)buffer.Ptr;
+            Container.GetAll(Llt, keys, spans, -1, Llt.PageLocator);
+            for (int i = 0; i < keys.Length; i++)
+            {
+                var buf = spans[i].ToSpan();
+                var reader = Node.Decode(Llt, buf);
+                reader.LoadInto(ref _nodes[indexes[matches + i]]);
+            }
         }
 
         public int GetNodeIndexById(long nodeId)
@@ -546,6 +541,7 @@ public unsafe partial class Hnsw
                 }
             }
 
+            _candidatesQ.Clear();
             levelEdges.EnsureCapacityFor(Llt.Allocator, _nearestEdgesQ.Count);
             var pq = new PriorityQueue<long, float>();
             while (_nearestEdgesQ.TryDequeue(out var edgeId, out var d))
