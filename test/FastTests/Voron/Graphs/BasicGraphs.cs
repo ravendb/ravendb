@@ -67,11 +67,12 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var txr = Env.ReadTransaction())
         {
-            Span<long> matches = stackalloc long[8];
+            Span<long> matches = new long[8];
+            Span<float> distances = new float[8];
             using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
                 numberOfCandidates: 32,
                 MemoryMarshal.Cast<float, byte>(v3));
-            int read = nearest.Fill(matches);
+            int read = nearest.Fill(matches, distances);
             Assert.Equal(3, read);
             Assert.Equal(8, matches[0]);
             Assert.Equal(4, matches[1]);

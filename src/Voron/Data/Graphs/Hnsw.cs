@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Numerics.Tensors;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
@@ -259,14 +258,13 @@ public unsafe partial class Hnsw
         private readonly PriorityQueue<int, float> _candidatesQ = new();
         private readonly PriorityQueue<int, float> _nearestEdgesQ = new();
         private readonly Dictionary<long, int> _nodeIdToIdx = new();
-        private Node[] _nodes = [];//TODO: Native List instead of array to spare managed allocs
-        private int _nodesCount;
+        private NativeList<Node> _nodes = default;
         private readonly Tree _tree;
         private readonly Lookup<Int64LookupKey> _nodeIdToLocations;
         public readonly LowLevelTransaction Llt;
         private int _visitsCounter;
 
-        public Span<Node> Nodes => _nodes.AsSpan(0, _nodesCount);
+        public Span<Node> Nodes => _nodes.ToSpan();
         public Tree Tree => _tree;
 
         public int CreatedNodesCount;
@@ -313,13 +311,8 @@ public unsafe partial class Hnsw
 
         private int AllocateNodeIndex(long nodeId)
         {
-            if (_nodesCount == _nodes.Length)
-            {
-                Array.Resize(ref _nodes, (int)BitOperations.RoundUpToPowerOf2((nuint)_nodes.Length + 1));
-            }
-
-            int nodeIndex = _nodesCount++;
-            _nodes[nodeIndex].NodeId = nodeId;
+            int nodeIndex = _nodes.Count;
+            _nodes.Add(Llt.Allocator, new Node { NodeId = nodeId });
             return nodeIndex;
         }
 
@@ -605,8 +598,7 @@ public unsafe partial class Hnsw
     
     public class Registration : IDisposable
     {
-        //TODO: make into NativeList
-        private readonly Dictionary<ByteString, (int NodeIndex, List<long> PostingList)> _vectorHashCache = new(ByteStringContentComparer.Instance);
+        private readonly Dictionary<ByteString, (int NodeIndex, NativeList<long> PostingList)> _vectorHashCache = new(ByteStringContentComparer.Instance);
         private readonly Lookup<Int64LookupKey> _nodesByVectorId;
         private SearchState _searchState;
         public Random Random = Random.Shared;
@@ -631,7 +623,8 @@ public unsafe partial class Hnsw
             if(exists)
             {
                 // already added this in the current batch
-                postingList.PostingList.Add(entryId);
+                ref var l = ref postingList.PostingList;
+                l.Add(_searchState.Llt.Allocator, entryId);
                 // key already exists in the dictionary, so can clear this 
                 _searchState.Llt.Allocator.Release(ref hashBuffer);
                 return;
@@ -648,14 +641,23 @@ public unsafe partial class Hnsw
             if (_nodesByVectorId.TryGetValue(vectorId, out var nodeId))
             {
                 int nodeIndex = _searchState.GetNodeIndexById(nodeId);
-                postingList = (nodeIndex,[entryId]);
+                postingList = ToPostingListTuple(nodeIndex);
                 return;
             }
 
             long newNodeId = ++_searchState.Options.CountOfVectors;
             int nodeIdx = _searchState.RegisterVectorNode(newNodeId, vectorId);
             _nodesByVectorId.Add(vectorId, newNodeId);
-            postingList = (nodeIdx,[entryId]);
+            
+            postingList = ToPostingListTuple(nodeIdx);
+
+            (int, NativeList<long>) ToPostingListTuple(int nodeIndex)
+            {
+                var list = new NativeList<long>();
+                list.Add(_searchState.Llt.Allocator, entryId);
+                var tuple = (nodeIndex,list);
+                return tuple;
+            }
         }
 
         private ByteString ComputeHashFor(Span<byte> vector)
@@ -713,7 +715,7 @@ public unsafe partial class Hnsw
             byteBuffer.Dispose();
             
             
-            long MergePostingList(long postingList, List<long> modifications)
+            long MergePostingList(long postingList, NativeList<long> modifications)
             {
                 // here we have 5 options:
                 // - value does not exist - so it would be 0
@@ -722,10 +724,9 @@ public unsafe partial class Hnsw
                 // - 0b01 - direct value
                 // - 0b10 - small posting list
                 // - 0b11 - large posting list
-
                 
                 listBuffer.Clear();
-                listBuffer.AddRange(CollectionsMarshal.AsSpan(modifications));
+                listBuffer.AddRange(modifications.ToSpan());
                 int currentSize = 0;
                 bool hasSmallPostingList = false;
                 long rawPostingListId = postingList & ~0b11;
@@ -982,10 +983,6 @@ public unsafe partial class Hnsw
             _pforDecoder.Dispose();
         }
 
-        public int Fill(Span<long> matches)
-        {
-            return Fill(matches, Span<float>.Empty);
-        }
         public int Fill(Span<long> matches, Span<float> distances)
         {
             int index = 0;
@@ -999,10 +996,7 @@ public unsafe partial class Hnsw
                 {
                     var copy = Math.Min(_postingListResults.Count - _currentMatchesIndex, matches.Length - index);
                     _postingListResults.CopyTo(matches[index..], _currentMatchesIndex, copy);
-                    if (distances.IsEmpty is false)
-                    {
-                        distances.Slice(index, copy).Fill(distance);
-                    }
+                    distances.Slice(index, copy).Fill(distance);
                     index += copy;
                     _currentMatchesIndex += copy;
                     if(_currentMatchesIndex == _postingListResults.Count)
@@ -1015,10 +1009,7 @@ public unsafe partial class Hnsw
                 }
 
                 ref var node = ref searchState.GetNodeByIndex(indexes[index]);
-                if (distances.IsEmpty is false)
-                {
-                    distance = searchState.Distance(_vector, ref Unsafe.NullRef<Node>(), ref node);
-                }
+                distance = searchState.Distance(_vector, ref Unsafe.NullRef<Node>(), ref node);
                 var rawPostingListId = node.PostingListId & ~0b11;
                 switch (node.PostingListId & 0b11)
                 {
@@ -1026,10 +1017,7 @@ public unsafe partial class Hnsw
                         _currentNode++;
                         continue;
                     case 0b01: // single item posting list
-                        if (distances.IsEmpty is false)
-                        {
-                            distances[index] = distance;
-                        }
+                        distances[index] = distance;
                         matches[index++] = rawPostingListId;
                         _currentNode++;
                         continue;

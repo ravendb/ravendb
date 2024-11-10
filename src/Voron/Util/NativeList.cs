@@ -116,7 +116,6 @@ public unsafe struct NativeList<T>
         return ref RawItems[Count++];
     }
 
-
     public void Shrink(int newSize)
     {
         if (newSize > Count)
