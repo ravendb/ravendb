@@ -106,7 +106,7 @@ table, th, td {
             var edges = new NativeList<int>();
             edges.EnsureCapacityFor(llt.Allocator, 16);
             searchState.SearchNearestAcrossLevels(vector, -1, searchState.Options.MaxLevel,  ref path);
-            searchState.NearestEdges(path[0], 0, 8, vector, -1, ref edges, true);
+            searchState.NearestEdges(path[0], -1, vector, 0, 8, ref edges, true);
             
             for (int level = searchState.Options.MaxLevel - 1; level >= 0; level--)
             {
