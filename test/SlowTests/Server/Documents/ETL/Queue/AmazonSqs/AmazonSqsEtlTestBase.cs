@@ -9,20 +9,17 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Util;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.ETL.Queue.AwsSqs;
+namespace SlowTests.Server.Documents.ETL.Queue.AmazonSqs;
 
-public class AwsSqsEtlTestBase : QueueEtlTestBase
+public class AmazonSqsEtlTestBase : QueueEtlTestBase
 {
-    public AwsSqsEtlTestBase(ITestOutputHelper output) : base(output)
+    public AmazonSqsEtlTestBase(ITestOutputHelper output) : base(output)
     {
     }
 
     protected string OrdersQueueName => "orders";
 
     protected readonly string[] DefaultCollections = { "orders" };
-
-    protected readonly string AzureQueueStorageConnectionString =
-        Environment.GetEnvironmentVariable("RAVEN_AZURE_QUEUE_STORAGE_CONNECTION_STRING");
 
     protected List<EtlQueue> DefaultExchanges => new() { new EtlQueue { Name = OrdersQueueName } };
 
@@ -44,14 +41,14 @@ loadToOrders" + @"(orderData, {
                                                      });
 output('test output')";
 
-    protected QueueEtlConfiguration SetupQueueEtlToAwsSqsOnline(DocumentStore store, string script,
+    protected QueueEtlConfiguration SetupQueueEtlToAmazonSqsOnline(DocumentStore store, string script,
         IEnumerable<string> collections, IEnumerable<EtlQueue> queues = null, bool applyToAllDocuments = false,
         string configurationName = null,
         string transformationName = null,
         Dictionary<string, string> configuration = null, string connectionString = null,
         bool skipAutomaticQueueDeclaration = false)
     {
-        var connectionStringName = $"{store.Database}@{store.Urls.First()} to AwsSqs";
+        var connectionStringName = $"{store.Database}@{store.Urls.First()} to AmazonSqs";
 
 
         Transformation transformation = new Transformation
@@ -86,7 +83,7 @@ output('test output')";
 
     protected string GenerateLargeString()
     {
-        StringBuilder builder = new StringBuilder();
+        StringBuilder builder = new();
 
         // Append characters to the StringBuilder until it's larger than 256KB
         while (builder.Length <= 256 * 1024)

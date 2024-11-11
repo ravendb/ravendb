@@ -20,20 +20,20 @@ using Xunit;
 using Xunit.Abstractions;
 using QueueItem = Raven.Server.Documents.ETL.Providers.Queue.QueueItem;
 
-namespace SlowTests.Server.Documents.ETL.Queue.AwsSqs;
+namespace SlowTests.Server.Documents.ETL.Queue.AmazonSqs;
 
-public class AwsSqsEtlTests : AwsSqsEtlTestBase
+public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
 {
-    public AwsSqsEtlTests(ITestOutputHelper output) : base(output)
+    public AmazonSqsEtlTests(ITestOutputHelper output) : base(output)
     {
     }
 
-    [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
+    [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
     public void SimpleScript()
     {
         using (var store = GetDocumentStore())
         {
-            var config = SetupQueueEtlToAwsSqsOnline(store, DefaultScript, DefaultCollections);
+            var config = SetupQueueEtlToAmazonSqsOnline(store, DefaultScript, DefaultCollections);
             var etlDone = Etl.WaitForEtlToComplete(store);
 
             using (var session = store.OpenSession())
@@ -64,12 +64,12 @@ public class AwsSqsEtlTests : AwsSqsEtlTestBase
         }
     }
     
-    [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
+    [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
     public async Task Simple_script_large_message_error_expected()
     {
         using (var store = GetDocumentStore())
         {
-            var config = SetupQueueEtlToAwsSqsOnline(store,
+            var config = SetupQueueEtlToAmazonSqsOnline(store,
                 @$"loadToUsers(this)", new[] { "users" },
                 new[] { new EtlQueue { Name = $"users" } });
             
@@ -101,7 +101,7 @@ public class AwsSqsEtlTests : AwsSqsEtlTestBase
         }
     }
     
-    [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
+    [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
     public void Error_if_script_does_not_contain_any_loadTo_method()
     {
         var config = new QueueEtlConfiguration
@@ -137,26 +137,26 @@ public class AwsSqsEtlTests : AwsSqsEtlTestBase
     }
 
     
-    [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
-    public void ShardedAzureQueueStorageEtlNotSupported()
+    [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
+    public void ShardedAmazonSqsEtlNotSupported()
     {
         using (var store = Sharding.GetDocumentStore())
         {
             var error = Assert.ThrowsAny<NotSupportedInShardingException>(() =>
             {
-                SetupQueueEtlToAwsSqsOnline(store, DefaultScript, DefaultCollections);
+                SetupQueueEtlToAmazonSqsOnline(store, DefaultScript, DefaultCollections);
             });
             Assert.Contains("Queue ETLs are currently not supported in sharding", error.Message);
         }
     }
 
     
-    [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
+    [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
     public void TestAreHeadersPresent()
     {
         using (var store = GetDocumentStore())
         {
-            var config = SetupQueueEtlToAwsSqsOnline(store, DefaultScript, DefaultCollections);
+            var config = SetupQueueEtlToAmazonSqsOnline(store, DefaultScript, DefaultCollections);
             var etlDone = Etl.WaitForEtlToComplete(store);
 
             using (var session = store.OpenSession())
@@ -189,7 +189,7 @@ public class AwsSqsEtlTests : AwsSqsEtlTestBase
     }
 
     
-    [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
+    [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
     public void SimpleScriptWithManyDocuments()
     {
         using var store = GetDocumentStore();
@@ -197,7 +197,7 @@ public class AwsSqsEtlTests : AwsSqsEtlTestBase
         var numberOfOrders = 10;
         var numberOfLinesPerOrder = 2;
 
-        var config = SetupQueueEtlToAwsSqsOnline(store, DefaultScript, DefaultCollections);
+        var config = SetupQueueEtlToAmazonSqsOnline(store, DefaultScript, DefaultCollections);
         var etlDone =
             Etl.WaitForEtlToComplete(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
 
@@ -244,7 +244,7 @@ public class AwsSqsEtlTests : AwsSqsEtlTestBase
     }
 
     
-    [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
+    [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
     public void Error_if_script_is_empty()
     {
         var config = new QueueEtlConfiguration
@@ -274,7 +274,7 @@ public class AwsSqsEtlTests : AwsSqsEtlTestBase
     }
 
     
-    [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
+    [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
     public async Task CanTestScript()
     {
         using (var store = GetDocumentStore())
@@ -348,12 +348,12 @@ public class AwsSqsEtlTests : AwsSqsEtlTestBase
     }
 
     
-    [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
+    [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
     public void ShouldDeleteDocumentsAfterProcessing()
     {
         using (var store = GetDocumentStore())
         {
-            var config = SetupQueueEtlToAwsSqsOnline(store,
+            var config = SetupQueueEtlToAmazonSqsOnline(store,
                 @$"loadToUsers(this)", new[] { "Users" },
                 new[] { new EtlQueue { Name = $"Users", DeleteProcessedDocuments = true } });
 
@@ -384,13 +384,13 @@ public class AwsSqsEtlTests : AwsSqsEtlTestBase
     }
 
      
-     [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
+     [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
      public async Task ShouldImportTask()
      {
          using (var srcStore = GetDocumentStore())
          using (var dstStore = GetDocumentStore())
          {
-             var config = SetupQueueEtlToAwsSqsOnline(srcStore,
+             var config = SetupQueueEtlToAmazonSqsOnline(srcStore,
                  DefaultScript, DefaultCollections,
                  new List<EtlQueue>() { new() { Name = "Orders", DeleteProcessedDocuments = true } });
 
@@ -417,14 +417,13 @@ public class AwsSqsEtlTests : AwsSqsEtlTestBase
          }
      }
 
-     //[RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding | RavenTestCategory.Etl, AzureQueueStorageRequired = true)]
-     [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
-     public async Task ShouldSkipUnsupportedFeaturesInShardingOnImport_AzureQueueStorageEtl()
+     [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding | RavenTestCategory.Etl, AmazonSqsRequired = true)]
+     public async Task ShouldSkipUnsupportedFeaturesInShardingOnImport_AmazonSqsEtl()
      {
          using (var srcStore = GetDocumentStore())
          using (var dstStore = Sharding.GetDocumentStore())
          {
-             var config = SetupQueueEtlToAwsSqsOnline(srcStore,
+             var config = SetupQueueEtlToAmazonSqsOnline(srcStore,
                  DefaultScript, DefaultCollections,
                  new List<EtlQueue>() { new() { Name = "Orders", DeleteProcessedDocuments = true } });
 
@@ -448,7 +447,7 @@ public class AwsSqsEtlTests : AwsSqsEtlTestBase
      }
 
      
-     [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
+     [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
      public void ProperUrlFromHttpConnectionString()
      {
          var config = new QueueEtlConfiguration
@@ -475,7 +474,7 @@ public class AwsSqsEtlTests : AwsSqsEtlTestBase
      }
 
      
-     [RavenFact(RavenTestCategory.Etl, AwsSqsRequired = true)]
+     [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
      public void ProperUrlFromHttpsConnectionString()
      {
          var config = new QueueEtlConfiguration

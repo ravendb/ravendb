@@ -21,7 +21,7 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
 
     public bool AzureQueueStorageRequired { get; set; }
     
-    public bool AwsSqsRequired { get; set; }
+    public bool AmazonSqsRequired { get; set; }
 
     public bool SnowflakeRequired { get; set; }
     
@@ -31,7 +31,7 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
     {
         get
         {
-            return ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, msSqlRequired: MsSqlRequired, elasticSearchRequired: ElasticSearchRequired, azureQueueStorageRequired: AzureQueueStorageRequired, snowflakeRequired: SnowflakeRequired, awsSqsRequired: AwsSqsRequired);
+            return ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, msSqlRequired: MsSqlRequired, elasticSearchRequired: ElasticSearchRequired, azureQueueStorageRequired: AzureQueueStorageRequired, snowflakeRequired: SnowflakeRequired, awsSqsRequired: AmazonSqsRequired);
         }
 
         set => _skip = value;
