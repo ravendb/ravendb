@@ -202,18 +202,6 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
             CreateQueueResponse createQueueResponse = await queueClient.CreateQueueAsync(queueName);
             _alreadyCreatedQueues.Add(queueName, createQueueResponse.QueueUrl);
 
-            try
-            {
-                await queueClient.GetQueueUrlAsync("connection-test");
-            }
-            catch (AmazonSQSException e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-            
-            
-
             // we must wait at least one second after the queue is created to be able to use the queue
             await Task.Delay(TimeSpan.FromMilliseconds(1000));
         }
@@ -221,50 +209,6 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
         {
             throw new QueueLoadException(
                 $"Failed to create queue, Aws error code: '{ex.ErrorCode}', error reason: '{ex.Message}'", ex);
-        }
-    }
-
-    private sealed class CloudEventConverter : JsonConverter<CloudEvent>
-    {
-        public static readonly CloudEventConverter Instance = new CloudEventConverter();
-
-        const string SpecVersionAttributeName = "specversion";
-
-        private CloudEventConverter()
-        {
-        }
-
-        public override void Write(Utf8JsonWriter writer, CloudEvent cloudEvent, JsonSerializerOptions options)
-        {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(SpecVersionAttributeName);
-            writer.WriteStringValue(cloudEvent.SpecVersion.VersionId);
-
-            foreach (var pair in cloudEvent.GetPopulatedAttributes())
-            {
-                var attribute = pair.Key;
-                if (attribute == cloudEvent.SpecVersion.DataContentTypeAttribute ||
-                    attribute.Name == Partitioning.PartitionKeyAttribute.Name)
-                {
-                    continue;
-                }
-
-                var value = attribute.Format(pair.Value);
-
-                writer.WritePropertyName(attribute.Name);
-                writer.WriteStringValue(value);
-            }
-
-            writer.WritePropertyName("data");
-            writer.WriteRawValue(((BlittableJsonReaderObject)cloudEvent.Data).ToString());
-
-            writer.WriteEndObject();
-        }
-
-        public override CloudEvent Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            throw new NotImplementedException();
         }
     }
 }
