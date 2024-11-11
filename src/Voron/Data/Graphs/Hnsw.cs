@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
@@ -14,9 +15,12 @@ using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
+using Voron.Global;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using Voron.Util;
 using Voron.Util.PFor;
+using static Voron.Data.Graphs.Hnsw;
 using Container = Voron.Data.Containers.Container;
 
 namespace Voron.Data.Graphs;
@@ -72,10 +76,36 @@ public unsafe partial class Hnsw
 
         [FieldOffset(32)]
         public long GlobalVectorsContainerId;
+        
+        [FieldOffset(40)]
+        public long LastUsedContainerId;
 
         public int MaxLevel => BitOperations.Log2((ulong)CountOfVectors);
         
         public int CurrentMaxLevel(int reduceBy) => BitOperations.Log2((ulong)(CountOfVectors - reduceBy));
+
+        // Remember that we have to fit a page header, and we want to
+        // minimize wasted space, so we will allocate the vectors in batches.
+        public int VectorBatchInPages => VectorSizeBytes switch
+        {
+            < 768 => 1, // small enough it doesn't matter, use a 
+
+            768 => 2,  // 2 pages, 21 vectors,   192 bytes wasted,  10 bytes / vector wasted
+            1024 => 2, // 2 pages, 15 vectors,   960 bytes wasted,  64 bytes / vector wasted
+            1536 => 4, // 4 pages, 21 vectors,   448 bytes wasted,  22 bytes / vector wasted
+
+            < 2048 => 4,
+            2048 => 4, // 4 pages, 15 vectors, 1,984 bytes wasted, 138 bytes / vector wasted
+            3072 => 2, // 2 pages,  5 vectors,   960 bytes wasted, 192 bytes / vector wasted
+            < 4096 => 4,
+            4096 => 4, // 4 pages,  7 vectors, 4,032 bytes wasted, 576 bytes / vector wasted
+            6144 => 4, // 4 pages,  5 vectors, 1,984 bytes wasted, 375 bytes / vector wasted
+            12288 => 8, // 8 pages, 5 vectors, 4,032 bytes wasted, 807 bytes / vector wasted
+
+            // in all sizes, we get a pretty good rate if we go with 5 vectors in a batch
+            _ => Paging.GetNumberOfOverflowPages(VectorSizeBytes * 5)
+        };
+
     }
 
     public ref struct NodeReader(ByteStringContext allocator, Span<byte> buffer)
@@ -120,6 +150,26 @@ public unsafe partial class Hnsw
                 list.AddUnsafe(prev);
             }
             return true;
+        }
+
+        public UnmanagedSpan ReadVector(in SearchState state) => ReadVector(VectorId, in state);
+
+        public static UnmanagedSpan ReadVector(long vectorId, in SearchState state)
+        {
+            if ((vectorId & 1) == 0)
+            {
+                var item = Container.Get(state.Llt, vectorId);
+                var vectorSpan = new UnmanagedSpan(item.Address, item.Length);
+                Debug.Assert(state.Options.VectorSizeBytes == vectorSpan.Length, "state.Options.VectorSizeBytes == vectorSpan.Length");
+                return vectorSpan;
+                
+            }
+            var count = (byte)(vectorId >> 1);
+            var containerId = vectorId & ~0xFFF;
+            var container = Container.Get(state.Llt, containerId);
+            var offset = count * state.Options.VectorSizeBytes + 1; // +1 to skip the count
+            Debug.Assert(offset > 0 && offset + state.Options.VectorSizeBytes <= container.Length, "offset > 0 && offset + state.Options.VectorSizeBytes <= container.Length");
+            return new UnmanagedSpan(container.Address + offset, state.Options.VectorSizeBytes);
         }
     }
 
@@ -178,10 +228,6 @@ public unsafe partial class Hnsw
                 Span<long> span = EdgesPerLevel[i].ToSpan();
                 int len = Sorting.SortAndRemoveDuplicates(span);
                 span = span[..len];
-                if (len != span.Length)
-                {
-                    Console.WriteLine();
-                }
                 long prev = 0;
                 pos += VariableSizeEncoding.Write(bufferSpan, span.Length, pos);
                 for (int j = 0; j < span.Length; j++)
@@ -195,14 +241,26 @@ public unsafe partial class Hnsw
             return bufferSpan[..pos];
         }
 
-        public Span<byte> GetVector(LowLevelTransaction llt)
+        public Span<byte> GetVector(in SearchState state)
         {
             if (_vectorSpan.Length > 0) 
                 return _vectorSpan.ToSpan();
-            
-            var item = Container.Get(llt, VectorId);
-            _vectorSpan = new UnmanagedSpan(item.Address, item.Length);
 
+            _vectorSpan = NodeReader.ReadVector(VectorId, in state);
+
+            if((VectorId & 1) == 0)
+            {
+                var item = Container.Get(state.Llt, VectorId);
+                _vectorSpan = new UnmanagedSpan(item.Address, item.Length);
+                Debug.Assert(state.Options.VectorSizeBytes == _vectorSpan.Length, "state.Options.VectorSizeBytes == _vectorSpan.Length");
+                return _vectorSpan.ToSpan();
+            }
+            var count = (byte)(VectorId >> 1);
+            var containerId = VectorId & ~0xFFF;
+            var container = Container.Get(state.Llt, containerId);
+            var offset = count * state.Options.VectorSizeBytes + 1; // +1 to skip the count
+            Debug.Assert(offset > 0 && offset + state.Options.VectorSizeBytes <= container.Length, "offset > 0 && offset + state.Options.VectorSizeBytes <= container.Length");
+            _vectorSpan = new UnmanagedSpan(container.Address + offset, state.Options.VectorSizeBytes);
             return _vectorSpan.ToSpan();
         }
     }
@@ -407,11 +465,11 @@ public unsafe partial class Hnsw
             if (vector.IsEmpty)
             {
                 ref var from = ref GetNodeByIndex(fromIdx);
-                vector = from.GetVector(Llt);
+                vector = from.GetVector(in this);
             }
 
             ref var to = ref GetNodeByIndex(toIdx);
-            Span<byte> v2 = to.GetVector(Llt);
+            Span<byte> v2 = to.GetVector(in this);
             var distance = 1 - TensorPrimitives.CosineSimilarity(
                 MemoryMarshal.Cast<byte, float>(vector),
                 MemoryMarshal.Cast<byte, float>(v2)
@@ -655,8 +713,7 @@ public unsafe partial class Hnsw
             var vectorHash = hashBuffer.ToReadOnlySpan();
             if (_vectorsByHash.TryGetValue(vectorHash, out var vectorId) is false)
             {
-                vectorId = Container.Allocate(_searchState.Llt, _searchState.Options.GlobalVectorsContainerId, vector.Length, out var vectorStorage);
-                vector.CopyTo(vectorStorage);
+                vectorId = RegisterVector(vector);
                 _vectorsByHash.Add(vectorHash, vectorId);
             }
             
@@ -680,6 +737,48 @@ public unsafe partial class Hnsw
                 var tuple = (nodeIndex,list);
                 return tuple;
             }
+        }
+
+        private long RegisterVector(Span<byte> vector)
+        {
+            var vectorBatchSize = _searchState.Options.VectorBatchInPages;
+
+            if (_searchState.Options.LastUsedContainerId is 0)
+            {
+                if (vectorBatchSize is 1)
+                {
+                    // here we allocate a small value, directly from the container
+                    var vectorId = Container.Allocate(_searchState.Llt, _searchState.Options.GlobalVectorsContainerId, 
+                        vector.Length, out var singleVectorStorage);
+
+                    vector.CopyTo(singleVectorStorage);
+                    return vectorId;
+                }
+                var sizeInBytes = vectorBatchSize * Constants.Storage.PageSize - PageHeader.SizeOf;
+                var batchId = Container.Allocate(_searchState.Llt, _searchState.Options.GlobalVectorsContainerId,
+                    sizeInBytes, out var vectorStorage);
+                Debug.Assert((batchId & 0xFFF) == 0, "We allocate > 1 page, so we get the full page container id");
+                _searchState.Options.LastUsedContainerId = batchId;
+                vectorStorage[0] = 1; // allocate one vector
+                vector.CopyTo(vectorStorage[1..]);
+                //container id | index    | marker  
+                return batchId | (0 << 1) | 1;
+            }
+            var span = Container.GetMutable(_searchState.Llt, _searchState.Options.LastUsedContainerId);
+            var count = span[0]++;
+            Debug.Assert(count < 32, "count < 32");
+            Debug.Assert(1 + ((count +1) * vector.Length) < span.Length, "1 + ((count +1) * vector.Length)");
+            var offset = 1 + count * vector.Length;
+            vector.CopyTo(span[offset..]);
+            offset += vector.Length;
+            //     container id                             | index              | marker
+            var id = _searchState.Options.LastUsedContainerId | (uint)(count << 1) | 1;
+            if (offset + vector.Length > span.Length)
+            {
+                // no more room for the _next_ vector
+                _searchState.Options.LastUsedContainerId = 0;
+            }
+            return id;
         }
 
         private ByteString ComputeHashFor(Span<byte> vector)
@@ -869,7 +968,7 @@ public unsafe partial class Hnsw
                     // it isn't _stable_ one and may move if the _nodes list is realloced
                     ref var node = ref _searchState.GetNodeByIndex(currentNodeIndex);
                     node.EdgesPerLevel.SetCapacity(_searchState.Llt.Allocator, nodeRandomLevel + 1);
-                    vector = node.GetVector(_searchState.Llt);
+                    vector = node.GetVector(in _searchState);
                     _searchState.SearchNearestAcrossLevels(vector, currentNodeIndex, currentMaxLevel, ref nearestNodesByLevel);
                 }
                 for (int level = nodeRandomLevel; level >= 0; level--)
@@ -949,7 +1048,7 @@ public unsafe partial class Hnsw
             if (reader.PostingListId is 0)
                 continue; // no entries, can skip
 
-            var curVect = Container.Get(llt, reader.VectorId).ToSpan();
+            var curVect = reader.ReadVector(in searchState);
             var distance = 1 - TensorPrimitives.CosineSimilarity(
                 MemoryMarshal.Cast<byte, float>(vector),
                 MemoryMarshal.Cast<byte, float>(curVect)
