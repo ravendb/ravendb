@@ -473,8 +473,19 @@ public unsafe partial class Hnsw
             _candidatesQ.Clear();
         }
 
+        [Flags]
+        public enum NearestEdgesFlags
+        {
+            None =0,
+            StartingPointAsEdge = 1 << 1,
+            FilterNodesWithEmptyPostingLists = 1 << 2
+        }
 
-        public void NearestEdges(int startingPointIndex, int level, int numberOfCandidates, Span<byte> vector, int dstIdx, ref NativeList<int> levelEdges, bool startingPointAsEdge)
+        public void NearestEdges(int startingPointIndex, 
+            int dstIdx, Span<byte> vector, 
+            int level, int numberOfCandidates, 
+            ref NativeList<int> candidates,
+            NearestEdgesFlags flags)
         {
             Debug.Assert(_candidatesQ.Count is 0 && _nearestEdgesQ.Count is 0);
             float lowerBound = -Distance(vector, dstIdx, startingPointIndex);
@@ -488,7 +499,7 @@ public unsafe partial class Hnsw
             // new item to the queue, we'll pop the one with the largest distance
             
             _candidatesQ.Enqueue(startingPointIndex, -lowerBound);
-            if (startingPointAsEdge)
+            if (flags.HasFlag(NearestEdgesFlags.StartingPointAsEdge))
             {
                 _nearestEdgesQ.Enqueue(startingPointIndex, lowerBound);
             }
@@ -520,12 +531,20 @@ public unsafe partial class Hnsw
                     if (_nearestEdgesQ.Count < numberOfCandidates)
                     {
                         _candidatesQ.Enqueue(nextIndex, -nextDist);
-                        _nearestEdgesQ.Enqueue(nextIndex, nextDist);
+                        if (next.PostingListId is not 0 ||
+                            flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false)
+                        {
+                            _nearestEdgesQ.Enqueue(nextIndex, nextDist);
+                        }
                     }
                     else if (lowerBound < nextDist)
                     {
                         _candidatesQ.Enqueue(nextIndex, -nextDist);
-                        _nearestEdgesQ.EnqueueDequeue(nextIndex, nextDist);
+                        if (next.PostingListId  is not 0 ||
+                            flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists)  is false)
+                        {
+                            _nearestEdgesQ.EnqueueDequeue(nextIndex, nextDist);
+                        }
                     }
                     else
                     {
@@ -538,14 +557,14 @@ public unsafe partial class Hnsw
             }
 
             _candidatesQ.Clear();
-            levelEdges.EnsureCapacityFor(Llt.Allocator, _nearestEdgesQ.Count);
+            candidates.EnsureCapacityFor(Llt.Allocator, _nearestEdgesQ.Count);
             var pq = new PriorityQueue<long, float>();
             while (_nearestEdgesQ.TryDequeue(out var edgeId, out var d))
             {
                 pq.Enqueue(GetNodeByIndex(edgeId).NodeId, d);
-                levelEdges.AddUnsafe(edgeId);
+                candidates.AddUnsafe(edgeId);
             }
-            levelEdges.Reverse();
+            candidates.Reverse();
 
             nodeIds.Dispose(Llt.Allocator);
             indexes.Dispose(Llt.Allocator);
@@ -857,11 +876,13 @@ public unsafe partial class Hnsw
                 {
                     int startingPointIndex = nearestNodesByLevel[level];
                     edges.Clear();
-                    _searchState.NearestEdges(startingPointIndex, level,
-                        _searchState.Options.NumberOfCandidates,
-                        vector, currentNodeIndex,
-                        ref edges,
-                        startingPointAsEdge: currentNodeIndex != startingPointIndex);
+                    var flags = currentNodeIndex != startingPointIndex ? 
+                        SearchState.NearestEdgesFlags.StartingPointAsEdge : 
+                        SearchState.NearestEdgesFlags.None;
+                    
+                    _searchState.NearestEdges(startingPointIndex, currentNodeIndex,
+                        vector,
+                        level, _searchState.Options.NumberOfCandidates, ref edges, flags);
 
                     if (edges.Count > _searchState.Options.NumberOfEdges)
                         _searchState.FilterEdgesHeuristic(currentNodeIndex, ref edges);
@@ -972,7 +993,8 @@ public unsafe partial class Hnsw
         searchState.SearchNearestAcrossLevels(vector, -1, searchState.Options.MaxLevel, ref nearestNodesByLevel.Inner);
         var nearest = nearestNodesByLevel[0];
         nearestNodesByLevel.Clear();
-        searchState.NearestEdges(nearest, level: 0, numberOfCandidates, vector, -1, ref nearestNodesByLevel.Inner, startingPointAsEdge: true);
+        searchState.NearestEdges(nearest, -1, vector, level: 0, numberOfCandidates: numberOfCandidates, candidates: ref nearestNodesByLevel.Inner, 
+            SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists);
         return new NearestSearch(searchState, nearestNodesByLevel, vector);
     }
 
