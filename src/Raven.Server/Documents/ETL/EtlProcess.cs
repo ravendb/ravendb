@@ -24,7 +24,7 @@ using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Queue;
-using Raven.Server.Documents.ETL.Providers.Queue.AwsSqs;
+using Raven.Server.Documents.ETL.Providers.Queue.AmazonSqs;
 using Raven.Server.Documents.ETL.Providers.Queue.AzureQueueStorage;
 using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
 using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
@@ -1399,18 +1399,18 @@ namespace Raven.Server.Documents.ETL
 
                                     return result;
                                 }
-                            case AwsSqsEtl awsSqsEtl:
-                                using (awsSqsEtl.EnterTestMode(out debugOutput))
+                            case AmazonSqsEtl amazonSqsEtl:
+                                using (amazonSqsEtl.EnterTestMode(out debugOutput))
                                 {
-                                    awsSqsEtl.EnsureThreadAllocationStats();
+                                    amazonSqsEtl.EnsureThreadAllocationStats();
 
                                     var queueItem = new QueueItem(document, docCollection);
 
-                                    var results = awsSqsEtl.Transform(new[] { queueItem }, context,
+                                    var results = amazonSqsEtl.Transform(new[] { queueItem }, context,
                                         new EtlStatsScope(new EtlRunStats()),
                                         new EtlProcessState());
 
-                                    var result = awsSqsEtl.RunTest(results, context);
+                                    var result = amazonSqsEtl.RunTest(results, context);
                                     result.DebugOutput = debugOutput;
 
                                     return result;

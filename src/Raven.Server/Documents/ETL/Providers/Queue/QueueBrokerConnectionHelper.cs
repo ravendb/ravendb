@@ -152,7 +152,7 @@ public static class QueueBrokerConnectionHelper
         return queueServiceClient;
     }
 
-    public static IAmazonSQS CreateAwsSqsClient(AwsSqsConnectionSettings connectionSettings)
+    public static IAmazonSQS CreateAmazonSqsClient(AmazonSqsConnectionSettings connectionSettings)
     {
         AmazonSQSClient sqsClient = null;
 
@@ -170,7 +170,7 @@ public static class QueueBrokerConnectionHelper
         {
             sqsClient = new AmazonSQSClient(new AmazonSQSConfig
             {
-                ServiceURL = Environment.GetEnvironmentVariable("RAVEN_AWS_SQS_EMULATOR_URL"), 
+                ServiceURL = Environment.GetEnvironmentVariable("RAVEN_AMAZON_SQS_EMULATOR_URL"), 
                 UseHttp = true,
             });
         }

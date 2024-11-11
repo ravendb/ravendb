@@ -28,10 +28,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
         
-        [RavenShardedAction("/databases/*/admin/etl/queue/awssqs/test-connection", "POST")]
-        public async Task GetTestAwsSqsConnectionResult()
+        [RavenShardedAction("/databases/*/admin/etl/queue/amazonsqs/test-connection", "POST")]
+        public async Task GetTestAmazonSqsConnectionResult()
         {
-            using (var processor = new QueueEtlHandlerProcessorForTestAwsSqsConnection<ShardedDatabaseRequestHandler, TransactionOperationContext>(this))
+            using (var processor = new QueueEtlHandlerProcessorForTestAmazonSqsConnection<ShardedDatabaseRequestHandler, TransactionOperationContext>(this))
                 await processor.ExecuteAsync();
         }
     }

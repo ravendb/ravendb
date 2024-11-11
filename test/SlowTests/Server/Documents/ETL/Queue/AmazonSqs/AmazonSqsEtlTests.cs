@@ -108,7 +108,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
         {
             Name = "test",
             ConnectionStringName = "test",
-            BrokerType = QueueBrokerType.AwsSqs,
+            BrokerType = QueueBrokerType.AmazonSqs,
             Transforms =
             {
                 new Transformation
@@ -121,8 +121,8 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
         config.Initialize(new QueueConnectionString
         {
             Name = "Foo",
-            BrokerType = QueueBrokerType.AwsSqs,
-            AwsSqsConnectionSettings = new AwsSqsConnectionSettings
+            BrokerType = QueueBrokerType.AmazonSqs,
+            AmazonSqsConnectionSettings = new AmazonSqsConnectionSettings
             {
                 UseEmulator = true
             }
@@ -251,15 +251,15 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
         {
             Name = "test",
             ConnectionStringName = "test",
-            BrokerType = QueueBrokerType.AwsSqs,
+            BrokerType = QueueBrokerType.AmazonSqs,
             Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"" } }
         };
 
         config.Initialize(new QueueConnectionString
         {
             Name = "Foo",
-            BrokerType = QueueBrokerType.AwsSqs,
-            AwsSqsConnectionSettings = new AwsSqsConnectionSettings
+            BrokerType = QueueBrokerType.AmazonSqs,
+            AmazonSqsConnectionSettings = new AmazonSqsConnectionSettings
             {
                 UseEmulator = true
             }
@@ -296,8 +296,8 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
                 new QueueConnectionString
                 {
                     Name = "simulate",
-                    BrokerType = QueueBrokerType.AwsSqs,
-                    AwsSqsConnectionSettings = new AwsSqsConnectionSettings
+                    BrokerType = QueueBrokerType.AmazonSqs,
+                    AmazonSqsConnectionSettings = new AmazonSqsConnectionSettings
                     {
                         UseEmulator = true
                     }
@@ -318,7 +318,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
                             Name = "simulate",
                             ConnectionStringName = "simulate",
                             Queues = { new EtlQueue() { Name = "Orders" } },
-                            BrokerType = QueueBrokerType.AwsSqs,
+                            BrokerType = QueueBrokerType.AmazonSqs,
                             Transforms =
                             {
                                 new Transformation
@@ -407,7 +407,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
              Assert.Equal(1, destinationRecord.QueueConnectionStrings.Count);
              Assert.Equal(1, destinationRecord.QueueEtls.Count);
 
-             Assert.Equal(QueueBrokerType.AwsSqs, destinationRecord.QueueEtls[0].BrokerType);
+             Assert.Equal(QueueBrokerType.AmazonSqs, destinationRecord.QueueEtls[0].BrokerType);
              Assert.Equal(DefaultScript, destinationRecord.QueueEtls[0].Transforms[0].Script);
              Assert.Equal(DefaultCollections, destinationRecord.QueueEtls[0].Transforms[0].Collections);
 
@@ -454,22 +454,22 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
          {
              Name = "test",
              ConnectionStringName = "test",
-             BrokerType = QueueBrokerType.AwsSqs,
+             BrokerType = QueueBrokerType.AmazonSqs,
              Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"" } }
          };
 
          config.Initialize(new QueueConnectionString
          {
              Name = "Foo",
-             BrokerType = QueueBrokerType.AwsSqs,
-             AwsSqsConnectionSettings = 
-                 new AwsSqsConnectionSettings
+             BrokerType = QueueBrokerType.AmazonSqs,
+             AmazonSqsConnectionSettings = 
+                 new AmazonSqsConnectionSettings
                  {
                      UseEmulator = true,
                  }
          });
 
-         var queueUrl = config.Connection.AwsSqsConnectionSettings.GetQueueUrl();
+         var queueUrl = config.Connection.AmazonSqsConnectionSettings.GetQueueUrl();
          Assert.Equal(queueUrl, "http://localhost:9324");
      }
 
@@ -481,22 +481,22 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
          {
              Name = "test",
              ConnectionStringName = "test",
-             BrokerType = QueueBrokerType.AwsSqs,
+             BrokerType = QueueBrokerType.AmazonSqs,
              Transforms = { new Transformation { Name = "test", Collections = { "Orders" }, Script = @"" } }
          };
 
          config.Initialize(new QueueConnectionString
          {
              Name = "Foo",
-             BrokerType = QueueBrokerType.AwsSqs,
-             AwsSqsConnectionSettings = 
-                 new AwsSqsConnectionSettings
+             BrokerType = QueueBrokerType.AmazonSqs,
+             AmazonSqsConnectionSettings = 
+                 new AmazonSqsConnectionSettings
                  {
                      Passwordless = true
                  }
          });
 
-         var queueUrl = config.Connection.AwsSqsConnectionSettings.GetQueueUrl();
+         var queueUrl = config.Connection.AmazonSqsConnectionSettings.GetQueueUrl();
          Assert.Equal(queueUrl, "https://queue.amazonaws.com/");
      }
 

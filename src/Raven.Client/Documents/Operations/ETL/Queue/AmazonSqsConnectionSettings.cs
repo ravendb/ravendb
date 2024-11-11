@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.Queue;
 
-public sealed class AwsSqsConnectionSettings
+public sealed class AmazonSqsConnectionSettings
 {
     public Basic Basic { get; set; }
 
@@ -62,7 +62,7 @@ public sealed class AwsSqsConnectionSettings
     public string GetQueueUrl()
     {
         // this is just static part of the url, dynamic parts are not accessible
-        return UseEmulator ? Environment.GetEnvironmentVariable("RAVEN_AWS_SQS_EMULATOR_URL") : "https://queue.amazonaws.com/"; 
+        return UseEmulator ? Environment.GetEnvironmentVariable("RAVEN_AMAZON_SQS_EMULATOR_URL") : "https://queue.amazonaws.com/"; 
     }
 }
 

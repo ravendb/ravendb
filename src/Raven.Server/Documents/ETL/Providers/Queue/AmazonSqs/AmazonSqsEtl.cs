@@ -18,9 +18,9 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.ETL.Providers.Queue.AwsSqs;
+namespace Raven.Server.Documents.ETL.Providers.Queue.AmazonSqs;
 
-public sealed class AwsSqsEtl : QueueEtl<AwsSqsItem>
+public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
 {
     private readonly Dictionary<string, string> _alreadyCreatedQueues = new();
     private IAmazonSQS _queueClient;
@@ -30,20 +30,20 @@ public sealed class AwsSqsEtl : QueueEtl<AwsSqsItem>
         Converters = { CloudEventConverter.Instance }
     };
 
-    public AwsSqsEtl(Transformation transformation, QueueEtlConfiguration configuration,
+    public AmazonSqsEtl(Transformation transformation, QueueEtlConfiguration configuration,
         DocumentDatabase database, ServerStore serverStore) : base(transformation, configuration, database, serverStore)
     {
     }
 
     protected override
-        EtlTransformer<QueueItem, QueueWithItems<AwsSqsItem>, EtlStatsScope, EtlPerformanceOperation>
+        EtlTransformer<QueueItem, QueueWithItems<AmazonSqsItem>, EtlStatsScope, EtlPerformanceOperation>
         GetTransformer(DocumentsOperationContext context)
     {
-        return new AwsSqsDocumentTransformer<AwsSqsItem>(Transformation, Database, context,
+        return new AmazonSqsDocumentTransformer<AmazonSqsItem>(Transformation, Database, context,
             Configuration);
     }
 
-    protected override int PublishMessages(List<QueueWithItems<AwsSqsItem>> itemsPerQueue,
+    protected override int PublishMessages(List<QueueWithItems<AmazonSqsItem>> itemsPerQueue,
         BlittableJsonEventBinaryFormatter formatter, out List<string> idsToDelete)
     {
         if (itemsPerQueue.Count == 0)
@@ -56,14 +56,14 @@ public sealed class AwsSqsEtl : QueueEtl<AwsSqsItem>
         idsToDelete = new List<string>();
         int count = 0;
 
-        foreach (QueueWithItems<AwsSqsItem> queue in itemsPerQueue)
+        foreach (QueueWithItems<AmazonSqsItem> queue in itemsPerQueue)
         {
             string queueName = queue.Name.ToLower();
 
             if (_queueClient == null)
             {
-                _queueClient = QueueBrokerConnectionHelper.CreateAwsSqsClient(
-                    Configuration.Connection.AwsSqsConnectionSettings);
+                _queueClient = QueueBrokerConnectionHelper.CreateAmazonSqsClient(
+                    Configuration.Connection.AmazonSqsConnectionSettings);
             }
 
             if (Configuration.SkipAutomaticQueueDeclaration == false &&
@@ -72,7 +72,7 @@ public sealed class AwsSqsEtl : QueueEtl<AwsSqsItem>
 
             var batchMessages = new List<SendMessageBatchRequestEntry>();
 
-            foreach (AwsSqsItem queueItem in queue.Items)
+            foreach (AmazonSqsItem queueItem in queue.Items)
             {
                 CancellationToken.ThrowIfCancellationRequested();
 
@@ -110,7 +110,7 @@ public sealed class AwsSqsEtl : QueueEtl<AwsSqsItem>
             {
                 Database.NotificationCenter.EtlNotifications.AddLoadErrors(Tag, Name, tooLargeDocsErrors,
                     "ETL has partially loaded the data. " +
-                    "Some of the documents were too big (>256KB) to be handled by Aws Sqs. " +
+                    "Some of the documents were too big (>256KB) to be handled by Amazon SQS. " +
                     "It caused load errors, that have been skipped. ");
             }
         }
@@ -119,7 +119,7 @@ public sealed class AwsSqsEtl : QueueEtl<AwsSqsItem>
     }
 
     private void SendBatchMessages(string queueName, List<SendMessageBatchRequestEntry> batchMessages,
-        QueueWithItems<AwsSqsItem> queue, List<string> idsToDelete, Queue<EtlErrorInfo> tooLargeDocsErrors)
+        QueueWithItems<AmazonSqsItem> queue, List<string> idsToDelete, Queue<EtlErrorInfo> tooLargeDocsErrors)
     {
         try
         {
@@ -182,7 +182,7 @@ public sealed class AwsSqsEtl : QueueEtl<AwsSqsItem>
     }
 
 
-    private string SerializeCloudEvent(AwsSqsItem queueItem)
+    private string SerializeCloudEvent(AmazonSqsItem queueItem)
     {
         var cloudEvent = CreateCloudEvent(queueItem);
         return JsonSerializer.Serialize(cloudEvent, JsonSerializerOptions);

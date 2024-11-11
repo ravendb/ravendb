@@ -28,10 +28,10 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
                 await processor.ExecuteAsync();
         }
         
-        [RavenAction("/databases/*/admin/etl/queue/awssqs/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task GetTestAwsSqsConnectionResult()
+        [RavenAction("/databases/*/admin/etl/queue/amazonsqs/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task GetTestAmazonSqsConnectionResult()
         {
-            using (var processor = new QueueEtlHandlerProcessorForTestAwsSqsConnection<DatabaseRequestHandler, DocumentsOperationContext>(this))
+            using (var processor = new QueueEtlHandlerProcessorForTestAmazonSqsConnection<DatabaseRequestHandler, DocumentsOperationContext>(this))
                 await processor.ExecuteAsync();
         }
     }

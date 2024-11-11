@@ -13,12 +13,12 @@ using Sparrow.Json.Parsing;
 namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers.Processors;
 
 internal sealed class
-    QueueEtlHandlerProcessorForTestAwsSqsConnection<TRequestHandler, TOperationContext> :
+    QueueEtlHandlerProcessorForTestAmazonSqsConnection<TRequestHandler, TOperationContext> :
     AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    public QueueEtlHandlerProcessorForTestAwsSqsConnection([NotNull] TRequestHandler requestHandler) :
+    public QueueEtlHandlerProcessorForTestAmazonSqsConnection([NotNull] TRequestHandler requestHandler) :
         base(requestHandler)
     {
     }
@@ -28,10 +28,10 @@ internal sealed class
         try
         {
             string authenticationJson = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-            AwsSqsConnectionSettings connectionSettings =
-                JsonConvert.DeserializeObject<AwsSqsConnectionSettings>(authenticationJson);
+            AmazonSqsConnectionSettings connectionSettings =
+                JsonConvert.DeserializeObject<AmazonSqsConnectionSettings>(authenticationJson);
 
-            IAmazonSQS client = QueueBrokerConnectionHelper.CreateAwsSqsClient(connectionSettings);
+            IAmazonSQS client = QueueBrokerConnectionHelper.CreateAmazonSqsClient(connectionSettings);
 
             try
             {
@@ -48,8 +48,6 @@ internal sealed class
             }
             catch (AmazonSQSException ex) when (ex.ErrorCode == "QueueDoesNotExist")
             {
-                // QueueDoesNotExist: the queue does not exist
-
                 // In this case, it means the connection is valid but the queue is not accessible
                 DynamicJsonValue result = new() { [nameof(NodeConnectionTestResult.Success)] = true };
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))

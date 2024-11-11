@@ -4,12 +4,12 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.ETL.Providers.Queue.AwsSqs;
+namespace Raven.Server.Documents.ETL.Providers.Queue.AmazonSqs;
 
-public sealed class AwsSqsDocumentTransformer<T> : QueueDocumentTransformer<T, AwsSqsItem>
+public sealed class AmazonSqsDocumentTransformer<T> : QueueDocumentTransformer<T, AmazonSqsItem>
     where T : QueueItem
 {
-    public AwsSqsDocumentTransformer(Transformation transformation, DocumentDatabase database,
+    public AmazonSqsDocumentTransformer(Transformation transformation, DocumentDatabase database,
         DocumentsOperationContext context, QueueEtlConfiguration config) : base(transformation, database, context,
         config)
     {
@@ -29,7 +29,7 @@ public sealed class AwsSqsDocumentTransformer<T> : QueueDocumentTransformer<T, A
 
         var queue = GetOrAdd(queueName);
 
-        queue.Items.Add(new AwsSqsItem(Current) { TransformationResult = result, Attributes = attributes });
+        queue.Items.Add(new AmazonSqsItem(Current) { TransformationResult = result, Attributes = attributes });
     }
 
     public override void Initialize(bool debugMode)

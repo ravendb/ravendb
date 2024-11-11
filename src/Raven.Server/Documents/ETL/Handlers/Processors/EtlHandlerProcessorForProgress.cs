@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.ETL.Queue;
-using Raven.Server.Documents.ETL.Providers.Queue.AwsSqs;
+using Raven.Server.Documents.ETL.Providers.Queue.AmazonSqs;
 using Raven.Server.Documents.ETL.Providers.Queue.AzureQueueStorage;
 using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
 using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
@@ -40,7 +40,7 @@ internal sealed class EtlHandlerProcessorForProgress : AbstractEtlHandlerProcess
                     RabbitMqEtl => QueueBrokerType.RabbitMq,
                     KafkaEtl => QueueBrokerType.Kafka,
                     AzureQueueStorageEtl => QueueBrokerType.AzureQueueStorage,
-                    AwsSqsEtl => QueueBrokerType.AwsSqs,
+                    AmazonSqsEtl => QueueBrokerType.AmazonSqs,
                     _ => null
                 }
             }).ToArray();

@@ -64,7 +64,7 @@ output('test output')";
             ConnectionStringName = connectionStringName,
             Transforms = { transformation },
             Queues = queues?.ToList(),
-            BrokerType = QueueBrokerType.AwsSqs,
+            BrokerType = QueueBrokerType.AmazonSqs,
             SkipAutomaticQueueDeclaration = skipAutomaticQueueDeclaration
         };
 
@@ -72,8 +72,8 @@ output('test output')";
             new QueueConnectionString
             {
                 Name = connectionStringName,
-                BrokerType = QueueBrokerType.AwsSqs,
-                AwsSqsConnectionSettings = new AwsSqsConnectionSettings
+                BrokerType = QueueBrokerType.AmazonSqs,
+                AmazonSqsConnectionSettings = new AmazonSqsConnectionSettings
                 {
                     UseEmulator = true
                 }
@@ -110,7 +110,7 @@ output('test output')";
     {
         IAmazonSQS queueClient = new AmazonSQSClient(new AmazonSQSConfig
         {
-            ServiceURL = Environment.GetEnvironmentVariable("RAVEN_AWS_SQS_EMULATOR_URL"), 
+            ServiceURL = Environment.GetEnvironmentVariable("RAVEN_AMAZON_SQS_EMULATOR_URL"), 
             UseHttp = true,
         });
         return queueClient;
