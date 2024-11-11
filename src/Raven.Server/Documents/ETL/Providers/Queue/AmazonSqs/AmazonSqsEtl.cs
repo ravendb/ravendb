@@ -2,12 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using CloudNative.CloudEvents;
-using CloudNative.CloudEvents.Extensions;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Util;
@@ -16,7 +13,6 @@ using Raven.Server.Exceptions.ETL.QueueEtl;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue.AmazonSqs;
 
@@ -68,7 +64,9 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
 
             if (Configuration.SkipAutomaticQueueDeclaration == false &&
                 _alreadyCreatedQueues.ContainsKey(queueName) == false)
+            {
                 AsyncHelpers.RunSync(() => CreateQueue(_queueClient, queueName));
+            }
 
             var batchMessages = new List<SendMessageBatchRequestEntry>();
 
@@ -88,8 +86,20 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
 
                     if (batchMessages.Count == 10)
                     {
-                        SendBatchMessages(queueName, batchMessages, queue, idsToDelete, tooLargeDocsErrors);
-                        count += batchMessages.Count;
+                        if (TrySendBatchMessages(queueName, batchMessages) == false)
+                        {
+                            // if batch sending failed, send each message individually
+                            SendMessagesOneByOne(queueName, batchMessages, queue, ref idsToDelete, ref tooLargeDocsErrors);
+                        }
+                        else
+                        {
+                            count += batchMessages.Count;
+                            if (queue.DeleteProcessedDocuments)
+                            {
+                                idsToDelete.AddRange(batchMessages.Select(entry => entry.Id));
+                            }
+                        }
+
                         batchMessages.Clear();
                     }
                 }
@@ -99,10 +109,23 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
                 }
             }
 
+            // handle remaining messages in batch
             if (batchMessages.Count > 0)
             {
-                SendBatchMessages(queueName, batchMessages, queue, idsToDelete, tooLargeDocsErrors);
-                count += batchMessages.Count;
+                if (TrySendBatchMessages(queueName, batchMessages) == false)
+                {
+                    // if batch sending failed, send each message individually
+                    SendMessagesOneByOne(queueName, batchMessages, queue, ref idsToDelete, ref tooLargeDocsErrors);
+                }
+                else
+                {
+                    count += batchMessages.Count;
+                    if (queue.DeleteProcessedDocuments)
+                    {
+                        idsToDelete.AddRange(batchMessages.Select(entry => entry.Id));
+                    }
+                }
+
                 batchMessages.Clear();
             }
 
@@ -118,65 +141,69 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
         return count;
     }
 
-    private void SendBatchMessages(string queueName, List<SendMessageBatchRequestEntry> batchMessages,
-        QueueWithItems<AmazonSqsItem> queue, List<string> idsToDelete, Queue<EtlErrorInfo> tooLargeDocsErrors)
+
+    private bool TrySendBatchMessages(string queueName, List<SendMessageBatchRequestEntry> batchMessages)
     {
         try
         {
             var sendMessageBatchRequest = new SendMessageBatchRequest
             {
-                QueueUrl = _alreadyCreatedQueues.GetValueOrDefault(queueName),
+                QueueUrl = AsyncHelpers.RunSync(() => GetQueueUrl(_queueClient, queueName)),
                 Entries = batchMessages
             };
 
             AsyncHelpers.RunSync(() => _queueClient.SendMessageBatchAsync(sendMessageBatchRequest));
-
-            if (queue.DeleteProcessedDocuments)
-            {
-                idsToDelete.AddRange(batchMessages.Select(entry => entry.Id));
-            }
+            return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Retry sending one by one if batch fails
-            foreach (var message in batchMessages)
+            if (Logger.IsWarnEnabled)
+                Logger.Warn($"ETL process: {Name}. Failed to send messages in a batch.", ex);
+            return false;
+        }
+    }
+
+    private void SendMessagesOneByOne(string queueName, List<SendMessageBatchRequestEntry> batchMessages,
+        QueueWithItems<AmazonSqsItem> queue, ref List<string> idsToDelete, ref Queue<EtlErrorInfo> tooLargeDocsErrors)
+    {
+        foreach (var message in batchMessages)
+        {
+            try
             {
-                try
+                var sendMessageRequest = new SendMessageRequest
                 {
-                    var sendMessageRequest = new SendMessageRequest
-                    {
-                        QueueUrl = _alreadyCreatedQueues.GetValueOrDefault(queueName),
-                        MessageBody = message.MessageBody
-                    };
+                    QueueUrl = AsyncHelpers.RunSync(() => GetQueueUrl(_queueClient, queueName)),
+                    MessageBody = message.MessageBody
+                };
 
-                    AsyncHelpers.RunSync(() => _queueClient.SendMessageAsync(sendMessageRequest));
+                AsyncHelpers.RunSync(() => _queueClient.SendMessageAsync(sendMessageRequest));
 
-                    if (queue.DeleteProcessedDocuments)
-                    {
-                        idsToDelete.Add(message.Id);
-                    }
-                }
-                catch (AmazonSQSException sqsEx)
+                if (queue.DeleteProcessedDocuments)
                 {
-                    if (sqsEx.ErrorCode == "InvalidAttributeValue")
-                    {
-                        tooLargeDocsErrors.Enqueue(new EtlErrorInfo()
-                        {
-                            Date = DateTime.UtcNow, DocumentId = message.Id, Error = sqsEx.Message
-                        });
-                    }
-                    else
-                    {
-                        throw new QueueLoadException(
-                            $"Failed to deliver message, Aws error code: '{sqsEx.ErrorCode}', error reason: '{sqsEx.Message}' for document with id: '{message.Id}'",
-                            sqsEx);
-                    }
+                    idsToDelete.Add(message.Id);
                 }
-                catch (Exception innerEx)
+            }
+            catch (AmazonSQSException sqsEx)
+            {
+                if (sqsEx.ErrorCode == "InvalidAttributeValue")
                 {
-                    throw new QueueLoadException($"Failed to deliver message, error reason: '{innerEx.Message}'",
-                        innerEx);
+                    tooLargeDocsErrors.Enqueue(new EtlErrorInfo()
+                    {
+                        Date = DateTime.UtcNow,
+                        DocumentId = message.Id,
+                        Error = sqsEx.Message
+                    });
                 }
+                else
+                {
+                    throw new QueueLoadException(
+                        $"Failed to deliver message, Amazon error code: '{sqsEx.ErrorCode}', error reason: '{sqsEx.Message}' for document with id: '{message.Id}'",
+                        sqsEx);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new QueueLoadException($"Failed to deliver message, error reason: '{ex.Message}'", ex);
             }
         }
     }
@@ -209,6 +236,33 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
         {
             throw new QueueLoadException(
                 $"Failed to create queue, Aws error code: '{ex.ErrorCode}', error reason: '{ex.Message}'", ex);
+        }
+    }
+    
+    private async Task<string> GetQueueUrl(IAmazonSQS queueClient, string queueName)
+    {
+        try
+        {
+            string queueUrl = _alreadyCreatedQueues.GetValueOrDefault(queueName);
+            
+            if (string.IsNullOrEmpty(queueUrl))
+            {
+                GetQueueUrlResponse getQueueUrlResponse = await queueClient.GetQueueUrlAsync(queueName);
+                _alreadyCreatedQueues.Add(queueName, getQueueUrlResponse.QueueUrl);
+                queueUrl = getQueueUrlResponse.QueueUrl;
+            }
+
+            return queueUrl;
+        }
+        catch (QueueDoesNotExistException ex)
+        {
+            throw new QueueLoadException(
+                $"Queue does not exist, Aws error code: '{ex.ErrorCode}', error reason: '{ex.Message}'", ex);
+        }
+        catch (AmazonSQSException ex)
+        {
+            throw new QueueLoadException(
+                $"Failed to retrieve the queue, Aws error code: '{ex.ErrorCode}', error reason: '{ex.Message}'", ex);
         }
     }
 }

@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Azure.Storage.Queues;
-using CloudNative.CloudEvents;
-using CloudNative.CloudEvents.Extensions;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Documents.ETL.Stats;
@@ -13,7 +9,6 @@ using Raven.Server.Exceptions.ETL.QueueEtl;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue.AzureQueueStorage;
 
