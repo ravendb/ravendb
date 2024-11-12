@@ -20,15 +20,12 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
 
     public StudioCollectionsHandlerProcessorForPreviewRevisions([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
-    }
-
-    protected override async Task InitializeAsync(DocumentsOperationContext context, CancellationToken token)
-    {
-        await base.InitializeAsync(context, token);
-
         _start = RequestHandler.GetStart();
         _pageSize = RequestHandler.GetPageSize();
+    }
 
+    protected override Task InitializeAsync(DocumentsOperationContext context, CancellationToken token)
+    {
         switch (Type)
         {
             case RevisionsStorage.RevisionsType.All:
@@ -53,6 +50,8 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
             default:
                 throw new ArgumentOutOfRangeException(nameof(Type), $"Unsupported revision type: {Type}");
         }
+
+        return Task.CompletedTask;
     }
 
     protected override IDisposable OpenReadTransaction(DocumentsOperationContext context)

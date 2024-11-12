@@ -236,15 +236,15 @@ namespace Raven.Server.Documents.Sharding
             {
                 public override int Compare(ShardStreamItem<BlittableJsonReaderObject> x, ShardStreamItem<BlittableJsonReaderObject> y)
                 {
-                    var xLastModified = GetId(x);
-                    var yLastModified = GetId(y);
+                    var xId = GetId(x);
+                    var yId = GetId(y);
 
-                    return xLastModified.CompareTo(yLastModified);
+                    return xId.CompareTo(yId);
                 }
 
-                private string GetId(ShardStreamItem<BlittableJsonReaderObject> x)
+                private LazyStringValue GetId(ShardStreamItem<BlittableJsonReaderObject> x)
                 {
-                    if (x.Item.TryGet(nameof(Document.Id), out string id) == false)
+                    if (x.Item.TryGet(nameof(Document.Id), out LazyStringValue id) == false)
                         throw new InvalidOperationException("Revision does not contain 'Id' field.");
 
                     return id;
