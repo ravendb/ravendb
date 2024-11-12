@@ -66,18 +66,21 @@ public unsafe partial class Hnsw
         public int NumberOfCandidates;
 
         [FieldOffset(12)] // this is used only in debug, not important for persistence
-        public int Version;  
-        
+        public ushort Version;
+
+        [FieldOffset(14)]
+        public byte VectorBatchIndex;
+
+        [FieldOffset(15)]
+        public byte Reserved;
+
         [FieldOffset(16)]
         public long CountOfVectors;
 
         [FieldOffset(24)]
         public long Container;
-
-        [FieldOffset(32)]
-        public long GlobalVectorsContainerId;
         
-        [FieldOffset(40)]
+        [FieldOffset(32)]
         public long LastUsedContainerId;
 
         public int MaxLevel => BitOperations.Log2((ulong)CountOfVectors);
@@ -290,12 +293,18 @@ public unsafe partial class Hnsw
             Container = storage,
             NumberOfEdges = numberOfEdges,
             NumberOfCandidates = numberOfCandidates,
-            GlobalVectorsContainerId = vectorsContainerId
         };
         using (tree.DirectAdd(OptionsSlice, sizeof(Options), out var output))
         {
             Unsafe.Write(output, options);
         }
+    }
+
+    private static long ReadGlobalVectorsContainerId(LowLevelTransaction llt)
+    {
+        var config = llt.Transaction.ReadTree(HnswGlobalConfigSlice);
+        var read = config.DirectRead(VectorsContainerIdSlice);
+        return Unsafe.Read<long>(read);
     }
 
     private static long CreateHnswGlobalState(LowLevelTransaction llt)
@@ -616,10 +625,8 @@ public unsafe partial class Hnsw
 
             _candidatesQ.Clear();
             candidates.EnsureCapacityFor(Llt.Allocator, _nearestEdgesQ.Count);
-            var pq = new PriorityQueue<long, float>();
             while (_nearestEdgesQ.TryDequeue(out var edgeId, out var d))
             {
-                pq.Enqueue(GetNodeByIndex(edgeId).NodeId, d);
                 candidates.AddUnsafe(edgeId);
             }
             candidates.Reverse();
@@ -683,10 +690,14 @@ public unsafe partial class Hnsw
         private SearchState _searchState;
         public Random Random = Random.Shared;
         private readonly CompactTree _vectorsByHash;
+        private int _vectorBatchSizeInPages;
+        private long _globalVectorsContainerId;
 
         public Registration(LowLevelTransaction llt, Slice name)
         {
             _searchState = new SearchState(llt, name);
+            _vectorBatchSizeInPages = _searchState.Options.VectorBatchInPages;
+            _globalVectorsContainerId = ReadGlobalVectorsContainerId(llt);
             _nodesByVectorId = _searchState.Tree.LookupFor<Int64LookupKey>(NodesByVectorIdSlice);
             _vectorsByHash = llt.Transaction.CompactTreeFor(VectorsIdByHashSlice);
         }
@@ -741,42 +752,41 @@ public unsafe partial class Hnsw
 
         private long RegisterVector(Span<byte> vector)
         {
-            var vectorBatchSize = _searchState.Options.VectorBatchInPages;
-
             if (_searchState.Options.LastUsedContainerId is 0)
             {
-                if (vectorBatchSize is 1)
+                if (_vectorBatchSizeInPages is 1)
                 {
                     // here we allocate a small value, directly from the container
-                    var vectorId = Container.Allocate(_searchState.Llt, _searchState.Options.GlobalVectorsContainerId, 
+                    var vectorId = Container.Allocate(_searchState.Llt, _globalVectorsContainerId, 
                         vector.Length, out var singleVectorStorage);
 
                     vector.CopyTo(singleVectorStorage);
                     return vectorId;
                 }
-                var sizeInBytes = vectorBatchSize * Constants.Storage.PageSize - PageHeader.SizeOf;
-                var batchId = Container.Allocate(_searchState.Llt, _searchState.Options.GlobalVectorsContainerId,
+
+                var sizeInBytes = _vectorBatchSizeInPages * Constants.Storage.PageSize - PageHeader.SizeOf;
+                var batchId = Container.Allocate(_searchState.Llt, _globalVectorsContainerId,
                     sizeInBytes, out var vectorStorage);
                 Debug.Assert((batchId & 0xFFF) == 0, "We allocate > 1 page, so we get the full page container id");
                 _searchState.Options.LastUsedContainerId = batchId;
-                vectorStorage[0] = 1; // allocate one vector
-                vector.CopyTo(vectorStorage[1..]);
+                vector.CopyTo(vectorStorage);
                 //container id | index    | marker  
                 return batchId | (0 << 1) | 1;
             }
             var span = Container.GetMutable(_searchState.Llt, _searchState.Options.LastUsedContainerId);
-            var count = span[0]++;
-            Debug.Assert(count < 32, "count < 32");
+            Debug.Assert(_searchState.Options.VectorBatchIndex < 32, "count < 32");
+            var count = _searchState.Options.VectorBatchIndex++;
             Debug.Assert(1 + ((count +1) * vector.Length) < span.Length, "1 + ((count +1) * vector.Length)");
             var offset = 1 + count * vector.Length;
             vector.CopyTo(span[offset..]);
             offset += vector.Length;
-            //     container id                             | index              | marker
+            //       container id                             | index              | marker
             var id = _searchState.Options.LastUsedContainerId | (uint)(count << 1) | 1;
             if (offset + vector.Length > span.Length)
             {
                 // no more room for the _next_ vector
                 _searchState.Options.LastUsedContainerId = 0;
+                _searchState.Options.VectorBatchIndex = 0;
             }
             return id;
         }
