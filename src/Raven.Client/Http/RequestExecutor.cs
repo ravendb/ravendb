@@ -96,7 +96,7 @@ namespace Raven.Client.Http
                 if (HttpClientFactory.CanCacheHttpClient)
                     _cachedHttpClient = httpClient;
 
-                    return httpClient;
+                return httpClient;
             }
         }
 
@@ -243,7 +243,7 @@ namespace Raven.Client.Http
                 _cachedHttpClient = null;
 
             return removed;
-            }
+        }
 
         private HttpClientCacheKey GetHttpClientCacheKey()
         {
@@ -255,7 +255,7 @@ namespace Raven.Client.Http
             TimeSpan? httpPooledConnectionIdleTimeout = null;
 #endif
 
-            return new HttpClientCacheKey(Certificate, Conventions.UseHttpDecompression, Conventions.HasExplicitlySetDecompressionUsage, httpPooledConnectionLifetime, httpPooledConnectionIdleTimeout, GlobalHttpClientTimeout, Conventions.HttpClientType);
+            return new HttpClientCacheKey(Certificate, Conventions.UseHttpDecompression, Conventions.HasExplicitlySetDecompressionUsage, httpPooledConnectionLifetime, httpPooledConnectionIdleTimeout, GlobalHttpClientTimeout, Conventions.HttpClientType, Conventions.ConfigureHttpMessageHandler);
         }
 
         private static bool ShouldRemoveHttpClient(SocketException exception)
@@ -717,10 +717,10 @@ namespace Raven.Client.Http
             {
                 try
                 {
-                    if(serverNode.ServerRole != ServerNode.Role.Member)
+                    if (serverNode.ServerRole != ServerNode.Role.Member)
                         continue;
 
-                    await requestExecutor.UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) {TimeoutInMs = 0, DebugTag = $"timer-callback-node-{serverNode.ClusterTag}"})
+                    await requestExecutor.UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) { TimeoutInMs = 0, DebugTag = $"timer-callback-node-{serverNode.ClusterTag}" })
                         .ConfigureAwait(false);
                 }
                 catch (Exception e)
@@ -1026,7 +1026,7 @@ namespace Raven.Client.Http
 
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
-                    
+
                     if (sessionInfo != null && response.Headers.TryGetValues(Constants.Headers.DatabaseClusterTransactionId, out var clusterTransactionId))
                     {
                         sessionInfo.ClusterTransactionId = clusterTransactionId.First();

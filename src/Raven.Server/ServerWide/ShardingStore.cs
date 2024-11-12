@@ -46,7 +46,7 @@ namespace Raven.Server.ServerWide
             var cmd = new SourceMigrationSendCompletedCommand(bucket, migrationIndex, lastChangeVector, database, raftId ?? RaftIdGenerator.NewId());
             return _serverStore.SendToLeaderAsync(cmd);
         }
-        
+
         public static string GenerateDestinationMigrationConfirmRaftId(int bucket, long migrationIndex, string node) => $"Confirm-{bucket}@{migrationIndex}/{node}";
 
         public Task<(long Index, object Result)> DestinationMigrationConfirm(string database, int bucket, long migrationIndex)
@@ -95,10 +95,10 @@ namespace Raven.Server.ServerWide
                 HttpClientType = typeof(ShardingStore),
                 DisableTopologyCache = DocumentConventions.DefaultForServer.DisableTopologyCache,
                 DisposeCertificate = DocumentConventions.DefaultForServer.DisposeCertificate,
-                CreateHttpClient = handler =>
+                ConfigureHttpMessageHandler = h =>
                 {
+                    var handler = (HttpClientHandler)h;
                     handler.ServerCertificateCustomValidationCallback = ShardingCustomValidationCallback;
-                    return new HttpClient(handler);
                 }
             };
 

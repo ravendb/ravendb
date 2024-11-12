@@ -83,7 +83,7 @@ internal class RavenServerHttpClientFactory : IRavenHttpClientFactory
                 if (h is not HttpClientHandler httpMessageHandler)
                     throw new InvalidOperationException($"Was expecting handler of type '{nameof(HttpClientHandler)}' but got '{h.GetType().Name}'.");
 
-                DefaultRavenHttpClientFactory.ConfigureHttpMessageHandler(httpMessageHandler, key.Certificate, setSslProtocols: true, key.UseHttpDecompression, key.HasExplicitlySetDecompressionUsage, key.PooledConnectionLifetime, key.PooledConnectionIdleTimeout);
+                DefaultRavenHttpClientFactory.ConfigureHttpMessageHandler(httpMessageHandler, key.Certificate, setSslProtocols: true, key.UseHttpDecompression, key.HasExplicitlySetDecompressionUsage, key.PooledConnectionLifetime, key.PooledConnectionIdleTimeout, key.ConfigureHttpMessageHandler);
             });
         }
     }

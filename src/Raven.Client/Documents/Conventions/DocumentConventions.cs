@@ -393,6 +393,7 @@ namespace Raven.Client.Documents.Conventions
 #endif
         private Type _httpClientType;
         private Func<HttpClientHandler, HttpClient> _createHttpClient;
+        private Action<HttpMessageHandler> _configureHttpMessageHandler;
 #if NETCOREAPP3_1_OR_GREATER
         private TimeSpan? _httpPooledConnectionLifetime;
         private TimeSpan? _httpPooledConnectionIdleTimeout;
@@ -490,6 +491,16 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _createHttpClient = value;
+            }
+        }
+
+        internal Action<HttpMessageHandler> ConfigureHttpMessageHandler
+        {
+            get => _configureHttpMessageHandler;
+            set
+            {
+                AssertNotFrozen();
+                _configureHttpMessageHandler = value;
             }
         }
 

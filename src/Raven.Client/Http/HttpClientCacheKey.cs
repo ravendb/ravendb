@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Raven.Client.Http;
@@ -13,10 +14,11 @@ internal readonly struct HttpClientCacheKey
     internal readonly TimeSpan? PooledConnectionIdleTimeout;
     internal readonly TimeSpan GlobalHttpClientTimeout;
     private readonly Type _httpClientType;
+    internal readonly Action<HttpMessageHandler> ConfigureHttpMessageHandler;
 
     public readonly string AsString;
 
-    internal HttpClientCacheKey(X509Certificate2 certificate, bool useHttpDecompression, bool hasExplicitlySetDecompressionUsage, TimeSpan? pooledConnectionLifetime, TimeSpan? pooledConnectionIdleTimeout, TimeSpan globalHttpClientTimeout, Type httpClientType)
+    internal HttpClientCacheKey(X509Certificate2 certificate, bool useHttpDecompression, bool hasExplicitlySetDecompressionUsage, TimeSpan? pooledConnectionLifetime, TimeSpan? pooledConnectionIdleTimeout, TimeSpan globalHttpClientTimeout, Type httpClientType, Action<HttpMessageHandler> configureHttpMessageHandler)
     {
         Certificate = certificate;
         _certificateThumbprint = certificate?.Thumbprint ?? string.Empty;
@@ -26,8 +28,9 @@ internal readonly struct HttpClientCacheKey
         PooledConnectionIdleTimeout = pooledConnectionIdleTimeout;
         GlobalHttpClientTimeout = globalHttpClientTimeout;
         _httpClientType = httpClientType;
+        ConfigureHttpMessageHandler = configureHttpMessageHandler;
 
-        AsString = $"{_certificateThumbprint}|{UseHttpDecompression}|{pooledConnectionIdleTimeout?.TotalMilliseconds}|{pooledConnectionIdleTimeout?.TotalMilliseconds}|{globalHttpClientTimeout.TotalMilliseconds}|{httpClientType.Name}";
+        AsString = $"{_certificateThumbprint}|{UseHttpDecompression}|{pooledConnectionIdleTimeout?.TotalMilliseconds}|{pooledConnectionIdleTimeout?.TotalMilliseconds}|{globalHttpClientTimeout.TotalMilliseconds}|{httpClientType.Name}|{configureHttpMessageHandler?.Method.Name}";
     }
 
     private bool Equals(HttpClientCacheKey other)

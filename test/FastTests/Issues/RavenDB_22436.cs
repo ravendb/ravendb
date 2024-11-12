@@ -29,7 +29,7 @@ public class RavenDB_22436 : NoDisposalNeeded
         if (getUnderlyingHandler == null)
             throw new InvalidOperationException("Could not get underlying handler field from HttpClientHandler.");
 
-        var key = new HttpClientCacheKey(certificate: null, useHttpDecompression: true, hasExplicitlySetDecompressionUsage: false, pooledConnectionLifetime: TimeSpan.FromMinutes(3), pooledConnectionIdleTimeout: TimeSpan.FromMinutes(1), DocumentConventions.Default.GlobalHttpClientTimeout, typeof(HttpClient));
+        var key = new HttpClientCacheKey(certificate: null, useHttpDecompression: true, hasExplicitlySetDecompressionUsage: false, pooledConnectionLifetime: TimeSpan.FromMinutes(3), pooledConnectionIdleTimeout: TimeSpan.FromMinutes(1), DocumentConventions.Default.GlobalHttpClientTimeout, typeof(HttpClient), configureHttpMessageHandler: null);
 
         var httpClient = DefaultRavenHttpClientFactory.Instance.GetHttpClient(key, handler => new HttpClient(handler));
         AssertHttpClient(httpClient);

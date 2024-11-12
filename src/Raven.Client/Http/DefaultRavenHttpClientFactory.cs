@@ -64,7 +64,8 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
             useHttpDecompression: key.UseHttpDecompression,
             hasExplicitlySetDecompressionUsage: key.HasExplicitlySetDecompressionUsage,
             key.PooledConnectionLifetime,
-            key.PooledConnectionIdleTimeout
+            key.PooledConnectionIdleTimeout,
+            key.ConfigureHttpMessageHandler
         );
 
         var httpClient = createHttpClient(httpMessageHandler);
@@ -79,16 +80,16 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
         httpClient.Timeout = timeout;
     }
 
-    internal static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useHttpDecompression, bool hasExplicitlySetDecompressionUsage = false, TimeSpan? pooledConnectionLifetime = null, TimeSpan? pooledConnectionIdleTimeout = null)
+    internal static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useHttpDecompression, bool hasExplicitlySetDecompressionUsage = false, TimeSpan? pooledConnectionLifetime = null, TimeSpan? pooledConnectionIdleTimeout = null, Action<HttpMessageHandler> configureHttpMessageHandler = null)
     {
         var httpMessageHandler = new HttpClientHandler();
 
-        ConfigureHttpMessageHandler(httpMessageHandler, certificate, setSslProtocols, useHttpDecompression, hasExplicitlySetDecompressionUsage, pooledConnectionLifetime, pooledConnectionIdleTimeout);
+        ConfigureHttpMessageHandler(httpMessageHandler, certificate, setSslProtocols, useHttpDecompression, hasExplicitlySetDecompressionUsage, pooledConnectionLifetime, pooledConnectionIdleTimeout, configureHttpMessageHandler);
 
         return httpMessageHandler;
     }
 
-    internal static void ConfigureHttpMessageHandler(HttpClientHandler httpMessageHandler, X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false, TimeSpan? pooledConnectionLifetime = null, TimeSpan? pooledConnectionIdleTimeout = null)
+    internal static void ConfigureHttpMessageHandler(HttpClientHandler httpMessageHandler, X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false, TimeSpan? pooledConnectionLifetime = null, TimeSpan? pooledConnectionIdleTimeout = null, Action<HttpMessageHandler> configureHttpMessageHandler = null)
     {
         try
         {
@@ -139,6 +140,8 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
 
             ValidateClientKeyUsages(certificate);
         }
+
+        configureHttpMessageHandler?.Invoke(httpMessageHandler);
     }
 
     private static void ValidateClientKeyUsages(X509Certificate2 certificate)
