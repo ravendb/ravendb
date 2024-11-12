@@ -138,7 +138,7 @@ namespace Raven.Server.Web.System
                         new Size(serverMetrics.Memory.TotalSwapUsageInMb, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes));
                     WriteGaugeWithHelp(writer, "Server working set swap usage", "memory_working_set_swap_usage_bytes",
                         new Size(serverMetrics.Memory.WorkingSetSwapUsageInMb, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes));
-                    WriteGaugeWithHelp(writer, "Available memory for processing", "available_memory_for_processing", 
+                    WriteGaugeWithHelp(writer, "Available memory for processing", "available_memory_for_processing_bytes", 
                         new Size(serverMetrics.Memory.AvailableMemoryForProcessingInMb, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes));
                     WriteGaugeWithHelp(writer, "Managed memory", "managed_memory_bytes",
                         new Size(serverMetrics.Memory.ManagedMemoryInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Bytes));
