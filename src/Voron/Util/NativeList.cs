@@ -285,4 +285,11 @@ public unsafe struct NativeList<T>
     {
         return new Span<T>(_storage.Ptr, Capacity);
     }
+
+    public static NativeList<T> Create(ByteStringContext allocator, T item)
+    {
+        var list = new NativeList<T>();
+        list.Add(allocator, item);
+        return list;
+    }
 }

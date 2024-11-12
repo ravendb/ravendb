@@ -493,7 +493,7 @@ public unsafe partial class Hnsw
             listBuffer.EnsureCapacityFor(Math.Max(256, count + listBuffer.Count));
             Debug.Assert(listBuffer.Capacity > 0 && listBuffer.Capacity % 256 ==0, "The buffer must be multiple of 256 for PForDecoder.Read");
             pforDecoder.Init(smallPostingList.Address + offset, smallPostingList.Length - offset);
-            listBuffer.Count = pforDecoder.Read(listBuffer.RawItems, listBuffer.Capacity);
+            listBuffer.Count += pforDecoder.Read(listBuffer.RawItems + listBuffer.Count, listBuffer.Capacity - listBuffer.Count);
             postingListSize = smallPostingList.Length;
         }
 
@@ -702,6 +702,37 @@ public unsafe partial class Hnsw
             _vectorsByHash = llt.Transaction.CompactTreeFor(VectorsIdByHashSlice);
         }
 
+        public void Remove(long entryId, Span<byte> vector)
+        {
+            PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>((entryId & 0b11) != 0, "Entry ids must have the first two bits cleared, we are using those");
+            PortableExceptions.ThrowIf<ArgumentOutOfRangeException>(
+                vector.Length != _searchState.Options.VectorSizeBytes,
+                $"Vector size {vector.Length} does not match expected size: {_searchState.Options.VectorSizeBytes}");
+            var hashBuffer = ComputeHashFor(vector);
+            ref var postingList = ref CollectionsMarshal.GetValueRefOrAddDefault(_vectorHashCache, hashBuffer, out var exists);
+            if(exists)
+            {
+                // already added this in the current batch
+                ref var l = ref postingList.PostingList;
+                l.Add(_searchState.Llt.Allocator, entryId | 1);
+                // key already exists in the dictionary, so can clear this 
+                _searchState.Llt.Allocator.Release(ref hashBuffer);
+                return;
+            }
+            
+            var vectorHash = hashBuffer.ToReadOnlySpan();
+            if (_vectorsByHash.TryGetValue(vectorHash, out var vectorId) is false)
+            {
+                return; // doesn't exist? 
+            }
+            if (_nodesByVectorId.TryGetValue(vectorId, out var nodeId) is false)
+            {
+                return; // doesn't exists?
+            }
+            int nodeIndex = _searchState.GetNodeIndexById(nodeId);
+            postingList = (nodeIndex, NativeList<long>.Create(_searchState.Llt.Allocator, entryId  | 1));
+        }
+
         public void Register(long entryId, Span<byte> vector)
         {
             PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>((entryId & 0b11) != 0, "Entry ids must have the first two bits cleared, we are using those");
@@ -731,7 +762,7 @@ public unsafe partial class Hnsw
             if (_nodesByVectorId.TryGetValue(vectorId, out var nodeId))
             {
                 int nodeIndex = _searchState.GetNodeIndexById(nodeId);
-                postingList = ToPostingListTuple(nodeIndex);
+                postingList = (nodeIndex, NativeList<long>.Create(_searchState.Llt.Allocator, entryId));
                 return;
             }
 
@@ -739,15 +770,14 @@ public unsafe partial class Hnsw
             int nodeIdx = _searchState.RegisterVectorNode(newNodeId, vectorId);
             _nodesByVectorId.Add(vectorId, newNodeId);
             
-            postingList = ToPostingListTuple(nodeIdx);
-
-            (int, NativeList<long>) ToPostingListTuple(int nodeIndex)
-            {
-                var list = new NativeList<long>();
-                list.Add(_searchState.Llt.Allocator, entryId);
-                var tuple = (nodeIndex,list);
-                return tuple;
-            }
+            postingList = (nodeIdx, NativeList<long>.Create(_searchState.Llt.Allocator, entryId));
+        }
+        
+        NativeList<long> ToPostingListTuple(long entryId)
+        {
+            var list = new NativeList<long>();
+            list.Add(_searchState.Llt.Allocator, entryId);
+            return list;
         }
 
         private long RegisterVector(Span<byte> vector)
