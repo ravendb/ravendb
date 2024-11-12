@@ -486,7 +486,7 @@ public unsafe partial class Hnsw
             return distance;
         }
         
-        public void ReadPostingList(long rawPostingListId, ref ContextBoundNativeList<long> listBuffer, FastPForDecoder pforDecoder, out int postingListSize)
+        public void ReadPostingList(long rawPostingListId, ref ContextBoundNativeList<long> listBuffer, ref FastPForDecoder pforDecoder, out int postingListSize)
         {
             var smallPostingList = Container.Get(Llt, rawPostingListId);
             var count = VariableSizeEncoding.Read<int>(smallPostingList.Address, out var offset);
@@ -692,7 +692,7 @@ public unsafe partial class Hnsw
         private readonly CompactTree _vectorsByHash;
         private int _vectorBatchSizeInPages;
         private long _globalVectorsContainerId;
-
+        
         public Registration(LowLevelTransaction llt, Slice name)
         {
             _searchState = new SearchState(llt, name);
@@ -844,9 +844,8 @@ public unsafe partial class Hnsw
         {
             PortableExceptions.ThrowIfOnDebug<InvalidOperationException>(_searchState.Llt.Committed);
             
-            using var pforDecoder = new FastPForDecoder(_searchState.Llt.Allocator);
-            using var pforEncoder = new FastPForEncoder(_searchState.Llt.Allocator);
-            
+            var pforEncoder = new FastPForEncoder(_searchState.Llt.Allocator);
+            var pforDecoder = new FastPForDecoder(_searchState.Llt.Allocator);
             var listBuffer = new ContextBoundNativeList<long>(_searchState.Llt.Allocator);
             var byteBuffer = new ContextBoundNativeList<byte>(_searchState.Llt.Allocator);
             byteBuffer.EnsureCapacityFor(128);
@@ -875,8 +874,10 @@ public unsafe partial class Hnsw
             
             listBuffer.Dispose();
             byteBuffer.Dispose();
-            
-            
+            pforEncoder.Dispose();
+            pforDecoder.Dispose();
+
+
             long MergePostingList(long postingList, NativeList<long> modifications)
             {
                 // here we have 5 options:
@@ -901,11 +902,10 @@ public unsafe partial class Hnsw
                         break;
                     case 0b10:
                         hasSmallPostingList = true;
-                        _searchState.ReadPostingList(rawPostingListId, ref listBuffer, pforDecoder, out currentSize);
+                        _searchState.ReadPostingList(rawPostingListId, ref listBuffer, ref pforDecoder, out currentSize);
                         break;
                     case 0b11:
-                        //TODO: fix large posting lists
-                        throw new NotImplementedException();
+                        return UpdatePostingList(rawPostingListId, in modifications, pforEncoder, ref pforDecoder, ref listBuffer);
                 }
                 
                 PostingList.SortEntriesAndRemoveDuplicatesAndRemovals(ref listBuffer);
@@ -926,7 +926,8 @@ public unsafe partial class Hnsw
                 int size = pforEncoder.Encode(listBuffer.RawItems, listBuffer.Count);
                 if (size > Container.MaxSizeInsideContainerPage)
                 {
-                    throw new NotImplementedException();
+                    DeleteOldSmallPostingListIfNeeded();
+                    return CreateNewPostingList(pforEncoder);
                 }
 
                 byteBuffer.EnsureCapacityFor(size + 5);
@@ -941,10 +942,7 @@ public unsafe partial class Hnsw
                 }
                 else
                 {
-                    if (hasSmallPostingList)
-                    {
-                        Container.Delete(_searchState.Llt, _searchState.Options.Container, rawPostingListId);
-                    }
+                    DeleteOldSmallPostingListIfNeeded();
                     rawPostingListId = Container.Allocate(_searchState.Llt, _searchState.Options.Container, byteBuffer.Count, out mutable);
                 }
                 Span<byte> span = byteBuffer.ToSpan();
@@ -952,7 +950,62 @@ public unsafe partial class Hnsw
 
                 Debug.Assert((rawPostingListId & 0b11) == 0, "(rawPostingListId & 0b11) == 0");
                 return rawPostingListId | 0b10;
+                
+                
+                void DeleteOldSmallPostingListIfNeeded()
+                {
+                    if (hasSmallPostingList)
+                    {
+                        Container.Delete(_searchState.Llt, _searchState.Options.Container, rawPostingListId);
+                    }
+                }
             }
+
+        }
+
+        private long UpdatePostingList(long postingListId, in NativeList<long> modifications, FastPForEncoder pForEncoder, ref FastPForDecoder pForDecoder, ref ContextBoundNativeList<long> tempListBuffer)
+        {
+            var setSpace = Container.GetMutable(_searchState.Llt, postingListId);
+            ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
+
+            var lists = stackalloc long*[2];
+            var indexes = stackalloc int[2];
+
+            using var _1 = _searchState.Llt.Allocator.Allocate(modifications.Count * sizeof(long), out var bs1);
+            using var _2 = _searchState.Llt.Allocator.Allocate(modifications.Count * sizeof(long), out var bs2);
+            lists[0] = (long*)bs1.Ptr;
+            lists[1] = (long*)bs2.Ptr;
+
+            for (int i = 0; i < modifications.Count; i++)
+            {
+                var cur = modifications[i];
+                var listIdx = cur & 1;
+                var curIndex = indexes[listIdx]++;
+                lists[listIdx][curIndex] = cur;
+            }
+
+            var numberOfEntries = PostingList.Update(_searchState.Llt, ref postingListState, lists[0], indexes[0], 
+                lists[1], indexes[1], pForEncoder, ref tempListBuffer, ref pForDecoder);
+
+            if(numberOfEntries is 0)
+            {
+                // TODO: remove from large posting list tracking, see: IndexWriter.AddEntriesToTermResultViaLargePostingList
+                Container.Delete(_searchState.Llt, _searchState.Options.Container, postingListId);
+                return 0;
+            }
+
+            return postingListId | 0b11;
+        }
+
+        private long CreateNewPostingList(FastPForEncoder pforEncoder)
+        {
+            long setId = Container.Allocate(_searchState.Llt, _searchState.Options.Container, sizeof(PostingListState), out var setSpace);
+            
+            // TODO: Register those large posting lists for storage report, see: IndexWriter.AddNewTermToSet
+            
+            ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
+            PostingList.Create(_searchState.Llt, ref postingListState, pforEncoder);
+            return setId | 0b11;
         }
 
 
@@ -1144,6 +1197,8 @@ public unsafe partial class Hnsw
         private ContextBoundNativeList<long> _postingListResults = new(searchState.Llt.Allocator);
         private FastPForDecoder _pforDecoder = new(searchState.Llt.Allocator);
         private readonly Span<byte> _vector = vector;
+        private PostingList.Iterator _postingListIterator;
+        private PostingList _postingList;
 
         public void Dispose()
         {
@@ -1160,6 +1215,20 @@ public unsafe partial class Hnsw
             {
                 if (_currentNode >= indexes.Count)
                     break;
+
+                if(_postingList != null)
+                {
+                    if (_postingListIterator.Fill(matches[index..], out var total) is false && total is 0)
+                    {
+                        _postingListIterator = default;
+                        _postingList = null;
+                        _currentNode++;
+                        continue;
+                    }
+                    distances.Slice(index, total).Fill(distance);
+                    index += total;
+                    continue;
+                }
 
                 if (_currentMatchesIndex < _postingListResults.Count)
                 {
@@ -1193,13 +1262,17 @@ public unsafe partial class Hnsw
                         continue;
                     case 0b10: // small posting list
                         Debug.Assert(_postingListResults.Count is 0 && _currentMatchesIndex is 0);
-                        searchState.ReadPostingList(rawPostingListId, ref _postingListResults, _pforDecoder, out _);
+                        searchState.ReadPostingList(rawPostingListId, ref _postingListResults, ref _pforDecoder, out _);
                         continue;
                     case 0b11: // large posting list
-                        // TODO: large posting list
-                        throw new NotSupportedException();
+                        var setStateSpan = Container.GetReadOnly(searchState.Llt, rawPostingListId);
+                        ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
+                        _postingList = new PostingList(searchState.Llt, Slices.Empty, setState);
+                        _postingListIterator = _postingList.Iterate();
+                        continue;
+                    default:
+                        throw new ArgumentOutOfRangeException("Impossible scenario, we have only 4 options, but got: " + node.PostingListId);
                 }
-                throw new NotSupportedException();
             }
             return index;
         }

@@ -135,6 +135,47 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         }
     }
 
+
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CanHandleLargePostingLists()
+    {
+        float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
+        float[] v2 = [0.15f, 0.25f, 0.35f, 0.45f];
+
+        // nearest to v2, then v1
+        float[] v3 = [0.25f, 0.35f, 0.45f, 0.55f];
+
+        using (var txw = Env.WriteTransaction())
+        {
+            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12);
+
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            {
+                for (int i = 0;i < 20_000; i++)
+                {
+                    registration.Register((i+1) * 4, MemoryMarshal.Cast<float, byte>(v1));
+                }
+            }
+
+            txw.Commit();
+        }
+
+        using (var txr = Env.ReadTransaction())
+        {
+            Span<long> matches = new long[500];
+            Span<float> distances = new float[500];
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+                numberOfCandidates: 32,
+                MemoryMarshal.Cast<float, byte>(v3));
+            for (int i = 0; i < 5; i++)
+            {
+                int read = nearest.Fill(matches, distances);
+                Assert.Equal(500, read);
+            }
+        }
+    }
+
     private static void Fill(float[] f, int seed)
     {
         var random = new Random(seed); 
