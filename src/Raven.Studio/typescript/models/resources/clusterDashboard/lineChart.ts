@@ -29,6 +29,7 @@ type chartOpts = {
     useSeparateYScales?: boolean;
     topPaddingProvider?: (key: string) => number;
     tooltipProvider?: (unalignedDate: ClusterWidgetUnalignedDate|null) => string;
+    onClick?: () => void;
     onMouseMove?: (date: ClusterWidgetUnalignedDate|null) => void;
 }
 
@@ -178,6 +179,9 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
     private setupValuesPreview() {
         const withTooltip = !!this.opts.tooltipProvider;
         this.svg
+            .on("click.tip", () => {
+                this.opts?.onClick();
+            })
             .on("mousemove.tip", () => {
                 if (this.xScale) {
                     const node = this.svg.node();

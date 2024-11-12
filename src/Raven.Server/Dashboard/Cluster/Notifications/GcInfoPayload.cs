@@ -81,6 +81,8 @@ public class GcInfoPayload : AbstractClusterDashboardNotification
         public long SizeBeforeBytes { get; set; }
 
         public long SizeAfterBytes { get; set; }
+        public long FragmentationBeforeBytes { get; set; }
+        public long FragmentationAfterBytes { get; set; }
         
         public DynamicJsonValue ToJson()
         {
@@ -88,6 +90,8 @@ public class GcInfoPayload : AbstractClusterDashboardNotification
             {
                 [nameof(SizeBeforeBytes)] = SizeBeforeBytes,
                 [nameof(SizeAfterBytes)] = SizeAfterBytes,
+                [nameof(FragmentationBeforeBytes)] = FragmentationBeforeBytes,
+                [nameof(FragmentationAfterBytes)] = FragmentationAfterBytes,
             };
         }
     }

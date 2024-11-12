@@ -14,30 +14,6 @@
 @gc-info-loh: @color-2;
 @gc-info-pinned: @color-4-3;
 
-.gc-info-widget {
-    .rect {
-        display: inline-block;
-        width: 15px;
-        height: 15px;
-        margin-left: 3px;
-    }
-    .gen-0 {
-        background-color: @gc-info-gen0;
-    }
-    .gen-1 {
-        background-color: @gc-info-gen1;
-    }
-    .gen-2 {
-        background-color: @gc-info-gen2;
-    }
-    .loh {
-        background-color: @gc-info-loh;
-    }
-    .pinned {
-        background-color: @gc-info-pinned;
-    }
-}
-
 
 .cluster-dashboard-container {
     width: 100%;
@@ -415,6 +391,81 @@
                                 min-width: 65px;
                                 transition: .2s color;
                             }
+
+                            .rect {
+                                display: inline-block;
+                                width: 15px;
+                                height: 15px;
+                                margin-left: 3px;
+                            }
+                            &.gen-0 {
+                                .details-item-value {
+                                    color: @gc-info-gen0;
+                                }
+                                .rect {
+                                    background-color: @gc-info-gen0;
+                                }
+                            }
+                            &.gen-1 {
+                                .details-item-value {
+                                    color: @gc-info-gen1;
+                                }
+                                .rect {
+                                    background-color: @gc-info-gen1;
+                                }
+                            }
+                            &.gen-2 {
+                                .details-item-value {
+                                    color: @gc-info-gen2;
+                                }
+                                .rect {
+                                    background-color: @gc-info-gen2;
+                                }
+                            }
+                            &.loh {
+                                .details-item-value {
+                                    color: @gc-info-loh;
+                                }
+                                .rect {
+                                    background-color: @gc-info-loh;
+                                }
+                            }
+                            &.pinned {
+                                .details-item-value {
+                                    color: @gc-info-pinned;
+                                }
+                                .rect {
+                                    background-color: @gc-info-pinned;
+                                }
+                            }
+                        }
+                    }
+                    
+                    &.no-data {
+                        .gen-0 {
+                            .details-item-value {
+                                color: @text-muted !important;
+                            }
+                        }
+                        .gen-1 {
+                            .details-item-value {
+                                color: @text-muted !important;
+                            }
+                        }
+                        .gen-2 {
+                            .details-item-value {
+                                color: @text-muted !important;
+                            }
+                        }
+                        .loh {
+                            .details-item-value {
+                                color: @text-muted !important;
+                            }
+                        }
+                        .pinned {
+                            .details-item-value {
+                                color: @text-muted !important;
+                            }
                         }
                     }
 
@@ -603,6 +654,7 @@
             .gc-pause-bubble-chart {
                 .point {
                     fill: var(--node-color);
+                    fill-opacity: 0.7;
                     text {
                         text-anchor: middle;
                         pointer-events: none;
@@ -978,6 +1030,17 @@
     }
 }
 
+.gc-info-widget {
+    .pin-container {
+        transition: opacity 0.5s cubic-bezier(0.4, 1.6, 0.6, 1);
+        opacity: 0;
+        
+        &.active {
+            opacity: 1;
+        }
+    }
+}
+
 .add-widget {
     position: fixed;
     bottom: 50px;
@@ -1079,7 +1142,7 @@
         .connection-outgoing, .connection-incoming {
             .connection {
                 stroke: @brand-danger !important;  
-                stroke-dasharray: 8px !important;
+                stroke-dasharray: 4px 2px !important;
             }
 
             .arrow {

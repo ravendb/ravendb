@@ -23,7 +23,10 @@
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
                                 <span data-bind="text: memoryFormatted"></span>
-                                <span class="supplementary-info">Total heap size</span>
+                                <span class="supplementary-info">Total heap size after GC</span>
+                            </div>
+                            <div title="Data has been pinned. Click on any chart to unpin" class="pin-container" data-bind="css: { active:  $root.pinned() }">
+                                <i class="icon-pinned text-warning"></i>
                             </div>
                         </div>
 
@@ -46,28 +49,29 @@
                             </div>
                         </div>
                         <div class="details-list">
-                            <h4 class="no-padding-left">Generations</h4>
-                            <div class="details-item">
-                                <div class="details-item-name">Gen0 <span class="rect gen-0"></span></div>
-                                <div class="details-item-value" data-bind="text: gen0Formatted"></div>
+                            <h4 class="no-padding-left">Generations (before GC → after GC)</h4>
+                            <div data-toggle="tooltip" data-html="true" data-animation="true" data-placement="bottom" data-bind="tooltipText: fragmentationInfo">
+                                <div class="details-item gen-0">
+                                    <div class="details-item-name">Gen0 <span class="rect"></span></div>
+                                    <div class="details-item-value" data-bind="text: gen0Formatted"></div>
+                                </div>
+                                <div class="details-item gen-1">
+                                    <div class="details-item-name">Gen1 <span class="rect"></span></div>
+                                    <div class="details-item-value" data-bind="text: gen1Formatted"></div>
+                                </div>
+                                <div class="details-item gen-2">
+                                    <div class="details-item-name">Gen2 <span class="rect"></span></div>
+                                    <div class="details-item-value" data-bind="text: gen2Formatted"></div>
+                                </div>
+                                <div class="details-item loh">
+                                    <div class="details-item-name" title="Large object heap">LOH <span class="rect"></span></div>
+                                    <div class="details-item-value" data-bind="text: lohFormatted"></div>
+                                </div>
+                                <div class="details-item pinned">
+                                    <div class="details-item-name" title="Pinned object heap">POH <span class="rect"></span></div>
+                                    <div class="details-item-value" data-bind="text: pinnedFormatted"></div>
+                                </div>
                             </div>
-                            <div class="details-item">
-                                <div class="details-item-name">Gen1 <span class="rect gen-1"></span></div>
-                                <div class="details-item-value" data-bind="text: gen1Formatted"></div>
-                            </div>
-                            <div class="details-item">
-                                <div class="details-item-name">Gen2 <span class="rect gen-2"></span></div>
-                                <div class="details-item-value" data-bind="text: gen2Formatted"></div>
-                            </div>
-                            <div class="details-item">
-                                <div class="details-item-name">LOH <span class="rect loh"></span></div>
-                                <div class="details-item-value" data-bind="text: lohFormatted"></div>
-                            </div>
-                            <div class="details-item">
-                                <div class="details-item-name">Pinned <span class="rect pinned"></span></div>
-                                <div class="details-item-value" data-bind="text: pinnedFormatted"></div>
-                            </div>
-                           
                         </div>
                     </div>
                 </div>
@@ -86,12 +90,15 @@
                     <i class="icon-arrow-up"></i>
                 </button>
                 <div class="nodes-container" data-bind="foreach: nodeStats">
-                    <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'no-data': !currentItem() }">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'node-warning': pauseLevel() === 'warning', 'node-danger': pauseLevel() === 'danger', 'no-data': !currentItem() }">
                         <div class="nodes-item-header" data-bind="css: { 'spinner': spinner }">
                             <div class="node-label" data-bind="text: tag"></div>
                             <div class="node-value">
                                 <span data-bind="text: pauseFormatted"></span>
                                 <span class="supplementary-info">Pause Time %</span>
+                            </div>
+                            <div title="Data has been pinned. Click on any chart to unpin" class="pin-container" data-bind="css: { active:  $root.pinned() }">
+                                <i class="icon-pinned text-warning"></i>
                             </div>
                         </div>
                         <div class="details-list">

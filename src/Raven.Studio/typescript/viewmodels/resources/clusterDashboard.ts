@@ -262,7 +262,10 @@ class clusterDashboard extends viewModelBase {
             this.addWidget(new databaseOverviewWidget(this));
             this.addWidget(new ongoingTasksWidget(this));
             this.addWidget(new clusterOverviewWidget(this));
-            this.addWidget(new gcInfoWidget(this));
+            
+            const gcWidget = new gcInfoWidget(this);
+            gcWidget.fullscreen(true);
+            this.addWidget(gcWidget);
             
             const initialWidgets = this.widgets();
             
@@ -387,10 +390,12 @@ class clusterDashboard extends viewModelBase {
         }
     }
     
+    static readonly fullscreenWidgetsByDefault: widgetType[] = ["GcInfo"]; 
+    
     addWidgetModal() {
         const existingWidgetTypes = _.uniq(this.widgets().map(x => x.getType()));
         const addWidgetView = new addWidgetModal(existingWidgetTypes, type => {
-            const newWidget = this.spawnWidget(type);
+            const newWidget = this.spawnWidget(type, clusterDashboard.fullscreenWidgetsByDefault.includes(type));
             this.addWidget(newWidget);
             
             newWidget.composeTask.done(() => {

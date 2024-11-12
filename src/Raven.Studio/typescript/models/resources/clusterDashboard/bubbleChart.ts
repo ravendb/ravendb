@@ -3,6 +3,7 @@
 import d3 = require("d3");
 import moment = require("moment");
 import { clusterDashboardChart } from "models/resources/clusterDashboard/clusterDashboardChart";
+import Update = d3.selection.Update;
 
 
 interface chartItemData {
@@ -19,12 +20,11 @@ export interface chartData {
 type chartOpts<TPayload extends { Date: string }, TExtra> = {
     grid?: boolean;
     yMaxProvider?: (data: chartData[]) => number | null;
-    useSeparateYScales?: boolean;
     topPaddingProvider?: (key: string) => number;
     tooltipProvider?: (unalignedDate: ClusterWidgetUnalignedDate|null) => string;
-    onMouseMove?: (date: ClusterWidgetUnalignedDate|null) => void;
+    onMouseMove?: (date: ClusterWidgetUnalignedDate|null, yValue: number) => void;
+    onClick?: () => void;
     extraArgumentsProvider?: (payload: TPayload) => TExtra;
-    drawPoints?: (selection: d3.Selection<chartItemData & TExtra>) => void;
 }
 
 export class bubbleChart<TPayload extends { Date: string }, TExtra = unknown> implements clusterDashboardChart<TPayload> {
@@ -45,11 +45,12 @@ export class bubbleChart<TPayload extends { Date: string }, TExtra = unknown> im
     private tooltip: d3.Selection<void>;
     
     private xScale: d3.time.Scale<number, number>;
+    private yScale: d3.scale.Linear<number, number>;
+    private points: Update<chartItemData>;
     
     private readonly containerSelector: string | EventTarget;
     private highlightDate: Date;
     private readonly dataProvider: (payload: TPayload) => number;
-    private readonly drawPoints: (selection: d3.Selection<any>) => void;
     
     constructor(containerSelector: string | EventTarget, dataProvider: (payload: TPayload) => number, opts?: chartOpts<TPayload, TExtra>) {
         this.opts = opts || {} as any;
@@ -66,8 +67,6 @@ export class bubbleChart<TPayload extends { Date: string }, TExtra = unknown> im
         
         this.width = $container.innerWidth();
         this.height = $container.innerHeight();
-
-        this.drawPoints = opts.drawPoints ?? ((selection: d3.Selection<chartItemData & TExtra>) => selection.append("circle").attr("r", 8));
 
         this.svg = container
             .append("svg")
@@ -146,8 +145,21 @@ export class bubbleChart<TPayload extends { Date: string }, TExtra = unknown> im
     }
     
     highlightTime(date: ClusterWidgetAlignedDate|null) {
+        this.points
+            .select("circle")
+            .transition()
+            .attr("r", 3);
+
         if (date) {
             const xToHighlight = this.xScale(date);
+            
+            this.points
+                .filter(x => x.x.getTime() === date.getTime())
+                .select("circle")
+                .transition()
+                .attr("r", 8);
+            
+            
             if (xToHighlight != null) {
                 if (!this.highlightDate) {
                     this.pointer
@@ -176,13 +188,18 @@ export class bubbleChart<TPayload extends { Date: string }, TExtra = unknown> im
     private setupValuesPreview() {
         const withTooltip = !!this.opts.tooltipProvider;
         this.svg
+            .on("click.tip", () => {
+                this.opts?.onClick();
+            })
             .on("mousemove.tip", () => {
                 if (this.xScale) {
                     const node = this.svg.node();
                     const mouseLocation = d3.mouse(node);
 
                     const hoverTime = this.xScale.invert(mouseLocation[0]);
-                    this.opts?.onMouseMove(hoverTime);
+                    const yValue = this.yScale ? this.yScale.invert(mouseLocation[1]) : 0;
+                    
+                    this.opts?.onMouseMove(hoverTime, yValue);
 
                     if (withTooltip) {
                         this.updateTooltip();
@@ -199,7 +216,7 @@ export class bubbleChart<TPayload extends { Date: string }, TExtra = unknown> im
                     this.hideTooltip();
                 }
                 
-                this.opts?.onMouseMove(null);
+                this.opts?.onMouseMove(null, null);
             });
     }
     
@@ -331,12 +348,10 @@ export class bubbleChart<TPayload extends { Date: string }, TExtra = unknown> im
             .domain([minTime, maxTime]);
     }
     
-    private createYScales(): Map<string, d3.scale.Linear<number, number>> {
+    private createYScale(): d3.scale.Linear<number, number> {
         if (!this.data.length) {
-            return new Map<string, d3.scale.Linear<number, number>>();
+            return null;
         }
-        
-        const result = new Map<string, d3.scale.Linear<number, number>>();
         
         const yScaleCreator = (maxValue: number, topPadding: number) => {
             if (!maxValue) {
@@ -348,28 +363,11 @@ export class bubbleChart<TPayload extends { Date: string }, TExtra = unknown> im
         };
         
         if (this.opts.yMaxProvider != null) {
-            const yScale = yScaleCreator(this.opts.yMaxProvider(this.data), this.opts.topPaddingProvider(null));
-            
-            this.data.forEach(data => {
-                result.set(data.id, yScale);
-            });
-        } else if (this.opts.useSeparateYScales) {
-            this.data.filter(x => x.values.length).forEach(data => {
-                const yMax = d3.max(data.values.map(values => values.y));
-                const yScale = yScaleCreator(yMax, this.opts.topPaddingProvider(data.id));
-                
-                result.set(data.id, yScale);
-            });
+            return yScaleCreator(this.opts.yMaxProvider(this.data), this.opts.topPaddingProvider(null));
         } else {
             const yMax = d3.max(this.data.filter(x => x.values.length).map(data => d3.max(data.values.map(values => values.y))));
-            const yScale = yScaleCreator(yMax, this.opts.topPaddingProvider(null));
-
-            this.data.forEach(data => {
-                result.set(data.id, yScale);
-            });
+            return yScaleCreator(yMax, this.opts.topPaddingProvider(null));
         }
-     
-        return result;
     }
     
     draw() {
@@ -388,23 +386,25 @@ export class bubbleChart<TPayload extends { Date: string }, TExtra = unknown> im
             .attr("class", x => "serie " + x.id);
         
         this.xScale = this.createXScale();
-        const yScales = this.createYScales();
+        this.yScale = this.createYScale();
         
-        const points = series.selectAll(".point")
+        this.points = series.selectAll(".point")
             .data<chartItemData>(x => x.values, x => x.x.getTime().toString());
         
-        points
+        this.points
             .exit()
             .remove();
         
-        const incomingGroups = points.enter()
+        const incomingGroups = this.points.enter()
             .append("g")
             .attr("class", "point");
         
-        incomingGroups.call(this.drawPoints);
+        incomingGroups
+            .append("circle")
+            .attr("r", 8);
         
-        points
-            .attr("transform", d => "translate(" + (this.xScale(d.x)) + "," + (yScales.get(d.parent.id)(d.y)) + ")");
+        this.points
+            .attr("transform", d => "translate(" + (this.xScale(d.x)) + "," + (this.yScale(d.y)) + ")");
         
         if (this.highlightDate) {
             this.highlightTime(this.highlightDate);

@@ -36,29 +36,39 @@ public class GcInfoNotificationSender : AbstractClusterDashboardNotificationSend
                 {
                     SizeBeforeBytes = info.GenerationInfo[0].SizeBeforeBytes, 
                     SizeAfterBytes = info.GenerationInfo[0].SizeAfterBytes,
+                    FragmentationBeforeBytes = info.GenerationInfo[0].FragmentationBeforeBytes,
+                    FragmentationAfterBytes = info.GenerationInfo[0].FragmentationAfterBytes,
                 },
             Gen1HeapSize =
                 new GcInfoPayload.GenerationInfoSize
                 {
                     SizeBeforeBytes = info.GenerationInfo[1].SizeBeforeBytes, 
                     SizeAfterBytes = info.GenerationInfo[1].SizeAfterBytes,
+                    FragmentationBeforeBytes = info.GenerationInfo[1].FragmentationBeforeBytes,
+                    FragmentationAfterBytes = info.GenerationInfo[1].FragmentationAfterBytes,
                 },
             Gen2HeapSize =
                 new GcInfoPayload.GenerationInfoSize
                 {
                     SizeBeforeBytes = info.GenerationInfo[2].SizeBeforeBytes, 
                     SizeAfterBytes = info.GenerationInfo[2].SizeAfterBytes,
+                    FragmentationBeforeBytes = info.GenerationInfo[2].FragmentationBeforeBytes,
+                    FragmentationAfterBytes = info.GenerationInfo[2].FragmentationAfterBytes,
                 },
             LargeObjectHeapSize =
                 new GcInfoPayload.GenerationInfoSize
                 {
                     SizeBeforeBytes = info.GenerationInfo[3].SizeBeforeBytes, 
                     SizeAfterBytes = info.GenerationInfo[3].SizeAfterBytes,
+                    FragmentationBeforeBytes = info.GenerationInfo[3].FragmentationBeforeBytes,
+                    FragmentationAfterBytes = info.GenerationInfo[3].FragmentationAfterBytes,
                 },
             PinnedObjectHeapSize = new GcInfoPayload.GenerationInfoSize
             {
                 SizeBeforeBytes = info.GenerationInfo[4].SizeBeforeBytes, 
                 SizeAfterBytes = info.GenerationInfo[4].SizeAfterBytes,
+                FragmentationBeforeBytes = info.GenerationInfo[4].FragmentationBeforeBytes,
+                FragmentationAfterBytes = info.GenerationInfo[4].FragmentationAfterBytes,
             },
         };
     }

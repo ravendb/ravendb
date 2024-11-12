@@ -28,6 +28,8 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
     generationsSizeCharts: lineChart<GcInfoChartData>[] = [];
     pausesChart: bubbleChart<GcInfoChartData>;
     
+    pinned = ko.observable<boolean>(false);
+    
     private readonly nodeTags: string[] = [];
     
     constructor(controller: clusterDashboard) {
@@ -199,7 +201,14 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
                     grid: true,
                     fillArea: true,
                     topPaddingProvider: () => 2,
-                    onMouseMove: date => this.mouseMovedLineChart(date, node)
+                    onMouseMove: date => {
+                        if (!this.pinned()) {
+                            this.mouseMovedLineChart(date, node);
+                        }
+                    },
+                    onClick: () => {
+                        this.pinned.toggle();
+                    }
                 });
         });
         
@@ -209,23 +218,21 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
         this.pausesChart = new bubbleChart<GcInfoChartData, {  gcType: string }>(pausesChartContainer, x => x.value, {
             grid: true,
             topPaddingProvider: () => 8,
-            onMouseMove: date => this.mouseMovedPausesChart(date),
+            onMouseMove: (date, yValue) => {
+                if (!this.pinned()) {
+                    this.mouseMovedPausesChart(date, yValue);
+                }
+            },
+            onClick: () => {
+                this.pinned.toggle();
+            },
             extraArgumentsProvider: payload => ({ gcType: payload.gcType }),
-            drawPoints: (selection) => {
-                selection
-                    .append("circle")
-                    .attr("r", 8);
-                
-                selection.append("text")
-                    .attr("y", 4)
-                    .text(d => d.gcType.substring(0, 1));
-            }
         });
         return [...charts, this.pausesChart];
     }
 
-    mouseMovedPausesChart(date: Date | null) {
-        const closestItem = this.findClosestItem(date);
+    mouseMovedPausesChart(date: Date | null, yValue: number) {
+        const closestItem = this.findClosestItem(date, yValue);
         if (closestItem) {
             // here we on purpose ignore closestItem date -> to detect no data, we only care here about node tag
             this.mouseMovedLineChart(date, closestItem.tag);    
@@ -235,7 +242,7 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
         }
     }
     
-    private findClosestItem(date: Date | null) {
+    private findClosestItem(date: Date | null, yValue: number) {
         if (!date) {
             return null;
         }
