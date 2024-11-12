@@ -799,6 +799,7 @@ public unsafe partial class Hnsw
                     sizeInBytes, out var vectorStorage);
                 Debug.Assert((batchId & 0xFFF) == 0, "We allocate > 1 page, so we get the full page container id");
                 _searchState.Options.LastUsedContainerId = batchId;
+                _searchState.Options.VectorBatchIndex = 1;
                 vector.CopyTo(vectorStorage);
                 //container id | index    | marker  
                 return batchId | (0 << 1) | 1;
