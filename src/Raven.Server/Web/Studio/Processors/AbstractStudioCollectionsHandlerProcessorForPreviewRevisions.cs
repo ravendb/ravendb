@@ -27,6 +27,13 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
     protected AbstractStudioCollectionsHandlerProcessorForPreviewRevisions([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
         ContextPool = RequestHandler.ContextPool;
+        Collection = RequestHandler.GetStringQueryString("collection", required: false);
+        var type = RequestHandler.GetStringQueryString("type", required: false) ?? "all";
+
+        if (Enum.TryParse(type, true, out Type) == false)
+        {
+            throw new ArgumentException($"Invalid value '{type}' provided for 'type'. Please use one of the following options: {string.Join(", ", Enum.GetNames(typeof(RevisionsStorage.RevisionsType)))}.");
+        }
     }
 
     public override async ValueTask ExecuteAsync()
@@ -76,18 +83,7 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
 
     protected abstract Task WriteItemsAsync(TOperationContext context, AsyncBlittableJsonTextWriter writer);
 
-    protected virtual Task InitializeAsync(TOperationContext context, CancellationToken token)
-    {
-        Collection = RequestHandler.GetStringQueryString("collection", required: false);
-        var type = RequestHandler.GetStringQueryString("type", required: false) ?? "all";
-
-        if (Enum.TryParse(type, true, out Type) == false)
-        {
-            throw new ArgumentException($"Invalid value '{type}' provided for 'type'. Please use one of the following options: {string.Join(", ", Enum.GetNames(typeof(RevisionsStorage.RevisionsType)))}.");
-        }
-
-        return Task.CompletedTask;
-    }
+    protected abstract Task InitializeAsync(TOperationContext context, CancellationToken token);
 
     protected sealed class PreviewRevisionsResult
     {

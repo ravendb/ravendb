@@ -30,13 +30,12 @@ using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
-using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
-using static Raven.Server.Documents.Schemas.Collections;
 using static Raven.Server.Documents.Schemas.Revisions;
 using static Voron.Data.Tables.Table;
 using Constants = Raven.Client.Constants;
 using Size = Sparrow.Size;
+using Slices = Voron.Slices;
 using Transaction = Voron.Impl.Transaction;
 
 namespace Raven.Server.Documents.Revisions
@@ -1217,9 +1216,8 @@ namespace Raven.Server.Documents.Revisions
                         yield break;
                 }
 
-                yield return TableValueToRevision(context, ref tvh.Reader, DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data); ;
-                take--;
-                if (take <= 0)
+                yield return TableValueToRevision(context, ref tvh.Reader, DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data);
+                if (--take <= 0)
                     yield break;
             }
         }
@@ -1265,51 +1263,38 @@ namespace Raven.Server.Documents.Revisions
 
         public IEnumerable<string> GetRevisionsIdsByPrefix(DocumentsOperationContext context, string prefix, int pageSize)
         {
+            if (pageSize <= 0)
+                yield break;
+
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
             using (DocumentIdWorker.GetSliceFromId(context, prefix, out var lowerPrefix))
             {
-                var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+                string startId = prefix;
+                var hasMoreIds = true;
+                var first = true;
 
-                bool first = true;
-                string lastId = string.Empty;
-
-                while (pageSize > 0)
+                while (hasMoreIds && pageSize > 0)
                 {
-                    if (first)
+                    hasMoreIds = false;
+                    using (DocumentIdWorker.GetSliceFromId(context, startId, out var idSlice))
+                    using (GetKeyWithEtag(context, idSlice, long.MaxValue, out var compoundPrefix))
                     {
-                        // var tempSlice = new Slice(context.Allocator.Slice(lowerPrefix.Content, 0, lowerPrefix.Size - 1)); // cut the prefix seperator from the end of the slice
-                        if (GetNextRevisionsId(context, table, start: lowerPrefix, lowerPrefix, out lastId) == false)
-                            yield break;
-
+                        var startSlice = first ? idSlice : compoundPrefix;
                         first = false;
-                    }
-                    else
-                    {
-                        using (DocumentIdWorker.GetSliceFromId(context, lastId, out var lowerLastId))
-                        using (GetKeyWithEtag(context, lowerLastId, long.MaxValue, out var compoundPrefix))
+
+                        foreach (var item in table.SeekForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], startSlice, lowerPrefix, skip: 0))
                         {
-                            if (GetNextRevisionsId(context, table, start: compoundPrefix, lowerPrefix, out lastId) == false)
-                                yield break;
+                            var revision = TableValueToRevision(context, ref item.Result.Reader, DocumentFields.LowerId | DocumentFields.Id);
+                            startId = revision.LowerId;
+                            yield return revision.Id;
+
+                            hasMoreIds = true;
+                            pageSize--;
+                            break;
                         }
                     }
-
-                    yield return lastId;
-                    pageSize--;
                 }
             }
-        }
-
-        private bool GetNextRevisionsId(DocumentsOperationContext context, Table table, Slice start, Slice prefix, out string id)
-        {
-            id = string.Empty;
-
-            foreach (var item in table.SeekForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], start, prefix, skip: 0))
-            {
-                var revision = TableValueToRevision(context, ref item.Result.Reader, DocumentFields.Id);
-                id = revision.Id;
-                return true;
-            }
-
-            return false;
         }
 
         private IEnumerable<Document> GetAllRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,

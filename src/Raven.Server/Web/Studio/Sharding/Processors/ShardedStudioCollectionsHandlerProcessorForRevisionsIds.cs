@@ -29,8 +29,6 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
         {
         }
 
-        protected override IDisposable OpenReadTransaction(TransactionOperationContext context) => null;
-
         protected override async Task WriteItemsAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer, CancellationToken token)
         {
             var op = new ShardedRevisionsIdsOperation(RequestHandler, Prefix, PageSize);
@@ -94,37 +92,43 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
 
             public RavenCommand<StreamResult> CreateCommandForShard(int shardNumber)
             {
-                return new ShardedRevisionsIdsCommand(_prefix, _pageSize);
+                return new RevisionsIdsCommand(_prefix, _pageSize);
             }
 
-            private sealed class ShardedRevisionsIdsCommand : RavenCommand<StreamResult>
+            private sealed class RevisionsIdsCommand : RavenCommand<StreamResult>
             {
                 private readonly string _prefix;
                 private readonly int _pageSize;
 
-                public ShardedRevisionsIdsCommand(string prefix, int pageSize)
+                public RevisionsIdsCommand(string prefix, int pageSize)
                 {
                     _prefix = prefix;
                     _pageSize = pageSize;
                 }
 
-                public override bool IsReadRequest => false;
+                public override bool IsReadRequest => true;
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/databases/{node.Database}/studio/revisions/ids?prefix={_prefix}&{Web.RequestHandler.PageSizeParameter}={_pageSize}";
 
-                    var message = new HttpRequestMessage { Method = HttpMethod.Get, };
+                    var message = new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Get,
+                    };
 
                     return message;
                 }
 
-                public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response,
-                    string url)
+                public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
                 {
                     var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
 
-                    Result = new StreamResult { Response = response, Stream = new StreamWithTimeout(responseStream) };
+                    Result = new StreamResult
+                    {
+                        Response = response,
+                        Stream = new StreamWithTimeout(responseStream)
+                    };
 
                     return ResponseDisposeHandling.Manually;
                 }

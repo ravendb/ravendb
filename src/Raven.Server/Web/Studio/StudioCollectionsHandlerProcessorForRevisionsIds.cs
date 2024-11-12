@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
@@ -20,10 +14,10 @@ internal sealed class StudioCollectionsHandlerProcessorForRevisionsIds : Abstrac
     {
     }
 
-    protected override IDisposable OpenReadTransaction(DocumentsOperationContext context) => context.OpenReadTransaction();
-
     protected override Task WriteItemsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, CancellationToken token)
     {
+        using var _ = context.OpenReadTransaction();
+    
         writer.WriteStartArray();
         var first = true;
         foreach (var id in RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsIdsByPrefix(context, Prefix, PageSize))
