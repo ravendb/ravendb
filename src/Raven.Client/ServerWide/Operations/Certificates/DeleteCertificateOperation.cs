@@ -7,10 +7,17 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
+    /// <summary>
+    /// Allows to delete a client certificate.
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Operations.ServerOperations.DeleteCertificateOperation"/>
     public sealed class DeleteCertificateOperation : IServerOperation
     {
         private readonly string _thumbprint;
 
+        /// <inheritdoc cref="DeleteCertificateOperation"/>
+        /// <param name="thumbprint">Certificate thumbprint.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="thumbprint"/> is null.</exception>
         public DeleteCertificateOperation(string thumbprint)
         {
             _thumbprint = thumbprint ?? throw new ArgumentNullException(nameof(thumbprint));

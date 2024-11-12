@@ -8,11 +8,18 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
+    /// <summary>
+    /// Allows to replace an existing cluster certificate with a new one.
+    /// </summary>
     public sealed class ReplaceClusterCertificateOperation : IServerOperation
     {
         private readonly byte[] _certBytes;
         private readonly bool _replaceImmediately;
 
+        /// <inheritdoc cref="ReplaceClusterCertificateOperation"/>
+        /// <param name="certBytes">Raw bytes of new certificate.</param>
+        /// <param name="replaceImmediately">Indicates whether certificate should be replaced immediately by the server.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="certBytes"/> is null.</exception>
         public ReplaceClusterCertificateOperation(byte[] certBytes, bool replaceImmediately)
         {
             _certBytes = certBytes ?? throw new ArgumentNullException(nameof(certBytes));

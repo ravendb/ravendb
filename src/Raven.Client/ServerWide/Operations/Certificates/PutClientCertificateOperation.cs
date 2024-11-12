@@ -11,6 +11,10 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
+    /// <summary>
+    /// Allows to register a client certificate.
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Operations.ServerOperations.PutClientCertificateOperation"/>
     public sealed class PutClientCertificateOperation : IServerOperation
     {
         private readonly X509Certificate2 _certificate;
@@ -20,6 +24,12 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         
         public string TwoFactorAuthenticationKey { get; set; }
 
+        /// <inheritdoc cref="PutClientCertificateOperation"/>
+        /// <param name="name">Certificate name.</param>
+        /// <param name="certificate">Client certificate to be registered.</param>
+        /// <param name="permissions">Dictionary mapping databases (by name) to access level.</param>
+        /// <param name="clearance">Access level (role) assigned to certificate.</param>
+        /// <exception cref="ArgumentNullException">Thrown when either <paramref name="name"/>, <paramref name="certificate"/> or <paramref name="permissions"/> are null.</exception>
         public PutClientCertificateOperation(string name, X509Certificate2 certificate, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance)
         {
             _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));

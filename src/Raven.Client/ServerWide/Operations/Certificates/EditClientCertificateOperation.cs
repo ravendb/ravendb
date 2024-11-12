@@ -9,6 +9,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
+    /// <summary>
+    /// Allows to edit a client certificate.
+    /// </summary>
     public sealed class EditClientCertificateOperation : IServerOperation
     {
         public sealed class Parameters
@@ -23,7 +26,10 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         private readonly Dictionary<string, DatabaseAccess> _permissions;
         private readonly string _name;
         private readonly SecurityClearance _clearance;
-
+        
+        /// <inheritdoc cref="EditClientCertificateOperation"/>
+        /// <param name="parameters">See <see cref="Parameters"/>.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameters"/> argument is null, or any of its required properties are null.</exception>
         public EditClientCertificateOperation(Parameters parameters)
         {
             if (parameters == null)

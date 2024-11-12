@@ -9,6 +9,10 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
+    /// <summary>
+    /// Allows to change the order of nodes in the database group topology.
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Operations.ServerOperations.ReorderDatabaseMembersOperation"/>
     public sealed class ReorderDatabaseMembersOperation : IServerOperation
     {
         public sealed class Parameters
@@ -20,10 +24,18 @@ namespace Raven.Client.ServerWide.Operations
         private readonly string _database;
         private readonly Parameters _parameters;
 
+        /// <inheritdoc cref="ReorderDatabaseMembersCommand"/>
+        /// <param name="database">Name of a database to operate on.</param>
+        /// <param name="order">List of node tags in the exact desired order.</param>
         public ReorderDatabaseMembersOperation(string database, List<string> order) : this(database, order, false)
         {
         }
 
+        /// <inheritdoc cref="ReorderDatabaseMembersCommand"/>
+        /// <param name="database">Name of a database to operate on.</param>
+        /// <param name="order">List of node tags in the exact desired order.</param>
+        /// <param name="fixedTopology">When set to true, the cluster will try to remain provided nodes order. Otherwise, it may be changed after being initially set.</param>
+        /// <exception cref="ArgumentException">Thrown when the reordered list doesn't correspond to the existing nodes of the database group.</exception>
         public ReorderDatabaseMembersOperation(string database, List<string> order, bool fixedTopology)
         {
             if (order == null || order.Count == 0)

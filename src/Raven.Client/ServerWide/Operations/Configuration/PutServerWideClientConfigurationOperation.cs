@@ -9,10 +9,18 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
+    /// <summary>
+    /// Allows to put a server-wide client configuration - set of configuration options that are set on the server
+    /// and apply to any client when communicating with any database in the cluster.
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Operations.ServerOperations.PutServerWideClientConfiguration"/>
     public sealed class PutServerWideClientConfigurationOperation : IServerOperation
     {
         private readonly ClientConfiguration _configuration;
 
+        /// <inheritdoc cref="PutServerWideClientConfigurationOperation"/>
+        /// <param name="configuration">See <see cref="ClientConfiguration"/>.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="configuration"/> is null.</exception>
         public PutServerWideClientConfigurationOperation(ClientConfiguration configuration)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));

@@ -10,10 +10,17 @@ using Size = Sparrow.Size;
 
 namespace Raven.Client.ServerWide.Operations.TrafficWatch
 {
+    /// <summary>
+    /// Allows to put traffic watch configuration.
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Configuration.TrafficWatchConfiguration"/>
     public sealed class PutTrafficWatchConfigurationOperation : IServerOperation
     {
         private readonly Parameters _parameters;
 
+        /// <inheritdoc cref="PutTrafficWatchConfigurationOperation"/>
+        /// <param name="parameters">See <see cref="Parameters"/>.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameters"/> argument is null.</exception>
         public PutTrafficWatchConfigurationOperation(Parameters parameters)
         {
             _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));

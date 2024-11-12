@@ -9,6 +9,10 @@ using Sparrow.Logging;
 
 namespace Raven.Client.ServerWide.Operations.Logs
 {
+    /// <summary>
+    /// Allows to set logs configuration.
+    /// </summary>
+    /// <inheritdoc cref="DocumentationUrls.Configuration.LogsConfiguration"/>
     public sealed class SetLogsConfigurationOperation : IServerOperation
     {
         private readonly Parameters _parameters;
@@ -34,6 +38,9 @@ namespace Raven.Client.ServerWide.Operations.Logs
             }
         }
 
+        /// <inheritdoc cref="SetLogsConfigurationOperation"/>
+        /// <param name="parameters">See <see cref="Parameters"/>.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameters"/> argument is null.</exception>
         public SetLogsConfigurationOperation(Parameters parameters)
         {
             _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
