@@ -632,7 +632,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private long GetMinLastEtag(Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null, string collection = null)
+        private long GetMinLastEtag()
         {
             var min = long.MaxValue;
 
@@ -652,11 +652,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (status == null)
                     {
                         // if there is no status for this, we don't need to take into account tombstones
-                        lastProcessedTombstonesInfo?.Add($"{config.Name}/{collection}", new LastTombstoneInfo(config.Name, collection, 0, ITombstoneAware.TombstoneDeletionBlockerType.Backup));
                         return 0; // cannot delete the tombstones until we've done a full backup
                     }
                     var etag = ChangeVectorUtils.GetEtagById(status.LastDatabaseChangeVector, _database.DbBase64Id);
-                    lastProcessedTombstonesInfo?.Add($"{config.Name}/{collection}", new LastTombstoneInfo(config.Name, collection, etag, ITombstoneAware.TombstoneDeletionBlockerType.Backup));
                     min = Math.Min(etag, min);
                 }
 

@@ -90,7 +90,10 @@ namespace FastTests
             {
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
-                WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, result.TaskId);
+                var responsibleNode = WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, result.TaskId);
+
+                // chosen responsible node might be different than the node we are going to run the backup on
+                Assert.Equal(server.ServerStore.NodeTag, responsibleNode);
 
                 await RunBackupAsync(server, result.TaskId, store, isFullBackup, opStatus, timeout);
                 return result.TaskId;
@@ -118,14 +121,15 @@ namespace FastTests
                 return backupTaskId;
             }
 
-            public void WaitForResponsibleNodeUpdate(ServerStore serverStore, string databaseName, long taskId, string differentThan = null)
+            public string WaitForResponsibleNodeUpdate(ServerStore serverStore, string databaseName, long taskId, string differentThan = null)
             {
+                string responsibleNode = null;
                 var value = WaitForValue(() =>
                 {
                     using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        var responsibleNode = BackupUtils.GetResponsibleNodeTag(serverStore, databaseName, taskId);
+                        responsibleNode = BackupUtils.GetResponsibleNodeTag(serverStore, databaseName, taskId);
                         return responsibleNode != differentThan;
                     }
                 }, true);
@@ -141,6 +145,7 @@ namespace FastTests
                     Assert.True(index > 0);
                     await _parent.Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(index, new() { serverStore.Server });
                 });
+                return responsibleNode;
             }
 
             /// <summary>
@@ -260,11 +265,11 @@ namespace FastTests
                 return backupTaskId;
             }
 
-            public void WaitForResponsibleNodeUpdateInCluster(DocumentStore store, List<RavenServer> nodes, long backupTaskId)
+            public void WaitForResponsibleNodeUpdateInCluster(DocumentStore store, List<RavenServer> nodes, long backupTaskId, string differentThan = null)
             {
                 foreach (var server in nodes)
                 {
-                    WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, backupTaskId);
+                    WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, backupTaskId, differentThan);
                 }
             }
 

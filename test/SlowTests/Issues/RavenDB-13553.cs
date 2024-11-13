@@ -64,7 +64,7 @@ namespace SlowTests.Issues
                 }
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var status = documentDatabase.PeriodicBackupRunner.GetBackupStatus(config.TaskId);
+                var status = documentDatabase.PeriodicBackupRunner.GetMostUpdatedClusterBackupStatus(config.TaskId);
                 var nextBackupDetails = documentDatabase.PeriodicBackupRunner.GetNextBackupDetails(record.PeriodicBackups.First(), status, out var responsibleNode);
                 
                 Assert.True(nextBackupDetails.IsFull);

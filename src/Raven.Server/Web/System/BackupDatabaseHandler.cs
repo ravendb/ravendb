@@ -6,6 +6,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.System
@@ -40,6 +41,7 @@ namespace Raven.Server.Web.System
         public async Task GetPeriodicBackupStatus()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var fetchLocalStatus = GetBoolValueQueryString("fetchLocalStatus", required: false) ?? false;
 
             if (await CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
                 return;
@@ -48,7 +50,9 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var statusBlittable = ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(name, taskId.Value)))
+            using (var statusBlittable = fetchLocalStatus ? 
+                       BackupUtils.GetLocalBackupStatusBlittable(ServerStore, context, name, taskId.Value) :
+                       BackupUtils.GetBackupStatusFromClusterBlittable(ServerStore, context, name, taskId.Value))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();

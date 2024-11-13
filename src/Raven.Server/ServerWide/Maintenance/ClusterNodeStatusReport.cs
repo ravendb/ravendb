@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Maintenance
@@ -61,6 +63,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
         public Dictionary<string, long> LastSentEtag = new Dictionary<string, long>();
+        public Dictionary<long, PeriodicBackupStatusReport> BackupStatuses = new ();
 
         public long LastCompareExchangeIndex { get; set; }
         public long LastClusterWideTransactionRaftIndex { get; set; }
@@ -111,6 +114,64 @@ namespace Raven.Server.ServerWide.Maintenance
             public long? LastTransactionId; // this is local, so we don't serialize it
         }
 
+        public class PeriodicBackupStatusReport
+        {
+            public long? TaskId { get; set; }
+            public DateTime? LastFullBackupInternal { get; set; }
+            public DateTime? LastIncrementalBackupInternal { get; set; }
+            public LastRaftIndex LastRaftIndex { get; set; }
+            public bool Error { get; set; }
+
+            public static PeriodicBackupStatusReport Deserialize(BlittableJsonReaderObject backupStatus)
+            {
+                var statusReport = new PeriodicBackupStatusReport();
+
+                if (backupStatus == null)
+                    return statusReport;
+
+                if (backupStatus.TryGet(nameof(TaskId), out long? taskId) && taskId != null)
+                {
+                    statusReport.TaskId = taskId.Value;
+                }
+                Debug.Assert(taskId != null);
+
+                if (backupStatus.TryGet(nameof(LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) && lastRaftIndexBlittable != null)
+                {
+                    lastRaftIndexBlittable.TryGet(nameof(LastRaftIndex.LastEtag), out long? lastEtag);
+                    statusReport.LastRaftIndex = new LastRaftIndex() { LastEtag = lastEtag };
+                }
+
+                if (backupStatus.TryGet(nameof(Error), out BlittableJsonReaderObject errorBlittable) && errorBlittable != null)
+                {
+                    statusReport.Error = true;
+                }
+
+                if (backupStatus.TryGet(nameof(LastFullBackupInternal), out DateTime? lastFullBackupInternal))
+                {
+                    statusReport.LastFullBackupInternal = lastFullBackupInternal;
+                }
+
+                if (backupStatus.TryGet(nameof(LastIncrementalBackupInternal), out DateTime? lastIncrementalBackupInternal))
+                {
+                    statusReport.LastIncrementalBackupInternal = lastIncrementalBackupInternal;
+                }
+
+                return statusReport;
+            }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue()
+                {
+                    [nameof(TaskId)] = TaskId,
+                    [nameof(LastFullBackupInternal)] = LastFullBackupInternal,
+                    [nameof(LastIncrementalBackupInternal)] = LastIncrementalBackupInternal,
+                    [nameof(LastRaftIndex)] = LastRaftIndex?.ToJson(),
+                    [nameof(Error)] = Error
+                };
+            }
+        }
+
         public long LastEtag;
         public long LastTombstoneEtag;
         public long NumberOfConflicts;
@@ -159,6 +220,13 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             dynamicJsonValue[nameof(LastIndexStats)] = indexStats;
+
+            var backupStatuses = new DynamicJsonValue();
+            foreach (var status in BackupStatuses)
+            {
+                backupStatuses[status.Key.ToString()] = status.Value?.ToJson();
+            }
+            dynamicJsonValue[nameof(BackupStatuses)] = backupStatuses;
 
             return dynamicJsonValue;
         }

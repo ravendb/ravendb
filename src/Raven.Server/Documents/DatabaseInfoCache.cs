@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Json.Serialization;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -65,6 +68,95 @@ namespace Raven.Server.Documents
                         tx.Commit();
                     }
                 }
+            }
+        }
+
+        public void InsertBackupStatus(PeriodicBackupStatus backupStatus, string databaseName, string dbId, long taskId)
+        {
+            var status = backupStatus.ToJson();
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction(TimeSpan.FromSeconds(5)))
+            {
+                var statusBlittable = context.ReadObject(status, "BackupStatus", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                InsertBackupStatusBlittable(context, statusBlittable, databaseName, dbId, taskId);
+                tx.Commit();
+            }
+        }
+        //TODO stav: create backup storage for backup status with dedicated tree. class will contain both history and statue storage
+        public unsafe void InsertBackupStatusBlittable<T>(TransactionOperationContext<T> context, BlittableJsonReaderObject backupStatus, string databaseName, string dbId, long taskId) 
+            where T : RavenTransaction
+        {
+            var key = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
+            using (var id = context.GetLazyString(key.ToLowerInvariant()))
+            using (backupStatus)
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
+                using (table.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(id.Buffer, id.Size);
+                    tvb.Add(backupStatus.BasePointer, backupStatus.Size);
+
+                    table.Set(tvb);
+                }
+            }
+        }
+
+        public BlittableJsonReaderObject GetBackupStatusBlittable<T>(TransactionOperationContext<T> context, string databaseName, string dbId, long taskId) where T : RavenTransaction
+        {
+            var key = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
+            var table = context.Transaction.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
+
+            TableValueReader infoTvr;
+            using (Slice.From(context.Transaction.InnerTransaction.Allocator, key.ToLowerInvariant(), out Slice databaseNameAsSlice))
+            {
+                if (table.ReadByKey(databaseNameAsSlice, out infoTvr) == false)
+                    return null;
+            }
+
+            unsafe
+            {
+                //it seems like the database was shutdown rudely and never wrote it stats onto the disk
+                if (infoTvr.Pointer == null)
+                    return null;
+            }
+
+            var statusBlittable = Read(context, ref infoTvr);
+            return statusBlittable;
+        }
+
+        public PeriodicBackupStatus GetBackupStatus(string databaseName, string dbId, long taskId, TransactionOperationContext context)
+        {
+            PeriodicBackupStatus periodicBackup = null;
+            using (var backupStatusBlittable = GetBackupStatusBlittable(context, databaseName, dbId, taskId))
+            {
+                if (backupStatusBlittable == null)
+                    return null;
+
+                periodicBackup = JsonDeserializationClient.PeriodicBackupStatus(backupStatusBlittable);
+            }
+            return periodicBackup;
+        }
+
+        public void DeleteBackupStatus(string databaseName, string dbId, long taskId)
+        {
+            var backupKey = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var tx = ctx.OpenWriteTransaction(TimeSpan.FromSeconds(5)))
+            using (Slice.From(ctx.Allocator, backupKey.ToLowerInvariant(), out Slice key))
+            {
+                DeleteInternal(ctx, key);
+                tx.Commit();
+            }
+        }
+
+        public void DeleteBackupStatus(ClusterOperationContext context, string databaseName, string dbId, long taskId)
+        {
+            // this is called from csm, so commiting will be done outside
+            var backupKey = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
+            using (Slice.From(context.Allocator, backupKey.ToLowerInvariant(), out Slice key))
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
+                table.DeleteByKey(key);
             }
         }
 

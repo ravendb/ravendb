@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
@@ -175,19 +176,23 @@ namespace Raven.Server.ServerWide.Maintenance
                     NodeName = _server.NodeTag
                 };
 
-                if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask, out var details) == false)
-                {
-                    DatabaseTopology topology;
-                    using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, dbName))
-                    {
-                        if (rawRecord == null)
-                        {
-                            continue; // Database does not exists in this server
-                        }
+                prevReport.TryGetValue(dbName, out var prevDatabaseReport);
 
-                        topology = rawRecord.Topology;
+                List<long> backupTaskIds = null;
+                DatabaseTopology topology;
+                using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, dbName))
+                {
+                    if (rawRecord == null)
+                    {
+                        continue; // Database does not exists in this server
                     }
 
+                    topology = rawRecord.Topology;
+                    backupTaskIds = rawRecord.PeriodicBackupsTaskIds;
+                }
+
+                if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask, out var details) == false)
+                {
                     if (topology == null)
                     {
                         continue;
@@ -199,10 +204,13 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
 
                     report.Status = DatabaseStatus.Unloaded;
+
+                    FillBackupStatusInfo(ctx, _server, dbName, backupTaskIds, report);
+
                     result[dbName] = report;
                     continue;
                 }
-
+                
                 report.UpTime = SystemTime.UtcNow - details.InCacheSince;
 
                 if (dbTask.IsFaulted)
@@ -234,6 +242,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 var currentHash = dbInstance.GetEnvironmentsHash();
                 report.EnvironmentsHash = currentHash;
 
+                
+                FillBackupStatusInfo(ctx, _server, dbName, backupTaskIds, report);
+
                 var documentsStorage = dbInstance.DocumentsStorage;
                 var indexStorage = dbInstance.IndexStore;
 
@@ -251,7 +262,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     FillReplicationInfo(dbInstance, report);
                     FillClusterInfo(ctx, report, dbInstance, dbName);
 
-                    prevReport.TryGetValue(dbName, out var prevDatabaseReport);
+                    
                     if (SupportedFeatures.Heartbeats.SendChangesOnly &&
                         prevDatabaseReport != null && prevDatabaseReport.EnvironmentsHash == currentHash)
                     {
@@ -364,6 +375,17 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     report.LastSentEtag.Add(node, outgoing._lastSentDocumentEtag);
                 }
+            }
+        }
+
+        private static void FillBackupStatusInfo(TransactionOperationContext context, ServerStore serverStore, string dbName, List<long> backupTaskIds,
+            DatabaseStatusReport report)
+        {
+            foreach (var taskId in backupTaskIds)
+            {
+                var statusBlittable = BackupUtils.GetLocalBackupStatusBlittable(serverStore, context, dbName, taskId);
+                var backupStatusReport = DatabaseStatusReport.PeriodicBackupStatusReport.Deserialize(statusBlittable);
+                report.BackupStatuses[taskId] = backupStatusReport;
             }
         }
 

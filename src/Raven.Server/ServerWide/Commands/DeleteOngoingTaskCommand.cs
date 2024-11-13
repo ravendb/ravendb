@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands
         private long? _backupTaskIdToDelete;
         private string _hubNameToDelete;
 
-        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
+        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, ServerStore serverStore, Logger clusterAuditLog)
         {
             switch (TaskType)
             {
@@ -46,6 +46,9 @@ namespace Raven.Server.ServerWide.Commands
 
                     var backupStatusKey = PeriodicBackupStatus.GenerateItemName(DatabaseName, _backupTaskIdToDelete.Value);
                     Delete(backupStatusKey);
+
+                    // delete locally
+                    serverStore.DatabaseInfoCache.DeleteBackupStatus(ctx, DatabaseName, serverStore._env.Base64Id, TaskId);
 
                     void Delete(string key)
                     {
