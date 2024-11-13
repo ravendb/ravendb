@@ -56,10 +56,6 @@ internal sealed class
                     context.Write(writer, result);
                 }
             }
-            catch (Exception ex)
-            {
-                await WriteErrorResponse(ex.ToString());
-            }
         }
         catch (Exception ex)
         {

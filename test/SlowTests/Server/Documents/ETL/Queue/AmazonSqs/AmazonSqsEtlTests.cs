@@ -102,6 +102,43 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
     }
     
     [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
+    public async Task Simple_script_queue_not_exist_error_expected()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var config = SetupQueueEtlToAmazonSqsOnline(store,
+                @$"loadToUsers(this)", new[] { "users" },
+                new[] { new EtlQueue { Name = $"users" } }, skipAutomaticQueueDeclaration: true);
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User()
+                {
+                    Id = "users/1-A",
+                    Name = GenerateLargeString()
+                });
+                session.Store(new User()
+                {
+                    Id = "users/2-A",
+                    Name = "Test"
+                });
+                session.SaveChanges();
+            }
+            
+            var alert = await AssertWaitForNotNullAsync(() =>
+            {
+                Etl.TryGetLoadError(store.Database, config, out var error);
+
+                return Task.FromResult(error);
+            }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
+
+            Assert.Contains(
+                "QueueDoesNotExist",
+                alert.Error);
+        }
+    }
+    
+    [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
     public void Error_if_script_does_not_contain_any_loadTo_method()
     {
         var config = new QueueEtlConfiguration

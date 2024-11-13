@@ -168,11 +168,14 @@ public static class QueueBrokerConnectionHelper
         }
         else if (connectionSettings.UseEmulator)
         {
-            sqsClient = new AmazonSQSClient(new AmazonSQSConfig
+            var emulatorUrl = Environment.GetEnvironmentVariable("RAVEN_AMAZON_SQS_EMULATOR_URL");
+            if (string.IsNullOrEmpty(emulatorUrl))
             {
-                ServiceURL = Environment.GetEnvironmentVariable("RAVEN_AMAZON_SQS_EMULATOR_URL"), 
-                UseHttp = true,
-            });
+                throw new InvalidOperationException(
+                    "The environment variable 'RAVEN_AMAZON_SQS_EMULATOR_URL' is required when using the Amazon SQS emulator.");
+            }
+
+            sqsClient = new AmazonSQSClient(new AmazonSQSConfig { ServiceURL = emulatorUrl, UseHttp = true, });
         }
 
         return sqsClient;

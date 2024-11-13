@@ -53,7 +53,8 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
         if (azureQueueStorageRequired && AzureQueueStorageHelper.ShouldSkip(out skip))
             return skip;
         
-        // TODO: implement AwsSqsRequired
+        if (amazonSqsRequired && AmazonSqsHelper.ShouldSkip(out skip))
+            return skip;
 
         if (snowflakeRequired && SnowflakeHelper.ShouldSkip(out skip))
             return skip;
