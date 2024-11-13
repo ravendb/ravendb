@@ -4,11 +4,11 @@
     <CentralPackageTransitivePinningEnabled>True</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.Core" Version="3.7.400.41" />
-    <PackageVersion Include="AWSSDK.Glacier" Version="3.7.400.41" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.405.5" />
+    <PackageVersion Include="AWSSDK.Core" Version="3.7.400.49" />
+    <PackageVersion Include="AWSSDK.Glacier" Version="3.7.400.49" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.405.13" />
     <PackageVersion Include="Azure.Identity" Version="1.13.1" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.22.2" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.23.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
     <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.14.0" />
     <PackageVersion Include="CloudNative.CloudEvents" Version="2.8.0" />
@@ -25,7 +25,7 @@
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.InMemory" Version="3.1.2" />
     <PackageVersion Include="Google.Api.Gax.Rest" Version="4.9.0" />
     <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.10.0" />
-    <PackageVersion Include="Hl7.Fhir.R4" Version="5.10.3" />
+    <PackageVersion Include="Hl7.Fhir.R4" Version="5.11.0" />
     <PackageVersion Include="JetBrains.Annotations" Version="2024.3.0" />
     <PackageVersion Include="Jint" Version="3.1.6" />
     <PackageVersion Include="JunitXml.TestLogger" Version="4.1.0" />
@@ -35,15 +35,15 @@
     <PackageVersion Include="Lucene.Net" Version="3.0.60010" />
     <PackageVersion Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60010" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.11" />
     <PackageVersion Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" />
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Bcl.HashCode" Version="1.1.1" />
+    <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.11.0" />
     <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
-    <PackageVersion Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.547301" />
+    <PackageVersion Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.553101" />
     <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.77" />
     <PackageVersion Include="Microsoft.DotNet.xunit.performance" Version="1.0.0-alpha-build0041" />
     <PackageVersion Include="Microsoft.DotNet.xunit.performance.runner.cli" Version="1.0.0-alpha-build0041" />
@@ -58,27 +58,27 @@
     <PackageVersion Include="MongoDB.Driver" Version="2.30.0" />
     <PackageVersion Include="MongoDB.Driver.GridFS" Version="2.30.0" />
     <PackageVersion Include="Mono.Posix.NETStandard" Version="1.0.0" />
-    <PackageVersion Include="MySqlConnector" Version="2.3.7" />
+    <PackageVersion Include="MySqlConnector" Version="2.4.0" />
     <PackageVersion Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
     <PackageVersion Include="NodaTime" Version="3.2.0" />
     <PackageVersion Include="Npgsql" Version="8.0.5" />
-    <PackageVersion Include="NuGet.Commands" Version="6.11.1" />
-    <PackageVersion Include="NuGet.PackageManagement" Version="6.11.1" />
-    <PackageVersion Include="NuGet.ProjectModel" Version="6.11.1" />
-    <PackageVersion Include="NuGet.Protocol" Version="6.11.1" />
-    <PackageVersion Include="NuGet.Resolver" Version="6.11.1" />
-    <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.6.0" />
+    <PackageVersion Include="NuGet.Commands" Version="6.12.1" />
+    <PackageVersion Include="NuGet.PackageManagement" Version="6.12.1" />
+    <PackageVersion Include="NuGet.ProjectModel" Version="6.12.1" />
+    <PackageVersion Include="NuGet.Protocol" Version="6.12.1" />
+    <PackageVersion Include="NuGet.Resolver" Version="6.12.1" />
+    <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.6.1" />
     <PackageVersion Include="Parquet.Net" Version="5.0.1" />
-    <PackageVersion Include="Polly" Version="8.4.2" />
+    <PackageVersion Include="Polly" Version="8.5.0" />
     <PackageVersion Include="Portable.BouncyCastle" Version="1.9.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="6.8.1" />
     <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.11" />
     <PackageVersion Include="Snappier" Version="1.1.6" />
     <PackageVersion Include="SourceLink.Create.CommandLine" Version="2.8.3" />
     <PackageVersion Include="Spatial4n" Version="0.4.1.1" />
-    <PackageVersion Include="System.Buffers" Version="4.5.1" />
+    <PackageVersion Include="System.Buffers" Version="4.6.0" />
     <PackageVersion Include="System.Collections.Immutable" Version="8.0.0" />
     <PackageVersion Include="System.Data.HashFunction.Blake2" Version="2.0.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
@@ -86,12 +86,12 @@
     <PackageVersion Include="System.DirectoryServices.Protocols" Version="8.0.0" />
     <PackageVersion Include="System.Formats.Asn1" Version="8.0.1" />
     <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
-    <PackageVersion Include="System.Memory" Version="4.5.5" />
+    <PackageVersion Include="System.Memory" Version="4.6.0" />
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <PackageVersion Include="System.Reflection.Metadata" Version="8.0.1" />
     <PackageVersion Include="System.Runtime.Caching" Version="8.0.1" />
-    <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+    <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.0" />
     <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
     <PackageVersion Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
@@ -99,14 +99,14 @@
     <PackageVersion Include="System.Text.Encodings.Web" Version="8.0.0" />
     <PackageVersion Include="System.Text.Json" Version="8.0.5" />
     <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
-    <PackageVersion Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+    <PackageVersion Include="System.Threading.Tasks.Extensions" Version="4.6.0" />
     <PackageVersion Include="TypeScripter" Version="0.5.4" />
     <PackageVersion Include="xRetry" Version="1.9.0" />
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.utility" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="XunitLogger" Version="4.0.991" />
-    <PackageVersion Include="YamlDotNet" Version="16.1.3" />
+    <PackageVersion Include="YamlDotNet" Version="16.2.0" />
     <PackageVersion Include="ZstdSharp.Port" Version="0.8.1" />
   </ItemGroup>
 </Project>

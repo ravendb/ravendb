@@ -19,7 +19,7 @@
     <PackageReference Include="System.Net.Http" />
     <PackageReference Include="System.Private.Uri" />
     <PackageReference Include="System.Text.RegularExpressions" />
-    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="3.1.16" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="3.1.17" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
