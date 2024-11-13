@@ -1751,6 +1751,9 @@ namespace Voron.Data.Tables
                 var result = new TableValueHolder();
                 do
                 {
+                    if (it.CurrentKey > key)
+                        continue;
+
                     GetTableValueReader(it, out result.Reader);
                     yield return result;
                 } while (it.MovePrev());
