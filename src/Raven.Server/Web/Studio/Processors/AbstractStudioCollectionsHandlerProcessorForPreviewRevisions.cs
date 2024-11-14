@@ -22,17 +22,23 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
 
     protected string Collection;
 
-    protected RevisionsStorage.RevisionsType Type;
+    protected RevisionsStorage.FilterRevisionsOption Type;
 
     protected AbstractStudioCollectionsHandlerProcessorForPreviewRevisions([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
         ContextPool = RequestHandler.ContextPool;
         Collection = RequestHandler.GetStringQueryString("collection", required: false);
-        var type = RequestHandler.GetStringQueryString("type", required: false) ?? "all";
+        var type = RequestHandler.GetStringQueryString("filterOption", required: false);
+        if (type == null)
+        {
+            Type = RevisionsStorage.FilterRevisionsOption.All;
+            return;
+        }
 
         if (Enum.TryParse(type, true, out Type) == false)
         {
-            throw new ArgumentException($"Invalid value '{type}' provided for 'type'. Please use one of the following options: {string.Join(", ", Enum.GetNames(typeof(RevisionsStorage.RevisionsType)))}.");
+            throw new ArgumentException(
+                $"Invalid value '{type}' provided for 'filterOption'. Please use one of the following options: {string.Join(", ", Enum.GetNames(typeof(RevisionsStorage.FilterRevisionsOption)))}.");
         }
     }
 
