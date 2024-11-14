@@ -18,8 +18,6 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
     private int _pageSize;
     private long _totalResults;
 
-    private const int TotalResultsUnsupported = -1;
-
     public StudioCollectionsHandlerProcessorForPreviewRevisions([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
         _start = RequestHandler.GetStart();
@@ -30,19 +28,19 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
     {
         switch (Type)
         {
-            case RevisionsStorage.FilterRevisionsOption.All:
+            case RevisionsStorage.RevisionType.All:
                 _totalResults = string.IsNullOrEmpty(Collection)
                     ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context)
                     : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocumentsForCollection(context, Collection);
                 break;
 
-            case RevisionsStorage.FilterRevisionsOption.NotDeleted:
+            case RevisionsStorage.RevisionType.Regular:
                 _totalResults = string.IsNullOrEmpty(Collection)
                     ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfNonDeletedRevisions(context)
                     : TotalResultsUnsupported; // Not available for specific collection
                 break;
 
-            case RevisionsStorage.FilterRevisionsOption.Deleted:
+            case RevisionsStorage.RevisionType.Deleted:
                 _totalResults = string.IsNullOrEmpty(Collection)
                     ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context) -
                       RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfNonDeletedRevisions(context)
