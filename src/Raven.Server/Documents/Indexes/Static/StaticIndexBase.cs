@@ -342,6 +342,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public object CreateVector(string fieldName, object value)
         {
+            if (value is DynamicNullObject)
+                return null;
+            
             var currentIndexingField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, false);
             PortableExceptions.ThrowIf<InvalidDataException>(currentIndexingField?.Vector is null,
                 $"Field '{fieldName}' does not exist in this indexing scope. Cannot index as vector.");

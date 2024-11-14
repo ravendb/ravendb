@@ -171,9 +171,9 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Register a field to be vector indexed
         /// </summary>
-        protected void Vector(string field, Func<VectorOptionsFactory, VectorOptions> indexing)
+        protected void Vector(string field, Func<VectorOptionsFactory, VectorOptionsFactory> indexing)
         {
-            VectorIndexesStrings.Add(field, indexing(new VectorOptionsFactory()));
+            VectorIndexesStrings.Add(field, indexing(new VectorOptionsFactory())._vectorOptions);
         }
 
         /// <summary>

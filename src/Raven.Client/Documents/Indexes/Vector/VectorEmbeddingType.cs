@@ -2,9 +2,9 @@
 
 public enum VectorEmbeddingType
 {
-    Binary,
-    Int8,
     Single,
-    Text,
+    Int8,
+    Binary,
+    Text
 }
     

@@ -304,7 +304,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 @long = iConvertible.ToInt64(CultureInfo.InvariantCulture);
                 @double = iConvertible.ToDouble(CultureInfo.InvariantCulture);
 
-                builder.Write(fieldId, path,  iConvertible.ToString(CultureInfo.InvariantCulture), @long, @double);
+                builder.Write(fieldId, path, iConvertible.ToString(CultureInfo.InvariantCulture), @long, @double);
                 break;
             
             case ValueType.Vector:
@@ -313,13 +313,16 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     switch (field.Vector.IndexingStrategy)
                     {
                         case VectorIndexingStrategy.Exact:
-                            builder.WriteVector(fieldId, path, vectorField.GetEmbedding());
+                            var embedding = vectorField.GetEmbedding();
+                            builder.WriteExactVector(fieldId, path, embedding);
                             break;
                         case VectorIndexingStrategy.HNSW:
                             throw new NotImplementedException("HNSW is not yet implemented.");
                         default:
                             throw new InvalidDataException($"Unknown vector indexing strategy: '{field.Vector.IndexingStrategy}'.");
                     }
+                    
+                    _index.IndexFieldsPersistence.SetFieldEmbeddingDimension(field.Name, vectorField.Length, field.Vector.DestinationEmbeddingType);
                 }
                 break;
 

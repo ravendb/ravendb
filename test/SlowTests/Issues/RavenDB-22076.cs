@@ -1,9 +1,13 @@
 using System;
 using System.IO;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
+using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -159,18 +163,212 @@ public class RavenDB_22076 : RavenTestBase
         var int8Embedding = VectorQuantizer.ToInt8(rawEmbedding);
         
         Assert.Equal([13, 19, -127, 64, 32, -64, -111, 0, 
-                      13, 19, -127, 64, 32, -64, -111, 0, 76,
-                      114, 34, -113, 67], int8Embedding);
+                      13, 19, -127, 64, 32, -64, -111, 0, 76], int8Embedding);
 
         var int1Embedding = VectorQuantizer.ToInt1(rawEmbedding);
         
         Assert.Equal([217, 217, 128], int1Embedding);
     }
 
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestEmbeddingDimensionsCheck(Options options)
+    {
+        options.RunInMemory = false;
+        
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                var dto1 = new Dto() { EmbeddingSingles = [0.5f, -1.0f] };
+                var dto2 = new Dto() { EmbeddingSingles = [0.2f, 0.3f] };
+                
+                session.Store(dto1);
+                session.Store(dto2);
+                
+                session.SaveChanges();
+
+                var index = new DummyIndex();
+                
+                index.Execute(store);
+                
+                Indexes.WaitForIndexing(store);
+                
+                var databaseDisableResult = store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
+                
+                Assert.True(databaseDisableResult.Success);
+                Assert.True(databaseDisableResult.Disabled);
+                Assert.Equal(store.Database, databaseDisableResult.Name);
+                
+                var databaseEnableResult = store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
+                
+                Assert.True(databaseEnableResult.Success);
+                Assert.False(databaseEnableResult.Disabled);
+                Assert.Equal(store.Database, databaseEnableResult.Name);
+                
+                var dto3 = new Dto() { EmbeddingSingles = [0.1f, 0.2f] };
+                
+                session.Store(dto3);
+                
+                session.SaveChanges();
+                
+                Indexes.WaitForIndexing(store);
+                
+                var dto4 = new Dto() { EmbeddingSingles = [0.5f, 0.7f, 0.9f] };
+                
+                session.Store(dto4);
+                
+                session.SaveChanges();
+
+                var indexErrors = Indexes.WaitForIndexingErrors(store);
+                
+                Assert.Equal(1, indexErrors.Length);
+                Assert.Contains("Attempted to index embedding with 3 dimensions, but field Singles already contains indexed embedding with 2 dimensions, or was explicitly configured for embeddings with 2 dimensions.", indexErrors[0].Errors[0].Error);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestInt8EmbeddingDimensionsMismatchException(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                var singles1 = new float[] { 0.5f, -1.0f };
+                var singles2 = new float[] { 0.5f, 0.7f };
+                
+                var dto1 = new Dto() { EmbeddingSBytes = VectorQuantizer.ToInt8(singles1) };
+                var dto2 = new Dto() { EmbeddingSBytes = VectorQuantizer.ToInt8(singles2) };
+                
+                session.Store(dto1);
+                session.Store(dto2);
+                
+                session.SaveChanges();
+
+                var index = new DummyIndex();
+                
+                index.Execute(store);
+                
+                Indexes.WaitForIndexing(store);
+
+                var singles3 = new float[] { 0.5f, -1.0f, 0.7f };
+                var dto3 = new Dto() { EmbeddingSBytes = VectorQuantizer.ToInt8(singles3) };
+
+                session.Store(dto3);
+                
+                session.SaveChanges();
+                
+                var indexErrors = Indexes.WaitForIndexingErrors(store);
+                
+                Assert.Equal(1, indexErrors.Length);
+                Assert.Contains("Attempted to index embedding with 3 dimensions, but field Integers already contains indexed embedding with 2 dimensions, or was explicitly configured for embeddings with 2 dimensions.", indexErrors[0].Errors[0].Error);
+            }
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestInt1EmbeddingDimensionsMismatchException(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                var singles1 = new float[] { 0.5f, -1.0f };
+                var singles2 = new float[] { 0.5f, -1.0f, 0.7f };
+                
+                var dto1 = new Dto() { EmbeddingBinary = VectorQuantizer.ToInt1(singles1) };
+                var dto2 = new Dto() { EmbeddingBinary = VectorQuantizer.ToInt1(singles2) };
+                
+                session.Store(dto1);
+                session.Store(dto2);
+                
+                session.SaveChanges();
+
+                var index = new DummyIndex();
+                
+                index.Execute(store);
+                
+                Indexes.WaitForIndexing(store);
+                
+                var singles3 = new float[] { 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f };
+                var dto3 = new Dto() { EmbeddingBinary = VectorQuantizer.ToInt1(singles3) };
+                
+                session.Store(dto3);
+                
+                session.SaveChanges();
+                
+                var indexErrors = Indexes.WaitForIndexingErrors(store);
+
+                Assert.Equal(1, indexErrors.Length);
+                Assert.Contains("Field Binary contains embeddings with different number of dimensions.", indexErrors[0].Errors[0].Error);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensions(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                var singles = new float[] { 0.1f, 0.2f, 0.3f };
+                var dto = new Dto() { EmbeddingSingles = singles };
+                
+                session.Store(dto);
+                
+                session.SaveChanges();
+
+                var index = new IndexWithSetDimensions();
+                
+                index.Execute(store);
+                
+                var indexErrors = Indexes.WaitForIndexingErrors(store);
+                
+                Assert.Equal(1, indexErrors.Length);
+                Assert.Contains("Attempted to index embedding with 3 dimensions, but field Singles already contains indexed embedding with 256 dimensions, or was explicitly configured for embeddings with 256 dimensions.", indexErrors[0].Errors[0].Error);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.None)]
+    public void TestDefaultVectorEmbeddingType()
+    {
+        Assert.Equal(VectorEmbeddingType.Single, default(VectorEmbeddingType));
+    }
+
     private class Dto
     {
-        public string Name { get; set; }
-        
         public string EmbeddingBase64 { get; set; }
+        public float[] EmbeddingSingles { get; set; }
+        public sbyte[] EmbeddingSBytes { get; set; }
+        public byte[] EmbeddingBinary { get; set; }
+    }
+
+    private class DummyIndex : AbstractIndexCreationTask<Dto>
+    {
+        public DummyIndex()
+        {
+            Map = dtos => from dto in dtos
+                select new { Singles = CreateVector(dto.EmbeddingSingles), Integers = CreateVector(dto.EmbeddingSBytes), Binary = CreateVector(dto.EmbeddingBinary) };
+            
+            Vector("Integers", factory => factory.SourceEmbedding(VectorEmbeddingType.Int8));
+            Vector("Binary", factory => factory.SourceEmbedding(VectorEmbeddingType.Binary));
+        }
+    }
+    
+    private class IndexWithSetDimensions : AbstractIndexCreationTask<Dto>
+    {
+        public IndexWithSetDimensions()
+        {
+            Map = dtos => from dto in dtos
+                select new { Singles = CreateVector(dto.EmbeddingSingles) };
+            
+            Vector("Singles", factory => factory.Dimensions(256));
+        }
     }
 }
