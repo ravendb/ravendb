@@ -3,9 +3,11 @@
 import d3 = require("d3");
 import moment = require("moment");
 import { clusterDashboardChart } from "models/resources/clusterDashboard/clusterDashboardChart";
+import Update = d3.selection.Update;
+import Line = d3.svg.Line;
 
 
-interface chartItemData {
+export interface chartItemData {
     x: Date;
     y: number;
 }
@@ -15,7 +17,7 @@ export interface chartData {
     ranges: chartItemRange[];
 }
 
-interface chartItemRange {
+export interface chartItemRange {
     finished: boolean;
     parent: chartData;
     values: chartItemData[];
@@ -46,14 +48,14 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
     private data: chartData[] = [];
     private opts: chartOpts;
     
-    private svg: d3.Selection<void>;
+    protected svg: d3.Selection<void>;
     private pointer: d3.Selection<void>;
     private tooltip: d3.Selection<void>;
     
-    private xScale: d3.time.Scale<number, number>;
+    protected xScale: d3.time.Scale<number, number>;
     
     private readonly containerSelector: string | EventTarget;
-    private highlightDate: Date;
+    protected highlightDate: Date;
     private readonly dataProvider: (payload: TPayload) => number;
     
     constructor(containerSelector: string | EventTarget, dataProvider: (payload: TPayload) => number, opts?: chartOpts) {
@@ -150,7 +152,7 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
     
     highlightTime(date: ClusterWidgetAlignedDate|null) {
         if (date) {
-            const xToHighlight = this.xScale(date);
+            const xToHighlight = Math.round(this.xScale(date));
             if (xToHighlight != null) {
                 if (!this.highlightDate) {
                     this.pointer
@@ -161,8 +163,8 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
                 this.highlightDate = date;
 
                 this.pointer
-                    .attr("x1", xToHighlight + 0.5)
-                    .attr("x2", xToHighlight + 0.5);
+                    .attr("x1", xToHighlight - 0.5)
+                    .attr("x2", xToHighlight - 0.5);
                 
                 return;
             }
@@ -362,16 +364,16 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
         }
     }
     
-    private createLineFunctions(): Map<string, d3.svg.Line<chartItemData>> {
+    private createLineFunctions(): Map<string, { line : d3.svg.Line<chartItemData>; scale: d3.scale.Linear<number, number> }> {
         if (!this.data.length) {
-            return new Map<string, d3.svg.Line<chartItemData>>();
+            return new Map<string, { line : d3.svg.Line<chartItemData>; scale: d3.scale.Linear<number, number> }>();
         }
         
         const timePerPixel = 500;
         const maxTime = this.maxDate;
         const minTime = new Date(maxTime.getTime() - this.width * timePerPixel);
 
-        const result = new Map<string, d3.svg.Line<chartItemData>>();
+        const result = new Map<string, { line : d3.svg.Line<chartItemData>; scale: d3.scale.Linear<number, number> }>();
 
         this.xScale = d3.time.scale()
             .range([0, this.width])
@@ -394,7 +396,7 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
                 .y(x => yScale(x.y));
             
             this.data.forEach(data => {
-                result.set(data.id, lineFunction);
+                result.set(data.id, { line: lineFunction, scale: yScale });
             });
         } else if (this.opts.useSeparateYScales) {
             this.data.forEach(data => {
@@ -405,7 +407,7 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
                     .x(x => this.xScale(x.x))
                     .y(x => yScale(x.y));
                 
-                result.set(data.id, lineFunction);
+                result.set(data.id, { line: lineFunction, scale: yScale });
             });
         } else {
             const yMax = d3.max(this.data.map(data => d3.max(data.ranges.filter(range => range.values.length).map(range => d3.max(range.values.map(values => values.y))))));
@@ -416,7 +418,7 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
                 .y(x => yScale(x.y));
 
             this.data.forEach(data => {
-                result.set(data.id, lineFunction);
+                result.set(data.id, { line: lineFunction, scale: yScale });
             });
         }
      
@@ -440,19 +442,7 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
         
         const lineFunctions = this.createLineFunctions();
         
-        const lines = series.selectAll(".line")
-            .data<chartItemRange>(x => x.ranges);
-
-        lines
-            .exit()
-            .remove();
-
-        lines.enter()
-            .append("path")
-            .attr("class", "line")
-
-        lines
-            .attr("d", d => lineFunctions.get(d.parent.id)(this.applyFill(d)));
+        this.drawLines(lineFunctions, series);
         
         if (this.opts.fillArea) {
             const fills = series.selectAll(".fill")
@@ -467,7 +457,7 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
                 .classed("fill", true);
             
             fills
-                .attr("d", d => lineFunctions.get(d.parent.id)(lineChart.closedPath(this.applyFill(d))));
+                .attr("d", d => lineFunctions.get(d.parent.id).line(lineChart.closedPath(this.applyFill(d))));
         }
 
         if (this.highlightDate) {
@@ -475,7 +465,23 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
         }
     }
     
-    private applyFill(range: chartItemRange) {
+    protected drawLines(lineFunctions: Map<string, { line : d3.svg.Line<chartItemData>; scale: d3.scale.Linear<number, number> }>, series: Update<chartData>) {
+        const lines = series.selectAll(".line")
+            .data<chartItemRange>(x => x.ranges);
+
+        lines
+            .exit()
+            .remove();
+
+        lines.enter()
+            .append("path")
+            .attr("class", "line")
+
+        lines
+            .attr("d", d => lineFunctions.get(d.parent.id).line(this.applyFill(d)));
+    }
+    
+    protected applyFill(range: chartItemRange) {
         const items = range.values;
         if (!this.opts.fillData || range.finished) {
             return items;

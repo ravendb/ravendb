@@ -6,6 +6,7 @@ import { lineChart } from "models/resources/clusterDashboard/lineChart";
 import moment = require("moment");
 import { clusterDashboardChart } from "models/resources/clusterDashboard/clusterDashboardChart";
 import { bubbleChart } from "models/resources/clusterDashboard/bubbleChart";
+import { generationsLineChart } from "models/resources/clusterDashboard/generationsLineChart";
 
 interface gcInfoState {
     showGenerationsDetails: boolean;
@@ -108,11 +109,11 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
         }>
             = [
             {
-                accessor: item => item.LargeObjectHeapSize,
-                key: "gc-info-loh"
-            }, {
                 accessor: item => item.PinnedObjectHeapSize,
                 key: "gc-info-pinned"
+            }, {
+                accessor: item => item.LargeObjectHeapSize,
+                key: "gc-info-loh"
             }, {
                 accessor: item => item.Gen2HeapSize,
                 key: "gc-info-gen2"
@@ -195,20 +196,19 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
             
             generationsSizeChartsContainer.appendChild(div);
             
-            return new lineChart<GcInfoChartData>(div,
+            return new generationsLineChart<GcInfoChartData>(div,
                 x => x.value,
                 {
                     grid: true,
+                    fillData: true,
                     fillArea: true,
-                    topPaddingProvider: () => 2,
+                    topPaddingProvider: () => 14,
                     onMouseMove: date => {
                         if (!this.pinned()) {
                             this.mouseMovedLineChart(date, node);
                         }
                     },
-                    onClick: () => {
-                        this.pinned.toggle();
-                    }
+                    onClick: () => this.pinned.toggle()
                 });
         });
         
@@ -223,9 +223,7 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
                     this.mouseMovedPausesChart(date, yValue);
                 }
             },
-            onClick: () => {
-                this.pinned.toggle();
-            },
+            onClick: () => this.pinned.toggle(),
             extraArgumentsProvider: payload => ({ gcType: payload.gcType }),
         });
         return [...charts, this.pausesChart];
@@ -235,7 +233,7 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
         const closestItem = this.findClosestItem(date, yValue);
         if (closestItem) {
             // here we on purpose ignore closestItem date -> to detect no data, we only care here about node tag
-            this.mouseMovedLineChart(date, closestItem.tag);    
+            this.mouseMovedLineChart(closestItem.date, closestItem.tag);
         } else {
             this.charts.forEach(x => x.highlightTime(null));
             this.showNodesHistory(null, true);
@@ -247,16 +245,32 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
             return null;
         }
         // find the closest date on all tracks and call mouseMovedLineChart
+        // here we do two-dimensional matching 
         const perNodeData = this.nodeStats().map(nodeStats => {
-            const dates = nodeStats.history.map(x => x.date);
-            const alignedDate = this.quantizeDate(date, dates);
+            const mouseCoordinates = this.pausesChart.convertToCoordinates(date, yValue);
+            
+            const points = nodeStats.history.map(x => {
+                const yValue = x.value.memoryInfo.PauseDurationsInMs.reduce((p, c) => p + c, 0);
+                const coordinates = this.pausesChart.convertToCoordinates(x.date, yValue);
+                const distance = Math.sqrt(Math.pow(Math.abs(mouseCoordinates[0] - coordinates[0]), 2) + Math.pow(Math.abs(mouseCoordinates[1] - coordinates[1]), 2));
+                return {
+                    date: x.date,
+                    x: coordinates[0],
+                    y: coordinates[1],
+                    distance
+                }
+            });
+            
+            const sortedPoints = _.sortBy(points, x => x.distance, "asc");
+            const closestPoint = sortedPoints[0];
+                        
+            const alignedDate = (closestPoint && closestPoint.distance < 50) ? closestPoint.date : null;
             return { date: alignedDate, tag: nodeStats.tag, distance: alignedDate ? Math.abs(date.getTime() - alignedDate.getTime()) : Number.MAX_SAFE_INTEGER };
         });
 
         const sortedPerNodeData = _.sortBy(perNodeData, x => x.distance, "asc");
         return sortedPerNodeData[0];
     }
-    
     
     mouseMovedLineChart(date: Date | null, nodeTag: string) {
         const nodeStats = this.nodeStats().find(x => x.tag === nodeTag);

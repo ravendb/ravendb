@@ -389,7 +389,6 @@
                                 margin: 0 @gutter-xs/2;
                                 order: 1;
                                 min-width: 65px;
-                                transition: .2s color;
                             }
 
                             .rect {
@@ -588,7 +587,7 @@
                     stroke-width: 1px;
                 }
 
-                .line {
+                .line, .dashes {
                     fill: none;
                     stroke-width: 2;
                     stroke: var(--node-color);
@@ -601,46 +600,57 @@
                 }
                 
                 &.gc-size-line-chart {
+                    .line {
+                        stroke-width: 4;
+                    }
+                    .serie {
+                        .dashes {
+                            stroke-dasharray: 4 4;
+                            stroke-width: 1;
+                            fill: none;
+                        }
+                    }
+                    
                     .fill {
                         fill-opacity: 0.1;
                     }
                     .gc-info-gen0 {
-                        .line {
+                        .line, .dashes {
                             stroke: @gc-info-gen0;
                         }
-                        .fill {
+                        .fill, .gc-event {
                             fill: @gc-info-gen0;
                         }
                     }
                     .gc-info-gen1 {
-                        .line {
+                        .line, .dashes {
                             stroke: @gc-info-gen1;
                         }
-                        .fill {
+                        .fill, .gc-event {
                             fill: @gc-info-gen1;
                         }
                     }
                     .gc-info-gen2 {
-                        .line {
+                        .line, .dashes {
                             stroke: @gc-info-gen2;    
                         }
-                        .fill {
+                        .fill, .gc-event {
                             fill: @gc-info-gen2;
                         }
                     }
                     .gc-info-pinned {
-                        .line {
+                        .line, .dashes {
                             stroke: @gc-info-pinned;
                         }
-                        .fill {
+                        .fill, .gc-event {
                             fill: @gc-info-pinned;
                         }
                     }
                     .gc-info-loh {
-                        .line {
+                        .line, .dashes {
                             stroke: @gc-info-loh;
                         }
-                        .fill {
+                        .fill, .gc-event {
                             fill: @gc-info-loh;
                         }
                     }
