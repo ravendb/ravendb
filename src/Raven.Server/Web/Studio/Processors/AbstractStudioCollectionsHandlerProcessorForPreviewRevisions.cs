@@ -17,28 +17,29 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
+    protected const int TotalResultsUnsupported = -1;
 
     protected readonly JsonContextPoolBase<TOperationContext> ContextPool;
 
-    protected string Collection;
+    protected readonly string Collection;
 
-    protected RevisionsStorage.FilterRevisionsOption Type;
+    protected readonly RevisionsStorage.RevisionType Type;
 
     protected AbstractStudioCollectionsHandlerProcessorForPreviewRevisions([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
         ContextPool = RequestHandler.ContextPool;
         Collection = RequestHandler.GetStringQueryString("collection", required: false);
-        var type = RequestHandler.GetStringQueryString("filterOption", required: false);
+        var type = RequestHandler.GetStringQueryString("type", required: false);
         if (type == null)
         {
-            Type = RevisionsStorage.FilterRevisionsOption.All;
+            Type = RevisionsStorage.RevisionType.All;
             return;
         }
 
         if (Enum.TryParse(type, true, out Type) == false)
         {
             throw new ArgumentException(
-                $"Invalid value '{type}' provided for 'filterOption'. Please use one of the following options: {string.Join(", ", Enum.GetNames(typeof(RevisionsStorage.FilterRevisionsOption)))}.");
+                $"Invalid value '{type}' provided for 'type'. Please use one of the following options: {string.Join(", ", Enum.GetNames(typeof(RevisionsStorage.RevisionType)))}.");
         }
     }
 

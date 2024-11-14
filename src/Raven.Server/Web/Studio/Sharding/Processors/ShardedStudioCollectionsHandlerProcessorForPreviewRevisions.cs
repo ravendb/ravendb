@@ -130,8 +130,8 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
 
     protected override async ValueTask<long> GetTotalCountAsync()
     {
-        if (Type != RevisionsStorage.FilterRevisionsOption.All && string.IsNullOrEmpty(Collection) == false) // In that case the shards results won't contain 'TotalResults' field
-            return -1;
+        if (Type != RevisionsStorage.RevisionType.All && string.IsNullOrEmpty(Collection) == false) // In that case the shards results won't contain 'TotalResults' field
+            return StudioCollectionsHandlerProcessorForPreviewRevisions.TotalResultsUnsupported;
 
         var result = await RequestHandler.DatabaseContext.Streaming.ReadCombinedLongAsync(_combinedReadState, nameof(PreviewRevisionsResult.TotalResults));
         var total = 0L;
@@ -168,9 +168,9 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
         private readonly ShardedDatabaseRequestHandler _handler;
         private readonly string _collection;
         private readonly ShardedPagingContinuation _continuationToken;
-        private readonly RevisionsStorage.FilterRevisionsOption _type;
+        private readonly RevisionsStorage.RevisionType _type;
 
-        public ShardedRevisionsCollectionPreviewOperation(ShardedDatabaseRequestHandler handler, string collection, RevisionsStorage.FilterRevisionsOption type, string etag, ShardedPagingContinuation continuationToken)
+        public ShardedRevisionsCollectionPreviewOperation(ShardedDatabaseRequestHandler handler, string collection, RevisionsStorage.RevisionType type, string etag, ShardedPagingContinuation continuationToken)
         {
             _handler = handler;
             _collection = collection;
@@ -189,11 +189,11 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
         private sealed class RevisionsPreviewCommand : RavenCommand<StreamResult>
         {
             private readonly string _collection;
-            private readonly RevisionsStorage.FilterRevisionsOption _type;
+            private readonly RevisionsStorage.RevisionType _type;
             private readonly int _start;
             private readonly int _pageSize;
 
-            public RevisionsPreviewCommand(string collection, RevisionsStorage.FilterRevisionsOption type, int start, int pageSize)
+            public RevisionsPreviewCommand(string collection, RevisionsStorage.RevisionType type, int start, int pageSize)
             {
                 _collection = collection;
                 _type = type;
@@ -205,7 +205,7 @@ internal sealed class ShardedStudioCollectionsHandlerProcessorForPreviewRevision
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/studio/revisions/preview?{Web.RequestHandler.StartParameter}={_start}&{Web.RequestHandler.PageSizeParameter}={_pageSize}&filterOption={_type}";
+                url = $"{node.Url}/databases/{node.Database}/studio/revisions/preview?{Web.RequestHandler.StartParameter}={_start}&{Web.RequestHandler.PageSizeParameter}={_pageSize}&type={_type}";
 
                 if (string.IsNullOrEmpty(_collection) == false)
                     url += $"&collection={Uri.EscapeDataString(_collection)}";

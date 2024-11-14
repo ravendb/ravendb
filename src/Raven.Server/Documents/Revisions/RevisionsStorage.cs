@@ -1174,14 +1174,14 @@ namespace Raven.Server.Documents.Revisions
             return conflictCount;
         }
 
-        public enum FilterRevisionsOption
+        public enum RevisionType
         {
             All,
-            NotDeleted,
+            Regular,
             Deleted
         }
 
-        public IEnumerable<Document> GetRevisionsInReverseEtagOrder(DocumentsOperationContext context, FilterRevisionsOption type, int skip, int take)
+        public IEnumerable<Document> GetRevisionsInReverseEtagOrder(DocumentsOperationContext context, RevisionType type, int skip, int take)
         {
             if (take == 0)
                 yield break;
@@ -1189,20 +1189,20 @@ namespace Raven.Server.Documents.Revisions
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
 
 
-            IEnumerable<TableValueHolder> revisions = null;
+            IEnumerable<TableValueHolder> revisions;
 
             using var _ = GetEtagAsSlice(context, 0, out var startSlice);
 
             switch (type)
             {
-                case FilterRevisionsOption.All:
+                case RevisionType.All:
                     revisions = table.SeekBackwardFromLast(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], skip);
                     break;
-                case FilterRevisionsOption.NotDeleted:
-                    revisions = table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], prefix: null, last: startSlice, skip).Select(seekResult => seekResult.Result);
+                case RevisionType.Regular:
+                    revisions = EnumerateSeekResults(table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], prefix: null, last: startSlice, skip));
                     break;
-                case FilterRevisionsOption.Deleted:
-                    revisions = table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], prefix: null, last: Slices.AfterAllKeys, skip).Select(seekResult => seekResult.Result);
+                case RevisionType.Deleted:
+                    revisions = EnumerateSeekResults(table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], prefix: null, last: Slices.AfterAllKeys, skip));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported revision type: {type}");
@@ -1212,7 +1212,7 @@ namespace Raven.Server.Documents.Revisions
 
             foreach (var tvh in enumerator)
             {
-                if (type == FilterRevisionsOption.Deleted)
+                if (type == RevisionType.Deleted)
                 {
                     var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvh.Reader);
                     if (etag == NotDeletedRevisionMarker)
@@ -1223,9 +1223,17 @@ namespace Raven.Server.Documents.Revisions
                 if (--take <= 0)
                     yield break;
             }
+
+            yield break;
+
+            static IEnumerable<TableValueHolder> EnumerateSeekResults(IEnumerable<SeekResult> enumerable)
+            {
+                foreach (var seekResult in enumerable)
+                    yield return seekResult.Result;
+            }
         }
 
-        public IEnumerable<Document> GetRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, FilterRevisionsOption type, string collection, int skip, int take)
+        public IEnumerable<Document> GetRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, RevisionType type, string collection, int skip, int take)
         {
             var collectionName = new CollectionName(collection);
             var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
@@ -1242,13 +1250,13 @@ namespace Raven.Server.Documents.Revisions
 
                 switch (type)
                 {
-                    case FilterRevisionsOption.All:
+                    case RevisionType.All:
                         break;
-                    case FilterRevisionsOption.NotDeleted:
+                    case RevisionType.Regular:
                         if (revision.Flags.Contain(DocumentFlags.DeleteRevision))
                             continue;
                         break;
-                    case FilterRevisionsOption.Deleted:
+                    case RevisionType.Deleted:
                         if (revision.Flags.Contain(DocumentFlags.DeleteRevision) == false)
                             continue;
                         break;
@@ -1302,7 +1310,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private IEnumerable<Document> GetAllRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,
-            long? maxDeletesUponUpdate, 
+            long? maxDeletesUponUpdate,
             Func<Document, bool> shouldSkip,
             DeleteOldRevisionsResult result)
         {
@@ -1425,7 +1433,7 @@ namespace Raven.Server.Documents.Revisions
                 // but we don't want to mess up the order of events so the delete revision etag we use is negative
                 revisionEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
             }
-            
+
             CreateTombstone(context, key, revisionEtag, collectionName, changeVector, lastModifiedTicks, fromReplication);
         }
 
@@ -2053,7 +2061,7 @@ namespace Raven.Server.Documents.Revisions
                 (table, result) => GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate, shouldSkip, result), tombstoneFlags);
         }
 
-        private (bool MoreWork, long Deleted) ForceDeleteAllRevisionsFor(DocumentsOperationContext context, Slice lowerId, Slice prefixSlice, CollectionName collectionName, 
+        private (bool MoreWork, long Deleted) ForceDeleteAllRevisionsFor(DocumentsOperationContext context, Slice lowerId, Slice prefixSlice, CollectionName collectionName,
             Func<Table, DeleteOldRevisionsResult, IEnumerable<Document>> getRevisions, DocumentFlags tombstoneFlags = DocumentFlags.None)
         {
             var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
