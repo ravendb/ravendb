@@ -27,7 +27,6 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
             QueryOperationContext queryContext, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             _mapReduceIndex.HandleTimeSeriesDelete(tombstone, indexContext);
-            base.HandleTimeSeriesDelete(tombstone, collection, writer, queryContext, indexContext, stats);
         }
     }
 }
