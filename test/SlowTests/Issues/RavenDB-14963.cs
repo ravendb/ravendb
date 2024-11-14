@@ -29,8 +29,8 @@ public class RavenDB_14963 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Voron)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { true })]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { false })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { true })]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { false })]
     public async Task TestAllRevisionsView(Options options, bool compression)
     {
         if (compression)
@@ -430,7 +430,7 @@ public class RavenDB_14963 : RavenTestBase
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/studio/revisions/preview?{Web.RequestHandler.StartParameter}={_start}&{Web.RequestHandler.PageSizeParameter}={_pageSize}&type={_type.ToString()}";
+                url = $"{node.Url}/databases/{node.Database}/studio/revisions/preview?{Web.RequestHandler.StartParameter}={_start}&{Web.RequestHandler.PageSizeParameter}={_pageSize}&filterOption={_type.ToString()}";
 
                 if (string.IsNullOrEmpty(_collection) == false)
                     url += $"&collection={Uri.EscapeDataString(_collection)}";

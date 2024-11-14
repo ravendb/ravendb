@@ -18,6 +18,8 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
     private int _pageSize;
     private long _totalResults;
 
+    private const int TotalResultsUnsupported = -1;
+
     public StudioCollectionsHandlerProcessorForPreviewRevisions([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
         _start = RequestHandler.GetStart();
@@ -28,23 +30,23 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
     {
         switch (Type)
         {
-            case RevisionsStorage.RevisionsType.All:
+            case RevisionsStorage.FilterRevisionsOption.All:
                 _totalResults = string.IsNullOrEmpty(Collection)
                     ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context)
                     : RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocumentsForCollection(context, Collection);
                 break;
 
-            case RevisionsStorage.RevisionsType.NotDeleted:
+            case RevisionsStorage.FilterRevisionsOption.NotDeleted:
                 _totalResults = string.IsNullOrEmpty(Collection)
                     ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfNonDeletedRevisions(context)
-                    : -1; // Not available for specific collection
+                    : TotalResultsUnsupported; // Not available for specific collection
                 break;
 
-            case RevisionsStorage.RevisionsType.Deleted:
+            case RevisionsStorage.FilterRevisionsOption.Deleted:
                 _totalResults = string.IsNullOrEmpty(Collection)
                     ? RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context) -
                       RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfNonDeletedRevisions(context)
-                    : -1; // Not available for specific collection
+                    : TotalResultsUnsupported; // Not available for specific collection
                 break;
 
             default:
@@ -62,6 +64,12 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
     protected override Task WriteItemsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer)
     {
         writer.WriteStartArray();
+
+        // '_totalResults' has 3 cases
+        //    0 - no results, so we we'll write an empty array on the writer
+        //    -1 - unknown number of results (TotalResultsUnsupported), we'll write the revisions info on the writer
+        //    else - we have results,  we'll write the revisions info on the writer
+
         if (_totalResults != 0)
         {
             IEnumerable<Document> revisions = string.IsNullOrEmpty(Collection)

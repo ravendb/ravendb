@@ -18,6 +18,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Enumerators;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -1173,14 +1174,14 @@ namespace Raven.Server.Documents.Revisions
             return conflictCount;
         }
 
-        public enum RevisionsType
+        public enum FilterRevisionsOption
         {
             All,
             NotDeleted,
             Deleted
         }
 
-        public IEnumerable<Document> GetRevisionsInReverseEtagOrder(DocumentsOperationContext context, RevisionsType type, int skip, int take)
+        public IEnumerable<Document> GetRevisionsInReverseEtagOrder(DocumentsOperationContext context, FilterRevisionsOption type, int skip, int take)
         {
             if (take == 0)
                 yield break;
@@ -1194,22 +1195,24 @@ namespace Raven.Server.Documents.Revisions
 
             switch (type)
             {
-                case RevisionsType.All:
+                case FilterRevisionsOption.All:
                     revisions = table.SeekBackwardFromLast(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], skip);
                     break;
-                case RevisionsType.NotDeleted:
-                    revisions = table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], null, startSlice, skip).Select(seekResult => seekResult.Result);
+                case FilterRevisionsOption.NotDeleted:
+                    revisions = table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], prefix: null, last: startSlice, skip).Select(seekResult => seekResult.Result);
                     break;
-                case RevisionsType.Deleted:
-                    revisions = table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], null, Slices.AfterAllKeys, skip).Select(seekResult => seekResult.Result);
+                case FilterRevisionsOption.Deleted:
+                    revisions = table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], prefix: null, last: Slices.AfterAllKeys, skip).Select(seekResult => seekResult.Result);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported revision type: {type}");
             }
 
-            foreach (var tvh in revisions)
+            var enumerator = new TransactionForgetAboutTableValueHolderStorageIdEnumerator(revisions.GetEnumerator(), context);
+
+            foreach (var tvh in enumerator)
             {
-                if (type == RevisionsType.Deleted)
+                if (type == FilterRevisionsOption.Deleted)
                 {
                     var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvh.Reader);
                     if (etag == NotDeletedRevisionMarker)
@@ -1222,7 +1225,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public IEnumerable<Document> GetRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, RevisionsType type, string collection, int skip, int take)
+        public IEnumerable<Document> GetRevisionsInReverseEtagOrderForCollection(DocumentsOperationContext context, FilterRevisionsOption type, string collection, int skip, int take)
         {
             var collectionName = new CollectionName(collection);
             var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
@@ -1230,21 +1233,22 @@ namespace Raven.Server.Documents.Revisions
             if (table == null || take == 0)
                 yield break;
 
+            var enumerator = new TransactionForgetAboutTableValueHolderStorageIdEnumerator(table.SeekBackwardFromLast(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], skip).GetEnumerator(), context);
 
-            foreach (var tvh in table.SeekBackwardFromLast(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], skip))
+            foreach (var tvh in enumerator)
             {
                 var tvr = tvh.Reader;
                 var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.ChangeVector);
 
                 switch (type)
                 {
-                    case RevisionsType.All:
+                    case FilterRevisionsOption.All:
                         break;
-                    case RevisionsType.NotDeleted:
+                    case FilterRevisionsOption.NotDeleted:
                         if (revision.Flags.Contain(DocumentFlags.DeleteRevision))
                             continue;
                         break;
-                    case RevisionsType.Deleted:
+                    case FilterRevisionsOption.Deleted:
                         if (revision.Flags.Contain(DocumentFlags.DeleteRevision) == false)
                             continue;
                         break;
