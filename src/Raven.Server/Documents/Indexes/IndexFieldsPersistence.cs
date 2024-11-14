@@ -45,9 +45,10 @@ namespace Raven.Server.Documents.Indexes
                     var dimensionsToWrite = indexField.Vector.DestinationEmbeddingType switch
                     {
                         // In case of VectorEmbeddingType.Single the embedding length is multiplied by 4 (for every float we have 4 bytes), so to match this behavior we 
-                        // have to multiply the length here by 4
-                        VectorEmbeddingType.Single => fieldDimensions.Value * 4,
+                        // have to multiply the length here
+                        VectorEmbeddingType.Single => fieldDimensions.Value * sizeof(float),
                         VectorEmbeddingType.Int8 => fieldDimensions.Value,
+                        // We don't restore original number of binary vector dimensions, so this value is not relevant 
                         VectorEmbeddingType.Binary => fieldDimensions.Value,
                         _ => throw new InvalidDataException($"Unexpected embedding type - {indexField.Vector.DestinationEmbeddingType}.")
                     };
@@ -88,15 +89,16 @@ namespace Raven.Server.Documents.Indexes
                 if (destinationEmbeddingType == VectorEmbeddingType.Binary)
                     throw new InvalidDataException($"Field {fieldName} contains embeddings with different number of dimensions.");
 
-                var (originalStoredDimensions, originalDimensions) = destinationEmbeddingType switch
+                // Because dimensions number we get as a parameter is a length of a vector after the quantization and cast to bytes, we have to restore original 
+                // length for exception message
+                var (originalInputDimensions, originalDimensions) = destinationEmbeddingType switch
                 {
-                    // 4 = sizeof(float) / sizeof(byte)
-                    VectorEmbeddingType.Single => (storedDimensions / 4, dimensions / 4),
+                    VectorEmbeddingType.Single => (storedDimensions / sizeof(float), dimensions / sizeof(float)),
                     VectorEmbeddingType.Int8 => (storedDimensions, dimensions),
                     _ => throw new InvalidDataException($"Unexpected embedding type - {destinationEmbeddingType}.")
                 };
 
-                throw new InvalidDataException($"Attempted to index embedding with {originalDimensions} dimensions, but field {fieldName} already contains indexed embedding with {originalStoredDimensions} dimensions, or was explicitly configured for embeddings with {originalStoredDimensions} dimensions.");
+                throw new InvalidDataException($"Attempted to index embedding with {originalDimensions} dimensions, but field {fieldName} already contains indexed embedding with {originalInputDimensions} dimensions, or was explicitly configured for embeddings with {originalInputDimensions} dimensions.");
             }
             
             _vectorFieldsDimensionsToWrite.Add(fieldName, dimensions);
