@@ -492,9 +492,8 @@ class trafficWatch extends viewModelBase {
                     $(".virtual-grid").on("click", `#show-timings-${id}`, () => {
                         app.showBootstrapDialog(new queryTimingsDialog(item.QueryTimings, item.CustomInfo));
                     });
-
-                    // TODO @mateuszbartosik: add button styling
-                    return `<button id="show-timings-${id}" class="text-info margin-right margin-right-xs" title="Open query timings">
+                    
+                    return `<button id="show-timings-${id}" class="text-primary margin-right margin-right-xs btn-link text-decoration-none hover-filter" title="Open query timings">
                             <i class="icon-stats"></i>
                         </button>`;
                 }

@@ -2347,6 +2347,19 @@ ul.properties {
     height: 100%;
 }
 
+.text-decoration-none {
+    text-decoration: none;
+    &:hover, &:active, &:focus {
+        text-decoration: none;
+    }
+}
+
+.hover-filter {
+    &:hover {
+        filter: var(--hover-filter);
+    }
+}
+
 @import "prism.less";
 @import "ace.less";
 @import "leaflet.less";
