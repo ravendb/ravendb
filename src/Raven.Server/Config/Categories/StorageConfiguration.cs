@@ -61,7 +61,7 @@ namespace Raven.Server.Config.Categories
         public int NumberOfConcurrentSyncsPerPhysicalDrive { get; set; }
 
         [Description("Compress transactions above size (value in KB)")]
-        [DefaultValue(512)]
+        [DefaultValue(32)]
         [SizeUnit(SizeUnit.Kilobytes)]
         [ConfigurationEntry("Storage.CompressTxAboveSizeInKb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size CompressTxAboveSize { get; set; }

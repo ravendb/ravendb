@@ -2087,8 +2087,6 @@ FinishJournalRecovery:
                 pagesCountIncludingAllOverflowPages += page.NumberOfPages;
             }
 
-            var performCompression = pagesCountIncludingAllOverflowPages > _env.Options.CompressTxAboveSizeInBytes / Constants.Storage.PageSize;
-
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
             var overhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
             var overheadInPages = checked((int)(overhead / Constants.Storage.PageSize + (overhead % Constants.Storage.PageSize == 0 ? 0 : 1)));
@@ -2144,7 +2142,7 @@ FinishJournalRecovery:
                 *(long*)write = pageHeader->PageNumber;
                 write += sizeof(long);
 
-                if (_env.Options.Encryption.IsEnabled == false && performCompression)
+                if (_env.Options.Encryption.IsEnabled == false)
                 {
                     _diffPage.Output = write;
 
@@ -2190,6 +2188,12 @@ FinishJournalRecovery:
 
             long compressedLen = 0;
 
+            // We want to do compression when the size of the data to store is bigger than the threshold.
+            // This is essentially a threshold between IO blocks usage and the CPU consumption of LZ4
+            // PERF: Before v7.0 we would avoid doing the diff if the amount of pages was big, however,
+            // the speed of diffing is roughly that of a memory copy, which is so fast that the benefit of always doing
+            // it is big enough to just do it every time. 
+            var performCompression = totalSizeWritten > _env.Options.CompressTxAboveSizeInBytes;
             if (performCompression)
             {
                 var outputBufferSize = LZ4.MaximumOutputLength(totalSizeWritten);
