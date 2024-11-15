@@ -34,9 +34,47 @@ namespace Voron.Data.BTrees
     {
         public bool IsMultiValueTree { get; set; }
 
+        public bool MultiExists(Slice key, Slice value)
+        {
+            if (value.HasValue == false)
+                throw new ArgumentNullException(nameof(value));
+
+            var page = FindPageFor(key, out var node);
+            if (page == null || page.LastMatch != 0)
+                return false;
+
+            var item = page.GetNode(page.LastSearchPosition);
+            if (item->Flags == TreeNodeFlags.MultiValuePageRef)
+            {
+                var existingTree = OpenMultiValueTree(key, item);
+                return existingTree.Exists(value);
+            }
+
+            if (item->Flags == TreeNodeFlags.PageRef)
+                throw new InvalidOperationException("Multi trees don't use overflows");
+
+            var nestedPagePtr = DirectAccessFromHeader(item);
+
+            var nestedPage = new TreePage(nestedPagePtr, (ushort)GetDataSize(item));
+            var existingItem = nestedPage.Search(_llt, value);
+            if (nestedPage.LastMatch != 0)
+            {
+                // not an actual match, just greater than
+                return false;
+            }
+
+            using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, existingItem, out Slice tmpValue))
+            {
+                if (SliceComparer.Equals(tmpValue, value))
+                    return true;
+            }
+
+            return false;
+        }
+
         public void MultiAdd(Slice key, Slice value)
         {
-            if (!value.HasValue)
+            if (value.HasValue == false)
                 throw new ArgumentNullException(nameof(value));
 
             int maxNodeSize = Llt.DataPager.NodeMaxSize;

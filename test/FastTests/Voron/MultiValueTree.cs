@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data;
 using Xunit;
@@ -353,6 +354,42 @@ namespace FastTests.Voron
             }
 
             ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, "foo");
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(16)]
+        [InlineData(2048)]
+        public void MultiExists(int inputCount)
+        {
+            const int INPUT_DATA_SIZE = 32;
+            const string CHILDTREE_KEY = "ChildTree";
+
+            var inputData = new List<string>();
+            for (int i = 0; i < inputCount; i++)
+            {
+                inputData.Add(RandomString(INPUT_DATA_SIZE));
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("foo");
+
+                for (int i = 0; i < inputCount; i++)
+                {
+                    tree.MultiAdd(CHILDTREE_KEY, inputData[i]);
+                }
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.CreateTree("foo");
+
+                for (int i = 0; i < inputCount; i++)
+                {
+                    Assert.True(tree.MultiExists(CHILDTREE_KEY, inputData[i]));
+                }
+            }
         }
 
         private void ValidateInputExistence(List<string> inputData, string childtreeKey, int inputDataSize, string treeName)

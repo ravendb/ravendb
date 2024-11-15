@@ -706,8 +706,11 @@ namespace Raven.Server.Documents.Indexes
                     var key = keys.Key;
                     foreach (var referenceKey in keys.Value)
                     {
-                        collectionTree.MultiAdd(referenceKey, key);
-                        referencesTree.MultiAdd(key, referenceKey);
+                        if (collectionTree.MultiExists(referenceKey, key) == false)
+                            collectionTree.MultiAdd(referenceKey, key);
+
+                        if (referencesTree.MultiExists(key, referenceKey) == false)
+                            referencesTree.MultiAdd(key, referenceKey);
                     }
 
                     RemoveReferences(key, collection, keys.Value, tx);

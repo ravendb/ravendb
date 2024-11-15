@@ -108,6 +108,18 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
+        public bool MultiExists(string key, string value)
+        {
+            Slice keySlice;
+            Slice valueSlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
+            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out valueSlice))
+            {
+                return MultiExists(keySlice, valueSlice);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiAdd(string key, string value)
         {
             Slice keySlice;
