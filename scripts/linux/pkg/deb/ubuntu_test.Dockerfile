@@ -15,7 +15,8 @@ ENV _DEB_DEBUG=true
 
 ENV RAVEN_ServerUrl=http://127.0.0.1:8080
 ENV RAVEN_DataDir="/var/lib/ravendb/data"
-ENV RAVEN_Indexing_NugetPackagesPath="/var/lib/ravendb/nuget"
+ENV RAVEN_Indexing_NugetPackagesPath='/var/lib/ravendb/packages/nuget/indexing'
+ENV RAVEN_Logs_NuGetPackagesPath='/var/lib/ravendb/packages/nuget/logging'
 ENV RAVEN_Logs_Path="/var/log/ravendb/logs"
 ENV RAVEN_Security_AuditLog_FolderPath="/var/log/ravendb/audit"
 ENV RAVEN_Security_MasterKey_Path="/etc/ravendb/security/master.key"
