@@ -24,30 +24,6 @@ type trafficChangeType =
     Raven.Client.Documents.Changes.TrafficWatchChangeType
     | Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.OperationTypes;
 
-
-class showTimingsFeature implements columnPreviewFeature {
-    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => Raven.Client.Documents.Changes.TrafficWatchHttpChange) {
-        $tooltip.on("click", ".show-timings", () => {
-            const item = elementProvider();
-            
-            app.showBootstrapDialog(new queryTimingsDialog(item.QueryTimings, item.CustomInfo));
-        });
-    }
-    
-    syntax(column: virtualColumn, escapedValue: any, element: Raven.Client.Documents.Changes.TrafficWatchChangeBase) {
-        console.log(column, escapedValue, element);
-        if (column.header !== "Duration" || escapedValue === generalUtils.escapeHtml("n/a")) {
-            return "";
-        }
-
-        if (!trafficWatch.isHttpItem(element) || !element.QueryTimings) {
-            return "";
-        }
-
-        return `<button class="btn btn-default btn-sm show-timings"><i class="icon-stats"></i><span>Show timings</span></button>`;
-    }
-}
-
 class runQueryFeature implements columnPreviewFeature {
 
     private queryList: string[] = [];
@@ -501,13 +477,34 @@ class trafficWatch extends viewModelBase {
         };
         
         const durationProvider = (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase) => {
-            if (trafficWatch.isHttpItem(item)) { 
-                const timingsPart = item.QueryTimings ? `<span class="icon-stats text-info margin-right margin-right-xs"></span>` : ""; 
-                return item.ElapsedMilliseconds.toLocaleString() + " " + timingsPart;
+            if (trafficWatch.isHttpItem(item)) {
+                return item.ElapsedMilliseconds.toLocaleString();
             } else {
                 return "n/a";
             }
         }
+
+        const timingsProvider = (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase) => {
+            if (trafficWatch.isHttpItem(item)) {
+                if (item.QueryTimings) {
+                    const id = _.uniqueId();
+
+                    $(".virtual-grid").on("click", `#show-timings-${id}`, () => {
+                        app.showBootstrapDialog(new queryTimingsDialog(item.QueryTimings, item.CustomInfo));
+                    });
+
+                    // TODO @mateuszbartosik: add button styling
+                    return `<button id="show-timings-${id}" class="text-info margin-right margin-right-xs" title="Open query timings">
+                            <i class="icon-stats"></i>
+                        </button>`;
+                }
+
+                return "";
+            }
+
+            return "n/a";
+        }
+        
         
         const grid = this.gridController();
         grid.headerVisible(true);
@@ -527,7 +524,7 @@ class trafficWatch extends viewModelBase {
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, 
                     x => trafficWatch.isHttpItem(x) ? x.ResponseStatusCode : "n/a",
-                    "HTTP Status", "8%", {
+                    "HTTP Status", "4%", {
                         extraClass: rowHighlightRules,
                         sortable: "number"
                 }),
@@ -583,12 +580,18 @@ class trafficWatch extends viewModelBase {
                     "Details", "20%", {
                         extraClass: rowHighlightRules,
                         sortable: "string"
-                })
+                    }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => trafficWatch.isHttpItem(x) ? x.QueryTimings : null,
+                    "<i class='icon-play' title='Query timings'></i>", "4%", {
+                        extraClass: rowHighlightRules,
+                        transformValue: (_, item) => timingsProvider(item),
+                        useRawValue: () => true,
+                    })
             ]
         );
 
         const runQuery = new runQueryFeature();
-        const showTimings = new showTimingsFeature();
         
         this.columnPreview.install("virtual-grid", ".js-traffic-watch-tooltip",
             (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, column: textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>,
@@ -605,7 +608,7 @@ class trafficWatch extends viewModelBase {
                     onValue(this.formatSource(item, true), this.formatSource(item, false), false);
                 }
             }, {
-                additionalFeatures: [runQuery, showTimings]
+                additionalFeatures: [runQuery]
             });
 
         $(".traffic-watch .viewport").on("scroll", () => {
