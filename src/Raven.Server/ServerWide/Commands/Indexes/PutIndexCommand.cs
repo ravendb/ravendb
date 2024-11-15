@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Extensions;
@@ -99,7 +100,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
                 if (_indexNames.Add(definition.Name) == false)
                 {
-                    throw new RachisApplyException($"Can not add index: {definition.Name} because an index with the same name but different casing already exist");
+                    throw new IndexCreationException($"Can not add index: {definition.Name} because an index with the same name but different casing already exist");
                 }
 
                 var safeFileSystemIndexName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(definition.Name);
@@ -109,7 +110,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                         x.Equals(definition.Name, StringComparison.OrdinalIgnoreCase) == false &&
                         safeFileSystemIndexName.Equals(IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(x), StringComparison.OrdinalIgnoreCase));
 
-                    throw new RachisApplyException(
+                    throw new IndexCreationException(
                         $"Could not create index '{definition.Name}' because it would result in directory name collision with '{existingIndexName}' index");
                 }
             }
