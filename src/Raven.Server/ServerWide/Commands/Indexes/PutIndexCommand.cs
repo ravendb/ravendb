@@ -47,11 +47,10 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             try
             {
                 record.AddIndex(Definition, Source, CreatedAt, etag, RevisionsToKeep, DefaultDeploymentMode ?? IndexDeploymentMode.Parallel);
-
             }
             catch (Exception e)
             {
-                throw new RachisApplyException("Failed to update index", e);
+                throw new RachisApplyException($"Failed to update index '{Definition.Name}'", e);
             }
         }
 
