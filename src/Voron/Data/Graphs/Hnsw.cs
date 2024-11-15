@@ -250,21 +250,7 @@ public unsafe partial class Hnsw
                 return _vectorSpan.ToSpan();
 
             _vectorSpan = NodeReader.ReadVector(VectorId, in state);
-
-            if((VectorId & 1) == 0)
-            {
-                var item = Container.Get(state.Llt, VectorId);
-                _vectorSpan = new UnmanagedSpan(item.Address, item.Length);
-                Debug.Assert(state.Options.VectorSizeBytes == _vectorSpan.Length, "state.Options.VectorSizeBytes == _vectorSpan.Length");
-                return _vectorSpan.ToSpan();
-            }
-            var count = (byte)(VectorId >> 1);
-            var containerId = VectorId & ~0xFFF;
-            var container = Container.Get(state.Llt, containerId);
-            var offset = count * state.Options.VectorSizeBytes + 1; // +1 to skip the count
-            Debug.Assert(offset > 0 && offset + state.Options.VectorSizeBytes <= container.Length, "offset > 0 && offset + state.Options.VectorSizeBytes <= container.Length");
-            _vectorSpan = new UnmanagedSpan(container.Address + offset, state.Options.VectorSizeBytes);
-            return _vectorSpan.ToSpan();
+            return _vectorSpan;
         }
     }
 
@@ -274,7 +260,7 @@ public unsafe partial class Hnsw
         Create(llt, slice, vectorSizeBytes, numberOfEdges, numberOfCandidates);
 
     }
-    public static void Create(LowLevelTransaction llt, Slice name, int vectorSizeBytes, int numberOfEdges, int numberOfCandidates)
+    private static void Create(LowLevelTransaction llt, Slice name, int vectorSizeBytes, int numberOfEdges, int numberOfCandidates)
     {
         var tree = llt.Transaction.CreateTree(name);
         if (tree.ReadHeader().NumberOfEntries is not 0)
@@ -533,6 +519,7 @@ public unsafe partial class Hnsw
 
                 if (match)
                 {
+                    Debug.Assert(candidates.HasCapacityFor(1), "candidates.HasCapacityFor(1)");
                     candidates.AddUnsafe(cur);
                 }
             }
@@ -543,7 +530,7 @@ public unsafe partial class Hnsw
         [Flags]
         public enum NearestEdgesFlags
         {
-            None =0,
+            None = 0,
             StartingPointAsEdge = 1 << 1,
             FilterNodesWithEmptyPostingLists = 1 << 2
         }
@@ -690,8 +677,8 @@ public unsafe partial class Hnsw
         private SearchState _searchState;
         public Random Random = Random.Shared;
         private readonly CompactTree _vectorsByHash;
-        private int _vectorBatchSizeInPages;
-        private long _globalVectorsContainerId;
+        private readonly int _vectorBatchSizeInPages;
+        private readonly long _globalVectorsContainerId;
         
         public Registration(LowLevelTransaction llt, Slice name)
         {
@@ -704,7 +691,7 @@ public unsafe partial class Hnsw
 
         public void Remove(long entryId, Span<byte> vector)
         {
-            PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>((entryId & 0b11) != 0, "Entry ids must have the first two bits cleared, we are using those");
+            PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>((entryId & Constants.Graphs.VectorId.EnsureIsSingleMask) != 0, "Entry ids must have the first two bits cleared, we are using those");
             PortableExceptions.ThrowIf<ArgumentOutOfRangeException>(
                 vector.Length != _searchState.Options.VectorSizeBytes,
                 $"Vector size {vector.Length} does not match expected size: {_searchState.Options.VectorSizeBytes}");
@@ -733,9 +720,14 @@ public unsafe partial class Hnsw
             postingList = (nodeIndex, NativeList<long>.Create(_searchState.Llt.Allocator, entryId  | 1));
         }
 
+        /// <summary>
+        /// Write vector to the graph
+        /// </summary>
+        /// <param name="entryId">Document (source) id</param>
+        /// <param name="vector">Vector data</param>
         public void Register(long entryId, Span<byte> vector)
         {
-            PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>((entryId & 0b11) != 0, "Entry ids must have the first two bits cleared, we are using those");
+            PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>((entryId & Constants.Graphs.VectorId.EnsureIsSingleMask) != 0, "Entry ids must have the first two bits cleared, we are using those");
             PortableExceptions.ThrowIf<ArgumentOutOfRangeException>(
                 vector.Length != _searchState.Options.VectorSizeBytes,
                 $"Vector size {vector.Length} does not match expected size: {_searchState.Options.VectorSizeBytes}");
@@ -770,9 +762,10 @@ public unsafe partial class Hnsw
             int nodeIdx = _searchState.RegisterVectorNode(newNodeId, vectorId);
             _nodesByVectorId.Add(vectorId, newNodeId);
             
-            postingList = (nodeIdx, NativeList<long>.Create(_searchState.Llt.Allocator, entryId));
+            postingList = (nodeIdx, ToPostingListTuple(entryId));
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         NativeList<long> ToPostingListTuple(long entryId)
         {
             var list = new NativeList<long>();
@@ -802,7 +795,7 @@ public unsafe partial class Hnsw
                 _searchState.Options.VectorBatchIndex = 1;
                 vector.CopyTo(vectorStorage);
                 //container id | index    | marker  
-                return batchId | (0 << 1) | 1;
+                return GetVectorId(batchId, 0);
             }
             var span = Container.GetMutable(_searchState.Llt, _searchState.Options.LastUsedContainerId);
             Debug.Assert(_searchState.Options.VectorBatchIndex < 32, "count < 32");
@@ -811,8 +804,7 @@ public unsafe partial class Hnsw
             var offset = 1 + count * vector.Length;
             vector.CopyTo(span[offset..]);
             offset += vector.Length;
-            //       container id                             | index              | marker
-            var id = _searchState.Options.LastUsedContainerId | (uint)(count << 1) | 1;
+            var id = GetVectorId(_searchState.Options.LastUsedContainerId, count);
             if (offset + vector.Length > span.Length)
             {
                 // no more room for the _next_ vector
@@ -820,6 +812,13 @@ public unsafe partial class Hnsw
                 _searchState.Options.VectorBatchIndex = 0;
             }
             return id;
+
+            long GetVectorId(long containerId, int index)
+            {
+                Debug.Assert((containerId & Constants.Graphs.VectorId.EnsureIsSingleMask) == 0, $"Container id {containerId}");
+                //container id | index    | marker
+                return containerId | (uint)(index << 1) | 1;
+            }
         }
 
         private ByteString ComputeHashFor(Span<byte> vector)
@@ -880,31 +879,23 @@ public unsafe partial class Hnsw
 
             long MergePostingList(long postingList, NativeList<long> modifications)
             {
-                // here we have 5 options:
-                // - value does not exist - so it would be 0
-                // or - by the first two bits
-                // - 0b00 - tombstone
-                // - 0b01 - direct value
-                // - 0b10 - small posting list
-                // - 0b11 - large posting list
-                
                 listBuffer.Clear();
                 listBuffer.AddRange(modifications.ToSpan());
                 int currentSize = 0;
                 bool hasSmallPostingList = false;
-                long rawPostingListId = postingList & ~0b11;
-                switch (postingList & 0b11)
+                long rawPostingListId = postingList & Constants.Graphs.VectorId.ContainerType;
+                switch (postingList & Constants.Graphs.VectorId.EnsureIsSingleMask)
                 {
-                    case 0b00: // nothing there
+                    case Constants.Graphs.VectorId.Tombstone: // nothing there
                         break;
-                    case 0b01: // single value, just add it
+                    case Constants.Graphs.VectorId.Single: // single value, just add it
                         listBuffer.Add(rawPostingListId);
                         break;
-                    case 0b10:
+                    case Constants.Graphs.VectorId.SmallPostingList:
                         hasSmallPostingList = true;
                         _searchState.ReadPostingList(rawPostingListId, ref listBuffer, ref pforDecoder, out currentSize);
                         break;
-                    case 0b11:
+                    case Constants.Graphs.VectorId.PostingList:
                         return UpdatePostingList(rawPostingListId, in modifications, pforEncoder, ref pforDecoder, ref listBuffer);
                 }
                 
@@ -919,8 +910,8 @@ public unsafe partial class Hnsw
                     if (listBuffer.Count is 0) 
                         return 0;
                     
-                    Debug.Assert((listBuffer[0] & 0b11) == 0, "(listBuffer[0] & 0b11) == 0");
-                    return listBuffer[0] | 0b01;
+                    Debug.Assert((listBuffer[0] & Constants.Graphs.VectorId.PostingList) == 0, "(listBuffer[0] & 0b11) == 0");
+                    return listBuffer[0] | Constants.Graphs.VectorId.Single;
                 }
 
                 int size = pforEncoder.Encode(listBuffer.RawItems, listBuffer.Count);
@@ -948,8 +939,8 @@ public unsafe partial class Hnsw
                 Span<byte> span = byteBuffer.ToSpan();
                 span.CopyTo(mutable);
 
-                Debug.Assert((rawPostingListId & 0b11) == 0, "(rawPostingListId & 0b11) == 0");
-                return rawPostingListId | 0b10;
+                Debug.Assert((rawPostingListId & Constants.Graphs.VectorId.PostingList) == 0, "(rawPostingListId & 0b11) == 0");
+                return rawPostingListId | Constants.Graphs.VectorId.SmallPostingList;
                 
                 
                 void DeleteOldSmallPostingListIfNeeded()
@@ -994,7 +985,7 @@ public unsafe partial class Hnsw
                 return 0;
             }
 
-            return postingListId | 0b11;
+            return postingListId | Constants.Graphs.VectorId.PostingList;
         }
 
         private long CreateNewPostingList(FastPForEncoder pforEncoder)
@@ -1005,7 +996,7 @@ public unsafe partial class Hnsw
             
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
             PostingList.Create(_searchState.Llt, ref postingListState, pforEncoder);
-            return setId | 0b11;
+            return setId | Constants.Graphs.VectorId.PostingList;
         }
 
 
@@ -1017,7 +1008,7 @@ public unsafe partial class Hnsw
                 var existing = Container.GetMutable(_searchState.Llt, locationId);
                 if (existing.Length == encoded.Length)
                 {
-                    encoded.CopyTo(encoded);
+                    encoded.CopyTo(existing);
                     return;
                 }
 
@@ -1248,23 +1239,23 @@ public unsafe partial class Hnsw
 
                 var nodeIdx = indexes[index];
                 ref var node = ref searchState.GetNodeByIndex(nodeIdx);
-                var rawPostingListId = node.PostingListId & ~0b11;
+                var rawPostingListId = node.PostingListId & Constants.Graphs.VectorId.ContainerType;
                 distance = searchState.Distance(_vector, -1, nodeIdx);
-                switch (node.PostingListId & 0b11)
+                switch (node.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask)
                 {
-                    case 0b00: // empty
+                    case Constants.Graphs.VectorId.Tombstone: // empty
                         _currentNode++;
                         continue;
-                    case 0b01: // single item posting list
+                    case Constants.Graphs.VectorId.Single: // single item posting list
                         distances[index] = distance;
                         matches[index++] = rawPostingListId;
                         _currentNode++;
                         continue;
-                    case 0b10: // small posting list
+                    case Constants.Graphs.VectorId.SmallPostingList: // small posting list
                         Debug.Assert(_postingListResults.Count is 0 && _currentMatchesIndex is 0);
                         searchState.ReadPostingList(rawPostingListId, ref _postingListResults, ref _pforDecoder, out _);
                         continue;
-                    case 0b11: // large posting list
+                    case Constants.Graphs.VectorId.PostingList: // large posting list
                         var setStateSpan = Container.GetReadOnly(searchState.Llt, rawPostingListId);
                         ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
                         _postingList = new PostingList(searchState.Llt, Slices.Empty, setState);
