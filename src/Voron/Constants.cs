@@ -66,6 +66,25 @@ namespace Voron.Global
             public const int MaximumKeySize = 1024;
         }
 
+        public static class Graphs
+        {
+            public static class VectorId
+            {
+                // or - by the first two bits
+                // - 0b00 - tombstone
+                // - 0b01 - direct value
+                // - 0b10 - small posting list
+                // - 0b11 - large posting list
+                public const long EnsureIsSingleMask = 0b11;
+                public const long ContainerType = ~0b11;
+
+                public const long Tombstone = 0b00;
+                public const long Single = 0b01;
+                public const long SmallPostingList = 0b10;
+                public const long PostingList = 0b11;
+            }
+        }
+        
         public static class Tree
         {
             public const int PageHeaderSize = TreePageHeader.SizeOf;
