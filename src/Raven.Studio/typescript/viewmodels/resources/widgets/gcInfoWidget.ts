@@ -10,7 +10,6 @@ import { generationsLineChart } from "models/resources/clusterDashboard/generati
 
 interface gcInfoState {
     showGenerationsDetails: boolean;
-    showPausesDetails: boolean;
 }
 
 class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
@@ -24,7 +23,6 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
     view = require("views/resources/widgets/gcInfoWidget.html");
 
     showGenerationsDetails = ko.observable<boolean>(false);
-    showPausesDetails = ko.observable<boolean>(false);
     
     generationsSizeCharts: lineChart<GcInfoChartData>[] = [];
     pausesChart: bubbleChart<GcInfoChartData>;
@@ -168,13 +166,22 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
     getState(): gcInfoState {
         return {
             showGenerationsDetails: this.showGenerationsDetails(),
-            showPausesDetails: this.showPausesDetails(),
         }
     }
 
     restoreState(state: gcInfoState) {
         this.showGenerationsDetails(state.showGenerationsDetails);
-        this.showPausesDetails(state.showPausesDetails);
+    }
+
+    createGcPauseWarning(level: "danger" | "warning" | null) {
+        switch (level) {
+            case "warning":
+                return "This range may be acceptable depending on the type of application. For a web application, this might indicate some latency but could still be manageable.";
+            case "danger":
+                return "GC pauses above 10% typically indicates performance problems. Users might experience noticeable delays, especially if GC pauses are lengthy or frequent.";
+            default:
+                return null;
+        }
     }
 
     protected canAppendToChart(chart: clusterDashboardChart<GcInfoChartData>, nodeTag: string, item: GcInfoChartData): boolean {
@@ -202,7 +209,7 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
                     grid: true,
                     fillData: true,
                     fillArea: true,
-                    topPaddingProvider: () => 14,
+                    topPaddingProvider: () => 10,
                     onMouseMove: date => {
                         if (!this.pinned()) {
                             this.mouseMovedLineChart(date, node);
@@ -293,12 +300,6 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
     toggleGenerationsDetails() {
         this.showGenerationsDetails.toggle();
 
-        this.controller.layout(true, "shift");
-    }
-    
-    togglePausesDetails() {
-        this.showPausesDetails.toggle();
-        
         this.controller.layout(true, "shift");
     }
 }

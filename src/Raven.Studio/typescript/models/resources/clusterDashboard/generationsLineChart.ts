@@ -76,6 +76,15 @@ export class generationsLineChart<TPayload extends { Date: string }> extends lin
             .attr("cx", x => this.xScale(x.date))
             .attr("cy", x => lineFunctions.get(x.parentId).scale(x.y));
     }
+
+    recordNoData() {
+        this.data.forEach(dataEntry => {
+            if (dataEntry.ranges.length) {
+                const lastRange = dataEntry.ranges[dataEntry.ranges.length - 1];
+                lastRange.finished = true;
+            }
+        })
+    }
     
     highlightTime(date: ClusterWidgetAlignedDate | null) {
 

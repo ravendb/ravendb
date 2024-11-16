@@ -18,7 +18,8 @@ class gcInfo extends historyAwareNodeStats<GcInfoNormalizedData> {
     concurrent = this.conditionalDataExtractor(x => x.memoryInfo.Concurrent);
     compacted = this.conditionalDataExtractor(x => x.memoryInfo.Compacted);
     generation = this.conditionalDataExtractor(x => x.memoryInfo.Generation.toString()); 
-    memoryFormatted = this.conditionalDataExtractor(x => genUtils.formatBytesToSize(x.memoryInfo.TotalHeapSizeAfterBytes));
+    memoryFormatted = this.conditionalDataExtractor(
+        x => genUtils.formatBytesToSize(x.memoryInfo.TotalHeapSizeAfterBytes), { customNoData: "No data" });
     
     fragmentationInfo = ko.pureComputed(() => {
         const noData = this.noDataText();
@@ -87,18 +88,22 @@ class gcInfo extends historyAwareNodeStats<GcInfoNormalizedData> {
     lohFragmentationFormatted = this.fragmentationProvider(x => x.LargeObjectHeapSize);
     pinnedFragmentationFormatted = this.fragmentationProvider(x =>  x.PinnedObjectHeapSize);
     
-    pause1 = this.conditionalDataExtractor(x => {
-        const num = x.memoryInfo.PauseDurationsInMs[0];
-        return Math.round(num) + " ms";
-    });
+    pauseTotal = this.conditionalDataExtractor(x => {
+        const pauses = x.memoryInfo.PauseDurationsInMs;
+        const num = pauses.reduce((p, c) => p + c, 0);
+        
+        const showDistribution = pauses[1] > 0;
+        const distribution = showDistribution ? " (" + gcInfo.formatGcPauseTime(pauses[0]) + "+" + gcInfo.formatGcPauseTime(pauses[1]) + ")" : "";
+        return gcInfo.formatGcPauseTime(num) + distribution;
+    })
     
-    pause2 = this.conditionalDataExtractor(x => {
-        const num = x.memoryInfo.PauseDurationsInMs[1];
-        if (num) {
-            return Math.round(num) + " ms";    
-        } 
-        return "n/a";
-    });
+    static formatGcPauseTime(millis: number) {
+        if (millis > 1000 * 60) {
+            const minutes = millis / 60_000;
+            return genUtils.formatNumberToStringFixed(minutes, 2) + " minutes";
+        }
+        return Math.round(millis) + " ms";
+    }
     
     constructor(tag: string) {
         super(tag, "exact");
@@ -106,7 +111,7 @@ class gcInfo extends historyAwareNodeStats<GcInfoNormalizedData> {
 
     protected noDataText(): string|null {
         const currentItem = this.currentItem();
-        return currentItem ? null : "No data";
+        return currentItem ? null : "n/a";
     }
 }
 

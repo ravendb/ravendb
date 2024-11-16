@@ -30,6 +30,7 @@ type chartOpts = {
     yMaxProvider?: (data: chartData[]) => number | null;
     useSeparateYScales?: boolean;
     topPaddingProvider?: (key: string) => number;
+    bottomPaddingProvider?: () => number;
     tooltipProvider?: (unalignedDate: ClusterWidgetUnalignedDate|null) => string;
     onClick?: () => void;
     onMouseMove?: (date: ClusterWidgetUnalignedDate|null) => void;
@@ -45,7 +46,7 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
     
     private minDate: ClusterWidgetUnalignedDate = null;
     private maxDate: ClusterWidgetUnalignedDate = null;
-    private data: chartData[] = [];
+    protected data: chartData[] = [];
     private opts: chartOpts;
     
     protected svg: d3.Selection<void>;
@@ -63,9 +64,8 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
         this.dataProvider = dataProvider;
         this.containerSelector = containerSelector;
         
-        if (!this.opts.topPaddingProvider) {
-            this.opts.topPaddingProvider = () => lineChart.defaultTopPadding;
-        }
+        this.opts.topPaddingProvider ??= () => lineChart.defaultTopPadding;
+        this.opts.bottomPaddingProvider ??= () => 0;
         
         const container = d3.select(containerSelector as string);
         
@@ -379,17 +379,17 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
             .range([0, this.width])
             .domain([minTime, maxTime]);
         
-        const yScaleCreator = (maxValue: number, topPadding: number) => {
+        const yScaleCreator = (maxValue: number, topPadding: number, bottomPadding: number) => {
             if (!maxValue) {
                 maxValue = 1;
             }
             return d3.scale.linear()
-                .range([topPadding != null ? topPadding : lineChart.defaultTopPadding, this.height])
+                .range([topPadding != null ? topPadding : lineChart.defaultTopPadding, this.height - (bottomPadding ?? 0)])
                 .domain([maxValue, 0]);
         };
         
         if (this.opts.yMaxProvider != null) {
-            const yScale = yScaleCreator(this.opts.yMaxProvider(this.data), this.opts.topPaddingProvider(null));
+            const yScale = yScaleCreator(this.opts.yMaxProvider(this.data), this.opts.topPaddingProvider(null), this.opts.bottomPaddingProvider());
 
             const lineFunction = d3.svg.line<chartItemData>()
                 .x(x => this.xScale(x.x))
@@ -401,7 +401,7 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
         } else if (this.opts.useSeparateYScales) {
             this.data.forEach(data => {
                 const yMax = d3.max(data.ranges.filter(range => range.values.length).map(range => d3.max(range.values.map(values => values.y))));
-                const yScale = yScaleCreator(yMax, this.opts.topPaddingProvider(data.id));
+                const yScale = yScaleCreator(yMax, this.opts.topPaddingProvider(data.id), this.opts.bottomPaddingProvider());
 
                 const lineFunction = d3.svg.line<chartItemData>()
                     .x(x => this.xScale(x.x))
@@ -411,7 +411,7 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
             });
         } else {
             const yMax = d3.max(this.data.map(data => d3.max(data.ranges.filter(range => range.values.length).map(range => d3.max(range.values.map(values => values.y))))));
-            const yScale = yScaleCreator(yMax, this.opts.topPaddingProvider(null));
+            const yScale = yScaleCreator(yMax, this.opts.topPaddingProvider(null), this.opts.bottomPaddingProvider());
 
             const lineFunction = d3.svg.line<chartItemData>()
                 .x(x => this.xScale(x.x))

@@ -29,8 +29,8 @@ type chartOpts<TPayload extends { Date: string }, TExtra> = {
 
 export class bubbleChart<TPayload extends { Date: string }, TExtra = unknown> implements clusterDashboardChart<TPayload> {
     
-    static readonly normalSize = 2;
-    static readonly hoverSize = 4;
+    static readonly normalSize = 3;
+    static readonly hoverSize = 5;
     
     static readonly defaultTopPadding = 5;
     static readonly timeFormat = "h:mm:ss A";

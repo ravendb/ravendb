@@ -78,12 +78,14 @@ public class GcInfoNotificationSender : AbstractClusterDashboardNotificationSend
         var ephemeralGc = GC.GetGCMemoryInfo(GCKind.Ephemeral);
         var backgroundGc = GC.GetGCMemoryInfo(GCKind.Background);
         var fullBlockingGc = GC.GetGCMemoryInfo(GCKind.FullBlocking);
+        
+        // index 0, means there wasn't any GC since server start
 
         var payload = new GcInfoPayload
         {
-            Ephemeral = _lastEphemeralIndex != ephemeralGc.Index ? ExtractGcMemoryInfoPayload(ephemeralGc) : null,
-            Background = _lastBackgroundIndex != backgroundGc.Index ? ExtractGcMemoryInfoPayload(backgroundGc) : null,
-            FullBlocking = _lastFullBlockingIndex != fullBlockingGc.Index ? ExtractGcMemoryInfoPayload(fullBlockingGc) : null,
+            Ephemeral = ephemeralGc.Index > 0 && _lastEphemeralIndex != ephemeralGc.Index ? ExtractGcMemoryInfoPayload(ephemeralGc) : null,
+            Background = backgroundGc.Index > 0 && _lastBackgroundIndex != backgroundGc.Index ? ExtractGcMemoryInfoPayload(backgroundGc) : null,
+            FullBlocking = fullBlockingGc.Index > 0 && _lastFullBlockingIndex != fullBlockingGc.Index ? ExtractGcMemoryInfoPayload(fullBlockingGc) : null,
         };
 
         _lastEphemeralIndex = ephemeralGc.Index;

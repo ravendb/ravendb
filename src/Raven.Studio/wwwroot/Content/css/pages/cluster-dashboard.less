@@ -697,14 +697,18 @@
                     flex-shrink: 0;
                     transform: scale(.9);
                 }
-
-                .node-value {
-                    flex-grow: 0 !important;
-                }
             }
 
             .details-list {
                 display: none;
+            }
+        }
+
+        &.property-fixed {
+            .nodes-container {
+                .nodes-item {
+                    transform: scale(0.9);
+                }
             }
         }
     }
