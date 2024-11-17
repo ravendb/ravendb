@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -35,6 +36,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
         public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             using (DocumentIdWorker.GetSliceFromId(indexContext, tombstone.LowerId, out Slice documentIdPrefixWithCounterKeySeparator, SpecialChars.RecordSeparator))
+            using (stats.For(IndexingOperation.Storage.UpdateReferences))
                 _referencesStorage.RemoveReferencesByPrefix(documentIdPrefixWithCounterKeySeparator, collection, null, indexContext.Transaction);
         }
 

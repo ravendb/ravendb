@@ -2361,7 +2361,7 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             IndexFieldsPersistence.Persist(indexContext);
-                            HandleReferences(tx);
+                            HandleReferences(tx, stats);
 
                             HandleMismatchedReferences();
                         }
@@ -2413,9 +2413,10 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void HandleReferences(RavenTransaction tx)
+        private void HandleReferences(RavenTransaction tx, IndexingStatsScope stats)
         {
-            _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
+            using (stats.For(IndexingOperation.Storage.UpdateReferences))
+                _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
 
             if (_updateReferenceLoadWarning == false)
                 return;

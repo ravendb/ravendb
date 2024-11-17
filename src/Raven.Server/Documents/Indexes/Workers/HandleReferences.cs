@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Static;
@@ -45,6 +46,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             var tx = indexContext.Transaction.InnerTransaction;
 
             using (Slice.External(tx.Allocator, tombstone.LowerId, out Slice tombstoneKeySlice))
+            using (stats.For(IndexingOperation.Storage.UpdateReferences))
                 _referencesStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
         }
     }
@@ -173,7 +175,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                         while (keepRunning)
                         {
-                            UpdateReferences(indexContext, collection);
+                            UpdateReferences(indexContext, collection, stats);
 
                             var hasChanges = false;
                             earlyExit = false;
@@ -224,7 +226,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             continue;
                                         }
 
-                                        var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedItem, lastIndexedEtag, indexed, referenceState);
+                                        var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedItem, lastIndexedEtag, indexed, referenceState, stats);
 
                                         var numberOfReferencedItemLoad = 0;
 
@@ -364,7 +366,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return (moreWorkFound, batchContinuationResult);
         }
 
-        private void UpdateReferences(TransactionOperationContext indexContext, string collection)
+        private void UpdateReferences(TransactionOperationContext indexContext, string collection, IndexingStatsScope stats)
         {
             // References were found during handling references
             // (HandleReferences is the first worker that is running so those references were found here).
@@ -375,20 +377,22 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (CurrentIndexingScope.Current.ReferencesByCollection != null &&
                 CurrentIndexingScope.Current.ReferencesByCollection.TryGetValue(collection, out var values))
             {
-                _indexStorage.ReferencesForDocuments.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
+                using (stats.For(IndexingOperation.Storage.UpdateReferences))
+                    _indexStorage.ReferencesForDocuments.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
                 values.Clear();
             }
 
             if (CurrentIndexingScope.Current.ReferencesByCollectionForCompareExchange != null &&
                 CurrentIndexingScope.Current.ReferencesByCollectionForCompareExchange.TryGetValue(collection, out values))
             {
-                _indexStorage.ReferencesForCompareExchange.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
+                using (stats.For(IndexingOperation.Storage.UpdateReferences))
+                    _indexStorage.ReferencesForCompareExchange.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
                 values.Clear();
             }
         }
 
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
-            string collection, Reference referencedItem, long lastIndexedEtag, HashSet<string> indexed, ReferencesState.ReferenceState referenceState)
+            string collection, Reference referencedItem, long lastIndexedEtag, HashSet<string> indexed, ReferencesState.ReferenceState referenceState, IndexingStatsScope stats)
         {
             var lastProcessedItemId = referenceState?.GetLastProcessedItemId(referencedItem);
             List<Slice> keysToRemove = null;
@@ -440,9 +444,12 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             if (keysToRemove != null)
             {
-                foreach (var keyToRemove in keysToRemove)
+                using (stats.For(IndexingOperation.Map.DocumentRead, start: false).For(IndexingOperation.Storage.UpdateReferences))
                 {
-                    _referencesStorage.RemoveReferences(keyToRemove, collection, null, indexContext.Transaction);
+                    foreach (var keyToRemove in keysToRemove)
+                    {
+                        _referencesStorage.RemoveReferences(keyToRemove, collection, null, indexContext.Transaction);
+                    }
                 }
             }
         }
