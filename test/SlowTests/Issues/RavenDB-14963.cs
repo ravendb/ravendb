@@ -74,32 +74,32 @@ public class RavenDB_14963 : RavenTestBase
         await AssertResultsAsync(store, list, expectedTotalResults: 12, start: 0, pageSize: 8, continuationToken: null, options.DatabaseMode);
         ct = await AssertResultsAsync(store, list, expectedTotalResults: 2, start: 0, pageSize: 4, continuationToken: null, options.DatabaseMode, null, RevisionsType.Deleted);
         await AssertResultsAsync(store, list, expectedTotalResults: 2, start: 4, pageSize: 4, continuationToken: ct, options.DatabaseMode, null, RevisionsType.Deleted);
-        ct = await AssertResultsAsync(store, list, expectedTotalResults: 10, start: 0, pageSize: 5, continuationToken: null, options.DatabaseMode, null, RevisionsType.NotDeleted);
-        await AssertResultsAsync(store, list, expectedTotalResults: 10, start: 5, pageSize: 10, continuationToken: ct, options.DatabaseMode, null, RevisionsType.NotDeleted);
+        ct = await AssertResultsAsync(store, list, expectedTotalResults: 10, start: 0, pageSize: 5, continuationToken: null, options.DatabaseMode, null, RevisionsType.Regular);
+        await AssertResultsAsync(store, list, expectedTotalResults: 10, start: 5, pageSize: 10, continuationToken: ct, options.DatabaseMode, null, RevisionsType.Regular);
 
         await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 8, continuationToken: null, options.DatabaseMode, "Companies");
         ct = await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 4, continuationToken: null, options.DatabaseMode, "Companies", RevisionsType.Deleted);
         await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 4, pageSize: 4, continuationToken: ct, options.DatabaseMode, "Companies", RevisionsType.Deleted);
-        ct = await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 4, continuationToken: null, options.DatabaseMode, "Companies", RevisionsType.NotDeleted);
-        await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 4, pageSize: 4, continuationToken: ct, options.DatabaseMode, "Companies", RevisionsType.NotDeleted);
+        ct = await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 4, continuationToken: null, options.DatabaseMode, "Companies", RevisionsType.Regular);
+        await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 4, pageSize: 4, continuationToken: ct, options.DatabaseMode, "Companies", RevisionsType.Regular);
 
         ct = await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 3, continuationToken: null, options.DatabaseMode, "Users");
         await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 3, pageSize: 3, continuationToken: ct, options.DatabaseMode, "Users");
         await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 3, continuationToken: null, options.DatabaseMode, "Users", RevisionsType.Deleted);
         await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 1, continuationToken: null, options.DatabaseMode, "Users", RevisionsType.Deleted);
-        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 8, continuationToken: null, options.DatabaseMode, "Users", RevisionsType.NotDeleted);
-        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 1, continuationToken: null, options.DatabaseMode, "Users", RevisionsType.NotDeleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 8, continuationToken: null, options.DatabaseMode, "Users", RevisionsType.Regular);
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 1, continuationToken: null, options.DatabaseMode, "Users", RevisionsType.Regular);
         await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 8, continuationToken: null, options.DatabaseMode, "Users", RevisionsType.Deleted);
         await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 1, continuationToken: null, options.DatabaseMode, "Users", RevisionsType.Deleted);
-        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 8, continuationToken: null, options.DatabaseMode, "Users", RevisionsType.NotDeleted);
-        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 1, continuationToken: null, options.DatabaseMode, "Users", RevisionsType.NotDeleted);
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 8, continuationToken: null, options.DatabaseMode, "Users", RevisionsType.Regular);
+        await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 1, continuationToken: null, options.DatabaseMode, "Users", RevisionsType.Regular);
 
         ct = await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 0, pageSize: 2, continuationToken: null, options.DatabaseMode, "Docs");
         ct = await AssertResultsAsync(store, list, expectedTotalResults: 4, start: 2, pageSize: 2, continuationToken: ct, options.DatabaseMode, "Docs");
         ct = await AssertResultsAsync(store, list, expectedTotalResults: 2, start: 0, pageSize: 1, continuationToken: null, options.DatabaseMode, "Docs", RevisionsType.Deleted);
         await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 1, pageSize: 1, continuationToken: ct, options.DatabaseMode, "Docs", RevisionsType.Deleted);
-        ct = await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 1, continuationToken: null, options.DatabaseMode, "Docs", RevisionsType.NotDeleted);
-        await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 1, pageSize: 1, continuationToken: ct, options.DatabaseMode, "Docs", RevisionsType.NotDeleted);
+        ct = await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 0, pageSize: 1, continuationToken: null, options.DatabaseMode, "Docs", RevisionsType.Regular);
+        await AssertResultsAsync(store, list, expectedTotalResults: 0, start: 1, pageSize: 1, continuationToken: ct, options.DatabaseMode, "Docs", RevisionsType.Regular);
     }
 
 
@@ -129,7 +129,7 @@ public class RavenDB_14963 : RavenTestBase
             case RevisionsType.Deleted:
                 filter = list.Where(x => x.Name == null);
                 break;
-            case RevisionsType.NotDeleted:
+            case RevisionsType.Regular:
                 filter = list.Where(x => x.Name != null);
                 break;
             case RevisionsType.All:
@@ -430,7 +430,7 @@ public class RavenDB_14963 : RavenTestBase
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/studio/revisions/preview?{Web.RequestHandler.StartParameter}={_start}&{Web.RequestHandler.PageSizeParameter}={_pageSize}&filterOption={_type.ToString()}";
+                url = $"{node.Url}/databases/{node.Database}/studio/revisions/preview?{Web.RequestHandler.StartParameter}={_start}&{Web.RequestHandler.PageSizeParameter}={_pageSize}&type={_type.ToString()}";
 
                 if (string.IsNullOrEmpty(_collection) == false)
                     url += $"&collection={Uri.EscapeDataString(_collection)}";
@@ -484,7 +484,7 @@ public class RavenDB_14963 : RavenTestBase
     public enum RevisionsType
     {
         All,
-        NotDeleted,
+        Regular,
         Deleted
     }
 }
