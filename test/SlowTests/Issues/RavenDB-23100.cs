@@ -19,6 +19,10 @@ namespace SlowTests.Issues
         {
         }
 
+        private const string EmployeeId1 = "Employ&es/1-A";
+        private const string EmployeeId2 = "EmPlo#ees/2-A";
+        private const string CompanyId = "COMan!es/1-A";
+
         [RavenFact(RavenTestCategory.Indexes)]
         public async Task Can_Delete_Document_References()
         {
@@ -27,10 +31,10 @@ namespace SlowTests.Issues
                 var index = new DocumentsIndex();
                 await store.ExecuteIndexAsync(index);
 
-                var company = new Company { Id = "COMan!es/1-A", Name = "RavenDB" };
+                var company = new Company { Id = CompanyId, Name = "RavenDB" };
 
-                var employee1 = new Employee { Id = "Employ&es/1-A", CompanyId = company.Id };
-                var employee2 = new Employee { Id = "EmPlo#ees/2-A", CompanyId = company.Id };
+                var employee1 = new Employee { Id = EmployeeId1, CompanyId = company.Id };
+                var employee2 = new Employee { Id = EmployeeId2, CompanyId = company.Id };
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -42,6 +46,7 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
+                WaitForUserToContinueTheTest(store);
                 var database = await GetDatabase(store.Database);
                 var indexInstance = database.IndexStore.GetIndex(index.IndexName);
 
@@ -101,6 +106,99 @@ namespace SlowTests.Issues
 
                     Assert.Equal(0, counts.ReferenceTableCount);
                     Assert.Equal(0, counts.CollectionTableCount);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public async Task Can_Delete_Document_References_For_Legacy_Index()
+        {
+            var backupPath = NewDataPath(forceCreateDir: true);
+            var fullBackupPath = Path.Combine(backupPath, "2024-11-17-09-31-49-8220303.ravendb-snapshot");
+
+            await using (var file = File.Create(fullBackupPath))
+            {
+                await using (var stream = typeof(RavenDB_23100).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_23100.2024-11-17-09-31-49-8220303.ravendb-snapshot"))
+                {
+                    await stream.CopyToAsync(file);
+                }
+            }
+
+            using (var store = GetDocumentStore(new Options
+            {
+                CreateDatabase = false
+            }))
+            {
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = backupPath,
+                    DatabaseName = store.Database
+                }))
+                {
+                    var database = await GetDatabase(store.Database);
+                    var indexInstance = database.IndexStore.GetIndex(new DocumentsIndex().IndexName);
+
+                    using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
+
+                        Assert.Equal(2, counts.ReferenceTableCount);
+                        Assert.Equal(0, counts.CollectionTableCount);
+
+                        counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
+
+                        Assert.Equal(2, counts.ReferenceTableCount);
+                        Assert.Equal(1, counts.CollectionTableCount);
+                    }
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        session.Delete(EmployeeId1);
+                        session.Delete(EmployeeId2);
+                        await session.SaveChangesAsync();
+                        // deleting the documents won't change the internal references tree like in new indexes
+                    }
+
+                    Indexes.WaitForIndexing(store);
+
+                    using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
+
+                        Assert.Equal(2, counts.ReferenceTableCount);
+                        Assert.Equal(0, counts.CollectionTableCount);
+
+                        counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
+
+                        Assert.Equal(2, counts.ReferenceTableCount);
+                        Assert.Equal(1, counts.CollectionTableCount);
+                    }
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var company = await session.LoadAsync<Company>(CompanyId);
+                        company.Name += " LTD";
+                        await session.SaveChangesAsync();
+                        // when we update the references, this will clean the leftovers
+                    }
+
+                    Indexes.WaitForIndexing(store);
+
+                    using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
+
+                        Assert.Equal(0, counts.ReferenceTableCount);
+                        Assert.Equal(0, counts.CollectionTableCount);
+
+                        counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
+
+                        Assert.Equal(0, counts.ReferenceTableCount);
+                        Assert.Equal(0, counts.CollectionTableCount);
+                    }
                 }
             }
         }

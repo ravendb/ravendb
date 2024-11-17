@@ -77,6 +77,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         private readonly IndexingConfiguration _configuration;
         protected readonly IndexStorage _indexStorage;
         protected readonly IndexStorage.ReferencesBase _referencesStorage;
+        private readonly bool _useNormalizedIds;
         protected readonly Reference _reference = new Reference();
 
         protected HandleReferencesBase(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexStorage.ReferencesBase referencesStorage, IndexingConfiguration configuration)
@@ -86,6 +87,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             _configuration = configuration;
             _indexStorage = indexStorage;
             _referencesStorage = referencesStorage;
+            _useNormalizedIds = index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.LowerCasedReferences;
             _logger = LoggingSource.Instance
                 .GetLogger<HandleReferences>(_indexStorage.DocumentDatabase.Name);
         }
@@ -389,11 +391,22 @@ namespace Raven.Server.Documents.Indexes.Workers
             string collection, Reference referencedItem, long lastIndexedEtag, HashSet<string> indexed, ReferencesState.ReferenceState referenceState)
         {
             var lastProcessedItemId = referenceState?.GetLastProcessedItemId(referencedItem);
+            List<Slice> keysToRemove = null;
+
             foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedItem.Key, indexContext.Transaction, lastProcessedItemId))
             {
                 var item = GetItem(queryContext.Documents, key);
                 if (item == null)
+                {
+                    if (_useNormalizedIds == false)
+                    {
+                        // this isn't required for new indexes as CleanupDocuments will handle it.
+                        // however, for older indexes, we need to clean up any leftovers.
+                        keysToRemove ??= new List<Slice>();
+                        keysToRemove.Add(key.Clone(queryContext.Documents.Allocator));
+                    }
                     continue;
+                }
 
                 if (indexed.Add(item.Id) == false)
                 {
@@ -422,6 +435,14 @@ namespace Raven.Server.Documents.Indexes.Workers
                         queryContext.Documents.Transaction.ForgetAbout(doc);
 
                     item.Dispose();
+                }
+            }
+
+            if (keysToRemove != null)
+            {
+                foreach (var keyToRemove in keysToRemove)
+                {
+                    _referencesStorage.RemoveReferences(keyToRemove, collection, null, indexContext.Transaction);
                 }
             }
         }
