@@ -259,6 +259,7 @@ class indexPerformance extends viewModelBase {
             "References": undefined as string,
             "Map": undefined as string,
             "Storage/DocumentRead": undefined as string,
+            "Storage/UpdateReferences": undefined as string,
             "Linq": undefined as string,
             "Jint": undefined as string,
             "LoadDocument": undefined as string,
