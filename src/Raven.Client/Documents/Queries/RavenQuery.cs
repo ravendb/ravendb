@@ -91,5 +91,10 @@ namespace Raven.Client.Documents.Queries
         {
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
+
+        public static object Include(string str)
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
     }
 }

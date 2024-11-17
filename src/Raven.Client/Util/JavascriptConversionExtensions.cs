@@ -1024,6 +1024,37 @@ namespace Raven.Client.Util
             }
         }
 
+        internal sealed class IncludeSupport : JavascriptConversionExtension
+        {
+            private readonly string _name;
+            public bool HasInclude;
+            public bool HadAnyIncludes;
+            public IncludeSupport()
+            {
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+
+                if (methodCallExpression?.Method.Name != "Include")
+                    return;
+
+                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
+                    return;
+
+                HasInclude = HadAnyIncludes = true;
+                context.PreventDefault();
+                var writer = context.GetWriter();
+                using (writer.Operation(methodCallExpression))
+                {
+                    writer.Write("include(");
+                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                    writer.Write(")");
+                }
+            }
+        }
+
         internal sealed class MathSupport : JavascriptConversionExtension
         {
             public static readonly MathSupport Instance = new MathSupport();

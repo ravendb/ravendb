@@ -1043,7 +1043,7 @@ namespace Raven.Client.Documents.Session
             }
 
             if (newFieldsToFetch != null)
-                UpdateFieldsToFetchToken(newFieldsToFetch);
+                UpdateFieldsToFetchToken(newFieldsToFetch, queryData.HadAnyInclude);
 
             var query = new DocumentQuery<TResult>(
                 TheSession,

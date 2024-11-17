@@ -13,6 +13,8 @@ namespace Raven.Client.Documents.Queries
 {
     public sealed class QueryData
     {
+        public bool HadAnyInclude { get; set; }
+
         public string[] Fields { get; set; }
 
         public IEnumerable<string> Projections { get; set; }
@@ -33,8 +35,9 @@ namespace Raven.Client.Documents.Queries
 
         public ProjectionBehavior? ProjectionBehavior { get; set; }
 
-        public QueryData(string[] fields, IEnumerable<string> projections, string fromAlias = null, IEnumerable<DeclareToken> declareTokens = null, List<LoadToken> loadTokens = null, bool isCustomFunction = false)
+        public QueryData(string[] fields, IEnumerable<string> projections, string fromAlias = null, IEnumerable<DeclareToken> declareTokens = null, List<LoadToken> loadTokens = null, bool isCustomFunction = false, bool hadAnyInclude = false)
         {
+            HadAnyInclude = hadAnyInclude;
             Fields = fields;
             Projections = projections;
             FromAlias = fromAlias;

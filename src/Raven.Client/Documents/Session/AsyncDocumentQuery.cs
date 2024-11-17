@@ -1058,7 +1058,7 @@ namespace Raven.Client.Documents.Session
             }
 
             if (newFieldsToFetch != null)
-                UpdateFieldsToFetchToken(newFieldsToFetch);
+                UpdateFieldsToFetchToken(newFieldsToFetch, hadInclude: queryData.HadAnyInclude);
 
             var query = new AsyncDocumentQuery<TResult>(
                 TheSession,
