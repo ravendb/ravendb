@@ -141,13 +141,13 @@ namespace Raven.Client.Documents.Operations.Attachments
                     var copyMemory = new Memory<byte>(copy);
                     buffer.Memory.Memory.Slice(parser.BufferOffset, bufferSize).CopyTo(copyMemory);
 
-                    Result = Iterate(stream, copy, bufferSize).GetEnumerator();
+                    Result = Iterate(stream, copy, bufferSize);
                 }
 
                 return ResponseDisposeHandling.Manually;
             }
 
-            private IEnumerable<AttachmentEnumeratorResult> Iterate(Stream stream, byte[] copy, int bufferSize)
+            private IEnumerator<AttachmentEnumeratorResult> Iterate(Stream stream, byte[] copy, int bufferSize)
             {
                 LimitedStream prev = null;
 
