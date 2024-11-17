@@ -22,7 +22,6 @@ namespace Raven.Server.Documents.Indexes.Static
         private IndexingStatsScope _loadCompareExchangeValueStats;
         private JavaScriptUtils _javaScriptUtils;
         private readonly DocumentsStorage _documentsStorage;
-        private readonly bool _useNormalizedIds;
         public readonly QueryOperationContext QueryContext;
 
         public readonly UnmanagedBuffersPoolWithLowMemoryHandling UnmanagedBuffersPool;
@@ -38,6 +37,8 @@ namespace Raven.Server.Documents.Indexes.Static
         public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollectionForCompareExchange;
 
         public MismatchedReferencesWarningHandler MismatchedReferencesWarningHandler;
+
+        public readonly bool UseNormalizedIds;
 
         [ThreadStatic]
         public static CurrentIndexingScope Current;
@@ -71,7 +72,8 @@ namespace Raven.Server.Documents.Indexes.Static
             IndexContext = indexContext;
             _getSpatialField = getSpatialField;
 
-            _useNormalizedIds = index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.LowerCasedReferences;
+            UseNormalizedIds = index.SourceType == IndexSourceType.Documents &&
+                                index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.LowerCasedReferences;
         } 
 
         public void SetSourceCollection(string collection, IndexingStatsScope stats)
@@ -252,7 +254,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private Slice GetIdSlice(LazyStringValue id)
         {
             Slice idSlice;
-            if (_useNormalizedIds)
+            if (UseNormalizedIds)
             {
                 // making sure that we normalize the case of the id so we'll be able to find
                 // it in case-insensitive manner
