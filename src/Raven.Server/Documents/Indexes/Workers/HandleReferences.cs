@@ -447,6 +447,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     foreach (var keyToRemove in keysToRemove)
                     {
                         _referencesStorage.RemoveReferences(keyToRemove, collection, null, indexContext.Transaction);
+                        keyToRemove.Release(queryContext.Documents.Allocator);
                     }
                 }
             }
