@@ -22,6 +22,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private IndexingStatsScope _loadCompareExchangeValueStats;
         private JavaScriptUtils _javaScriptUtils;
         private readonly DocumentsStorage _documentsStorage;
+        private readonly bool _useNormalizedIds;
         public readonly QueryOperationContext QueryContext;
 
         public readonly UnmanagedBuffersPoolWithLowMemoryHandling UnmanagedBuffersPool;
@@ -69,7 +70,9 @@ namespace Raven.Server.Documents.Indexes.Static
             IndexDefinition = indexDefinition;
             IndexContext = indexContext;
             _getSpatialField = getSpatialField;
-        }
+
+            _useNormalizedIds = index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.LowerCasedReferences;
+        } 
 
         public void SetSourceCollection(string collection, IndexingStatsScope stats)
         {
@@ -208,7 +211,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 // we intentionally don't dispose of the scope here, this is being tracked by the references
                 // and will be disposed there.
 
-                Slice.From(QueryContext.Documents.Allocator, id, out var idSlice);
+                var idSlice = GetIdSlice(id);
                 var references = GetReferencesForItem(idSlice);
 
                 references.Add(keySlice);
@@ -246,6 +249,24 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        private Slice GetIdSlice(LazyStringValue id)
+        {
+            Slice idSlice;
+            if (_useNormalizedIds)
+            {
+                // making sure that we normalize the case of the id so we'll be able to find
+                // it in case-insensitive manner
+                // in addition, special characters need to be escaped
+                DocumentIdWorker.GetSliceFromId(QueryContext.Documents, id, out idSlice);
+            }
+            else
+            {
+                Slice.From(QueryContext.Documents.Allocator, id, out idSlice);
+            }
+
+            return idSlice;
+        }
+
         public unsafe dynamic LoadCompareExchangeValue(LazyStringValue keyLazy, string keyString)
         {
             using (_loadCompareExchangeValueStats?.Start() ?? (_loadCompareExchangeValueStats = _stats?.For(IndexingOperation.LoadCompareExchangeValue)))
@@ -261,7 +282,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 // we intentionally don't dispose of the scope here, this is being tracked by the references
                 // and will be disposed there.
-                Slice.From(QueryContext.Documents.Allocator, id, out var idSlice);
+
+                var idSlice = GetIdSlice(id);
                 var references = GetCompareExchangeReferencesForItem(idSlice);
 
                 references.Add(keySlice);
@@ -301,7 +323,7 @@ namespace Raven.Server.Documents.Indexes.Static
             // and will be disposed there.
 
             // making sure that we normalize the case of the key so we'll be able to find
-            // it in case insensitive manner
+            // it in case-insensitive manner
             // In addition, special characters need to be escaped
 
             if (keyLazy != null)
