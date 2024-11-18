@@ -187,7 +187,7 @@ namespace Raven.Client.Exceptions
                 throw ctxConcurrencyException;
             }
 
-            var concurrencyException = new ConcurrencyException(schema.Message);
+            var concurrencyException = new ConcurrencyException(schema.Message, new RavenException(schema.Error));
 
             if (json.TryGet(nameof(ConcurrencyException.Id), out docId))
                 concurrencyException.Id = docId;

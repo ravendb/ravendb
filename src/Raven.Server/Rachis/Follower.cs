@@ -169,7 +169,7 @@ namespace Raven.Server.Rachis
                                 // on raft protocol violation propagate the error and close this follower. 
                                 throw;
                             }
-                            catch (ConcurrencyException)
+                            catch (TermValidationException)
                             {
                                 // the term was changed
                                 throw;
