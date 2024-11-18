@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Static;
@@ -388,12 +389,22 @@ namespace Raven.Server.Documents.Indexes.Workers
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             string collection, Reference referencedItem, long lastIndexedEtag, HashSet<string> indexed, ReferencesState.ReferenceState referenceState)
         {
+            List<Slice> keysToRemove = null;
+
             var lastProcessedItemId = referenceState?.GetLastProcessedItemId(referencedItem);
             foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedItem.Key, indexContext.Transaction, lastProcessedItemId))
             {
                 var item = GetItem(queryContext.Documents, key);
                 if (item == null)
+                {
+                    if (_index.SourceType == IndexSourceType.Documents)
+                    {
+                        // the document doesn't exist, we need to clean up any leftovers
+                        keysToRemove ??= new List<Slice>();
+                        keysToRemove.Add(key.Clone(queryContext.Documents.Allocator));
+                    }
                     continue;
+                }
 
                 if (indexed.Add(item.Id) == false)
                 {
@@ -415,6 +426,15 @@ namespace Raven.Server.Documents.Indexes.Workers
                 }
 
                 yield return item;
+
+                if (keysToRemove != null)
+                {
+                    foreach (var keyToRemove in keysToRemove)
+                    {
+                        _referencesStorage.RemoveReferences(keyToRemove, collection, null, indexContext.Transaction);
+                        keyToRemove.Release(queryContext.Documents.Allocator);
+                    }
+                }
 
                 void DisposeItem()
                 {
