@@ -36,6 +36,8 @@ namespace Raven.Server.Documents.Indexes.Static
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollectionForCompareExchange;
 
+        public HashSet<Slice> ReferencesToDelete;
+
         public MismatchedReferencesWarningHandler MismatchedReferencesWarningHandler;
 
         public readonly bool UseNormalizedIds;

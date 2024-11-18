@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
@@ -53,12 +54,7 @@ namespace SlowTests.Issues
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
-
-                    Assert.Equal(2, counts.ReferenceTableCount);
-                    Assert.Equal(0, counts.CollectionTableCount);
-
-                    counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
+                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
 
                     Assert.Equal(2, counts.ReferenceTableCount);
                     Assert.Equal(1, counts.CollectionTableCount);
@@ -75,12 +71,7 @@ namespace SlowTests.Issues
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
-
-                    Assert.Equal(1, counts.ReferenceTableCount);
-                    Assert.Equal(0, counts.CollectionTableCount);
-
-                    counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
+                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
 
                     Assert.Equal(1, counts.ReferenceTableCount);
                     Assert.Equal(1, counts.CollectionTableCount);
@@ -97,12 +88,7 @@ namespace SlowTests.Issues
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
-
-                    Assert.Equal(0, counts.ReferenceTableCount);
-                    Assert.Equal(0, counts.CollectionTableCount);
-
-                    counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
+                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
 
                     Assert.Equal(0, counts.ReferenceTableCount);
                     Assert.Equal(0, counts.CollectionTableCount);
@@ -114,11 +100,11 @@ namespace SlowTests.Issues
         public async Task Can_Delete_Document_References_For_Legacy_Index()
         {
             var backupPath = NewDataPath(forceCreateDir: true);
-            var fullBackupPath = Path.Combine(backupPath, "2024-11-17-09-31-49-8220303.ravendb-snapshot");
+            var fullBackupPath = Path.Combine(backupPath, "2024-11-18-17-16-52-7843589.ravendb-snapshot");
 
             await using (var file = File.Create(fullBackupPath))
             {
-                await using (var stream = typeof(RavenDB_23100).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_23100.2024-11-17-09-31-49-8220303.ravendb-snapshot"))
+                await using (var stream = typeof(RavenDB_23100).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_23100.2024-11-18-17-16-52-7843589.ravendb-snapshot"))
                 {
                     await stream.CopyToAsync(file);
                 }
@@ -141,15 +127,32 @@ namespace SlowTests.Issues
                     using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
                     {
-                        var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
-
-                        Assert.Equal(2, counts.ReferenceTableCount);
-                        Assert.Equal(0, counts.CollectionTableCount);
-
-                        counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
+                        var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
 
                         Assert.Equal(2, counts.ReferenceTableCount);
                         Assert.Equal(1, counts.CollectionTableCount);
+                    }
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var company = await session.LoadAsync<Company>(CompanyId);
+                        company.Name += " LTD";
+                        await session.SaveChangesAsync();
+                    }
+
+                    Indexes.WaitForIndexing(store);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var results = await session.Query<DocumentsIndex.Result, DocumentsIndex>()
+                            .ProjectInto<DocumentsIndex.Result>().ToListAsync();
+                        
+                        Assert.Equal(2, results.Count);
+                        
+                        foreach (var company in results)
+                        {
+                            Assert.Equal("RavenDB LTD", company.CompanyName);
+                        }
                     }
 
                     using (var session = store.OpenAsyncSession())
@@ -165,12 +168,7 @@ namespace SlowTests.Issues
                     using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
                     {
-                        var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
-
-                        Assert.Equal(2, counts.ReferenceTableCount);
-                        Assert.Equal(0, counts.CollectionTableCount);
-
-                        counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
+                        var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
 
                         Assert.Equal(2, counts.ReferenceTableCount);
                         Assert.Equal(1, counts.CollectionTableCount);
@@ -179,7 +177,7 @@ namespace SlowTests.Issues
                     using (var session = store.OpenAsyncSession())
                     {
                         var company = await session.LoadAsync<Company>(CompanyId);
-                        company.Name += " LTD";
+                        company.Name += " HR";
                         await session.SaveChangesAsync();
                         // when we update the references, this will clean the leftovers
                     }
@@ -189,12 +187,7 @@ namespace SlowTests.Issues
                     using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
                     {
-                        var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
-
-                        Assert.Equal(0, counts.ReferenceTableCount);
-                        Assert.Equal(0, counts.CollectionTableCount);
-
-                        counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
+                        var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
 
                         Assert.Equal(0, counts.ReferenceTableCount);
                         Assert.Equal(0, counts.CollectionTableCount);
@@ -214,7 +207,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("Company#1", new Company { Name = "RavenDB" });
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(CompanyId, new Company { Name = "RavenDB" });
                     await session.SaveChangesAsync();
                 }
 
@@ -233,12 +226,7 @@ namespace SlowTests.Issues
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var counts = indexInstance._indexStorage.ReferencesForCompareExchange.GetReferenceTablesCount("Companies", tx);
-
-                    Assert.Equal(2, counts.ReferenceTableCount);
-                    Assert.Equal(0, counts.CollectionTableCount);
-
-                    counts = indexInstance._indexStorage.ReferencesForCompareExchange.GetReferenceTablesCount("Employees", tx);
+                    var counts = indexInstance._indexStorage.ReferencesForCompareExchange.GetReferenceTablesCount("Employees", tx);
 
                     Assert.Equal(2, counts.ReferenceTableCount);
                     Assert.Equal(1, counts.CollectionTableCount);
@@ -255,12 +243,7 @@ namespace SlowTests.Issues
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var counts = indexInstance._indexStorage.ReferencesForCompareExchange.GetReferenceTablesCount("Companies", tx);
-
-                    Assert.Equal(1, counts.ReferenceTableCount);
-                    Assert.Equal(0, counts.CollectionTableCount);
-
-                    counts = indexInstance._indexStorage.ReferencesForCompareExchange.GetReferenceTablesCount("Employees", tx);
+                    var counts = indexInstance._indexStorage.ReferencesForCompareExchange.GetReferenceTablesCount("Employees", tx);
 
                     Assert.Equal(1, counts.ReferenceTableCount);
                     Assert.Equal(1, counts.CollectionTableCount);
@@ -277,17 +260,112 @@ namespace SlowTests.Issues
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var counts = indexInstance._indexStorage.ReferencesForCompareExchange.GetReferenceTablesCount("Companies", tx);
-
-                    Assert.Equal(0, counts.ReferenceTableCount);
-                    Assert.Equal(0, counts.CollectionTableCount);
-
-                    counts = indexInstance._indexStorage.ReferencesForCompareExchange.GetReferenceTablesCount("Employees", tx);
+                    var counts = indexInstance._indexStorage.ReferencesForCompareExchange.GetReferenceTablesCount("Employees", tx);
 
                     Assert.Equal(0, counts.ReferenceTableCount);
                     Assert.Equal(0, counts.CollectionTableCount);
                 }
 
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes, Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-23166/Snapshot-restore-of-with-compare-exchange-references")]
+        public async Task Can_Delete_CompareExchange_References_For_Legacy_Index()
+        {
+            var backupPath = NewDataPath(forceCreateDir: true);
+            var fullBackupPath = Path.Combine(backupPath, "2024-11-18-18-07-42-3204449.ravendb-snapshot");
+
+            await using (var file = File.Create(fullBackupPath))
+            {
+                await using (var stream = typeof(RavenDB_23100).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_23100.2024-11-18-18-07-42-3204449.ravendb-snapshot"))
+                {
+                    await stream.CopyToAsync(file);
+                }
+            }
+
+            using (var store = GetDocumentStore(new Options
+            {
+                CreateDatabase = false
+            }))
+            {
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = backupPath,
+                    DatabaseName = store.Database
+                }))
+                {
+                    var database = await GetDatabase(store.Database);
+                    var indexInstance = database.IndexStore.GetIndex(new DocumentsWithCompareExchangeIndex().IndexName);
+
+                    using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        var counts = indexInstance._indexStorage.ReferencesForCompareExchange.GetReferenceTablesCount("Employees", tx);
+
+                        Assert.Equal(2, counts.ReferenceTableCount);
+                        Assert.Equal(1, counts.CollectionTableCount);
+                    }
+
+                    using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(CompanyId);
+                        company.Value.Name += " LTD";
+                        await session.SaveChangesAsync();
+                    }
+
+                    Indexes.WaitForIndexing(store);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var results = await session.Query<DocumentsWithCompareExchangeIndex.Result, DocumentsWithCompareExchangeIndex>()
+                            .ProjectInto<DocumentsWithCompareExchangeIndex.Result>().ToListAsync();
+                        
+                        Assert.Equal(2, results.Count);
+                        
+                        foreach (var company in results)
+                        {
+                            Assert.Equal("RavenDB LTD", company.CompanyName);
+                        }
+                    }
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        session.Delete(EmployeeId1);
+                        session.Delete(EmployeeId2);
+                        await session.SaveChangesAsync();
+                        // deleting the documents won't change the internal references tree like in new indexes
+                    }
+
+                    Indexes.WaitForIndexing(store);
+
+                    using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        var counts = indexInstance._indexStorage.ReferencesForCompareExchange.GetReferenceTablesCount("Employees", tx);
+
+                        Assert.Equal(2, counts.ReferenceTableCount);
+                        Assert.Equal(1, counts.CollectionTableCount);
+                    }
+
+                    using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(CompanyId);
+                        company.Value.Name += " HR";
+                        await session.SaveChangesAsync();
+                        // when we update the references, this will clean the leftovers
+                    }
+
+                    Indexes.WaitForIndexing(store);
+
+                    using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        var counts = indexInstance._indexStorage.ReferencesForCompareExchange.GetReferenceTablesCount("Employees", tx);
+
+                        Assert.Equal(0, counts.ReferenceTableCount);
+                        Assert.Equal(0, counts.CollectionTableCount);
+                    }
+                }
             }
         }
 
@@ -321,12 +399,7 @@ namespace SlowTests.Issues
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
-
-                    Assert.Equal(2, counts.ReferenceTableCount);
-                    Assert.Equal(0, counts.CollectionTableCount);
-
-                    counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
+                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
 
                     Assert.Equal(2, counts.ReferenceTableCount);
                     Assert.Equal(1, counts.CollectionTableCount);
@@ -343,12 +416,7 @@ namespace SlowTests.Issues
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
-
-                    Assert.Equal(1, counts.ReferenceTableCount);
-                    Assert.Equal(0, counts.CollectionTableCount);
-
-                    counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
+                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
 
                     Assert.Equal(1, counts.ReferenceTableCount);
                     Assert.Equal(1, counts.CollectionTableCount);
@@ -365,12 +433,7 @@ namespace SlowTests.Issues
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
-
-                    Assert.Equal(0, counts.ReferenceTableCount);
-                    Assert.Equal(0, counts.CollectionTableCount);
-
-                    counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
+                    var counts = indexInstance._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Employees", tx);
 
                     Assert.Equal(0, counts.ReferenceTableCount);
                     Assert.Equal(0, counts.CollectionTableCount);
@@ -495,6 +558,8 @@ namespace SlowTests.Issues
                     {
                         CompanyName = LoadDocument<Company>(employee.CompanyId).Name,
                     };
+
+                StoreAllFields(FieldStorage.Yes);
             }
         }
 
@@ -513,6 +578,8 @@ namespace SlowTests.Issues
                     {
                         CompanyName = LoadCompareExchangeValue<Company>(employee.CompanyId).Name
                     };
+
+                StoreAllFields(FieldStorage.Yes);
             }
         }
 

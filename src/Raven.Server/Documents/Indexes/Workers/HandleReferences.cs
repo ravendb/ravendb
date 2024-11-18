@@ -28,17 +28,19 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
         }
 
-        protected override unsafe IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key)
+        protected override IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key)
         {
-            using (DocumentIdWorker.GetLower(databaseContext.Allocator, key.Content.Ptr, key.Size, out var loweredKey))
-            {
-                // when there is conflict, we need to apply same behavior as if the document would not exist
-                var doc = _documentsStorage.Get(databaseContext, loweredKey, throwOnConflict: false);
-                if (doc == null)
-                    return default;
+            return GetDocumentItem(databaseContext, key);
+        }
 
-                return new DocumentIndexItem(doc.Id, doc.LowerId, doc.Etag, doc.LastModified, doc.Data.Size, doc);
-            }
+        public static IndexItem GetDocumentItem(DocumentsOperationContext databaseContext, Slice key)
+        {
+            // when there is conflict, we need to apply same behavior as if the document would not exist
+            var doc = databaseContext.DocumentDatabase.DocumentsStorage.Get(databaseContext, key, throwOnConflict: false);
+            if (doc == null)
+                return default;
+
+            return new DocumentIndexItem(doc.Id, doc.LowerId, doc.Etag, doc.LastModified, doc.Data.Size, doc);
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
@@ -393,22 +395,12 @@ namespace Raven.Server.Documents.Indexes.Workers
             string collection, Reference referencedItem, long lastIndexedEtag, HashSet<string> indexed, ReferencesState.ReferenceState referenceState, IndexingStatsScope stats)
         {
             var lastProcessedItemId = referenceState?.GetLastProcessedItemId(referencedItem);
-            List<Slice> keysToRemove = null;
 
             foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedItem.Key, indexContext.Transaction, lastProcessedItemId))
             {
                 var item = GetItem(queryContext.Documents, key);
                 if (item == null)
-                {
-                    if (CurrentIndexingScope.Current.UseNormalizedIds == false)
-                    {
-                        // this isn't required for new indexes as CleanupDocuments will handle it.
-                        // however, for older indexes, we need to clean up any leftovers.
-                        keysToRemove ??= new List<Slice>();
-                        keysToRemove.Add(key.Clone(queryContext.Documents.Allocator));
-                    }
                     continue;
-                }
 
                 if (indexed.Add(item.Id) == false)
                 {
@@ -440,17 +432,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 }
             }
 
-            if (keysToRemove != null)
-            {
-                using (stats.For(IndexingOperation.Map.DocumentRead, start: false).For(IndexingOperation.Storage.UpdateReferences))
-                {
-                    foreach (var keyToRemove in keysToRemove)
-                    {
-                        _referencesStorage.RemoveReferences(keyToRemove, collection, null, indexContext.Transaction);
-                        keyToRemove.Release(queryContext.Documents.Allocator);
-                    }
-                }
-            }
+            AfterGetItemsFromCollectionThatReference(collection, stats, queryContext.Documents, indexContext);
         }
 
         protected virtual IEnumerable<Reference> GetItemReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
@@ -485,6 +467,10 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
 
         protected abstract IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key);
+
+        protected virtual void AfterGetItemsFromCollectionThatReference(string collection, IndexingStatsScope stats, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        {
+        }
 
         public abstract void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
