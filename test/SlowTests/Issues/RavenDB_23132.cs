@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Tests.Infrastructure;
@@ -20,14 +21,19 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        public async Task DeleteTimeSeriesShouldNotThrowNotSupportedException_mapReduceIndexWithOutputToCollection()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenData(Data = [true], SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(Data = [true], SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(Data = [false], SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(Data = [false], SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task DeleteTimeSeriesShouldNotThrowNotSupportedException_mapReduceIndexWithOutputToCollection(Options options, bool deleteDocument)
         {
             using (var store = GetDocumentStore())
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation(operateOnTypes: _operateOnTypes));
 
                 var indexName = "Companies/StockPrices/TradeVolumeByMonth";
+                var outputToCollection = "StockPricesTradeVolumeByMonth";
 
                 await WaitAndAssertForValueAsync(async () =>
                 {
@@ -37,17 +43,16 @@ namespace SlowTests.Issues
 
                 // add OutputReduceToCollection
                 var index = await store.Maintenance.SendAsync(new GetIndexOperation(indexName));
-                index.OutputReduceToCollection = "StockPricesTradeVolumeByMonth";
+                index.OutputReduceToCollection = outputToCollection;
                 await store.Maintenance.SendAsync(new PutIndexesOperation(index));
 
-                try
-                {
-                    Indexes.WaitForIndexing(store);
-                }
-                catch
-                {
-                    // do nothing...
-                }
+                
+                Indexes.WaitForIndexing(store, allowErrors: true);
+
+                var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+               
+                Assert.True(collectionStats.Collections.TryGetValue(outputToCollection, out var outputs1));
+                Assert.True(outputs1 > 0);
 
                 var indexErrors = await store.Maintenance.SendAsync(new GetIndexErrorsOperation(new[] { indexName }));
 
@@ -56,83 +61,30 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    for (int i = 1; i < 5; i++)
-                        session.Delete($"companies/{i}-A");
+                    if (deleteDocument)
+                    {
+                        for (int i = 1; i <= 5; i++)
+                            session.Delete($"companies/{i}-A");
+                    }
+                    else
+                    {
+                        for (int i = 1; i <= 5; i++)
+                            session.TimeSeriesFor($"companies/{i}-A", "StockPrices").Delete();
+                    }
 
                     await session.SaveChangesAsync();
                 }
 
-                try
-                {
-                    Indexes.WaitForIndexing(store);
-                }
-                catch
-                {
-                    // do nothing...
-                }
+                Indexes.WaitForIndexing(store, allowErrors: true);
+
+                collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+
+                Assert.True(collectionStats.Collections.TryGetValue(outputToCollection, out var outputs2));
+                Assert.True(outputs2 < outputs1);
 
                 indexErrors = await store.Maintenance.SendAsync(new GetIndexErrorsOperation(new[] { indexName }));
 
                 Assert.Single(indexErrors);
-                Assert.Empty(indexErrors[0].Errors);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        public async Task DeleteTimeSeriesShouldNotThrowNotSupportedException_mapReduceIndexWithOutputToCollection2()
-        {
-            using (var store = GetDocumentStore())
-            {
-                await store.Maintenance.SendAsync(new CreateSampleDataOperation(operateOnTypes: _operateOnTypes));
-
-                var indexName = "Companies/StockPrices/TradeVolumeByMonth";
-
-                await WaitAndAssertForValueAsync(async () =>
-                {
-                    var indexNames = await store.Maintenance.SendAsync(new GetIndexNamesOperation(start: 0, pageSize: int.MaxValue));
-                    return indexNames.Contains(indexName, StringComparer.OrdinalIgnoreCase);
-                }, true);
-
-                // add OutputReduceToCollection
-                var index = await store.Maintenance.SendAsync(new GetIndexOperation(indexName));
-                index.OutputReduceToCollection = "StockPricesTradeVolumeByMonth";
-                await store.Maintenance.SendAsync(new PutIndexesOperation(index));
-
-                try
-                {
-                    Indexes.WaitForIndexing(store);
-                }
-                catch
-                {
-                    // do nothing...
-                }
-
-                var indexErrors = await store.Maintenance.SendAsync(new GetIndexErrorsOperation(new[] { indexName }));
-
-                Assert.Single(indexErrors);
-                Assert.Empty(indexErrors[0].Errors);
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    for (int i = 1; i < 5; i++)
-                        session.TimeSeriesFor($"companies/{i}-A", "StockPrices").Delete();
-
-                    await session.SaveChangesAsync();
-                }
-
-                try
-                {
-                    Indexes.WaitForIndexing(store);
-                }
-                catch
-                {
-                    // do nothing...
-                }
-
-                indexErrors = await store.Maintenance.SendAsync(new GetIndexErrorsOperation(new[] { indexName }));
-
-                Assert.Single(indexErrors);
-                Assert.Equal(indexName, indexErrors[0].Name, StringComparer.OrdinalIgnoreCase);
                 Assert.Empty(indexErrors[0].Errors);
             }
         }
