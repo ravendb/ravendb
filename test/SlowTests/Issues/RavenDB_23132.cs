@@ -22,10 +22,8 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(Data = [true], SearchEngineMode = RavenSearchEngineMode.Corax)]
-        [RavenData(Data = [true], SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(Data = [false], SearchEngineMode = RavenSearchEngineMode.Corax)]
-        [RavenData(Data = [false], SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(Data = [true], SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(Data = [false], SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task DeleteTimeSeriesShouldNotThrowNotSupportedException_mapReduceIndexWithOutputToCollection(Options options, bool deleteDocument)
         {
             using (var store = GetDocumentStore())
