@@ -16,8 +16,8 @@ public class HandleNotNormalizedCompareExchangeReferences : HandleCompareExchang
         return HandleNotNormalizedDocumentReferences.GetNonNormalizedDocumentItem(databaseContext, key);
     }
 
-    protected override void AfterGetItemsFromCollectionThatReference(string collection, IndexingStatsScope stats, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+    protected override void DeleteReferences(string collection, IndexingStatsScope stats, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
     {
-        HandleNotNormalizedDocumentReferences.AfterGetItemsFromCollectionThatReference(collection, stats, _referencesStorage, databaseContext, indexContext);
+        HandleNotNormalizedDocumentReferences.DeleteReferences(collection, stats, _referencesStorage, databaseContext, indexContext);
     }
 }

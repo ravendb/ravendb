@@ -31,7 +31,7 @@ public class HandleNotNormalizedDocumentReferences : HandleDocumentReferences
             {
                 // this isn't required for new indexes as CleanupDocuments will handle it.
                 // however, for older indexes, we need to clean up any leftovers.
-                CurrentIndexingScope.Current.ReferencesToDelete ??= new HashSet<Slice>();
+                CurrentIndexingScope.Current.ReferencesToDelete ??= new List<Slice>();
                 CurrentIndexingScope.Current.ReferencesToDelete.Add(key.Clone(databaseContext.Allocator));
             }
 
@@ -39,17 +39,17 @@ public class HandleNotNormalizedDocumentReferences : HandleDocumentReferences
         }
     }
 
-    protected override void AfterGetItemsFromCollectionThatReference(string collection, IndexingStatsScope stats, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+    protected override void DeleteReferences(string collection, IndexingStatsScope stats, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
     {
-        AfterGetItemsFromCollectionThatReference(collection, stats, _referencesStorage, databaseContext, indexContext);
+        DeleteReferences(collection, stats, _referencesStorage, databaseContext, indexContext);
     }
 
-    public static void AfterGetItemsFromCollectionThatReference(string collection, IndexingStatsScope stats, IndexStorage.ReferencesBase referencesStorage, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+    public static void DeleteReferences(string collection, IndexingStatsScope stats, IndexStorage.ReferencesBase referencesStorage, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
     {
         if (CurrentIndexingScope.Current.ReferencesToDelete == null)
             return;
 
-        using (stats.For(IndexingOperation.Map.DocumentRead, start: false).For(IndexingOperation.Storage.UpdateReferences))
+        using (stats.For(IndexingOperation.Storage.UpdateReferences))
         {
             foreach (var keyToRemove in CurrentIndexingScope.Current.ReferencesToDelete)
             {

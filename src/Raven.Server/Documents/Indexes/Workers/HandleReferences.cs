@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                         while (keepRunning)
                         {
-                            UpdateReferences(indexContext, collection, stats);
+                            UpdateReferences(collection, collectionStats, queryContext, indexContext);
 
                             var hasChanges = false;
                             earlyExit = false;
@@ -328,6 +328,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                             }
                         }
 
+                        DeleteReferences(collection, collectionStats, queryContext.Documents, indexContext);
+
                         if (lastReferenceEtag == lastEtag)
                         {
                             // the last referenced etag hasn't changed
@@ -366,7 +368,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return (moreWorkFound, batchContinuationResult);
         }
 
-        private void UpdateReferences(TransactionOperationContext indexContext, string collection, IndexingStatsScope stats)
+        private void UpdateReferences(string collection, IndexingStatsScope stats, QueryOperationContext queryContext, TransactionOperationContext indexContext)
         {
             // References were found during handling references
             // (HandleReferences is the first worker that is running so those references were found here).
@@ -389,6 +391,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                     _indexStorage.ReferencesForCompareExchange.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
                 values.Clear();
             }
+
+            DeleteReferences(collection, stats, queryContext.Documents, indexContext);
         }
 
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
@@ -431,8 +435,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                     item.Dispose();
                 }
             }
-
-            AfterGetItemsFromCollectionThatReference(collection, stats, queryContext.Documents, indexContext);
         }
 
         protected virtual IEnumerable<Reference> GetItemReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
@@ -468,7 +470,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected abstract IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key);
 
-        protected virtual void AfterGetItemsFromCollectionThatReference(string collection, IndexingStatsScope stats, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        protected virtual void DeleteReferences(string collection, IndexingStatsScope stats, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
         {
         }
 
