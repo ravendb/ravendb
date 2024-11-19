@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
 using Xunit;
@@ -26,6 +29,15 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             Assert.Equal(12, options.NumberOfCandidates);
             Assert.Equal(3, options.NumberOfEdges);
             Assert.Equal(0, options.CountOfVectors);
+            float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
+
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+                numberOfCandidates: 32,
+                MemoryMarshal.Cast<float, byte>(v1));
+            Span<float> scores = new float[32];
+            Span<long> docs = new long[32];
+            var r = nearest.Fill(docs, scores);
+            Assert.Equal(0, r);
         }
     }
 
@@ -90,14 +102,16 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         // nearest to v2, then v1
         float[] v3 = [0.25f, 0.35f, 0.45f, 0.55f];
-
+        long entryIdToRemove = 4;
+        ByteString vectorHashToRemove = default;
+        
         using (var txw = Env.WriteTransaction())
         {
             Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12);
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
             {
-                registration.Register(4, MemoryMarshal.Cast<float, byte>(v1));
+                vectorHashToRemove = registration.Register(entryIdToRemove, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
             }
             
@@ -115,7 +129,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
             {
-                registration.Remove(4, MemoryMarshal.Cast<float, byte>(v1));
+                registration.Remove(entryIdToRemove, vectorHashToRemove.ToSpan());
             }
 
             txw.Commit();
@@ -146,6 +160,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         // nearest to v2, then v1
         float[] v3 = [0.25f, 0.35f, 0.45f, 0.55f];
 
+        List<(long entryId, ByteString vectorHash)> elementInGraph = new();
         using (var txw = Env.WriteTransaction())
         {
             Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12);
@@ -154,13 +169,16 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             {
                 for (int i = 0;i < 20_000; i++)
                 {
-                    registration.Register((i+1) * 4, MemoryMarshal.Cast<float, byte>(v1));
+                    var id = (i + 1) * 4;
+                    var vec = registration.Register(id, MemoryMarshal.Cast<float, byte>(v1));
+                    elementInGraph.Add((id, vec));
                 }
             }
 
             txw.Commit();
         }
 
+        List<long> readFromGraph = new();
         using (var txr = Env.ReadTransaction())
         {
             Span<long> matches = new long[500];
@@ -168,11 +186,97 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
                 numberOfCandidates: 32,
                 MemoryMarshal.Cast<float, byte>(v3));
-            for (int i = 0; i < 5; i++)
+            var read = 0;
+            readFromGraph.Clear();
+            do
             {
-                int read = nearest.Fill(matches, distances);
-                Assert.Equal(500, read);
+                read = nearest.Fill(matches, distances);
+                readFromGraph.AddRange(matches.Slice(0, read));
+            } while (read > 0);
+            
+            Assert.Equal(elementInGraph.Select(x => x.entryId), readFromGraph);
+        }
+        
+        //reduce to 100 elements
+        var toRemove = elementInGraph.ToArray()[100..];
+        using (var txw = Env.WriteTransaction())
+        {
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            {
+                foreach (var el in toRemove)
+                    registration.Remove(el.entryId, el.vectorHash.ToSpan());
             }
+            
+            txw.Commit();
+        }
+        
+        using (var txr = Env.ReadTransaction())
+        {
+            Span<long> matches = new long[500];
+            Span<float> distances = new float[500];
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+                numberOfCandidates: 32,
+                MemoryMarshal.Cast<float, byte>(v3));
+            readFromGraph.Clear();
+            var read = 0;
+            do
+            {
+                read = nearest.Fill(matches, distances);
+                readFromGraph.AddRange(matches.Slice(0, read));
+            } while (read > 0);
+            
+            Assert.Equal(100, readFromGraph.Count);
+        }
+        
+        toRemove = elementInGraph.ToArray()[1..];
+        using (var txw = Env.WriteTransaction())
+        {
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            {
+                foreach (var id in toRemove)
+                    registration.Remove(id.entryId, id.vectorHash.ToSpan());
+            }
+            
+            txw.Commit();
+        }
+        
+        using (var txr = Env.ReadTransaction())
+        {
+            Span<long> matches = new long[100];
+            Span<float> distances = new float[100];
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+                numberOfCandidates: 32,
+                MemoryMarshal.Cast<float, byte>(v3));
+            readFromGraph.Clear();
+            var read = 0;
+            do
+            {
+                read = nearest.Fill(matches, distances);
+                readFromGraph.AddRange(matches.Slice(0, read));
+            } while (read > 0);
+            
+            Assert.Equal(1, readFromGraph.Count);
+        }
+        
+        using (var txw = Env.WriteTransaction())
+        {
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            {
+                registration.Remove(elementInGraph[0].entryId, elementInGraph[0].vectorHash.ToSpan());
+            }
+            
+            txw.Commit();
+        }
+        
+        using (var txr = Env.ReadTransaction())
+        {
+            Span<long> matches = new long[4];
+            Span<float> distances = new float[4];
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+                numberOfCandidates: 32,
+                MemoryMarshal.Cast<float, byte>(v3));
+            var read = nearest.Fill(matches, distances);
+            Assert.Equal(0, read);
         }
     }
 

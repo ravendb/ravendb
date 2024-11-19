@@ -28,15 +28,14 @@ namespace Voron.Data.Graphs;
 public unsafe partial class Hnsw
 {
     public const long EntryPointId = 1;
-
-
+    
     private static readonly Slice VectorsContainerIdSlice;
     private static readonly Slice NodeIdToLocationSlice;
     private static readonly Slice NodesByVectorIdSlice;
     private static readonly Slice VectorsIdByHashSlice;
     private static readonly Slice HnswGlobalConfigSlice;
     private static readonly Slice OptionsSlice;
-
+    
     static Hnsw()
     {
         using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -51,8 +50,7 @@ public unsafe partial class Hnsw
             Slice.From(ctx, "Options", ByteStringType.Immutable, out OptionsSlice);
         }
     }
-
-
+    
     [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 64)]
     public struct Options
     {
@@ -72,7 +70,7 @@ public unsafe partial class Hnsw
         public byte VectorBatchIndex;
 
         [FieldOffset(15)]
-        public byte Reserved;
+        public SimilarityMethod SimilarityMethod;
 
         [FieldOffset(16)]
         public long CountOfVectors;
@@ -306,7 +304,7 @@ public unsafe partial class Hnsw
         return vectorsContainerId;
     }
 
-    public struct SearchState
+    public unsafe struct SearchState
     {
         private readonly PriorityQueue<int, float> _candidatesQ = new();
         private readonly PriorityQueue<int, float> _nearestEdgesQ = new();
@@ -316,7 +314,7 @@ public unsafe partial class Hnsw
         private readonly Lookup<Int64LookupKey> _nodeIdToLocations;
         public readonly LowLevelTransaction Llt;
         private int _visitsCounter;
-
+        public delegate*<Span<byte>, Span<byte>, float> SimilarityCalc;
         public Span<Node> Nodes => _nodes.ToSpan();
         public Tree Tree => _tree;
 
@@ -342,6 +340,13 @@ public unsafe partial class Hnsw
             _nodeIdToLocations = _tree.LookupFor<Int64LookupKey>(NodeIdToLocationSlice);
             var options = _tree.DirectRead(OptionsSlice);
             Options = Unsafe.Read<Options>(options);
+            SimilarityCalc = Options.SimilarityMethod switch
+            {
+                SimilarityMethod.CosineSimilaritySingles => &CosineSimilaritySingles,
+                SimilarityMethod.CosineSimilarityI8 => &CosineSimilarityI8,
+                SimilarityMethod.HammingDistance => &HammingDistance,
+                _ => throw new ArgumentOutOfRangeException(nameof(Options.SimilarityMethod), Options.SimilarityMethod, null)
+            };
         }
 
         public void FlushOptions()
@@ -465,10 +470,7 @@ public unsafe partial class Hnsw
 
             ref var to = ref GetNodeByIndex(toIdx);
             Span<byte> v2 = to.GetVector(in this);
-            var distance = 1 - TensorPrimitives.CosineSimilarity(
-                MemoryMarshal.Cast<byte, float>(vector),
-                MemoryMarshal.Cast<byte, float>(v2)
-            );
+            var distance = SimilarityCalc(vector, v2);
             return distance;
         }
         
@@ -543,17 +545,17 @@ public unsafe partial class Hnsw
         {
             Debug.Assert(_candidatesQ.Count is 0 && _nearestEdgesQ.Count is 0);
             float lowerBound = -Distance(vector, dstIdx, startingPointIndex);
-            var visitedCounter = ++_visitsCounter;
-            
-            GetNodeByIndex(startingPointIndex).Visited = visitedCounter;
-            
+            var visitedCounter = ++_visitsCounter; 
+            ref var startingPoint = ref GetNodeByIndex(startingPointIndex);
+            startingPoint.Visited = visitedCounter;
             // candidates queue is sorted using the distance, so the lowest distance
             // will always pop first.
             // nearest edges is sorted using _reversed_ distance, so when we add a 
             // new item to the queue, we'll pop the one with the largest distance
             
             _candidatesQ.Enqueue(startingPointIndex, -lowerBound);
-            if (flags.HasFlag(NearestEdgesFlags.StartingPointAsEdge))
+            if (flags.HasFlag(NearestEdgesFlags.StartingPointAsEdge) && 
+                    (startingPoint.PostingListId != 0 || flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false))
             {
                 _nearestEdgesQ.Enqueue(startingPointIndex, lowerBound);
             }
@@ -672,7 +674,7 @@ public unsafe partial class Hnsw
     
     public class Registration : IDisposable
     {
-        private readonly Dictionary<ByteString, (int NodeIndex, NativeList<long> PostingList)> _vectorHashCache = new(ByteStringContentComparer.Instance);
+        private readonly Dictionary<ByteString, (ByteString Key, int NodeIndex, NativeList<long> PostingList)> _vectorHashCache = new(ByteStringContentComparer.Instance);
         private readonly Lookup<Int64LookupKey> _nodesByVectorId;
         private SearchState _searchState;
         public Random Random = Random.Shared;
@@ -689,80 +691,87 @@ public unsafe partial class Hnsw
             _vectorsByHash = llt.Transaction.CompactTreeFor(VectorsIdByHashSlice);
         }
 
-        public void Remove(long entryId, Span<byte> vector)
+        /// <summary>
+        /// Removes a vector from the graph.
+        /// </summary>
+        /// <param name="entryId">The ID of the document.</param>
+        /// <param name="vectorHash">The hash of the vector to remove.</param>
+        public void Remove(long entryId, Span<byte> vectorHash)
         {
+            const long RemovalMask = 1;
+
             PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>((entryId & Constants.Graphs.VectorId.EnsureIsSingleMask) != 0, "Entry ids must have the first two bits cleared, we are using those");
-            PortableExceptions.ThrowIf<ArgumentOutOfRangeException>(
-                vector.Length != _searchState.Options.VectorSizeBytes,
-                $"Vector size {vector.Length} does not match expected size: {_searchState.Options.VectorSizeBytes}");
-            var hashBuffer = ComputeHashFor(vector);
+
+            _searchState.Llt.Allocator.AllocateDirect(Sodium.GenericHashSize, out var hashBuffer);
+            vectorHash.CopyTo(hashBuffer.ToSpan());
+            
             ref var postingList = ref CollectionsMarshal.GetValueRefOrAddDefault(_vectorHashCache, hashBuffer, out var exists);
-            if(exists)
+            if (exists)
             {
-                // already added this in the current batch
                 ref var l = ref postingList.PostingList;
-                l.Add(_searchState.Llt.Allocator, entryId | 1);
-                // key already exists in the dictionary, so can clear this 
+                l.Add(_searchState.Llt.Allocator, entryId | RemovalMask);
                 _searchState.Llt.Allocator.Release(ref hashBuffer);
                 return;
             }
-            
-            var vectorHash = hashBuffer.ToReadOnlySpan();
+
             if (_vectorsByHash.TryGetValue(vectorHash, out var vectorId) is false)
-            {
-                return; // doesn't exist? 
-            }
+                PortableExceptions.Throw<InvalidOperationException>($"Unable to find the vector corresponding to the provided vector hash: base64({Convert.ToBase64String(vectorHash)}).");
+            
             if (_nodesByVectorId.TryGetValue(vectorId, out var nodeId) is false)
-            {
-                return; // doesn't exists?
-            }
+                PortableExceptions.Throw<InvalidOperationException>($"Unable to find the node corresponding to the provided vector hash: base64({Convert.ToBase64String(vectorHash)}) and VectorId({vectorId}).");
+
             int nodeIndex = _searchState.GetNodeIndexById(nodeId);
-            postingList = (nodeIndex, NativeList<long>.Create(_searchState.Llt.Allocator, entryId  | 1));
+            postingList = (hashBuffer, nodeIndex, NativeList<long>.Create(_searchState.Llt.Allocator, entryId  | RemovalMask));
         }
 
         /// <summary>
-        /// Write vector to the graph
+        /// Adds a vector to the graph.
         /// </summary>
-        /// <param name="entryId">Document (source) id</param>
-        /// <param name="vector">Vector data</param>
-        public void Register(long entryId, Span<byte> vector)
+        /// <param name="entryId">The ID of the document (source).</param>
+        /// <param name="vector">The vector's data.</param>
+        /// <returns>The CompactKey address of the hash calculated from the vector, which will be required for removal.</returns>
+        public ByteString Register(long entryId, Span<byte> vector)
         {
             PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>((entryId & Constants.Graphs.VectorId.EnsureIsSingleMask) != 0, "Entry ids must have the first two bits cleared, we are using those");
             PortableExceptions.ThrowIf<ArgumentOutOfRangeException>(
                 vector.Length != _searchState.Options.VectorSizeBytes,
                 $"Vector size {vector.Length} does not match expected size: {_searchState.Options.VectorSizeBytes}");
 
+            long hashContainerId;
             var hashBuffer = ComputeHashFor(vector);
-            ref var postingList = ref CollectionsMarshal.GetValueRefOrAddDefault(_vectorHashCache, hashBuffer, out var exists);
+            ref (ByteString Hash, int NodeIndex, NativeList<long> PostingList) postingList = ref CollectionsMarshal.GetValueRefOrAddDefault(_vectorHashCache, hashBuffer, out var exists);
             if(exists)
             {
                 // already added this in the current batch
                 ref var l = ref postingList.PostingList;
                 l.Add(_searchState.Llt.Allocator, entryId);
                 // key already exists in the dictionary, so can clear this 
+                var nodeIdExists = _vectorsByHash.TryGetValue(hashBuffer.ToReadOnlySpan(), out hashContainerId, out _);
                 _searchState.Llt.Allocator.Release(ref hashBuffer);
-                return;
+                Debug.Assert(nodeIdExists, $"nodeIdExists");
+                return postingList.Hash;
             }
 
             var vectorHash = hashBuffer.ToReadOnlySpan();
-            if (_vectorsByHash.TryGetValue(vectorHash, out var vectorId) is false)
+            if (_vectorsByHash.TryGetValue(vectorHash, out hashContainerId, out var vectorId) is false)
             {
                 vectorId = RegisterVector(vector);
-                _vectorsByHash.Add(vectorHash, vectorId);
+                hashContainerId = _vectorsByHash.Add(vectorHash, vectorId);
             }
             
             if (_nodesByVectorId.TryGetValue(vectorId, out var nodeId))
             {
                 int nodeIndex = _searchState.GetNodeIndexById(nodeId);
-                postingList = (nodeIndex, NativeList<long>.Create(_searchState.Llt.Allocator, entryId));
-                return;
+                postingList = (hashBuffer, nodeIndex, NativeList<long>.Create(_searchState.Llt.Allocator, entryId));
+                return hashBuffer;
             }
 
             long newNodeId = ++_searchState.Options.CountOfVectors;
             int nodeIdx = _searchState.RegisterVectorNode(newNodeId, vectorId);
             _nodesByVectorId.Add(vectorId, newNodeId);
             
-            postingList = (nodeIdx, ToPostingListTuple(entryId));
+            postingList = (hashBuffer, nodeIdx, ToPostingListTuple(entryId));
+            return hashBuffer;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -850,7 +859,7 @@ public unsafe partial class Hnsw
             byteBuffer.EnsureCapacityFor(128);
 
             var nodes = _searchState.Nodes;
-            foreach (var (_, (nodeIndex, modifications)) in _vectorHashCache)
+            foreach (var (_, (_, nodeIndex, modifications)) in _vectorHashCache)
             {
                 ref var node = ref nodes[nodeIndex];
                 node.PostingListId = MergePostingList(node.PostingListId, modifications);
@@ -1134,11 +1143,7 @@ public unsafe partial class Hnsw
                 continue; // no entries, can skip
 
             var curVect = reader.ReadVector(in searchState);
-            var distance = 1 - TensorPrimitives.CosineSimilarity(
-                MemoryMarshal.Cast<byte, float>(vector),
-                MemoryMarshal.Cast<byte, float>(curVect)
-            );
-
+            var distance = searchState.SimilarityCalc(vector, curVect);
             if (pq.Count < numberOfCandidates)
             {
                 pq.Enqueue(nodeId, -distance);
@@ -1237,7 +1242,7 @@ public unsafe partial class Hnsw
                     continue;
                 }
 
-                var nodeIdx = indexes[index];
+                var nodeIdx = indexes[_currentNode];
                 ref var node = ref searchState.GetNodeByIndex(nodeIdx);
                 var rawPostingListId = node.PostingListId & Constants.Graphs.VectorId.ContainerType;
                 distance = searchState.Distance(_vector, -1, nodeIdx);
