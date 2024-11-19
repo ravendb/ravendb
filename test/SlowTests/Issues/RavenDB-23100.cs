@@ -835,35 +835,6 @@ namespace SlowTests.Issues
             }
         }
 
-        private class DocumentsWithCompareExchangeIndexMapReduce : AbstractIndexCreationTask<Employee, DocumentsWithCompareExchangeIndexMapReduce.Result>
-        {
-            public class Result
-            {
-                public string CompanyName { get; set; }
-                public int Count { get; set; }
-            }
-
-            public DocumentsWithCompareExchangeIndexMapReduce()
-            {
-                Map = employees =>
-                    from employee in employees
-                    select new Result
-                    {
-                        CompanyName = LoadCompareExchangeValue<Company>(employee.CompanyId).Name,
-                        Count = 1
-                    };
-
-                Reduce = results => from result in results
-                    group result by result.CompanyName into g
-                    select new Result
-                    {
-                        CompanyName = g.Key,
-                        Count = g.Sum(x => x.Count)
-                    };
-
-            }
-        }
-
         private class CountersIndex : AbstractCountersIndexCreationTask<Employee>
         {
             public class Result
