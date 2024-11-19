@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                         while (keepRunning)
                         {
-                            UpdateReferences(indexContext, collection);
+                            UpdateReferences(collection, queryContext, indexContext);
 
                             var hasChanges = false;
                             earlyExit = false;
@@ -325,6 +325,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                             }
                         }
 
+                        DeleteReferences(collection, queryContext.Documents, indexContext);
+
                         if (lastReferenceEtag == lastEtag)
                         {
                             // the last referenced etag hasn't changed
@@ -363,7 +365,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return (moreWorkFound, batchContinuationResult);
         }
 
-        private void UpdateReferences(TransactionOperationContext indexContext, string collection)
+        private void UpdateReferences(string collection, QueryOperationContext queryContext, TransactionOperationContext indexContext)
         {
             // References were found during handling references
             // (HandleReferences is the first worker that is running so those references were found here).
@@ -384,13 +386,27 @@ namespace Raven.Server.Documents.Indexes.Workers
                 _indexStorage.ReferencesForCompareExchange.WriteReferencesForSingleCollection(collection, values, indexContext.Transaction);
                 values.Clear();
             }
+
+            DeleteReferences(collection, queryContext.Documents, indexContext);
+        }
+
+        private void DeleteReferences(string collection, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        {
+            if (CurrentIndexingScope.Current.ReferencesToDelete == null)
+                return;
+
+            foreach (var keyToRemove in CurrentIndexingScope.Current.ReferencesToDelete)
+            {
+                _referencesStorage.RemoveReferences(keyToRemove, collection, null, indexContext.Transaction);
+                keyToRemove.Release(databaseContext.Allocator);
+            }
+
+            CurrentIndexingScope.Current.ReferencesToDelete.Clear();
         }
 
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             string collection, Reference referencedItem, long lastIndexedEtag, HashSet<string> indexed, ReferencesState.ReferenceState referenceState)
         {
-            List<Slice> keysToRemove = null;
-
             var lastProcessedItemId = referenceState?.GetLastProcessedItemId(referencedItem);
             foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedItem.Key, indexContext.Transaction, lastProcessedItemId))
             {
@@ -400,8 +416,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (_index.SourceType == IndexSourceType.Documents)
                     {
                         // the document doesn't exist, we need to clean up any leftovers
-                        keysToRemove ??= new List<Slice>();
-                        keysToRemove.Add(key.Clone(queryContext.Documents.Allocator));
+                        CurrentIndexingScope.Current.ReferencesToDelete ??= new List<Slice>();
+                        CurrentIndexingScope.Current.ReferencesToDelete.Add(key.Clone(queryContext.Documents.Allocator));
                     }
                     continue;
                 }
@@ -426,15 +442,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                 }
 
                 yield return item;
-
-                if (keysToRemove != null)
-                {
-                    foreach (var keyToRemove in keysToRemove)
-                    {
-                        _referencesStorage.RemoveReferences(keyToRemove, collection, null, indexContext.Transaction);
-                        keyToRemove.Release(queryContext.Documents.Allocator);
-                    }
-                }
 
                 void DisposeItem()
                 {
