@@ -46,7 +46,9 @@
     <None Remove="Data\RavenDB_16378\RavenDB-16401-NRE.ravendb-snapshot" />
     <None Remove="Data\RavenDB_18381\2022-03-27-12-38-05-8912792.ravendb-snapshot" />
     <None Remove="Data\RavenDB_23100\2024-11-18-17-16-52-7843589.ravendb-snapshot" />
-    <None Remove="Data\RavenDB_23100\2024-11-18-18-07-42-3204449.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_23100\2024-11-19-08-30-34-7519596.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_23100\2024-11-19-10-39-25-6242058.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_23100\2024-11-19-10-43-34-8245899.ravendb-snapshot" />
     <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
   </ItemGroup>
@@ -125,7 +127,9 @@
     <EmbeddedResource Include="Data\RavenDB_17070\Precorax\Orders_ByOrderBy.zip" />
     <EmbeddedResource Include="Data\RavenDB_18381\2022-03-27-12-38-05-8912792.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_23100\2024-11-18-17-16-52-7843589.ravendb-snapshot" />
-    <EmbeddedResource Include="Data\RavenDB_23100\2024-11-18-18-07-42-3204449.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_23100\2024-11-19-08-30-34-7519596.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_23100\2024-11-19-10-39-25-6242058.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_23100\2024-11-19-10-43-34-8245899.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
