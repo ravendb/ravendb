@@ -3,9 +3,24 @@ using Sparrow;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
+    /// <summary>
+    /// Represents a range of time series data based on specific start and end times.
+    /// </summary>
     public sealed class TimeSeriesRange : AbstractTimeSeriesRange
     {
-        public DateTime? From, To;
+        /// <summary>
+        /// Gets or sets the start time of the range.
+        /// Data points from this timestamp (inclusive) will be included in the range.
+        /// If <c>null</c>, the range starts from the beginning of the time series.
+        /// </summary>
+        public DateTime? From { get; set; }
+
+        /// <summary>
+        /// Gets or sets the end time of the range.
+        /// Data points up to this timestamp (inclusive) will be included in the range.
+        /// If <c>null</c>, the range extends to the end of the time series.
+        /// </summary>
+        public DateTime? To { get; set; }
     }
 
     internal sealed class TimeSeriesTimeRange : AbstractTimeSeriesRange
@@ -20,14 +35,33 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public TimeSeriesRangeType Type;
     }
 
+    /// <summary>
+    /// Represents a base class for defining time series ranges.
+    /// </summary>
     public abstract class AbstractTimeSeriesRange
     {
-        public string Name;
+        /// <summary>
+        /// Gets or sets the name of the time series.
+        /// </summary>
+        /// <remarks>
+        /// This property identifies the time series on which the range operations will be performed.
+        /// </remarks>
+        public string Name { get; set; }
     }
 
+    /// <summary>
+    /// Specifies the type of time series range operation.
+    /// </summary>
     public enum TimeSeriesRangeType
     {
+        /// <summary>
+        /// No range type specified.
+        /// </summary>
         None,
+
+        /// <summary>
+        /// Specifies a range that retrieves the last set of data points from the time series.
+        /// </summary>
         Last
     }
 }

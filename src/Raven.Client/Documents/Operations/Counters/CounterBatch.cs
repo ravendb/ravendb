@@ -12,8 +12,22 @@ namespace Raven.Client.Documents.Operations.Counters
     /// </summary>
     public sealed class CounterBatch
     {
-        public bool ReplyWithAllNodesValues;
+        /// <summary>
+        /// Gets or sets a value indicating whether the response should include counter values from all nodes.
+        /// When set to <c>true</c>, the response includes the values of each counter from all nodes in the cluster.
+        /// </summary>
+        public bool ReplyWithAllNodesValues { get; set; }
+
+        /// <summary>
+        /// Gets or sets the list of counter operations to be performed on the specified documents.
+        /// Each <see cref="DocumentCountersOperation"/> represents a set of counter operations for a single document.
+        /// </summary>
         public List<DocumentCountersOperation> Documents = new List<DocumentCountersOperation>();
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the batch originated from an ETL process.
+        /// This is used internally to identify and manage counter operations triggered by ETL pipelines.
+        /// </summary>
         public bool FromEtl;
     }
 
@@ -22,8 +36,24 @@ namespace Raven.Client.Documents.Operations.Counters
     /// </summary>
     public sealed class DocumentCountersOperation
     {
-        public List<CounterOperation> Operations;
-        public string DocumentId;
+        /// <summary>
+        /// Gets or sets the list of counter operations to be performed on the specified document.
+        /// Each operation in the list specifies an action, such as incrementing or deleting a counter.
+        /// </summary>
+        /// <remarks>
+        /// The <see cref="Operations"/> property is mandatory and must be populated before the batch operation is executed.
+        /// If it is not set or is empty, an exception will be thrown during parsing or execution.
+        /// </remarks>
+        public List<CounterOperation> Operations { get; set; }
+
+        /// <summary>
+        /// Gets or sets the ID of the document on which the counter operations are to be performed.
+        /// </summary>
+        /// <remarks>
+        /// The <see cref="DocumentId"/> property is mandatory and identifies the target document for the counter operations.
+        /// If it is not set, an exception will be thrown during parsing or execution.
+        /// </remarks>
+        public string DocumentId { get; set; }
         
         public static DocumentCountersOperation Parse(BlittableJsonReaderObject input)
         {
@@ -78,13 +108,39 @@ namespace Raven.Client.Documents.Operations.Counters
         }
     }
 
+    /// <summary>
+    /// Represents the types of operations that can be performed on counters in RavenDB.
+    /// </summary>
     public enum CounterOperationType
     {
+        /// <summary>
+        /// No operation. Represents the absence of any counter operation.
+        /// </summary>
         None,
+
+        /// <summary>
+        /// Increases the value of the counter by a specified amount. If the counter does not exist, it will be created with the specified value.
+        /// </summary>
         Increment,
+
+        /// <summary>
+        /// Deletes the counter, removing it from the database.
+        /// </summary>
         Delete,
+
+        /// <summary>
+        /// Retrieves the value of a specific counter.
+        /// </summary>
         Get,
+
+        /// <summary>
+        /// Used internally for sending counters by ETL
+        /// </summary>
         Put,
+
+        /// <summary>
+        /// Retrieves all counters associated with a document. When using this type, 'CounterName' should not be specified.
+        /// </summary>
         GetAll
     }
 
@@ -93,9 +149,38 @@ namespace Raven.Client.Documents.Operations.Counters
     /// </summary>
     public sealed class CounterOperation
     {
-        public CounterOperationType Type;
-        public string CounterName;
-        public long Delta;
+        /// <summary>
+        /// Gets or sets the type of the counter operation to be performed.
+        /// Specifies the action, such as incrementing, deleting, or retrieving a counter value.
+        /// </summary>
+        /// <remarks>
+        /// Valid types are defined in the <see cref="CounterOperationType"/> enumeration, including:
+        /// - <see cref="CounterOperationType.Increment"/>: Increments the counter by a specified value.
+        /// - <see cref="CounterOperationType.Delete"/>: Deletes the counter.
+        /// - <see cref="CounterOperationType.Get"/>: Retrieves the value of the counter.
+        /// - <see cref="CounterOperationType.GetAll"/>: Retrieves all counters for a document.
+        /// </remarks>
+        public CounterOperationType Type { get; set; }
+
+        /// <summary>
+        /// Gets or sets the name of the counter to be operated on.
+        /// </summary>
+        /// <remarks>
+        /// - The <see cref="CounterName"/> property is mandatory for operations of type <see cref="CounterOperationType.Increment"/>, <see cref="CounterOperationType.Delete"/>, and <see cref="CounterOperationType.Get"/>.
+        /// - For <see cref="CounterOperationType.GetAll"/>, the <see cref="CounterName"/> property is not used and can be <c>null</c>.
+        /// - If <see cref="CounterName"/> is required but not set, an exception will be thrown during parsing or execution.
+        /// </remarks>
+        public string CounterName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the value by which the counter should be incremented or decremented.
+        /// </summary>
+        /// <remarks>
+        /// - Used only for operations of type <see cref="CounterOperationType.Increment"/>.
+        /// - For <see cref="CounterOperationType.Put"/>, this specifies the exact value to set for the counter but is used internally and not intended for external use.
+        /// - For other operation types, this property is ignored.
+        /// </remarks>
+        public long Delta { get; set; }
 
         internal string ChangeVector;
         internal string DocumentId;

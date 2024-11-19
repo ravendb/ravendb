@@ -17,7 +17,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private SortedList<long, AppendOperation> _appends;
         private SortedList<long, IncrementOperation> _increments;
 
-
         internal IList<AppendOperation> Appends
         {
             get => _appends?.Values;
@@ -45,6 +44,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             }
         }
 
+        /// <summary>
+        /// Adds an incremental operation to the batch for the specified time series.
+        /// This operation increments the values at the given timestamp, supporting concurrent updates in a distributed environment.
+        /// </summary>
+        /// <param name="incrementOperation">The increment operation to add, specifying the timestamp and values to increment.</param>
+        /// <remarks>
+        /// Incremental time series in RavenDB are designed to handle concurrent updates from multiple nodes.
+        /// Each node maintains its own local changes for the specified timestamp, which are aggregated to provide a unified view.
+        /// </remarks>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown if the number of values in the new operation does not match the number in an existing operation for the same timestamp.
+        /// </exception>
         public void Increment(IncrementOperation incrementOperation)
         {
             _increments ??= new SortedList<long, IncrementOperation>();
@@ -67,8 +78,21 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         internal List<DeleteOperation> Deletes;
 
-        public string Name;
+        /// <summary>
+        /// Gets or sets the name of the time series on which the operations are performed.
+        /// This property is mandatory and must be set before executing the <see cref="TimeSeriesBatchOperation"/> that contains this <see cref="TimeSeriesOperation"/>.
+        /// </summary>
+        /// <remarks>
+        /// The <see cref="Name"/> property identifies the time series within the document to which the batch operations apply.
+        /// If this property is not set, an exception will be thrown when attempting to execute the batch operation.
+        /// </remarks>
+        public string Name { get; set; }
 
+        /// <summary>
+        /// Adds an append operation to the batch.
+        /// This operation adds new data points to the time series at a specific timestamp.
+        /// </summary>
+        /// <param name="appendOperation">The append operation to add.</param>
         public void Append(AppendOperation appendOperation)
         {
             _appends ??= new SortedList<long, AppendOperation>();
@@ -76,6 +100,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             _appends[appendOperation.Timestamp.Ticks] = appendOperation; // on duplicate values the last one overrides
         }
 
+        /// <summary>
+        /// Adds a delete operation to the batch.
+        /// This operation removes data points within a specific range from the time series.
+        /// </summary>
+        /// <param name="deleteOperation">The delete operation to add.</param>
         public void Delete(DeleteOperation deleteOperation)
         {
             Deletes ??= new List<DeleteOperation>();
@@ -284,6 +313,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             throw new InvalidDataException($"Missing '{prop}' property on TimeSeriesOperation '{typeof(T).Name}'");
         }
 
+        /// <summary>
+        /// Converts the time series operation into a JSON representation.
+        /// </summary>
+        /// <returns>A <see cref="DynamicJsonValue"/> representing the operation.</returns>
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -300,10 +333,23 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// </summary>
         public sealed class AppendOperation
         {
-            public DateTime Timestamp;
-            public double[] Values;
-            public string Tag;
+            /// <summary>
+            /// Gets or sets the timestamp of the data point to be appended.
+            /// This specifies when the data point occurred.
+            /// </summary>
+            public DateTime Timestamp { get; set; }
 
+            /// <summary>
+            /// Gets or sets the values associated with the data point.
+            /// These are the numeric measurements recorded at the specified <see cref="Timestamp"/>.
+            /// </summary>
+            public double[] Values { get; set; }
+
+            /// <summary>
+            /// Gets or sets an optional tag for the data point.
+            /// The tag can provide additional context or metadata for the appended data, such as the source or a descriptive label.
+            /// </summary>
+            public string Tag { get; set; }
             internal static AppendOperation Parse(BlittableJsonReaderObject input)
             {
                 if (input.TryGet(nameof(Timestamp), out DateTime ts) == false)
@@ -350,7 +396,19 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// </summary>
         public sealed class DeleteOperation
         {
-            public DateTime? From, To;
+            /// <summary>
+            /// Gets or sets the start of the range for the delete operation.
+            /// Data points from this timestamp (inclusive) will be considered for deletion.
+            /// If <c>null</c>, the range starts from the beginning of the time series.
+            /// </summary>
+            public DateTime? From { get; set; }
+
+            /// <summary>
+            /// Gets or sets the end of the range for the delete operation.
+            /// Data points up to this timestamp (inclusive) will be considered for deletion.
+            /// If <c>null</c>, the range extends to the end of the time series.
+            /// </summary>
+            public DateTime? To { get; set; }
 
             internal static DeleteOperation Parse(BlittableJsonReaderObject input)
             {
@@ -379,8 +437,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// </summary>
         public sealed class IncrementOperation
         {
-            public DateTime Timestamp;
-            public double[] Values;
+            /// <summary>
+            /// Gets or sets the timestamp of the data point to be incremented.
+            /// This specifies the exact point in time where the values should be adjusted.
+            /// </summary>
+            public DateTime Timestamp { get; set; }
+
+            /// <summary>
+            /// Gets or sets the values to increment at the specified <see cref="Timestamp"/>.
+            /// Each value corresponds to a numeric field in the time series, and the increment operation adds the specified amount to the current values.
+            /// </summary>
+            public double[] Values { get; set; }
+
             internal int? ValuesLength;
 
             internal static IncrementOperation Parse(BlittableJsonReaderObject input)

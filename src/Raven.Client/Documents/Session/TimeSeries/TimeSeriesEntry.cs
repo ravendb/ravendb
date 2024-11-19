@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="TimeSeriesValue.cs" company="Hibernating Rhinos LTD">
+// <copyright file="TimeSeriesEntry.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -28,12 +28,42 @@ namespace Raven.Client.Documents.Session.TimeSeries
     /// </remarks>
     public class TimeSeriesEntry : ITimeSeriesQueryStreamEntry
     {
+        /// <summary>
+        /// Gets or sets the timestamp of the time series entry.
+        /// This represents the point in time at which the values were recorded.
+        /// </summary>
         public DateTime Timestamp { get; set; }
+
+        /// <summary>
+        /// Gets or sets the values associated with the time series entry.
+        /// These values represent the numeric data points recorded at the specified <see cref="Timestamp"/>.
+        /// </summary>
         public double[] Values { get; set; }
+
+        /// <summary>
+        /// Gets or sets the tag for the time series entry.
+        /// This optional metadata provides additional context about the entry, such as the source or a descriptive label.
+        /// </summary>
         public string Tag { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the entry is part of a rollup time series.
+        /// A rollup aggregates data over a specific time range, as opposed to individual data points.
+        /// </summary>
         public bool IsRollup { get; set; }
+
+        /// <summary>
+        /// Gets or sets a dictionary of node-specific values for the time series entry.
+        /// The key represents the node identifier, and the value is an array of numeric data points associated with that node.
+        /// </summary>
         public Dictionary<string, double[]> NodeValues { get; set; }
 
+        /// <summary>
+        /// Gets or sets the value of the time series entry if it contains a single value.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown if the entry contains more than one value.
+        /// </exception>
         [JsonDeserializationIgnore]
         public double Value
         {
@@ -56,6 +86,10 @@ namespace Raven.Client.Documents.Session.TimeSeries
             }
         }
 
+        /// <summary>
+        /// Returns a string representation of the time series entry, including the timestamp, values, and tag.
+        /// </summary>
+        /// <returns>A string in the format "[Timestamp] Values Tag".</returns>
         public override string ToString()
         {
             return $"[{Timestamp}] {string.Join(", ", Values)} {Tag}";
