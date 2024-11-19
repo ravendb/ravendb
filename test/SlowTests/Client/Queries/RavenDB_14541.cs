@@ -19,7 +19,7 @@ namespace SlowTests.Client.Queries
         }
 
         [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-        public void RavenQueryIncludeTest1()
+        public void IncludeWithSingleSplitTest()
         {
             using (var store = GetDocumentStore())
             {
@@ -52,7 +52,7 @@ namespace SlowTests.Client.Queries
         }
 
 
-        public void RavenQueryIncludeTest2()
+        public void IncludeWithLet()
         {
             using (var store = GetDocumentStore())
             {
@@ -83,7 +83,7 @@ namespace SlowTests.Client.Queries
         }
 
 
-        public void RavenQueryIncludeTest3()
+        public void IncludeWithSinglePropertyAndLet()
         {
             using (var store = GetDocumentStore())
             {
@@ -114,7 +114,7 @@ namespace SlowTests.Client.Queries
 
 
 
-        public void RavenQueryIncludeTest4()
+        public void MultipleIncludesInsideSelect()
         {
             using (var store = GetDocumentStore())
             {
@@ -147,7 +147,7 @@ namespace SlowTests.Client.Queries
         }
 
 
-        public void RavenQueryIncludeTest5()
+        public void IncludeWithInvalidName()
         {
             using (var store = GetDocumentStore())
             {
@@ -164,7 +164,7 @@ namespace SlowTests.Client.Queries
                         });
 
                     var error = Assert.Throws<InvalidOperationException>(() => query5.ToList());
-                    Assert.Equal("Include variable can only be named by discard('_') character", error.Message);
+                    Assert.Equal("The include variable can only be assigned to the discard character (_)", error.Message);
                 }
             }
         }

@@ -1026,7 +1026,6 @@ namespace Raven.Client.Util
 
         internal sealed class IncludeSupport : JavascriptConversionExtension
         {
-            private readonly string _name;
             public bool HasInclude;
             public bool HadAnyIncludes;
             public IncludeSupport()

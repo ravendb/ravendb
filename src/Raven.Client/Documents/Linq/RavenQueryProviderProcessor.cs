@@ -3045,14 +3045,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                          (!(arg is MethodCallExpression methodCall) || methodCall.Method.Name == nameof(RavenQuery.Load));
 
                 var loadSupport = new JavascriptConversionExtensions.LoadSupport(_loadTypes) { DoNotTranslate = shouldUseLoadToken };
-                var js = ToJs(arg, false, loadSupport, name);
+                var js = ToJs(arg, false, loadSupport);
 
                 if (_includeSupport.HasInclude)
                 {
                     _includeSupport.HasInclude = false;
                     if (name.All(c => c == '_') == false)
                     {
-                        throw new InvalidOperationException("Include variable can only be named by discard('_') character");
+                        throw new InvalidOperationException("The include variable can only be assigned to the discard character (_)");
                     }
                 }
                 if (loadSupport.HasLoad && shouldUseLoadToken)
@@ -3337,7 +3337,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (expression is MemberExpression or MethodCallExpression)
             {
-                if (_includeSupport.HadAnyIncludes)
+                if (_includeSupport is not null && _includeSupport.HadAnyIncludes)
                 {
                     sb.Append('{');
                     var name = GetMember(expression);
@@ -3350,7 +3350,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     script = ToJs(expression);
 
                 sb.Append(script);
-                if (_includeSupport.HadAnyIncludes)
+                if (_includeSupport is not null && _includeSupport.HadAnyIncludes)
                 {
                     sb.Append("}");
                 }
@@ -3365,7 +3365,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (IsRawOrTimeSeriesCall(expression, out string script) == false)
             {
-                script = ToJs(expression, name:name);
+                script = ToJs(expression);
             }
 
             if (_includeSupport?.HasInclude == true)
@@ -3373,7 +3373,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 _includeSupport.HasInclude = false;
                 if (name.All(c => c == '_') == false)
                 {
-                    throw new InvalidOperationException("Include variable can only be named by discard('_') character");
+                    throw new InvalidOperationException("The include variable can only be assigned to the discard character (_)");
                 }
             }
 
@@ -3409,7 +3409,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == "Raw";
         }
 
-        private string ToJs(Expression expression, bool loadArg = false, JavascriptConversionExtensions.LoadSupport loadSupport = null, string name = null)
+        private string ToJs(Expression expression, bool loadArg = false, JavascriptConversionExtensions.LoadSupport loadSupport = null)
         {
             var extensions = new JavascriptConversionExtension[]
             {
