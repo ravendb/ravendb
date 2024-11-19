@@ -99,6 +99,8 @@ namespace FastTests
         static unsafe TestBase()
         {
             IgnoreProcessorAffinityChanges(ignore: true);
+            LicenseManager.IgnoreCompressionLicenseLimit = true;
+
             //RequestExecutor.HttpClientFactory = RavenServerHttpClientFactory.Instance;
             LicenseManager.AddLicenseStatusToLicenseLimitsException = true;
             RachisStateMachine.EnableDebugLongCommit = true;
