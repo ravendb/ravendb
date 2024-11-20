@@ -70,7 +70,6 @@ public unsafe partial class Pager
             }
 
             GC.SuppressFinalize(this);
-
         }
 
         ~State()

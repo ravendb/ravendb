@@ -10,7 +10,6 @@ namespace Voron.Impl.Paging;
 
 public unsafe partial class Pager
 {
-
     public static class Bits64
     {
         public const int AllocationGranularity = 64 * Constants.Size.Kilobyte;
