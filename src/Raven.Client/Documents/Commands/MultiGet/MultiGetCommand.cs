@@ -150,7 +150,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
                 command.Headers[Constants.Headers.IfNoneMatch] = $"\"{changeVector}\"";
                 _cached ??= new Cached(_commands.Count);
-                _cached.Values[i] = (cachedItem, cached);
+                _cached.Set(i, cachedItem, cached);
             }
 
             if (readAllFromCache)
@@ -160,9 +160,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     Result = new List<GetResponse>(_commands.Count);
                     for (int i = 0; i < _commands.Count; i++)
                     {
-                        // ReSharper disable once PossibleNullReferenceException
-                        var (_, cached) = _cached.Values[i];
-                        Result.Add(new GetResponse { Result = cached?.Clone(ctx), StatusCode = HttpStatusCode.NotModified });
+                        Result.Add(new GetResponse { Result = _cached.GetItem(i)?.Clone(ctx), StatusCode = HttpStatusCode.NotModified });
                     }
                 }
 
@@ -203,7 +201,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     var command = _commands[i];
 
                     MaybeSetCache(getResponse, command, i);
-                    Result.Add(_cached != null && getResponse.StatusCode == HttpStatusCode.NotModified ? new GetResponse { Result = _cached.Values[i].Cached?.Clone(context), StatusCode = HttpStatusCode.NotModified } : getResponse);
+                    Result.Add(_cached != null && getResponse.StatusCode == HttpStatusCode.NotModified ? new GetResponse { Result = _cached.GetItem(i)?.Clone(context), StatusCode = HttpStatusCode.NotModified } : getResponse);
 
                     i++;
                 }
@@ -315,7 +313,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             if (getResponse.StatusCode == HttpStatusCode.NotModified)
             {
                 // if not modified - update age
-                _cached?.Values[cachedIndex].Release.NotModified();
+                _cached?.SetNotModified(cachedIndex);
                 return;
             }
 
@@ -363,27 +361,52 @@ namespace Raven.Client.Documents.Commands.MultiGet
             }
         }
 
-        private class Cached : IDisposable
+        private sealed class Cached : IDisposable
         {
             private readonly int _size;
-            public (HttpCache.ReleaseCacheItem Release, BlittableJsonReaderObject Cached)[] Values;
+            private HttpCache.ReleaseCacheItem[] _releaseCacheItems;
+            private BlittableJsonReaderObject[] _commands;
 
             public Cached(int size)
             {
                 _size = size;
-                Values = ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Rent(size);
+                _releaseCacheItems = ArrayPool<HttpCache.ReleaseCacheItem>.Shared.Rent(size);
+                _commands = ArrayPool<BlittableJsonReaderObject>.Shared.Rent(size);
+            }
+
+            public void Set(int index, HttpCache.ReleaseCacheItem cachedItem, BlittableJsonReaderObject cached)
+            {
+                _releaseCacheItems[index] = cachedItem;
+                _commands[index] = cached;
+            }
+
+            public BlittableJsonReaderObject GetItem(int index)
+            {
+                return _commands[index];
+            }
+
+            public void SetNotModified(int index)
+            {
+                _releaseCacheItems[index].NotModified();
             }
 
             public void Dispose()
             {
-                if (Values == null)
+                if (_releaseCacheItems == null || _commands == null)
                     return;
+
                 for (int i = 0; i < _size; i++)
                 {
-                    Values[i].Release.Dispose();
+                    _releaseCacheItems[i].Dispose();
+                    _releaseCacheItems[i] = default;
+                    _commands[i] = null;
                 }
-                ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Return(Values);
-                Values = null;
+
+                ArrayPool<HttpCache.ReleaseCacheItem>.Shared.Return(_releaseCacheItems);
+                ArrayPool<BlittableJsonReaderObject>.Shared.Return(_commands);
+
+                _releaseCacheItems = null;
+                _commands = null;
             }
         }
     }
