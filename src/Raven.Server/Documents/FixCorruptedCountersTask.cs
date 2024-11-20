@@ -187,4 +187,32 @@ public class FixCorruptedCountersTask
             return startAfter;
         }
     }
+
+    public class ExecuteFixCounterGroupsCommand : TransactionOperationsMerger.MergedTransactionCommand
+    {
+        private readonly List<string> _docIds;
+        private readonly DocumentDatabase _database;
+
+
+        public ExecuteFixCounterGroupsCommand(DocumentDatabase database, string docId) : this(database, [docId])
+        {
+        }
+
+        public ExecuteFixCounterGroupsCommand(DocumentDatabase database, List<string> docIdsToFix)
+        {
+            _docIds = docIdsToFix;
+            _database = database;
+        }
+
+        protected override long ExecuteCmd(DocumentsOperationContext context)
+        {
+            var numOfCounterGroupFixed = _database.DocumentsStorage.CountersStorage.FixCountersForDocuments(context, _docIds);
+            return numOfCounterGroupFixed;
+        }
+
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
@@ -23,8 +22,6 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
-using static Raven.Server.Documents.Handlers.CountersHandler;
-using static Raven.Server.Utils.MetricCacher.Keys;
 using Constants = Raven.Client.Constants;
 using Memory = Sparrow.Memory;
 
@@ -420,8 +417,6 @@ namespace Raven.Server.Documents
                         if (data.TryGet(CounterNames, out BlittableJsonReaderObject originalNames) == false)
                             ThrowMissingProperty(counterKeySlice, CounterNames);
 
-                        CheckForCorruptedCountersData(documentId, counters, originalNames);
-
                         var counterEtag = _documentsStorage.GenerateNextEtag();
 
                         counters.TryGetMember(lowerName, out object existingCounter);
@@ -523,22 +518,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static void CheckForCorruptedCountersData(string documentId, BlittableJsonReaderObject counterValues, BlittableJsonReaderObject counterNames)
-        {
-            // RavenDB-22835
-            // counters data might be corrupted and needs to be fixed before adding/incrementing new counters
-
-            var msg = $"Counters data of document '{documentId}' is corrupted. " +
-                      $"Cannot add/increment counters while counter data is in this corrupted state. Please use FixCounters tool (/databases/*/counters/fix-document) in order to add/increment counters of this document";
-
-            if (counterValues.Count != counterNames.Count)
-                throw new InvalidDataException(msg);
-            
-            var counterValuesPropertyNames = counterValues.GetSortedPropertyNames();
-            var counterNamesPropertyNames = counterNames.GetSortedPropertyNames();
-            if (counterValuesPropertyNames.SequenceEqual(counterNamesPropertyNames) == false)
-                throw new InvalidDataException(msg);
-        }
 
         internal static void ThrowMissingProperty(Slice counterKeySlice, string property)
         {
