@@ -714,8 +714,8 @@ namespace Voron.Impl
 
             if (_cachedDecompressedBuffersByStorageId.Remove(storageId, out var t))
             {
-                Allocator.Release(ref t);
                 _lowLevelTransaction.DecompressedBufferBytes -= t.Length;
+                Allocator.Release(ref t);
             }
         }
 
