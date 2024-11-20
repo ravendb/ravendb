@@ -89,7 +89,8 @@ namespace Raven.Server.Documents
         private DateTime _nextIoMetricsCleanupTime;
         private long _lastTopologyIndex = -1;
         private long _preventUnloadCounter;
-
+        private readonly ClusterTransactionErrorNotification _clusterTransactionErrorNotification;
+        
         public string DatabaseGroupId;
         public string ClusterTransactionId;
         public SupportedFeature SupportedFeatures;
@@ -185,6 +186,7 @@ namespace Raven.Server.Documents
                 TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
                 ConfigurationStorage = new ConfigurationStorage(this);
                 NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, DatabaseShutdown, configuration);
+                _clusterTransactionErrorNotification = new ClusterTransactionErrorNotification(NotificationCenter, Name);
                 HugeDocuments = new HugeDocuments(NotificationCenter, ConfigurationStorage.NotificationsStorage, Name, configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes,
@@ -592,6 +594,8 @@ namespace Raven.Server.Documents
                     maxIndex = command.Index;
                 }
                 ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(maxIndex);
+
+                _clusterTransactionErrorNotification.Dismiss();
             }
             catch
             {
@@ -640,25 +644,55 @@ namespace Raven.Server.Documents
                 {
                     ClusterWideTransactionIndexWaiter.NotifyListenersAboutError(e);
                     OnClusterTransactionCompletion(command, exception: e);
-                    NotificationCenter.Add(AlertRaised.Create(
-                        Name,
-                        "Cluster transaction failed to execute",
+                    _clusterTransactionErrorNotification.Notify(
                         $"Failed to execute cluster transactions with raft index: {command.Index}. {Environment.NewLine}" +
                         $"With the following document ids involved: {string.Join(", ", command.Commands.Select(item => item.Id))} {Environment.NewLine}" +
-                        "Performing cluster transactions on this database will be stopped until the issue is resolved.",
-                        AlertType.ClusterTransactionFailure,
-                        NotificationSeverity.Error,
-                        $"{Name}/ClusterTransaction",
-                        new ExceptionDetails(e)));
+                        "Performing cluster transactions on this database will be stopped until the issue is resolved.", e);
 
                     DatabaseShutdown.WaitHandle.WaitOne(_clusterTransactionDelayOnFailure);
                     _clusterTransactionDelayOnFailure = Math.Min(_clusterTransactionDelayOnFailure * 2, 15000);
 
                     return;
                 }
+
+                _clusterTransactionErrorNotification.Dismiss();
             }
         }
 
+        private class ClusterTransactionErrorNotification
+        {
+            private readonly NotificationCenter.NotificationCenter _notificationCenter;
+            private readonly string _key;
+            private readonly string _id;
+            private readonly string _databaseName;
+
+            public ClusterTransactionErrorNotification(NotificationCenter.NotificationCenter notificationCenter, string databaseName)
+            {
+                _notificationCenter = notificationCenter;
+                _key = $"{databaseName}/ClusterTransaction";
+                _id = AlertRaised.GetKey(AlertType.ClusterTransactionFailure, _key);
+                _databaseName = databaseName;
+            }
+
+            public void Notify(string msg, Exception e)
+            {
+                _notificationCenter.Add(AlertRaised.Create(
+                    _databaseName,
+                    "Cluster transaction failed to execute",
+                    msg,
+                    AlertType.ClusterTransactionFailure,
+                    NotificationSeverity.Error,
+                    _key,
+                    new ExceptionDetails(e)));
+            }
+
+            public void Dismiss()
+            {
+                if (_notificationCenter.Exists(_id))
+                    _notificationCenter.Dismiss(_id);
+            }
+        }
+        
         private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command, BatchHandler.ClusterTransactionMergedCommand mergedCommands)
         {
             try
