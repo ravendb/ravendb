@@ -55,6 +55,9 @@ namespace Raven.Server.Documents
         private static readonly Slice TombstonesPrefix;
         private static readonly Slice DeletedEtagsSlice;
 
+        private static readonly Slice FixCountersLastKeySlice;
+
+
         public static readonly TableSchema DocsSchema = new TableSchema
         {
             TableType = (byte)TableType.Documents
@@ -121,6 +124,8 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
                 Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
                 Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
+                Slice.From(ctx, "FixCountersLastKeySlice", ByteStringType.Immutable, out FixCountersLastKeySlice);
+
             }
             /*
             Collection schema is:
@@ -726,6 +731,7 @@ namespace Raven.Server.Documents
 
             return lastEtag;
         }
+
         public static long ReadLastCompletedClusterTransactionIndex(Transaction tx)
         {
             if (tx == null)
@@ -750,6 +756,38 @@ namespace Raven.Server.Documents
             using (Slice.External(context.Allocator, (byte*)&index, sizeof(long), out Slice indexSlice))
                 tree.Add(LastCompletedClusterTransactionIndexSlice, indexSlice);
         }
+
+        public static string ReadFixCountersLastKey(Transaction tx)
+        {
+            if (tx == null)
+                throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
+            var tree = tx.ReadTree(GlobalTreeSlice);
+            var val = tree.Read(FixCountersLastKeySlice);
+            if (val == null)
+            {
+                return string.Empty;
+            }
+            return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
+        }
+
+        public void SetFixCountersLastKey(DocumentsOperationContext context, string lastKey)
+        {
+            try
+            {
+                var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
+                using (Slice.From(context.Allocator, lastKey, out var slice))
+                {
+                    tree.Add(FixCountersLastKeySlice, slice);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+        }
+
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string startAfterId,
             long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All, CancellationToken token = default)

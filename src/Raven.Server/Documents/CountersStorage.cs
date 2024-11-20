@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
@@ -22,6 +23,8 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
+using static Raven.Server.Documents.Handlers.CountersHandler;
+using static Raven.Server.Utils.MetricCacher.Keys;
 using Constants = Raven.Client.Constants;
 using Memory = Sparrow.Memory;
 
@@ -1178,6 +1181,8 @@ namespace Raven.Server.Documents
                 _dictionariesPool.Free(entriesToUpdate);
             }
         }
+
+
 
         public int FixCountersForDocuments(DocumentsOperationContext context, List<string> docIds)
         {

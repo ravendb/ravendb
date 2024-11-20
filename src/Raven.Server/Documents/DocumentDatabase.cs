@@ -201,6 +201,7 @@ namespace Raven.Server.Documents
                 });
                 _hasClusterTransaction = new ManualResetEventSlim(false);
                 IdentityPartsSeparator = '/';
+                FixCorruptedCountersTask = new FixCorruptedCountersTask(this);
             }
             catch (Exception)
             {
@@ -285,6 +286,8 @@ namespace Raven.Server.Documents
         public ClientConfiguration ClientConfiguration { get; private set; }
 
         public StudioConfiguration StudioConfiguration { get; private set; }
+
+        public FixCorruptedCountersTask FixCorruptedCountersTask { get; private set; }
 
         public bool Is32Bits { get; }
 
@@ -390,6 +393,8 @@ namespace Raven.Server.Documents
                     var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
                     ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(lastCompletedClusterTransactionIndex);
                 }
+
+                FixCorruptedCountersTask.Start();
 
                 _ = Task.Run(async () =>
                 {
