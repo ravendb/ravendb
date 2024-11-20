@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.TimeSeries
         private static readonly Slice TimeSeriesStatsKey;
         private static readonly Slice PolicyIndex;
         private static readonly Slice StartTimeIndex;
-        private static readonly TableSchema TimeSeriesStatsSchema = new TableSchema();
+        public static readonly TableSchema TimeSeriesStatsSchema = new TableSchema();
 
         private enum StatsColumns
         {
@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public (long Count, DateTime Start, DateTime End) GetStats(DocumentsOperationContext context, Slice statsKey)
         {
-            var table = new Table(TimeSeriesStatsSchema, context.Transaction.InnerTransaction);
+            var table = context.TimeSeriesStatsTable();
             if (table.ReadByKey(statsKey, out var tvr) == false)
                 return default;
 
@@ -324,7 +324,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public IEnumerable<string> GetTimeSeriesNamesForDocumentOriginalCasing(DocumentsOperationContext context, string docId)
         {
-            var table = new Table(TimeSeriesStatsSchema, context.Transaction.InnerTransaction);
+            var table = context.TimeSeriesStatsTable();
             using (DocumentIdWorker.GetSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator))
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(documentKeyPrefix, Slices.Empty, 0))
@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public LazyStringValue GetTimeSeriesNameOriginalCasing(DocumentsOperationContext context, Slice key)
         {
-            var table = new Table(TimeSeriesStatsSchema, context.Transaction.InnerTransaction);
+            var table = context.TimeSeriesStatsTable();
             if (table.ReadByKey(key, out var tvr) == false)
                 return null;
 

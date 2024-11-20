@@ -69,6 +69,7 @@ namespace Raven.Server.Documents
         {
             BeforeCommit();
             _replaced = true;
+            _context.ResetTablesCache();
             var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction(context.PersistentContext);
             return new DocumentsTransaction(context, tx, _changes);
         }
@@ -113,6 +114,7 @@ namespace Raven.Server.Documents
                 if (_context.Transaction != null && _context.Transaction != this)
                     ThrowInvalidTransactionUsage();
 
+                _context.ResetTablesCache();
                 _context.Transaction = null;
             }
 

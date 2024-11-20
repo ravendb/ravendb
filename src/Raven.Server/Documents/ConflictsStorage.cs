@@ -22,6 +22,7 @@ using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Voron;
+using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Voron.Util;
@@ -699,19 +700,20 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfDocumentsConflicts(DocumentsOperationContext context)
         {
-            var table = new Table(ConflictsSchema, context.Transaction.InnerTransaction);
+            var table = context.ConflictsTable(this);
             return table.GetTree(ConflictsSchema.Indexes[ConflictsIdSlice]).ReadHeader().NumberOfEntries;
         }
 
         public long GetNumberOfConflicts(DocumentsOperationContext context)
         {
-            return GetNumberOfConflicts(context.Transaction.InnerTransaction);
-        }
-
-        public long GetNumberOfConflicts(Transaction transaction)
-        {
-            var table = new Table(ConflictsSchema, transaction);
+            var table = context.ConflictsTable(this);
             return table.GetNumberOfEntriesFor(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice]);
+        }
+        
+        public long GetNumberOfConflicts(Transaction tx)
+        {
+            var index = tx.GetGlobalFixedSizeTree(AllConflictedDocsEtagsSlice, sizeof(long), isIndexTree: true);
+            return index.NumberOfEntries;
         }
 
         public string GetCollection(DocumentsOperationContext context, string id)

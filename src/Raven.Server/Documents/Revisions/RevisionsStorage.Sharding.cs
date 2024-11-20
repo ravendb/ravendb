@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Revisions
     {
         public IEnumerable<Document> GetRevisionsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.RevisionsTable(this);
 
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], bucket, etag))
             {

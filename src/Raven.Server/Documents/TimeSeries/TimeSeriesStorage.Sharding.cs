@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.TimeSeries
     {
         public IEnumerable<TimeSeriesReplicationItem> GetSegmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
-            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+            var table = context.TimesSeriesTable(this);
 
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, etag))
             {
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
-            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+            var table = context.DeleteRangesTable(this);
 
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, etag))
             {

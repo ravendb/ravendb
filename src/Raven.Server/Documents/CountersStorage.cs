@@ -110,7 +110,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<ReplicationBatchItem> GetCountersFrom(DocumentsOperationContext context, long etag, bool caseInsensitiveNames = true)
         {
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+            var table = context.CountersTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, 0))
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<CounterGroupDetail> GetCountersFrom(DocumentsOperationContext context, long etag, long skip, long take)
         {
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+            var table = context.CountersTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, skip))
@@ -1443,7 +1443,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<string> GetCountersForDocument(DocumentsOperationContext context, string docId)
         {
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+            var table = context.CountersTable(this);
 
             foreach (string c in GetCountersForDocumentInternal(context, docId, table))
                 yield return c;
@@ -1453,7 +1453,7 @@ namespace Raven.Server.Documents
         {
             // for testing purposes only
             // get the number of counters without skipping the deleted counters
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+            var table = context.CountersTable(this);
 
             var countersCount = 0L;
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
@@ -1549,7 +1549,7 @@ namespace Raven.Server.Documents
         {
             blob = null;
             etag = -1;
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+            var table = context.CountersTable(this);
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
             using (DocumentIdWorker.GetLower(context.Allocator, counterName, out Slice counterNameSlice))
@@ -1586,7 +1586,7 @@ namespace Raven.Server.Documents
             if (string.IsNullOrEmpty(counterName))
                 yield break;
 
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+            var table = context.CountersTable(this);
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
             using (DocumentIdWorker.GetLower(context.Allocator, counterName, out Slice counterNameSlice))
@@ -1661,7 +1661,7 @@ namespace Raven.Server.Documents
 
         internal IEnumerable<CounterGroupDetail> GetCounterValuesForDocument(DocumentsOperationContext context, string docId)
         {
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+            var table = context.CountersTable(this);
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
             {
@@ -1873,7 +1873,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<CounterTombstoneDetail> GetCounterTombstonesFrom(DocumentsOperationContext context, long etag, long toEtag = long.MaxValue)
         {
-            var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
+            var table = context.CountersTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice], etag, 0))
@@ -2429,7 +2429,7 @@ namespace Raven.Server.Documents
 
             public CounterGroupItemMetadata GetCountersMetadata(DocumentsOperationContext context, long etag)
             {
-                var table = new Table(_countersStorage.CountersSchema, context.Transaction.InnerTransaction);
+                var table = context.CountersTable(_countersStorage);
                 var index = _countersStorage.CountersSchema.FixedSizeIndexes[AllCountersEtagSlice];
 
                 if (table.Read(context.Allocator, index, etag, out var tvr) == false)
@@ -2443,7 +2443,7 @@ namespace Raven.Server.Documents
 
             public CounterGroupItemMetadata GetCountersMetadata(DocumentsOperationContext context, Slice counterKeySlice)
             {
-                var table = new Table(_countersStorage.CountersSchema, context.Transaction.InnerTransaction);
+                var table = context.CountersTable(_countersStorage);
 
                 using (ExtractDocumentIdAndCounterNameFromKey(context, counterKeySlice, out var documentIdPrefix, out var loweredCounterNameSlice))
                 {
@@ -2468,7 +2468,7 @@ namespace Raven.Server.Documents
 
             public IEnumerable<CounterGroupItemMetadata> GetCountersMetadataFrom(DocumentsOperationContext context, long etag, long skip, long take)
             {
-                var table = new Table(_countersStorage.CountersSchema, context.Transaction.InnerTransaction);
+                var table = context.CountersTable(_countersStorage);
 
                 foreach (var result in table.SeekForwardFrom(_countersStorage.CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, skip))
                 {

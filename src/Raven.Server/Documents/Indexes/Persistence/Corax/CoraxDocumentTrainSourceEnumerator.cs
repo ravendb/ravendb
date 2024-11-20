@@ -43,7 +43,7 @@ public class CoraxDocumentTrainSourceEnumerator
 
     public IEnumerable<Document> GetDocumentsForDictionaryTraining(DocumentsOperationContext context, CoraxDocumentTrainSourceState state, DocumentFields fields = DocumentFields.All)
     {
-        var table = new Table(_documentsStorage.DocsSchema, context.Transaction.InnerTransaction);
+        var table = context.DocumentsTable(_documentsStorage);
         state.InitializeState(table);
         foreach (var (key, result) in table.IterateForDictionaryTraining(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.AllDocsEtagsSlice], state.DocumentSkip, state.CurrentKey))
         {
