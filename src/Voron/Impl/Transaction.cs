@@ -70,11 +70,15 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void EnsureTrees()
+        private bool EnsureTrees()
         {
             if (_trees != null)
-                return;
-            _trees = new Dictionary<Slice, Tree>(SliceStructComparer.Instance);
+                return false;
+
+            // PERF: By initializing with 11, we are trying to avoid resizes which are expensive and since
+            // most transactions will always use more than 2 items, the probability of resize is too big. 
+            _trees = new Dictionary<Slice, Tree>(11, SliceStructComparer.Instance);
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -86,17 +90,9 @@ namespace Voron.Impl
 
         public Tree ReadTree(Slice treeName, RootObjectType type = RootObjectType.VariableSizeTree, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
-            EnsureTrees();
-
-            if (_trees.TryGetValue(treeName, out var tree))
+            if(EnsureTrees() == false && _trees.TryGetValue(treeName, out var tree))
             {
-                if (tree == null)
-                    return null;
-
-                if (newPageAllocator == null)
-                    return tree;
-
-                if (tree.HasNewPageAllocator == false)
+                if (newPageAllocator != null && tree?.HasNewPageAllocator == false)
                     tree.SetNewPageAllocator(newPageAllocator);
 
                 return tree;
@@ -110,7 +106,6 @@ namespace Voron.Impl
                 tree = Tree.Open(_lowLevelTransaction, this, treeName, *header, isIndexTree, newPageAllocator);
 
                 _trees.Add(treeName, tree);
-
                 return tree;
             }
 
@@ -367,15 +362,14 @@ namespace Voron.Impl
 
         internal void AddTree(Slice name, Tree tree)
         {
-            EnsureTrees();
-
-            if (_trees.TryGetValue(name, out Tree value) && value != null)
+            // Either we haven't added this tree, or we added it as null (meaning it didn't exist)
+            if (EnsureTrees() || _trees.TryGetValue(name, out Tree value) == false || value == null)
             {
-                throw new InvalidOperationException("Tree already exists: " + name);
+                _trees[name] = tree;
+                return;
             }
 
-            // Either we haven't added this tree, or we added it as null (meaning it didn't exist)
-            _trees[name] = tree;
+            throw new InvalidOperationException("Tree already exists: " + name);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -489,7 +483,6 @@ namespace Voron.Impl
             AddTree(toName, fromTree);
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
         public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             Slice.From(Allocator, name, ByteStringType.Immutable, out var treeNameSlice);
