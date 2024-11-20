@@ -381,6 +381,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 for (int i = 0; i < _size; i++)
                 {
                     Values[i].Release.Dispose();
+                    Values[i].Release = default;
+                    Values[i].Cached = null;
                 }
                 ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Return(Values);
                 Values = null;
