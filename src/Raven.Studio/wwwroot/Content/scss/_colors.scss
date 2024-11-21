@@ -523,8 +523,9 @@ $task-colors: (
     "olap-etl": $color-2-1,
     "rabbitmq-etl": $color-2-2,
     "azure-queue-storage-etl": $color-2-3,
-    "kafka-sink": $color-3,
-    "rabbitmq-sink": $color-3-1,
+    "amazon-sqs-etl": $color-3,
+    "kafka-sink": $color-3-1,
+    "rabbitmq-sink": $color-3-2,
 ) !default;
 
 $tokens: (

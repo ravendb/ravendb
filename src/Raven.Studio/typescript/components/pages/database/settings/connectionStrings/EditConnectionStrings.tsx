@@ -208,7 +208,7 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
         {
             value: "AzureQueueStorage",
             label: "Azure Queue Storage",
-            icon: "azure-queue-storage-etl",
+            icon: "azure-queue-storage",
             licenseRequired: "Enterprise",
             isDisabled: !features.hasQueueEtl,
         },
@@ -222,7 +222,7 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
         {
             value: "AmazonSqs",
             label: "Amazon SQS",
-            icon: "amazon-sqs-etl",
+            icon: "amazon-sqs",
             licenseRequired: "Enterprise",
             isDisabled: !features.hasQueueEtl,
         },
