@@ -17,12 +17,14 @@ namespace Voron.Impl.FreeSpace
 
         private readonly Dictionary<long, SectionMetadata> _maxConsecutiveRangePerSection = new();
 
-        [StructLayout(LayoutKind.Sequential, Size = 6)]
+        [StructLayout(LayoutKind.Sequential, Size = 8)]
         public struct SectionMetadata()
         {
             public ushort Max = NumberOfPagesInSection;
             public ushort StartBits = NumberOfPagesInSection;
             public ushort EndBits = NumberOfPagesInSection;
+
+            private ushort Padding = 0;
         }
 
         static FreeSpaceHandling()
