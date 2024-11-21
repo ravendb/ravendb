@@ -325,6 +325,8 @@ namespace Raven.Server.Documents
                 _addToInitLog(LogMode.Information, "Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();
 
+                _clusterTransactionErrorNotifier.Initialize();
+                
                 if ((options & InitializeOptions.SkipLoadingDatabaseRecord) == InitializeOptions.SkipLoadingDatabaseRecord)
                     return;
 
@@ -674,9 +676,10 @@ namespace Raven.Server.Documents
                 _key = $"{databaseName}/ClusterTransaction";
                 _id = AlertRaised.GetKey(AlertType.ClusterTransactionFailure, _key);
                 _databaseName = databaseName;
-                _isNotified = _notificationCenter.Exists(_id);
             }
-
+            
+            public void Initialize() => _isNotified = _notificationCenter.Exists(_id);
+            
             public void Notify(string msg, Exception e)
             {
                 _notificationCenter.Add(AlertRaised.Create(
