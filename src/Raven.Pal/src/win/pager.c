@@ -1,7 +1,6 @@
 ﻿#include <windows.h>
 #include <VersionHelpers.h>
 #include <stdio.h>
-#include <stdatomic.h>
 
 #include "rvn.h"
 #include "status_codes.h"
@@ -28,13 +27,14 @@ struct handle
     HANDLE file_mapping_handle;
     void *read_address;
     void *write_address;
-    uint64_t allocation_size;
+    int64_t allocation_size;
     int32_t open_flags;
     int32_t status_flags;
     int64_t locked_memory;
+    char* file_path;
 };
 
-extern _Atomic int64_t g_locked_memory_size;
+extern MemoryLockCallback g_locked_memory_callback;
 
 BOOL CALLBACK InitializeCriticalSectionOnce(PINIT_ONCE initOnce, PVOID Parameter, PVOID *Context)
 {
@@ -54,7 +54,7 @@ uint64_t _GetNearestFileSize(uint64_t needed_size)
         int32_t idx = clzl(needed_size);
         if (idx)
         {
-            return (uint64_t)1 << (32 - idx);
+            return (uint64_t)1 << (64 - idx);
         }
         return 1024 * 1024;
     }
@@ -129,8 +129,7 @@ int32_t rvn_lock_memory(struct handle* handle, int32_t open_flags, void *mem, in
             // note that we *explicitly* account for locked memory even if we failed to do so
             // if we don't consider this as catastrophic error, because otherwise accounting 
             // for its removal is really complicated
-            handle->locked_memory += size;
-            atomic_fetch_add(&g_locked_memory_size, size);
+            g_locked_memory_callback(size, handle->file_path);
             rc = SUCCESS;
             break;
         }
@@ -239,8 +238,7 @@ int32_t rvn_unmap_memory(
     }
     if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
     {
-        handle_ptr->locked_memory -= size;
-        atomic_fetch_sub(&g_locked_memory_size, size);
+        g_locked_memory_callback(-size, handle_ptr->file_path);
     }
     return SUCCESS;
 }
@@ -298,7 +296,30 @@ Exit:
 }
 
 
+char* ConvertLPCWSTRToUTF8(LPCWSTR lpWideCharStr)
+{
+    int utf8Size = WideCharToMultiByte(CP_UTF8, 0, lpWideCharStr, -1, NULL, 0, NULL, NULL);
+
+    if (utf8Size == 0) {
+        return NULL;
+    }
+
+    char* utf8Str = (char*)malloc(utf8Size * sizeof(char));
+    if (utf8Str == NULL) {
+        return NULL;
+    }
+    int result = WideCharToMultiByte(CP_UTF8, 0, lpWideCharStr, -1, utf8Str, utf8Size, NULL, NULL);
+    if (result == 0) {
+        free(utf8Str);
+        return NULL;
+    }
+
+    return utf8Str;
+}
+
+
 int32_t _open_pager_file(HANDLE h,
+                         char* file_path,
                          int32_t open_flags,
                          int64_t req_file_size,
                          void **handle,
@@ -319,6 +340,7 @@ int32_t _open_pager_file(HANDLE h,
         rc = FAIL_NOMEM;
         goto Error;
     }
+    handle_ptr->file_path = file_path;
 
     LARGE_INTEGER file_size;
     if (!GetFileSizeEx(h, &file_size) || file_size.QuadPart < 0)
@@ -392,10 +414,11 @@ int32_t _open_pager_file(HANDLE h,
     m = INVALID_HANDLE_VALUE;
 
     if (open_flags & OPEN_FILE_LOCK_MEMORY &&
-        rvn_lock_memory(handle_ptr, open_flags, mem, file_size.QuadPart, detailed_error_code) && 
-        wmem != NULL && 
-        rvn_lock_memory(handle_ptr, open_flags, wmem, file_size.QuadPart, detailed_error_code))
+        // We map the memory twice if we have WRITE access, but in phsyical memory, it ends up being the same
+        // thing, so we only lock it once. 
+        rvn_lock_memory(handle_ptr, open_flags, mem, file_size.QuadPart, detailed_error_code) != SUCCESS)
     {
+        
         rc = FAIL_LOCK_MEMORY;
         goto Error;
     }
@@ -414,6 +437,10 @@ int32_t _open_pager_file(HANDLE h,
 
 Error:
     *detailed_error_code = GetLastError();
+    if(file_path != NULL)
+    {
+        free(file_path);
+    }
     if (mem != NULL)
     {
         UnmapViewOfFile(mem);
@@ -448,7 +475,8 @@ rvn_init_pager(const char *filename,
     dwFlagsAndAttributes |= open_flags & OPEN_FILE_SEQUENTIAL_SCAN ? FILE_FLAG_SEQUENTIAL_SCAN : FILE_FLAG_RANDOM_ACCESS;
     dwFlagsAndAttributes |= open_flags & OPEN_FILE_READ_ONLY ? FILE_ATTRIBUTE_READONLY : 0;
 
-    HANDLE h = CreateFileW((LPCWSTR)filename, dwDesiredAccess,
+    LPCWSTR file_path_unicode = (LPCWSTR)filename;
+    HANDLE h = CreateFileW(file_path_unicode, dwDesiredAccess,
                           FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
                           NULL, OPEN_ALWAYS, dwFlagsAndAttributes, NULL);
     if (h == INVALID_HANDLE_VALUE)
@@ -457,7 +485,13 @@ rvn_init_pager(const char *filename,
         return FAIL_OPEN_FILE;
     }
 
-    return _open_pager_file(h, open_flags, initial_file_size, handle, memory, writable_memory, memory_size, detailed_error_code);
+    char* file_path = ConvertLPCWSTRToUTF8(file_path_unicode);
+    if (file_path == NULL)
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_NOMEM;
+    }
+    return _open_pager_file(h, file_path, open_flags, initial_file_size, handle, memory, writable_memory, memory_size, detailed_error_code);
 }
 
 int32_t
@@ -484,8 +518,13 @@ rvn_increase_pager_size(void *handle,
         *detailed_error_code = GetLastError();
         return FAIL_DUPLICATE_HANDLE;
     }
-
-    return _open_pager_file(h, handle_ptr->open_flags, new_length, new_handle, memory, writable_memory, memory_size, detailed_error_code);
+    char* file_path_copy = strdup(handle_ptr->file_path);
+    if (file_path_copy == NULL)
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_NOMEM;
+    }
+    return _open_pager_file(h, file_path_copy, handle_ptr->open_flags, new_length, new_handle, memory, writable_memory, memory_size, detailed_error_code);
 }
 
 EXPORT int32_t
@@ -504,8 +543,7 @@ rvn_close_pager(
     {
         if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
         {
-            handle_ptr->locked_memory -= handle_ptr->allocation_size;
-            atomic_fetch_sub(&g_locked_memory_size, handle_ptr->allocation_size);
+            g_locked_memory_callback(-handle_ptr->allocation_size, handle_ptr->file_path);
         }
 
         if (!UnmapViewOfFile(handle_ptr->read_address))
@@ -517,8 +555,7 @@ rvn_close_pager(
         {
             if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
             {
-                handle_ptr->locked_memory -= handle_ptr->allocation_size;
-                atomic_fetch_sub(&g_locked_memory_size, handle_ptr->allocation_size);
+                g_locked_memory_callback(-handle_ptr->allocation_size, handle_ptr->file_path);
             }
 
             if (!UnmapViewOfFile(handle_ptr->write_address))
@@ -546,6 +583,7 @@ rvn_close_pager(
         if (rc == SUCCESS)
             rc = FAIL_CLOSE;
     }
+    free(handle_ptr->file_path);
     free(handle_ptr);
     return rc;
 }

@@ -15,7 +15,6 @@
 #include <unistd.h>
 #include <libgen.h>
 #include <string.h>
-#include <stdatomic.h>
 
 #include "rvn.h"
 #include "status_codes.h"
@@ -30,10 +29,9 @@ struct handle
     int file_fd;
     int32_t open_flags;
     int32_t status_flags;
-    int64_t locked_memory;
 };
 
-extern _Atomic int64_t g_locked_memory_size;
+extern MemoryLockCallback g_locked_memory_callback;
 
 int32_t rvn_lock_memory(struct handle * handle, int32_t open_flags, void *mem, int64_t size, int32_t *detailed_error_code)
 {
@@ -58,8 +56,7 @@ int32_t rvn_lock_memory(struct handle * handle, int32_t open_flags, void *mem, i
         // note that we *explicitly* account for locked memory even if we failed to do so
         // if we don't consider this as catastrophic error, because otherwise accounting 
         // for its removal is really complicated
-        handle->locked_memory += size;
-        atomic_fetch_add(&g_locked_memory_size, size);
+        g_locked_memory_callback(size, handle->file_path);
         return SUCCESS;
     }
     rc = FAIL_LOCK_MEMORY;
@@ -154,9 +151,9 @@ int32_t _open_pager_file(int fd,
     }
 
     if (open_flags & OPEN_FILE_LOCK_MEMORY &&
-        !rvn_lock_memory(handle_ptr, open_flags, mem, st.st_size, detailed_error_code) &&
-        wmem != NULL &&
-        !rvn_lock_memory(handle_ptr, open_flags, wmem, st.st_size, detailed_error_code))
+        // We map the memory twice if we have WRITE access, but in phsyical memory, it ends up being the same
+        // thing, so we only lock it once. 
+        rvn_lock_memory(handle_ptr, open_flags, mem, st.st_size, detailed_error_code) != SUCCESS)
     {
         rc = FAIL_LOCK_MEMORY;
         goto Error;
@@ -287,8 +284,7 @@ rvn_close_pager(
     {
         if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
         {
-            handle_ptr->locked_memory -= handle_ptr->allocation_size;
-            atomic_fetch_sub(&g_locked_memory_size, handle_ptr->allocation_size);
+            g_locked_memory_callback(-handle_ptr->allocation_size, handle_ptr->file_path);
         }
 
         if (munmap(handle_ptr->read_address, handle_ptr->allocation_size))
@@ -300,8 +296,7 @@ rvn_close_pager(
         {
             if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
             {
-                handle_ptr->locked_memory -= handle_ptr->allocation_size;
-                atomic_fetch_sub(&g_locked_memory_size, handle_ptr->allocation_size);
+                g_locked_memory_callback(-handle_ptr->allocation_size, handle_ptr->file_path);
             }
 
             if (munmap(handle_ptr->write_address, handle_ptr->allocation_size))
@@ -424,8 +419,7 @@ int32_t rvn_unmap_memory(
     }
     if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
     {
-        handle_ptr->locked_memory -= size;
-        atomic_fetch_sub(&g_locked_memory_size, size);
+        g_locked_memory_callback(-size, handle_ptr->file_path);
     }
     return SUCCESS;
 }

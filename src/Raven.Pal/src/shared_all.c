@@ -1,16 +1,17 @@
 #include <sys/types.h>
-#include <stdatomic.h>
 
 #include "rvn.h"
 #include "status_codes.h"
 
 
-_Atomic int64_t g_locked_memory_size;
+void noop(int64_t size, char* filename){}
+
+MemoryLockCallback g_locked_memory_callback = noop;
 
 EXPORT
-_Atomic int64_t* get_locked_memory_size()
+void rvn_register_callback(MemoryLockCallback callback)
 {
-    return &g_locked_memory_size;
+    g_locked_memory_callback = callback;
 }
 
 PRIVATE int64_t

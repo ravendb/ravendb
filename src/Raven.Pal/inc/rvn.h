@@ -60,9 +60,10 @@ struct RVN_RANGE_LIST
     size_t number_of_bytes;
 };
 
+typedef void (*MemoryLockCallback)(int64_t size, char* filename);
+
 EXPORT
-_Atomic int64_t* 
-rvn_get_locked_memory_size(void);
+void rvn_register_callback(MemoryLockCallback callback);
 
 EXPORT
 int32_t rvn_pager_get_file_handle(

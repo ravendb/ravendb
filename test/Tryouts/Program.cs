@@ -41,16 +41,11 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new Jalchr3(testOutputHelper))
+                using (var test = new RavenDB_23085(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                    
-                    test.Streaming_documents_will_respect_the_sorting_order(
-                        new RavenTestParameters
-                        {
-                            DatabaseMode = RavenDatabaseMode.Single, 
-                            SearchEngine = RavenSearchEngineMode.Lucene
-                        });
+                    test.CanAccountForLockedMemory();
                 }
             }
             catch (Exception e)
