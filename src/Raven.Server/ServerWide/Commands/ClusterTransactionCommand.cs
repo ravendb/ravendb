@@ -22,7 +22,6 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using static Raven.Client.Exceptions.ClusterTransactionConcurrencyException;
-using static Sparrow.Server.Utils.ThreadNames.ThreadDetails;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -635,16 +634,20 @@ namespace Raven.Server.ServerWide.Commands
         }
 
 
-        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch<TTransaction>(TransactionOperationContext<TTransaction> context, string database, long? fromCount, long? lastCompletedClusterTransactionIndex = null, long take = 128)
+        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch<TTransaction>(TransactionOperationContext<TTransaction> context, string database, long? fromCount, long? lastCompletedClusterTransactionIndex = null, long take = 128, long maxBytesToRead = long.MaxValue)
             where TTransaction : RavenTransaction
         {
             var lowerDb = database.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             using (GetPrefix(context, database, out Slice prefixSlice, fromCount))
             {
+                var readSize = 0;
                 var commandsBulk = items.SeekByPrimaryKey(prefixSlice, 0);
                 foreach (var command in commandsBulk)
                 {
+                    if (take <= 0)
+                        yield break;
+
                     var reader = command.Reader;
                     var result = ReadCommand(context, reader);
                     if (result == null)
@@ -669,11 +672,12 @@ namespace Raven.Server.ServerWide.Commands
                         continue;
                     }
 
-                    if (take <= 0)
-                        yield break;
-
                     take--;
                     yield return result;
+
+                    readSize += reader.Size;
+                    if(readSize > maxBytesToRead)
+                        yield break;
                 }
             }
         }
