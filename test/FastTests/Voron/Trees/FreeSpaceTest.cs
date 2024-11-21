@@ -292,9 +292,14 @@ namespace FastTests.Voron.Trees
                 var max = Env.FreeSpaceHandling.GetMaxConsecutiveRangePerSection(tx.LowLevelTransaction);
                 Assert.Equal(5, max.Count);
 
-                for (var i = 0; i < totalSections - 1; i++)
+                Assert.Equal(1, max[0].Max);
+                Assert.Equal(FreeSpaceHandling.NumberOfPagesInSection, max[0].StartBits);
+                Assert.Equal(0, max[0].EndBits);
+                
+                for (var i = 1; i < totalSections - 1; i++)
                 {
                     Assert.Equal(1, max[i].Max);
+                    Assert.Equal(1, max[i].StartBits);
                     Assert.Equal(0, max[i].EndBits);
                 }
 
@@ -302,7 +307,9 @@ namespace FastTests.Voron.Trees
                 Assert.Equal(1, max[3].StartBits);
                 Assert.Equal(1, max[3].EndBits);
 
+                Assert.Equal(FreeSpaceHandling.NumberOfPagesInSection, max[4].Max);
                 Assert.Equal(0, max[4].StartBits);
+                Assert.Equal(FreeSpaceHandling.NumberOfPagesInSection, max[4].EndBits);
 
                 // releasing 2 pages in section 4 to make 3 consecutive pages between two sections
                 Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, totalPages);
@@ -311,6 +318,8 @@ namespace FastTests.Voron.Trees
 
                 max = Env.FreeSpaceHandling.GetMaxConsecutiveRangePerSection(tx.LowLevelTransaction);
                 Assert.Equal(4, max.Count);
+
+                Assert.Equal(FreeSpaceHandling.NumberOfPagesInSection, max[0].StartBits);
 
                 for (var i = 0; i < totalSections - 1; i++)
                 {
@@ -334,6 +343,8 @@ namespace FastTests.Voron.Trees
 
                 var max = Env.FreeSpaceHandling.GetMaxConsecutiveRangePerSection(tx.LowLevelTransaction);
 
+                Assert.Equal(FreeSpaceHandling.NumberOfPagesInSection, max[0].StartBits);
+
                 for (var i = 0; i < totalSections - 1; i++)
                 {
                     Assert.Equal(3, max[i].Max);
@@ -348,6 +359,8 @@ namespace FastTests.Voron.Trees
                 Assert.Equal(2, max[4].StartBits);
 
                 Assert.Equal(0, max[5].StartBits);
+                Assert.Equal(FreeSpaceHandling.NumberOfPagesInSection, max[5].EndBits);
+                Assert.Equal(FreeSpaceHandling.NumberOfPagesInSection, max[5].Max);
 
                 var page = tx.LowLevelTransaction.AllocatePage(3);
                 Assert.Equal(lastPageInAllSections, page.PageNumber);
