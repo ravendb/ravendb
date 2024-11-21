@@ -56,7 +56,6 @@ public unsafe partial class Pager : IDisposable
             RaiseError(filename, error, result, initialFileSize);
         var state = new State(pager, readOnlyMemory, writeMemory, memorySize, handle);
         (state.TotalFileSize, state.TotalDiskSpace) = pager.GetFileSize(state);
-        NativeMemory.RegisterFileMapping(pager.FileName, new IntPtr(state.ReadAddress), state.TotalDiskSpace, null);
         pager.InstallState(state);
         pager.Initialize(memorySize);
         return (pager, state);
@@ -334,7 +333,6 @@ public unsafe partial class Pager : IDisposable
         }
         Debug.Assert(totalAllocatedSize >= state.TotalAllocatedSize, "totalAllocatedSize >= state.TotalAllocatedSize");
         state = new State(this, readAddress, writeAddress, totalAllocatedSize, handle);
-        NativeMemory.RegisterFileMapping(state.Pager.FileName, new IntPtr(state.ReadAddress), state.TotalAllocatedSize, null);
         InstallState(state);
     }
 

@@ -268,11 +268,6 @@ namespace Sparrow.Utils
             return FileType.Data;
         }
 
-        public static void UnregisterFileMapping(string name)
-        {
-            FileMapping.TryRemove(name, out _);
-        }
-
         public static void UnregisterFileMapping(string name, IntPtr start, long size)
         {
             if (FileMapping.TryGetValue(name, out var mapping) == false)
