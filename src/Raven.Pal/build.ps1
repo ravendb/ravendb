@@ -94,7 +94,7 @@ zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target aarch64-macos-none -o runtimes/
 mkdir artifacts  -ErrorAction Ignore  > $null
 Move-Item .\runtimes artifacts  -ErrorAction Ignore
 $PalNuspec = (Get-Content pal.nuspec.template)
-$NuspecVersion = "$($PalVerStr[0]).$($PalVerStr[1]).$($PalVerStr.Substring(2))"
+$NuspecVersion = "$($PalVerStr[0]).$($PalVerStr[1]).$($PalVerStr.Substring(2).TrimStart('0'))"
 $PalNuspec = $PalNuspec.Replace("NUGET_PACKAGE_VERSION", $NuspecVersion)
 Set-Content artifacts\pal.nuspec  -Value $PalNuspec
 
@@ -104,5 +104,9 @@ Remove-Item *.nupkg
 Remove-Item ../../../libs/Raven.Pal.*
 Copy-Item *.nupkg ../../../libs
 Set-Location ..
-dotnet remove ../Sparrow.Server/Sparrow.Server.csproj package Raven.Pal
-dotnet add ../Sparrow.Server/Sparrow.Server.csproj package Raven.Pal --source ..\..\libs\
+
+$dirPackagesPath = Resolve-Path -Path "../../Directory.Packages.props"
+[xml]$dirPkgs = Get-Content $dirPackagesPath
+$packageNode = $dirPkgs.Project.ItemGroup.PackageVersion | Where-Object { $_.Include -eq "Raven.Pal" }
+$packageNode.Version = $NuspecVersion
+$dirPkgs.Save($dirPackagesPath)
