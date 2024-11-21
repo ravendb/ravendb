@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -238,57 +239,64 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
             WaitForSpecificIndexes = ConvertToStringValues("waitForSpecificIndex");
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected override void OnValue(QueryStringEnumerable.EncodedNameValuePair pair)
         {
             var name = pair.EncodedName;
 
-            if (IsMatch(name, NoReplyQueryStringName))
+            switch (name.Length)
             {
-                NoReply = GetBoolValue(name, pair.EncodedValue);
-                return;
-            }
-
-            if (IsMatch(name, WaitForIndexesTimeoutQueryStringName))
-            {
-                WaitForIndexesTimeout = GetTimeSpan(name, pair.EncodedValue);
-                return;
-            }
-
-            if (IsMatch(name, WaitForIndexThrowQueryStringName))
-            {
-                WaitForIndexThrow = GetBoolValue(name, pair.EncodedValue);
-                return;
-            }
-
-            if (IsMatch(name, WaitForSpecificIndexQueryStringName))
-            {
-                AddForStringValues("waitForSpecificIndex", pair.DecodeValue());
-                return;
-            }
-
-            if (IsMatch(name, WaitForReplicasTimeoutQueryStringName))
-            {
-                WaitForReplicasTimeout = GetTimeSpan(name, pair.EncodedValue);
-                return;
-            }
-
-            if (IsMatch(name, NumberOfReplicasToWaitForQueryStringName))
-            {
-                var value = pair.DecodeValue();
-                if (IsMatch(value, MajorityValue))
+                case 7:
                 {
-                    Majority = true;
+                    if (IsMatch(name, NoReplyQueryStringName))
+                        NoReply = GetBoolValue(name, pair.EncodedValue);
                     return;
                 }
+                case 17:
+                {
+                    if (IsMatch(name, WaitForIndexThrowQueryStringName))
+                        WaitForIndexThrow = GetBoolValue(name, pair.EncodedValue);
+                    return;
+                }
+                case 20:
+                {
+                    if (IsMatch(name, WaitForSpecificIndexQueryStringName))
+                        AddForStringValues("waitForSpecificIndex", pair.DecodeValue());
+                    return;
+                }
+                case 21:
+                {
+                    if (IsMatch(name, WaitForIndexesTimeoutQueryStringName))
+                        WaitForIndexesTimeout = GetTimeSpan(name, pair.EncodedValue);
+                    return;
+                }
+                case 22:
+                {
+                    if (IsMatch(name, WaitForReplicasTimeoutQueryStringName))
+                        WaitForReplicasTimeout = GetTimeSpan(name, pair.EncodedValue);
+                    return;
+                }
+                case 25:
+                {
+                    if (IsMatch(name, NumberOfReplicasToWaitForQueryStringName))
+                    {
+                        var value = pair.DecodeValue();
+                        if (IsMatch(value, MajorityValue))
+                        {
+                            Majority = true;
+                            return;
+                        }
 
-                NumberOfReplicasToWaitFor = GetIntValue(name, value);
-                return;
-            }
-
-            if (IsMatch(name, ThrowOnTimeoutInWaitForReplicasQueryStringName))
-            {
-                ThrowOnTimeoutInWaitForReplicas = GetBoolValue(name, pair.EncodedValue);
-                return;
+                        NumberOfReplicasToWaitFor = GetIntValue(name, value);
+                    }
+                    return;
+                }
+                case 31:
+                {
+                    if (IsMatch(name, ThrowOnTimeoutInWaitForReplicasQueryStringName))
+                        ThrowOnTimeoutInWaitForReplicas = GetBoolValue(name, pair.EncodedValue);
+                    return;
+                }
             }
         }
 

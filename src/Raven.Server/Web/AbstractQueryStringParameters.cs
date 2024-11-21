@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
@@ -8,9 +9,9 @@ using Raven.Client;
 
 namespace Raven.Server.Web;
 
-internal abstract class AbstractQueryStringParameters
+internal abstract class AbstractQueryStringParameters(HttpRequest httpRequest)
 {
-    private readonly HttpRequest _httpRequest;
+    private readonly HttpRequest _httpRequest = httpRequest ?? throw new ArgumentNullException(nameof(httpRequest));
 
     protected static readonly ReadOnlyMemory<char> MetadataOnlyQueryStringName = "metadataOnly".AsMemory();
 
@@ -80,11 +81,6 @@ internal abstract class AbstractQueryStringParameters
 
     private Dictionary<string, List<string>> _tempStringValues;
 
-    protected AbstractQueryStringParameters(HttpRequest httpRequest)
-    {
-        _httpRequest = httpRequest ?? throw new ArgumentNullException(nameof(httpRequest));
-    }
-
     protected void Parse()
     {
         foreach (var pair in new QueryStringEnumerable(_httpRequest.QueryString.Value))
@@ -98,10 +94,12 @@ internal abstract class AbstractQueryStringParameters
     protected void AddForStringValues(string name, ReadOnlyMemory<char> value)
     {
         _tempStringValues ??= new Dictionary<string, List<string>>();
-        if (_tempStringValues.TryGetValue(name, out var list) == false)
-            _tempStringValues[name] = list = new List<string>(1);
 
-        list.Add(value.ToString());
+        ref var item = ref CollectionsMarshal.GetValueRefOrAddDefault(_tempStringValues, name, out bool exists);
+        if (exists == false)
+            item = new List<string>(1);
+
+        item.Add(value.ToString());
     }
 
     protected bool AnyStringValues() => _tempStringValues is { Count: > 0 };

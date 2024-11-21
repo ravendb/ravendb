@@ -351,52 +351,57 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         {
             var name = pair.EncodedName;
 
-            if (IsMatch(name, MetadataOnlyQueryStringName))
+            switch (name.Length)
             {
-                MetadataOnly = GetBoolValue(name, pair.EncodedValue);
-                return;
-            }
+                case 5:
+                {
+                    if (IsMatch(name, DebugQueryStringName))
+                        Debug = pair.DecodeValue().ToString();
+                    return;
+                }
+                case 11:
+                {
+                    if (IsMatch(name, IgnoreLimitQueryStringName))
+                    {
+                        IgnoreLimit = GetBoolValue(name, pair.EncodedValue);
+                        return;
+                    }
 
-            if (IsMatch(name, AddSpatialPropertiesQueryStringName))
-            {
-                AddSpatialProperties = GetBoolValue(name, pair.EncodedValue);
-                return;
-            }
-
-            if (IsMatch(name, IncludeServerSideQueryQueryStringName))
-            {
-                IncludeServerSideQuery = GetBoolValue(name, pair.EncodedValue);
-                return;
-            }
-
-            if (IsMatch(name, DiagnosticsQueryStringName))
-            {
-                Diagnostics = GetBoolValue(name, pair.EncodedValue);
-                return;
-            }
-
-            if (IsMatch(name, AddTimeSeriesNamesQueryStringName))
-            {
-                AddTimeSeriesNames = GetBoolValue(name, pair.EncodedValue);
-                return;
-            }
-
-            if (IsMatch(name, DisableAutoIndexCreationQueryStringName))
-            {
-                DisableAutoIndexCreation = GetBoolValue(name, pair.EncodedValue);
-                return;
-            }
-
-            if (IsMatch(name, DebugQueryStringName))
-            {
-                Debug = pair.DecodeValue().ToString();
-                return;
-            }
-
-            if (IsMatch(name, IgnoreLimitQueryStringName))
-            {
-                IgnoreLimit = GetBoolValue(name, pair.EncodedValue);
-                return;
+                    if (IsMatch(name, DiagnosticsQueryStringName))
+                        Diagnostics = GetBoolValue(name, pair.EncodedValue);
+                    
+                    return;
+                }
+                case 12:
+                {
+                    if (IsMatch(name, MetadataOnlyQueryStringName))
+                        MetadataOnly = GetBoolValue(name, pair.EncodedValue);
+                    return;
+                }
+                case 18:
+                {
+                    if (IsMatch(name, AddTimeSeriesNamesQueryStringName))
+                        AddTimeSeriesNames = GetBoolValue(name, pair.EncodedValue);
+                    return;
+                }
+                case 20:
+                {
+                    if (IsMatch(name, AddSpatialPropertiesQueryStringName))
+                        AddSpatialProperties = GetBoolValue(name, pair.EncodedValue);
+                    return;
+                }
+                case 22:
+                {
+                    if (IsMatch(name, IncludeServerSideQueryQueryStringName))
+                        IncludeServerSideQuery = GetBoolValue(name, pair.EncodedValue);
+                    return;
+                }
+                case 24:
+                {
+                    if (IsMatch(name, DisableAutoIndexCreationQueryStringName))
+                        DisableAutoIndexCreation = GetBoolValue(name, pair.EncodedValue);
+                    return;
+                }
             }
         }
 

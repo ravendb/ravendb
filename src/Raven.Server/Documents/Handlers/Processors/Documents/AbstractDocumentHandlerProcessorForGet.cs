@@ -595,144 +595,150 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         {
             var name = pair.EncodedName;
 
-            if (_isGet && IsMatch(name, IdQueryStringName))
+            switch (name.Length)
             {
-                Ids ??= new List<ReadOnlyMemory<char>>(1);
-                Ids.Add(pair.DecodeValue());
-                return;
-            }
+                case 2:
+                {
+                    if (_isGet && IsMatch(name, IdQueryStringName))
+                    {
+                        Ids ??= new List<ReadOnlyMemory<char>>(1);
+                        Ids.Add(pair.DecodeValue());
+                        return;
+                    }
 
-            if (IsMatch(name, MetadataOnlyQueryStringName))
-            {
-                MetadataOnly = GetBoolValue(name, pair.EncodedValue);
-                return;
-            }
+                    if (IsMatch(name, ToQueryStringName))
+                        AddForStringValues("to", pair.DecodeValue());  // optimize this
+                    return;
+                }
+                case 4:
+                {
+                    if (IsMatch(name, FromQueryStringName))
+                        AddForStringValues("from", pair.DecodeValue()); // optimize this
+                    return;
+                }
+                case 6:
+                {
+                    if (IsMatch(name, TxModeQueryStringName))
+                    {
+                        if (TryGetEnumValue<TransactionMode>(pair.EncodedValue, out var value))
+                            TxMode = value;
+                    }
+                    return;
+                }
+                case 7:
+                {
+                    if (IsMatch(name, IncludesQueryStringName))
+                    {
+                        // optimize this
+                        AddForStringValues("include", pair.DecodeValue());
+                        return;
+                    }
 
-            if (IsMatch(name, IncludesQueryStringName))
-            {
-                // optimize this
-                AddForStringValues("include", pair.DecodeValue());
-                return;
-            }
+                    if (IsMatch(name, CmpxchgQueryStringName))
+                    {
+                        // optimize this
+                        AddForStringValues("cmpxchg", pair.DecodeValue());
+                        return;
+                    }
 
-            if (IsMatch(name, CmpxchgQueryStringName))
-            {
-                // optimize this
-                AddForStringValues("cmpxchg", pair.DecodeValue());
-                return;
-            }
+                    if (IsMatch(name, CounterQueryStringName))
+                        AddForStringValues("counter", pair.DecodeValue()); // optimize this
+                    
+                    return;
+                }
+                case 8:
+                {
+                    if (IsMatch(name, TimeTypeQueryStringName))
+                    {
+                        AddForStringValues("timeType", pair.DecodeValue()); // optimize this
+                        return;
+                    }
 
-            if (IsMatch(name, CounterQueryStringName))
-            {
-                // optimize this
-                AddForStringValues("counter", pair.DecodeValue());
-                return;
-            }
+                    if (IsMatch(name, TimeUnitQueryStringName))
+                        AddForStringValues("timeUnit", pair.DecodeValue()); // optimize this
+                    return;
+                }
+                case 9:
+                {
+                    if (IsMatch(name, RevisionsQueryStringName))
+                    {
+                        Revisions ??= new List<ReadOnlyMemory<char>>(1);
+                        Revisions.Add(pair.DecodeValue());
+                        return;
+                    }
 
-            if (IsMatch(name, RevisionsQueryStringName))
-            {
-                Revisions ??= new List<ReadOnlyMemory<char>>(1);
-                Revisions.Add(pair.DecodeValue());
-                return;
-            }
+                    if (IsMatch(name, TimeValueQueryStringName))
+                    {
+                        // optimize this
+                        AddForStringValues("timeValue", pair.DecodeValue());
+                        return;
+                    }
 
-            if (IsMatch(name, RevisionsBeforeQueryStringName))
-            {
-                RevisionsBefore = pair.DecodeValue();
-                return;
-            }
+                    if (IsMatch(name, CountTypeQueryStringName))
+                        AddForStringValues("countType", pair.DecodeValue()); // optimize this
 
-            if (IsMatch(name, TimeSeriesQueryStringName))
-            {
-                TimeSeries ??= new List<ReadOnlyMemory<char>>(1);
+                    return;
+                }
+                case 10:
+                {
+                    if (IsMatch(name, CountValueQueryStringName))
+                    {
+                        AddForStringValues("countValue", pair.DecodeValue()); // optimize this
+                            return;
+                    }
 
-                var value = pair.DecodeValue();
-                if (value.Span.Equals(AllTimeSeries.Span, StringComparison.Ordinal))
-                    TimeSeriesHasAllTimeSeries = true;
+                    if (IsMatch(name, TimeSeriesQueryStringName))
+                    {
+                        TimeSeries ??= new List<ReadOnlyMemory<char>>(1);
 
-                TimeSeries.Add(value);
-                return;
-            }
+                        var value = pair.DecodeValue();
+                        if (value.Span.Equals(AllTimeSeries.Span, StringComparison.Ordinal))
+                            TimeSeriesHasAllTimeSeries = true;
 
-            if (IsMatch(name, TimeSeriesTimesQueryStringName))
-            {
-                TimeSeriesTimes ??= new List<ReadOnlyMemory<char>>(1);
+                        TimeSeries.Add(value);
+                    }
 
-                var value = pair.DecodeValue();
-                if (value.Span.Equals(AllTimeSeries.Span, StringComparison.Ordinal))
-                    TimeSeriesTimesHasAllTimeSeries = true;
+                    return;
+                }
+                case 12:
+                {
+                    if (IsMatch(name, MetadataOnlyQueryStringName))
+                        MetadataOnly = GetBoolValue(name, pair.EncodedValue);
+                    return;
+                }
+                case 14:
+                {
+                    if (IsMatch(name, TimeSeriesTimesQueryStringName))
+                    {
+                        TimeSeriesTimes ??= new List<ReadOnlyMemory<char>>(1);
 
-                TimeSeriesTimes.Add(value);
-                return;
-            }
+                        var value = pair.DecodeValue();
+                        if (value.Span.Equals(AllTimeSeries.Span, StringComparison.Ordinal))
+                            TimeSeriesTimesHasAllTimeSeries = true;
 
-            if (IsMatch(name, TimeSeriesCountsQueryStringName))
-            {
-                TimeSeriesCounts ??= new List<ReadOnlyMemory<char>>(1);
+                        TimeSeriesTimes.Add(value);
+                    }
+                    return;
+                }
+                case 15:
+                {
+                    if (IsMatch(name, RevisionsBeforeQueryStringName))
+                    {
+                        RevisionsBefore = pair.DecodeValue();
+                        return;
+                    }
+                    if (IsMatch(name, TimeSeriesCountsQueryStringName))
+                    {
+                        TimeSeriesCounts ??= new List<ReadOnlyMemory<char>>(1);
 
-                var value = pair.DecodeValue();
-                if (value.Span.Equals(AllTimeSeries.Span, StringComparison.Ordinal))
-                    TimeSeriesCountsHasAllTimeSeries = true;
+                        var value = pair.DecodeValue();
+                        if (value.Span.Equals(AllTimeSeries.Span, StringComparison.Ordinal))
+                            TimeSeriesCountsHasAllTimeSeries = true;
 
-                TimeSeriesCounts.Add(value);
-                return;
-            }
-
-            if (IsMatch(name, TxModeQueryStringName))
-            {
-                if (TryGetEnumValue<TransactionMode>(pair.EncodedValue, out var value))
-                    TxMode = value;
-
-                return;
-            }
-
-            if (IsMatch(name, FromQueryStringName))
-            {
-                // optimize this
-                AddForStringValues("from", pair.DecodeValue());
-                return;
-            }
-
-            if (IsMatch(name, ToQueryStringName))
-            {
-                // optimize this
-                AddForStringValues("to", pair.DecodeValue());
-                return;
-            }
-
-            if (IsMatch(name, TimeTypeQueryStringName))
-            {
-                // optimize this
-                AddForStringValues("timeType", pair.DecodeValue());
-                return;
-            }
-
-            if (IsMatch(name, TimeValueQueryStringName))
-            {
-                // optimize this
-                AddForStringValues("timeValue", pair.DecodeValue());
-                return;
-            }
-
-            if (IsMatch(name, TimeUnitQueryStringName))
-            {
-                // optimize this
-                AddForStringValues("timeUnit", pair.DecodeValue());
-                return;
-            }
-
-            if (IsMatch(name, CountTypeQueryStringName))
-            {
-                // optimize this
-                AddForStringValues("countType", pair.DecodeValue());
-                return;
-            }
-
-            if (IsMatch(name, CountValueQueryStringName))
-            {
-                // optimize this
-                AddForStringValues("countValue", pair.DecodeValue());
-                return;
+                        TimeSeriesCounts.Add(value);
+                    }
+                    return;
+                }
             }
         }
 
