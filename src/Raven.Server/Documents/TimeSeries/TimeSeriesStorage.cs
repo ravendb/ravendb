@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             Stats = new TimeSeriesStats(this, tx);
             Rollups = new TimeSeriesRollups(_documentDatabase);
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase<TimeSeriesStorage>(documentDatabase.Name);
+            _logger = documentDatabase.Loggers.GetLogger<TimeSeriesStorage>();
         }
 
         public long PurgeSegmentsAndDeletedRanges(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)

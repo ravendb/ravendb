@@ -10,6 +10,7 @@ using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Voron;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents
 {
@@ -28,10 +29,9 @@ namespace Raven.Server.Documents
         public ConfigurationStorage(DocumentDatabase db)
         {
             _db = db;
-
             OperationsStorage = new OperationsStorage();
 
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase<ConfigurationStorage>(db);
+            _logger = db.Loggers.GetLogger<ConfigurationStorage>();
         }
 
         public void Initialize()

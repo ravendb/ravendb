@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Revisions
             RevisionsSchema = revisionsSchema ?? throw new ArgumentNullException(nameof(revisionsSchema));
             CompressedRevisionsSchema = compressedRevisionsSchema ?? throw new ArgumentNullException(nameof(compressedRevisionsSchema));
 
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase<RevisionsStorage>(database);
+            _logger = database.Loggers.GetLogger<RevisionsStorage>();
             Operations = new RevisionsOperations(_database);
             ConflictConfiguration = new RevisionsConfiguration
             {

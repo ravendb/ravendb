@@ -26,7 +26,7 @@ public class DataArchivist : BackgroundWorkBase
 
     public DataArchivalConfiguration DataArchivalConfiguration { get; }
 
-    private DataArchivist(DocumentDatabase database, DataArchivalConfiguration dataArchivalConfiguration) : base(database.Name, RavenLogManager.Instance.GetLoggerForDatabase<DataArchivist>(database), database.DatabaseShutdown)
+    private DataArchivist(DocumentDatabase database, DataArchivalConfiguration dataArchivalConfiguration) : base(database.Name, database.Loggers.GetLogger<DataArchivist>(), database.DatabaseShutdown)
     {
         DataArchivalConfiguration = dataArchivalConfiguration;
         _database = database;
@@ -69,7 +69,7 @@ public class DataArchivist : BackgroundWorkBase
                 $"Data archival load configuration error in '{database.Name}' database", msg,
                 AlertType.ArchivalConfigurationNotValid, NotificationSeverity.Error, database.Name));
 
-            var logger = RavenLogManager.Instance.GetLoggerForDatabase<DataArchivist>(database);
+            var logger = database.Loggers.GetLogger<DataArchivist>();
             if (logger.IsErrorEnabled)
                 logger.Error(msg, e);
 

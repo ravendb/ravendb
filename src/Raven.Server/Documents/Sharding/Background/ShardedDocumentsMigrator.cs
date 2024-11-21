@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Sharding.Background
         {
             _database = database;
             _token = database.ShardedDocumentsStorage.DocumentDatabase.DatabaseShutdown;
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), database);
+            _logger = database.Loggers.GetLogger(GetType());
         }
 
         internal async Task ExecuteMoveDocumentsAsync()

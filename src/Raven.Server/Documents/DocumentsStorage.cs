@@ -122,7 +122,7 @@ namespace Raven.Server.Documents
             DocumentDatabase = documentDatabase;
             SetDocumentsStorageSchemas();
             _name = DocumentDatabase.Name;
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), DocumentDatabase);
+            _logger = DocumentDatabase.Loggers.GetLogger(GetType());
             _addToInitLog = addToInitLog;
         }
 

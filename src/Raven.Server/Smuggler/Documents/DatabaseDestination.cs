@@ -55,7 +55,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             _database = database;
             _token = token;
-            _log = RavenLogManager.Instance.GetLoggerForDatabase<DatabaseDestination>(database);
+            _log = database.Loggers.GetLogger<DatabaseDestination>();
             _duplicateDocsHandler = new DuplicateDocsHandler(_database);
         }
 
@@ -976,7 +976,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public MergedBatchPutCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                var log = RavenLogManager.Instance.GetLoggerForDatabase<MergedBatchPutCommandDto>(database);
+                var log = database.Loggers.GetLogger<MergedBatchPutCommandDto>();
                 var command = new MergedBatchPutCommand(database, BuildType, log)
                 {
                     IsRevision = IsRevision
@@ -1128,7 +1128,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 public MergedBatchFixDocumentMetadataCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
                 {
-                    var log = RavenLogManager.Instance.GetLoggerForDatabase<MergedBatchFixDocumentMetadataCommandDto>(database);
+                    var log = database.Loggers.GetLogger<MergedBatchFixDocumentMetadataCommandDto>();
                     var command = new MergedBatchFixDocumentMetadataCommand(database, log);
 
                     foreach (var id in Ids)
@@ -1211,7 +1211,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public MergedBatchDeleteRevisionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                var log = RavenLogManager.Instance.GetLoggerForDatabase<MergedBatchDeleteRevisionCommandDto>(database);
+                var log = database.Loggers.GetLogger<MergedBatchDeleteRevisionCommandDto>();
                 var command = new MergedBatchDeleteRevisionCommand(database, log);
 
                 foreach (var id in Ids)

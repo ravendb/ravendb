@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Replication
         {
             _conflictResolver = conflictResolver;
             _database = database;
-            _log = RavenLogManager.Instance.GetLoggerForDatabase<ConflictManager>(_database.Name);
+            _log = _database.Loggers.GetLogger<ConflictManager>();
         }
 
         public unsafe void HandleConflictForDocument(

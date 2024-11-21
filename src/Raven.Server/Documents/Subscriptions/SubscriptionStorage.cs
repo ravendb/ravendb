@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             _db = db;
             _databaseName = name; // this is full name for sharded db 
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), db);
+            _logger = db.Loggers.GetLogger(GetType());
         }
 
         protected override void DropSubscriptionConnections(SubscriptionConnectionsState state, SubscriptionException ex)

@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected SubscriptionFetcher(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) : base(database, subscriptionConnectionsState, collection)
         {
-            Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), database);
+            Logger = database.Loggers.GetLogger(GetType());
         }
 
         protected abstract IEnumerator<T> FetchByEtag();

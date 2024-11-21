@@ -14,6 +14,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.QueueSink;
 
@@ -56,7 +57,7 @@ public class QueueSinkLoader : IDisposable
     {
         _database = documentDatabase;
         _serverStore = serverStore;
-        Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), documentDatabase);
+        Logger = documentDatabase.Loggers.GetLogger(GetType());
     }
 
     private void LoadProcesses(DatabaseRecord record, List<QueueSinkConfiguration> newQueueSinkDestinations,

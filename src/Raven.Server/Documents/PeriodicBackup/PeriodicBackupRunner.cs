@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             _database = database;
             _serverStore = serverStore;
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase<PeriodicBackupRunner>(database);
+            _logger = database.Loggers.GetLogger<PeriodicBackupRunner>();
             _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             _tempBackupPath = BackupUtils.GetBackupTempPath(_database.Configuration, "PeriodicBackupTemp", out _);
             _originalDatabaseName = database is ShardedDocumentDatabase sdd ? sdd.ShardedDatabaseName : database.Name;

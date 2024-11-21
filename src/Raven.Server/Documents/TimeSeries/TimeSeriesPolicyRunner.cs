@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private readonly TimeSpan _checkFrequency;
 
-        public TimeSeriesPolicyRunner(DocumentDatabase database, TimeSeriesConfiguration configuration) : base(database.Name, RavenLogManager.Instance.GetLoggerForDatabase<TimeSeriesPolicyRunner>(database), database.DatabaseShutdown)
+        public TimeSeriesPolicyRunner(DocumentDatabase database, TimeSeriesConfiguration configuration) : base(database.Name, database.Loggers.GetLogger<TimeSeriesPolicyRunner>(), database.DatabaseShutdown)
         {
             _database = database;
             Configuration = configuration;
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.TimeSeries
                         AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
                 }
 
-                var logger = RavenLogManager.Instance.GetLoggerForDatabase<TimeSeriesPolicyRunner>(database);
+                var logger = database.Loggers.GetLogger<TimeSeriesPolicyRunner>();
                 if (logger.IsErrorEnabled)
                     logger.Error(msg, e);
 

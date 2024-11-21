@@ -34,7 +34,7 @@ namespace Raven.Server.Documents
         private readonly HashSet<ITombstoneAware> _subscriptions = new HashSet<ITombstoneAware>();
         private long? _maxTombstoneEtagToDelete;
 
-        public TombstoneCleaner(DocumentDatabase documentDatabase) : base(documentDatabase.Name, RavenLogManager.Instance.GetLoggerForDatabase<TombstoneCleaner>(documentDatabase), documentDatabase.DatabaseShutdown)
+        public TombstoneCleaner(DocumentDatabase documentDatabase) : base(documentDatabase.Name, documentDatabase.Loggers.GetLogger<TombstoneCleaner>(), documentDatabase.DatabaseShutdown)
         {
             _documentDatabase = documentDatabase;
             _numberOfTombstonesToDeleteInBatch = _documentDatabase.Is32Bits
@@ -504,7 +504,7 @@ namespace Raven.Server.Documents
 
         public TombstoneCleaner.DeleteTombstonesCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var log = RavenLogManager.Instance.GetLoggerForDatabase<DeleteTombstonesCommandDto>(database);
+            var log = database.Loggers.GetLogger<DeleteTombstonesCommandDto>();
             var command = new TombstoneCleaner.DeleteTombstonesCommand(Tombstones, MinAllDocsEtag, MinAllTimeSeriesEtag, MinAllCountersEtag, NumberOfTombstonesToDeleteInBatch ?? long.MaxValue, database, log);
             return command;
         }

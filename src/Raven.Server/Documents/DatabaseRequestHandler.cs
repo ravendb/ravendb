@@ -29,7 +29,7 @@ namespace Raven.Server.Documents
         {
             Database = context.Database;
             ContextPool = Database.DocumentsStorage.ContextPool;
-            Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), Database);
+            Logger = Database.Loggers.GetLogger(GetType());
 
             base.Init(context);
         }

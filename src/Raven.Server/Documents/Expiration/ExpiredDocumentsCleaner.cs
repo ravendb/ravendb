@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Expiration
         public ExpirationConfiguration ExpirationConfiguration { get; }
         public RefreshConfiguration RefreshConfiguration { get; }
 
-        private ExpiredDocumentsCleaner(DocumentDatabase database, ExpirationConfiguration expirationConfiguration, RefreshConfiguration refreshConfiguration) : base(database.Name, RavenLogManager.Instance.GetLoggerForDatabase<ExpiredDocumentsCleaner>(database), database.DatabaseShutdown)
+        private ExpiredDocumentsCleaner(DocumentDatabase database, ExpirationConfiguration expirationConfiguration, RefreshConfiguration refreshConfiguration) : base(database.Name, database.Loggers.GetLogger<ExpiredDocumentsCleaner>(), database.DatabaseShutdown)
         {
             ExpirationConfiguration = expirationConfiguration;
             RefreshConfiguration = refreshConfiguration;
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Expiration
                     $"Expiration error in {database.Name}", msg,
                     AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
 
-                var logger = RavenLogManager.Instance.GetLoggerForDatabase<ExpiredDocumentsCleaner>(database.Name);
+                var logger = database.Loggers.GetLogger<ExpiredDocumentsCleaner>();
                 if (logger.IsErrorEnabled)
                     logger.Error(msg, e);
 
