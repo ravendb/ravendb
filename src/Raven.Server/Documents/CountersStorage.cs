@@ -1873,7 +1873,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<CounterTombstoneDetail> GetCounterTombstonesFrom(DocumentsOperationContext context, long etag, long toEtag = long.MaxValue)
         {
-            var table = context.CountersTable(this);
+            var table = context.CountersTombstonesTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice], etag, 0))
