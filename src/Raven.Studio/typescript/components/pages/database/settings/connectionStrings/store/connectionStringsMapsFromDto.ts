@@ -9,6 +9,7 @@ import {
     RavenConnection,
     SqlConnection,
     SnowflakeConnection,
+    AmazonSqsConnection,
 } from "../connectionStringsTypes";
 
 import ElasticSearchConnectionStringDto = Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString;
@@ -59,6 +60,9 @@ function getConnectionStringUsedTasks(
             break;
         case "AzureQueueStorage":
             filteredTasks = tasks.filter((task) => task.BrokerType === "AzureQueueStorage");
+            break;
+        case "AmazonSqs":
+            filteredTasks = tasks.filter((task) => task.BrokerType === "AmazonSqs");
             break;
         default:
             assertUnreachable(connectionType);
@@ -281,5 +285,23 @@ export function mapAzureQueueStorageConnectionsFromDto(
                     },
                     usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
                 }) satisfies AzureQueueStorageConnection
+        );
+}
+
+export function mapAmazonSqsConnectionsFromDto(
+    connections: Record<string, QueueConnectionStringDto>,
+    ongoingTasks: OngoingTaskForConnection[]
+): AmazonSqsConnection[] {
+    const type: AmazonSqsConnection["type"] = "AmazonSqs";
+
+    return Object.values(connections)
+        .filter((x) => x.BrokerType === "AmazonSqs")
+        .map(
+            (connection) =>
+                ({
+                    type,
+                    name: connection.Name,
+                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
+                }) satisfies AmazonSqsConnection
         );
 }

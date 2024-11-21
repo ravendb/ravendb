@@ -28,6 +28,7 @@ import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptions
 import getBackupLocationCommand from "commands/database/tasks/getBackupLocationCommand";
 import testAzureQueueStorageServerConnectionCommand from "commands/database/cluster/testAzureQueueStorageServerConnectionCommand";
 import testSnowflakeConnectionStringCommand from "commands/database/cluster/testSnowflakeConnectionStringCommand";
+import testAmazonSqsServerConnectionCommand from "commands/database/cluster/testAmazonSqsServerConnectionCommand";
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -128,6 +129,13 @@ export default class TasksService {
         authentication: Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings
     ) {
         return new testAzureQueueStorageServerConnectionCommand(databaseName, authentication).execute();
+    }
+
+    async testAmazonSqsServerConnection(
+        databaseName: string,
+        authentication: Raven.Client.Documents.Operations.ETL.Queue.AmazonSqsConnectionSettings
+    ) {
+        return new testAmazonSqsServerConnectionCommand(databaseName, authentication).execute();
     }
 
     async testKafkaServerConnection(

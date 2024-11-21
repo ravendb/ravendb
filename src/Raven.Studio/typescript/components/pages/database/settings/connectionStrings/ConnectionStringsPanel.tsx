@@ -103,6 +103,7 @@ function getDtoEtlType(type: StudioEtlType): Raven.Client.Documents.Operations.E
         case "Kafka":
         case "RabbitMQ":
         case "AzureQueueStorage":
+        case "AmazonSqs":
             return "Queue";
         default:
             return type;

@@ -524,6 +524,7 @@ export class DatabasesStubs {
                     },
                     RabbitMqConnectionSettings: null,
                     AzureQueueStorageConnectionSettings: null,
+                    AmazonSqsConnectionSettings: null,
                 },
                 "rabbitmq-name": {
                     Type: "Queue",
@@ -534,6 +535,7 @@ export class DatabasesStubs {
                         ConnectionString: "some-connection-string",
                     },
                     AzureQueueStorageConnectionSettings: null,
+                    AmazonSqsConnectionSettings: null,
                 },
                 "azure-queue-storage-name": {
                     Type: "Queue",
@@ -546,6 +548,9 @@ export class DatabasesStubs {
                         EntraId: null,
                         Passwordless: null,
                     },
+                    AmazonSqsConnectionSettings: null,
+                },
+                "azure-sqs-name": {
                 },
             },
         };

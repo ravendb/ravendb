@@ -3,6 +3,7 @@ import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.Olap
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
 import AzureQueueStorageConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings;
+import AmazonSqsConnectionSettingsDto = Raven.Client.Documents.Operations.ETL.Queue.AmazonSqsConnectionSettings;
 
 type SqlConnectionStringDto = SqlConnectionString;
 type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
@@ -101,7 +102,8 @@ export type Connection =
     | ElasticSearchConnection
     | KafkaConnection
     | RabbitMqConnection
-    | AzureQueueStorageConnection;
+    | AzureQueueStorageConnection
+    | AmazonSqsConnection;
 
 export type ConnectionStringDto = Partial<
     | ElasticSearchConnectionStringDto
@@ -111,6 +113,7 @@ export type ConnectionStringDto = Partial<
     | SqlConnectionStringDto
     | SnowflakeConnectionStringDto
     | AzureQueueStorageConnectionSettingsDto
+    | AmazonSqsConnectionSettingsDto
 >;
 
 export interface EditConnectionStringFormProps {

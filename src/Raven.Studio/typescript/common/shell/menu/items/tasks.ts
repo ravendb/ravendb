@@ -324,6 +324,19 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             }
         }),
         new leafMenuItem({
+            route: 'databases/tasks/editAmazonSqsEtlTask',
+            moduleId: require('viewmodels/database/tasks/editAmazonSqsEtlTask'),
+            title: 'Amazon SQS ETL Task',
+            nav: false,
+            css: "icon-plus",
+            dynamicHash: appUrls.editAmazonSqsEtlTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks',
+            search: {
+                overrideTitle: "Add New Amazon SQS ETL Task",
+                alternativeTitles: ["Create Amazon SQS ETL Task"],
+            }
+        }),
+        new leafMenuItem({
             route: 'databases/tasks/editKafkaSinkTask',
             moduleId: require('viewmodels/database/tasks/editKafkaSinkTask'),
             title: 'Kafka Sink Task',

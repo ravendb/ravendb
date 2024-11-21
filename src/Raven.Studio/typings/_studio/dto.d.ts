@@ -878,9 +878,11 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
 }
 
 type StudioTaskType = "Replication" | "PullReplicationAsHub" | "PullReplicationAsSink" | "Backup" | "Subscription" |
-    "RavenEtl" | "SqlEtl" | "SnowflakeEtl" | "OlapEtl" | "ElasticSearchEtl" | "KafkaQueueEtl" | "RabbitQueueEtl" | "AzureQueueStorageQueueEtl" | "KafkaQueueSink" | "RabbitQueueSink";
-    
-type StudioEtlType = "Raven" | "Sql" | "Snowflake" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage";
+    "RavenEtl" | "SqlEtl" | "SnowflakeEtl" | "OlapEtl" | "ElasticSearchEtl" | 
+    "KafkaQueueEtl" | "RabbitQueueEtl" | "AzureQueueStorageQueueEtl" | "AmazonSqsQueueEtl" |
+    "KafkaQueueSink" | "RabbitQueueSink";
+
+type StudioEtlType = "Raven" | "Sql" | "Snowflake" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage" | "AmazonSqs";
 
 type StudioQueueSinkType = "KafkaQueueSink" | "RabbitQueueSink";
 
@@ -1055,5 +1057,5 @@ type GetConnectionStringsResult = Omit<Raven.Client.Documents.Operations.Connect
     SqlConnectionStrings: {[key: string]: SqlConnectionString;};
 }
 
-
 type AzureQueueStorageAuthenticationType = "connectionString" | "entraId" | "passwordless";
+type AmazonSqsAuthenticationType = "basic" | "emulator" | "passwordless";

@@ -45,6 +45,10 @@ export function ConnectionStringsInfoHub() {
                     .featureName,
                 value: features.hasQueueEtl,
             },
+            {
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "amazon-sqs-etl").featureName,
+                value: features.hasQueueEtl,
+            },
         ],
     });
 
@@ -136,6 +140,13 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Azure Queue Storage ETL",
         featureIcon: "azure-queue-storage-etl",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+    {
+        featureName: "Amazon SQS ETL",
+        featureIcon: "amazon-sqs-etl",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },

@@ -13,6 +13,7 @@ import {
     mapRavenConnectionsFromDto,
     mapSqlConnectionsFromDto,
     mapSnowflakeConnectionsFromDto,
+    mapAmazonSqsConnectionsFromDto,
 } from "./connectionStringsMapsFromDto";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import DatabaseUtils from "components/utils/DatabaseUtils";
@@ -36,6 +37,7 @@ const initialState: ConnectionStringsState = {
         Kafka: [],
         RabbitMQ: [],
         AzureQueueStorage: [],
+        AmazonSqs: [],
     },
     urlParameters: {
         name: null,
@@ -52,7 +54,8 @@ type StudioEtlType =
     | "ElasticSearch"
     | "Kafka"
     | "RabbitMQ"
-    | "AzureQueueStorage";
+    | "AzureQueueStorage"
+    | "AmazonSqs";
 
 export const connectionStringsSlice = createSlice({
     name: "connectionStrings",
@@ -124,12 +127,14 @@ export const connectionStringsSlice = createSlice({
                     connectionStringsDto.QueueConnectionStrings,
                     ongoingTasks
                 );
-
                 connections.AzureQueueStorage = mapAzureQueueStorageConnectionsFromDto(
                     connectionStringsDto.QueueConnectionStrings,
                     ongoingTasks
                 );
-
+                connections.AmazonSqs = mapAmazonSqsConnectionsFromDto(
+                    connectionStringsDto.QueueConnectionStrings,
+                    ongoingTasks
+                );
                 state.loadStatus = "success";
 
                 if (payload.hasDatabaseAdminAccess && urlParameters.name && urlParameters.type) {

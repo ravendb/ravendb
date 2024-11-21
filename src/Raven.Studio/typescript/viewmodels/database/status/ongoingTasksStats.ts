@@ -1788,6 +1788,8 @@ class ongoingTasksStats extends shardViewModelBase {
                 return "RabbitMQ ETL";
             case "AzureQueueStorage":
                 return "Azure Queue Storage";
+            case "AmazonSqs":
+                return "Amazon SQS";
             case "SubscriptionConnection":
                 return "Subscription";
             case "SubscriptionBatch":
@@ -2088,6 +2090,7 @@ class ongoingTasksStats extends shardViewModelBase {
                 type === "ElasticSearch" || 
                 type === "Kafka" || 
                 type === "AzureQueueStorage" ||
+                type === "AmazonSqs" ||
                 type === "RabbitMQ";
             
             const isSubscription = type === "SubscriptionConnection" || type === "SubscriptionBatch" || type === "AggregatedBatchesInfo";
@@ -2154,6 +2157,7 @@ class ongoingTasksStats extends shardViewModelBase {
                     case "Olap":
                     case "ElasticSearch":
                     case "AzureQueueStorage":
+                    case "AmazonSqs":
                     case "Kafka":
                     case "RabbitMQ": { 
                         const elementWithData = context.rootStats as EtlPerformanceBaseWithCache;

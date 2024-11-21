@@ -52,6 +52,10 @@ class getConnectionStringInfoCommand extends commandBase {
     static forAzureQueueStorageEtl(db: database, connectionStringName: string) {
         return new getConnectionStringInfoCommand(db, "Queue", connectionStringName);
     }
+
+    static forAmazonSqsEtl(db: database, connectionStringName: string) {
+        return new getConnectionStringInfoCommand(db, "Queue", connectionStringName);
+    }
 }
 
 export = getConnectionStringInfoCommand; 

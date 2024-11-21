@@ -25,6 +25,7 @@ import {
     OngoingTaskSnowflakeEtlSharedInfo,
     OngoingTaskSubscriptionInfo,
     OngoingTaskSubscriptionSharedInfo,
+    OngoingTaskAmazonSqsEtlSharedInfo,
 } from "components/models/tasks";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
@@ -260,6 +261,15 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 case "AzureQueueStorage": {
                     // noinspection UnnecessaryLocalVariableJS
                     const result: OngoingTaskAzureQueueStorageEtlSharedInfo = {
+                        ...commonProps,
+                        connectionStringName: incoming.ConnectionStringName,
+                        url: incoming.Url,
+                    };
+                    return result;
+                }
+                case "AmazonSqs": {
+                    // noinspection UnnecessaryLocalVariableJS
+                    const result: OngoingTaskAmazonSqsEtlSharedInfo = {
                         ...commonProps,
                         connectionStringName: incoming.ConnectionStringName,
                         url: incoming.Url,

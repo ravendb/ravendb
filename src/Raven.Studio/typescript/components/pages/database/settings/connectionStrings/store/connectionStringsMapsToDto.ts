@@ -11,6 +11,7 @@ import {
     OlapConnection,
     ConnectionFormData,
     SnowflakeConnection,
+    AmazonSqsConnection,
 } from "../connectionStringsTypes";
 import assertUnreachable from "components/utils/assertUnreachable";
 import ApiKeyAuthentication = Raven.Client.Documents.Operations.ETL.ElasticSearch.ApiKeyAuthentication;
@@ -167,6 +168,15 @@ export function mapAzureQueueStorageConnectionStringToDto(
     };
 }
 
+export function mapAmazonSqsConnectionStringToDto(connection: AmazonSqsConnection): ConnectionStringDto {
+    return {
+        Type: "Queue",
+        BrokerType: "AmazonSqs",
+        Name: connection.name,
+        AmazonSqsConnectionSettings: mapAmazonSqsConnectionStringSettingsToDto(connection),
+    };
+}
+
 export function mapConnectionStringToDto(connection: Connection): ConnectionStringDto {
     const type = connection.type;
 
@@ -187,6 +197,8 @@ export function mapConnectionStringToDto(connection: Connection): ConnectionStri
             return mapRabbitMqStringToDto(connection);
         case "AzureQueueStorage":
             return mapAzureQueueStorageConnectionStringToDto(connection);
+        case "AmazonSqs":
+            return mapAmazonSqsConnectionStringToDto(connection);
         default:
             return assertUnreachable(type);
     }

@@ -65,6 +65,9 @@ class transformationScriptSyntax extends dialogViewModelBase {
             case "AzureQueueStorage":
                 sampleText = transformationScriptSyntax.azureQueueStorageEtlSampleText;
                 break;
+            case "AmazonSqs":
+                sampleText = transformationScriptSyntax.amazonSqsEtlSampleText;
+                break;
             default:
                 genUtils.assertUnreachable(type, "Unknown studioEtlType: " + type);
         }
@@ -246,6 +249,7 @@ loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
     
     rabbitMqEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.rabbitMqEtlSampleText);
     azureQueueStorageEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.azureQueueStorageEtlSampleText);
+    amazonSqsEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.amazonSqsEtlSampleText);
     
     static readonly olapEtlSamplePartitionText =
 `var orderDate = new Date(this.OrderedAt);

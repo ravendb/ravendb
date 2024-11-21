@@ -37,6 +37,7 @@ export class TasksStubs {
                 TasksStubs.getKafkaEtl(),
                 TasksStubs.getRabbitEtl(),
                 TasksStubs.getAzureQueueStorageEtl(),
+                TasksStubs.getAmazonSqsEtl(),
                 TasksStubs.getKafkaSink(),
                 TasksStubs.getRabbitSink(),
                 TasksStubs.getReplicationSink(),
@@ -60,6 +61,7 @@ export class TasksStubs {
                 TasksStubs.getKafkaProgress(),
                 TasksStubs.getRabbitProgress(),
                 TasksStubs.getAzureQueueStorageProgress(),
+                TasksStubs.getAmazonSqsProgress(),
             ],
         };
     }
@@ -167,6 +169,11 @@ export class TasksStubs {
 
     static getAzureQueueStorageProgress(): EtlTaskProgress {
         const taskName = TasksStubs.getAzureQueueStorageEtl().TaskName;
+        return TasksStubs.getEtlProgress(taskName, "Queue");
+    }
+
+    static getAmazonSqsProgress(): EtlTaskProgress {
+        const taskName = TasksStubs.getAmazonSqsEtl().TaskName;
         return TasksStubs.getEtlProgress(taskName, "Queue");
     }
 

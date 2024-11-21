@@ -490,6 +490,45 @@ export const AzureQueueStorageEtlEmptyScript = boundCopy(AzureQueueStorageEtlTem
     emptyScript: true,
 });
 
+export const AmazonSqsEtlTemplate = (args: {
+    disabled?: boolean;
+    completed?: boolean;
+    emptyScript?: boolean;
+    customizeTask?: (x: OngoingTaskQueueEtlListView) => void;
+}) => {
+    commonInit();
+
+    const { tasksService } = mockServices;
+
+    tasksService.withGetTasks((x) => {
+        const etl = TasksStubs.getAmazonSqsEtl();
+        if (args.disabled) {
+            etl.TaskState = "Disabled";
+        }
+        args.customizeTask?.(etl);
+        x.OngoingTasks = [etl];
+        x.PullReplications = [];
+        x.SubscriptionsCount = 0;
+    });
+
+    mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
+
+    return <OngoingTasksPage />;
+};
+
+export const AmazonSqsEtlDisabled = boundCopy(AmazonSqsEtlTemplate, {
+    disabled: true,
+});
+
+export const AmazonSqsEtlCompleted = boundCopy(AmazonSqsEtlTemplate, {
+    completed: true,
+});
+
+export const AmazonSqsEtlEmptyScript = boundCopy(AmazonSqsEtlTemplate, {
+    completed: true,
+    emptyScript: true,
+});
+
 export const KafkaSinkTemplate = (args: {
     disabled?: boolean;
     customizeTask?: (x: OngoingTaskQueueSinkListView) => void;

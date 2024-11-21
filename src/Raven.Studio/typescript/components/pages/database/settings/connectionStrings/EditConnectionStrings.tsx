@@ -23,6 +23,7 @@ import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/Lice
 import { components, OptionProps } from "react-select";
 import AzureQueueStorageConnectionString from "components/pages/database/settings/connectionStrings/editForms/AzureQueueStorageConnectionString";
 import SnowflakeConnectionString from "components/pages/database/settings/connectionStrings/editForms/SnowflakeConnectionString";
+import AmazonSqsConnectionString from "components/pages/database/settings/connectionStrings/editForms/AmazonSqsConnectionString";
 
 export interface EditConnectionStringsProps {
     initialConnection?: Connection;
@@ -148,6 +149,8 @@ function getEditConnectionStringComponent(type: StudioEtlType): (props: EditConn
             return RabbitMqConnectionString;
         case "AzureQueueStorage":
             return AzureQueueStorageConnectionString;
+        case "AmazonSqs":
+            return AmazonSqsConnectionString;
         default:
             return null;
     }
@@ -215,6 +218,13 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
             icon: "snowflake",
             licenseRequired: "Enterprise",
             isDisabled: !features.hasSnowflakeEtl,
+        },
+        {
+            value: "AmazonSqs",
+            label: "Amazon SQS",
+            icon: "amazon-sqs-etl",
+            licenseRequired: "Enterprise",
+            isDisabled: !features.hasQueueEtl,
         },
     ];
 }

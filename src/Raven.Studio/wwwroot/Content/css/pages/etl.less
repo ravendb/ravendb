@@ -50,6 +50,9 @@
 @azure-queue-storage-etl-color-dark: darken(@azure-queue-storage-etl-color, 10%);
 @azure-queue-storage-etl-color-light: lighten(@azure-queue-storage-etl-color, 5%);
 
+@amazon-sqs-etl-color-dark: darken(@amazon-sqs-etl-color, 10%);
+@amazon-sqs-etl-color-light: lighten(@amazon-sqs-etl-color, 5%);
+
 @kafka-sink-color: @color-3;
 @kafka-sink-color-dark: darken(@kafka-sink-color, 10%);
 @kafka-sink-color-light: lighten(@kafka-sink-color, 3%);
@@ -96,7 +99,8 @@
     .pull-replication-hub, 
     .pull-replication-sink, 
     .kafka-etl, 
-    .azure-queue-storage-etl, 
+    .azure-queue-storage-etl,
+    .amazon-sqs-etl,
     .rabbitmq-etl, 
     .kafka-sink, 
     .rabbitmq-sink {
@@ -159,6 +163,10 @@
 
     .azure-queue-storage-etl {
         .bigbtn-variant (@azure-queue-storage-etl-color, @azure-queue-storage-etl-color-dark);
+    }
+
+    .amazon-sqs-etl {
+        .bigbtn-variant (@amazon-sqs-etl-color, @amazon-sqs-etl-color-dark);
     }
 
     .kafka-sink {
@@ -342,8 +350,16 @@
             color: @azure-queue-storage-etl-color;
         }
 
+        .amazon-sqs-etl {
+            color: @amazon-sqs-etl-color;
+        }
+
         .task-azure-queue-storage-etl {
             background-color: @azure-queue-storage-etl-color;
+        }
+
+        .task-amazon-sqs-etl {
+            background-color: @amazon-sqs-etl-color;
         }
 
         .kafka-sink {
@@ -436,6 +452,10 @@
         }
 
         &.azure-queue-storage-etl {
+            .name-variant (@brand-info, @brand-info-light);
+        }
+
+        &.amazon-sqs-etl {
             .name-variant (@brand-info, @brand-info-light);
         }
         
@@ -798,7 +818,7 @@
     }
 }
 
-.edit-kafka-etl-task, .edit-rabbitmq-etl-task, .edit-azure-queue-storage-etl-task, .edit-kafka-sink-task, .edit-rabbitmq-sink-task {
+.edit-kafka-etl-task, .edit-rabbitmq-etl-task, .edit-azure-queue-storage-etl-task, .edit-amazon-sqs-etl-task, .edit-kafka-sink-task, .edit-rabbitmq-sink-task {
 
     overflow-x: hidden;
 

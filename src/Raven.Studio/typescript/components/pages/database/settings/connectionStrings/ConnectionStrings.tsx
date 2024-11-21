@@ -115,7 +115,8 @@ const allStudioEtlTypes = exhaustiveStringTuple<StudioEtlType>()(
     "ElasticSearch",
     "Kafka",
     "RabbitMQ",
-    "AzureQueueStorage"
+    "AzureQueueStorage",
+    "AmazonSqs"
 );
 
 const addNewButtonId = "add-new-connection-string";

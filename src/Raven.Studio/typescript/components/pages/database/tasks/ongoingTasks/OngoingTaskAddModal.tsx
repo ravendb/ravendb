@@ -35,6 +35,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
     const hasOlapEtl = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));
     const hasRabbitMqEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasAzureQueueStorageEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const hasAmazonSqsEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasKafkaSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
@@ -264,6 +265,18 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         <Icon icon="azure-queue-storage-etl" />
                         <h4 className="mt-1 mb-0">Azure Queue Storage ETL</h4>
                         {!hasAzureQueueStorageEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
+                    </TaskItem>
+                    <TaskItem
+                        title="Create new Amazon SQS ETL task"
+                        href={appUrl.forEditAmazonSqsEtl(db.name)}
+                        className="amazon-sqs-etl"
+                        target="AmazonSqsETL"
+                        disabled={isSharded}
+                        disableReason={getDisableReasonForSharded()}
+                    >
+                        <Icon icon="amazon-sqs-etl" />
+                        <h4 className="mt-1 mb-0">Amazon SQS ETL</h4>
+                        {!hasAmazonSqsEtl && <LicenseRestrictedBadge licenseRequired="Enterprise" />}
                     </TaskItem>
                 </Row>
                 <HrHeader>SINK (SOURCE ⇛ RavenDB)</HrHeader>

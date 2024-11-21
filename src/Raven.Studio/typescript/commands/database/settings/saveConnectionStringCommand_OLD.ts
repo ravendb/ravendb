@@ -9,6 +9,7 @@ import connectionStringElasticSearchEtlModel = require("models/database/settings
 import connectionStringKafkaModel from "models/database/settings/connectionStringKafkaModel";
 import connectionStringRabbitMqModel from "models/database/settings/connectionStringRabbitMqModel";
 import connectionStringAzureQueueStorageModel from "models/database/settings/connectionStringAzureQueueStorageModel";
+import connectionStringAmazonSqsModel from "models/database/settings/connectionStringAmazonSqsModel";
 
 class saveConnectionStringCommand_OLD extends commandBase {
 
@@ -19,7 +20,8 @@ class saveConnectionStringCommand_OLD extends commandBase {
         connectionStringElasticSearchEtlModel |
         connectionStringKafkaModel |
         connectionStringRabbitMqModel |
-        connectionStringAzureQueueStorageModel) {
+        connectionStringAzureQueueStorageModel |
+        connectionStringAmazonSqsModel) {
         super();
     }
  
