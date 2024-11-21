@@ -15,16 +15,16 @@ public partial class Hnsw
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static float CosineSimilaritySingles(Span<byte> a, Span<byte> b) => 1 - TensorPrimitives.CosineSimilarity(MemoryMarshal.Cast<byte, float>(a), MemoryMarshal.Cast<byte, float>(b));
+    private static float CosineSimilaritySingles(ReadOnlySpan<byte> a, Span<byte> b) => 1 - TensorPrimitives.CosineSimilarity(MemoryMarshal.Cast<byte, float>(a), MemoryMarshal.Cast<byte, float>(b));
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static float CosineSimilarityI8(Span<byte> a, Span<byte> b)
+    private static float CosineSimilarityI8(ReadOnlySpan<byte> a, Span<byte> b)
     {
         throw new NotImplementedException("Not implemented yet");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static float HammingDistance(Span<byte> a, Span<byte> b)
+    private static float HammingDistance(ReadOnlySpan<byte> a, Span<byte> b)
     {
         return TensorPrimitives.HammingBitDistance<byte>(a, b);
     }

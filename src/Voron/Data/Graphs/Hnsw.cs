@@ -315,7 +315,7 @@ public unsafe partial class Hnsw
         private readonly Lookup<Int64LookupKey> _nodeIdToLocations;
         public readonly LowLevelTransaction Llt;
         private int _visitsCounter;
-        public delegate*<Span<byte>, Span<byte>, float> SimilarityCalc;
+        public delegate*<ReadOnlySpan<byte>, Span<byte>, float> SimilarityCalc;
         public Span<Node> Nodes => _nodes.ToSpan();
         public Tree Tree => _tree;
 
@@ -461,7 +461,7 @@ public unsafe partial class Hnsw
             return ref GetNodeByIndex(idx);
         }
 
-        public float Distance(Span<byte> vector, int fromIdx, int toIdx)
+        public float Distance(ReadOnlySpan<byte> vector, int fromIdx, int toIdx)
         {
             if (vector.IsEmpty)
             {
@@ -539,7 +539,7 @@ public unsafe partial class Hnsw
         }
 
         public void NearestEdges(int startingPointIndex, 
-            int dstIdx, Span<byte> vector, 
+            int dstIdx, ReadOnlySpan<byte> vector, 
             int level, int numberOfCandidates, 
             ref NativeList<int> candidates,
             NearestEdgesFlags flags)
@@ -625,7 +625,7 @@ public unsafe partial class Hnsw
             indexes.Dispose(Llt.Allocator);
         }
 
-        public void SearchNearestAcrossLevels(Span<byte> vector, int dstIdx, int maxLevel, ref NativeList<int> nearestIndexes)
+        public void SearchNearestAcrossLevels(ReadOnlySpan<byte> vector, int dstIdx, int maxLevel, ref NativeList<int> nearestIndexes)
         {
             var visitCounter = ++_visitsCounter;
             var currentNodeIndex = GetNodeIndexById(EntryPointId);
@@ -1171,13 +1171,13 @@ public unsafe partial class Hnsw
         return new NearestSearch(searchState, candidates, vector);
     }
 
-    public static NearestSearch ApproximateNearest(LowLevelTransaction llt, string name, int numberOfCandidates, Span<byte> vector)
+    public static NearestSearch ApproximateNearest(LowLevelTransaction llt, string name, int numberOfCandidates, ReadOnlySpan<byte> vector)
     {
         Slice.From(llt.Allocator, name, out var slice);
         return ApproximateNearest(llt, slice, numberOfCandidates, vector);
     }
 
-    public static NearestSearch ApproximateNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Span<byte> vector)
+    public static NearestSearch ApproximateNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, ReadOnlySpan<byte> vector)
     {
         var searchState = new SearchState(llt, name);
         var nearestNodesByLevel = new ContextBoundNativeList<int>(llt.Allocator);
@@ -1194,20 +1194,33 @@ public unsafe partial class Hnsw
         return new NearestSearch(searchState, nearestNodesByLevel, vector);
     }
 
-    public ref struct NearestSearch(SearchState searchState, ContextBoundNativeList<int> indexes, Span<byte> vector) 
+    public struct NearestSearch() 
     {
+        public NearestSearch(SearchState searchState, ContextBoundNativeList<int> indexes, ReadOnlySpan<byte> vector) : this()
+        {
+            _searchState = searchState;
+            _indexes = indexes;
+            _postingListResults = new(_searchState.Llt.Allocator);
+            _pforDecoder = new(searchState.Llt.Allocator);
+            searchState.Llt.Allocator.AllocateDirect(vector.Length, out _vector);
+            vector.CopyTo(_vector.ToSpan());
+        }
+
+        private ContextBoundNativeList<int> _indexes;
+        private SearchState _searchState;
         private int _currentNode, _currentMatchesIndex;
-        private ContextBoundNativeList<long> _postingListResults = new(searchState.Llt.Allocator);
-        private FastPForDecoder _pforDecoder = new(searchState.Llt.Allocator);
-        private readonly Span<byte> _vector = vector;
+        private ContextBoundNativeList<long> _postingListResults;
+        private FastPForDecoder _pforDecoder;
+        private ByteString _vector;
         private PostingList.Iterator _postingListIterator;
         private PostingList _postingList;
 
         public void Dispose()
         {
-            indexes.Dispose();
+            _indexes.Dispose();
             _postingListResults.Dispose();
             _pforDecoder.Dispose();
+            _searchState.Llt.Allocator.Release(ref _vector);
         }
 
         public int Fill(Span<long> matches, Span<float> distances)
@@ -1216,7 +1229,7 @@ public unsafe partial class Hnsw
             float distance = float.NaN;
             while (index < matches.Length)
             {
-                if (_currentNode >= indexes.Count)
+                if (_currentNode >= _indexes.Count)
                     break;
 
                 if(_postingList != null)
@@ -1249,10 +1262,10 @@ public unsafe partial class Hnsw
                     continue;
                 }
 
-                var nodeIdx = indexes[_currentNode];
-                ref var node = ref searchState.GetNodeByIndex(nodeIdx);
+                var nodeIdx = _indexes[_currentNode];
+                ref var node = ref _searchState.GetNodeByIndex(nodeIdx);
                 var rawPostingListId = node.PostingListId & Constants.Graphs.VectorId.ContainerType;
-                distance = searchState.Distance(_vector, -1, nodeIdx);
+                distance = _searchState.Distance(_vector.ToSpan(), -1, nodeIdx);
                 switch (node.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask)
                 {
                     case Constants.Graphs.VectorId.Tombstone: // empty
@@ -1265,12 +1278,12 @@ public unsafe partial class Hnsw
                         continue;
                     case Constants.Graphs.VectorId.SmallPostingList: // small posting list
                         Debug.Assert(_postingListResults.Count is 0 && _currentMatchesIndex is 0);
-                        searchState.ReadPostingList(rawPostingListId, ref _postingListResults, ref _pforDecoder, out _);
+                        _searchState.ReadPostingList(rawPostingListId, ref _postingListResults, ref _pforDecoder, out _);
                         continue;
                     case Constants.Graphs.VectorId.PostingList: // large posting list
-                        var setStateSpan = Container.GetReadOnly(searchState.Llt, rawPostingListId);
+                        var setStateSpan = Container.GetReadOnly(_searchState.Llt, rawPostingListId);
                         ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
-                        _postingList = new PostingList(searchState.Llt, Slices.Empty, setState);
+                        _postingList = new PostingList(_searchState.Llt, Slices.Empty, setState);
                         _postingListIterator = _postingList.Iterate();
                         continue;
                     default:
