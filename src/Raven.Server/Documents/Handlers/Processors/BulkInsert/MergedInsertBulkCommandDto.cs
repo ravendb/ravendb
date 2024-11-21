@@ -19,7 +19,7 @@ public sealed class MergedInsertBulkCommandDto : IReplayableCommandDto<Documents
             TotalSize = Commands.Sum(c => c.Document.Size),
             Commands = Commands,
             Database = database,
-            Logger = RavenLogManager.Instance.GetLoggerForDatabase<MergedInsertBulkCommandDto>(database)
+            Logger = database.Loggers.GetLogger<MergedInsertBulkCommandDto>()
         };
     }
 }

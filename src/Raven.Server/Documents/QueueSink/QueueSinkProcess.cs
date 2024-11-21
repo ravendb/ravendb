@@ -66,7 +66,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
         DocumentDatabase database, string tag)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
-        Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), database);
+        Logger = database.Loggers.GetLogger(GetType());
         Database = database;
         Configuration = configuration;
         Script = script;

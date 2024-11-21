@@ -113,6 +113,8 @@ namespace Raven.Server.Documents
 
         private readonly DatabasesLandlord.StateChange _databaseStateChange;
 
+        public readonly DatabaseLoggersContext Loggers;
+
         public DocumentsCompressionConfiguration DocumentsCompression => _documentsCompression;
         private DocumentsCompressionConfiguration _documentsCompression = new(compressRevisions: false, collections: Array.Empty<string>());
         private HashSet<string> _compressedCollections = new(StringComparer.OrdinalIgnoreCase);
@@ -127,7 +129,8 @@ namespace Raven.Server.Documents
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<LogLevel, string> addToInitLog)
         {
             Name = name;
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase<DocumentDatabase>(name);
+            Loggers = new DatabaseLoggersContext(this);
+            _logger = Loggers.GetLogger<DocumentDatabase>();
             _serverStore = serverStore;
             _addToInitLog = addToInitLog;
             StartTime = Time.GetUtcNow();

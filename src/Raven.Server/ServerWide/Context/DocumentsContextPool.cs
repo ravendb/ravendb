@@ -16,7 +16,7 @@ namespace Raven.Server.ServerWide.Context
         private DocumentDatabase _database;
 
         public DocumentsContextPool(DocumentDatabase database)
-            : base(database.Configuration.Memory.MaxContextSizeToKeep, RavenLogManager.Instance.GetLoggerForDatabase<DocumentsContextPool>(database))
+            : base(database.Configuration.Memory.MaxContextSizeToKeep, database.Loggers.GetLogger<DocumentsContextPool>())
         {
             _database = database;
         }

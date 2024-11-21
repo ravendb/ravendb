@@ -41,7 +41,7 @@ public class ShardedMapReduceQueryResultsMerger
         _isAutoMapReduceQuery = isAutoMapReduceQuery;
         Context = context;
         Token = token;
-        _logger = RavenLogManager.Instance.GetLoggerForDatabase<ShardedMapReduceQueryResultsMerger>(indexesContext.DatabaseContext);
+        _logger = indexesContext.DatabaseContext.Loggers.GetLogger<ShardedMapReduceQueryResultsMerger>();
     }
 
     public List<BlittableJsonReaderObject> Merge()

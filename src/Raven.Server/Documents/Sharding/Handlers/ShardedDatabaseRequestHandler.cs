@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             DatabaseContext = context.DatabaseContext;
             //TODO - sharding: We probably want to put it in the ShardedDatabaseContext, not use the server one 
             ContextPool = context.RavenServer.ServerStore.ContextPool;
-            Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), DatabaseContext);
+            Logger = DatabaseContext.Loggers.GetLogger(GetType());
 
             var request = HttpContext.Request;
             var url = context.RouteMatch.Url;

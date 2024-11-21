@@ -555,7 +555,7 @@ namespace Raven.Server.Documents.Replication
         {
             var resolver = new ResolveConflictOnReplicationConfigurationChange(
                 database.ReplicationLoader,
-                RavenLogManager.Instance.GetLoggerForDatabase<PutResolvedConflictsCommandDto>(database));
+                database.Loggers.GetLogger<PutResolvedConflictsCommandDto>());
 
             return new ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand(
                 database.DocumentsStorage.ConflictsStorage,

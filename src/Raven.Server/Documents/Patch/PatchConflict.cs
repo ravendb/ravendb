@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Patch
 
         public PatchConflict(DocumentDatabase database, IReadOnlyList<DocumentConflict> docs)
         {
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase<PatchConflict>(database);
+            _logger = database.Loggers.GetLogger<PatchConflict>();
             _database = database;
 
             foreach (var doc in docs)

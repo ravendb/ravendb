@@ -29,7 +29,7 @@ public partial class ShardedDatabaseContext
         {
             _context = context;
             _databaseName = _context.DatabaseName;
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase<ShardedSubscriptionsStorage>(context);
+            _logger = context.Loggers.GetLogger<ShardedSubscriptionsStorage>();
         }
 
         protected override void DropSubscriptionConnections(SubscriptionConnectionsStateOrchestrator state, SubscriptionException ex)

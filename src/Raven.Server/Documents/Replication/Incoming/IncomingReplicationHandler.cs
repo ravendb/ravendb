@@ -874,7 +874,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 ReplicatedItems = replicationItems,
                 ReplicatedAttachmentStreams = replicatedAttachmentStreams,
                 SupportedFeatures = SupportedFeatures,
-                Logger = RavenLogManager.Instance.GetLoggerForDatabase<MergedDocumentReplicationCommandDto>(database)
+                Logger = database.Loggers.GetLogger<MergedDocumentReplicationCommandDto>()
             };
 
             return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag);

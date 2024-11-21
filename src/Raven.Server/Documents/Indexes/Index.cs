@@ -78,6 +78,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
 using Voron.Impl.Journal;
+using static Raven.Server.Utils.MetricCacher.Keys;
 using AsyncManualResetEvent = Sparrow.Server.AsyncManualResetEvent;
 using Constants = Raven.Client.Constants;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
@@ -390,7 +391,7 @@ namespace Raven.Server.Documents.Indexes
 
         public static Index Open(string path, DocumentDatabase documentDatabase, bool generateNewDatabaseId, out SearchEngineType searchEngineType)
         {
-            var logger = RavenLogManager.Instance.GetLoggerForDatabase<Index>(documentDatabase);
+            var logger = documentDatabase.Loggers.GetLogger<Index>();
             StorageEnvironment environment = null;
             searchEngineType = SearchEngineType.None;
 
@@ -650,7 +651,7 @@ namespace Raven.Server.Documents.Indexes
         {
             InitializeMetrics(configuration);
 
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), documentDatabase);
+            _logger = documentDatabase.Loggers.GetLogger(GetType());
             using (DrainRunningQueries())
             {
                 if (_initialized)

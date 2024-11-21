@@ -21,6 +21,7 @@ using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.TimeSeries
 {
@@ -89,7 +90,7 @@ namespace Raven.Server.Documents.TimeSeries
         public TimeSeriesRollups(DocumentDatabase database)
         {
             _database = database;
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase<TimeSeriesRollups>(database);
+            _logger = database.Loggers.GetLogger<TimeSeriesRollups>();
         }
 
         public unsafe void MarkForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, TimeSeriesPolicy nextPolicy, DateTime timestamp)
@@ -255,7 +256,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                var logger = RavenLogManager.Instance.GetLoggerForDatabase<TimeSeriesRetentionCommand>(context.DocumentDatabase);
+                var logger = context.DocumentDatabase.Loggers.GetLogger<TimeSeriesRetentionCommand>();
                 var request = new TimeSeriesStorage.DeletionRangeRequest
                 {
                     From = DateTime.MinValue,

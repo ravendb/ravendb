@@ -44,6 +44,7 @@ using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Sparrow.Threading;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -125,7 +126,7 @@ namespace Raven.Server.Documents.Indexes
             Delete = delete;
             HasChanged = hasChanged;
             IndexReadOperationFactory = indexReadOperationFactory;
-            Logger = RavenLogManager.Instance.GetLoggerForDatabase<IndexStore>(_documentDatabase);
+            Logger = _documentDatabase.Loggers.GetLogger<IndexStore>();
 
             var stoppedConcurrentIndexBatches = _documentDatabase.Configuration.Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory;
             StoppedConcurrentIndexBatches = new SemaphoreSlim(stoppedConcurrentIndexBatches);

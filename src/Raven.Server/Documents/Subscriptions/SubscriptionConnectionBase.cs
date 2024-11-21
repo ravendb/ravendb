@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             DatabaseName = database;
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), ExtractDatabaseNameForLogging(tcpConnection));
+            _logger = GetLogger(GetType(), tcpConnection);
 
             ClientUri = tcpConnection.TcpClient.Client.RemoteEndPoint.ToString();
 
@@ -129,6 +129,15 @@ namespace Raven.Server.Documents.Subscriptions
             if (tcpConnection.DatabaseContext != null)
                 return tcpConnection.DatabaseContext.DatabaseName;
 
+            return null;
+        }
+
+        private static RavenLogger GetLogger(Type type, TcpConnectionOptions tcpConnection)
+        {
+            if (tcpConnection.DocumentDatabase != null)
+                return tcpConnection.DocumentDatabase.Loggers.GetLogger(type);
+            if (tcpConnection.DatabaseContext != null)
+                return tcpConnection.DatabaseContext.Loggers.GetLogger(type);
             return null;
         }
 
@@ -184,8 +193,8 @@ namespace Raven.Server.Documents.Subscriptions
         }
 
         internal virtual async Task HandleBatchStatusAsync<TState, TConnection>(
-            TState state, SubscriptionBatchStatus status, 
-            Stopwatch sendingCurrentBatchStopwatch, 
+            TState state, SubscriptionBatchStatus status,
+            Stopwatch sendingCurrentBatchStopwatch,
             SubscriptionConnectionInUse markInUse,
             SubscriptionBatchStatsScope batchScope) where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
@@ -524,14 +533,14 @@ namespace Raven.Server.Documents.Subscriptions
                 if (subscription.ArchivedDataProcessingBehavior is null)
                 {
                     // from 5.x version
-                    subscription.ArchivedDataProcessingBehavior = _subscriptions.GetDefaultArchivedDataProcessingBehavior();  
+                    subscription.ArchivedDataProcessingBehavior = _subscriptions.GetDefaultArchivedDataProcessingBehavior();
                 }
 
                 var whoseTaskIsIt = _subscriptions.GetSubscriptionResponsibleNode(context, subscription);
                 if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(ServerStore.NodeTag))
                     throw new DatabaseDoesNotExistException(
                         $"Stopping subscription '{name}' on node {ServerStore.NodeTag}, because database '{DatabaseName}' is being deleted.");
-                
+
                 if (record.IsDisabled)
                     throw new DatabaseDisabledException($"Stopping subscription '{name}' on node {ServerStore.NodeTag}, because database '{DatabaseName}' is disabled.");
 

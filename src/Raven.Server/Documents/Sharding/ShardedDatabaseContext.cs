@@ -65,7 +65,9 @@ namespace Raven.Server.Documents.Sharding
 
             ServerStore = serverStore;
             _record = record;
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase<ShardedDatabaseContext>(DatabaseName);
+
+            Loggers = new ShardedLoggersContext(this);
+            _logger = Loggers.GetLogger<ShardedDatabaseContext>();
 
             _orchestratorStateChange = new DatabasesLandlord.StateChange(ServerStore, record.DatabaseName, _logger, OnDatabaseRecordChange, 0, _databaseShutdown.Token);
             _urlUpdateStateChange = new DatabasesLandlord.StateChange(ServerStore, record.DatabaseName, _logger, OnUrlChange, 0, _databaseShutdown.Token);

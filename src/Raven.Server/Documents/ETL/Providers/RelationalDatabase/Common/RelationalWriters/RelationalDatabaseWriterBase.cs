@@ -53,7 +53,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         Configuration = configuration;
         _connection = ProviderFactory.CreateConnection();
         _commandBuilder = GetInitializedCommandBuilder();
-        Logger = RavenLogManager.Instance.GetLoggerForDatabase<RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration>>(Database.Name);
+        Logger = Database.Loggers.GetLogger<RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration>>();
 
         var connectionString = GetConnectionString(configuration);
         _connection.ConnectionString = connectionString;

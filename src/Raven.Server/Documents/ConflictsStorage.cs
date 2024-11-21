@@ -49,7 +49,7 @@ namespace Raven.Server.Documents
 
             ConflictsSchema = schema ?? throw new ArgumentNullException(nameof(schema));
 
-            _logger = RavenLogManager.Instance.GetLoggerForDatabase<ConflictsStorage>(documentDatabase);
+            _logger = documentDatabase.Loggers.GetLogger<ConflictsStorage>();
 
             ConflictsSchema.Create(tx, ConflictsSlice, 32);
         }
