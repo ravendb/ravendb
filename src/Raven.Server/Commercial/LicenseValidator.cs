@@ -33,7 +33,7 @@ namespace Raven.Server.Commercial
             var year = (number >> 9) + 1980;
             var month = (number & 0x01e0) >> 5;
             var day = number & 0x1F;
-            return new DateTime(year, month, day);
+            return new DateTime(year, month, day, hour: 23, minute: 59, second: 59, DateTimeKind.Utc);
         }
 
         private static byte[] GetBytesFromBase64String(string str)
