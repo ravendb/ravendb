@@ -22,13 +22,17 @@ namespace SlowTests.Issues
         {
         }
 
-        private const string EmployeeId1 = "Employ&es/1-A";
-        private const string EmployeeId2 = "EmPlo#ees/2-A";
-        private const string CompanyId = "COMan!es/1-A";
+        private const string EmployeeId1 = "Em\tploy&es/1-A";
+        private const string EmployeeId2 = "EmPl\ro#ees/2-A";
+        private const string CompanyId = "COM\ban!es/1-A";
 
         private static readonly Company _company = new Company { Id = CompanyId, Name = "RavenDB" };
         private static readonly Employee _employee1 = new Employee { Id = EmployeeId1, CompanyId = _company.Id };
         private static readonly Employee _employee2 = new Employee { Id = EmployeeId2, CompanyId = _company.Id };
+
+        private const string LegacyEmployeeId1 = "Employ&es/1-A";
+        private const string LegacyEmployeeId2 = "EmPlo#ees/2-A";
+        private const string LegacyCompanyId = "COMan!es/1-A";
 
         [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(typeof(DocumentsIndex))]
@@ -137,7 +141,7 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        var company = await session.LoadAsync<Company>(CompanyId);
+                        var company = await session.LoadAsync<Company>(LegacyCompanyId);
                         company.Name += " LTD";
                         await session.SaveChangesAsync();
                     }
@@ -159,8 +163,8 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        session.Delete(EmployeeId1);
-                        session.Delete(EmployeeId2);
+                        session.Delete(LegacyEmployeeId1);
+                        session.Delete(LegacyEmployeeId2);
                         await session.SaveChangesAsync();
                         // deleting the documents won't change the internal references tree like in new indexes
                     }
@@ -178,7 +182,7 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        var company = await session.LoadAsync<Company>(CompanyId);
+                        var company = await session.LoadAsync<Company>(LegacyCompanyId);
                         company.Name += " HR";
                         await session.SaveChangesAsync();
                         // when we update the references, this will clean the leftovers
@@ -237,7 +241,7 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        var company = await session.LoadAsync<Company>(CompanyId);
+                        var company = await session.LoadAsync<Company>(LegacyCompanyId);
                         company.Name += " LTD";
                         await session.SaveChangesAsync();
                     }
@@ -255,8 +259,8 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        session.Delete(EmployeeId1);
-                        session.Delete(EmployeeId2);
+                        session.Delete(LegacyEmployeeId1);
+                        session.Delete(LegacyEmployeeId2);
                         await session.SaveChangesAsync();
                         // deleting the documents won't change the internal references tree like in new indexes
                     }
@@ -274,7 +278,7 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        var company = await session.LoadAsync<Company>(CompanyId);
+                        var company = await session.LoadAsync<Company>(LegacyCompanyId);
                         company.Name += " HR";
                         await session.SaveChangesAsync();
                         // when we update the references, this will clean the leftovers
@@ -408,7 +412,7 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
-                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(CompanyId);
+                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(LegacyCompanyId);
                         company.Value.Name += " LTD";
                         await session.SaveChangesAsync();
                     }
@@ -430,8 +434,8 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        session.Delete(EmployeeId1);
-                        session.Delete(EmployeeId2);
+                        session.Delete(LegacyEmployeeId1);
+                        session.Delete(LegacyEmployeeId2);
                         await session.SaveChangesAsync();
                         // deleting the documents won't change the internal references tree like in new indexes
                     }
@@ -449,7 +453,7 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
-                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(CompanyId);
+                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(LegacyCompanyId);
                         company.Value.Name += " HR";
                         await session.SaveChangesAsync();
                         // when we update the references, this will clean the leftovers
@@ -508,7 +512,7 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
-                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(CompanyId);
+                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(LegacyCompanyId);
                         company.Value.Name += " LTD";
                         await session.SaveChangesAsync();
                     }
@@ -524,8 +528,8 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        session.Delete(EmployeeId1);
-                        session.Delete(EmployeeId2);
+                        session.Delete(LegacyEmployeeId1);
+                        session.Delete(LegacyEmployeeId2);
                         await session.SaveChangesAsync();
                         // deleting the documents won't change the internal references tree like in new indexes
                     }
@@ -543,7 +547,7 @@ namespace SlowTests.Issues
 
                     using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
-                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(CompanyId);
+                        var company = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(LegacyCompanyId);
                         company.Value.Name += " HR";
                         await session.SaveChangesAsync();
                         // when we update the references, this will clean the leftovers
