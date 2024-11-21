@@ -20,6 +20,7 @@ namespace Raven.Client.Properties
         private static int? _buildVersion;
         private static readonly Version _assemblyVersion;
         private static string _assemblyVersionAsString;
+        private static DateTime? _releaseDate;
 
         public static readonly RavenVersionAttribute Instance;
 
@@ -37,7 +38,7 @@ namespace Raven.Client.Properties
             PatchVersion = _assemblyVersion.Build;
         }
 
-        public string AssemblyVersion => _assemblyVersionAsString ?? (_assemblyVersionAsString = $"{MajorVersion.ToInvariantString()}.{MinorVersion.ToInvariantString()}.{PatchVersion.ToInvariantString()}.{BuildVersion.ToInvariantString()}");
+        public string AssemblyVersion => _assemblyVersionAsString ??= $"{MajorVersion.ToInvariantString()}.{MinorVersion.ToInvariantString()}.{PatchVersion.ToInvariantString()}.{BuildVersion.ToInvariantString()}";
 
         public readonly int MajorVersion;
 
@@ -47,14 +48,7 @@ namespace Raven.Client.Properties
 
         public readonly int PatchVersion;
 
-        internal DateTime ReleaseDate
-        {
-            get
-            {
-                var releaseDate = DateTime.Parse(ReleaseDateString).Date;
-                return new DateTime(releaseDate.Year, releaseDate.Month, releaseDate.Day, hour: 0, minute: 0, second: 0, DateTimeKind.Utc);
-            }
-        }
+        internal DateTime ReleaseDate => _releaseDate ??= DateTime.SpecifyKind(DateTime.Parse(ReleaseDateString), DateTimeKind.Utc);
 
         public int BuildVersion
         {
