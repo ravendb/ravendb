@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (_compiled.CollectionsWithCompareExchangeReferences.Count > 0)
             {
-                _handleCompareExchangeReferences = Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.LowerCasedReferences
+                _handleCompareExchangeReferences = IndexDefinitionBaseServerSide.IndexVersion.IsLowerCasedReferencesSupported(Definition.Version)
                     ? new HandleCompareExchangeReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration)
                     : new HandleNotNormalizedCompareExchangeReferences(this, _compiled.CollectionsWithCompareExchangeReferences, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration);
 
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (_referencedCollections.Count > 0)
             {
-                _handleReferences = Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.LowerCasedReferences
+                _handleReferences = IndexDefinitionBaseServerSide.IndexVersion.IsLowerCasedReferencesSupported(Definition.Version)
                     ? new HandleDocumentReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration)
                     : new HandleNotNormalizedDocumentReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration);
 

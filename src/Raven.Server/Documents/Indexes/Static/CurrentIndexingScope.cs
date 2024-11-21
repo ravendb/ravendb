@@ -11,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
 using Voron;
+using static Raven.Server.Documents.Indexes.IndexDefinitionBaseServerSide;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -75,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Static
             _getSpatialField = getSpatialField;
 
             UseNormalizedIds = index.SourceType == IndexSourceType.Documents &&
-                                index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.LowerCasedReferences;
+                                IndexVersion.IsLowerCasedReferencesSupported(index.Definition.Version);
         } 
 
         public void SetSourceCollection(string collection, IndexingStatsScope stats)
