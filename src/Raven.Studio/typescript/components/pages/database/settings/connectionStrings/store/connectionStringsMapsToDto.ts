@@ -157,6 +157,40 @@ export function mapAzureQueueStorageConnectionStringSettingsToDto(
     }
 }
 
+export function mapAmazonSqsConnectionStringSettingsToDto(
+    connection: Omit<AmazonSqsConnection, "type" | "usedByTasks">
+): Raven.Client.Documents.Operations.ETL.Queue.AmazonSqsConnectionSettings {
+    switch (connection.authType) {
+        case "basic": {
+            return {
+                Basic: {
+                    SecretKey: connection.settings.basic.secretKey,
+                    AccessKey: connection.settings.basic.accessKey,
+                    RegionName: connection.settings.basic.regionName,
+                },
+                UseEmulator: false,
+                Passwordless: false,
+            };
+        }
+        case "passwordless": {
+            return {
+                Basic: null,
+                Passwordless: true,
+                UseEmulator: false,
+            };
+        }
+        case "emulator": {
+            return {
+                Basic: null,
+                Passwordless: false,
+                UseEmulator: true,
+            };
+        }
+        default:
+            return assertUnreachable(connection.authType);
+    }
+}
+
 export function mapAzureQueueStorageConnectionStringToDto(
     connection: AzureQueueStorageConnection
 ): ConnectionStringDto {

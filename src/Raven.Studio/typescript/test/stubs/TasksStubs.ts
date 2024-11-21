@@ -357,6 +357,24 @@ export class TasksStubs {
         };
     }
 
+    static getAmazonSqsEtl(): OngoingTaskQueueEtl {
+        return {
+            TaskName: "AmazonSqsTask",
+            TaskId: 305,
+            TaskType: "QueueEtl",
+            ConnectionStringName: "AQS-CS",
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskState: "Enabled",
+            Error: null,
+            TaskConnectionStatus: "Active",
+            MentorNode: null,
+            Url: "https://queue.amazonaws.com",
+            BrokerType: "AmazonSqs",
+            PinToMentorNode: false,
+            Configuration: null,
+        };
+    }
+
     static getKafkaSink(): OngoingTaskQueueSink {
         return {
             TaskName: "KafkaSinkTask",

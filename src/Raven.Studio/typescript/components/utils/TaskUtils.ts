@@ -87,6 +87,10 @@ export default class TaskUtils {
                     return "Kafka";
                 case "RabbitMq":
                     return "RabbitMQ";
+                case "AmazonSqs":
+                    return "AmazonSqs";
+                case "AzureQueueStorage":
+                    return "AzureQueueStorage";
             }
         }
 

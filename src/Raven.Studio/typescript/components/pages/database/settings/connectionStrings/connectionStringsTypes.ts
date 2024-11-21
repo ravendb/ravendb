@@ -94,6 +94,20 @@ export interface AzureQueueStorageConnection extends ConnectionBase {
     };
 }
 
+export interface AmazonSqsConnection extends ConnectionBase {
+    type: Extract<StudioEtlType, "AmazonSqs">;
+    authType?: AmazonSqsAuthenticationType;
+    settings?: {
+        basic?: {
+            accessKey?: string;
+            regionName?: string;
+            secretKey?: string;
+        };
+        emulator?: boolean;
+        passwordless?: boolean;
+    };
+}
+
 export type Connection =
     | RavenConnection
     | SqlConnection

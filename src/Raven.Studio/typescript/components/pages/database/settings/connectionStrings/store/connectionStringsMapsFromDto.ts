@@ -301,7 +301,30 @@ export function mapAmazonSqsConnectionsFromDto(
                 ({
                     type,
                     name: connection.Name,
+                    authType: getAmazonSqsAuthType(connection),
+                    settings: {
+                        emulator: connection.AmazonSqsConnectionSettings.UseEmulator,
+                        passwordless: connection.AmazonSqsConnectionSettings.Passwordless,
+                        basic: {
+                            accessKey: connection.AmazonSqsConnectionSettings.Basic?.AccessKey,
+                            secretKey: connection.AmazonSqsConnectionSettings.Basic?.SecretKey,
+                            regionName: connection.AmazonSqsConnectionSettings.Basic?.RegionName,
+                        },
+                    },
                     usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
                 }) satisfies AmazonSqsConnection
         );
+}
+
+function getAmazonSqsAuthType(dto: QueueConnectionStringDto): AmazonSqsAuthenticationType {
+    if (dto.AmazonSqsConnectionSettings.Passwordless) {
+        return "passwordless";
+    }
+    if (dto.AmazonSqsConnectionSettings.UseEmulator) {
+        return "emulator";
+    }
+    if (dto.AmazonSqsConnectionSettings.Basic) {
+        return "basic";
+    }
+    return null;
 }

@@ -245,6 +245,26 @@ loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
     Source: '/registrations/direct-signup'
 });`;
     
+    static readonly amazonSqsEtlSampleText =
+        `${transformationScriptSyntax.queueEtlBaseSampleText}
+
+loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
+    Id: id(this),
+    Type: 'com.github.users',
+    Source: '/registrations/direct-signup'
+});
+
+//  This is alternative syntax for FIFO queues:
+//
+//loadTo('orders.fifo', orderData, {
+//    Id: id(this),
+//    Type: 'com.github.users',
+//    Source: '/registrations/direct-signup'
+//});
+`;
+    
+    
+    
     kafkaEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.kafkaEtlSampleText);
     
     rabbitMqEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.rabbitMqEtlSampleText);

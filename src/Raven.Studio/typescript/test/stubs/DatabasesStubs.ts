@@ -551,6 +551,21 @@ export class DatabasesStubs {
                     AmazonSqsConnectionSettings: null,
                 },
                 "azure-sqs-name": {
+                    Type: "Queue",
+                    Name: "azure-sqs-name",
+                    BrokerType: "AmazonSqs",
+                    KafkaConnectionSettings: null,
+                    RabbitMqConnectionSettings: null,
+                    AzureQueueStorageConnectionSettings: null,
+                    AmazonSqsConnectionSettings: {
+                        Basic: {
+                            AccessKey: "AKIA123",
+                            SecretKey: "this is secret",
+                            RegionName: "us-west-2",
+                        },
+                        Passwordless: false,
+                        UseEmulator: false,
+                    },
                 },
             },
         };
