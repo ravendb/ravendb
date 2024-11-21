@@ -331,7 +331,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.LuceneUnmanagedAllocationsForSorting)] = Size.Humane(NativeMemory.TotalLuceneUnmanagedAllocationsForSorting),
                 [nameof(MemoryInfo.EncryptionBuffersInUse)] = Size.Humane(encryptionBuffers.CurrentlyInUseSize),
                 [nameof(MemoryInfo.EncryptionBuffersPool)] = Size.Humane(encryptionBuffers.TotalPoolSize),
-                [nameof(MemoryInfo.EncryptionLockedMemory)] = Size.Humane(Pal.LockedMemorySize),
+                [nameof(MemoryInfo.EncryptionLockedMemory)] = Size.Humane(MemoryLockUsage.LockedMemorySize),
                 [nameof(MemoryInfo.MemoryMapped)] = Size.Humane(totalMapping),
                 [nameof(MemoryInfo.IsHighDirty)] = dirtyMemoryState.IsHighDirty,
                 [nameof(MemoryInfo.DirtyMemory)] = dirtyMemoryState.TotalDirty.ToString(),

@@ -61,9 +61,11 @@ struct RVN_RANGE_LIST
 };
 
 typedef void (*MemoryLockCallback)(int64_t size, char* filename);
+typedef bool (*RecoveryMemoryLockFailureCallback)(int64_t size, char* filename);
 
 EXPORT
-void rvn_register_callback(MemoryLockCallback callback);
+void rvn_register_callbacks(MemoryLockCallback memoryLockCallback, 
+    RecoveryMemoryLockFailureCallback recoveryMemoryLockFailureCallback);
 
 EXPORT
 int32_t rvn_pager_get_file_handle(

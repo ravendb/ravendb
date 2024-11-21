@@ -4,14 +4,19 @@
 #include "status_codes.h"
 
 
-void noop(int64_t size, char* filename){}
+void noop_void(int64_t size, char* filename){}
+bool noop_bool(int64_t size, char* filename){ return false; }
 
-MemoryLockCallback g_locked_memory_callback = noop;
+
+MemoryLockCallback g_locked_memory_callback = noop_void;
+RecoveryMemoryLockFailureCallback g_recovery_memory_lock_failure_callback = noop_bool;
 
 EXPORT
-void rvn_register_callback(MemoryLockCallback callback)
+void rvn_register_callbacks(MemoryLockCallback memoryLockCallback, 
+    RecoveryMemoryLockFailureCallback recoveryMemoryLockFailureCallback)
 {
-    g_locked_memory_callback = callback;
+    g_locked_memory_callback = memoryLockCallback;
+    g_recovery_memory_lock_failure_callback = recoveryMemoryLockFailureCallback;
 }
 
 PRIVATE int64_t

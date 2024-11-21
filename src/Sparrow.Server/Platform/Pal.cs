@@ -2,7 +2,6 @@ using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Sparrow.Platform;
 using Sparrow.Utils;
@@ -13,15 +12,6 @@ namespace Sparrow.Server.Platform
     {
         public const int PAL_VER = 62022; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
-        public static long LockedMemorySize;
-
-        private static void UpdateLockedMemory(Int64 v, char* filenamePtr)
-        {
-            string filename = Marshal.PtrToStringUTF8(new IntPtr(filenamePtr));
-            Console.WriteLine(v +" - " + filename);
-            Console.WriteLine(Environment.StackTrace);
-            Interlocked.Add(ref LockedMemorySize, v);
-        }
         static  Pal()
         {
             PalFlags.FailCodes rc;
@@ -35,7 +25,7 @@ namespace Sparrow.Server.Platform
                         $"{LIBRVNPAL} version '{palVer}' mismatches this RavenDB instance version (set to '{PAL_VER}'). Did you forget to set new value in 'rvn_get_pal_ver()'");
                 }
 
-                rvn_register_callback(&UpdateLockedMemory);
+                rvn_register_callbacks(&MemoryLockUsage.UpdateLockedMemory, &MemoryLockUsage.RecoverLockedMemoryFailure);
 
                 rc = rvn_get_system_information(out _, out errorCode);
             }
@@ -85,7 +75,9 @@ namespace Sparrow.Server.Platform
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern void rvn_register_callback(delegate*<Int64, char*, void> callback);
+        public static extern void rvn_register_callbacks(
+            delegate*<Int64, char*, void> memoryLockCallback,
+            delegate*<Int64, char*, bool> recoverMemoryLockFailureCallback);
         
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_unmap_memory(void* handle,

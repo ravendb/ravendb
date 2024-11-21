@@ -832,8 +832,9 @@ namespace Voron
                             {
                                 // if we don't need encryption here, but there is encryption, means that this is a temp buffer
                                 // and we still need to ensure that this isn't paged to disk
-                                flags|=Pal.OpenFileFlags.LockMemory;
-                    }
+                                flags |= Pal.OpenFileFlags.LockMemory;
+                            }
+
                             if(DoNotConsiderMemoryLockFailureAsCatastrophicError)
                                 flags|=Pal.OpenFileFlags.DoNotConsiderMemoryLockFailureAsCatastrophicError;
                         }

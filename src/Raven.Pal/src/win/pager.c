@@ -35,6 +35,7 @@ struct handle
 };
 
 extern MemoryLockCallback g_locked_memory_callback;
+extern RecoveryMemoryLockFailureCallback g_recovery_memory_lock_failure_callback;
 
 BOOL CALLBACK InitializeCriticalSectionOnce(PINIT_ONCE initOnce, PVOID Parameter, PVOID *Context)
 {
@@ -61,47 +62,6 @@ uint64_t _GetNearestFileSize(uint64_t needed_size)
     const uint64_t ONE_GB = (uint64_t)1024 * 1024 * 1024;
     // if it is over 0.5 GB, then we grow at 1 GB intervals
     return (needed_size + ONE_GB - 1) & ~ONE_GB;
-}
-
-BOOL _RecoverFromMemoryLockFailure(void *mem, SIZE_T size)
-{
-    static INIT_ONCE initOnce = INIT_ONCE_STATIC_INIT;
-    static CRITICAL_SECTION working_set_increase_cs;
-    InitOnceExecuteOnce(&initOnce, InitializeCriticalSectionOnce, &working_set_increase_cs, NULL);
-    EnterCriticalSection(&working_set_increase_cs);
-
-    BOOL rc;
-    SIZE_T min_working_set, max_working_set;
-    if (!GetProcessWorkingSetSize(GetCurrentProcess(),
-                                  &min_working_set,
-                                  &max_working_set))
-    {
-        rc = FALSE;
-        goto Exit;
-    }
-
-    // From: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686234(v=vs.85).aspx
-    // "The maximum number of pages that a process can lock is equal to the number of pages in its minimum working set minus a small overhead"
-    // let's increase the max size of memory we can lock by increasing the MinWorkingSet. On Windows, that is available for all users
-    SIZE_T next_working_set_size = (SIZE_T)_GetNearestFileSize(min_working_set + size);
-    if (next_working_set_size > INT32_MAX)
-    {
-        if (sizeof(void *) == 4)
-        {
-            next_working_set_size = INT32_MAX;
-        }
-    }
-    // Minimum working set size must be less than or equal to the maximum working set size.
-    // Let's increase the max as well.
-    max_working_set = rvn_max(max_working_set, next_working_set_size);
-
-    rc = SetProcessWorkingSetSize(GetCurrentProcess(),
-                                  next_working_set_size,
-                                  max_working_set);
-
-Exit:
-    LeaveCriticalSection(&working_set_increase_cs);
-    return rc;
 }
 
 int32_t rvn_lock_memory(struct handle* handle, int32_t open_flags, void *mem, int64_t size, int32_t *detailed_error_code)
@@ -134,7 +94,7 @@ int32_t rvn_lock_memory(struct handle* handle, int32_t open_flags, void *mem, in
             break;
         }
 
-        if (!_RecoverFromMemoryLockFailure(mem, size))
+        if (!g_recovery_memory_lock_failure_callback(size, handle->file_path))
         {
             rc = FAIL_LOCK_MEMORY;
             break;
@@ -553,11 +513,6 @@ rvn_close_pager(
         }
         if(handle_ptr->open_flags & OPEN_FILE_WRITABLE_MAP)
         {
-            if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
-            {
-                g_locked_memory_callback(-handle_ptr->allocation_size, handle_ptr->file_path);
-            }
-
             if (!UnmapViewOfFile(handle_ptr->write_address))
             {
                 rc = FAIL_MAP_VIEW_OF_FILE;

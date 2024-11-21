@@ -294,11 +294,6 @@ rvn_close_pager(
         }
         if(handle_ptr->open_flags & OPEN_FILE_WRITABLE_MAP)
         {
-            if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
-            {
-                g_locked_memory_callback(-handle_ptr->allocation_size, handle_ptr->file_path);
-            }
-
             if (munmap(handle_ptr->write_address, handle_ptr->allocation_size))
             {
                 *detailed_error_code = errno;

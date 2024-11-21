@@ -26,7 +26,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
@@ -46,7 +46,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
+    <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
@@ -138,8 +138,8 @@
     <ClInclude Include="inc\status_codes.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\shared_all.c" />
     <ClCompile Include="test.c" />
-    <ClCompile Include="src\fileutils_all.c" />
     <ClCompile Include="src\rvngetpalver.c" />
     <ClCompile Include="src\win\fileutils.c" />
     <ClCompile Include="src\win\getcurrentthreadid.c" />
