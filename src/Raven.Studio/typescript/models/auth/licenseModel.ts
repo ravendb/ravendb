@@ -36,12 +36,12 @@ class licenseModel {
 
     static formattedExpiration = ko.pureComputed(() => {
         const licenseStatus = licenseModel.licenseStatus();
-        if (!licenseStatus || !licenseStatus.Expiration) {
+        if (!licenseStatus || !licenseStatus.SubscriptionExpiration) {
             return null;
         }
 
         const dateFormat = "YYYY MMMM Do";
-        const expiration = moment(licenseStatus.Expiration);
+        const expiration = moment(licenseStatus.SubscriptionExpiration);
         const now = moment();
         const nextMonth = moment().add(1, 'month');
         if (now.isBefore(expiration)) {
