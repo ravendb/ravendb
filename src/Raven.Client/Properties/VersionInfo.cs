@@ -47,7 +47,14 @@ namespace Raven.Client.Properties
 
         public readonly int PatchVersion;
 
-        internal DateTime ReleaseDate => DateTime.Parse(ReleaseDateString);
+        internal DateTime ReleaseDate
+        {
+            get
+            {
+                var releaseDate = DateTime.Parse(ReleaseDateString).Date;
+                return new DateTime(releaseDate.Year, releaseDate.Month, releaseDate.Day, hour: 0, minute: 0, second: 0, DateTimeKind.Utc);
+            }
+        }
 
         public int BuildVersion
         {
