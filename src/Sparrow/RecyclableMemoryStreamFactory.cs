@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Microsoft.IO;
 using Sparrow.Global;
 
@@ -20,12 +21,12 @@ internal class RecyclableMemoryStreamFactory
 
     public static RecyclableMemoryStream GetRecyclableStream()
     {
-        return Manager.GetStream();
+        return Manager.GetStream(Guid.Empty);
     }
 
     public static RecyclableMemoryStream GetRecyclableStream(long requiredSize)
     {
-        return Manager.GetStream(null, requiredSize);
+        return Manager.GetStream(Guid.Empty, null, requiredSize);
     }
 
     public static MemoryStream GetMemoryStream()
