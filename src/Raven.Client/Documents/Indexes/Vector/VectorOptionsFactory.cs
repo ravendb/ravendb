@@ -39,9 +39,15 @@ public sealed class VectorOptionsFactory
         return this;
     }
     
-    public VectorOptionsFactory IndexingStrategy(VectorIndexingStrategy indexingStrategy)
+    public VectorOptionsFactory NumberOfCandidates(int numberOfCandidates)
     {
-        _vectorOptions.IndexingStrategy = indexingStrategy;
+        _vectorOptions.NumberOfCandidatesForIndexing = numberOfCandidates;
+        return this;
+    }
+    
+    public VectorOptionsFactory NumberOfEdges(int numberOfEdges)
+    {
+        _vectorOptions.NumberOfEdges = numberOfEdges;
         return this;
     }
 }

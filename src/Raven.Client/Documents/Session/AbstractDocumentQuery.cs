@@ -1515,13 +1515,12 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         }
 
         internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory embeddingValueFactory,
-            float minimumSimilarity)
+            float minimumSimilarity, int numberOfCandidates)
         {
             var fieldName = embeddingFieldFactory.FieldName;
             var sourceQuantizationType = embeddingFieldFactory.SourceQuantizationType;
             var targetQuantizationType = embeddingFieldFactory.DestinationQuantizationType;
             var isSourceBase64Encoded = embeddingFieldFactory.IsBase64Encoded;
-            var indexingStrategy = embeddingFieldFactory.VectorIndexingStrategy;
             
             string queryParameterName;
             var isVectorBase64Encoded = false;
@@ -1556,14 +1555,14 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 isVectorBase64Encoded = true;
             }
             
-            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, isSourceBase64Encoded, isVectorBase64Encoded, minimumSimilarity, indexingStrategy);
+            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, isSourceBase64Encoded, isVectorBase64Encoded, minimumSimilarity, numberOfCandidates);
 
             WhereTokens.AddLast(vectorSearchToken);
         }
 
-        public void VectorSearch(IVectorFieldFactory<T> fieldFactory, IVectorFieldValueFactory valueFactory, float minimumSimilarity)
+        public void VectorSearch(IVectorFieldFactory<T> fieldFactory, IVectorFieldValueFactory valueFactory, float minimumSimilarity, int numberOfCandidates)
         {
-            VectorSearch((VectorEmbeddingFieldFactory<T>)fieldFactory, (VectorFieldValueFactory)valueFactory, minimumSimilarity);
+            VectorSearch((VectorEmbeddingFieldFactory<T>)fieldFactory, (VectorFieldValueFactory)valueFactory, minimumSimilarity, numberOfCandidates);
         }
 
         public void Distinct()

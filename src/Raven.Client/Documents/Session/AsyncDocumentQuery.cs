@@ -337,7 +337,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> queriedTextFactory, float minimumSimilarity)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> queriedTextFactory, float minimumSimilarity, int numberOfCandidatesForQuerying)
         {
             var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
             var valueBuilder = new VectorFieldValueFactory();
@@ -345,13 +345,13 @@ namespace Raven.Client.Documents.Session
             textFieldFactory.Invoke(fieldBuilder);
             queriedTextFactory.Invoke(valueBuilder);
             
-            VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity);
+            VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidatesForQuerying);
             
             return this;
         }
         
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> queriedEmbeddingFactory, float minimumSimilarity)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> queriedEmbeddingFactory, float minimumSimilarity, int numberOfCandidates)
         {
             var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
             var valueBuilder = new VectorFieldValueFactory();
@@ -359,13 +359,13 @@ namespace Raven.Client.Documents.Session
             embeddingFieldFactory.Invoke(fieldBuilder);
             queriedEmbeddingFactory.Invoke(valueBuilder);
 
-            VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity);
+            VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates);
             
             return this;
         }
         
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorField> vectorFieldFactory, Action<IVectorFieldValueFactory> queriedEmbeddingFactory, float minimumSimilarity)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorField> vectorFieldFactory, Action<IVectorFieldValueFactory> queriedEmbeddingFactory, float minimumSimilarity, int numberOfCandidates)
         {
             var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
             var valueBuilder = new VectorFieldValueFactory();
@@ -373,7 +373,7 @@ namespace Raven.Client.Documents.Session
             vectorFieldFactory.Invoke(fieldBuilder);
             queriedEmbeddingFactory.Invoke(valueBuilder);
 
-            VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity);
+            VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates);
             
             return this;
         }

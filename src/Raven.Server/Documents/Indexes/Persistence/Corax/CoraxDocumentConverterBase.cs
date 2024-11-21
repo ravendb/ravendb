@@ -310,18 +310,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             case ValueType.Vector:
                 using (var vectorField = (VectorValue)value)
                 {
-                    switch (field.Vector.IndexingStrategy)
-                    {
-                        case VectorIndexingStrategy.Exact:
-                            var embedding = vectorField.GetEmbedding();
-                            builder.WriteExactVector(fieldId, path, embedding);
-                            break;
-                        case VectorIndexingStrategy.HNSW:
-                            throw new NotImplementedException("HNSW is not yet implemented.");
-                        default:
-                            throw new InvalidDataException($"Unknown vector indexing strategy: '{field.Vector.IndexingStrategy}'.");
-                    }
-                    
+                    var embedding = vectorField.GetEmbedding(); 
+                    builder.WriteExactVector(fieldId, path, embedding);
+                            
                     _index.IndexFieldsPersistence.SetFieldEmbeddingDimension(field.Name, vectorField.Length, field.Vector.DestinationEmbeddingType);
                 }
                 break;

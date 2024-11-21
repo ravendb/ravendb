@@ -19,7 +19,6 @@ public sealed class AutoVectorOptions : VectorOptions
         SourceEmbeddingType = options.SourceEmbeddingType;
         DestinationEmbeddingType = options.DestinationEmbeddingType;
         SourceFieldName = options.SourceFieldName;
-        IndexingStrategy = options.IndexingStrategy;
     }
 
     public override bool Equals(object obj)

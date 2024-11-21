@@ -80,7 +80,6 @@ namespace Raven.Server.Extensions
                     vector[nameof(VectorOptions.Dimensions)] = kvp.Value.Vector.Dimensions;
                     vector[nameof(VectorOptions.SourceEmbeddingType)] = kvp.Value.Vector.SourceEmbeddingType.ToString();
                     vector[nameof(VectorOptions.DestinationEmbeddingType)] = kvp.Value.Vector.DestinationEmbeddingType.ToString();
-                    vector[nameof(VectorOptions.IndexingStrategy)] = kvp.Value.Vector.IndexingStrategy.ToString();
                 }
 
                 var field = new DynamicJsonValue();

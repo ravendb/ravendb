@@ -2535,7 +2535,6 @@ function execute(doc, args){
                     var vectorOptions = new AutoVectorOptions()
                     {
                         SourceFieldName = fieldName, 
-                        IndexingStrategy = VectorIndexingStrategy.Exact, 
                         DestinationEmbeddingType = embedding.Destination, 
                         SourceEmbeddingType = embedding.Source
                     };

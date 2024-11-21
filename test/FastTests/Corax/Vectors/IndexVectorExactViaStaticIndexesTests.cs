@@ -46,8 +46,7 @@ select new
                         {
                             DestinationEmbeddingType = VectorEmbeddingType.Binary,
                             SourceEmbeddingType = VectorEmbeddingType.Binary,
-                            Dimensions = 1,
-                            IndexingStrategy = VectorIndexingStrategy.HNSW
+                            Dimensions = 1
                         }
                     }
                 }
@@ -126,7 +125,7 @@ select new
             VectorIndexes.Add(x => x.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Text, DestinationEmbeddingType = vectorEmbeddingType
+                    SourceEmbeddingType = VectorEmbeddingType.Text, DestinationEmbeddingType = vectorEmbeddingType
                 });
         }
     }
@@ -139,7 +138,7 @@ select new
                 select new { Id = doc.Id, Vector = CreateVector(doc.Embeddings) };
 
 
-            VectorIndexes.Add(x => x.Vector, new VectorOptions() { IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Single });
+            VectorIndexes.Add(x => x.Vector, new VectorOptions() { SourceEmbeddingType = VectorEmbeddingType.Single });
         }
     }
 
@@ -224,7 +223,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Text, DestinationEmbeddingType = VectorEmbeddingType.Single
+                    SourceEmbeddingType = VectorEmbeddingType.Text, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
         }
     }
@@ -238,7 +237,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Text, DestinationEmbeddingType = VectorEmbeddingType.Single
+                    SourceEmbeddingType = VectorEmbeddingType.Text, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
         }
     }
@@ -252,7 +251,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
+                    SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
         }
     }
@@ -266,7 +265,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
+                    SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
         }
     }
@@ -280,7 +279,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
+                    SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
         }
     }
@@ -294,7 +293,7 @@ select new
             VectorIndexes.Add(source => source.Vector,
                 new VectorOptions()
                 {
-                    IndexingStrategy = VectorIndexingStrategy.Exact, SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
+                    SourceEmbeddingType = VectorEmbeddingType.Single, DestinationEmbeddingType = VectorEmbeddingType.Single
                 });
         }
     }

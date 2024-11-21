@@ -617,7 +617,9 @@ namespace Raven.Client
 
             public const float DefaultMinimumSimilarity = 0.8F;
             public const VectorEmbeddingType DefaultEmbeddingType = VectorEmbeddingType.Single;
-            public const VectorIndexingStrategy DefaultIndexingStrategy = VectorIndexingStrategy.Exact;
+            public const int DefaultNumberOfEdges = 8;
+            public const int DefaultNumberOfCandidatesForQuerying = 16;
+            public const int DefaultNumberOfCandidatesForIndexing = 16;
         }
     }
 }

@@ -46,7 +46,6 @@ public class VectorAutoIndexDefinitionTests(ITestOutputHelper output) : NoDispos
         Assert.Equal(null, vectorOptions.Dimensions);
         Assert.Equal(sourceType, vectorOptions.SourceEmbeddingType);
         Assert.Equal(destinationType, vectorOptions.DestinationEmbeddingType);
-        Assert.Equal(VectorIndexingStrategy.Exact, vectorOptions.IndexingStrategy);
         Assert.IsType<AutoVectorOptions>(vectorOptions);
         Assert.True(vectorOptions is AutoVectorOptions { SourceFieldName: "Name" });
     }

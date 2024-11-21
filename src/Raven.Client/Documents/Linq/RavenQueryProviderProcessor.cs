@@ -1604,6 +1604,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     if (minimumSimilarityObject is not float minimumSimilarity || minimumSimilarity is < -1.0f or > 1.0f)
                         throw new NotSupportedException($"The minimum similarity parameter should be a float in the range [-1, 1]. However, it was '{minimumSimilarityObject.GetType().FullName}' with the value '{minimumSimilarityObject.ToString()}'.");
+
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[4], out var numberOfCandidatesObject);
+
+                    if (numberOfCandidatesObject is not int numberOfCandidates || numberOfCandidates <= 0)
+                        throw new NotSupportedException("Number of candidates has to be positive.");
                     
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var fieldFactoryObject);
                     
@@ -1655,7 +1660,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             throw new InvalidOperationException($"Unknown field factory type: {fieldFactoryObject.GetType().FullName}.");
                     }
                     
-                    DocumentQuery.VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity);
+                    DocumentQuery.VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates);
                     break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);

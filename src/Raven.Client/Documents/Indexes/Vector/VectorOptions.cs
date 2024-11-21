@@ -17,15 +17,15 @@ public class VectorOptions
     public VectorOptions(VectorOptions options)
     {
         Dimensions = options.Dimensions;
-        IndexingStrategy = options.IndexingStrategy;
         SourceEmbeddingType = options.SourceEmbeddingType;
         DestinationEmbeddingType = options.DestinationEmbeddingType;
+        NumberOfCandidatesForIndexing = options.NumberOfCandidatesForIndexing;
+        NumberOfEdges = options.NumberOfEdges;
     }
     
     internal static readonly VectorOptions Default = new()
     {
         Dimensions = null, 
-        IndexingStrategy = VectorIndexingStrategy.Exact, 
         SourceEmbeddingType = VectorEmbeddingType.Single, 
         DestinationEmbeddingType = VectorEmbeddingType.Single
     };
@@ -33,7 +33,6 @@ public class VectorOptions
     internal static readonly VectorOptions DefaultText = new()
     {
         Dimensions = null, 
-        IndexingStrategy = VectorIndexingStrategy.Exact, 
         SourceEmbeddingType = VectorEmbeddingType.Text, 
         DestinationEmbeddingType = VectorEmbeddingType.Single
     };
@@ -42,11 +41,6 @@ public class VectorOptions
     /// Defines dimensions size of embedding. When null we're locking the space to size we got from first item indexed.
     /// </summary>
     public int? Dimensions { get; set; }
-    
-    /// <summary>
-    /// Defines indexing strategy for vector field inside index.
-    /// </summary>
-    public VectorIndexingStrategy IndexingStrategy { get; set; }
     
     /// <summary>
     /// Defines embedding source.
@@ -58,6 +52,10 @@ public class VectorOptions
     /// </summary>
     public VectorEmbeddingType DestinationEmbeddingType { get; set; }
 
+    public int NumberOfCandidatesForIndexing { get; set; } = Constants.VectorSearch.DefaultNumberOfCandidatesForIndexing;
+    
+    public int NumberOfEdges { get; set; } = Constants.VectorSearch.DefaultNumberOfEdges;
+
     [Conditional("DEBUG")]
     internal void ValidateDebug() => Validate();
     
@@ -68,7 +66,8 @@ public class VectorOptions
         PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is VectorEmbeddingType.Text && Dimensions is not null, "Dimensions are set internally by the embedder.");
         PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is VectorEmbeddingType.Int8 && DestinationEmbeddingType is not VectorEmbeddingType.Int8, "Quantization cannot be performed on already quantized vector.");
         PortableExceptions.ThrowIf<InvalidOperationException>(SourceEmbeddingType is VectorEmbeddingType.Binary && DestinationEmbeddingType is not VectorEmbeddingType.Binary, "Quantization cannot be performed on already quantized vector.");
-        PortableExceptions.ThrowIf<InvalidOperationException>(IndexingStrategy is not (VectorIndexingStrategy.Exact or VectorIndexingStrategy.HNSW), $"Unknown indexing strategy. Expected {VectorIndexingStrategy.Exact} or {VectorIndexingStrategy.HNSW} but was {IndexingStrategy}.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(NumberOfEdges <= 0, "Number of edges has to be positive.");
+        PortableExceptions.ThrowIf<InvalidOperationException>(NumberOfCandidatesForIndexing <= 0, "Number of candidate nodes has to be positive.");
     }
     
     public static bool Equals(VectorOptions left, VectorOptions right)
@@ -92,7 +91,6 @@ public class VectorOptions
             return false;
         
         return options.Dimensions == Dimensions 
-               && options.IndexingStrategy == IndexingStrategy
                && options.SourceEmbeddingType == SourceEmbeddingType
                && options.DestinationEmbeddingType == DestinationEmbeddingType;
     }
@@ -103,7 +101,6 @@ public class VectorOptions
         {
             var hashCode = SourceEmbeddingType.GetHashCode();
             hashCode = (hashCode * 397) ^ DestinationEmbeddingType.GetHashCode();
-            hashCode = (hashCode * 397) ^ IndexingStrategy.GetHashCode();
             hashCode = (hashCode * 397) ^ Dimensions.GetHashCode();
             
             return hashCode;

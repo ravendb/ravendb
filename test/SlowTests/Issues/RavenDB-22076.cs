@@ -29,9 +29,9 @@ public class RavenDB_22076 : RavenTestBase
             using (var session = store.OpenSession())
             {
                 var q1 = session.Advanced.DocumentQuery<Dto>()
-                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", VectorEmbeddingType.Int8), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString();
+                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", VectorEmbeddingType.Int8), factory => factory.ByEmbedding([2.5f, 3.3f]), minimumSimilarity: 0.65f, numberOfCandidates: 12).ToString();
 
-                Assert.Equal("from 'Dtos' where vector.search(embedding.i8(EmbeddingField), $p0, 0.65)", q1);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.i8(EmbeddingField), $p0, 0.65, 12)", q1);
 
                 var q2 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithField("VectorField"), factory => factory.ByText("aaaa")).ToString();
                 
@@ -51,14 +51,14 @@ public class RavenDB_22076 : RavenTestBase
                 Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField), $p0)", q5);
                 
                 var q6 = session.Advanced.DocumentQuery<Dto>()
-                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", VectorEmbeddingType.Int8, VectorIndexingStrategy.HNSW), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString();
+                    .VectorSearch(x => x.WithEmbedding("EmbeddingField", VectorEmbeddingType.Int8), factory => factory.ByEmbedding([2.5f, 3.3f]), 0.65f).ToString();
 
-                Assert.Equal("from 'Dtos' where vector.search(HNSW(embedding.i8(EmbeddingField)), $p0, 0.65)", q6);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.i8(EmbeddingField), $p0, 0.65)", q6);
                 
-                var q7 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithText("TextField", VectorIndexingStrategy.HNSW).TargetQuantization(VectorEmbeddingType.Int8),
+                var q7 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithText("TextField").TargetQuantization(VectorEmbeddingType.Int8),
                     factory => factory.ByText("aaaa")).ToString();
                 
-                Assert.Equal("from 'Dtos' where vector.search(HNSW(embedding.text_i8(TextField)), $p0)", q7);
+                Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField), $p0)", q7);
             }
         }
     }

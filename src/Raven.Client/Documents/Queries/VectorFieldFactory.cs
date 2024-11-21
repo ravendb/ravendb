@@ -18,11 +18,11 @@ public interface IVectorFieldFactory<T>
     /// </summary>
     /// <param name="fieldName">Name of the document field containing text data.</param>
     /// <param name="vectorIndexingStrategy">Name of the vector search technique used for finding similar documents.</param>
-    public IVectorEmbeddingTextField WithText(string fieldName, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
+    public IVectorEmbeddingTextField WithText(string fieldName);
     
     /// <inheritdoc cref="WithText(string,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
     /// <param name="propertySelector">Path to the document field containing text data.</param>
-    public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
+    public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector);
     
     /// <summary>
     /// Defines the embedding field that vector search will be performed on.
@@ -30,11 +30,11 @@ public interface IVectorFieldFactory<T>
     /// <param name="fieldName">Name of the document field containing embedding data.</param>
     /// <param name="storedEmbeddingQuantization">Quantization that was performed on stored embeddings.</param>
     /// <param name="vectorIndexingStrategy">Name of the vector search technique used for finding similar documents.</param>
-    public IVectorEmbeddingField WithEmbedding(string fieldName, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
+    public IVectorEmbeddingField WithEmbedding(string fieldName, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
     
     ///<inheritdoc cref="WithEmbedding(string,Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
     /// <param name="propertySelector">Path to the document field containing embedding data.</param>
-    public IVectorEmbeddingField WithEmbedding(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
+    public IVectorEmbeddingField WithEmbedding(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
     
     /// <summary>
     /// Defines the embedding field (encoded as base64) that vector search will be performed on.
@@ -42,10 +42,10 @@ public interface IVectorFieldFactory<T>
     /// <param name="fieldName">Name of the document field containing base64 encoded embedding data.</param>
     /// <param name="storedEmbeddingQuantization">Quantization of stored embeddings.</param>
     /// <param name="vectorIndexingStrategy">Name of the vector search technique used for finding similar documents.</param>
-    public IVectorEmbeddingField WithBase64(string fieldName, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
+    public IVectorEmbeddingField WithBase64(string fieldName, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
     
     /// <inheritdoc cref="WithBase64(string,Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
-    public IVectorEmbeddingField WithBase64(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType, VectorIndexingStrategy vectorIndexingStrategy = Constants.VectorSearch.DefaultIndexingStrategy);
+    public IVectorEmbeddingField WithBase64(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
 
     /// <summary>
     /// Defines the field (that's already indexed) that vector search will be performed on.
@@ -86,66 +86,59 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
     internal VectorEmbeddingType SourceQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
     internal VectorEmbeddingType DestinationQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
     internal bool IsBase64Encoded { get; set; }
-    internal VectorIndexingStrategy VectorIndexingStrategy { get; set; } = Constants.VectorSearch.DefaultIndexingStrategy;
     
-    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(Expression<Func<T, object>> propertySelector, VectorIndexingStrategy vectorIndexingStrategy)
+    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(Expression<Func<T, object>> propertySelector)
     {
         FieldName = propertySelector.ToPropertyPath(DocumentConventions.Default);
         SourceQuantizationType = VectorEmbeddingType.Text;
         DestinationQuantizationType = Constants.VectorSearch.DefaultEmbeddingType;
-        VectorIndexingStrategy = vectorIndexingStrategy;
         
         return this;
     }
     
-    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(string fieldName, VectorIndexingStrategy vectorIndexingStrategy)
+    IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(string fieldName)
     {
         FieldName = fieldName;
         SourceQuantizationType = VectorEmbeddingType.Text;
         DestinationQuantizationType = Constants.VectorSearch.DefaultEmbeddingType;
-        VectorIndexingStrategy = vectorIndexingStrategy;
         
         return this;
     }
 
-    IVectorEmbeddingField IVectorFieldFactory<T>.WithEmbedding(string fieldName, VectorEmbeddingType storedEmbeddingQuantization, VectorIndexingStrategy vectorIndexingStrategy)
+    IVectorEmbeddingField IVectorFieldFactory<T>.WithEmbedding(string fieldName, VectorEmbeddingType storedEmbeddingQuantization)
     {
         FieldName = fieldName;
         SourceQuantizationType = storedEmbeddingQuantization;
         DestinationQuantizationType = SourceQuantizationType;
-        VectorIndexingStrategy = vectorIndexingStrategy;
         
         return this;
     }
 
-    IVectorEmbeddingField IVectorFieldFactory<T>.WithEmbedding(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization, VectorIndexingStrategy vectorIndexingStrategy)
+    IVectorEmbeddingField IVectorFieldFactory<T>.WithEmbedding(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization)
     {
         FieldName = propertySelector.ToPropertyPath(DocumentConventions.Default);
         SourceQuantizationType = storedEmbeddingQuantization;
         DestinationQuantizationType = SourceQuantizationType;
-        VectorIndexingStrategy = vectorIndexingStrategy;
         
         return this;
     }
 
-    IVectorEmbeddingField IVectorFieldFactory<T>.WithBase64(string fieldName, VectorEmbeddingType storedEmbeddingQuantization, VectorIndexingStrategy vectorIndexingStrategy)
+    IVectorEmbeddingField IVectorFieldFactory<T>.WithBase64(string fieldName, VectorEmbeddingType storedEmbeddingQuantization)
     {
         FieldName = fieldName;
         SourceQuantizationType = storedEmbeddingQuantization;
         DestinationQuantizationType = SourceQuantizationType;
         IsBase64Encoded = true;
-        VectorIndexingStrategy = vectorIndexingStrategy;
 
         return this;
     }
 
-    IVectorEmbeddingField IVectorFieldFactory<T>.WithBase64(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization, VectorIndexingStrategy vectorIndexingStrategy)
+    IVectorEmbeddingField IVectorFieldFactory<T>.WithBase64(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization)
     {
         FieldName = propertySelector.ToPropertyPath(DocumentConventions.Default);
         SourceQuantizationType = storedEmbeddingQuantization;
         DestinationQuantizationType = SourceQuantizationType;
         IsBase64Encoded = true;
-        VectorIndexingStrategy = vectorIndexingStrategy;
 
         return this;
     }

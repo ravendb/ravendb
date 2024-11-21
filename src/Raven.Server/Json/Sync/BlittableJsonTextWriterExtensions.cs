@@ -251,10 +251,6 @@ namespace Raven.Server.Json.Sync
                     writer.WriteNull();
                 writer.WriteComma();
                 
-                writer.WritePropertyName(nameof(options.Vector.IndexingStrategy));
-                writer.WriteString(options.Vector.IndexingStrategy.ToString());
-                writer.WriteComma();
-                
                 writer.WritePropertyName(nameof(options.Vector.SourceEmbeddingType));
                 writer.WriteString(options.Vector.SourceEmbeddingType.ToString());
                 writer.WriteComma();
