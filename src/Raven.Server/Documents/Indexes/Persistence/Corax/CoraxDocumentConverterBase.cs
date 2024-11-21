@@ -313,7 +313,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     switch (field.Vector.IndexingStrategy)
                     {
                         case VectorIndexingStrategy.Exact:
-                            builder.WriteExactVector(fieldId, path, vectorField.GetEmbedding());
+                            builder.WriteVector(fieldId, path, vectorField.GetEmbedding());
                             break;
                         case VectorIndexingStrategy.HNSW:
                             throw new NotImplementedException("HNSW is not yet implemented.");

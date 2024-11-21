@@ -16,22 +16,19 @@ public sealed class IndexFieldBinding
     private Analyzer _analyzer;
     public readonly bool HasSuggestions;
     public readonly bool HasSpatial;
-    public FieldIndexingMode FieldIndexingMode => _silentlyChangedIndexingModeLegacy ?? _fieldIndexingMode;
-    private readonly FieldIndexingMode _fieldIndexingMode;
+    public FieldIndexingMode FieldIndexingMode => _silentlyChangedIndexingModeLegacy ?? field;
     public readonly bool ShouldStore;
     private FieldIndexingMode? _silentlyChangedIndexingModeLegacy;
-    private string _fieldName;
 
     private readonly bool _isFieldBindingForWriter;
-
     public readonly FieldMetadata Metadata;
-    private string _fieldNameForStatistics;
+    public VectorOptions VectorOptions;
 
     public IndexFieldBinding(int fieldId, Slice fieldName, Slice fieldNameLong, Slice fieldNameDouble, Slice fieldTermTotalSumField, bool isFieldBindingForWriter,
         Analyzer analyzer = null, bool hasSuggestions = false,
         FieldIndexingMode fieldIndexingMode = FieldIndexingMode.Normal,
         bool shouldStore = false,
-        bool hasSpatial = false)
+        bool hasSpatial = false, VectorOptions vectorOptions = null)
     {
         FieldId = fieldId;
         FieldName = fieldName;
@@ -39,11 +36,12 @@ public sealed class IndexFieldBinding
         FieldNameLong = fieldNameLong;
         FieldTermTotalSumField = fieldTermTotalSumField;
         HasSuggestions = hasSuggestions;
-        _fieldIndexingMode = fieldIndexingMode;
+        FieldIndexingMode = fieldIndexingMode;
         ShouldStore = shouldStore;
         HasSpatial = hasSpatial;
         _isFieldBindingForWriter = isFieldBindingForWriter;
         _analyzer = analyzer;
+        VectorOptions = vectorOptions;
         Metadata = FieldMetadata.Build(fieldName, fieldTermTotalSumField, fieldId, fieldIndexingMode, analyzer);
     }
     
@@ -51,7 +49,7 @@ public sealed class IndexFieldBinding
     {
         get
         {
-            return _fieldName ??= FieldName.ToString();
+            return field ??= FieldName.ToString();
         }
     }
 
@@ -59,7 +57,7 @@ public sealed class IndexFieldBinding
     {
         get
         {
-            return _fieldNameForStatistics ??= $"Field_{FieldName}";
+            return field ??= $"Field_{FieldName}";
         }
     }
     

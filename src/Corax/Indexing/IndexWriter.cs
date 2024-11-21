@@ -90,7 +90,8 @@ namespace Corax.Indexing
             _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
             _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
             _utf8ConverterBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize * 10);
-
+            _dynamicFieldsTerms = []; // avoids NRE in cases where the index does not contain a dynamic field
+            
             var bufferSize = fieldsMapping!.Count;
             _knownFieldsTerms = new IndexedField[bufferSize];
             for (int i = 0; i < bufferSize; ++i)
@@ -291,9 +292,9 @@ namespace Corax.Indexing
             if (_dynamicFieldsMapping?.TryGetByFieldName(clonedFieldName, out var binding) is true)
             {
                 indexedField = source?.CreateVirtualIndexedField(binding) 
-                               ?? new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong,
+                               ?? new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName,  binding.FieldNameLong,
                     binding.FieldNameDouble, binding.FieldTermTotalSumField, binding.Analyzer,
-                    binding.FieldIndexingMode, binding.HasSuggestions, binding.ShouldStore, _supportedFeatures);
+                    binding.FieldIndexingMode, binding.HasSuggestions, binding.ShouldStore, _supportedFeatures, binding.VectorOptions);
             }
             else
             {
@@ -310,7 +311,7 @@ namespace Corax.Indexing
                 IndexFieldsMappingBuilder.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
                 IndexFieldsMappingBuilder.GetFieldForTotalSum(context, clonedFieldName, out var nameSum);
                 var field = source is null 
-                    ? new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, hasSuggestions: false, shouldStore: false, _supportedFeatures)
+                    ? new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, hasSuggestions: false, shouldStore: false, _supportedFeatures, vectorOptions: null)
                     : source.CreateVirtualIndexedField(new IndexFieldBinding(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, true, analyzer, hasSuggestions: false, FieldIndexingMode.Normal));
                 return field;
             }
@@ -475,7 +476,7 @@ namespace Corax.Indexing
                 {
                     ThrowUnableToFindMatchingField(reader);
                 }
-
+                
                 if (reader.IsNull)
                 {
                     RemoveMarkerTerm(field, reader, Constants.NullValueSlice, entryToDelete, termsPerEntryIndex);
@@ -489,6 +490,14 @@ namespace Corax.Indexing
                 }
                 
                 var decodedKey = reader.Current.Decoded();
+
+                if (field.HasVector)
+                {
+                    var vectorWriter = field.GetVectorWriter(_transaction.LowLevelTransaction);
+                    vectorWriter.Remove(entryToDelete, decodedKey);
+                    continue;
+                }
+                
                 var scope = Slice.From(_entriesAllocator, decodedKey, out Slice termSlice);
                 if (field.HasSuggestions)
                     RemoveSuggestions(field, decodedKey);
@@ -875,6 +884,12 @@ namespace Corax.Indexing
                 
                 using var staticFieldScope = stats.For(indexedField.NameForStatistics);
 
+                if (indexedField.VectorIndexWriter != null)
+                {
+                    using var __ = staticFieldScope.For(CommitOperation.VectorValues);
+                    indexedField.VectorIndexWriter.Commit();
+                }
+                
                 if (indexedField.Textual.Count == 0)
                     continue;
 
@@ -2085,6 +2100,13 @@ namespace Corax.Indexing
             _pforDecoder.Dispose();
             _entriesAllocator.Dispose();
             _jsonOperationContext?.Dispose();
+            
+            foreach (var indexedField in _knownFieldsTerms)
+                indexedField.VectorIndexWriter?.Dispose();
+            
+            foreach (var (_,indexedField) in _dynamicFieldsTerms)
+                indexedField.VectorIndexWriter?.Dispose();
+            
             if (_ownsTransaction)
                 _transaction?.Dispose();
 

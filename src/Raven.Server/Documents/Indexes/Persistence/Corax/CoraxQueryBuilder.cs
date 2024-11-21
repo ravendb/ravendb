@@ -40,6 +40,7 @@ using CoraxConstants = Corax.Constants;
 using Memory = NetTopologySuite.Utilities.Memory;
 using SpatialUnits = Raven.Client.Documents.Indexes.Spatial.SpatialUnits;
 using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.Corax;
+using VectorOptions = Raven.Client.Documents.Indexes.Vector.VectorOptions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 

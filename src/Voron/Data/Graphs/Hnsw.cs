@@ -258,7 +258,8 @@ public unsafe partial class Hnsw
         Create(llt, slice, vectorSizeBytes, numberOfEdges, numberOfCandidates);
 
     }
-    private static void Create(LowLevelTransaction llt, Slice name, int vectorSizeBytes, int numberOfEdges, int numberOfCandidates)
+    
+    public static void Create(LowLevelTransaction llt, Slice name, int vectorSizeBytes, int numberOfEdges, int numberOfCandidates)
     {
         var tree = llt.Transaction.CreateTree(name);
         if (tree.ReadHeader().NumberOfEntries is not 0)
@@ -674,6 +675,7 @@ public unsafe partial class Hnsw
     
     public class Registration : IDisposable
     {
+        public bool IsCommited { get; private set; }
         private readonly Dictionary<ByteString, (ByteString Key, int NodeIndex, NativeList<long> PostingList)> _vectorHashCache = new(ByteStringContentComparer.Instance);
         private readonly Lookup<Int64LookupKey> _nodesByVectorId;
         private SearchState _searchState;
@@ -696,7 +698,7 @@ public unsafe partial class Hnsw
         /// </summary>
         /// <param name="entryId">The ID of the document.</param>
         /// <param name="vectorHash">The hash of the vector to remove.</param>
-        public void Remove(long entryId, Span<byte> vectorHash)
+        public void Remove(long entryId, ReadOnlySpan<byte> vectorHash)
         {
             const long RemovalMask = 1;
 
@@ -730,7 +732,7 @@ public unsafe partial class Hnsw
         /// <param name="entryId">The ID of the document (source).</param>
         /// <param name="vector">The vector's data.</param>
         /// <returns>The CompactKey address of the hash calculated from the vector, which will be required for removal.</returns>
-        public ByteString Register(long entryId, Span<byte> vector)
+        public ByteString Register(long entryId, ReadOnlySpan<byte> vector)
         {
             PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>((entryId & Constants.Graphs.VectorId.EnsureIsSingleMask) != 0, "Entry ids must have the first two bits cleared, we are using those");
             PortableExceptions.ThrowIf<ArgumentOutOfRangeException>(
@@ -782,7 +784,7 @@ public unsafe partial class Hnsw
             return list;
         }
 
-        private long RegisterVector(Span<byte> vector)
+        private long RegisterVector(ReadOnlySpan<byte> vector)
         {
             if (_searchState.Options.LastUsedContainerId is 0)
             {
@@ -830,7 +832,7 @@ public unsafe partial class Hnsw
             }
         }
 
-        private ByteString ComputeHashFor(Span<byte> vector)
+        private ByteString ComputeHashFor(ReadOnlySpan<byte> vector)
         {
             _searchState.Llt.Allocator.AllocateDirect(Sodium.GenericHashSize, out var hashBuffer);
             Sodium.GenericHash(vector, hashBuffer.ToSpan());
@@ -848,7 +850,7 @@ public unsafe partial class Hnsw
             return level;
         }
 
-        public void Dispose()
+        public void Commit()
         {
             PortableExceptions.ThrowIfOnDebug<InvalidOperationException>(_searchState.Llt.Committed);
             
@@ -885,7 +887,8 @@ public unsafe partial class Hnsw
             pforEncoder.Dispose();
             pforDecoder.Dispose();
 
-
+            IsCommited = true;
+            
             long MergePostingList(long postingList, NativeList<long> modifications)
             {
                 listBuffer.Clear();
@@ -960,7 +963,11 @@ public unsafe partial class Hnsw
                     }
                 }
             }
-
+        }
+        
+        public void Dispose()
+        {
+            //todo: we may wants to release the vector hash cache
         }
 
         private long UpdatePostingList(long postingListId, in NativeList<long> modifications, FastPForEncoder pForEncoder, ref FastPForDecoder pForDecoder, ref ContextBoundNativeList<long> tempListBuffer)

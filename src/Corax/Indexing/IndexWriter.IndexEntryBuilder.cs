@@ -278,12 +278,16 @@ public partial class IndexWriter
 
         public void Write(int fieldId, ReadOnlySpan<byte> value) => Write(fieldId, null, value);
 
-        public void WriteExactVector(int fieldId, string path, ReadOnlySpan<byte> value)
+        public void WriteVector(int fieldId, string path, ReadOnlySpan<byte> value)
         {
             if (value.Length <= 0) return; // we don't index missing / empty vectors 
-            
             var field = GetField(fieldId, path);
-            RegisterTerm(field, value, StoredFieldType.Raw);
+
+            var vectorWriter = field.GetVectorWriter(_parent._transaction.LowLevelTransaction, value.Length);
+            var vectorHash = vectorWriter.Register(_entryId, value);
+            
+            //We're storing the vector hash for removal purposes
+            RegisterTerm(field, vectorHash.ToSpan(), StoredFieldType.Raw);
         }
         
         public void Write(int fieldId, string path, ReadOnlySpan<byte> value)

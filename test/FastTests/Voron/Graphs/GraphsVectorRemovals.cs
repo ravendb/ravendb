@@ -26,6 +26,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
             using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, TreeName))
             {
                 vectorHash = registration.Register(entryId, v1AsBytes);
+                registration.Commit();
             }
 
             wTx.Commit();
@@ -46,6 +47,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
             using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, TreeName))
             {
                 registration.Remove(entryId, vectorHash.ToSpan());
+                registration.Commit();
             }
             
             wTx.Commit();
@@ -78,6 +80,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
             {
                 v1Id = registration.Register(entryId1, v1AsBytes);
                 registration.Register(entryId2, v2AsBytes);
+                registration.Commit();
             }
     
             wTx.Commit();
@@ -97,6 +100,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
             using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test"))
             {
                 registration.Remove(entryId1, v1Id.ToSpan());
+                registration.Commit();
             }
             wTx.Commit();
         }
@@ -141,6 +145,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
                 using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test"))
                 {
                     vecId = registration.Register(EntryId(id), v1AsBytes);
+                    registration.Commit();
                 }
 
                 wTx.Commit();
@@ -158,6 +163,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
                 using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test"))
                 {
                     registration.Remove(EntryId(id), vecId.ToSpan());
+                    registration.Commit();
                 }
 
                 wTx.Commit();
@@ -194,6 +200,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
             {
                 vectorTermContainer = registration.Register(4, MemoryMarshal.Cast<float, byte>(v1));
+                registration.Commit();
             }
             
             txw.Commit();
@@ -213,7 +220,10 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         using (var txw = Env.WriteTransaction())
         {
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            {
                 registration.Remove(entryId, vectorTermContainer.ToSpan());
+                registration.Commit();
+            }
 
             txw.Commit();
         }

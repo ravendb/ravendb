@@ -6,7 +6,7 @@ namespace Sparrow.Platform
     public static unsafe partial class Sodium
     {
         public const int GenericHashSize = 32;
-        public static void GenericHash(Span<byte> data, Span<byte> hash)
+        public static void GenericHash(ReadOnlySpan<byte> data, Span<byte> hash)
         {
             PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>(hash.Length != (int)crypto_generichash_bytes());
 
