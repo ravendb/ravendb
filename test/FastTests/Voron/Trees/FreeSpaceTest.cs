@@ -254,7 +254,7 @@ namespace FastTests.Voron.Trees
         public void CanUpdateMaxConsecutiveRanges()
         {
             const int totalSections = 4;
-            const int totalPages = 2048 * totalSections;
+            const int totalPages = FreeSpaceHandling.NumberOfPagesInSection * totalSections;
 
             using (var tx = Env.WriteTransaction())
             {
@@ -275,7 +275,7 @@ namespace FastTests.Voron.Trees
             const int lastPageInAllSections = totalPages - 1;
             using (var tx = Env.WriteTransaction())
             {
-                for (int i = 0; i < totalPages; i += 2048)
+                for (int i = 0; i < totalPages; i += FreeSpaceHandling.NumberOfPagesInSection)
                 {
                     Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, i);
                 }
@@ -333,7 +333,7 @@ namespace FastTests.Voron.Trees
 
             using (var tx = Env.WriteTransaction())
             {
-                for (int i = 0; i < totalPages; i += 2048)
+                for (int i = 0; i < totalPages; i += FreeSpaceHandling.NumberOfPagesInSection)
                 {
                     Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, i + 2);
                     Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, i + 4);
@@ -381,7 +381,7 @@ namespace FastTests.Voron.Trees
             {
                 // releasing from sections 0 and 2 - this should clear the in memory state for those sections
                 Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 3);
-                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, 2048 * 2 + 15);
+                Env.FreeSpaceHandling.FreePage(tx.LowLevelTransaction, FreeSpaceHandling.NumberOfPagesInSection * 2 + 15);
 
                 tx.Commit();
 
