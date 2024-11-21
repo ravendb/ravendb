@@ -25,7 +25,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<CounterTombstoneDetail> GetCounterTombstonesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
-            var table = context.CountersTable(this);
+            var table = context.CountersTombstonesTable(this);
 
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, CounterTombstonesSchema.DynamicKeyIndexes[CounterTombstonesBucketAndEtagSlice], bucket, etag))
             {
