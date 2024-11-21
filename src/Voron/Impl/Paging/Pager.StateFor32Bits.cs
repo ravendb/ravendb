@@ -8,8 +8,9 @@ namespace Voron.Impl.Paging;
 
 public partial class Pager
 {
-    public class TxStateFor32Bits
+    public class TxStateFor32Bits(State state)
     {
+        public unsafe void* Handle = state.Handle;
         public readonly Dictionary<long, LoadedPage> LoadedPages = [];
         public readonly List<MappedAddresses> AddressesToUnload = [];
         public long TotalLoadedSize;

@@ -1,6 +1,8 @@
 ﻿#include <windows.h>
 #include <VersionHelpers.h>
 #include <stdio.h>
+#include <stdatomic.h>
+
 #include "rvn.h"
 #include "status_codes.h"
 #include "internal_win.h"
@@ -29,7 +31,10 @@ struct handle
     uint64_t allocation_size;
     int32_t open_flags;
     int32_t status_flags;
+    int64_t locked_memory;
 };
+
+extern _Atomic int64_t g_locked_memory_size;
 
 BOOL CALLBACK InitializeCriticalSectionOnce(PINIT_ONCE initOnce, PVOID Parameter, PVOID *Context)
 {
@@ -99,7 +104,7 @@ Exit:
     return rc;
 }
 
-int32_t rvn_lock_memory(int32_t open_flags, void *mem, int64_t size, int32_t *detailed_error_code)
+int32_t rvn_lock_memory(struct handle* handle, int32_t open_flags, void *mem, int64_t size, int32_t *detailed_error_code)
 {
     int32_t rc = SUCCESS;
     if (sizeof(SIZE_T) == 4)
@@ -121,6 +126,11 @@ int32_t rvn_lock_memory(int32_t open_flags, void *mem, int64_t size, int32_t *de
         if (VirtualLock(mem, (SIZE_T)size) ||
             open_flags & OPEN_FILE_DO_NOT_CONSIDER_MEMORY_LOCK_FAILURE_AS_CATASTROPHIC_ERROR)
         {
+            // note that we *explicitly* account for locked memory even if we failed to do so
+            // if we don't consider this as catastrophic error, because otherwise accounting 
+            // for its removal is really complicated
+            handle->locked_memory += size;
+            atomic_fetch_add(&g_locked_memory_size, size);
             rc = SUCCESS;
             break;
         }
@@ -215,16 +225,22 @@ rvn_pager_set_sparse_region(void* handle,
 
 EXPORT
 int32_t rvn_unmap_memory(
+    void* handle,
     void *mem,
     int64_t size,
     int32_t *detailed_error_code)
 {
-    (void)size;
+    struct handle *handle_ptr = handle;
     *detailed_error_code = 0;
     if (!UnmapViewOfFile(mem))
     {
         *detailed_error_code = GetLastError();
         return FAIL_UNMAP_VIEW_OF_FILE;
+    }
+    if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
+    {
+        handle_ptr->locked_memory -= size;
+        atomic_fetch_sub(&g_locked_memory_size, size);
     }
     return SUCCESS;
 }
@@ -267,7 +283,7 @@ int32_t rvn_map_memory(void *handle,
     if (handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
     {
         // intentionally returning the error code & rc from the lock_memory call
-        int mem_lock_rc = rvn_lock_memory(handle_ptr->open_flags, *mem, size, detailed_error_code);
+        int mem_lock_rc = rvn_lock_memory(handle_ptr, handle_ptr->open_flags, *mem, size, detailed_error_code);
         if (rc != SUCCESS)
         {
             UnmapViewOfFile(*mem);
@@ -376,9 +392,9 @@ int32_t _open_pager_file(HANDLE h,
     m = INVALID_HANDLE_VALUE;
 
     if (open_flags & OPEN_FILE_LOCK_MEMORY &&
-        rvn_lock_memory(open_flags, mem, file_size.QuadPart, detailed_error_code) && 
+        rvn_lock_memory(handle_ptr, open_flags, mem, file_size.QuadPart, detailed_error_code) && 
         wmem != NULL && 
-        rvn_lock_memory(open_flags, wmem, file_size.QuadPart, detailed_error_code))
+        rvn_lock_memory(handle_ptr, open_flags, wmem, file_size.QuadPart, detailed_error_code))
     {
         rc = FAIL_LOCK_MEMORY;
         goto Error;
@@ -486,6 +502,12 @@ rvn_close_pager(
     int rc = SUCCESS;
     if (!(handle_ptr->open_flags & OPEN_FILE_DO_NOT_MAP))
     {
+        if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
+        {
+            handle_ptr->locked_memory -= handle_ptr->allocation_size;
+            atomic_fetch_sub(&g_locked_memory_size, handle_ptr->allocation_size);
+        }
+
         if (!UnmapViewOfFile(handle_ptr->read_address))
         {
             *detailed_error_code = GetLastError();
@@ -493,6 +515,12 @@ rvn_close_pager(
         }
         if(handle_ptr->open_flags & OPEN_FILE_WRITABLE_MAP)
         {
+            if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
+            {
+                handle_ptr->locked_memory -= handle_ptr->allocation_size;
+                atomic_fetch_sub(&g_locked_memory_size, handle_ptr->allocation_size);
+            }
+
             if (!UnmapViewOfFile(handle_ptr->write_address))
             {
                 rc = FAIL_MAP_VIEW_OF_FILE;

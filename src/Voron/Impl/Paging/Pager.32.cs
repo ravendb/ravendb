@@ -29,7 +29,7 @@ public unsafe partial class Pager
 
         public static bool EnsureMapped(Pager pager, State state, ref PagerTransactionState txState, long pageNumber, int numberOfPages)
         {
-            var pagerTxState = GetTxState(pager, ref txState);
+            var pagerTxState = GetTxState(pager, state, ref txState);
 
             var distanceFromStart = (pageNumber % NumberOfPagesInAllocationGranularity);
             var allocationStartPosition = pageNumber - distanceFromStart;
@@ -45,7 +45,7 @@ public unsafe partial class Pager
             return true;
         }
 
-        private static TxStateFor32Bits GetTxState(Pager pager, ref PagerTransactionState txState)
+        private static TxStateFor32Bits GetTxState(Pager pager, State state, ref PagerTransactionState txState)
         {
             if (txState.For32Bits is null)
             {
@@ -54,7 +54,7 @@ public unsafe partial class Pager
             }
             if (txState.For32Bits.TryGetValue(pager, out var pagerTxState) == false)
             {
-                txState.For32Bits[pager] = pagerTxState = new TxStateFor32Bits();
+                txState.For32Bits[pager] = pagerTxState = new TxStateFor32Bits(state);
             }
             return pagerTxState;
         }
@@ -101,7 +101,7 @@ public unsafe partial class Pager
                     }
                     
                     NativeMemory.UnregisterFileMapping(addr.File, addr.Address, addr.Size);
-                    var rc = Pal.rvn_unmap_memory((void*)addr.Address, addr.Size, out var errorCode);
+                    var rc = Pal.rvn_unmap_memory(txState.Handle, (void*)addr.Address, addr.Size, out var errorCode);
                     if (rc != PalFlags.FailCodes.Success)
                     {
                         PalHelper.ThrowLastError(rc, errorCode, $"Failed to unmap memory in 32 bits mode for {pager.FileName}");
@@ -122,7 +122,7 @@ public unsafe partial class Pager
 
         private static byte* AcquirePagePointer(Pager pager, State state, ref PagerTransactionState txState, long pageNumber)
         {
-            var pagerTxState = GetTxState(pager, ref txState);
+            var pagerTxState = GetTxState(pager, state, ref txState);
             
             if (pageNumber > state.NumberOfAllocatedPages || pageNumber < 0)
                 goto InvalidPage;

@@ -61,6 +61,10 @@ struct RVN_RANGE_LIST
 };
 
 EXPORT
+_Atomic int64_t* 
+rvn_get_locked_memory_size(void);
+
+EXPORT
 int32_t rvn_pager_get_file_handle(
     void *handle,
     void** file_handle,
@@ -68,6 +72,7 @@ int32_t rvn_pager_get_file_handle(
 
 EXPORT
 int32_t rvn_unmap_memory(
+    void *handle,
     void* mem,
     int64_t size,
     int32_t *detailed_error_code);

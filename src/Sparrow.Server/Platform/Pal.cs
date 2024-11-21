@@ -12,6 +12,9 @@ namespace Sparrow.Server.Platform
     {
         public const int PAL_VER = 62022; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
+        private static readonly long* _lockedMemorySize;
+        public static long LockedMemorySize => *_lockedMemorySize;
+        
         static  Pal()
         {
             PalFlags.FailCodes rc;
@@ -24,6 +27,8 @@ namespace Sparrow.Server.Platform
                     throw new IncorrectDllException(
                         $"{LIBRVNPAL} version '{palVer}' mismatches this RavenDB instance version (set to '{PAL_VER}'). Did you forget to set new value in 'rvn_get_pal_ver()'");
                 }
+
+                _lockedMemorySize = rvn_get_locked_memory_size();
 
                 rc = rvn_get_system_information(out _, out errorCode);
             }
@@ -73,7 +78,11 @@ namespace Sparrow.Server.Platform
             out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_unmap_memory(void* mem,
+        public static extern Int64* rvn_get_locked_memory_size();
+        
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_unmap_memory(void* handle,
+            void* mem,
             Int64 size,
             out Int32 errorCode);
 

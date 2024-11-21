@@ -212,38 +212,6 @@ namespace Sparrow.Platform
 
         [DllImport(LIBSODIUM)]
         public static extern UIntPtr crypto_secretstream_xchacha20poly1305_abytes();
-
-        [DllImport(LIBSODIUM)]
-        public static extern int sodium_munlock(byte* addr, UIntPtr len);
-
-        [DllImport(LIBSODIUM)]
-        public static extern int sodium_mlock(byte* addr, UIntPtr len);
-
-        private static long _lockedBytes;
-
-        public static long LockedBytes => _lockedBytes;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int Lock(byte* addr, UIntPtr len)
-        {
-            var r = sodium_mlock(addr, len);
-            if (r != 0)
-                return r;
-
-            Interlocked.Add(ref _lockedBytes, (long)len);
-            return 0;
-    }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int Unlock(byte* addr, UIntPtr len)
-        {
-            var r = sodium_munlock(addr, len);
-            if (r != 0)
-                return r;
-
-            Interlocked.Add(ref _lockedBytes, -(long)len);
-            return 0;
-}
     }
 #endif
 }

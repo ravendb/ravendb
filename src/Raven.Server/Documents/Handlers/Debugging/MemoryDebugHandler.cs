@@ -14,6 +14,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server.LowMemory;
+using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
 using Sparrow.Utils;
@@ -330,7 +331,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.LuceneUnmanagedAllocationsForSorting)] = Size.Humane(NativeMemory.TotalLuceneUnmanagedAllocationsForSorting),
                 [nameof(MemoryInfo.EncryptionBuffersInUse)] = Size.Humane(encryptionBuffers.CurrentlyInUseSize),
                 [nameof(MemoryInfo.EncryptionBuffersPool)] = Size.Humane(encryptionBuffers.TotalPoolSize),
-                [nameof(MemoryInfo.EncryptionLockedMemory)] = Size.Humane(Sodium.LockedBytes),
+                [nameof(MemoryInfo.EncryptionLockedMemory)] = Size.Humane(Pal.LockedMemorySize),
                 [nameof(MemoryInfo.MemoryMapped)] = Size.Humane(totalMapping),
                 [nameof(MemoryInfo.IsHighDirty)] = dirtyMemoryState.IsHighDirty,
                 [nameof(MemoryInfo.DirtyMemory)] = dirtyMemoryState.TotalDirty.ToString(),
