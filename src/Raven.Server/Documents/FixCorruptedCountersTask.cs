@@ -1,6 +1,5 @@
 ﻿using Raven.Server.ServerWide.Context;
 using Sparrow.Server.Utils;
-using static Raven.Server.Documents.Handlers.CountersHandler;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
@@ -19,7 +18,7 @@ public class FixCorruptedCountersTask
     private string _lastProcessedKey;
     private readonly Logger _logger;
 
-    private const string Completed = "Completed";
+    private readonly string _completed = string.Empty;
 
     public FixCorruptedCountersTask(DocumentDatabase database)
     {
@@ -33,7 +32,7 @@ public class FixCorruptedCountersTask
         using (var tx = documentsContext.OpenReadTransaction())
         {
             _lastProcessedKey = DocumentsStorage.ReadFixCountersLastKey(tx.InnerTransaction);
-            if (_lastProcessedKey == Completed)
+            if (_lastProcessedKey == _completed)
                 return; // completed
         }
 
@@ -47,7 +46,7 @@ public class FixCorruptedCountersTask
         StartAfterSliceHolder startAfterSliceHolder = null;
         string lastDocId = null;
 
-        if (string.IsNullOrEmpty(_lastProcessedKey) == false)
+        if (_lastProcessedKey != null)
         {
             startAfterSliceHolder = new StartAfterSliceHolder(_lastProcessedKey);
         }
@@ -65,8 +64,7 @@ public class FixCorruptedCountersTask
                     {
                         bool hasMore = false;
 
-                        foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys,
-                                     startAfter: startAfterSliceHolder?.GetStartAfterSlice(context) ?? Slices.Empty, skip: 0))
+                        foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, startAfter: startAfterSliceHolder?.GetStartAfterSlice(context) ?? Slices.Empty, skip: 0))
                         {
                             hasMore = true;
 
@@ -105,8 +103,7 @@ public class FixCorruptedCountersTask
 
                         if (docIdsToFix.Count == 0)
                         {
-                            //_database.DocumentsStorage.SetFixCountersLastKey(context, Completed);
-                            SaveLastProcessedKey(Completed);
+                            SaveLastProcessedKey(_completed);
                             return;
                         }
 
@@ -122,7 +119,7 @@ public class FixCorruptedCountersTask
                             break; // break from inner while loop in order to open a new read tx
                         }
 
-                        SaveLastProcessedKey(Completed);
+                        SaveLastProcessedKey(_completed);
                         startAfterSliceHolder?.Dispose();
                         return;
                     }

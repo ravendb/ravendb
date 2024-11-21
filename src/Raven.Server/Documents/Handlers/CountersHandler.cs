@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -22,6 +23,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using static Raven.Server.Documents.CountersStorage;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -398,10 +400,20 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var cgd in _counterGroups)
                 {
-                    using (cgd.Values)
+                    try
                     {
-                        PutCounters(context, cgd);
+
+                        using (cgd.Values)
+                        {
+                            PutCounters(context, cgd);
+                        }
                     }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        throw;
+                    }
+
                 }
 
                 UpdateDocumentsMetadata(context);
@@ -419,6 +431,57 @@ namespace Raven.Server.Documents.Handlers
                         UpdateDocumentCountersAfterImportBatch(context, toUpdate.Key, doc);
                     }
                 }
+            }
+
+            private static void CheckForDataCorruption(DocumentsOperationContext context, CounterGroupDetail counterGroup, Document doc)
+            {
+                counterGroup.Values.TryGet(Values, out BlittableJsonReaderObject counterValues);
+                counterGroup.Values.TryGet(CounterNames, out BlittableJsonReaderObject counterNames);
+
+                if (counterValues.Count == counterNames.Count && 
+                    counterValues.GetSortedPropertyNames().SequenceEqual(counterNames.GetSortedPropertyNames()))
+                    return;
+                
+                BlittableJsonReaderObject.PropertyDetails prop = default;
+                var originalNames = new DynamicJsonValue();
+                var counterNamesFromDocument = TryGetCounterNamesFromDocument(doc);
+                
+                for (int i = 0; i < counterValues.Count; i++)
+                {
+                    counterValues.GetPropertyByIndex(i, ref prop);
+
+                    var lowerCasedCounterName = prop.Name;
+                    if (counterNames.TryGet(lowerCasedCounterName, out string counterNameToUse) == false)
+                    {
+                        var location = counterNamesFromDocument?.BinarySearch(lowerCasedCounterName, StringComparer.OrdinalIgnoreCase) ?? -1;
+
+                        // if we don't have the counter name in its original casing - we'll use the lowered-case name instead
+                        counterNameToUse = location < 0
+                            ? lowerCasedCounterName
+                            : counterNamesFromDocument![location];
+                    }
+
+                    originalNames[lowerCasedCounterName] = counterNameToUse;
+                }
+
+                counterGroup.Values.Modifications = new DynamicJsonValue(counterGroup.Values)
+                {
+                    [CounterNames] = originalNames
+                };
+
+                using (var old = counterGroup.Values)
+                {
+                    counterGroup.Values = context.ReadObject(counterGroup.Values, counterGroup.DocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                }
+            }
+
+            private static List<string> TryGetCounterNamesFromDocument(Document doc)
+            {
+                if (doc != null && 
+                    doc.TryGetMetadata(out var metadata) &&
+                    metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters))
+                    return counters.Select(x => x.ToString()).ToList();
+                return null;
             }
 
             private void PutCounters(DocumentsOperationContext context, CounterGroupDetail counterGroupDetail)
@@ -439,6 +502,8 @@ namespace Raven.Server.Documents.Handlers
 
                 if (doc != null)
                     docCollection = CollectionName.GetCollectionName(doc.Data);
+
+                CheckForDataCorruption(context, counterGroupDetail, doc);
 
                 _database.DocumentsStorage.CountersStorage.PutCounters(context, counterGroupDetail.DocumentId, docCollection,
                     counterGroupDetail.ChangeVector, counterGroupDetail.Values);
