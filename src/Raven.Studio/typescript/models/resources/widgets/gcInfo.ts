@@ -33,7 +33,7 @@ class gcInfo extends historyAwareNodeStats<GcInfoNormalizedData> {
         const fragmentationLoh = this.lohFragmentationFormatted();
         const fragmentationPoh = this.pinnedFragmentationFormatted();
         
-        return `<div>
+        return `<div class="padding-xs">
                     <h3 class="text-center">Heap Fragmentation</h3>
                     <div class="details-item gen-0">
                         <div class="details-item-name">Gen0 <span class="rect"></span></div>

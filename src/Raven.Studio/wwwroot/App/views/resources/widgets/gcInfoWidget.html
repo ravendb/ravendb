@@ -31,19 +31,19 @@
                         </div>
 
                         <div class="details-list">
-                            <div class="details-item">
+                            <div class="details-item flex-row align-items-center">
                                 <div class="details-item-name">GC Kind</div>
                                 <div class="details-item-value" data-bind="text: type"></div>
                             </div>
-                            <div class="details-item">
+                            <div class="details-item flex-row align-items-center">
                                 <div class="details-item-name">Concurrent</div>
                                 <div class="details-item-value" data-bind="text: concurrent"></div>
                             </div>
-                            <div class="details-item">
+                            <div class="details-item flex-row align-items-center">
                                 <div class="details-item-name">Compacted</div>
                                 <div class="details-item-value" data-bind="text: compacted"></div>
                             </div>
-                            <div class="details-item">
+                            <div class="details-item flex-row align-items-center">
                                 <div class="details-item-name">Generation</div>
                                 <div class="details-item-value" data-bind="text: generation"></div>
                             </div>
@@ -54,31 +54,31 @@
                                 <span data-bind="visible: $index() === 0">Generations (before GC → after GC)</span>
                             </h4>
                             <div data-toggle="tooltip" data-html="true" data-animation="true" data-placement="bottom" data-bind="tooltipText: fragmentationInfo">
-                                <div class="details-item gen-0">
+                                <div class="details-item flex-row align-items-center gen-0">
                                     <div class="details-item-name" data-bind="visible: $index() === $parent.nodeStats().length - 1">
                                         Gen0 <span class="rect"></span>
                                     </div>
                                     <div class="details-item-value" data-bind="text: gen0Formatted"></div>
                                 </div>
-                                <div class="details-item gen-1">
+                                <div class="details-item flex-row align-items-center gen-1">
                                     <div class="details-item-name" data-bind="visible: $index() === $parent.nodeStats().length - 1">
                                         Gen1 <span class="rect"></span>
                                     </div>
                                     <div class="details-item-value" data-bind="text: gen1Formatted"></div>
                                 </div>
-                                <div class="details-item gen-2">
+                                <div class="details-item flex-row align-items-center gen-2">
                                     <div class="details-item-name" data-bind="visible: $index() === $parent.nodeStats().length - 1">
                                         Gen2 <span class="rect"></span>
                                     </div>
                                     <div class="details-item-value" data-bind="text: gen2Formatted"></div>
                                 </div>
-                                <div class="details-item loh">
+                                <div class="details-item flex-row align-items-center loh">
                                     <div class="details-item-name" title="Large object heap" data-bind="visible: $index() === $parent.nodeStats().length - 1">
                                         LOH <span class="rect"></span>
                                     </div>
                                     <div class="details-item-value" data-bind="text: lohFormatted"></div>
                                 </div>
-                                <div class="details-item pinned">
+                                <div class="details-item flex-row align-items-center pinned">
                                     <div class="details-item-name" title="Pinned object heap" data-bind="visible: $index() === $parent.nodeStats().length - 1">
                                         POH <span class="rect"></span>
                                     </div>
