@@ -1,4 +1,4 @@
-﻿ using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -250,8 +250,8 @@ public class RavenDB_22363 : RavenTestBase
         Indexes.WaitForIndexing(store);
         new IndexUpdate().Execute(store);
         Indexes.WaitForIndexing(store);
-        var status = store.Maintenance.Send(new GetIndexingStatusOperation());
-        Assert.Equal(IndexRunningStatus.Running, status.Indexes[0].Status);
+        var status = WaitForValue(() => store.Maintenance.Send(new GetIndexingStatusOperation()).Indexes[0].Status, IndexRunningStatus.Running);
+        Assert.Equal(IndexRunningStatus.Running, status);
     }
 
     private class Product
