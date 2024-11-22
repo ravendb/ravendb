@@ -168,11 +168,6 @@ namespace Raven.Server.Documents.Indexes
 
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {
-                if (indexVersion >= Base54Version)
-                {
-                    return indexVersion >= LowerCasedReferences_54;
-                }
-
                 return indexVersion >= LowerCasedReferences_54;
             }
         }
