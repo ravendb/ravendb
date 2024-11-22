@@ -27,6 +27,8 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
     generationsSizeCharts: lineChart<GcInfoChartData>[] = [];
     pausesChart: bubbleChart<GcInfoChartData>;
     
+    generationsMaxY = 0;
+    
     pinned = ko.observable<boolean>(false);
     
     private readonly nodeTags: string[] = [];
@@ -154,6 +156,15 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
             gcType: item.gcType,
         })
         
+        const memoryMaxFromCurrentChunk = output
+            .filter(x => x.Key.startsWith("gc-info"))
+            .map(x => x.value)
+            .reduce((p, c) => Math.max(p, c), 0);
+        
+        if (memoryMaxFromCurrentChunk > this.generationsMaxY) {
+            this.generationsMaxY = memoryMaxFromCurrentChunk;
+        }
+        
         return output;
     }
     
@@ -176,7 +187,7 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
     createGcPauseWarning(level: "danger" | "warning" | null) {
         switch (level) {
             case "warning":
-                return "This range may be acceptable depending on the type of application. For a web application, this might indicate some latency but could still be manageable.";
+                return "GC pauses exceeding 5% might introduce some latency but could still be manageable and provide acceptable performance.";
             case "danger":
                 return "GC pauses above 10% typically indicates performance problems. Users might experience noticeable delays, especially if GC pauses are lengthy or frequent.";
             default:
@@ -210,6 +221,7 @@ class gcInfoWidget extends abstractTransformingChartsWebsocketWidget<
                     fillData: true,
                     fillArea: true,
                     topPaddingProvider: () => 10,
+                    yMaxProvider: () => this.generationsMaxY,
                     onMouseMove: date => {
                         if (!this.pinned()) {
                             this.mouseMovedLineChart(date, node);
