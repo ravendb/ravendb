@@ -30,10 +30,16 @@ public class RavenDB_22369 : RavenTestBase
         var index = new TIndex();
         index.Execute(store);
         Indexes.WaitForIndexing(store, allowErrors: true);
+        WaitForValue(ErrorExist, true);
         var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] {index.IndexName}));
-        Assert.NotEmpty(indexErrors);
         Assert.Contains($"Your spatial field 'Location' has 'Indexing' set to 'No'. Spatial fields cannot be stored, so this field is useless because it cannot be searched or retrieved.",
             indexErrors[0].Errors[0].ToString());
+
+        bool ErrorExist()
+        {
+            var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
+            return errors != null && errors.Length > 0 && errors[0].Errors != null && errors[0].Errors.Length > 0;
+        }
     }
 
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
