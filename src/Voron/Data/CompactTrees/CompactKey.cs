@@ -1,14 +1,10 @@
 using System;
-using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Json;
-using Sparrow.Server;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
@@ -22,22 +18,17 @@ public sealed unsafe class CompactKey : IDisposable
 {
     public static readonly CompactKey NullInstance = new();
 
-    [ThreadStatic]
-    private static ArrayPool<byte> StoragePool;
-    [ThreadStatic]
-    private static ArrayPool<long> KeyMappingPool;
-
     private LowLevelTransaction _owner;
 
     private const int MappingTableSize = 64;
     private const int MappingTableMask = MappingTableSize - 1;
 
-    private long[] _keyMappingCache;
+    private readonly long[] _keyMappingCache = new long[2 * MappingTableMask];
     private ref long KeyMappingCache(int i) => ref _keyMappingCache[i];
     private ref long KeyMappingCacheIndex(int i) => ref _keyMappingCache[MappingTableSize + i];
 
 
-    private byte[] _storage;
+    private byte[] _storage = new byte[2 * Constants.CompactTree.MaximumKeySize];
 
     // The storage data will be used in an arena fashion. If there is no enough, we just create a bigger one and
     // copy the content back. 
@@ -57,10 +48,16 @@ public sealed unsafe class CompactKey : IDisposable
 
     private const int Invalid = -1;
 
+
     public void Initialize(LowLevelTransaction tx)
     {
         _owner = tx;
+        
+        Reuse();
+    }
 
+    public void Reuse()
+    {
         Dictionary = Invalid;
         _currentKeyIdx = Invalid;
         _decodedKeyIdx = Invalid;
@@ -68,20 +65,10 @@ public sealed unsafe class CompactKey : IDisposable
 
         _currentIdx = 0;
         MaxLength = 0;
-
-        StoragePool ??= ArrayPool<byte>.Create();
-        KeyMappingPool ??= ArrayPool<long>.Create();
-
-        _storage ??= StoragePool.Rent(2 * Constants.CompactTree.MaximumKeySize);
-        _keyMappingCache ??= KeyMappingPool.Rent(2 * MappingTableMask);
     }
 
     public void Reset()
     {
-        PortableExceptions.ThrowIf<InvalidOperationException>(
-            _storage is null || _keyMappingCache is null, 
-            "The key has not been initialized before calling reset.");
-
         _owner = null;
     }
 
@@ -224,12 +211,11 @@ public sealed unsafe class CompactKey : IDisposable
 
         // Request more memory, copy the content and return it.
         maxSize = Math.Max(maxSize, oldStorage.Length) * 2;
-
-        var storage = StoragePool.Rent(maxSize);
+        var storage = new byte[maxSize];
         _storage.AsSpan(0, _currentIdx).CopyTo(storage.AsSpan());
-        
-        StoragePool.Return(_storage); // Return old to pool.
-        _storage = storage; // Update the new references.
+
+        // Update the new references.
+        _storage = storage; 
     }
 
     public void Set(ReadOnlySpan<byte> key)
@@ -401,18 +387,6 @@ public sealed unsafe class CompactKey : IDisposable
     
     public void Dispose()
     {
-        if (_storage is not null)
-        {
-            StoragePool.Return(_storage);
-            _storage = null;
-        }
-
-        if (_keyMappingCache is not null)
-        {
-            KeyMappingPool.Return(_keyMappingCache);
-            _keyMappingCache = null;
-        }
-
         _owner = null;
     }
 
