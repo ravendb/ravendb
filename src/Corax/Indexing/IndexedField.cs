@@ -11,6 +11,7 @@ using Voron;
 using Voron.Data.Graphs;
 using Voron.Impl;
 using Voron.Util;
+using VectorOptions = Corax.Mappings.VectorOptions;
 
 namespace Corax.Indexing;
 
@@ -156,7 +157,7 @@ internal sealed class IndexedField
     private void CreateHnswTree(LowLevelTransaction llt, int vectorSize)
     {
         PortableExceptions.ThrowIfNull<InvalidOperationException>(_vectorOptions, $"{nameof(_vectorOptions)} is null)");
-        Hnsw.Create(llt, Name, vectorSize, _vectorOptions.NumberOfEdges, _vectorOptions.NumberOfCandidates);
+        Hnsw.Create(llt, Name, vectorSize, _vectorOptions.NumberOfEdges, _vectorOptions.NumberOfCandidates, _vectorOptions.VectorEmbeddingType);
     }
     
     public void Clear()
@@ -168,7 +169,7 @@ internal sealed class IndexedField
         Textual?.Clear();
         EntryToTerms = default;
         
-        PortableExceptions.ThrowIfOnDebug<InvalidOperationException>(VectorIndexWriter is { IsCommited: true }, "VectorIndexer is { IsDisposed: true }");
+        PortableExceptions.ThrowIfOnDebug<InvalidOperationException>(VectorIndexWriter is { IsCommited: false }, "VectorIndexer is { IsDisposed: false }");
         VectorIndexWriter = null; // after Commit it will be recreated from scratch
     }
 }

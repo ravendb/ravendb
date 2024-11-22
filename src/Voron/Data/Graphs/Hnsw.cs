@@ -252,14 +252,13 @@ public unsafe partial class Hnsw
         }
     }
 
-    public static void Create(LowLevelTransaction llt, string name, int vectorSizeBytes, int numberOfEdges, int numberOfCandidates)
+    public static void Create(LowLevelTransaction llt, string name, int vectorSizeBytes, int numberOfEdges, int numberOfCandidates, VectorEmbeddingType embeddingType)
     {
         using var _ = Slice.From(llt.Allocator, name, out var slice);
-        Create(llt, slice, vectorSizeBytes, numberOfEdges, numberOfCandidates);
-
+        Create(llt, slice, vectorSizeBytes, numberOfEdges, numberOfCandidates, embeddingType);
     }
     
-    public static void Create(LowLevelTransaction llt, Slice name, int vectorSizeBytes, int numberOfEdges, int numberOfCandidates)
+    public static void Create(LowLevelTransaction llt, Slice name, int vectorSizeBytes, int numberOfEdges, int numberOfCandidates, VectorEmbeddingType embeddingType)
     {
         var tree = llt.Transaction.CreateTree(name);
         if (tree.ReadHeader().NumberOfEntries is not 0)
@@ -270,6 +269,15 @@ public unsafe partial class Hnsw
         long storage = Container.Create(llt);
         tree.LookupFor<Int64LookupKey>(NodeIdToLocationSlice);
         tree.LookupFor<Int64LookupKey>(NodesByVectorIdSlice);
+
+        var similarityMethod = embeddingType switch
+        {
+            VectorEmbeddingType.Single => SimilarityMethod.CosineSimilaritySingles,
+            VectorEmbeddingType.Int8 => SimilarityMethod.CosineSimilarityI8,
+            VectorEmbeddingType.Binary => SimilarityMethod.HammingDistance,
+            _ => throw new InvalidOperationException($"Unexpected value of {nameof(VectorEmbeddingType)}: {embeddingType}")
+        };
+        
         var options = new Options
         {
             Version = 1,
@@ -278,6 +286,7 @@ public unsafe partial class Hnsw
             Container = storage,
             NumberOfEdges = numberOfEdges,
             NumberOfCandidates = numberOfCandidates,
+            SimilarityMethod = similarityMethod
         };
         using (tree.DirectAdd(OptionsSlice, sizeof(Options), out var output))
         {

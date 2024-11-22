@@ -5,6 +5,7 @@ using Tests.Infrastructure;
 using Voron.Data.Graphs;
 using Xunit;
 using Xunit.Abstractions;
+using VectorEmbeddingType = Voron.Data.Graphs.VectorEmbeddingType;
 
 namespace FastTests.Voron.Graphs;
 
@@ -22,7 +23,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         ByteString vectorHash = default;
         using (var wTx = Env.WriteTransaction())
         {
-            Hnsw.Create(wTx.LowLevelTransaction, TreeName, VectorSizeInBytes, 3, 12);
+            Hnsw.Create(wTx.LowLevelTransaction, TreeName, VectorSizeInBytes, 3, 12, VectorEmbeddingType.Single);
             using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, TreeName))
             {
                 vectorHash = registration.Register(entryId, v1AsBytes);
@@ -43,7 +44,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
 
         using (var wTx = Env.WriteTransaction())
         {
-            Hnsw.Create(wTx.LowLevelTransaction, TreeName, VectorSizeInBytes, 3, 12);
+            Hnsw.Create(wTx.LowLevelTransaction, TreeName, VectorSizeInBytes, 3, 12, VectorEmbeddingType.Single);
             using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, TreeName))
             {
                 registration.Remove(entryId, vectorHash.ToSpan());
@@ -75,7 +76,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         var entryId2 = 2 << 2;
         using (var wTx = Env.WriteTransaction())
         {
-            Hnsw.Create(wTx.LowLevelTransaction, "test", VectorSizeInBytes, 3, 12);
+            Hnsw.Create(wTx.LowLevelTransaction, "test", VectorSizeInBytes, 3, 12, VectorEmbeddingType.Single);
             using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test"))
             {
                 v1Id = registration.Register(entryId1, v1AsBytes);
@@ -140,7 +141,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
             using (var wTx = Env.WriteTransaction())
             {
                 if (register)
-                    Hnsw.Create(wTx.LowLevelTransaction, "test", VectorSizeInBytes, 3, 12);
+                    Hnsw.Create(wTx.LowLevelTransaction, "test", VectorSizeInBytes, 3, 12, VectorEmbeddingType.Single);
 
                 using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test"))
                 {
@@ -195,7 +196,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         ByteString vectorTermContainer = default;
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12);
+            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
             {

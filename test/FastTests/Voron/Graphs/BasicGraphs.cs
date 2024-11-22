@@ -7,6 +7,7 @@ using Tests.Infrastructure;
 using Voron.Data.Graphs;
 using Xunit;
 using Xunit.Abstractions;
+using VectorEmbeddingType = Voron.Data.Graphs.VectorEmbeddingType;
 
 namespace FastTests.Voron.Graphs;
 
@@ -17,7 +18,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
     {
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12);
+            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
 
             txw.Commit();
         }
@@ -52,7 +53,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12);
+            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
             {
@@ -109,7 +110,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12);
+            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
             {
@@ -129,7 +130,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12);
+            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
             {
@@ -168,7 +169,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         List<(long entryId, ByteString vectorHash)> elementInGraph = new();
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12);
+            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
             {
@@ -316,7 +317,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", v1.Length * 4, 3, 12);
+            Hnsw.Create(txw.LowLevelTransaction, "test", v1.Length * 4, 3, 12, VectorEmbeddingType.Single);
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
             {

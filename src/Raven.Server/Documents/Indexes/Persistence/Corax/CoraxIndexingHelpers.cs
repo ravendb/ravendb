@@ -14,10 +14,12 @@ using System.Reflection;
 using Raven.Client.Documents.Indexes;
 using Corax;
 using Corax.Mappings;
+using Raven.Client.Documents.Indexes.Vector;
 using Constants = Raven.Client.Constants;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
+using VectorOptions = Corax.Mappings.VectorOptions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -123,24 +125,44 @@ public static class CoraxIndexingHelpers
             var hasSuggestions = field.HasSuggestions;
             var hasSpatial = field.Spatial is not null;
             bool shouldStore = field.Storage == FieldStorage.Yes;
+            VectorOptions coraxVectorOptions = null;
+
+            if (field.Vector is not null)
+            {
+                var vectorEmbeddingType = field.Vector.DestinationEmbeddingType switch
+                {
+                    VectorEmbeddingType.Single => Voron.Data.Graphs.VectorEmbeddingType.Single,
+                    VectorEmbeddingType.Int8 => Voron.Data.Graphs.VectorEmbeddingType.Int8,
+                    VectorEmbeddingType.Binary => Voron.Data.Graphs.VectorEmbeddingType.Binary,
+                    VectorEmbeddingType.Text => Voron.Data.Graphs.VectorEmbeddingType.Text,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+
+                coraxVectorOptions = new VectorOptions()
+                {
+                    NumberOfCandidates = field.Vector.NumberOfCandidatesForIndexing,
+                    NumberOfEdges = field.Vector.NumberOfEdges,
+                    VectorEmbeddingType = vectorEmbeddingType
+                };
+            }
 
             switch (field.Indexing)
             {
                 case FieldIndexing.Exact:
                     var keywordAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, forQuerying, CreateKeywordAnalyzer);
-                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, keywordAnalyzer, hasSuggestions, FieldIndexingMode.Exact, shouldStore, hasSpatial);
+                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, keywordAnalyzer, hasSuggestions, FieldIndexingMode.Exact, shouldStore, hasSpatial, coraxVectorOptions);
                     break;
 
                 case FieldIndexing.Search:
                     var analyzer = GetCoraxAnalyzer(fieldName, field.Analyzer, analyzers, forQuerying, index.DocumentDatabase.Name);
                     if (analyzer != null)
                     {
-                        mappingBuilder.AddBinding(fieldId, fieldNameSlice, analyzer, hasSuggestions, FieldIndexingMode.Search, shouldStore, hasSpatial);
+                        mappingBuilder.AddBinding(fieldId, fieldNameSlice, analyzer, hasSuggestions, FieldIndexingMode.Search, shouldStore, hasSpatial, coraxVectorOptions);
                         continue;
                     }
 
                     var standardAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, forQuerying, CreateStandardAnalyzer);
-                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, standardAnalyzer, hasSuggestions, FieldIndexingMode.Search, shouldStore, hasSpatial);
+                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, standardAnalyzer, hasSuggestions, FieldIndexingMode.Search, shouldStore, hasSpatial, coraxVectorOptions);
                     break;
 
                 case FieldIndexing.Default:
@@ -148,7 +170,7 @@ public static class CoraxIndexingHelpers
                     {
                         defaultAnalyzer ??= CreateDefaultAnalyzer(fieldName, index.Configuration.DefaultAnalyzerType.Value.Type, forQuerying);
                     }
-                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, defaultAnalyzer, hasSuggestions, FieldIndexingMode.Normal, shouldStore, hasSpatial);
+                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, defaultAnalyzer, hasSuggestions, FieldIndexingMode.Normal, shouldStore, hasSpatial, coraxVectorOptions);
 
                     break;
                 case FieldIndexing.No:

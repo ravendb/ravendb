@@ -22,7 +22,7 @@ public sealed class IndexFieldBinding
 
     private readonly bool _isFieldBindingForWriter;
     public readonly FieldMetadata Metadata;
-    public VectorOptions VectorOptions;
+    public readonly VectorOptions VectorOptions;
 
     public IndexFieldBinding(int fieldId, Slice fieldName, Slice fieldNameLong, Slice fieldNameDouble, Slice fieldTermTotalSumField, bool isFieldBindingForWriter,
         Analyzer analyzer = null, bool hasSuggestions = false,
