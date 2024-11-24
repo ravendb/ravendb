@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <stdint.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include "rvn.h"
 #include "status_codes.h"
@@ -11,26 +12,17 @@ _resize_file(HANDLE handle, int64_t size, int32_t *detailed_error_code)
 {
     assert(size % 4096 == 0);
 
-    int32_t rc;
-    LARGE_INTEGER distance_to_move;
-    distance_to_move.QuadPart = size;
-    if (SetFilePointerEx(handle, distance_to_move, NULL, FILE_BEGIN) == FALSE)
+    // Here we take advantage on the side effect that creating a file mapping with a size larger than the file
+    // will automatically resize the file to the specified size. That way we don't need to call SetEndOfFile
+    // and risk race conditions with concurrent WriteFile calls
+    HANDLE hFileMap = CreateFileMapping(handle, NULL, PAGE_READWRITE, (DWORD)(size >> 32), (DWORD)size, NULL);
+    if(hFileMap == NULL)
     {
-        rc = FAIL_SET_FILE_POINTER;
-        goto error_cleanup;
+        *detailed_error_code = GetLastError();
+        return FAIL_ALLOC_FILE;
     }
-
-    if (SetEndOfFile(handle) == FALSE)
-    {
-        rc = FAIL_SET_EOF;
-        goto error_cleanup;
-    }
-
+    CloseHandle(hFileMap);
     return SUCCESS;
-
-error_cleanup:
-    *detailed_error_code = GetLastError();
-    return rc;
 }
 
 PRIVATE int32_t

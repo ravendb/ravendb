@@ -31,7 +31,7 @@ rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int
     int32_t rc;
     HANDLE h_file = CreateFileW(
         (LPCWSTR)file_name,
-        GENERIC_WRITE,
+        GENERIC_WRITE | GENERIC_READ,
         share_flags,
         NULL,
         OPEN_ALWAYS,
