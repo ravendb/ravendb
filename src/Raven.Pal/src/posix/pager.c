@@ -50,7 +50,7 @@ int32_t rvn_lock_memory(struct handle * handle, int32_t open_flags, void *mem, i
         goto Exit;
     }
 
-    if (mlock(mem, size) ||
+    if (!mlock(mem, size) ||
         open_flags & OPEN_FILE_DO_NOT_CONSIDER_MEMORY_LOCK_FAILURE_AS_CATASTROPHIC_ERROR)
     {
         // note that we *explicitly* account for locked memory even if we failed to do so
