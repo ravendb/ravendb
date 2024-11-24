@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using FastTests.Voron;
 using Sparrow.Server.Platform;
 using Tests.Infrastructure;
@@ -15,7 +16,13 @@ public class RavenDB_23085(ITestOutputHelper output) : StorageTest(output)
     public void CanAccountForLockedMemory()
     {
         long locked = 0;
-        EventHandler<long> handler = (s, amount) => locked += amount;
+        int currentThreadManagedThreadId = Thread.CurrentThread.ManagedThreadId;
+        EventHandler<long> handler = (s, amount) =>
+        {
+            if (currentThreadManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                return; // we'll only update on changed in _this_ thread 
+            locked += amount;
+        };
         // problematic - since this is a global state
         RequireFileBasedPager();
         try
