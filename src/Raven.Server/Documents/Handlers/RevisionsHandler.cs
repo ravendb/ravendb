@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,6 +22,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -354,26 +356,28 @@ namespace Raven.Server.Documents.Handlers
 
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
             var before = GetDateTimeQueryString("before", required: false);
+            var withSize = GetBoolValueQueryString("withSize", required: false) ?? false;
             var start = GetStart();
             var pageSize = GetPageSize();
 
-            Document[] revisions = Array.Empty<Document>();
+            Dictionary<Document, (int ActualSize, int AllocatedSize, bool IsCompressed)?> revisionsToMetrics = null;
+
             long count = 0;
             if (before != null)
             {
-                var revision = Database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context, id, before.Value);
-                if (revision != null)
+                var result = Database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context, id, before.Value, withSize);
+                if (result.Revision != null)
                 {
                     count = 1;
-                    revisions = new[] { revision };
+                    revisionsToMetrics = new Dictionary<Document, (int ActualSize, int AllocatedSize, bool IsCompressed)?>() { { result.Revision, result.Metrics } };
                 }
             }
             else
             {
-                (revisions, count) = Database.DocumentsStorage.RevisionsStorage.GetRevisions(context, id, start, pageSize);
+                (revisionsToMetrics, count) = Database.DocumentsStorage.RevisionsStorage.GetRevisions(context, id, withSize, start, pageSize);
             }
 
-            var actualChangeVector = revisions.Length == 0 ? "" : revisions[0].ChangeVector;
+            var actualChangeVector = revisionsToMetrics.Count == 0 ? "" : revisionsToMetrics.Keys.First().ChangeVector + (withSize ? "_withSize" : string.Empty);
 
             if (GetStringFromHeaders(Constants.Headers.IfNoneMatch) == actualChangeVector)
             {
@@ -389,7 +393,18 @@ namespace Raven.Server.Documents.Handlers
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
-                (loadedRevisionsCount, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, revisions, metadataOnly, token);
+                
+
+                Action<JsonOperationContext, AbstractBlittableJsonTextWriter, Document> writeAdditionalInfoToDocument =
+                    withSize ? 
+                        (ctx, textWriter, revision) =>
+                        {
+                            textWriter.WriteComma();
+                            WriteRevisionMetrics(ctx, textWriter, revisionsToMetrics[revision]);
+                        }
+                        : null;
+
+                (loadedRevisionsCount, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, revisionsToMetrics.Keys, metadataOnly, writeAdditionalInfoToDocument, token);
 
                 writer.WriteComma();
 
@@ -399,6 +414,24 @@ namespace Raven.Server.Documents.Handlers
             }
 
             AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext.Request.QueryString.Value, loadedRevisionsCount, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
+        }
+
+        private static void WriteRevisionMetrics(JsonOperationContext context, AbstractBlittableJsonTextWriter writer, (int ActualSize, int AllocatedSize, bool IsCompressed)? metrics)
+        {
+            if (metrics.HasValue == false)
+                return;
+
+            var details = new SizeDetails
+            {
+                ActualSize = metrics.Value.ActualSize,
+                HumaneActualSize = Sizes.Humane(metrics.Value.ActualSize),
+                AllocatedSize = metrics.Value.AllocatedSize,
+                HumaneAllocatedSize = Sizes.Humane(metrics.Value.AllocatedSize),
+                IsCompressed = metrics.Value.IsCompressed
+            };
+
+            writer.WritePropertyName("Size");
+            context.Write(writer, details.ToJson());
         }
 
         [RavenAction("/databases/*/revisions/resolved", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]

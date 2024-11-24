@@ -72,8 +72,8 @@ namespace SlowTests.Issues
 
                         void VerifyRevisions()
                         {
-                            var revisions = documentsStorage.RevisionsStorage.GetRevisions(context, document.Id, 0, int.MaxValue);
-                            foreach (var revision in revisions.Revisions)
+                            var revisions = documentsStorage.RevisionsStorage.GetRevisions(context, document.Id, includeMetrics: false, 0, int.MaxValue);
+                            foreach (var (revision, _) in revisions.RevisionsToMetrics)
                             {
                                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(revision.ChangeVector, lastRevisionChangeVector);
                                 if (conflictStatus == ConflictStatus.Update)

@@ -1609,31 +1609,36 @@ namespace Raven.Server.Documents.Revisions
             return numbers.Read(prefix)?.Reader.ReadLittleEndianInt64() ?? 0;
         }
 
-        public Document
-            GetRevisionBefore(DocumentsOperationContext context, string id, DateTime max)
+        public (Document Revision, (int ActualSize, int AllocatedSize, bool IsCompressed)? Metrics)
+            GetRevisionBefore(DocumentsOperationContext context, string id, DateTime max, bool includeMetrics = false)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             using (GetLastKey(context, lowerId, out Slice lastKey))
             {
-                // Here we assume a reasonable number of revisions and scan the entire history
-                // This is because we want to handle out of order revisions from multiple nodes so the local etag
-                // order is different than the last modified order
-                Document result = null;
+                // Initialize variables
+                Document revision = null;
+                (int ActualSize, int AllocatedSize, bool IsCompressed)? metrics = null;
+
                 var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-                foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
+                foreach (var seekResult in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
                 {
-                    var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Result.Reader);
+                    ref var tvr = ref seekResult.Result.Reader;
+
+                    var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr);
                     if (lastModified > max)
                         continue;
 
-                    if (result == null ||
-                        result.LastModified < lastModified)
+                    if (revision == null || revision.LastModified < lastModified)
                     {
-                        result = TableValueToRevision(context, ref tvr.Result.Reader);
+                        revision = TableValueToRevision(context, ref tvr);
+
+                        if (includeMetrics)
+                            metrics = GetMetrics(table, tvr);
                     }
                 }
-                return result;
+
+                return (revision, metrics);
             }
         }
 
@@ -2400,29 +2405,43 @@ namespace Raven.Server.Documents.Revisions
             return count;
         }
 
-        public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string id, long start, long take)
+        public (Dictionary<Document, (int ActualSize, int AllocatedSize, bool IsCompressed)?> RevisionsToMetrics, long Count) GetRevisions(DocumentsOperationContext context, string id, bool includeMetrics, long start, long take)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             using (GetLastKey(context, lowerId, out Slice lastKey))
             {
-                var revisions = GetRevisions(context, prefixSlice, lastKey, start, take).ToArray();
+                var revisionsToMetrics = GetRevisions(context, prefixSlice, lastKey, includeMetrics, start, take);
                 var count = CountOfRevisions(context, prefixSlice);
-                return (revisions, count);
+                return (revisionsToMetrics, count);
             }
         }
 
-        private IEnumerable<Document> GetRevisions(DocumentsOperationContext context, Slice prefixSlice, Slice lastKey, long start, long take)
+        private Dictionary<Document, (int ActualSize, int AllocatedSize, bool IsCompressed)?> GetRevisions(DocumentsOperationContext context, Slice prefixSlice, Slice lastKey, bool includeMetrics, long start, long take)
         {
+            var revisionsToMetrics = new Dictionary<Document, (int ActualSize, int AllocatedSize, bool IsCompressed)?>();
+
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-            foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, start))
+            foreach (var seekResult in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, start))
             {
                 if (take-- <= 0)
-                    yield break;
+                    break;
 
-                var document = TableValueToRevision(context, ref tvr.Result.Reader);
-                yield return document;
+                ref var tvr = ref seekResult.Result.Reader;
+
+                var revision = TableValueToRevision(context, ref tvr);
+                var metrics = includeMetrics ? GetMetrics(table, tvr) : null;
+
+                revisionsToMetrics.Add(revision, metrics);
             }
+
+            return revisionsToMetrics;
+        }
+
+        public struct RevisionWithMetrics
+        {
+            public Document Revision;
+            public (int ActualSize, int AllocatedSize, bool IsCompressed)? Metrics;
         }
 
         public void GetLatestRevisionsBinEntry(DocumentsOperationContext context, out string latestChangeVector)

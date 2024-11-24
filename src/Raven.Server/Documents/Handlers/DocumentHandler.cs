@@ -773,9 +773,20 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class DocumentSizeDetails : IDynamicJson
+    public class DocumentSizeDetails : SizeDetails
     {
         public string DocId { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(DocId)] = DocId;
+            return json;
+        }
+    }
+
+    public class SizeDetails : IDynamicJson
+    {
         public int ActualSize { get; set; }
         public string HumaneActualSize { get; set; }
         public int AllocatedSize { get; set; }
@@ -786,7 +797,6 @@ namespace Raven.Server.Documents.Handlers
         {
             return new DynamicJsonValue
             {
-                [nameof(DocId)] = DocId,
                 [nameof(ActualSize)] = ActualSize,
                 [nameof(HumaneActualSize)] = HumaneActualSize,
                 [nameof(AllocatedSize)] = AllocatedSize,

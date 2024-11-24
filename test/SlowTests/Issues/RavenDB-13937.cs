@@ -57,9 +57,9 @@ namespace SlowTests.Issues
 
                     using (context.OpenReadTransaction())
                     {
-                        var (revisions, count) = database.DocumentsStorage.RevisionsStorage.GetRevisions(context, "Orders/825-A", 0, int.MaxValue);
+                        var (revisions, count) = database.DocumentsStorage.RevisionsStorage.GetRevisions(context, "Orders/825-A", includeMetrics: false, 0, int.MaxValue);
 
-                        Assert.Equal(count, revisions.Length);
+                        Assert.Equal(count, revisions.Count);
                     }
                 }
             }

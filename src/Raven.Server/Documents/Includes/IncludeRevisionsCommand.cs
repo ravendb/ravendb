@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Includes
             
             if (_revisionsBeforeDateTime != default(DateTime))
             {
-                var doc = _database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context: _context, id: document.Id, max: _revisionsBeforeDateTime.Value); 
+                var doc = _database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context: _context, id: document.Id, max: _revisionsBeforeDateTime.Value).Revision; 
                 if (doc is null) return; 
                 RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase); 
                 IdByRevisionsByDateTimeResults ??= new Dictionary<string, Dictionary<DateTime, Document>>(StringComparer.OrdinalIgnoreCase); 
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Includes
             if (dateTime.HasValue == false)
                 return;
 
-            var doc = _database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context: _context, id: documentId, max: dateTime.Value); 
+            var doc = _database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context: _context, id: documentId, max: dateTime.Value).Revision; 
             if (doc is null)
                 return;
             

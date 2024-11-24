@@ -1448,10 +1448,15 @@ namespace Raven.Server.Json
 
         public static Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, CancellationToken token)
         {
-            return WriteDocumentsAsync(writer, context, documents.GetEnumerator(), metadataOnly, token);
+            return WriteDocumentsAsync(writer, context, documents.GetEnumerator(), metadataOnly, writeAdditionalInfoToDocument: null, token);
         }
 
-        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerator<Document> documents, bool metadataOnly, CancellationToken token)
+        public static Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, Action<JsonOperationContext, AbstractBlittableJsonTextWriter, Document> writeAdditionalInfoToDocument, CancellationToken token)
+        {
+            return WriteDocumentsAsync(writer, context, documents.GetEnumerator(), metadataOnly, writeAdditionalInfoToDocument, token);
+        }
+
+        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerator<Document> documents, bool metadataOnly, Action<JsonOperationContext, AbstractBlittableJsonTextWriter, Document> writeAdditionalInfoToDocument, CancellationToken token)
         {
             long numberOfResults = 0;
             long totalDocumentsSizeInBytes = 0;
@@ -1470,7 +1475,7 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
-                WriteDocument(writer, context, documents.Current, metadataOnly);
+                WriteDocument(writer, context, documents.Current, metadataOnly, writeAdditionalInfo: writeAdditionalInfoToDocument);
                 await writer.MaybeFlushAsync(token);
             }
 
@@ -1478,7 +1483,7 @@ namespace Raven.Server.Json
             return (numberOfResults, totalDocumentsSizeInBytes);
         }
 
-        public static void WriteDocument(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly, Func<LazyStringValue, bool> filterMetadataProperty = null)
+        public static void WriteDocument(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly, Func<LazyStringValue, bool> filterMetadataProperty = null, Action<JsonOperationContext, AbstractBlittableJsonTextWriter, Document> writeAdditionalInfo = null)
         {
             if (document == null)
             {
@@ -1503,10 +1508,16 @@ namespace Raven.Server.Json
             // so we will let the context handle it, rather than handle it directly ourselves
             //using (document.Data)
             {
+                writer.WriteStartObject();
+
                 if (metadataOnly == false)
                     writer.WriteDocumentInternal(context, document, filterMetadataProperty);
                 else
                     writer.WriteDocumentMetadata(context, document, filterMetadataProperty);
+
+                writeAdditionalInfo?.Invoke(context, writer, document);
+
+                writer.WriteEndObject();
             }
         }
 
@@ -1877,11 +1888,11 @@ namespace Raven.Server.Json
         private static void WriteDocumentMetadata(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context,
             Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
-            writer.WriteStartObject();
+            // writer.WriteStartObject();
             document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
             WriteMetadata(writer, document, metadata, filterMetadataProperty);
 
-            writer.WriteEndObject();
+            // writer.WriteEndObject();
         }
 
         public static void WriteMetadata(this AbstractBlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata, Func<LazyStringValue, bool> filterMetadataProperty = null)
@@ -1965,9 +1976,9 @@ namespace Raven.Server.Json
 
         private static void WriteDocumentInternal(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
-            writer.WriteStartObject();
+            // writer.WriteStartObject();
             WriteDocumentProperties(writer, context, document, filterMetadataProperty);
-            writer.WriteEndObject();
+            // writer.WriteEndObject();
         }
 
         private static unsafe void WriteDocumentProperties(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
