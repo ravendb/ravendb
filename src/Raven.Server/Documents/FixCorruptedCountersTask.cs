@@ -15,40 +15,26 @@ public class FixCorruptedCountersTask
 {
     private readonly DocumentDatabase _database;
 
-    private string _lastProcessedKey;
     private readonly Logger _logger;
 
-    private readonly string _completed = string.Empty;
+    public static string Completed = string.Empty;
 
     public FixCorruptedCountersTask(DocumentDatabase database)
     {
         _database = database;
-        _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(_database.Name);
+        _logger = LoggingSource.Instance.GetLogger<FixCorruptedCountersTask>(_database.Name);
     }
 
-    public void Start()
-    {
-        using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
-        using (var tx = documentsContext.OpenReadTransaction())
-        {
-            _lastProcessedKey = DocumentsStorage.ReadFixCountersLastKey(tx.InnerTransaction);
-            if (_lastProcessedKey == _completed)
-                return; // completed
-        }
-
-        _ = Task.Run(ExecuteFixCountersTask);
-    }
-
-    private async Task ExecuteFixCountersTask()
+    public async Task Start(string lastProcessedKey)
     {
         const int maxNumberOfDocsToFixInSingleTx = 1024;
         List<string> docIdsToFix = [];
         StartAfterSliceHolder startAfterSliceHolder = null;
         string lastDocId = null;
 
-        if (_lastProcessedKey != null)
+        if (lastProcessedKey != null)
         {
-            startAfterSliceHolder = new StartAfterSliceHolder(_lastProcessedKey);
+            startAfterSliceHolder = new StartAfterSliceHolder(lastProcessedKey);
         }
 
         try
@@ -103,7 +89,7 @@ public class FixCorruptedCountersTask
 
                         if (docIdsToFix.Count == 0)
                         {
-                            SaveLastProcessedKey(_completed);
+                            SaveLastProcessedKey(Completed);
                             return;
                         }
 
@@ -119,7 +105,7 @@ public class FixCorruptedCountersTask
                             break; // break from inner while loop in order to open a new read tx
                         }
 
-                        SaveLastProcessedKey(_completed);
+                        SaveLastProcessedKey(Completed);
                         startAfterSliceHolder?.Dispose();
                         return;
                     }

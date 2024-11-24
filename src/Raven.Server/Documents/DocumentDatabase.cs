@@ -392,9 +392,11 @@ namespace Raven.Server.Documents
                 {
                     var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
                     ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(lastCompletedClusterTransactionIndex);
-                }
 
-                FixCorruptedCountersTask.Start();
+                    var fixCountersLastKey = DocumentsStorage.ReadFixCountersLastKey(ctx.Transaction.InnerTransaction);
+                    if (fixCountersLastKey != FixCorruptedCountersTask.Completed)
+                        _ = Task.Run(() => FixCorruptedCountersTask.Start(fixCountersLastKey), DatabaseShutdown);
+                }
 
                 _ = Task.Run(async () =>
                 {
@@ -412,8 +414,7 @@ namespace Raven.Server.Documents
                 var clusterTransactionThreadName = ThreadNames.GetNameToUse(ThreadNames.ForClusterTransactions($"Cluster Transaction Thread {Name}", Name));
                 _clusterTransactionsThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
                 {
-                    ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, clusterTransactionThreadName
-                        ,
+                    ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, clusterTransactionThreadName,
                         _logger);
                     try
                     {
@@ -434,9 +435,6 @@ namespace Raven.Server.Documents
                 }, null, ThreadNames.ForClusterTransactions(
                     clusterTransactionThreadName,
                     Name));
-
-
-
 
                 _serverStore.LicenseManager.LicenseChanged += LoadTimeSeriesPolicyRunnerConfigurations;
                 IoChanges.OnIoChange += CheckWriteRateAndNotifyIfNecessary;
