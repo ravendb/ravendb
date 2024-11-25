@@ -11,7 +11,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.Documents;
 
-public class FixCorruptedCountersTask
+public class CountersRepairTask
 {
     private readonly DocumentDatabase _database;
 
@@ -19,10 +19,10 @@ public class FixCorruptedCountersTask
 
     public static string Completed = string.Empty;
 
-    public FixCorruptedCountersTask(DocumentDatabase database)
+    public CountersRepairTask(DocumentDatabase database)
     {
         _database = database;
-        _logger = LoggingSource.Instance.GetLogger<FixCorruptedCountersTask>(_database.Name);
+        _logger = LoggingSource.Instance.GetLogger<CountersRepairTask>(_database.Name);
     }
 
     public async Task Start(string lastProcessedKey)
@@ -128,7 +128,7 @@ public class FixCorruptedCountersTask
         using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
         using (var tx = writeCtx.OpenWriteTransaction())
         {
-            _database.DocumentsStorage.SetFixCountersLastKey(writeCtx, Completed);
+            _database.DocumentsStorage.SetLastFixedCounterKey(writeCtx, Completed);
             tx.Commit();
         }
     }

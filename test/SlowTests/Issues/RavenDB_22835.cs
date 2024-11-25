@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Exceptions;
-using Raven.Client.Http;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
@@ -291,18 +292,22 @@ namespace SlowTests.Issues
                 }
             }
 
-            // call FixCounters endpoint
-            using var requestExecutor = leaderStore.GetRequestExecutor();
-
-            // use the single-doc endpoint 
-            var cmd = new FixCountersCommand(id);
-            using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                await requestExecutor.ExecuteAsync(cmd, ctx);
-
-            // assert that counters data is fixed on all nodes
             foreach (var node in cluster.Nodes)
-            {
+            {                
                 var db = await GetDatabase(node, dbName);
+
+                // call FixCounters tool
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var numOfFixes = db.DocumentsStorage.CountersStorage.FixCountersForDocument(context, id);
+                    Assert.Equal(1, numOfFixes);
+
+                    tx.Commit();
+                }
+
+                // assert that counters data is fixed
+
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -398,11 +403,15 @@ namespace SlowTests.Issues
                 }
             }
 
-            // call FixCounters endpoint
-            using var requestExecutor = store.GetRequestExecutor();
-            var cmd = new FixCountersCommand();
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                await requestExecutor.ExecuteAsync(cmd, ctx);
+            // call FixCounters tool
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var numOfFixes = db.DocumentsStorage.CountersStorage.FixCountersForDocuments(context, docIdsToCorrupt, hasMore: false);
+                Assert.Equal(4, numOfFixes);
+
+                tx.Commit();
+            }
 
             // assert that counters data was fixed in all corrupted documents
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -433,29 +442,36 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Counters)]
-        public async Task ShouldThrowOnAttemptToAddNewCounterIfCountersDataIsCorrupted()
+        public async Task ShouldFixCorruptedCountersDataOnImport()
         {
             var rand = new Random(12345);
-            const string id = "users/1";
+            List<string> docIdsToCorrupt = ["users/1", "users/10", "users/20", "users/100"];
 
             using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
             {
-                session.Store(new User(), id);
+                for (int i = 1; i <= 100; i++)
+                {
+                    session.Store(new User(), "users/" + i);
+                }
+
                 session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var countersFor = session.CountersFor(id);
-
-                for (int j = 0; j < 10; j++)
+                for (int i = 1; i <= 100; i++)
                 {
-                    var strSize = (int)rand.NextInt64(5, 15);
-                    var s = GenRandomString(rand, strSize);
+                    var countersFor = session.CountersFor("users/" + i);
 
-                    countersFor.Increment(s, j);
+                    for (int j = 0; j < 100; j++)
+                    {
+                        var strSize = (int)rand.NextInt64(5, 15);
+                        var s = GenRandomString(rand, strSize);
+
+                        countersFor.Increment(s, j);
+                    }
                 }
 
                 session.SaveChanges();
@@ -463,30 +479,399 @@ namespace SlowTests.Issues
 
             var db = await GetDatabase(store.Database);
 
-            // deliberately corrupt counters group data
-            CorruptCountersData(db);
+            foreach (var id in docIdsToCorrupt)
+            {
+                // deliberately corrupt counters group data
+                CorruptCountersData(db, id);
+
+                // verify that counters data is corrupted - we're missing a counter name
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var readTable = new Table(CountersSchema, context.Transaction.InnerTransaction);
+                    TableValueReader tvr;
+                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    {
+                        Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
+                    }
+
+                    var data = GetCounterValuesData(context, ref tvr);
+                    Assert.True(data.TryGet(Values, out BlittableJsonReaderObject counterValues));
+                    Assert.True(data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames));
+
+                    Assert.NotEqual(counterValues.Count, counterNames.Count);
+                    BlittableJsonReaderObject.PropertyDetails p = default;
+                    counterValues.GetPropertyByIndex(0, ref p);
+                    var firstCounter = p.Name;
+
+                    Assert.False(counterNames.TryGet(firstCounter, out string _));
+                }
+            }
+
+            // backup the database with bad counters
+
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            var config = Backup.CreateBackupConfiguration(backupPath);
+            var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+            var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+            var backupStatus = store.Maintenance.Send(operation);
+            var backupOperationId = backupStatus.Status.LastOperationId;
+
+            var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
+            Assert.Equal(OperationStatus.Completed, backupOperation.Status);
+
+            // restore the database with a different name
+            var restoredDatabaseName = $"restored_database-{Guid.NewGuid()}";
+            var backupLocation = Directory.GetDirectories(backupPath).First();
+
+            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+            {
+                BackupLocation = backupLocation,
+                DatabaseName = restoredDatabaseName
+            }))
+            {
+                var restoredDb = await GetDatabase(restoredDatabaseName);
+
+                // wait for FixCounters to complete
+                Assert.True(await WaitForValueAsync(() =>
+                {
+                    using (restoredDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        return DocumentsStorage.ReadLastFixedCounterKey(context.Transaction.InnerTransaction) == CountersRepairTask.Completed;
+                    }
+                }, expectedVal: true, timeout: 10_000));
+
+                // assert that counters data was fixed in all corrupted documents
+                using (restoredDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var counterGroups = restoredDb.DocumentsStorage.CountersStorage.GetCountersFrom(context, etag: 0);
+
+                    foreach (var item in counterGroups)
+                    {
+                        var counterGroup = item as CounterReplicationItem;
+                        Assert.NotNull(counterGroup);
+
+                        Assert.True(counterGroup.Values.TryGet(Values, out BlittableJsonReaderObject counterValues));
+                        Assert.True(counterGroup.Values.TryGet(CounterNames, out BlittableJsonReaderObject counterNames));
+
+                        Assert.Equal(counterValues.Count, counterNames.Count);
+
+                        BlittableJsonReaderObject.PropertyDetails p1 = default, p2 = default;
+                        for (int i = 0; i < counterValues.Count; i++)
+                        {
+                            counterValues.GetPropertyByIndex(i, ref p1);
+                            counterNames.GetPropertyByIndex(i, ref p2);
+
+                            Assert.Equal(p1.Name, p2.Name);
+                        }
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Counters)]
+        public async Task AfterDatabaseRestartFixCountersToolShouldBeLaunched()
+        {
+            var rand = new Random(12345);
+            List<string> docIdsToCorrupt = ["users/1", "users/10", "users/20", "users/100"];
+
+            using var store = GetDocumentStore(new Options
+            {
+                RunInMemory = false
+            });
 
             using (var session = store.OpenSession())
             {
-                session.CountersFor(id).Increment("new-counter", 123);
-                Assert.Throws<RavenException>(() => session.SaveChanges());
+                for (int i = 1; i <= 100; i++)
+                {
+                    session.Store(new User(), "users/" + i);
+                }
+
+                session.SaveChanges();
             }
 
-            // call FixCounters tool
+            using (var session = store.OpenSession())
+            {
+                for (int i = 1; i <= 100; i++)
+                {
+                    var countersFor = session.CountersFor("users/" + i);
+
+                    for (int j = 0; j < 100; j++)
+                    {
+                        var strSize = (int)rand.NextInt64(5, 15);
+                        var s = GenRandomString(rand, strSize);
+
+                        countersFor.Increment(s, j);
+                    }
+                }
+
+                session.SaveChanges();
+            }
+
+            var db = await GetDatabase(store.Database);
+
+            foreach (var id in docIdsToCorrupt)
+            {
+                // deliberately corrupt counters group data
+                CorruptCountersData(db, id);
+
+                // verify that counters data is corrupted - we're missing a counter name
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var readTable = new Table(CountersSchema, context.Transaction.InnerTransaction);
+                    TableValueReader tvr;
+                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    {
+                        Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
+                    }
+
+                    var data = GetCounterValuesData(context, ref tvr);
+                    Assert.True(data.TryGet(Values, out BlittableJsonReaderObject counterValues));
+                    Assert.True(data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames));
+
+                    Assert.NotEqual(counterValues.Count, counterNames.Count);
+                    BlittableJsonReaderObject.PropertyDetails p = default;
+                    counterValues.GetPropertyByIndex(0, ref p);
+                    var firstCounter = p.Name;
+
+                    Assert.False(counterNames.TryGet(firstCounter, out string _));
+                }
+            }
+
+            // override LastCounterFixed in order to launch the FixCounters tool upon restart
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
-                var numOfFixes = db.DocumentsStorage.CountersStorage.FixCountersForDocument(context, id);
-                Assert.Equal(1, numOfFixes);
-
+                db.DocumentsStorage.SetLastFixedCounterKey(context, lastKey: "users/0");
                 tx.Commit();
             }
 
-            // we should be able to add new counters now
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var lastCounterFixed = DocumentsStorage.ReadLastFixedCounterKey(context.Transaction.InnerTransaction);
+                Assert.Equal("users/0", lastCounterFixed);
+            }
+
+            // reload database 
+            await ReloadDatabase(store);
+            db = await GetDatabase(store.Database);
+
+            // wait for FixCounters to complete
+            Assert.True(await WaitForValueAsync(() =>
+            {
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    return DocumentsStorage.ReadLastFixedCounterKey(context.Transaction.InnerTransaction) == CountersRepairTask.Completed;
+                }
+            }, expectedVal: true, timeout: 10_000));
+
+            // assert that counters data was fixed in all corrupted documents
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var counterGroups = db.DocumentsStorage.CountersStorage.GetCountersFrom(context, etag: 0);
+
+                foreach (var item in counterGroups)
+                {
+                    var counterGroup = item as CounterReplicationItem;
+                    Assert.NotNull(counterGroup);
+
+                    Assert.True(counterGroup.Values.TryGet(Values, out BlittableJsonReaderObject counterValues));
+                    Assert.True(counterGroup.Values.TryGet(CounterNames, out BlittableJsonReaderObject counterNames));
+
+                    Assert.Equal(counterValues.Count, counterNames.Count);
+
+                    BlittableJsonReaderObject.PropertyDetails p1 = default, p2 = default;
+                    for (int i = 0; i < counterValues.Count; i++)
+                    {
+                        counterValues.GetPropertyByIndex(i, ref p1);
+                        counterNames.GetPropertyByIndex(i, ref p2);
+
+                        Assert.Equal(p1.Name, p2.Name);
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Counters)]
+        public async Task FixCountersShouldContinueFromWhereItStopped()
+        {
+            var rand = new Random(12345);
+            List<string> docIdsToCorrupt = ["users/10", "users/11", "users/12", "users/13", "users/14", "users/15"];
+
+            using var store = GetDocumentStore(new Options
+            {
+                RunInMemory = false
+            });
+
             using (var session = store.OpenSession())
             {
-                session.CountersFor(id).Increment("new-counter", 123);
+                for (int i = 1; i <= 100; i++)
+                {
+                    session.Store(new User(), "users/" + i);
+                }
+
                 session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                for (int i = 1; i <= 100; i++)
+                {
+                    var countersFor = session.CountersFor("users/" + i);
+
+                    for (int j = 0; j < 100; j++)
+                    {
+                        var strSize = (int)rand.NextInt64(5, 15);
+                        var s = GenRandomString(rand, strSize);
+
+                        countersFor.Increment(s, j);
+                    }
+                }
+
+                session.SaveChanges();
+            }
+
+            var db = await GetDatabase(store.Database);
+
+            foreach (var id in docIdsToCorrupt)
+            {
+                // deliberately corrupt counters group data
+                CorruptCountersData(db, id);
+
+                // verify that counters data is corrupted - we're missing a counter name
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var readTable = new Table(CountersSchema, context.Transaction.InnerTransaction);
+                    TableValueReader tvr;
+                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    {
+                        Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
+                    }
+
+                    var data = GetCounterValuesData(context, ref tvr);
+                    Assert.True(data.TryGet(Values, out BlittableJsonReaderObject counterValues));
+                    Assert.True(data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames));
+
+                    Assert.NotEqual(counterValues.Count, counterNames.Count);
+                    BlittableJsonReaderObject.PropertyDetails p = default;
+                    counterValues.GetPropertyByIndex(0, ref p);
+                    var firstCounter = p.Name;
+
+                    Assert.False(counterNames.TryGet(firstCounter, out string _));
+                }
+            }
+
+            // override LastCounterFixed in order to launch the FixCounters tool upon restart, 
+            // and set the LastCounterFixed to "users/12" (docs that come before "users/12" should Not be fixed)
+
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                db.DocumentsStorage.SetLastFixedCounterKey(context, "users/12");
+                tx.Commit();
+            }
+
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var lastCounterFixed = DocumentsStorage.ReadLastFixedCounterKey(context.Transaction.InnerTransaction);
+                Assert.Equal("users/12", lastCounterFixed);
+            }
+
+            // reload the database to launch FixCounters tool
+            await ReloadDatabase(store);
+            db = await GetDatabase(store.Database);
+
+            // wait for FixCounters to complete
+            Assert.True(await WaitForValueAsync(() =>
+            {
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    return DocumentsStorage.ReadLastFixedCounterKey(context.Transaction.InnerTransaction) == CountersRepairTask.Completed;
+                }
+            }, expectedVal: true, timeout: 10_000));
+
+            // assert that docs Before "users/12" still have corrupted counters, and that docs After "users/12" were fixed
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var readTable = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
+                foreach (var id in docIdsToCorrupt)
+                {
+                    TableValueReader tvr;
+                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    {
+                        Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
+                    }
+
+                    var data = GetCounterValuesData(context, ref tvr);
+                    Assert.True(data.TryGet(Values, out BlittableJsonReaderObject counterValues));
+                    Assert.True(data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames));
+
+                    if (string.Compare(id, "users/12", StringComparison.OrdinalIgnoreCase) <= 0)
+                    {
+                        // ids before "users/12" should still be corrupted
+
+                        Assert.NotEqual(counterValues.Count, counterNames.Count);
+                        BlittableJsonReaderObject.PropertyDetails p = default;
+                        counterValues.GetPropertyByIndex(0, ref p);
+                        var firstCounter = p.Name;
+
+                        Assert.False(counterNames.TryGet(firstCounter, out string _));
+                        continue;
+                    }
+
+                    // ids after "users/12" should be fixed
+
+                    Assert.Equal(counterValues.Count, counterNames.Count);
+
+                    BlittableJsonReaderObject.PropertyDetails p1 = default, p2 = default;
+                    for (int i = 0; i < counterValues.Count; i++)
+                    {
+                        counterValues.GetPropertyByIndex(i, ref p1);
+                        counterNames.GetPropertyByIndex(i, ref p2);
+
+                        Assert.Equal(p1.Name, p2.Name);
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Counters)]
+        public async Task LastCounterFixedShouldBePersisted()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                RunInMemory = false
+            });
+
+            var db = await GetDatabase(store.Database);
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var lastCounterFixed = DocumentsStorage.ReadLastFixedCounterKey(context.Transaction.InnerTransaction);
+                Assert.Equal(CountersRepairTask.Completed, lastCounterFixed);
+            }
+
+            await ReloadDatabase(store);
+            db = await GetDatabase(store.Database);
+
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var lastCounterFixed = DocumentsStorage.ReadLastFixedCounterKey(context.Transaction.InnerTransaction);
+                Assert.Equal(CountersRepairTask.Completed, lastCounterFixed);
             }
         }
 
@@ -587,29 +972,25 @@ namespace SlowTests.Issues
             }
         }
 
-        private class FixCountersCommand : RavenCommand
+        private async Task ReloadDatabase(DocumentStore store)
         {
-            private readonly string _docId;
+            var result = store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
 
-            public FixCountersCommand(string docId = null)
-            {
-                _docId = docId;
-            }
+            Assert.True(result.Success);
+            Assert.True(result.Disabled);
+            Assert.Equal(store.Database, result.Name);
 
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-            {
-                url = _docId != null 
-                    ? $"{node.Url}/databases/{node.Database}/counters/fix-document?id={_docId}" 
-                    : $"{node.Url}/databases/{node.Database}/counters/fix";
+            //wait until disabled databases unload, this is an immediate operation
+            Assert.True(await WaitUntilDatabaseHasState(store, TimeSpan.FromSeconds(30), isLoaded: false));
 
-                return new HttpRequestMessage
-                {
-                    Method = HttpMethod.Patch
-                };
-            }
+            //now we enable all databases, so FixCounters tool should be launched
+            result = store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
 
-            public override bool IsReadRequest => false;
+            Assert.True(result.Success);
+            Assert.False(result.Disabled);
+            Assert.Equal(store.Database, result.Name);
 
+            Assert.True(await WaitUntilDatabaseHasState(store, TimeSpan.FromSeconds(10), db => db.Disabled == false));
         }
     }
 }

@@ -757,7 +757,7 @@ namespace Raven.Server.Documents
                 tree.Add(LastCompletedClusterTransactionIndexSlice, indexSlice);
         }
 
-        public static string ReadFixCountersLastKey(Transaction tx)
+        public static string ReadLastFixedCounterKey(Transaction tx)
         {
             if (tx == null)
                 throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
@@ -768,7 +768,7 @@ namespace Raven.Server.Documents
             return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
 
-        public void SetFixCountersLastKey(DocumentsOperationContext context, string lastKey)
+        public void SetLastFixedCounterKey(DocumentsOperationContext context, string lastKey)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
             using (Slice.From(context.Allocator, lastKey, out var slice))

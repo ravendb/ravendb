@@ -201,7 +201,7 @@ namespace Raven.Server.Documents
                 });
                 _hasClusterTransaction = new ManualResetEventSlim(false);
                 IdentityPartsSeparator = '/';
-                FixCorruptedCountersTask = new FixCorruptedCountersTask(this);
+                CountersRepairTask = new CountersRepairTask(this);
             }
             catch (Exception)
             {
@@ -287,7 +287,7 @@ namespace Raven.Server.Documents
 
         public StudioConfiguration StudioConfiguration { get; private set; }
 
-        public FixCorruptedCountersTask FixCorruptedCountersTask { get; private set; }
+        public CountersRepairTask CountersRepairTask { get; private set; }
 
         public bool Is32Bits { get; }
 
@@ -393,9 +393,9 @@ namespace Raven.Server.Documents
                     var lastCompletedClusterTransactionIndex = DocumentsStorage.ReadLastCompletedClusterTransactionIndex(ctx.Transaction.InnerTransaction);
                     ClusterWideTransactionIndexWaiter.SetAndNotifyListenersIfHigher(lastCompletedClusterTransactionIndex);
 
-                    var fixCountersLastKey = DocumentsStorage.ReadFixCountersLastKey(ctx.Transaction.InnerTransaction);
-                    if (fixCountersLastKey != FixCorruptedCountersTask.Completed)
-                        _ = Task.Run(() => FixCorruptedCountersTask.Start(fixCountersLastKey), DatabaseShutdown);
+                    var lastCounterFixed = DocumentsStorage.ReadLastFixedCounterKey(ctx.Transaction.InnerTransaction);
+                    if (lastCounterFixed != CountersRepairTask.Completed)
+                        _ = Task.Run(() => CountersRepairTask.Start(lastCounterFixed), DatabaseShutdown);
                 }
 
                 _ = Task.Run(async () =>

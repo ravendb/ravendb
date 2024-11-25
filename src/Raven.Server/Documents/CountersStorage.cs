@@ -1169,8 +1169,8 @@ namespace Raven.Server.Documents
                 numOfCounterGroupsFixed += FixCountersForDocument(context, docId);
             }
 
-            var lastProcessedKey = hasMore ? docIds[^1] : FixCorruptedCountersTask.Completed;
-            _documentsStorage.SetFixCountersLastKey(context, lastProcessedKey);
+            var lastProcessedKey = hasMore ? docIds[^1] : CountersRepairTask.Completed;
+            _documentsStorage.SetLastFixedCounterKey(context, lastProcessedKey);
 
             return numOfCounterGroupsFixed;
         }

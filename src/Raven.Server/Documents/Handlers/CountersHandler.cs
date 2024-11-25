@@ -400,20 +400,10 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var cgd in _counterGroups)
                 {
-                    try
+                    using (cgd.Values)
                     {
-
-                        using (cgd.Values)
-                        {
-                            PutCounters(context, cgd);
-                        }
+                        PutCounters(context, cgd);
                     }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        throw;
-                    }
-
                 }
 
                 UpdateDocumentsMetadata(context);
