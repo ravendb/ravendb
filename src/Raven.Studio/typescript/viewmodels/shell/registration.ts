@@ -111,7 +111,7 @@ class registration extends dialogViewModelBase {
                 error += `: ${licenseStatus.ErrorMessage}`;
             }
         } else if (licenseStatus.Expired) {
-            const expiration = moment(licenseStatus.Expiration);
+            const expiration = moment(licenseStatus.SubscriptionExpiration);
             error = "License has expired";
             if (expiration.isValid()) {
                 error += ` on ${expiration.format("YYYY MMMM Do")}`;
