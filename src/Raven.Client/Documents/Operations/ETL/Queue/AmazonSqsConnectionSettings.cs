@@ -1,4 +1,5 @@
 using System;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.Queue;
@@ -9,7 +10,8 @@ public sealed class AmazonSqsConnectionSettings
 
     public bool Passwordless { get; set; }
 
-    public bool UseEmulator { get; set; }
+    [ForceJsonSerialization]
+    internal bool UseEmulator { get; set; }
 
     public bool IsValidConnection()
     {

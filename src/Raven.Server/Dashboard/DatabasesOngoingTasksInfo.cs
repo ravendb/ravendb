@@ -66,7 +66,7 @@ namespace Raven.Server.Dashboard
                 [nameof(PeriodicBackupCount)] = PeriodicBackupCount,
                 [nameof(SubscriptionCount)] = SubscriptionCount,
                 [nameof(KafkaSinkCount)] = KafkaSinkCount,
-                [nameof(RabbitMqSinkCount)] = RabbitMqSinkCount
+                [nameof(RabbitMqSinkCount)] = RabbitMqSinkCount,
             };
         }
     }

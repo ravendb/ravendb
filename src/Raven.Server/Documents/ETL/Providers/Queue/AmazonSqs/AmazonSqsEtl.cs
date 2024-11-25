@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.AmazonSqs;
 
 public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
 {
+    private const string FifoQueueIdentifier = ".fifo";
     private readonly Dictionary<string, string> _alreadyCreatedQueues = new();
     private IAmazonSQS _queueClient;
 
@@ -55,6 +56,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
         foreach (QueueWithItems<AmazonSqsItem> queue in itemsPerQueue)
         {
             string queueName = queue.Name.ToLower();
+            bool isFifoQueue = queueName.EndsWith(FifoQueueIdentifier);
 
             if (_queueClient == null)
             {
@@ -65,7 +67,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
             if (Configuration.SkipAutomaticQueueDeclaration == false &&
                 _alreadyCreatedQueues.ContainsKey(queueName) == false)
             {
-                AsyncHelpers.RunSync(() => CreateQueue(_queueClient, queueName));
+                AsyncHelpers.RunSync(() => CreateQueue(_queueClient, queueName, isFifoQueue));
             }
 
             var batchMessages = new List<SendMessageBatchRequestEntry>();
@@ -76,57 +78,39 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
 
                 try
                 {
+                    string message = SerializeCloudEvent(queueItem, out string messageId, out string messageGroupId);
+                    
                     var sendMessageEntry = new SendMessageBatchRequestEntry
                     {
-                        Id = queueItem.DocumentId,
-                        MessageBody = SerializeCloudEvent(queueItem)
+                        Id = messageId,
+                        MessageBody = message
                     };
+
+                    if (isFifoQueue)
+                    {
+                        sendMessageEntry.MessageDeduplicationId = messageId;
+                        sendMessageEntry.MessageGroupId = messageGroupId;
+                    }
 
                     batchMessages.Add(sendMessageEntry);
 
                     if (batchMessages.Count == 10)
                     {
-                        if (TrySendBatchMessages(queueName, batchMessages) == false)
-                        {
-                            // if batch sending failed, send each message individually
-                            SendMessagesOneByOne(queueName, batchMessages, queue, ref idsToDelete, ref tooLargeDocsErrors);
-                        }
-                        else
-                        {
-                            count += batchMessages.Count;
-                            if (queue.DeleteProcessedDocuments)
-                            {
-                                idsToDelete.AddRange(batchMessages.Select(entry => entry.Id));
-                            }
-                        }
-
-                        batchMessages.Clear();
+                        ProcessBatchMessages(queueName, batchMessages, queue, ref count, ref idsToDelete,
+                            ref tooLargeDocsErrors);
                     }
                 }
                 catch (Exception ex)
                 {
-                    throw new QueueLoadException($"Failed to prepare message, error reason: '{ex.Message}'", ex);
+                    throw new QueueLoadException($"Failed to deliver message, error reason: '{ex.Message}'", ex);
                 }
             }
 
             // handle remaining messages in batch
             if (batchMessages.Count > 0)
             {
-                if (TrySendBatchMessages(queueName, batchMessages) == false)
-                {
-                    // if batch sending failed, send each message individually
-                    SendMessagesOneByOne(queueName, batchMessages, queue, ref idsToDelete, ref tooLargeDocsErrors);
-                }
-                else
-                {
-                    count += batchMessages.Count;
-                    if (queue.DeleteProcessedDocuments)
-                    {
-                        idsToDelete.AddRange(batchMessages.Select(entry => entry.Id));
-                    }
-                }
-
-                batchMessages.Clear();
+                ProcessBatchMessages(queueName, batchMessages, queue, ref count, ref idsToDelete,
+                    ref tooLargeDocsErrors);
             }
 
             if (tooLargeDocsErrors.Count > 0)
@@ -140,6 +124,28 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
 
         return count;
     }
+    
+    private void ProcessBatchMessages(string queueName,
+        List<SendMessageBatchRequestEntry> batchMessages,
+        QueueWithItems<AmazonSqsItem> queue, ref int count, ref List<string> idsToDelete,
+        ref Queue<EtlErrorInfo> tooLargeDocsErrors)
+    {
+        if (TrySendBatchMessages(queueName, batchMessages) == false)
+        {
+            // If batch sending failed, send each message individually
+            SendMessagesOneByOne(queueName, batchMessages, queue, ref idsToDelete, ref tooLargeDocsErrors);
+        }
+        else
+        {
+            count += batchMessages.Count;
+            if (queue.DeleteProcessedDocuments)
+            {
+                idsToDelete.AddRange(batchMessages.Select(entry => entry.Id));
+            }
+        }
+
+        batchMessages.Clear();
+    }
 
 
     private bool TrySendBatchMessages(string queueName, List<SendMessageBatchRequestEntry> batchMessages)
@@ -152,7 +158,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
                 Entries = batchMessages
             };
 
-            AsyncHelpers.RunSync(() => _queueClient.SendMessageBatchAsync(sendMessageBatchRequest));
+            var a = AsyncHelpers.RunSync(() => _queueClient.SendMessageBatchAsync(sendMessageBatchRequest));
             return true;
         }
         catch (Exception ex)
@@ -172,6 +178,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
             {
                 var sendMessageRequest = new SendMessageRequest
                 {
+                    MessageGroupId = message.MessageGroupId,
                     QueueUrl = AsyncHelpers.RunSync(() => GetQueueUrl(_queueClient, queueName)),
                     MessageBody = message.MessageBody
                 };
@@ -209,9 +216,11 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
     }
 
 
-    private string SerializeCloudEvent(AmazonSqsItem queueItem)
+    private string SerializeCloudEvent(AmazonSqsItem queueItem, out string messageId, out string messageGroupId)
     {
         var cloudEvent = CreateCloudEvent(queueItem);
+        messageId = cloudEvent.Id;
+        messageGroupId = cloudEvent.Type;
         return JsonSerializer.Serialize(cloudEvent, JsonSerializerOptions);
     }
 
@@ -222,11 +231,28 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
         _alreadyCreatedQueues.Clear();
     }
 
-    private async Task CreateQueue(IAmazonSQS queueClient, string queueName)
+    private async Task CreateQueue(IAmazonSQS queueClient, string queueName, bool isFifoQueue)
     {
         try
         {
-            CreateQueueResponse createQueueResponse = await queueClient.CreateQueueAsync(queueName);
+            CreateQueueResponse createQueueResponse;
+            
+            if (isFifoQueue)
+            {
+                createQueueResponse = await queueClient.CreateQueueAsync(new CreateQueueRequest()
+                {
+                    Attributes = new Dictionary<string, string>()
+                    {
+                        { "FifoQueue", "true" }
+                    },
+                    QueueName = queueName,
+                });
+            }
+            else
+            {
+                createQueueResponse = await queueClient.CreateQueueAsync(queueName);    
+            }
+            
             _alreadyCreatedQueues.Add(queueName, createQueueResponse.QueueUrl);
 
             // we must wait at least one second after the queue is created to be able to use the queue

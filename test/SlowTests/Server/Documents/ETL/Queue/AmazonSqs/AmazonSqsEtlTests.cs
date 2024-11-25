@@ -65,6 +65,66 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
     }
     
     [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
+    public void SimpleScriptToFifoQueue()
+    {
+        using (var store = GetDocumentStore())
+        {
+            IAmazonSQS queueClient = CreateQueueClient();
+            queueClient.CreateQueueAsync(new CreateQueueRequest
+            {
+                QueueName = "users.fifo",
+                Attributes = new Dictionary<string, string>
+                {
+                    // required attribute for FIFO queue
+                    { "FifoQueue", "true" },
+                }
+            });
+
+
+            var config = SetupQueueEtlToAmazonSqsOnline(store,
+                @$"loadTo('users.fifo', this)", new[] { "users" },
+                new[] { new EtlQueue { Name = "users.fifo" } }, skipAutomaticQueueDeclaration: true);
+            
+            var etlDone = Etl.WaitForEtlToComplete(store);
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User()
+                {
+                    Id = "users/1-A",
+                    Name = "John Doe"
+                });
+                session.Store(new User()
+                {
+                    Id = "users/2-A",
+                    Name = "Test"
+                });
+                session.SaveChanges();
+            }
+            
+            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+
+            
+            var queueUrl = AsyncHelpers.RunSync(() => queueClient.GetQueueUrlAsync("users.fifo")).QueueUrl;
+            var messagesReadResult = AsyncHelpers.RunSync(() => queueClient.ReceiveMessageAsync(new ReceiveMessageRequest
+            {
+                QueueUrl = queueUrl,
+                MaxNumberOfMessages = 2
+            }));
+            var userData1 = JsonConvert.DeserializeObject<CloudEventUserData>(messagesReadResult.Messages[0].Body).Data;
+            var userData2 = JsonConvert.DeserializeObject<CloudEventUserData>(messagesReadResult.Messages[1].Body).Data;
+
+            Assert.NotNull(userData1);
+            Assert.Equal("users/1-A", userData1.Id);
+            Assert.Equal("John Doe", userData1.Name);
+            
+            Assert.NotNull(userData2);
+            Assert.Equal("users/2-A", userData2.Id);
+            Assert.Equal("Test", userData2.Name);
+        }
+    }
+    
+    [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
     public async Task Simple_script_large_message_error_expected()
     {
         using (var store = GetDocumentStore())
@@ -571,7 +631,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
 
     private class UserData
     {
-        public string UserId { get; set; }
+        public string Id { get; set; }
         public string Name { get; set; }
     }
 

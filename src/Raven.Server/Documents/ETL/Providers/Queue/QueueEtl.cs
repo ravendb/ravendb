@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using CloudNative.CloudEvents;
 using CloudNative.CloudEvents.Extensions;
 using Raven.Client.Documents.Operations.Counters;
@@ -22,7 +20,6 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Exceptions.ETL.QueueEtl;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
@@ -181,50 +178,6 @@ public abstract class QueueEtl<T> : EtlProcess<QueueItem, QueueWithItems<T>, Que
             TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
             Summary = summaries
         };
-    }
-    
-    protected sealed class CloudEventConverter : JsonConverter<CloudEvent>
-    {
-        public static readonly CloudEventConverter Instance = new();
-
-        const string SpecVersionAttributeName = "specversion";
-
-        private CloudEventConverter()
-        {
-        }
-
-        public override void Write(Utf8JsonWriter writer, CloudEvent cloudEvent, JsonSerializerOptions options)
-        {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(SpecVersionAttributeName);
-            writer.WriteStringValue(cloudEvent.SpecVersion.VersionId);
-
-            foreach (var pair in cloudEvent.GetPopulatedAttributes())
-            {
-                var attribute = pair.Key;
-                if (attribute == cloudEvent.SpecVersion.DataContentTypeAttribute ||
-                    attribute.Name == Partitioning.PartitionKeyAttribute.Name)
-                {
-                    continue;
-                }
-
-                var value = attribute.Format(pair.Value);
-
-                writer.WritePropertyName(attribute.Name);
-                writer.WriteStringValue(value);
-            }
-
-            writer.WritePropertyName("data");
-            writer.WriteRawValue(((BlittableJsonReaderObject)cloudEvent.Data).ToString());
-
-            writer.WriteEndObject();
-        }
-
-        public override CloudEvent Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            throw new NotImplementedException();
-        }
     }
 
     public override void Dispose()
