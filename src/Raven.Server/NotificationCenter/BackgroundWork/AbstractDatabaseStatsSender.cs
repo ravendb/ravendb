@@ -46,7 +46,8 @@ public abstract class AbstractDatabaseStatsSender : BackgroundWorkBase
             current.LastEtag,
             current.CountOfIndexingErrors,
             current.LastIndexingErrorTime,
-            modifiedCollections));
+            modifiedCollections,
+            current.CountOfRevisions));
 
         _latest = current;
     }
