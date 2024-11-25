@@ -699,8 +699,10 @@ namespace Raven.Server.Documents
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Failed to execute cluster transaction batch (count: {batchCollector.Count}), will retry them one-by-one.", e);
 
-                        if (ExecuteClusterTransactionOneByOne(batch))
+                        if (ExecuteClusterTransactionOneByOne(batch, out var actualBatchSize, out var actualCommandsCount))
                             batchCollector.AllCommandsBeenProcessed = true;
+                        
+                        return (actualBatchSize, actualCommandsCount);
                     }
                 }
                 catch
@@ -743,8 +745,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool ExecuteClusterTransactionOneByOne(ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
+        private bool ExecuteClusterTransactionOneByOne(ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch, out long batchSize, out long commandsCount)
         {
+            commandsCount = 0;
+            batchSize = 0;
+            
             for (int i = 0; i < batch.Count; i++)
             {
                 var command = batch[i];
@@ -758,6 +763,8 @@ namespace Raven.Server.Documents
 
                     _clusterTransactionDelayOnFailure = 1000;
                     command.Processed = true;
+                    commandsCount += command.Commands.Count;
+                    batchSize++;
                 }
                 catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
                 {
@@ -770,6 +777,8 @@ namespace Raven.Server.Documents
 
                     DatabaseShutdown.WaitHandle.WaitOne(_clusterTransactionDelayOnFailure);
                     _clusterTransactionDelayOnFailure = Math.Min(_clusterTransactionDelayOnFailure * 2, 15000);
+                    _hasClusterTransaction.Set();
+                    
                     return false;
                 }
 
