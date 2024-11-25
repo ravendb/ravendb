@@ -79,14 +79,14 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         internal List<DeleteOperation> Deletes;
 
         /// <summary>
-        /// Gets or sets the name of the time series on which the operations are performed.
-        /// This property is mandatory and must be set before executing the <see cref="TimeSeriesBatchOperation"/> that contains this <see cref="TimeSeriesOperation"/>.
+        /// The name of the time series on which the operations are performed.
+        /// This field is mandatory and must be set before executing the <see cref="TimeSeriesBatchOperation"/> that contains this <see cref="TimeSeriesOperation"/>.
         /// </summary>
         /// <remarks>
-        /// The <see cref="Name"/> property identifies the time series within the document to which the batch operations apply.
-        /// If this property is not set, an exception will be thrown when attempting to execute the batch operation.
+        /// The <see cref="Name"/> field identifies the time series within the document to which the batch operations apply.
+        /// If this field is not set, an exception will be thrown when attempting to execute the batch operation.
         /// </remarks>
-        public string Name { get; set; }
+        public string Name;
 
         /// <summary>
         /// Adds an append operation to the batch.
@@ -334,22 +334,23 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public sealed class AppendOperation
         {
             /// <summary>
-            /// Gets or sets the timestamp of the data point to be appended.
+            /// The timestamp of the data point to be appended.
             /// This specifies when the data point occurred.
             /// </summary>
-            public DateTime Timestamp { get; set; }
+            public DateTime Timestamp;
 
             /// <summary>
-            /// Gets or sets the values associated with the data point.
+            /// The values associated with the data point.
             /// These are the numeric measurements recorded at the specified <see cref="Timestamp"/>.
             /// </summary>
-            public double[] Values { get; set; }
+            public double[] Values;
 
             /// <summary>
-            /// Gets or sets an optional tag for the data point.
+            /// An optional tag for the data point.
             /// The tag can provide additional context or metadata for the appended data, such as the source or a descriptive label.
             /// </summary>
-            public string Tag { get; set; }
+            public string Tag;
+
             internal static AppendOperation Parse(BlittableJsonReaderObject input)
             {
                 if (input.TryGet(nameof(Timestamp), out DateTime ts) == false)
@@ -397,18 +398,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public sealed class DeleteOperation
         {
             /// <summary>
-            /// Gets or sets the start of the range for the delete operation.
+            /// The start of the range for the delete operation.
             /// Data points from this timestamp (inclusive) will be considered for deletion.
             /// If <c>null</c>, the range starts from the beginning of the time series.
             /// </summary>
-            public DateTime? From { get; set; }
+            public DateTime? From;
 
             /// <summary>
-            /// Gets or sets the end of the range for the delete operation.
+            /// The end of the range for the delete operation.
             /// Data points up to this timestamp (inclusive) will be considered for deletion.
             /// If <c>null</c>, the range extends to the end of the time series.
             /// </summary>
-            public DateTime? To { get; set; }
+            public DateTime? To;
 
             internal static DeleteOperation Parse(BlittableJsonReaderObject input)
             {
@@ -438,16 +439,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public sealed class IncrementOperation
         {
             /// <summary>
-            /// Gets or sets the timestamp of the data point to be incremented.
+            /// The timestamp of the data point to be incremented.
             /// This specifies the exact point in time where the values should be adjusted.
             /// </summary>
-            public DateTime Timestamp { get; set; }
+            public DateTime Timestamp;
 
             /// <summary>
-            /// Gets or sets the values to increment at the specified <see cref="Timestamp"/>.
+            /// The values to increment at the specified <see cref="Timestamp"/>.
             /// Each value corresponds to a numeric field in the time series, and the increment operation adds the specified amount to the current values.
             /// </summary>
-            public double[] Values { get; set; }
+            public double[] Values;
 
             internal int? ValuesLength;
 
