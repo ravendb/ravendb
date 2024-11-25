@@ -764,30 +764,18 @@ namespace Raven.Server.Documents
             var tree = tx.ReadTree(GlobalTreeSlice);
             var val = tree.Read(FixCountersLastKeySlice);
             if (val == null)
-            {
-                return string.Empty;
-            }
+                return null;
             return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
 
         public void SetFixCountersLastKey(DocumentsOperationContext context, string lastKey)
         {
-            try
+            var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
+            using (Slice.From(context.Allocator, lastKey, out var slice))
             {
-                var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
-                using (Slice.From(context.Allocator, lastKey, out var slice))
-                {
-                    tree.Add(FixCountersLastKeySlice, slice);
-                }
+                tree.Add(FixCountersLastKeySlice, slice);
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-
         }
-
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string startAfterId,
             long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All, CancellationToken token = default)

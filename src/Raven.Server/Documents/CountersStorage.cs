@@ -1161,15 +1161,16 @@ namespace Raven.Server.Documents
             }
         }
 
-
-
-        public int FixCountersForDocuments(DocumentsOperationContext context, List<string> docIds)
+        public int FixCountersForDocuments(DocumentsOperationContext context, List<string> docIds, bool hasMore)
         {
             var numOfCounterGroupsFixed = 0;
             foreach (var docId in docIds)
             {
                 numOfCounterGroupsFixed += FixCountersForDocument(context, docId);
             }
+
+            var lastProcessedKey = hasMore ? docIds[^1] : FixCorruptedCountersTask.Completed;
+            _documentsStorage.SetFixCountersLastKey(context, lastProcessedKey);
 
             return numOfCounterGroupsFixed;
         }

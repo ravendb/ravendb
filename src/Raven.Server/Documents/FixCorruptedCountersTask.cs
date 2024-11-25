@@ -89,23 +89,19 @@ public class FixCorruptedCountersTask
 
                         if (docIdsToFix.Count == 0)
                         {
-                            SaveLastProcessedKey(Completed);
+                            MarkAsCompleted();
                             return;
                         }
 
                         if (docIdsToFix.Count < maxNumberOfDocsToFixInSingleTx && hasMore)
                             continue;
 
-                        await _database.TxMerger.Enqueue(new ExecuteFixCounterGroupsCommand(_database, docIdsToFix));
+                        await _database.TxMerger.Enqueue(new ExecuteFixCounterGroupsCommand(_database, docIdsToFix, hasMore));
                         docIdsToFix.Clear();
 
                         if (hasMore)
-                        {
-                            SaveLastProcessedKey(lastDocId);
                             break; // break from inner while loop in order to open a new read tx
-                        }
 
-                        SaveLastProcessedKey(Completed);
                         startAfterSliceHolder?.Dispose();
                         return;
                     }
@@ -127,12 +123,12 @@ public class FixCorruptedCountersTask
         }
     }
 
-    private void SaveLastProcessedKey(string lastDocId)
+    private void MarkAsCompleted()
     {
         using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
         using (var tx = writeCtx.OpenWriteTransaction())
         {
-            _database.DocumentsStorage.SetFixCountersLastKey(writeCtx, lastDocId);
+            _database.DocumentsStorage.SetFixCountersLastKey(writeCtx, Completed);
             tx.Commit();
         }
     }
@@ -174,22 +170,19 @@ public class FixCorruptedCountersTask
     public class ExecuteFixCounterGroupsCommand : TransactionOperationsMerger.MergedTransactionCommand
     {
         private readonly List<string> _docIds;
+        private readonly bool _hasMore;
         private readonly DocumentDatabase _database;
 
-
-        public ExecuteFixCounterGroupsCommand(DocumentDatabase database, string docId) : this(database, [docId])
-        {
-        }
-
-        public ExecuteFixCounterGroupsCommand(DocumentDatabase database, List<string> docIdsToFix)
+        public ExecuteFixCounterGroupsCommand(DocumentDatabase database, List<string> docIdsToFix, bool hasMore)
         {
             _docIds = docIdsToFix;
+            _hasMore = hasMore;
             _database = database;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            var numOfCounterGroupFixed = _database.DocumentsStorage.CountersStorage.FixCountersForDocuments(context, _docIds);
+            var numOfCounterGroupFixed = _database.DocumentsStorage.CountersStorage.FixCountersForDocuments(context, _docIds, _hasMore);
             return numOfCounterGroupFixed;
         }
 
