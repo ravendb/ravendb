@@ -13,10 +13,10 @@ namespace Raven.Client.Documents.Operations.Counters
     public sealed class CounterBatch
     {
         /// <summary>
-        /// Gets or sets a value indicating whether the response should include counter values from all nodes.
+        /// A value indicating whether the response should include counter values from all nodes.
         /// When set to <c>true</c>, the response includes the values of each counter from all nodes in the cluster.
         /// </summary>
-        public bool ReplyWithAllNodesValues { get; set; }
+        public bool ReplyWithAllNodesValues;
 
         /// <summary>
         /// Gets or sets the list of counter operations to be performed on the specified documents.
@@ -37,23 +37,23 @@ namespace Raven.Client.Documents.Operations.Counters
     public sealed class DocumentCountersOperation
     {
         /// <summary>
-        /// Gets or sets the list of counter operations to be performed on the specified document.
+        /// A list of counter operations to be performed on the specified document.
         /// Each operation in the list specifies an action, such as incrementing or deleting a counter.
         /// </summary>
         /// <remarks>
-        /// The <see cref="Operations"/> property is mandatory and must be populated before the batch operation is executed.
+        /// The <see cref="Operations"/> field is mandatory and must be populated before the batch operation is executed.
         /// If it is not set or is empty, an exception will be thrown during parsing or execution.
         /// </remarks>
-        public List<CounterOperation> Operations { get; set; }
+        public List<CounterOperation> Operations;
 
         /// <summary>
-        /// Gets or sets the ID of the document on which the counter operations are to be performed.
+        /// The ID of the document on which the counter operations are to be performed.
         /// </summary>
         /// <remarks>
-        /// The <see cref="DocumentId"/> property is mandatory and identifies the target document for the counter operations.
+        /// The <see cref="DocumentId"/> field is mandatory and identifies the target document for the counter operations.
         /// If it is not set, an exception will be thrown during parsing or execution.
         /// </remarks>
-        public string DocumentId { get; set; }
+        public string DocumentId;
 
         public static DocumentCountersOperation Parse(BlittableJsonReaderObject input)
         {
@@ -150,7 +150,7 @@ namespace Raven.Client.Documents.Operations.Counters
     public sealed class CounterOperation
     {
         /// <summary>
-        /// Gets or sets the type of the counter operation to be performed.
+        /// The type of the counter operation to be performed.
         /// Specifies the action, such as incrementing, deleting, or retrieving a counter value.
         /// </summary>
         /// <remarks>
@@ -160,27 +160,27 @@ namespace Raven.Client.Documents.Operations.Counters
         /// - <see cref="CounterOperationType.Get"/>: Retrieves the value of the counter.
         /// - <see cref="CounterOperationType.GetAll"/>: Retrieves all counters for a document.
         /// </remarks>
-        public CounterOperationType Type { get; set; }
+        public CounterOperationType Type;
 
         /// <summary>
-        /// Gets or sets the name of the counter to be operated on.
+        /// The name of the counter to be operated on.
         /// </summary>
         /// <remarks>
-        /// - The <see cref="CounterName"/> property is mandatory for operations of type <see cref="CounterOperationType.Increment"/>, <see cref="CounterOperationType.Delete"/>, and <see cref="CounterOperationType.Get"/>.
-        /// - For <see cref="CounterOperationType.GetAll"/>, the <see cref="CounterName"/> property is not used and can be <c>null</c>.
+        /// - The <see cref="CounterName"/> field is mandatory for operations of type <see cref="CounterOperationType.Increment"/>, <see cref="CounterOperationType.Delete"/>, and <see cref="CounterOperationType.Get"/>.
+        /// - For <see cref="CounterOperationType.GetAll"/>, the <see cref="CounterName"/> field is not used and can be <c>null</c>.
         /// - If <see cref="CounterName"/> is required but not set, an exception will be thrown during parsing or execution.
         /// </remarks>
-        public string CounterName { get; set; }
+        public string CounterName;
 
         /// <summary>
-        /// Gets or sets the value by which the counter should be incremented or decremented.
+        /// The value by which the counter should be incremented or decremented.
         /// </summary>
         /// <remarks>
         /// - Used only for operations of type <see cref="CounterOperationType.Increment"/>.
         /// - For <see cref="CounterOperationType.Put"/>, this specifies the exact value to set for the counter but is used internally and not intended for external use.
-        /// - For other operation types, this property is ignored.
+        /// - For other operation types, this field is ignored.
         /// </remarks>
-        public long Delta { get; set; } = 1;
+        public long Delta = 1;
 
         internal string ChangeVector;
         internal string DocumentId;
