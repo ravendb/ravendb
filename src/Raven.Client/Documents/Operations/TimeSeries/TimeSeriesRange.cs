@@ -9,18 +9,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     public sealed class TimeSeriesRange : AbstractTimeSeriesRange
     {
         /// <summary>
-        /// Gets or sets the start time of the range.
+        /// The start time of the range.
         /// Data points from this timestamp (inclusive) will be included in the range.
         /// If <c>null</c>, the range starts from the beginning of the time series.
         /// </summary>
-        public DateTime? From { get; set; }
+        public DateTime? From;
 
         /// <summary>
-        /// Gets or sets the end time of the range.
+        /// The end time of the range.
         /// Data points up to this timestamp (inclusive) will be included in the range.
         /// If <c>null</c>, the range extends to the end of the time series.
         /// </summary>
-        public DateTime? To { get; set; }
+        public DateTime? To;
     }
 
     internal sealed class TimeSeriesTimeRange : AbstractTimeSeriesRange
@@ -41,12 +41,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     public abstract class AbstractTimeSeriesRange
     {
         /// <summary>
-        /// Gets or sets the name of the time series.
+        /// The name of the time series.
         /// </summary>
         /// <remarks>
-        /// This property identifies the time series on which the range operations will be performed.
+        /// This field identifies the time series on which the range operations will be performed.
         /// </remarks>
-        public string Name { get; set; }
+        public string Name;
     }
 
     /// <summary>
