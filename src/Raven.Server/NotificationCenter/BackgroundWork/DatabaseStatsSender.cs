@@ -67,7 +67,8 @@ public sealed class DatabaseStatsSender : AbstractDatabaseStatsSender
                 GlobalChangeVector = DocumentsStorage.GetDatabaseChangeVector(context.Documents),
                 LastIndexingErrorTime = lastIndexingErrorTime,
                 Collections = database.DocumentsStorage.GetCollections(context.Documents)
-                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, database.DocumentsStorage.GetLastDocumentChangeVector(context.Documents.Transaction.InnerTransaction, context.Documents, x.Name)))
+                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, database.DocumentsStorage.GetLastDocumentChangeVector(context.Documents.Transaction.InnerTransaction, context.Documents, x.Name))),
+                CountOfRevisions = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context.Documents)
             };
         }
     }
