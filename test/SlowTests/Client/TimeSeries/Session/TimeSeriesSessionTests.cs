@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.TimeSeries;
@@ -239,7 +240,55 @@ namespace SlowTests.Client.TimeSeries.Session
                 }
             }
         }
-        
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanDeleteTimestamp2Async(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                var timeSeriesName = Constants.Headers.IncrementalTimeSeriesPrefix + "Heartrate";
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Oren" }, "users/ayende");
+
+                    var tsf = session.IncrementalTimeSeriesFor("users/ayende", Constants.Headers.IncrementalTimeSeriesPrefix + "Heartrate");
+
+                    tsf.Increment(baseline.AddMinutes(1), 59d);
+                    tsf.Increment(baseline.AddMinutes(2), 69d);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.IncrementalTimeSeriesFor("users/ayende",Constants.Headers.IncrementalTimeSeriesPrefix + "Heartrate").Delete(baseline.AddMinutes(2));
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = session.Advanced.AsyncRawQuery<TimeSeriesAggregationResult>($@"
+                    declare timeseries out(x) 
+                    {{
+                        from x.'{timeSeriesName}' between $start and $end
+                        group by 1h
+                        select last()
+                    }}
+                    from Users as u
+                    select out(u)
+                    ")
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
+
+                    var result = await query.ToListAsync();
+                    var last = result[0].Results[0].Last[0];
+                    Assert.Equal(59, last);
+                }
+            }
+        }
+
         [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanDeleteTimestamp3()
         {

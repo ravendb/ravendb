@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -89,6 +90,46 @@ namespace SlowTests.Client.TimeSeries.Session
                             Assert.Equal("stream", entry.Tag);
                             i++;
                         }
+                    }
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanStreamIncrementalTimeSeriesAsync(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var timeSeriesName = Constants.Headers.IncrementalTimeSeriesPrefix + "heartrate";
+                var baseline = DateTime.UtcNow.EnsureMilliseconds();
+                using (var session = store.OpenAsyncSession())
+                {
+
+                    await session.StoreAsync(new User(), "karmel");
+                    var ts = session.IncrementalTimeSeriesFor("karmel", timeSeriesName);
+                    for (int i = 0; i < 10; i++)
+                    {
+                        ts.Increment(baseline.AddMinutes(i), i);
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("karmel", timeSeriesName);
+                    var it = await ts.StreamAsync();
+                    await using (it)
+                    {
+                        var i = 0;
+                        while (await it.MoveNextAsync())
+                        {
+                            var entry = it.Current;
+                            Assert.Equal(baseline.AddMinutes(i), entry.Timestamp);
+                            Assert.Equal(i, entry.Value);
+                            i++;
+                        }
+                        Assert.Equal(10, i);
                     }
                 }
             }
