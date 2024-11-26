@@ -401,7 +401,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
     private readonly IndexSearcher _searcher;
     private TInner _inner;
     private readonly MultiUnaryItem[] _comparers;
-    private GrowableBuffer<Progressive> _growableBuffer;
+    private GrowableBuffer<long, Progressive<long>> _growableBuffer;
     public MultiUnaryMatch(IndexSearcher searcher, TInner inner, in MultiUnaryItem[] items)
     {
         _inner = inner;

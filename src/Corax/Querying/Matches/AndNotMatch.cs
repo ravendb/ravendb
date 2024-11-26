@@ -31,7 +31,7 @@ namespace Corax.Querying.Matches
         /// </summary>
         private bool _isAndWithBuffer;
 
-        private GrowableBuffer<Progressive> _buffer;
+        private GrowableBuffer<long, Progressive<long>> _buffer;
 
         private bool _doNotSortResults;
 
@@ -68,7 +68,7 @@ namespace Corax.Querying.Matches
             // Check if this is the second time we enter or not. 
             if (_buffer.IsInitialized == false)
             {
-                _buffer = new GrowableBuffer<Progressive>();
+                _buffer = new GrowableBuffer<long, Progressive<long>>();
                 int iterations = 0;
                 
                 _buffer.Init(_context, _outer.Count);
@@ -152,7 +152,7 @@ namespace Corax.Querying.Matches
             if (_isAndWithBuffer == false)
             {
                 _token.ThrowIfCancellationRequested();
-                var andWithBuffer = new GrowableBuffer<Progressive>();
+                var andWithBuffer = new GrowableBuffer<long, Progressive<long>>();
                 andWithBuffer.Init(_context, Count);
 
                 // Now it is time to run the other part of the algorithm, which is getting the Inner data until we fill the buffer.
