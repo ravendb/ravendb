@@ -31,9 +31,12 @@ namespace Voron.Data.BTrees
             _treePageStackPool.Free(_statePages);
         }
 
-        public void Update(FastStack<TreePage> stack, TreePage newVal)
+        /// <summary>
+        /// Replace the top of the cursor path with a new tree page. 
+        /// </summary>
+        public void SetTopPage(TreePage newVal)
         {
-            ref var treePage = ref stack.TopByRef();
+            ref var treePage = ref _statePages.TopByRef();
             treePage = newVal;
         }
 

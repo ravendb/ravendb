@@ -415,7 +415,7 @@ namespace Voron.Data.BTrees
                 {
                     using (var cursor = cursorConstructor.Build(key))
                     {
-                        cursor.Update(cursor.Pages, page);
+                        cursor.SetTopPage(page);
 
                         var pageSplitter = new TreePageSplitter(_llt, this, key, len, pageNumber, nodeType, cursor);
                         dataPos = pageSplitter.Execute();

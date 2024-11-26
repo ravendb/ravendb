@@ -123,7 +123,7 @@ namespace Voron.Data.BTrees
 
                     _parentPage = _tree.ModifyPage(_cursor.CurrentPage);
 
-                    _cursor.Update(_cursor.Pages, _parentPage);
+                    _cursor.SetTopPage(_parentPage);
                 }
 
                 using (_pageDecompressed)

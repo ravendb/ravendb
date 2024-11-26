@@ -36,7 +36,7 @@ namespace Sparrow.Collections
 
         public FastStack()
         {
-            _array = Array.Empty<T>();
+            _array = [];
         }
 
         // Create a stack with a specific initial capacity.  The initial capacity
@@ -56,20 +56,19 @@ namespace Sparrow.Collections
         /// </summary>
         public void Clear()
         {
-            if (typeof(T) == typeof(int) || typeof(T) == typeof(uint) || typeof(T) == typeof(byte) ||
-                typeof(T) == typeof(short) || typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
-                typeof(T) == typeof(nint) || typeof(T) == typeof(nuint) || typeof(T) == typeof(IntPtr))
-            {
-                _size = 0;
-                _version++;
-
-                return;
-            }
-
             int size = _size;
 
             _size = 0;
             _version++;
+
+            if (typeof(T) == typeof(int) || typeof(T) == typeof(uint) || typeof(T) == typeof(byte) ||
+                typeof(T) == typeof(short) || typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
+                typeof(T) == typeof(nint) || typeof(T) == typeof(nuint) || typeof(T) == typeof(IntPtr) ||
+                typeof(T) == typeof(sbyte) || typeof(T) == typeof(ushort))
+            {
+                return;
+            }
+
             if (size > 0)
                 Array.Clear(_array, 0, size); // Clear the elements so that the gc can reclaim the references.
         }
@@ -148,13 +147,10 @@ namespace Sparrow.Collections
         // is empty, Peek throws an InvalidOperationException.        
         public T Peek()
         {
-            if (_size == 0)
-                goto Error;
+            if (_size != 0) 
+                return _array[_size - 1];
 
-            return _array[_size - 1];
-
-        Error:
-            return ThrowForEmptyStack();
+            throw new InvalidOperationException("The stack is empty.");
         }
 
         // Returns the top object on the stack without removing it.  If the stack
@@ -169,26 +165,26 @@ namespace Sparrow.Collections
 
         public bool TryPeek(out T result)
         {
-            if (_size == 0)
+            if (_size != 0)
             {
-                result = default(T);
-                return false;
+                result = _array[_size - 1];
+                return true;
             }
 
-            result = _array[_size - 1];
-            return true;
+            Unsafe.SkipInit(out result);
+            return false;
         }
 
         public bool TryPeek(int depth, out T result)
         {
-            if (_size < depth)
+            if (_size >= depth)
             {
-                result = default(T);
-                return false;
+                result = _array[_size - depth];
+                return true;
             }
 
-            result = _array[_size - depth];
-            return true;
+            Unsafe.SkipInit(out result);
+            return false;
         }
 
         // Pops an item from the top of the stack.  If the stack is empty, Pop
@@ -208,31 +204,30 @@ namespace Sparrow.Collections
 
         public bool TryPop(out T result)
         {
-            if (_size == 0)
+            if (_size != 0)
             {
-                result = default(T);
-                return false;
+                _version++;
+                result = _array[--_size];
+                _array[_size] = default(T);
+
+                return true;
             }
 
-            _version++;
-            result = _array[--_size];
-            _array[_size] = default(T);
-
-            return true;
+            Unsafe.SkipInit(out result);
+            return false;
         }
 
         // Pushes an item to the top of the stack.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Push(in T item)
         {
-            if (_size == _array.Length)
-                goto Grow;
+            if (_size != _array.Length)
+            {
+                _array[_size++] = item;
+                _version++;
+                return;
+            }
 
-            _array[_size++] = item;
-            _version++;
-            return;
-
-        Grow:
             PushUnlikely(item);
         }
 
@@ -269,7 +264,7 @@ namespace Sparrow.Collections
         public T[] ToArray()
         {
             if (_size == 0)
-                return Array.Empty<T>();
+                return [];
 
             T[] objArray = new T[_size];
             int i = 0;
@@ -279,12 +274,6 @@ namespace Sparrow.Collections
                 i++;
             }
             return objArray;
-        }
-
-        private T ThrowForEmptyStack()
-        {
-            Debug.Assert(_size == 0);
-            throw new InvalidOperationException("The stack is empty.");
         }
 
         public struct Enumerator : IEnumerator<T>

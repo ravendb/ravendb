@@ -115,7 +115,7 @@ namespace Voron.Data.Compression
 
                     using (var cursor = cursorConstructor.Build(key))
                     {
-                        cursor.Update(cursor.Pages, this); // we need to use uncompressed page here because it might have some modifications (e.g. deleted node)
+                        cursor.SetTopPage(this); // we need to use uncompressed page here because it might have some modifications (e.g. deleted node)
 
                         var pageSplitter = new TreePageSplitter(tx, tree, key, valueReader.Length, PageNumber, flags, cursor,
                             splittingOnDecompressed: true);

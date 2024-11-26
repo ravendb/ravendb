@@ -47,7 +47,7 @@ namespace Voron.Data.BTrees
                 _cursor.Pop();
 
                 var parentPage = _tree.ModifyPage(_cursor.CurrentPage);
-                _cursor.Update(_cursor.Pages, parentPage);
+                _cursor.SetTopPage(parentPage);
 
                 if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
                 {

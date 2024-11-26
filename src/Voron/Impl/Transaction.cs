@@ -90,7 +90,7 @@ namespace Voron.Impl
 
         public Tree ReadTree(Slice treeName, RootObjectType type = RootObjectType.VariableSizeTree, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
-            if(EnsureTrees() == false && _trees.TryGetValue(treeName, out var tree))
+            if (EnsureTrees() == false && _trees.TryGetValue(treeName, out var tree))
             {
                 if (newPageAllocator != null && tree?.HasNewPageAllocator == false)
                     tree.SetNewPageAllocator(newPageAllocator);
