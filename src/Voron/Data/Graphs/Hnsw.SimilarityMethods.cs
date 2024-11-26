@@ -20,7 +20,41 @@ public partial class Hnsw
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static float CosineSimilarityI8(ReadOnlySpan<byte> a, Span<byte> b)
     {
-        throw new NotImplementedException("Not implemented yet");
+        // assert |a| == |b|
+        
+        var vectorLength = a.Length - sizeof(float);
+        
+        ref var aRef = ref MemoryMarshal.GetReference(a);
+        ref var bRef = ref MemoryMarshal.GetReference(b);
+        
+        var magA = Unsafe.ReadUnaligned<float>(ref Unsafe.AddByteOffset(ref aRef, a.Length - sizeof(float)));
+        var magB = Unsafe.ReadUnaligned<float>(ref Unsafe.AddByteOffset(ref bRef, b.Length - sizeof(float)));
+        
+        var alpha1 = magA / 127;
+        var alpha2 = magB / 127;
+        
+        float dotProduct = alpha1 * alpha2 * vectorLength;
+
+        for (int i = 0; i < vectorLength; i++)
+        {
+            dotProduct += alpha1 * a[i];
+            dotProduct += alpha2 * b[i];
+            dotProduct += a[i] * b[i];
+        }
+
+        float sq1 = 0;
+        float sq2 = 0;
+        
+        for (int i = 0; i < vectorLength; i++)
+        {
+            sq1 += a[i] * a[i];
+            sq2 += b[i] * b[i];
+        }
+        
+        sq1 = MathF.Sqrt(sq1);
+        sq2 = MathF.Sqrt(sq2);
+        
+        return dotProduct / (sq1 * sq2);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1203,7 +1203,7 @@ public unsafe partial class Hnsw
         return new NearestSearch(searchState, nearestNodesByLevel, vector);
     }
 
-    public struct NearestSearch() 
+    public struct NearestSearch() : IDisposable
     {
         public NearestSearch(SearchState searchState, ContextBoundNativeList<int> indexes, ReadOnlySpan<byte> vector) : this()
         {

@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Indexes
                 var (originalInputDimensions, originalDimensions) = destinationEmbeddingType switch
                 {
                     VectorEmbeddingType.Single => (storedDimensions / sizeof(float), dimensions / sizeof(float)),
-                    VectorEmbeddingType.Int8 => (storedDimensions, dimensions),
+                    VectorEmbeddingType.Int8 => (storedDimensions - sizeof(float), dimensions - sizeof(float)),
                     _ => throw new InvalidDataException($"Unexpected embedding type - {destinationEmbeddingType}.")
                 };
 

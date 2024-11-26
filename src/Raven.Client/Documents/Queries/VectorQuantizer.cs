@@ -21,19 +21,23 @@ public class VectorQuantizer
         
         var scaleFactor = 127f / maxComponent;
         ref var destinationRef = ref MemoryMarshal.GetReference(destination);
+        
         for (var i = 0; i < rawEmbedding.Length; i++)
         {
             var scaledValue = Unsafe.Add(ref sourceRef, i) * scaleFactor;
             Unsafe.Add(ref destinationRef, i) = Convert.ToSByte(scaledValue);
         }
         
-        usedBytes = rawEmbedding.Length;
+        // Store magnitude as four last sbytes
+        Unsafe.As<sbyte, float>(ref Unsafe.Add(ref destinationRef, rawEmbedding.Length)) = maxComponent;
+        
+        usedBytes = rawEmbedding.Length + sizeof(float);
         return true;
     }
 
     public static sbyte[] ToInt8(float[] rawEmbedding)
     {
-        var mem = new sbyte[rawEmbedding.Length];
+        var mem = new sbyte[rawEmbedding.Length + sizeof(float)];
         TryToInt8(rawEmbedding, mem, out _);
         return mem;
     }

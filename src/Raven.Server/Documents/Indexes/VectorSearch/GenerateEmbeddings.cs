@@ -38,7 +38,22 @@ public static class GenerateEmbeddings
             {
                 var source = MemoryMarshal.Cast<byte, float>(embeddings.GetEmbedding());
                 var dest = MemoryMarshal.Cast<byte, sbyte>(embeddings.GetEmbedding());
-                VectorQuantizer.TryToInt8(source, dest, out int usedBytes);
+
+                int usedBytes;
+                if (dest.Length < source.Length + sizeof(float))
+                {
+                    var mem = Allocator.Rent(dest.Length + sizeof(float));
+                    VectorQuantizer.TryToInt8(source, MemoryMarshal.Cast<byte, sbyte>(mem), out usedBytes);
+
+                    var newDest = new VectorValue(Allocator, mem, mem);
+                    embeddings.Dispose();
+                    embeddings = newDest;
+                }
+                else
+                {
+                    VectorQuantizer.TryToInt8(source, dest, out usedBytes);
+                }
+                
                 embeddings.OverrideLength(usedBytes);
                 break;
             }
@@ -82,14 +97,23 @@ public static class GenerateEmbeddings
             }
             case VectorEmbeddingType.Int8:
             {
-                bool result = VectorQuantizer.TryToInt8(mem.ToSpan<float>().Slice(0, usedBytes / sizeof(float)), mem.ToSpan<sbyte>(), out usedBytes);
-                PortableExceptions.ThrowIfNot<InvalidDataException>(result, $"Error during quantization of the array.");
+                var destination = mem.ToSpan<sbyte>();
+                
+                if (mem.Length < usedBytes + sizeof(float))
+                {
+                    var rentedMem = Allocator.Rent(mem.Length + sizeof(float));
+
+                    destination = MemoryMarshal.Cast<byte, sbyte>(rentedMem);
+                }
+                
+                bool result = VectorQuantizer.TryToInt8(mem.ToSpan<float>().Slice(0, usedBytes / sizeof(float)), destination, out usedBytes);
+                PortableExceptions.ThrowIfNot<InvalidDataException>(result, "Error during quantization of the array.");
                 return new VectorValue(disposable, mem, usedBytes);
             }
             case VectorEmbeddingType.Binary:
             {
                 bool result = VectorQuantizer.TryToInt1(mem.ToSpan<float>().Slice(0, usedBytes / sizeof(float)), mem.ToSpan<byte>(), out usedBytes);
-                PortableExceptions.ThrowIfNot<InvalidDataException>(result, $"Error during quantization of the array.");
+                PortableExceptions.ThrowIfNot<InvalidDataException>(result, "Error during quantization of the array.");
                 return new VectorValue(disposable, mem, usedBytes);
             }
             default:
