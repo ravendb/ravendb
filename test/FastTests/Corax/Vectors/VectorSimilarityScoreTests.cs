@@ -42,7 +42,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         var queryVector = Enumerable.Range(0, dimensions).Select(_ => random.NextSingle()).ToArray();
 
         var query = session.Query<Dto, Index>()
-            .VectorSearch(f => f.WithField(d => d.Singles), v => v.ByEmbedding(queryVector), -1f)
+            .VectorSearch(f => f.WithField(d => d.Singles), v => v.ByEmbedding(queryVector), 0.1f)
             .OrderByScore();
 
 
@@ -53,7 +53,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         Assert.NotNull(streamResults.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
         var similarity = (float)streamResults.Current.Metadata.GetDouble(Constants.Documents.Metadata.IndexScore);
 
-        var expectedSimilarity = TensorPrimitives.CosineSimilarity(queryVector, doc.Singles);
+        var expectedSimilarity = 1 - TensorPrimitives.CosineSimilarity(queryVector, doc.Singles);
         
         Assert.Equal(expectedSimilarity, similarity, 0.0001f);
     }
@@ -124,7 +124,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         } while (commonsBits <= 0);
 
         var query = session.Query<Dto, Index>()
-            .VectorSearch(f => f.WithField(d => d.Binary), v => v.ByEmbedding(queryVector), -1f)
+            .VectorSearch(f => f.WithField(d => d.Binary), v => v.ByEmbedding(queryVector), 0.01f)
             .OrderByScore();
         
         using IEnumerator<StreamResult<Dto>> streamResults = session.Advanced.Stream(query, out _);
@@ -136,9 +136,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         
         var hammingBitDistance = TensorPrimitives.HammingBitDistance<byte>(queryVector, doc.Binary);
         
-        var expectedSimilarity = 1.0f - (hammingBitDistance / (queryVector.Length * 8f));
-        
-        Assert.Equal(expectedSimilarity, similarity, 0.0001f);
+        Assert.Equal(hammingBitDistance, similarity, 0.0001f);
     }
 
     private IDocumentStore GetDocumentStoreWithDocument(Random random, int dimension)

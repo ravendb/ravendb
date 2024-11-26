@@ -51,7 +51,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         rql: "from 'AutoVecDocs' where vector.search(embedding.i1(Binary), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithEmbedding(f => f.Binary, VectorEmbeddingType.Binary), 
-                value => value.ByEmbedding([0.1f, 0.1f])));
+                value => value.ByEmbedding([1, 2])));
     
     [RavenFact(RavenTestCategory.Vector)]
     public void TextToSinglesTest() => AutoIndexingTestingBase(

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics.Tensors;
 using System.Runtime.InteropServices;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -42,6 +43,67 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         }
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void BasicSearchBigVec()
+    {
+        Random rnd = new Random(1536);
+        float[] v1 = Enumerable.Range(0, 1536).Select(_ => rnd.NextSingle() * (rnd.NextInt64() % 2 == 0 ? 1f : -1f)).ToArray();
+        float[] v2 = Enumerable.Range(0, 1536).Select(_ => rnd.NextSingle() * (rnd.NextInt64() % 2 == 0 ? 1f : -1f)).ToArray();
+        // nearest to v2, then v1
+
+        float[] v3 = v2.Select(x => x + 0.05f).ToArray();
+
+        
+        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v1,v1)));
+        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v1,v2)));
+        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v1,v3)));
+        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v2,v2)));
+        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v2,v3)));
+        Assert.False(float.IsNaN(TensorPrimitives.CosineSimilarity(v3,v3)));
+        
+        using (var txw = Env.WriteTransaction())
+        {
+            Hnsw.Create(txw.LowLevelTransaction, "test", 1536 * sizeof(float), 3, 12, VectorEmbeddingType.Single);
+
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            {
+                registration.Register(1, MemoryMarshal.Cast<float, byte>(v1));
+                registration.Register(2, MemoryMarshal.Cast<float, byte>(v2));
+                registration.Commit();
+            }
+            
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            {
+                registration.Register(3, MemoryMarshal.Cast<float, byte>(v1));
+                registration.Commit();
+            }
+
+            txw.Commit();
+        }
+
+        using (var txr = Env.ReadTransaction())
+        {
+            var state = new Hnsw.SearchState(txr.LowLevelTransaction, "test");
+            var options = state.Options;
+            Assert.Equal(12, options.NumberOfCandidates);
+            Assert.Equal(3, options.NumberOfEdges);
+            Assert.Equal(2, options.CountOfVectors);
+        }
+
+        using (var txr = Env.ReadTransaction())
+        {
+            Span<long> matches = new long[8];
+            Span<float> distances = new float[8];
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test", numberOfCandidates: 32, MemoryMarshal.Cast<float, byte>(v3));
+            int read = nearest.Fill(matches, distances);
+             Assert.Equal(3, read);
+            Assert.False(distances.Slice(0, read).ToArray().Any(float.IsNaN));
+            Assert.Equal(2, matches[0]);
+            Assert.Equal(1, matches[1]);
+            Assert.Equal(3, matches[2]);
+        }
+    }
+    
     [RavenFact(RavenTestCategory.Voron)]
     public void BasicSearch()
     {

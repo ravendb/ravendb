@@ -17,6 +17,7 @@ using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using Lucene.Net.Analysis;
+using Microsoft.IO;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Corax;
@@ -610,7 +611,7 @@ public static class CoraxQueryBuilder
                 case MethodType.Spatial_Intersects:
                     return HandleSpatial(builderParameters, me, methodType);
                 case MethodType.Vector_Search:
-                    return HandleVector(builderParameters, me);
+                    return HandleVector(builderParameters, me, exact);
                
                 case MethodType.Regex:
                     return HandleRegex(builderParameters, me, ref leftOnlyOptimization);
@@ -625,7 +626,7 @@ public static class CoraxQueryBuilder
         throw new InvalidQueryException("Unable to understand query", metadata.QueryText, queryParameters);
     }
     
-    private static IQueryMatch HandleVector(Parameters builderParameters, MethodExpression me)
+    private static IQueryMatch HandleVector(Parameters builderParameters, MethodExpression me, bool exact)
     {
         var metadata = builderParameters.Metadata;
         var (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[1], allowObjectsInParameters: false, allowArraysInParameters: true);
@@ -655,7 +656,15 @@ public static class CoraxQueryBuilder
         }
         else if (value is string s)
         {
-            transformedEmbedding= GenerateEmbeddings.FromArray(vectorOptions, builderParameters.Allocator, s);
+            if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Binary)
+            {
+                var buffer = Convert.FromBase64String(s);
+                transformedEmbedding = new VectorValue(arrayPool: null, buffer, buffer);
+            }
+            else
+            {
+                transformedEmbedding = GenerateEmbeddings.FromArray(vectorOptions, builderParameters.Allocator, s);
+            }
         }
         else if (value is StringSegment stringSegment)
         {
@@ -702,15 +711,21 @@ public static class CoraxQueryBuilder
                 _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + valueType)
             };
         }
-        
-        var similarityType = (vectorOptions.DestinationEmbeddingType) switch
+
+        var numberOfCandidates = 12;
+        if (me.Arguments.Count > 3)
         {
-            VectorEmbeddingType.Binary => SimilarityMethod.Hamming,
-            VectorEmbeddingType.Int8 => SimilarityMethod.CosineSbyte,
-            _ => SimilarityMethod.CosineFloat,
-        };
+            (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[3]);
+            numberOfCandidates = valueType switch
+            {
+                ValueTokenType.Long => (int)value,
+                ValueTokenType.Double => (int)(double)value,
+                _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + valueType)
+            };
+        }
+
         
-        return builderParameters.IndexSearcher.VectorQuery(fieldMetadata, transformedEmbedding, minimumMatch, similarityType);
+        return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, transformedEmbedding, minimumMatch, numberOfCandidates, exact);
     }
 
     private static IQueryMatch HandleIn(Parameters builderParameters, InExpression ie, bool exact)

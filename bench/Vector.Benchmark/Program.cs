@@ -86,7 +86,7 @@ async Task ImportData(string path)
 
     using (var txw = env.WriteTransaction())
     {
-        Hnsw.Create(txw.LowLevelTransaction, "wiki", 768 * 4, 12, 40);
+        Hnsw.Create(txw.LowLevelTransaction, "wiki", 768 * 4, 12, 40, VectorEmbeddingType.Single);
         txw.Commit();
     }
 
@@ -111,6 +111,7 @@ async Task ImportData(string path)
                         var vector = new Memory<float>(vectors, i * 768, 768);
                         registration.Register(ids[i] * 100, MemoryMarshal.Cast<float, byte>(vector.Span));
                     }
+                    registration.Commit();
                 }
                 txw.Commit();
             }

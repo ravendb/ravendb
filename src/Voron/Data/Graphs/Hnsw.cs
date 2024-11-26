@@ -2,10 +2,12 @@
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Numerics;
 using System.Numerics.Tensors;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Platform;
@@ -325,6 +327,9 @@ public unsafe partial class Hnsw
         public readonly LowLevelTransaction Llt;
         private int _visitsCounter;
         public delegate*<ReadOnlySpan<byte>, Span<byte>, float> SimilarityCalc;
+        public bool IsEmpty;
+        
+        
         public Span<Node> Nodes => _nodes.ToSpan();
         public Tree Tree => _tree;
 
@@ -345,9 +350,14 @@ public unsafe partial class Hnsw
         public SearchState(LowLevelTransaction llt, Slice name)
         {
             Llt = llt;
-            
             _tree = llt.Transaction.ReadTree(name);
-            _nodeIdToLocations = _tree.LookupFor<Int64LookupKey>(NodeIdToLocationSlice);
+
+            if (_tree is null || _tree.TryGetLookupFor(NodeIdToLocationSlice, out _nodeIdToLocations) == false)
+            {
+                IsEmpty = true;
+                return;
+            }
+            
             var options = _tree.DirectRead(OptionsSlice);
             Options = Unsafe.Read<Options>(options);
             SimilarityCalc = Options.SimilarityMethod switch
@@ -359,6 +369,20 @@ public unsafe partial class Hnsw
             };
         }
 
+        public float MinimumSimilarityToDistance(float minimumSimilarity)
+        {
+            switch (Options.SimilarityMethod)
+            {
+                case SimilarityMethod.CosineSimilaritySingles:
+                case SimilarityMethod.CosineSimilarityI8:
+                    return 2f * (1.0f - minimumSimilarity);
+                case SimilarityMethod.HammingDistance:
+                    return Options.VectorSizeBytes * 8 * (1f - minimumSimilarity);  // number_of_bits * minimum_similarity
+                default:
+                    throw new InvalidDataException($"Unknown similarity method {Options.SimilarityMethod}");
+            }
+        }
+        
         public void FlushOptions()
         {
             using (_tree.DirectAdd(OptionsSlice, sizeof(Options), out var dst))
@@ -709,6 +733,7 @@ public unsafe partial class Hnsw
         /// <param name="vectorHash">The hash of the vector to remove.</param>
         public void Remove(long entryId, ReadOnlySpan<byte> vectorHash)
         {
+            entryId = EntryIdToInternalEntryId(entryId);
             const long RemovalMask = 1;
 
             PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>((entryId & Constants.Graphs.VectorId.EnsureIsSingleMask) != 0, "Entry ids must have the first two bits cleared, we are using those");
@@ -736,6 +761,49 @@ public unsafe partial class Hnsw
         }
 
         /// <summary>
+        /// The two lowest bits must be cleared for mask purposes.
+        /// </summary>
+        /// <param name="entryId">Original entryId.</param>
+        /// <returns>Internal Hnsw entryId</returns>
+        private long EntryIdToInternalEntryId(long entryId) => entryId << 2;
+
+        /// <summary>
+        /// During indexing, we're shifting each ID 2 bits to the left to use the two lowest bits as a mask placeholder. This is for querying decoding.
+        /// </summary>
+        /// <param name="entries">Array of internal ids.</param>
+        internal static void InternalEntryIdToEntryId(Span<long> entries)
+        {
+            var entriesPos = 0;
+            ref var entriesRef = ref MemoryMarshal.GetReference(entries);
+            if (AdvInstructionSet.IsAcceleratedVector512)
+            {
+                var N = Vector512<long>.Count;
+                var limit = entries.Length / N;
+                for (; entriesPos < limit; entriesPos += N)
+                {
+                    ref var currentMemory = ref Unsafe.Add(ref entriesRef, entriesPos);
+                    var current = Vector512.LoadUnsafe(ref currentMemory);
+                    Vector512.ShiftRightLogical(current, 2).StoreUnsafe(ref currentMemory);
+                }
+            }
+            
+            if (AdvInstructionSet.IsAcceleratedVector256)
+            {
+                var N = Vector256<long>.Count;
+                var limit = (entries.Length - entriesPos) / N;
+                for (; entriesPos < limit; entriesPos += N)
+                {
+                    ref var currentMemory = ref Unsafe.Add(ref entriesRef, entriesPos);
+                    var current = Vector256.LoadUnsafe(ref currentMemory);
+                    Vector256.ShiftRightLogical(current, 2).StoreUnsafe(ref currentMemory);
+                }
+            }
+            
+            for (; entriesPos < entries.Length; entriesPos++)
+                Unsafe.Add(ref entriesRef, entriesPos) >>= 2;
+        }
+        
+        /// <summary>
         /// Adds a vector to the graph.
         /// </summary>
         /// <param name="entryId">The ID of the document (source).</param>
@@ -743,6 +811,7 @@ public unsafe partial class Hnsw
         /// <returns>The CompactKey address of the hash calculated from the vector, which will be required for removal.</returns>
         public ByteString Register(long entryId, ReadOnlySpan<byte> vector)
         {
+            entryId = EntryIdToInternalEntryId(entryId);
             PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>((entryId & Constants.Graphs.VectorId.EnsureIsSingleMask) != 0, "Entry ids must have the first two bits cleared, we are using those");
             PortableExceptions.ThrowIf<ArgumentOutOfRangeException>(
                 vector.Length != _searchState.Options.VectorSizeBytes,
@@ -1142,13 +1211,13 @@ public unsafe partial class Hnsw
         return new Registration(llt, name);
     }
 
-    public static NearestSearch ExactNearest(LowLevelTransaction llt, string name, int numberOfCandidates, Span<byte> vector)
+    public static NearestSearch ExactNearest(LowLevelTransaction llt, string name, int numberOfCandidates, ReadOnlySpan<byte> vector)
     {
         Slice.From(llt.Allocator, name, out var slice);
         return ExactNearest(llt, slice, numberOfCandidates, vector);
     }
 
-    public static NearestSearch ExactNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Span<byte> vector)
+    public static NearestSearch ExactNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, ReadOnlySpan<byte> vector)
     {
         var searchState = new SearchState(llt, name);
         var pq = new PriorityQueue<long, float>();
@@ -1203,9 +1272,9 @@ public unsafe partial class Hnsw
         return new NearestSearch(searchState, nearestNodesByLevel, vector);
     }
 
-    public struct NearestSearch() : IDisposable
+    public struct NearestSearch : IDisposable
     {
-        public NearestSearch(SearchState searchState, ContextBoundNativeList<int> indexes, ReadOnlySpan<byte> vector) : this()
+        public NearestSearch(SearchState searchState, ContextBoundNativeList<int> indexes, ReadOnlySpan<byte> vector)
         {
             _searchState = searchState;
             _indexes = indexes;
@@ -1223,6 +1292,8 @@ public unsafe partial class Hnsw
         private ByteString _vector;
         private PostingList.Iterator _postingListIterator;
         private PostingList _postingList;
+        public SimilarityMethod SimilarityMethod => _searchState.Options.SimilarityMethod;
+        public bool IsEmpty => _searchState.IsEmpty;
 
         public void Dispose()
         {
@@ -1231,6 +1302,8 @@ public unsafe partial class Hnsw
             _pforDecoder.Dispose();
             _searchState.Llt.Allocator.Release(ref _vector);
         }
+        
+        public float MinimumSimilarityToMaximumDistance(float min) => _searchState.MinimumSimilarityToDistance(min);
 
         public int Fill(Span<long> matches, Span<float> distances)
         {
@@ -1299,6 +1372,8 @@ public unsafe partial class Hnsw
                         throw new ArgumentOutOfRangeException("Impossible scenario, we have only 4 options, but got: " + node.PostingListId);
                 }
             }
+
+            Registration.InternalEntryIdToEntryId(matches.Slice(0, index));
             return index;
         }
     }
