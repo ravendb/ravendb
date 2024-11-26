@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -425,8 +426,11 @@ namespace Raven.Server.Documents.Handlers
 
             private static void CheckForDataCorruption(DocumentsOperationContext context, CounterGroupDetail counterGroup, Document doc)
             {
-                counterGroup.Values.TryGet(Values, out BlittableJsonReaderObject counterValues);
-                counterGroup.Values.TryGet(CounterNames, out BlittableJsonReaderObject counterNames);
+                if (counterGroup.Values.TryGet(Values, out BlittableJsonReaderObject counterValues) == false)
+                    throw new InvalidDataException($"Counter-group of document '{counterGroup.DocumentId}' is missing '{Values}' property");
+
+                if (counterGroup.Values.TryGet(CounterNames, out BlittableJsonReaderObject counterNames) == false)
+                    return; // legacy counters
 
                 if (counterValues.Count == counterNames.Count && 
                     counterValues.GetSortedPropertyNames().SequenceEqual(counterNames.GetSortedPropertyNames()))
