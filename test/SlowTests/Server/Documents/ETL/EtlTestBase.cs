@@ -203,9 +203,9 @@ namespace SlowTests.Server.Documents.ETL
             });
         }
 
-        protected bool TryGetLoadError<T>(string databaseName, EtlConfiguration<T> config, out EtlErrorInfo error) where T : ConnectionString
+        protected async Task<EtlErrorInfo> TryGetLoadError<T>(string databaseName, EtlConfiguration<T> config) where T : ConnectionString
         {
-            var database = GetDatabase(databaseName).Result;
+            var database = await GetDatabase(databaseName);
 
             string tag;
 
@@ -224,20 +224,12 @@ namespace SlowTests.Server.Documents.ETL
 
             var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertType.Etl_LoadError);
 
-            if (loadAlert.Errors.Count != 0)
-            {
-                error = loadAlert.Errors.First();
-
-                return true;
-            }
-
-            error = null;
-            return false;
+            return loadAlert.Errors.Count != 0 ? loadAlert.Errors.First() : null;
         }
 
-        protected bool TryGetTransformationError<T>(string databaseName, EtlConfiguration<T> config, out EtlErrorInfo error) where T : ConnectionString
+        protected async Task<EtlErrorInfo> TryGetTransformationError<T>(string databaseName, EtlConfiguration<T> config) where T : ConnectionString
         {
-            var database = GetDatabase(databaseName).Result;
+            var database = await GetDatabase(databaseName);
 
             string tag;
 
@@ -256,15 +248,7 @@ namespace SlowTests.Server.Documents.ETL
             
             var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertType.Etl_TransformationError);
 
-            if (loadAlert.Errors.Count != 0)
-            {
-                error = loadAlert.Errors.First();
-
-                return true;
-            }
-
-            error = null;
-            return false;
+            return loadAlert.Errors.Count != 0 ? loadAlert.Errors.First() : null;
         }
 
         public override void Dispose()

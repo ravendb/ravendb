@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Nest;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
@@ -134,12 +135,12 @@ loadToOrders" + IndexSuffix + @"(orderData);";
             }
         }
 
-        protected void AssertEtlDone(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, ElasticSearchEtlConfiguration config)
+        protected async Task AssertEtlDone(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, ElasticSearchEtlConfiguration config)
         {
             if (etlDone.Wait(timeout) == false)
             {
-                TryGetLoadError(databaseName, config, out var loadError);
-                TryGetTransformationError(databaseName, config, out var transformationError);
+                var loadError = await TryGetLoadError(databaseName, config);
+                var transformationError = await TryGetTransformationError(databaseName, config);
 
                 Assert.True(false, $"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
             }

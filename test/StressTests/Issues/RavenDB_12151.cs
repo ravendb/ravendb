@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
@@ -22,7 +22,7 @@ namespace StressTests.Issues
         }
 
         [MultiplatformFact(RavenArchitecture.AllX64)]
-        public void IndexingWhenTransactionSizeLimitExceeded()
+        public async Task IndexingWhenTransactionSizeLimitExceeded()
         {
             using (var store = GetDocumentStore(new Options()
             {
@@ -32,12 +32,12 @@ namespace StressTests.Issues
                 }
             }))
             {
-                RunTest(store, "Reached transaction size limit");
+                await RunTest(store, "Reached transaction size limit");
             }
         }
 
         [MultiplatformFact(RavenArchitecture.AllX64)]
-        public void IndexingWhenScratchSpaceLimitExceeded()
+        public async Task IndexingWhenScratchSpaceLimitExceeded()
         {
             using (var store = GetDocumentStore(new Options()
             {
@@ -49,12 +49,12 @@ namespace StressTests.Issues
                 }
             }))
             {
-                RunTest(store, "Reached scratch space limit");
+                await RunTest(store, "Reached scratch space limit");
             }
         }
 
         [MultiplatformFact(RavenArchitecture.AllX64)]
-        public void IndexingWhenGlobalScratchSpaceLimitExceeded()
+        public async Task IndexingWhenGlobalScratchSpaceLimitExceeded()
         {
             UseNewLocalServer(new Dictionary<string, string>
             {
@@ -67,12 +67,12 @@ namespace StressTests.Issues
                 ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Storage.MaxScratchBufferSize)] = "2"
             }))
             {
-                RunTest(store, "Reached global scratch space limit");
+                await RunTest(store, "Reached global scratch space limit");
             }
         }
 
         [MultiplatformFact(RavenArchitecture.AllX86)]
-        public void IndexingWhenTransactionSizeLimitExceeded32()
+        public async Task IndexingWhenTransactionSizeLimitExceeded32()
         {
             using (var store = GetDocumentStore(new Options()
             {
@@ -82,12 +82,12 @@ namespace StressTests.Issues
                 }
             }))
             {
-                RunTest32(store, "Reached transaction size limit");
+                await RunTest32(store, "Reached transaction size limit");
             }
         }
 
         [MultiplatformFact(RavenArchitecture.AllX86)]
-        public void IndexingWhenScratchSpaceLimitExceeded32()
+        public async Task IndexingWhenScratchSpaceLimitExceeded32()
         {
             using (var store = GetDocumentStore(new Options()
             {
@@ -99,12 +99,12 @@ namespace StressTests.Issues
                 }
             }))
             {
-                RunTest32(store, "Reached scratch space limit");
+                await RunTest32(store, "Reached scratch space limit");
             }
         }
 
         [MultiplatformFact(RavenArchitecture.AllX86)]
-        public void IndexingWhenGlobalScratchSpaceLimitExceeded32()
+        public async Task IndexingWhenGlobalScratchSpaceLimitExceeded32()
         {
             UseNewLocalServer(new Dictionary<string, string>
             {
@@ -117,12 +117,12 @@ namespace StressTests.Issues
                 ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Storage.MaxScratchBufferSize)] = "2"
             }))
             {
-                RunTest32(store, "Reached global scratch space limit");
+                await RunTest32(store, "Reached global scratch space limit");
             }
         }
 
         [Fact]
-        public void IndexingWhenEncryptedTransactionSizeLimitLimitExceeded()
+        public async Task IndexingWhenEncryptedTransactionSizeLimitLimitExceeded()
         {
             string dbName = Encryption.SetupEncryptedDatabase(out var certificates, out var _);
 
@@ -139,17 +139,17 @@ namespace StressTests.Issues
                 }
             }))
             {
-                RunTest(store, "Reached transaction size limit");
+                await RunTest(store, "Reached transaction size limit");
             }
         }
 
-        private void RunTest(DocumentStore store, string endOfPatchReason)
+        private async Task RunTest(DocumentStore store, string endOfPatchReason)
         {
-            using (var bulk = store.BulkInsert())
+            await using (var bulk = store.BulkInsert())
             {
                 for (int i = 0; i < 2000; i++)
                 {
-                    bulk.Store(new Order()
+                    await bulk.StoreAsync(new Order()
                     {
                         Company = $"companies/{i}",
                         Employee = $"employee/{i}",
@@ -172,9 +172,9 @@ namespace StressTests.Issues
 
             SimpleIndex index = new SimpleIndex();
 
-            index.Execute(store);
+            await index.ExecuteAsync(store);
 
-            var indexInstance = GetDatabase(store.Database).Result.IndexStore.GetIndex(index.IndexName);
+            var indexInstance = (await GetDatabase(store.Database)).IndexStore.GetIndex(index.IndexName);
 
             indexInstance._indexStorage.Environment().Options.MaxNumberOfPagesInJournalBeforeFlush = 4;
 
@@ -182,9 +182,9 @@ namespace StressTests.Issues
 
             try
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var count = session.Query<Order, SimpleIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).Count();
+                    var count = await session.Query<Order, SimpleIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5))).CountAsync();
 
                     Assert.Equal(4000, count);
                 }
@@ -231,14 +231,14 @@ namespace StressTests.Issues
             Assert.True(mapRunDetails.Any(x => x.BatchCompleteReason.Contains(endOfPatchReason)));
         }
 
-        private void RunTest32(DocumentStore store, string endOfPatchReason)
+        private async Task RunTest32(DocumentStore store, string endOfPatchReason)
         {
             const int docsCount = 2500;
-            using (var bulk = store.BulkInsert())
+            await using (var bulk = store.BulkInsert())
             {
                 for (int i = 0; i < docsCount; i++)
                 {
-                    bulk.Store(new Order()
+                    await bulk.StoreAsync(new Order()
                     {
                         Company = $"companies/{i}",
                         Employee = $"employee/{i}",
@@ -261,15 +261,15 @@ namespace StressTests.Issues
 
             var index = new SimpleIndex32();
 
-            index.Execute(store);
+            await index.ExecuteAsync(store);
 
-            var indexInstance = GetDatabase(store.Database).Result.IndexStore.GetIndex(index.IndexName);
+            var indexInstance = (await GetDatabase(store.Database)).IndexStore.GetIndex(index.IndexName);
 
             indexInstance._indexStorage.Environment().Options.MaxNumberOfPagesInJournalBeforeFlush = 4;
 
-            using (var session = store.OpenSession())
+            using (var session = store.OpenAsyncSession())
             {
-                var count = session.Query<Order, SimpleIndex32>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(2))).Count();
+                var count = await session.Query<Order, SimpleIndex32>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(2))).CountAsync();
 
                 Assert.Equal(docsCount, count);
             }

@@ -43,7 +43,7 @@ loadTo" + OrdersIndexName + @"(orderData);
 ";
 
         [RequiresElasticSearchRetryFact]
-        public void CanOmitDocumentIdPropertyInJsonPassedToLoadTo()
+        public async Task CanOmitDocumentIdPropertyInJsonPassedToLoadTo()
         {
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -52,9 +52,9 @@ loadTo" + OrdersIndexName + @"(orderData);
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new Order
+                    await session.StoreAsync(new Order
                     {
                         Lines = new List<OrderLine>
                         {
@@ -62,13 +62,13 @@ loadTo" + OrdersIndexName + @"(orderData);
                             new OrderLine { PricePerUnit = 4, Product = "Bear", Quantity = 2 },
                         }
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCount = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCount = await client.CountAsync<object>(c => c.Index(OrdersIndexName));
+                var orderLinesCount = await client.CountAsync<object>(c => c.Index(OrderLinesIndexName));
 
                 Assert.True(ordersCount.IsValid);
                 Assert.True(orderLinesCount.IsValid);
@@ -78,17 +78,17 @@ loadTo" + OrdersIndexName + @"(orderData);
 
                 etlDone.Reset();
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     session.Delete("orders/1-A");
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrdersIndexName));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCountAfterDelete = await client.CountAsync<object>(c => c.Index(OrdersIndexName));
+                var orderLinesCountAfterDelete = await client.CountAsync<object>(c => c.Index(OrderLinesIndexName));
 
                 Assert.True(ordersCount.IsValid);
                 Assert.True(orderLinesCount.IsValid);

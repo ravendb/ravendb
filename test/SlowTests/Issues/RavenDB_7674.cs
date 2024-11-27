@@ -3,6 +3,8 @@ using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,48 +17,48 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Group_by_entire_document_LastModified_formatting_issue()
+        public async Task Group_by_entire_document_LastModified_formatting_issue()
         {
             using (var store = GetDocumentStore())
             {
-                new Users_ByUsers().Execute(store);
+                await new Users_ByUsers().ExecuteAsync(store);
 
                 // it's going to be written as Last-Modified in document metadata
                 // in order to reproduce the date needs to have at least one zero at the end
                 var parsed = DateTime.Parse("2017-06-26T19:51:26.3000000").ToUniversalTime();
 
-                var db = GetDatabase(store.Database).Result;
+                var db = await GetDatabase(store.Database);
 
                 db.Time.UtcDateTime = () => parsed;
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new User() { Name = "Joe" }, null, "users/1");
-                    session.SaveChanges();
+                    await session.StoreAsync(new User() { Name = "Joe" }, null, "users/1");
+                    await session.SaveChangesAsync();
                 }
 
                 db.Time.UtcDateTime = null;
 
                 Indexes.WaitForIndexing(store);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var list = session.Query<Users_ByUsers.Result, Users_ByUsers>().ToList();
+                    var list = await session.Query<Users_ByUsers.Result, Users_ByUsers>().ToListAsync();
 
                     Assert.Equal(1, list.Count);
                 }
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new User() { Name = "Doe" }, null, "users/1");
-                    session.SaveChanges();
+                    await session.StoreAsync(new User() { Name = "Doe" }, null, "users/1");
+                    await session.SaveChangesAsync();
                 }
 
                 Indexes.WaitForIndexing(store);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var list = session.Query<Users_ByUsers.Result, Users_ByUsers>().ToList();
+                    var list = await session.Query<Users_ByUsers.Result, Users_ByUsers>().ToListAsync();
 
                     Assert.Equal(1, list.Count);
                 }

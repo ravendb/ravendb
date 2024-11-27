@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
@@ -17,7 +18,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Fact]
-        public void Etl_from_encrypted_to_non_encrypted_db_will_work()
+        public async Task Etl_from_encrypted_to_non_encrypted_db_will_work()
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -82,27 +83,27 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     Database = dest.Database,
                 });
 
-                var db = GetDatabase(src.Database).Result;
+                var db = await GetDatabase(src.Database);
 
                 Assert.Equal(1, db.EtlLoader.Processes.Length);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
-                using (var session = src.OpenSession())
+                using (var session = src.OpenAsyncSession())
                 {
-                    session.Store(new User()
+                    await session.StoreAsync(new User()
                     {
                         Name = "Joe Doe"
                     });
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                using (var session = dest.OpenSession())
+                using (var session = dest.OpenAsyncSession())
                 {
-                    var user = session.Load<User>("users/1-A");
+                    var user = await session.LoadAsync<User>("users/1-A");
 
                     Assert.NotNull(user);
                     Assert.Equal("Joe Doe", user.Name);
@@ -111,7 +112,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
         }
 
         [Fact]
-        public void Etl_from_encrypted_to_encrypted_db_will_work_even_if_AllowEtlOnNonEncryptedChannel_is_set()
+        public async Task Etl_from_encrypted_to_encrypted_db_will_work_even_if_AllowEtlOnNonEncryptedChannel_is_set()
         {
             var certificates = Certificates.SetupServerAuthentication();
             var srcDbName = GetDatabaseName();
@@ -182,27 +183,27 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     Database = dest.Database,
                 });
 
-                var db = GetDatabase(src.Database).Result;
+                var db = await GetDatabase(src.Database);
 
                 Assert.Equal(1, db.EtlLoader.Processes.Length);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
-                using (var session = src.OpenSession())
+                using (var session = src.OpenAsyncSession())
                 {
-                    session.Store(new User()
+                    await session.StoreAsync(new User()
                     {
                         Name = "Joe Doe"
                     });
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                using (var session = dest.OpenSession())
+                using (var session = dest.OpenAsyncSession())
                 {
-                    var user = session.Load<User>("users/1-A");
+                    var user = await session.LoadAsync<User>("users/1-A");
 
                     Assert.NotNull(user);
                     Assert.Equal("Joe Doe", user.Name);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -14,15 +15,14 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [Fact]
-        public void EntersFallbackModeIfCantConnectTheDestination()
+        public async Task EntersFallbackModeIfCantConnectTheDestination()
         {
             using (var src = GetDocumentStore())
             {
-                using (var store = src.OpenSession())
+                using (var store = src.OpenAsyncSession())
                 {
-                    store.Store(new User());
-
-                    store.SaveChanges();
+                    await store.StoreAsync(new User());
+                    await store.SaveChangesAsync();
                 }
 
                 var configuration = new RavenEtlConfiguration()
@@ -46,7 +46,7 @@ namespace SlowTests.Server.Documents.ETL
                     Database = "test",
                 });
 
-                var process = GetDatabase(src.Database).Result.EtlLoader.Processes[0];
+                var process = (await GetDatabase(src.Database)).EtlLoader.Processes[0];
 
                 Assert.True(SpinWait.SpinUntil(() =>
                 {

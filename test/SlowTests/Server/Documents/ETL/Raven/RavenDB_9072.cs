@@ -99,19 +99,17 @@ loadToOrders(orderData);"
         }
 
         [Fact]
-        public void CanTestScriptSpecifiedOnMultipleCollections()
+        public async Task CanTestScriptSpecifiedOnMultipleCollections()
         {
             using (var store = GetDocumentStore())
             {
-
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new Order());
-
-                    session.SaveChanges();
+                    await session.StoreAsync(new Order());
+                    await session.SaveChangesAsync();
                 }
 
-                var database = GetDatabase(store.Database).Result;
+                var database = await GetDatabase(store.Database);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
@@ -143,19 +141,17 @@ loadToOrders(this);"
         }
 
         [Fact]
-        public void ShouldThrowIfTestingOnDocumentBelongingToDifferentCollection()
+        public async Task ShouldThrowIfTestingOnDocumentBelongingToDifferentCollection()
         {
             using (var store = GetDocumentStore())
             {
-
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new Order());
-
-                    session.SaveChanges();
+                    await session.StoreAsync(new Order());
+                    await session.SaveChangesAsync();
                 }
 
-                var database = GetDatabase(store.Database).Result;
+                var database = await GetDatabase(store.Database);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
@@ -197,7 +193,6 @@ loadToDifferentCollection(this);"
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order());
-
                     await session.SaveChangesAsync();
 
                     var database = await GetDatabase(store.Database);

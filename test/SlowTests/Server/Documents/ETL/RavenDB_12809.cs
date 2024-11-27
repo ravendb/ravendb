@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Xunit;
@@ -16,7 +17,7 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [Fact]
-        public void Can_setup_etl_from_encrypted_to_non_encrypted_db()
+        public async Task Can_setup_etl_from_encrypted_to_non_encrypted_db()
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -76,7 +77,7 @@ namespace SlowTests.Server.Documents.ETL
                     Database = "Northwind",
                 });
 
-                var db = GetDatabase(src.Database).Result;
+                var db = await GetDatabase(src.Database);
 
                 Assert.Equal(1, db.EtlLoader.Processes.Length);
             }
