@@ -56,6 +56,7 @@ using Raven.Server.NotificationCenter;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
+using RevisionsHandler = Raven.Server.Documents.Handlers.RevisionsHandler;
 
 namespace Raven.Server.Json
 {
@@ -242,6 +243,8 @@ namespace Raven.Server.Json
             public static readonly Func<BlittableJsonReaderObject, DeleteDatabasesOperation.Parameters> DeleteDatabasesParameters = GenerateJsonDeserializationRoutine<DeleteDatabasesOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, ReorderDatabaseMembersOperation.Parameters> MembersOrder = GenerateJsonDeserializationRoutine<ReorderDatabaseMembersOperation.Parameters>();
+
+            public static readonly Func<BlittableJsonReaderObject, RevisionsHandler.GetRevisionsSizeParameters> GetRevisionsSizeParameters = GenerateJsonDeserializationRoutine<RevisionsHandler.GetRevisionsSizeParameters>();
 
             public static readonly Func<BlittableJsonReaderObject, ToggleDatabasesStateOperation.Parameters> DisableDatabaseToggleParameters = GenerateJsonDeserializationRoutine<ToggleDatabasesStateOperation.Parameters>();
 

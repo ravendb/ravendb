@@ -1,18 +1,22 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using FastTests.Utils;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
-using Raven.Server.Documents.Handlers;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static Raven.Server.Documents.Handlers.RevisionsHandler;
 
 namespace SlowTests.Issues;
 public class RavenDB_22491 : ReplicationTestBase
@@ -52,20 +56,32 @@ public class RavenDB_22491 : ReplicationTestBase
             await session.SaveChangesAsync();
         }
 
-        WaitForUserToContinueTheTest(store, false);
+        List<string> cvs;
+        using (var session = store.OpenAsyncSession())
+        {
+            cvs = (await session.Advanced.Revisions.GetMetadataForAsync("Docs/1")).Select(metadata =>
+            {
+                if (metadata.TryGetValue(Constants.Documents.Metadata.ChangeVector, out string cv) == false)
+                    return null;
+                return cv;
+            }).Where(cv => cv != null).ToList();
+        }
 
-        var results = await store.Maintenance.SendAsync(new GetRevisionsMetadataAndMetricsOperation("Docs/1", withSize: true, 0, 100));
+        Assert.Equal(2, cvs.Count);
+
+        cvs.Add("Non Existing Change Vector");
+
+        var results = await store.Maintenance.SendAsync(new GetRevisionsSizeOperation(cvs));
         Assert.NotNull(results);
-        Assert.NotNull(results.Results);
-        Assert.Equal(2, results.Results.Length);
-
-        var newSize = results.Results[0].Size.ActualSize;
-        var oldSize = results.Results[1].Size.ActualSize;
-
+        Assert.NotNull(results.Sizes);
+        Assert.Equal(3, results.Sizes.Length);
+        
+        var newSize = results.Sizes[0].ActualSize;
+        var oldSize = results.Sizes[1].ActualSize;
+        
         Assert.True(newSize > oldSize);
 
-        WaitForUserToContinueTheTest(store, false);
-
+        Assert.False(results.Sizes[2].Exist);
     }
 
     private class User
@@ -74,68 +90,54 @@ public class RavenDB_22491 : ReplicationTestBase
         public string Name { get; set; }
     }
 
-    public class RevisionsWithMetricsResults // Have to be public for GetRevisionsMetadataAndMetricsOperation
-    {
-        public Result[] Results { get; set; }
-    }
 
-    public class Result // Have to be public for GetRevisionsMetadataAndMetricsOperation
-    {
-        public SizeDetails Size  { get; set; }
-    }
 
-    public class GetRevisionsMetadataAndMetricsOperation : IMaintenanceOperation<RevisionsWithMetricsResults>
+    public class GetRevisionsSizeOperation : IMaintenanceOperation<GetRevisionsSizeOperation.Results>
     {
-        private readonly string _id;
-        private readonly bool _withSize;
-        private readonly int _start;
-        private readonly int _pageSize;
+        private readonly GetRevisionsSizeParameters _parameters;
 
-        public GetRevisionsMetadataAndMetricsOperation(string id, bool withSize, int start, int pageSize)
+        public class Results // Have to be public for GetRevisionsSizeOperation
         {
-            _id = id;
-            _withSize = withSize;
-            _start = start;
-            _pageSize = pageSize;
+            public RevisionSizeDetails[] Sizes { get; set; }
         }
 
-        public RavenCommand<RevisionsWithMetricsResults> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public static readonly Func<BlittableJsonReaderObject, Results> ToResults = JsonDeserializationClient.GenerateJsonDeserializationRoutine<Results>();
+
+        public GetRevisionsSizeOperation(List<string> changeVectors)
         {
-            return new GetRevisionsMetadataAndMetricsCommand(_id, _withSize, _start, _pageSize);
+            _parameters = new GetRevisionsSizeParameters { ChangeVectors = changeVectors };
         }
-
-        private class GetRevisionsMetadataAndMetricsCommand : RavenCommand<RevisionsWithMetricsResults>
+    
+        public RavenCommand<Results> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            private readonly string _id;
-            private readonly bool _withSize;
-            private readonly int _start;
-            private readonly int _pageSize;
-
-            private static Func<BlittableJsonReaderObject, RevisionsWithMetricsResults> ToResult = JsonDeserializationClient.GenerateJsonDeserializationRoutine<RevisionsWithMetricsResults>();
-
-            public GetRevisionsMetadataAndMetricsCommand(string id, bool withSize, int start, int pageSize)
+            return new GetRevisionsMetadataAndMetricsCommand(_parameters);
+        }
+    
+        private class GetRevisionsMetadataAndMetricsCommand : RavenCommand<Results>
+        {
+            private readonly GetRevisionsSizeParameters _parameters;
+    
+            public GetRevisionsMetadataAndMetricsCommand(GetRevisionsSizeParameters parameters)
             {
-                _id = id;
-                _withSize = withSize;
-                _start = start;
-                _pageSize = pageSize;
+                _parameters = parameters;
             }
-
+    
             public override bool IsReadRequest { get; }
-
+    
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/revisions?id={_id}&start={_start}&pageSize={_pageSize}&metadataOnly=true&withSize={_withSize}";
-
+                url = $"{node.Url}/databases/{node.Database}/revisions/size";
+    
                 return new HttpRequestMessage
                 {
-                    Method = HttpMethod.Get
+                    Method = HttpMethod.Get,
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx)).ConfigureAwait(false))
                 };
             }
-
+    
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
-                Result = ToResult(response);
+                Result = ToResults(response);
             }
         }
     }

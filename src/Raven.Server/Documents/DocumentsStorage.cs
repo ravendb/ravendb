@@ -1228,7 +1228,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static (int ActualSize, int AllocatedSize, bool IsCompressed)? GetMetrics(Table table, TableValueReader tvr)
+        public static (int ActualSize, int AllocatedSize, bool IsCompressed) GetMetrics(Table table, TableValueReader tvr)
         {
             var info = table.GetInfoFor(tvr.Id);
             return (tvr.Size, info.AllocatedSize, info.IsCompressed);

@@ -771,28 +771,17 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
         }
-    }
 
-    public class DocumentSizeDetails : IDynamicJson
-    {
-        public string DocId { get; set; }
-        public int ActualSize { get; set; }
-        public string HumaneActualSize { get; set; }
-        public int AllocatedSize { get; set; }
-        public string HumaneAllocatedSize { get; set; }
-        public bool IsCompressed { get; set; }
-
-        public virtual DynamicJsonValue ToJson()
+        public sealed class DocumentSizeDetails : SizeDetails
         {
-            return new DynamicJsonValue
+            public string DocId { get; set; }
+
+            public override DynamicJsonValue ToJson()
             {
-                [nameof(DocId)] = DocId,
-                [nameof(ActualSize)] = ActualSize,
-                [nameof(HumaneActualSize)] = HumaneActualSize,
-                [nameof(AllocatedSize)] = AllocatedSize,
-                [nameof(HumaneAllocatedSize)] = HumaneAllocatedSize,
-                [nameof(IsCompressed)] = IsCompressed
-            };
+                var json = base.ToJson();
+                json[nameof(DocId)] = DocId;
+                return json;
+            }
         }
     }
 
