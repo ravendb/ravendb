@@ -883,7 +883,7 @@ public unsafe partial class Hnsw
                 Debug.Assert((batchId & 0xFFF) == 0, "We allocate > 1 page, so we get the full page container id");
                 _searchState.Options.LastUsedContainerId = batchId;
                 _searchState.Options.VectorBatchIndex = 1;
-                vector.CopyTo(vectorStorage);
+                vector.CopyTo(vectorStorage.Slice(1)); // count (ptr+1)
                 //container id | index    | marker  
                 return GetVectorId(batchId, 0);
             }
