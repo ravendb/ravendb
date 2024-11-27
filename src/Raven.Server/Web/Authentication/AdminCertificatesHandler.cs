@@ -97,8 +97,8 @@ namespace Raven.Server.Web.Authentication
                 {
                     var permissions = FormatPermissions(certificate);
 
-                    LogAuditFor("Certificates", "ADD", 
-                        $"Generate certificate {certificate?.Name}. Security Clearance: {certificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey)}");
+                    LogAuditFor("Certificates", "GENERATE", 
+                        $"Certificate {certificate?.Name}. Security Clearance: {certificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey)}");
                 }
                 
                 byte[] certs = null;
@@ -784,7 +784,7 @@ namespace Raven.Server.Web.Authentication
                     var permissions = FormatPermissions(newCertificate);
 
                     LogAuditFor("Certificates", "CHANGE", 
-                        $"Edit certificate {newCertificate?.Name}. Security Clearance: {newCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey)}");
+                        $"Certificate {newCertificate?.Name}. Security Clearance: {newCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey)}");
                 }
 
                 var cmd = new PutCertificateCommand(newCertificate.Thumbprint,
@@ -1011,7 +1011,7 @@ namespace Raven.Server.Web.Authentication
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    LogAuditFor("Certificates", "RENEW", "Renew server certificate");
+                    LogAuditFor("Certificates", "RENEW", "Server certificate");
                 }
                 
                 try
