@@ -85,9 +85,8 @@ namespace SlowTests.Issues
 
                     using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
-                        var task = sinkServer.ServerStore.UpdatePullReplicationAsSink(sinkStore.Database, reader, Guid.NewGuid().ToString(), out PullReplicationAsSink pullReplication);
-                        Task.WaitAll(task);
-                        taskId = task.Result.Index;
+                        var result = await sinkServer.ServerStore.UpdatePullReplicationAsSink(sinkStore.Database, reader, Guid.NewGuid().ToString(), out PullReplicationAsSink pullReplication);
+                        taskId = result.Index;
                         Assert.NotNull(pullReplication.CertificateWithPrivateKey);
                     }
                 }
