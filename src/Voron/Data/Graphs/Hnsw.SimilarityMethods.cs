@@ -16,7 +16,7 @@ public partial class Hnsw
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static float CosineSimilaritySingles(ReadOnlySpan<byte> a, Span<byte> b)
+    private static float CosineSimilaritySingles(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
     {
         var aSingles = MemoryMarshal.Cast<byte, float>(a);
         var bSingles = MemoryMarshal.Cast<byte, float>(b);
@@ -24,7 +24,7 @@ public partial class Hnsw
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static float CosineSimilarityI8(ReadOnlySpan<byte> a, Span<byte> b)
+    internal static float CosineSimilarityI8(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
     {
         // assert |a| == |b|
         
@@ -36,8 +36,8 @@ public partial class Hnsw
         var magA = Unsafe.ReadUnaligned<float>(ref Unsafe.AddByteOffset(ref aRef, a.Length - sizeof(float)));
         var magB = Unsafe.ReadUnaligned<float>(ref Unsafe.AddByteOffset(ref bRef, b.Length - sizeof(float)));
         
-        var alpha1 = magA / 127;
-        var alpha2 = magB / 127;
+        var alpha1 = magA / 127f;
+        var alpha2 = magB / 127f;
         
         float dotProduct = alpha1 * alpha2 * vectorLength;
 
@@ -60,11 +60,11 @@ public partial class Hnsw
         sq1 = MathF.Sqrt(sq1);
         sq2 = MathF.Sqrt(sq2);
         
-        return dotProduct / (sq1 * sq2);
+        return 1f - (dotProduct / (sq1 * sq2));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static float HammingDistance(ReadOnlySpan<byte> a, Span<byte> b)
+    private static float HammingDistance(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
     {
         return TensorPrimitives.HammingBitDistance<byte>(a, b);
     }

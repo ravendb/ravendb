@@ -36,6 +36,7 @@ public struct VectorSearchMatch : IQueryMatch
             ? Hnsw.ApproximateNearest(searcher.Transaction.LowLevelTransaction, metadata.FieldName, numberOfCandidates, vectorToSearch.GetEmbedding())
             : Hnsw.ExactNearest(searcher.Transaction.LowLevelTransaction, metadata.FieldName, numberOfCandidates, vectorToSearch.GetEmbedding());
 
+        vectorToSearch.Dispose(); // release memory from querying since search has own copy
         if (_nearestSearch.IsEmpty)
         {
             _isEmpty = true;

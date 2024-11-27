@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using FastTests.Voron.FixedSize;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
@@ -14,9 +15,13 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
     private const string TreeName = "test";
     private const int VectorSizeInBytes = 4 * sizeof(float);
     
-    [RavenFact(RavenTestCategory.Voron)]
-    public void CanRemoveSingle()
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    public void CanRemoveSingle(int seed)
     {
+        Random random = new Random(seed);
         float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
         var v1AsBytes = MemoryMarshal.Cast<float, byte>(v1);
         var entryId = 1 << 2;
@@ -24,7 +29,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         using (var wTx = Env.WriteTransaction())
         {
             Hnsw.Create(wTx.LowLevelTransaction, TreeName, VectorSizeInBytes, 3, 12, VectorEmbeddingType.Single);
-            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, TreeName))
+            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, TreeName, random))
             {
                 vectorHash = registration.Register(entryId, v1AsBytes);
                 registration.Commit();
@@ -45,7 +50,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         using (var wTx = Env.WriteTransaction())
         {
             Hnsw.Create(wTx.LowLevelTransaction, TreeName, VectorSizeInBytes, 3, 12, VectorEmbeddingType.Single);
-            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, TreeName))
+            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, TreeName, random))
             {
                 registration.Remove(entryId, vectorHash.ToSpan());
                 registration.Commit();
@@ -64,9 +69,13 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         }
     }
     
-    [RavenFact(RavenTestCategory.Voron)]
-    public void CanRemoveDoubleSingle()
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    public void CanRemoveDoubleSingle(int seed)
     {
+        var random = new Random(seed);
         float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
         float[] v2 = [0.2f, 0.3f, 0.4f, 0.1f];
         var v1AsBytes = MemoryMarshal.Cast<float, byte>(v1);
@@ -77,7 +86,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         using (var wTx = Env.WriteTransaction())
         {
             Hnsw.Create(wTx.LowLevelTransaction, "test", VectorSizeInBytes, 3, 12, VectorEmbeddingType.Single);
-            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test", random))
             {
                 v1Id = registration.Register(entryId1, v1AsBytes);
                 registration.Register(entryId2, v2AsBytes);
@@ -98,7 +107,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
     
         using (var wTx = Env.WriteTransaction())
         {
-            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test", random))
             {
                 registration.Remove(entryId1, v1Id.ToSpan());
                 registration.Commit();
@@ -117,9 +126,13 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         }
     }
 
-    [RavenFact(RavenTestCategory.Voron)]
-    public void CanExpandNodeFromSingleToSmallPostingList()
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    public void CanExpandNodeFromSingleToSmallPostingList(int seed)
     {
+        Random random = new(seed);
         var v1Id = AddElement(1, register: true);
         var v2Id = AddElement(2, register: true);
         var result = Read();
@@ -143,7 +156,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
                 if (register)
                     Hnsw.Create(wTx.LowLevelTransaction, "test", VectorSizeInBytes, 3, 12, VectorEmbeddingType.Single);
 
-                using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test"))
+                using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test", random))
                 {
                     vecId = registration.Register(EntryId(id), v1AsBytes);
                     registration.Commit();
@@ -161,7 +174,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
             
             using (var wTx = Env.WriteTransaction())
             {
-                using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test"))
+                using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test", random))
                 {
                     registration.Remove(EntryId(id), vecId.ToSpan());
                     registration.Commit();
@@ -187,18 +200,22 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         }
     }
     
-    [RavenFact(RavenTestCategory.Voron)]
-    public void CanRemoveBasedOnEntryIdAndVectorHashAddress()
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    public void CanRemoveBasedOnEntryIdAndVectorHashAddress(int seed)
     {
         float[] v1 = [.4f, .4f, .4f, .4f];
         var v1AsBytes = MemoryMarshal.Cast<float, byte>(v1);
         var entryId = 4;
         ByteString vectorTermContainer = default;
+        Random random = new(seed);
         using (var txw = Env.WriteTransaction())
         {
             Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", random))
             {
                 vectorTermContainer = registration.Register(4, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Commit();
@@ -220,7 +237,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
 
         using (var txw = Env.WriteTransaction())
         {
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", random))
             {
                 registration.Remove(entryId, vectorTermContainer.ToSpan());
                 registration.Commit();

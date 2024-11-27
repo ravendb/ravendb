@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics.Tensors;
 using System.Runtime.InteropServices;
+using FastTests.Voron.FixedSize;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
@@ -43,14 +44,18 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         }
     }
 
-    [RavenFact(RavenTestCategory.Voron)]
-    public void BasicSearchBigVec()
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineData(1199463143)]
+    public void BasicSearchBigVec(int seed)
     {
-        Random rnd = new Random(1536);
-        float[] v1 = Enumerable.Range(0, 1536).Select(_ => rnd.NextSingle() * (rnd.NextInt64() % 2 == 0 ? 1f : -1f)).ToArray();
-        float[] v2 = Enumerable.Range(0, 1536).Select(_ => rnd.NextSingle() * (rnd.NextInt64() % 2 == 0 ? 1f : -1f)).ToArray();
-        // nearest to v2, then v1
+        Random hnswRandom = new Random(seed);
 
+        float[] v1 = Enumerable.Range(0, 1536).Select(_ => hnswRandom.NextSingle() * (hnswRandom.NextInt64() % 2 == 0 ? 1f : -1f)).ToArray();
+        float[] v2 = Enumerable.Range(0, 1536).Select(_ => hnswRandom.NextSingle() * (hnswRandom.NextInt64() % 2 == 0 ? 1f : -1f)).ToArray();
+        // nearest to v2, then v1
         float[] v3 = v2.Select(x => x + 0.05f).ToArray();
 
         
@@ -65,14 +70,14 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Hnsw.Create(txw.LowLevelTransaction, "test", 1536 * sizeof(float), 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Register(1, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Register(2, MemoryMarshal.Cast<float, byte>(v2));
                 registration.Commit();
             }
             
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Register(3, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Commit();
@@ -104,9 +109,13 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         }
     }
     
-    [RavenFact(RavenTestCategory.Voron)]
-    public void BasicSearch()
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    public void BasicSearch(int seed)
     {
+        Random hnswRandom = new Random(seed);
         float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
         float[] v2 = [0.15f, 0.25f, 0.35f, 0.45f];
 
@@ -117,14 +126,14 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Register(4, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
                 registration.Commit();
             }
             
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Register(12, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Commit();
@@ -157,11 +166,13 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         }
     }
     
-    
-
-    [RavenFact(RavenTestCategory.Voron)]
-    public void CanAddAndRemove()
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    public void CanAddAndRemove(int seed)
     {
+        Random hnswRandom = new Random(seed);
         float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
         float[] v2 = [0.15f, 0.25f, 0.35f, 0.45f];
 
@@ -174,14 +185,14 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 vectorHashToRemove = registration.Register(entryIdToRemove, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
                 registration.Commit();
             }
             
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Register(12, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Commit();
@@ -194,7 +205,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Remove(entryIdToRemove, vectorHashToRemove.ToSpan());
                 registration.Commit();
@@ -219,9 +230,14 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
 
 
-    [RavenFact(RavenTestCategory.Voron)]
-    public void CanHandleLargePostingLists()
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineData(387668521)]
+    public void CanHandleLargePostingLists(int seed)
     {
+        Random hnswRandom = new Random(seed);
         float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
         float[] v2 = [0.15f, 0.25f, 0.35f, 0.45f];
 
@@ -233,7 +249,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 for (int i = 0;i < 20_000; i++)
                 {
@@ -271,7 +287,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         var toRemove = elementInGraph.ToArray()[100..];
         using (var txw = Env.WriteTransaction())
         {
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 foreach (var el in toRemove)
                     registration.Remove(el.entryId, el.vectorHash.ToSpan());
@@ -302,7 +318,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         toRemove = elementInGraph.ToArray()[1..];
         using (var txw = Env.WriteTransaction())
         {
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 foreach (var id in toRemove)
                     registration.Remove(id.entryId, id.vectorHash.ToSpan());
@@ -333,7 +349,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         
         using (var txw = Env.WriteTransaction())
         {
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Remove(elementInGraph[0].entryId, elementInGraph[0].vectorHash.ToSpan());
                 registration.Commit();
@@ -364,9 +380,13 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
     }
 
 
-    [RavenFact(RavenTestCategory.Voron)]
-    public void WithLargeVectors()
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    public void WithLargeVectors(int seed)
     {
+        Random hnswRandom = new Random(seed);
         float[] v1 = new float[768];
         float[] v2 = new float[768];
 
@@ -381,14 +401,14 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Hnsw.Create(txw.LowLevelTransaction, "test", v1.Length * 4, 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Register(4, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
                 registration.Commit();
             }
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test"))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Register(12, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Commit();

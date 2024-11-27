@@ -23,13 +23,14 @@ public static class GenerateEmbeddings
     private const int F32Size = 1536;
     
     [ThreadStatic] // avoid convoys in querying
-    private static ArrayPool<byte> Allocator;
+    private static ArrayPool<byte> Allocator; 
 
     private static readonly LocalEmbedder Embedder = new();
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static VectorValue FromText(in VectorOptions options, in string text)
     {
+        Allocator ??= ArrayPool<byte>.Create();
         var embeddings = CreateSmartComponentsLocalEmbedding<EmbeddingF32>(text, F32Size);
 
         switch (options.DestinationEmbeddingType)
@@ -88,7 +89,8 @@ public static class GenerateEmbeddings
             PortableExceptions.ThrowIf<InvalidDataException>(embeddingDestinationType != embeddingSourceType);
             return new VectorValue(disposable, mem, usedBytes);
         }
-        
+        Allocator ??= ArrayPool<byte>.Create();
+
         switch (embeddingDestinationType)
         {
             case VectorEmbeddingType.Single:

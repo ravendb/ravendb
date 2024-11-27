@@ -2,18 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics.Tensors;
+using System.Runtime.InteropServices;
 using FastTests.Voron.FixedSize;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Config;
 using Sparrow.Server.Platform.Posix.macOS;
 using Tests.Infrastructure;
+using Voron.Data.Graphs;
 using Xunit;
 using Xunit.Abstractions;
+using VectorEmbeddingType = Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType;
 
 namespace FastTests.Corax.Vectors;
 
@@ -81,7 +83,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         var queryVector = VectorQuantizer.ToInt8(Enumerable.Range(0, dimensions).Select(_ => random.NextSingle()).ToArray());
 
         var query = session.Query<Dto, Index>()
-            .VectorSearch(f => f.WithField(d => d.Int8), v => v.ByEmbedding(queryVector), -1f)
+            .VectorSearch(f => f.WithField(d => d.Int8), v => v.ByEmbedding(queryVector), 0.1f)
             .OrderByScore();
 
 
@@ -92,7 +94,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         Assert.NotNull(streamResults.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
         var similarity = (float)streamResults.Current.Metadata.GetDouble(Constants.Documents.Metadata.IndexScore);
         
-        var expectedSimilarity = TensorPrimitives.CosineSimilarity(queryVector.Select(x => (float)x).ToArray(), doc.Int8.Select(x => (float)x).ToArray());
+        var expectedSimilarity = Hnsw.CosineSimilarityI8(MemoryMarshal.Cast<sbyte, byte>(queryVector), MemoryMarshal.Cast<sbyte, byte>(doc.Int8));
         Assert.Equal(expectedSimilarity, similarity, 0.0001f);
     }
     

@@ -656,7 +656,7 @@ public static class CoraxQueryBuilder
         }
         else if (value is string s)
         {
-            if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Binary)
+            if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Binary or VectorEmbeddingType.Int8)
             {
                 var buffer = Convert.FromBase64String(s);
                 transformedEmbedding = new VectorValue(arrayPool: null, buffer, buffer);

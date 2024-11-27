@@ -43,7 +43,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         rql: "from 'AutoVecDocs' where vector.search(embedding.i8(Int8), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithEmbedding(f => f.Int8, VectorEmbeddingType.Int8), 
-                value => value.ByEmbedding([0.1f, 0.1f])));
+                value => value.ByEmbedding(new sbyte[]{(sbyte)-1, (sbyte)1})));
     
     [RavenFact(RavenTestCategory.Vector)]
     public void Int1Test() => AutoIndexingTestingBase(

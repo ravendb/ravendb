@@ -326,7 +326,7 @@ public unsafe partial class Hnsw
         private readonly Lookup<Int64LookupKey> _nodeIdToLocations;
         public readonly LowLevelTransaction Llt;
         private int _visitsCounter;
-        public delegate*<ReadOnlySpan<byte>, Span<byte>, float> SimilarityCalc;
+        public delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, float> SimilarityCalc;
         public bool IsEmpty;
         
         
@@ -712,13 +712,14 @@ public unsafe partial class Hnsw
         private readonly Dictionary<ByteString, (ByteString Key, int NodeIndex, NativeList<long> PostingList)> _vectorHashCache = new(ByteStringContentComparer.Instance);
         private readonly Lookup<Int64LookupKey> _nodesByVectorId;
         private SearchState _searchState;
-        public Random Random = Random.Shared;
+        public Random Random;
         private readonly CompactTree _vectorsByHash;
         private readonly int _vectorBatchSizeInPages;
         private readonly long _globalVectorsContainerId;
-        
-        public Registration(LowLevelTransaction llt, Slice name)
+
+        public Registration(LowLevelTransaction llt, Slice name, Random random = null)
         {
+            Random = random ?? Random.Shared;
             _searchState = new SearchState(llt, name);
             _vectorBatchSizeInPages = _searchState.Options.VectorBatchInPages;
             _globalVectorsContainerId = ReadGlobalVectorsContainerId(llt);
@@ -1201,14 +1202,14 @@ public unsafe partial class Hnsw
         }
     }
 
-    public static Registration RegistrationFor(LowLevelTransaction llt, string name)
+    public static Registration RegistrationFor(LowLevelTransaction llt, string name, Random random = null)
     {
         Slice.From(llt.Allocator, name, out var slice);
-        return RegistrationFor(llt, slice);
+        return RegistrationFor(llt, slice, random);
     }
-    public static Registration RegistrationFor(LowLevelTransaction llt, Slice name)
+    public static Registration RegistrationFor(LowLevelTransaction llt, Slice name, Random random = null)
     {
-        return new Registration(llt, name);
+        return new Registration(llt, name, random);
     }
 
     public static NearestSearch ExactNearest(LowLevelTransaction llt, string name, int numberOfCandidates, ReadOnlySpan<byte> vector)
