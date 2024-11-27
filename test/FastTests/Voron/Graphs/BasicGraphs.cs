@@ -5,6 +5,7 @@ using System.Numerics.Tensors;
 using System.Runtime.InteropServices;
 using FastTests.Voron.FixedSize;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
 using Xunit;
@@ -179,7 +180,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         // nearest to v2, then v1
         float[] v3 = [0.25f, 0.35f, 0.45f, 0.55f];
         long entryIdToRemove = 4;
-        ByteString vectorHashToRemove = default;
+        byte[] vectorHashToRemove = default;
         
         using (var txw = Env.WriteTransaction())
         {
@@ -187,7 +188,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
-                vectorHashToRemove = registration.Register(entryIdToRemove, MemoryMarshal.Cast<float, byte>(v1));
+                vectorHashToRemove = registration.Register(entryIdToRemove, MemoryMarshal.Cast<float, byte>(v1)).ToSpan().ToArray();
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
                 registration.Commit();
             }
@@ -207,7 +208,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
-                registration.Remove(entryIdToRemove, vectorHashToRemove.ToSpan());
+                registration.Remove(entryIdToRemove, vectorHashToRemove);
                 registration.Commit();
             }
 
@@ -244,18 +245,18 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         // nearest to v2, then v1
         float[] v3 = [0.25f, 0.35f, 0.45f, 0.55f];
 
-        List<(long entryId, ByteString vectorHash)> elementInGraph = new();
+        List<(long entryId, byte[] vectorHash)> elementInGraph = new();
         using (var txw = Env.WriteTransaction())
         {
             Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
-                for (int i = 0;i < 20_000; i++)
+                for (int i = 1; i <= 20_000; i++)
                 {
-                    var id = (i + 1) * 4;
+                    var id = i;
                     var vec = registration.Register(id, MemoryMarshal.Cast<float, byte>(v1));
-                    elementInGraph.Add((id, vec));
+                    elementInGraph.Add((id, vec.ToSpan().ToArray()));
                 }
                 
                 registration.Commit();
@@ -290,7 +291,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 foreach (var el in toRemove)
-                    registration.Remove(el.entryId, el.vectorHash.ToSpan());
+                    registration.Remove(el.entryId, el.vectorHash);
                 registration.Commit();
             }
             
@@ -321,7 +322,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 foreach (var id in toRemove)
-                    registration.Remove(id.entryId, id.vectorHash.ToSpan());
+                    registration.Remove(id.entryId, id.vectorHash);
                 
                 registration.Commit();
             }
@@ -351,7 +352,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
-                registration.Remove(elementInGraph[0].entryId, elementInGraph[0].vectorHash.ToSpan());
+                registration.Remove(elementInGraph[0].entryId, elementInGraph[0].vectorHash);
                 registration.Commit();
             }
             

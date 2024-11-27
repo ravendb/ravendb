@@ -25,13 +25,13 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
         var v1AsBytes = MemoryMarshal.Cast<float, byte>(v1);
         var entryId = 1 << 2;
-        ByteString vectorHash = default;
+        byte[] vectorHash = default;
         using (var wTx = Env.WriteTransaction())
         {
             Hnsw.Create(wTx.LowLevelTransaction, TreeName, VectorSizeInBytes, 3, 12, VectorEmbeddingType.Single);
             using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, TreeName, random))
             {
-                vectorHash = registration.Register(entryId, v1AsBytes);
+                vectorHash = registration.Register(entryId, v1AsBytes).ToSpan().ToArray();
                 registration.Commit();
             }
 
@@ -52,7 +52,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
             Hnsw.Create(wTx.LowLevelTransaction, TreeName, VectorSizeInBytes, 3, 12, VectorEmbeddingType.Single);
             using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, TreeName, random))
             {
-                registration.Remove(entryId, vectorHash.ToSpan());
+                registration.Remove(entryId, vectorHash);
                 registration.Commit();
             }
             
@@ -81,14 +81,14 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         var v1AsBytes = MemoryMarshal.Cast<float, byte>(v1);
         var v2AsBytes = MemoryMarshal.Cast<float, byte>(v2);
         var entryId1 = 1 << 2;
-        ByteString v1Id = default;
+        byte[] v1Id = default;
         var entryId2 = 2 << 2;
         using (var wTx = Env.WriteTransaction())
         {
             Hnsw.Create(wTx.LowLevelTransaction, "test", VectorSizeInBytes, 3, 12, VectorEmbeddingType.Single);
             using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test", random))
             {
-                v1Id = registration.Register(entryId1, v1AsBytes);
+                v1Id = registration.Register(entryId1, v1AsBytes).ToSpan().ToArray();
                 registration.Register(entryId2, v2AsBytes);
                 registration.Commit();
             }
@@ -109,7 +109,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         {
             using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test", random))
             {
-                registration.Remove(entryId1, v1Id.ToSpan());
+                registration.Remove(entryId1, v1Id);
                 registration.Commit();
             }
             wTx.Commit();
@@ -146,11 +146,11 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
 
         long EntryId(int i) => i << 2; 
 
-        ByteString AddElement(int id, bool register = false)
+        byte[] AddElement(int id, bool register = false)
         {
             float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
             var v1AsBytes = MemoryMarshal.Cast<float, byte>(v1);
-            ByteString vecId = default;
+            byte[] vecId = default;
             using (var wTx = Env.WriteTransaction())
             {
                 if (register)
@@ -158,7 +158,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
 
                 using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test", random))
                 {
-                    vecId = registration.Register(EntryId(id), v1AsBytes);
+                    vecId = registration.Register(EntryId(id), v1AsBytes).ToSpan().ToArray();
                     registration.Commit();
                 }
 
@@ -167,7 +167,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
 
             return vecId;
         }
-        void RemoveElement(int id, ByteString vecId)
+        void RemoveElement(int id, byte[] vecId)
         {
             float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
             var v1AsBytes = MemoryMarshal.Cast<float, byte>(v1);
@@ -176,7 +176,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
             {
                 using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, "test", random))
                 {
-                    registration.Remove(EntryId(id), vecId.ToSpan());
+                    registration.Remove(EntryId(id), vecId);
                     registration.Commit();
                 }
 
@@ -209,7 +209,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         float[] v1 = [.4f, .4f, .4f, .4f];
         var v1AsBytes = MemoryMarshal.Cast<float, byte>(v1);
         var entryId = 4;
-        ByteString vectorTermContainer = default;
+        byte[] vectorTermContainer = default;
         Random random = new(seed);
         using (var txw = Env.WriteTransaction())
         {
@@ -217,7 +217,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", random))
             {
-                vectorTermContainer = registration.Register(4, MemoryMarshal.Cast<float, byte>(v1));
+                vectorTermContainer = registration.Register(4, MemoryMarshal.Cast<float, byte>(v1)).ToSpan().ToArray();
                 registration.Commit();
             }
             
@@ -239,7 +239,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         {
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", random))
             {
-                registration.Remove(entryId, vectorTermContainer.ToSpan());
+                registration.Remove(entryId, vectorTermContainer);
                 registration.Commit();
             }
 
