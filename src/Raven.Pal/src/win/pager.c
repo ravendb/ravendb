@@ -1,8 +1,14 @@
-﻿#include <windows.h>
+﻿// required to enable io ring support
+#define NTDDI_VERSION NTDDI_WIN10_NI
+
+#include <windows.h>
 #include <VersionHelpers.h>
 #include <stdio.h>
 
+#include <ioringapi.h>
+
 #include "rvn.h"
+#include "rvn_internal.h"
 #include "status_codes.h"
 #include "internal_win.h"
 
@@ -20,7 +26,34 @@ __forceinline int clzl(uint64_t x)
 }
 #endif
 
+#define IO_RING_SIZE (256)
 
+// This state is shared across all instances of the pager for a particular file
+struct handle_global_state
+{
+    // This lock handles:
+    // * Writing to the file
+    // * Extending the file and creating new handle
+    // * Closing the handle
+    // 
+    // We explicitly want to deny concurrent writes to the file, because:
+    // * Voron doesn't need that
+    // * We want to use io_ring, which requires single threaded access to the ring
+    // * Avoid race conditions between writes extending the file & writes to the file past the eof
+    //
+    // Voron already ensures that you are either single threaded when writing or extending the file.
+    // There is a potential race between writes & closing a file handle, but that is likely to be rare
+    // and will usually only block the finalizer for a single write duration
+    CRITICAL_SECTION lock;
+
+    uint32_t ref_count;
+    HIORING io_ring;
+    int32_t open_flags;
+    char* file_path;
+};
+
+// This state represent a single handle to the pager on a file
+// multiple such instances may exists at the same time
 struct handle
 {
     HANDLE file_handle;
@@ -28,19 +61,20 @@ struct handle
     void *read_address;
     void *write_address;
     int64_t allocation_size;
-    int32_t open_flags;
     int32_t status_flags;
     int64_t locked_memory;
-    char* file_path;
+    struct handle_global_state* global_state;
 };
 
 extern MemoryLockCallback g_locked_memory_callback;
 extern RecoveryMemoryLockFailureCallback g_recovery_memory_lock_failure_callback;
 
-BOOL CALLBACK InitializeCriticalSectionOnce(PINIT_ONCE initOnce, PVOID Parameter, PVOID *Context)
-{
-    InitializeCriticalSection(Parameter);
-    return TRUE;
+
+bool _IsIoRingSupported() {
+    IORING_CAPABILITIES capabilities; 
+    return IsWindowsVersionOrGreater(10, 0, 22000) && 
+        SUCCEEDED(QueryIoRingCapabilities(&capabilities)) &&
+        capabilities.MaxCompletionQueueSize != IORING_VERSION_INVALID;
 }
 
 uint64_t _GetNearestFileSize(uint64_t needed_size)
@@ -64,7 +98,7 @@ uint64_t _GetNearestFileSize(uint64_t needed_size)
     return (needed_size + ONE_GB - 1) & ~ONE_GB;
 }
 
-int32_t rvn_lock_memory(struct handle* handle, int32_t open_flags, void *mem, int64_t size, int32_t *detailed_error_code)
+int32_t rvn_lock_memory(struct handle* handle, void *mem, int64_t size, int32_t *detailed_error_code)
 {
     int32_t rc = SUCCESS;
     if (sizeof(SIZE_T) == 4)
@@ -84,17 +118,17 @@ int32_t rvn_lock_memory(struct handle* handle, int32_t open_flags, void *mem, in
     for (int i = 0; i < 10; ++i)
     {
         if (VirtualLock(mem, (SIZE_T)size) ||
-            open_flags & OPEN_FILE_DO_NOT_CONSIDER_MEMORY_LOCK_FAILURE_AS_CATASTROPHIC_ERROR)
+            handle->global_state->open_flags & OPEN_FILE_DO_NOT_CONSIDER_MEMORY_LOCK_FAILURE_AS_CATASTROPHIC_ERROR)
         {
             // note that we *explicitly* account for locked memory even if we failed to do so
             // if we don't consider this as catastrophic error, because otherwise accounting 
             // for its removal is really complicated
-            g_locked_memory_callback(size, handle->file_path);
+            g_locked_memory_callback(size, handle->global_state->file_path);
             rc = SUCCESS;
             break;
         }
 
-        if (!g_recovery_memory_lock_failure_callback(size, handle->file_path))
+        if (!g_recovery_memory_lock_failure_callback(size, handle->global_state->file_path))
         {
             rc = FAIL_LOCK_MEMORY;
             break;
@@ -196,9 +230,9 @@ int32_t rvn_unmap_memory(
         *detailed_error_code = GetLastError();
         return FAIL_UNMAP_VIEW_OF_FILE;
     }
-    if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
+    if(handle_ptr->global_state->open_flags & OPEN_FILE_LOCK_MEMORY)
     {
-        g_locked_memory_callback(-size, handle_ptr->file_path);
+        g_locked_memory_callback(-size, handle_ptr->global_state->file_path);
     }
     return SUCCESS;
 }
@@ -225,7 +259,10 @@ int32_t rvn_map_memory(void *handle,
     }
 
     struct handle *handle_ptr = handle;
-    DWORD dwDesiredAccess = (handle_ptr->open_flags & OPEN_FILE_WRITABLE_MAP) ? (FILE_MAP_READ | FILE_MAP_WRITE) : ((handle_ptr->open_flags & OPEN_FILE_COPY_ON_WRITE) ? FILE_MAP_COPY : FILE_MAP_READ);
+    DWORD dwDesiredAccess = (handle_ptr->global_state->open_flags & OPEN_FILE_WRITABLE_MAP) ? 
+        (FILE_MAP_READ | FILE_MAP_WRITE) : 
+        ((handle_ptr->global_state->open_flags & OPEN_FILE_COPY_ON_WRITE) ? FILE_MAP_COPY : FILE_MAP_READ);
+
     *mem = MapViewOfFile(handle_ptr->file_mapping_handle,
                          dwDesiredAccess,
                          offset >> 32,
@@ -238,10 +275,10 @@ int32_t rvn_map_memory(void *handle,
         goto Exit;
     }
 
-    if (handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
+    if (handle_ptr->global_state->open_flags & OPEN_FILE_LOCK_MEMORY)
     {
         // intentionally returning the error code & rc from the lock_memory call
-        int mem_lock_rc = rvn_lock_memory(handle_ptr, handle_ptr->open_flags, *mem, size, detailed_error_code);
+        int mem_lock_rc = rvn_lock_memory(handle_ptr, *mem, size, detailed_error_code);
         if (rc != SUCCESS)
         {
             UnmapViewOfFile(*mem);
@@ -259,12 +296,11 @@ Exit:
 char* ConvertLPCWSTRToUTF8(LPCWSTR lpWideCharStr)
 {
     int utf8Size = WideCharToMultiByte(CP_UTF8, 0, lpWideCharStr, -1, NULL, 0, NULL, NULL);
-
     if (utf8Size == 0) {
         return NULL;
     }
 
-    char* utf8Str = (char*)malloc(utf8Size * sizeof(char));
+    char* utf8Str = calloc(utf8Size, sizeof(char));
     if (utf8Str == NULL) {
         return NULL;
     }
@@ -273,14 +309,30 @@ char* ConvertLPCWSTRToUTF8(LPCWSTR lpWideCharStr)
         free(utf8Str);
         return NULL;
     }
-
     return utf8Str;
+}
+
+void delete_global_state(struct handle_global_state* global_state)
+{
+    if(global_state == NULL)
+    {
+        return;
+    }
+    if (global_state->io_ring != NULL)
+    {
+        CloseIoRing(global_state->io_ring);
+    }
+    if (global_state->file_path != NULL)
+    {
+        free(global_state->file_path);
+    }
+    DeleteCriticalSection(&global_state->lock);
+    free(global_state);
 }
 
 
 int32_t _open_pager_file(HANDLE h,
-                         char* file_path,
-                         int32_t open_flags,
+                         struct handle_global_state* global_state,
                          int64_t req_file_size,
                          void **handle,
                          void **memory,
@@ -300,7 +352,8 @@ int32_t _open_pager_file(HANDLE h,
         rc = FAIL_NOMEM;
         goto Error;
     }
-    handle_ptr->file_path = file_path;
+    handle_ptr->global_state = global_state;
+
 
     LARGE_INTEGER file_size;
     if (!GetFileSizeEx(h, &file_size) || file_size.QuadPart < 0)
@@ -312,25 +365,26 @@ int32_t _open_pager_file(HANDLE h,
         (req_file_size + ALLOCATION_GRANULARITY - 1) & ~(ALLOCATION_GRANULARITY - 1),
         ALLOCATION_GRANULARITY);
 
-    if (min_file_size > file_size.QuadPart && !(open_flags & OPEN_FILE_READ_ONLY))
+    if (min_file_size > file_size.QuadPart && !(global_state->open_flags & OPEN_FILE_READ_ONLY))
     {
         file_size.QuadPart = min_file_size;
         rc = _resize_file(h, min_file_size, detailed_error_code);
         if(rc != SUCCESS)
             goto Error;
     }
-    else if( file_size.QuadPart == 0 && (open_flags & OPEN_FILE_READ_ONLY))
+    else if( file_size.QuadPart == 0 && (global_state->open_flags & OPEN_FILE_READ_ONLY))
     {
         // we allow opening zero len files with read only mode, but don't try to map them
+        global_state->open_flags |= OPEN_FILE_DO_NOT_MAP;
+
         handle_ptr->file_handle = h;
-        handle_ptr->open_flags = open_flags | OPEN_FILE_DO_NOT_MAP;
         handle_ptr->file_mapping_handle = INVALID_HANDLE_VALUE;
         *memory_size = 0;
         *handle = handle_ptr;
         return SUCCESS;
     }
 
-    DWORD flProtect = (open_flags & OPEN_FILE_WRITABLE_MAP) ? PAGE_READWRITE : PAGE_READONLY;
+    DWORD flProtect = (global_state->open_flags  & OPEN_FILE_WRITABLE_MAP) ? PAGE_READWRITE : PAGE_READONLY;
     m = CreateFileMapping(h, NULL, flProtect, 0, 0, NULL);
 
     if (m == NULL)
@@ -340,17 +394,16 @@ int32_t _open_pager_file(HANDLE h,
         goto Error;
     }
 
-    if ((open_flags & OPEN_FILE_DO_NOT_MAP))
+    if ((global_state->open_flags & OPEN_FILE_DO_NOT_MAP))
     {
         handle_ptr->file_handle = h;
-        handle_ptr->open_flags = open_flags;
         handle_ptr->file_mapping_handle = m;
         *memory_size = file_size.QuadPart;
         *handle = handle_ptr;
         return SUCCESS;
     }
 
-    DWORD dwDesiredAccess = ((open_flags & OPEN_FILE_COPY_ON_WRITE) ? FILE_MAP_COPY : FILE_MAP_READ);
+    DWORD dwDesiredAccess = ((global_state->open_flags & OPEN_FILE_COPY_ON_WRITE) ? FILE_MAP_COPY : FILE_MAP_READ);
 
     mem = MapViewOfFile(m, dwDesiredAccess, 0, 0, 0);
     if (mem == NULL)
@@ -359,7 +412,7 @@ int32_t _open_pager_file(HANDLE h,
         goto Error;
     }
 
-    if (open_flags & OPEN_FILE_WRITABLE_MAP)
+    if (global_state->open_flags & OPEN_FILE_WRITABLE_MAP)
     {
         wmem = MapViewOfFile(m, FILE_MAP_WRITE, 0, 0, 0);
         if (wmem == NULL)
@@ -373,10 +426,10 @@ int32_t _open_pager_file(HANDLE h,
 
     m = INVALID_HANDLE_VALUE;
 
-    if (open_flags & OPEN_FILE_LOCK_MEMORY &&
+    if (global_state->open_flags & OPEN_FILE_LOCK_MEMORY &&
         // We map the memory twice if we have WRITE access, but in phsyical memory, it ends up being the same
         // thing, so we only lock it once. 
-        rvn_lock_memory(handle_ptr, open_flags, mem, file_size.QuadPart, detailed_error_code) != SUCCESS)
+        rvn_lock_memory(handle_ptr, mem, file_size.QuadPart, detailed_error_code) != SUCCESS)
     {
         
         rc = FAIL_LOCK_MEMORY;
@@ -387,7 +440,6 @@ int32_t _open_pager_file(HANDLE h,
     handle_ptr->read_address = mem;
     handle_ptr->write_address = wmem;
     handle_ptr->allocation_size = file_size.QuadPart;
-    handle_ptr->open_flags = open_flags;
     handle_ptr->file_mapping_handle = INVALID_HANDLE_VALUE;
     *handle = handle_ptr;
     *memory = mem;
@@ -397,10 +449,6 @@ int32_t _open_pager_file(HANDLE h,
 
 Error:
     *detailed_error_code = GetLastError();
-    if(file_path != NULL)
-    {
-        free(file_path);
-    }
     if (mem != NULL)
     {
         UnmapViewOfFile(mem);
@@ -410,7 +458,6 @@ Error:
         UnmapViewOfFile(wmem);
     }
     CloseHandle(m);
-    CloseHandle(h);
     free(handle_ptr);
     return rc;
 }
@@ -428,6 +475,9 @@ rvn_init_pager(const char *filename,
     *memory_size = 0;
     *memory = NULL;
     *handle = NULL;
+    HANDLE h = INVALID_HANDLE_VALUE;
+
+    int32_t rc = -1;
 
     DWORD dwDesiredAccess = ((open_flags & OPEN_FILE_READ_ONLY) | (open_flags & OPEN_FILE_COPY_ON_WRITE)) ? GENERIC_READ : GENERIC_READ | GENERIC_WRITE;
     DWORD dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
@@ -435,23 +485,67 @@ rvn_init_pager(const char *filename,
     dwFlagsAndAttributes |= open_flags & OPEN_FILE_SEQUENTIAL_SCAN ? FILE_FLAG_SEQUENTIAL_SCAN : FILE_FLAG_RANDOM_ACCESS;
     dwFlagsAndAttributes |= open_flags & OPEN_FILE_READ_ONLY ? FILE_ATTRIBUTE_READONLY : 0;
 
+    rvn_write_mode write_mode = _get_writer_mode();
+    if(write_mode == rvn_write_mode_mmap)
+    {
+        open_flags |= OPEN_FILE_WRITABLE_MAP;
+    }
+
+    struct handle_global_state* global_state = calloc(1, sizeof(struct handle_global_state));
+    if(global_state == NULL)
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_NOMEM;
+    }
+    global_state->open_flags = open_flags;
+    global_state->ref_count = 1;
+    InitializeCriticalSection(&global_state->lock);
     LPCWSTR file_path_unicode = (LPCWSTR)filename;
-    HANDLE h = CreateFileW(file_path_unicode, dwDesiredAccess,
+    global_state->file_path = ConvertLPCWSTRToUTF8(file_path_unicode);
+    if (global_state->file_path == NULL)
+    {
+        *detailed_error_code = GetLastError();
+        rc = FAIL_NOMEM;
+        goto Error;
+    }
+    if (_IsIoRingSupported()) {
+        IORING_CREATE_FLAGS flags = { 0 };
+        HRESULT hr = CreateIoRing(IORING_VERSION_3, flags, IO_RING_SIZE, IO_RING_SIZE, &global_state->io_ring);
+        if (FAILED(hr)) {
+            *detailed_error_code = hr;
+            rc = FAIL_CREATE_IO_RING;
+            goto Error;
+        }
+    } 
+    else if(write_mode == rvn_write_mode_io_ring)
+    {
+        rc = FAIL_CREATE_IO_RING;
+        goto Error;
+    }
+    h = CreateFileW(file_path_unicode, dwDesiredAccess,
                           FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
                           NULL, OPEN_ALWAYS, dwFlagsAndAttributes, NULL);
     if (h == INVALID_HANDLE_VALUE)
     {
         *detailed_error_code = GetLastError();
-        return FAIL_OPEN_FILE;
+        rc = FAIL_OPEN_FILE;
+        goto Error;
     }
-
-    char* file_path = ConvertLPCWSTRToUTF8(file_path_unicode);
-    if (file_path == NULL)
+  
+    rc = _open_pager_file(h, global_state, initial_file_size, handle, memory, writable_memory, memory_size, detailed_error_code);
+    if (rc == SUCCESS)
     {
-        *detailed_error_code = GetLastError();
-        return FAIL_NOMEM;
+        return SUCCESS;
     }
-    return _open_pager_file(h, file_path, open_flags, initial_file_size, handle, memory, writable_memory, memory_size, detailed_error_code);
+    
+
+Error:
+    if(h != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(h);
+    }
+    delete_global_state(global_state);
+    return rc;
 }
 
 int32_t
@@ -478,13 +572,24 @@ rvn_increase_pager_size(void *handle,
         *detailed_error_code = GetLastError();
         return FAIL_DUPLICATE_HANDLE;
     }
-    char* file_path_copy = strdup(handle_ptr->file_path);
-    if (file_path_copy == NULL)
+
+    EnterCriticalSection(&handle_ptr->global_state->lock);
+    int32_t rc = _open_pager_file(h, 
+        handle_ptr->global_state, new_length, 
+        new_handle, memory, writable_memory,
+        memory_size, detailed_error_code);
+    if(rc == SUCCESS)
     {
-        *detailed_error_code = GetLastError();
-        return FAIL_NOMEM;
+        handle_ptr->global_state->ref_count++;   
     }
-    return _open_pager_file(h, file_path_copy, handle_ptr->open_flags, new_length, new_handle, memory, writable_memory, memory_size, detailed_error_code);
+    LeaveCriticalSection(&handle_ptr->global_state->lock);
+    if(rc == SUCCESS)
+    {
+        return SUCCESS;
+    }
+
+    CloseHandle(h);
+    return rc;
 }
 
 EXPORT int32_t
@@ -499,11 +604,11 @@ rvn_close_pager(
     struct handle *handle_ptr = handle;
     *detailed_error_code = 0;
     int rc = SUCCESS;
-    if (!(handle_ptr->open_flags & OPEN_FILE_DO_NOT_MAP))
+    if (!(handle_ptr->global_state->open_flags & OPEN_FILE_DO_NOT_MAP))
     {
-        if(handle_ptr->open_flags & OPEN_FILE_LOCK_MEMORY)
+        if(handle_ptr->global_state->open_flags & OPEN_FILE_LOCK_MEMORY)
         {
-            g_locked_memory_callback(-handle_ptr->allocation_size, handle_ptr->file_path);
+            g_locked_memory_callback(-handle_ptr->allocation_size, handle_ptr->global_state->file_path);
         }
 
         if (!UnmapViewOfFile(handle_ptr->read_address))
@@ -511,7 +616,7 @@ rvn_close_pager(
             *detailed_error_code = GetLastError();
             rc = FAIL_MAP_VIEW_OF_FILE;
         }
-        if(handle_ptr->open_flags & OPEN_FILE_WRITABLE_MAP)
+        if(handle_ptr->global_state->open_flags & OPEN_FILE_WRITABLE_MAP)
         {
             if (!UnmapViewOfFile(handle_ptr->write_address))
             {
@@ -538,7 +643,15 @@ rvn_close_pager(
         if (rc == SUCCESS)
             rc = FAIL_CLOSE;
     }
-    free(handle_ptr->file_path);
+    EnterCriticalSection(&handle_ptr->global_state->lock);
+    uint32_t refs = --handle_ptr->global_state->ref_count;
+    LeaveCriticalSection(&handle_ptr->global_state->lock);
+
+    if(refs == 0)
+    {
+        // here we _know_ we are the only ones
+        delete_global_state(handle_ptr->global_state);
+    }
     free(handle_ptr);
     return rc;
 }
@@ -578,4 +691,176 @@ int32_t rvn_pager_get_file_handle(
     }
     *file_handle = h;
     return SUCCESS;
+}
+
+int32_t rvn_write_file_io(
+    void* handle,
+    int32_t count,
+    struct page_to_write *buffers,
+    int32_t *detailed_error_code
+)
+{
+    struct handle *handle_ptr = handle;
+    OVERLAPPED ov = {0};
+    for(int32_t i = 0; i < count; i++)
+    {
+        int64_t offset = buffers[i].page_num * VORON_PAGE_SIZE;
+        int64_t size = (int64_t)buffers[i].count_of_pages * VORON_PAGE_SIZE;
+        while(size > 0)
+        {
+            ov.Offset = (DWORD)offset;
+            ov.OffsetHigh = (DWORD)(offset >> 32);
+
+            int32_t size_to_write = (int32_t)(rvn_min(size, INT32_MAX));
+            if(!WriteFile(handle_ptr->file_handle, buffers[i].ptr, size_to_write, NULL, &ov))
+            {
+                *detailed_error_code = GetLastError();
+                return FAIL_WRITE_FILE;
+            }    
+            offset += size_to_write;
+            size -= size_to_write;
+        }
+    }
+    return SUCCESS;
+}
+
+int32_t _submit_and_wait(
+    HIORING io_ring,
+    int32_t count,
+    int32_t* detailed_error_code)
+{
+    HRESULT hr = SubmitIoRing(io_ring, count, INFINITE, NULL);
+    if (FAILED(hr))
+    {
+        *detailed_error_code = hr;
+        return FAIL_IO_RING_SUBMIT;
+    }
+    IORING_CQE cqe;
+    for(int i = 0; i < count; i++)
+    {
+        hr = PopIoRingCompletion(io_ring, &cqe);
+        if (hr != S_OK)
+        {
+            *detailed_error_code = hr;
+            return FAIL_IO_RING_NO_RESULT;
+        }
+        if(FAILED(cqe.ResultCode))
+        {
+            *detailed_error_code = cqe.ResultCode;
+            return FAIL_IO_RING_WRITE_RESULT;
+        }
+    }
+    return SUCCESS;
+}
+
+int32_t rvn_write_io_ring(
+    void* handle,
+    int32_t count,
+    struct page_to_write *buffers,
+    int32_t *detailed_error_code
+)
+{
+    struct handle *handle_ptr = handle;
+    IORING_HANDLE_REF file_handle_ref =  IoRingHandleRefFromHandle(handle_ptr->file_handle);
+    uint32_t submitted = 0;
+    HRESULT hr;
+    int32_t rc = SUCCESS;
+
+    EnterCriticalSection(&handle_ptr->global_state->lock);
+    for(int32_t i = 0; i < count; i++)
+    {
+        IORING_BUFFER_REF buf = IoRingBufferRefFromPointer(buffers[i].ptr);
+        int64_t offset = buffers[i].page_num * VORON_PAGE_SIZE;
+        int64_t size = (int64_t)buffers[i].count_of_pages * VORON_PAGE_SIZE;
+        while(size > 0)
+        {
+            int32_t size_to_write = (int32_t)(rvn_min(size, INT32_MAX));
+            hr = BuildIoRingWriteFile(handle_ptr->global_state->io_ring, file_handle_ref, 
+                buf, size_to_write, offset, FILE_WRITE_FLAGS_NONE, 0,
+                IOSQE_FLAGS_NONE);
+            size -= size_to_write;
+            offset += size_to_write;
+
+            if (FAILED(hr))
+            {
+                *detailed_error_code = hr;
+                return FAIL_IO_RING_WRITE;
+            }
+            if(++submitted >= IO_RING_SIZE)
+            {  
+                rc = _submit_and_wait(handle_ptr->global_state->io_ring, submitted, detailed_error_code);
+                if(rc != SUCCESS)
+                {
+                    break;
+                }
+                submitted = 0;
+            }
+        }
+    }
+    if(rc == SUCCESS)
+    {
+        rc =  _submit_and_wait(handle_ptr->global_state->io_ring, submitted, detailed_error_code);
+    }
+    LeaveCriticalSection(&handle_ptr->global_state->lock);
+    return rc;
+}
+
+
+int32_t rvn_write_mmap(
+    void* handle,
+    int32_t count,
+    struct page_to_write *buffers,
+    int32_t *detailed_error_code
+)
+{
+    struct handle *handle_ptr = handle;
+    for(int32_t i = 0; i < count; i++)
+    {
+        int64_t offset = buffers[i].page_num * VORON_PAGE_SIZE;
+        int64_t size = (int64_t)buffers[i].count_of_pages * VORON_PAGE_SIZE;
+        memcpy((char*)handle_ptr->write_address + offset, buffers[i].ptr, (size_t)size);
+    }
+    if(!FlushViewOfFile(handle_ptr->write_address, 0))
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_FLUSH_VIEW_OF_FILE;
+    }
+    return SUCCESS;
+}
+
+
+int32_t rvn_write_invalid_setup(
+    void* handle,
+    int32_t count,
+    struct page_to_write *buffers,
+    int32_t *detailed_error_code
+)
+{
+    *detailed_error_code = ERROR_NOT_SUPPORTED;
+    return FAIL_INVALID_HANDLE;
+}
+
+
+EXPORT
+rvn_writer rvn_get_writer(void* handle)
+{
+    struct handle *handle_ptr = handle;
+    rvn_write_mode mode = _get_writer_mode();
+    switch (mode)
+    {
+        case rvn_write_mode_file_io:
+            return rvn_write_file_io;
+        case rvn_write_mode_io_ring:
+            if(handle_ptr->global_state->io_ring == NULL)
+                return rvn_write_invalid_setup;
+            return rvn_write_io_ring;
+        case rvn_write_mode_mmap:
+            if(handle_ptr->write_address == NULL)
+                return rvn_write_invalid_setup;
+            return rvn_write_mmap;
+        default:
+            if(handle_ptr->global_state->io_ring == NULL)
+                return rvn_write_file_io;
+            return rvn_write_io_ring;
+    }
 }

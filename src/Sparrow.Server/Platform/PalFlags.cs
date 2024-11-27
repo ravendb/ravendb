@@ -52,6 +52,13 @@ namespace Sparrow.Server.Platform
             FailGetVolumeDetails = 42,
             FailSetSparse = 43,
             FailSetSparseRange = 44,
+            FailCreateIoRing = 45,
+            FailIoRingRegisterFile = 46,
+            FailIoRingWrite = 47,
+            FailIoRingSubmit = 48,
+            FailIoRingWriteResult = 49,
+            FailIoRingNoResult = 50,
+            FailFlushViewOfFile = 51,
         };
 
         [Flags]

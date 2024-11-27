@@ -52,8 +52,15 @@ enum
     FAIL_GET_VOLUME_DETAILS     =      42,
     FAIL_SET_SPARSE             =      43,
     FAIL_SET_SPARSE_RANGE       =      44,
-    
+    FAIL_CREATE_IO_RING         =      45,
+    FAIL_IO_RING_REGISTER_FILE  =      46,
+    FAIL_IO_RING_WRITE          =      47,
+    FAIL_IO_RING_SUBMIT         =      48,
+    FAIL_IO_RING_WRITE_RESULT   =      49,
+    FAIL_IO_RING_NO_RESULT      =      50,
+    FAIL_FLUSH_VIEW_OF_FILE     =      51,
 };
+
 #define ERRNO_SPECIAL_CODES_NONE        0
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
 #define ERRNO_SPECIAL_CODES_ENOENT      (1 << 1)

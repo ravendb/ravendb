@@ -11,6 +11,7 @@ rvn_get_system_information(struct SYSTEM_INFORMATION *sys_info, int32_t *detaile
 {
     sys_info->page_size = 64 * 1024;
     sys_info->prefetch_status = IsWindows8OrGreater() ? 1 : 0;
+    sys_info->voron_page_size = VORON_PAGE_SIZE;
 
     *detailed_error_code = 0;
 

@@ -49,17 +49,23 @@ public unsafe partial class Pager : IDisposable
 
     public static (Pager Pager, State State) Create(StorageEnvironmentOptions options, string filename, long initialFileSize, Pal.OpenFileFlags flags)
     {
+        if (Pal.PalVoronPageSize != Constants.Storage.PageSize)// JIT should eliminate this
+            throw new InvalidOperationException($"Expected the PAL to have page size matching Voron but was: {Pal.PalVoronPageSize}");
+        
         var pager = new Pager(options, filename, flags, GetFunctions(options, flags));
         var result = Pal.rvn_init_pager(filename, initialFileSize, flags, 
             out var handle, out var readOnlyMemory, out var writeMemory, out var memorySize, out var error);
         if (result != PalFlags.FailCodes.Success)
             RaiseError(filename, error, result, initialFileSize);
+        pager.Writer = Pal.rvn_get_writer(handle);
         var state = new State(pager, readOnlyMemory, writeMemory, memorySize, handle);
         (state.TotalFileSize, state.TotalDiskSpace) = pager.GetFileSize(state);
         pager.InstallState(state);
         pager.Initialize(memorySize);
         return (pager, state);
     }
+
+    public Pal.WriterFunc Writer;
 
     private static Functions GetFunctions(StorageEnvironmentOptions options, Pal.OpenFileFlags flags)
     {
@@ -73,7 +79,7 @@ public unsafe partial class Pager : IDisposable
         return funcs;
     }
 
-    private static void RaiseError(string filename, int errorCode, PalFlags.FailCodes rc, long initialFileSize, [CallerMemberName] string? caller = null)
+    public static void RaiseError(string filename, int errorCode, PalFlags.FailCodes rc, long initialFileSize, [CallerMemberName] string? caller = null)
     {
         if (rc == PalFlags.FailCodes.FailLockMemory)
             throw new InsufficientMemoryException(

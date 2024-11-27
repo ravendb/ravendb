@@ -1,6 +1,9 @@
 #include <sys/types.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "rvn.h"
+#include "rvn_internal.h"
 #include "status_codes.h"
 
 
@@ -29,3 +32,42 @@ _nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size)
     }
     return ((orig_size / sys_page_size) + 1) * sys_page_size;
 }
+
+rvn_write_mode _get_writer_mode()
+{
+    const char* env_var_name = "RAVEN_WRITER_MODE";
+#if defined(_WIN32)
+    char buffer[32];
+    memset(buffer, 0, sizeof(buffer));
+    size_t required_size;
+    if (getenv_s(&required_size, buffer, sizeof buffer, env_var_name) != 0 || 
+        required_size == 0)
+    {
+        return rvn_mode_default;
+    }
+#else
+    const char* buffer = getenv(env_var_name);
+    if (buffer == NULL)
+    {
+        return rvn_mode_default;
+    }
+#endif
+
+    if (strcmp(buffer, "file_io") == 0)
+    {
+        return rvn_write_mode_file_io;
+    }
+    else if (strcmp(buffer, "io_ring") == 0)
+    {
+        return rvn_write_mode_io_ring;
+    }
+    else if (strcmp(buffer, "mmap") == 0)
+    {
+        return rvn_write_mode_mmap;
+    }
+    else // Invalid value
+    {
+        return rvn_mode_default;
+    }
+}
+

@@ -12,10 +12,11 @@ namespace Sparrow.Server.Platform
     {
         public const int PAL_VER = 62048; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
-        static  Pal()
+        static Pal()
         {
             PalFlags.FailCodes rc;
             int errorCode;
+            PalDefinitions.SystemInformation sysInfo; 
             try
             {
                 var palVer = rvn_get_pal_ver();
@@ -27,7 +28,7 @@ namespace Sparrow.Server.Platform
 
                 rvn_register_callbacks(&MemoryLockUsage.UpdateLockedMemory, &MemoryLockUsage.RecoverLockedMemoryFailure);
 
-                rc = rvn_get_system_information(out _, out errorCode);
+                rc = rvn_get_system_information(out sysInfo, out errorCode);
             }
             catch (Exception ex)
             {
@@ -44,7 +45,11 @@ namespace Sparrow.Server.Platform
 
             if (rc != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(rc, errorCode, "Cannot get system information");
+            
+            PalVoronPageSize = sysInfo.VoronPageSize;
         }
+
+        public static readonly int PalVoronPageSize;
 
         private const string LIBRVNPAL = "librvnpal";
 
@@ -187,6 +192,29 @@ namespace Sparrow.Server.Platform
             PalDefinitions.PrefetchRanges* list,
             Int32 count,
             out Int32 errorCode);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct page_to_write : IComparable<page_to_write>
+        {
+            public Int64 page_num;
+            public Int32 count_of_pages;
+            public void* ptr;
+
+            public int CompareTo(page_to_write other)
+            {
+                return page_num.CompareTo(other.page_num);
+            }
+        };
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        public delegate PalFlags.FailCodes WriterFunc(
+            void* handle,
+            Int32 count,
+            page_to_write* buffers,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern WriterFunc rvn_get_writer(void* handle);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_pager_get_file_handle(

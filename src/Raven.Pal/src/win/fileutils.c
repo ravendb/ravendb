@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "rvn.h"
+#include "rvn_internal.h"
 #include "status_codes.h"
 #include "internal_win.h"
 
@@ -162,4 +163,3 @@ rvn_test_storage_durability(
    *detailed_error_code = 0;
     return SUCCESS; /* windows and mac are always true */
 }
-

@@ -20,6 +20,7 @@ rvn_get_system_information(struct SYSTEM_INFORMATION *sys_info,
 
     sys_info->page_size = page_size;
     sys_info->prefetch_status = true;
+    sys_info->voron_page_size = VORON_PAGE_SIZE;
 
     return SUCCESS;
     

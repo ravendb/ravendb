@@ -46,11 +46,13 @@ enum
 
 #define ALLOCATION_GRANULARITY (64*1024)
 
+#define VORON_PAGE_SIZE (8192)
+
 struct SYSTEM_INFORMATION
 {
     int32_t page_size;
     int32_t prefetch_status;
-
+    int32_t voron_page_size;
     /* can_prefetch => prefetch_status == true */
 };
 
@@ -66,6 +68,23 @@ typedef bool (*RecoveryMemoryLockFailureCallback)(int64_t size, char* filename);
 EXPORT
 void rvn_register_callbacks(MemoryLockCallback memoryLockCallback, 
     RecoveryMemoryLockFailureCallback recoveryMemoryLockFailureCallback);
+
+struct page_to_write
+{
+    int64_t page_num;
+    int32_t count_of_pages;
+    void* ptr;
+};
+
+typedef int32_t (*rvn_writer)(
+    void* handle,
+    int32_t count,
+    struct page_to_write *buffers,
+    int32_t *detailed_error_code
+);
+
+EXPORT
+rvn_writer rvn_get_writer(void* handle);
 
 EXPORT
 int32_t rvn_pager_get_file_handle(

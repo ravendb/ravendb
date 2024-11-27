@@ -13,6 +13,7 @@ namespace Sparrow.Server.Platform
         {
             public Int32 PageSize;
             private Int32 PrefetchOption;
+            public Int32 VoronPageSize;
 
             public bool CanPrefetch => PrefetchOption == 1;
         }
