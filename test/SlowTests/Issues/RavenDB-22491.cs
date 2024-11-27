@@ -52,6 +52,8 @@ public class RavenDB_22491 : ReplicationTestBase
             await session.SaveChangesAsync();
         }
 
+        WaitForUserToContinueTheTest(store, false);
+
         var results = await store.Maintenance.SendAsync(new GetRevisionsMetadataAndMetricsOperation("Docs/1", withSize: true, 0, 100));
         Assert.NotNull(results);
         Assert.NotNull(results.Results);

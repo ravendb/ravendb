@@ -110,7 +110,7 @@ namespace SlowTests.Issues
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
-                            var rev = db.DocumentsStorage.RevisionsStorage.GetRevisions(ctx, "users/1", includeMetrics: false, 0, 1);
+                            var rev = db.DocumentsStorage.RevisionsStorage.GetRevisions(ctx, "users/1", 0, 1);
                             return rev.Count;
                         }
                     }, 4
@@ -151,7 +151,7 @@ namespace SlowTests.Issues
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
-                            var rev = db.DocumentsStorage.RevisionsStorage.GetRevisions(ctx, "users/1", includeMetrics: false, 0, 1);
+                            var rev = db.DocumentsStorage.RevisionsStorage.GetRevisions(ctx, "users/1", 0, 1);
                             return rev.Count;
                         }
                     }, 0
