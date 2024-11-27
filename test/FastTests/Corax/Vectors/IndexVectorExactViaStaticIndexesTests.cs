@@ -64,11 +64,12 @@ select new
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Vector)]
     [InlineData(VectorEmbeddingType.Binary, 0.7f)]
-    [InlineData(VectorEmbeddingType.Int8, 0.55f)]
-    [InlineData(VectorEmbeddingType.Single, 0.6f)]
+    [InlineData(VectorEmbeddingType.Int8, 0.82f)]
+    [InlineData(VectorEmbeddingType.Single, 0.75f)]
     public async Task CanCreateVectorIndexFromCSharp(VectorEmbeddingType vectorEmbeddingType, float similarity)
     {
         using var store = CreateDocumentStore();
+        
         {
             using var session = store.OpenAsyncSession();
             await session.StoreAsync(new Document() { Text = "Cat has brown eyes." });

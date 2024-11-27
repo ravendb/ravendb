@@ -4,13 +4,14 @@ using System.Linq;
 using System.Numerics.Tensors;
 using System.Runtime.InteropServices;
 using FastTests.Voron.FixedSize;
-using Sparrow.Server;
-using Sparrow.Threading;
+using Raven.Server.Documents.Indexes.VectorSearch;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
 using Xunit;
 using Xunit.Abstractions;
+using Random = System.Random;
 using VectorEmbeddingType = Voron.Data.Graphs.VectorEmbeddingType;
+using VectorOptions = Raven.Client.Documents.Indexes.Vector.VectorOptions;
 
 namespace FastTests.Voron.Graphs;
 
@@ -229,8 +230,52 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         }
     }
 
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    public void CanCalculateGoodDistances(int seed)
+    {
+        var random = new Random(seed);
+        var vecOpt = new VectorOptions()
+        {
+            SourceEmbeddingType = Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType.Text,
+            DestinationEmbeddingType = Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType.Single
+        };
+        using var v1 = GenerateEmbeddings.FromText(vecOpt, "Cat has brown eyes.");
+        using var v2 = GenerateEmbeddings.FromText(vecOpt, "Apple usually is red.");
+        using var vQ = GenerateEmbeddings.FromText(vecOpt, "animal");
 
+        using (var wTx = Env.WriteTransaction())
+        {
+            Hnsw.Create(wTx.LowLevelTransaction, nameof(CanCalculateGoodDistances), v1.Length, 3, 12, VectorEmbeddingType.Single);
+            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, nameof(CanCalculateGoodDistances), random))
+            {
+                registration.Register(1, v1.GetEmbedding());
+                registration.Register(2, v2.GetEmbedding());
+                registration.Commit();
+            }
+            
+            wTx.Commit();
+        }
 
+        using (var rTx = Env.ReadTransaction())
+        {
+            using var search = Hnsw.ApproximateNearest(rTx.LowLevelTransaction, nameof(CanCalculateGoodDistances), 12, vQ.GetEmbedding());
+            var distances = new float[16];
+            var matches = new long[16];
+            var read = search.Fill(matches, distances);
+            Assert.Equal(2, read);
+            var v1Pos = matches.AsSpan().Slice(0, read).IndexOf(1L);
+            Assert.True(int.IsPositive(v1Pos));
+            Assert.Equal(Hnsw.CosineSimilaritySingles(v1.GetEmbedding(), vQ.GetEmbedding()), distances[v1Pos]);
+            var v2Pos = matches.AsSpan().Slice(0, read).IndexOf(2L);
+            Assert.True(int.IsPositive(v2Pos));
+            Assert.Equal(Hnsw.CosineSimilaritySingles(v2.GetEmbedding(), vQ.GetEmbedding()), distances[v2Pos]);
+        }
+    }
+    
+    
     [RavenTheory(RavenTestCategory.Voron)]
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]

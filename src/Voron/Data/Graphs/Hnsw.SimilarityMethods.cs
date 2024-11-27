@@ -16,7 +16,7 @@ public partial class Hnsw
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static float CosineSimilaritySingles(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
+    internal static float CosineSimilaritySingles(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
     {
         var aSingles = MemoryMarshal.Cast<byte, float>(a);
         var bSingles = MemoryMarshal.Cast<byte, float>(b);

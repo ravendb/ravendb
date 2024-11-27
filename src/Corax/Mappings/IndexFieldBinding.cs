@@ -16,13 +16,16 @@ public sealed class IndexFieldBinding
     private Analyzer _analyzer;
     public readonly bool HasSuggestions;
     public readonly bool HasSpatial;
-    public FieldIndexingMode FieldIndexingMode => _silentlyChangedIndexingModeLegacy ?? field;
+    public FieldIndexingMode FieldIndexingMode => _silentlyChangedIndexingModeLegacy ?? _fieldIndexingMode;
     public readonly bool ShouldStore;
     private FieldIndexingMode? _silentlyChangedIndexingModeLegacy;
 
     private readonly bool _isFieldBindingForWriter;
     public readonly FieldMetadata Metadata;
     public readonly VectorOptions VectorOptions;
+    private FieldIndexingMode _fieldIndexingMode;
+    private string _fieldNameAsString;
+    private string _fieldNameForStatistics;
 
     public IndexFieldBinding(int fieldId, Slice fieldName, Slice fieldNameLong, Slice fieldNameDouble, Slice fieldTermTotalSumField, bool isFieldBindingForWriter,
         Analyzer analyzer = null, bool hasSuggestions = false,
@@ -36,7 +39,7 @@ public sealed class IndexFieldBinding
         FieldNameLong = fieldNameLong;
         FieldTermTotalSumField = fieldTermTotalSumField;
         HasSuggestions = hasSuggestions;
-        FieldIndexingMode = fieldIndexingMode;
+        _fieldIndexingMode = fieldIndexingMode;
         ShouldStore = shouldStore;
         HasSpatial = hasSpatial;
         _isFieldBindingForWriter = isFieldBindingForWriter;
@@ -49,7 +52,7 @@ public sealed class IndexFieldBinding
     {
         get
         {
-            return field ??= FieldName.ToString();
+            return _fieldNameAsString ??= FieldName.ToString();
         }
     }
 
@@ -57,7 +60,7 @@ public sealed class IndexFieldBinding
     {
         get
         {
-            return field ??= $"Field_{FieldName}";
+            return _fieldNameForStatistics ??= $"Field_{FieldName}";
         }
     }
     

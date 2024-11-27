@@ -23,6 +23,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Sparrow;
 
 namespace Raven.Client.Documents
 {
@@ -1255,6 +1256,8 @@ namespace Raven.Client.Documents
         
         public static IRavenQueryable<T> VectorSearch<T>(this IQueryable<T> source, Func<IVectorFieldFactory<T>, IVectorField> embeddingFieldFactory, Action<IVectorFieldValueFactory> embeddingValueFactory, float minimumSimilarity = Constants.VectorSearch.DefaultMinimumSimilarity, int numberOfCandidates = Constants.VectorSearch.DefaultNumberOfCandidatesForQuerying)
         {
+            PortableExceptions.ThrowIfNot<InvalidDataException>(minimumSimilarity is > 0 and <= 1f, $"Minimum similarity must be a value in the range of (0; 1].");
+            
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
             
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
