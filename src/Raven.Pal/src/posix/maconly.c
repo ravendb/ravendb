@@ -11,8 +11,24 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include "rvn.h"
+#include "rvn_internal.h"
 #include "internal_posix.h"
 #include "status_codes.h"
+
+
+bool _io_ring_supported()
+{
+    return false;
+}
+int32_t _setup_io_ring(struct handle_global_state *global_state, int32_t *detailed_error_code)
+{
+    *detailed_error_code = ENOTSUP;
+    return FAIL_CREATE_IO_RING;
+}
+
+void _close_io_ring(struct handle_global_state *global_state)
+{
+}
 
 
 EXPORT uint64_t
@@ -66,6 +82,27 @@ rvn_test_storage_durability(
 {
     *detailed_error_code = 0;
     return SUCCESS; /* windows and mac are always true */
+}
+
+EXPORT
+rvn_writer rvn_get_writer(void* handle)
+{
+    struct handle *handle_ptr = handle;
+    rvn_write_mode mode = _get_writer_mode();
+    switch (mode)
+    {
+        case rvn_write_mode_vectored_file_io:
+        case rvn_write_mode_file_io:
+            return rvn_write_file_io;
+        case rvn_write_mode_io_ring:
+            return rvn_write_invalid_setup;
+        case rvn_write_mode_mmap:
+            if(handle_ptr->write_address == NULL)
+                return rvn_write_invalid_setup;
+            return rvn_write_mmap;
+        default:
+            return rvn_write_file_io;
+    }
 }
 
 #endif

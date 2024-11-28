@@ -53,7 +53,11 @@ rvn_write_mode _get_writer_mode()
     }
 #endif
 
-    if (strcmp(buffer, "file_io") == 0)
+     if (strcmp(buffer, "vectored_file_io") == 0)
+    {
+        return rvn_write_mode_vectored_file_io;
+    }
+    else if (strcmp(buffer, "file_io") == 0)
     {
         return rvn_write_mode_file_io;
     }

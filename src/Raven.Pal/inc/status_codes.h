@@ -59,6 +59,7 @@ enum
     FAIL_IO_RING_WRITE_RESULT   =      49,
     FAIL_IO_RING_NO_RESULT      =      50,
     FAIL_FLUSH_VIEW_OF_FILE     =      51,
+    FAIL_MUTEX_INIT             =      52,
 };
 
 #define ERRNO_SPECIAL_CODES_NONE        0

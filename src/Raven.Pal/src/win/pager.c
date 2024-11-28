@@ -4,7 +4,6 @@
 #include <windows.h>
 #include <VersionHelpers.h>
 #include <stdio.h>
-
 #include <ioringapi.h>
 
 #include "rvn.h"
@@ -457,7 +456,10 @@ Error:
     {
         UnmapViewOfFile(wmem);
     }
-    CloseHandle(m);
+    if(m != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(m);
+    }
     free(handle_ptr);
     return rc;
 }
@@ -510,7 +512,7 @@ rvn_init_pager(const char *filename,
     }
     if (_IsIoRingSupported()) {
         IORING_CREATE_FLAGS flags = { 0 };
-        HRESULT hr = CreateIoRing(IORING_VERSION_3, flags, IO_RING_SIZE, IO_RING_SIZE, &global_state->io_ring);
+        HRESULT hr = CreateIoRing(IORING_VERSION_3, flags, IO_RING_SIZE, IO_RING_SIZE * 2, &global_state->io_ring);
         if (FAILED(hr)) {
             *detailed_error_code = hr;
             rc = FAIL_CREATE_IO_RING;
@@ -583,12 +585,10 @@ rvn_increase_pager_size(void *handle,
         handle_ptr->global_state->ref_count++;   
     }
     LeaveCriticalSection(&handle_ptr->global_state->lock);
-    if(rc == SUCCESS)
+    if(rc != SUCCESS)
     {
-        return SUCCESS;
+        CloseHandle(h);
     }
-
-    CloseHandle(h);
     return rc;
 }
 
@@ -848,16 +848,20 @@ rvn_writer rvn_get_writer(void* handle)
     rvn_write_mode mode = _get_writer_mode();
     switch (mode)
     {
+        case rvn_write_mode_vectored_file_io:
         case rvn_write_mode_file_io:
             return rvn_write_file_io;
+
         case rvn_write_mode_io_ring:
             if(handle_ptr->global_state->io_ring == NULL)
                 return rvn_write_invalid_setup;
             return rvn_write_io_ring;
+
         case rvn_write_mode_mmap:
             if(handle_ptr->write_address == NULL)
                 return rvn_write_invalid_setup;
             return rvn_write_mmap;
+            
         default:
             if(handle_ptr->global_state->io_ring == NULL)
                 return rvn_write_file_io;
