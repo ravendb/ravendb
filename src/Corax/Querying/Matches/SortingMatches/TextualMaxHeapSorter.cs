@@ -186,6 +186,8 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
         // should replace the max element in the heap (and then find the new maximum).
         // Reversing the elements is done via Span<T>.Reverse, which is a vectorized operation.
         results.ToSpan().Slice(start).Reverse();
+        if (exposeScore)
+            scoreDestination.ToSpan().Slice(start).Reverse();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

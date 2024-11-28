@@ -186,6 +186,8 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
         // However, instead of rebuilding the heap as a MinHeap, let's add everything from the heap and call Reverse from the Span extension,
         // which is a vectorized operation.
         results.ToSpan().Slice(start).Reverse();
+        if (exposeScores)
+            scoreDestination.ToSpan().Slice(start).Reverse();
     }
 
     /// <summary>
@@ -234,6 +236,8 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
         // Reversing the elements is done via Span<T>.Reverse, which is a vectorized operation.
         results.ToSpan().Slice(startDocuments, total).Reverse();
         terms.ToSpan().Slice(startTerms, total).Reverse();
+        if (exposeScores)
+            scoreDestination.ToSpan().Slice(startDocuments, total).Reverse();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
