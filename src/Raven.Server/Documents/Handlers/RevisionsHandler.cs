@@ -271,21 +271,6 @@ namespace Raven.Server.Documents.Handlers
             public List<string> ChangeVectors;
         }
 
-        public sealed class RevisionSizeDetails : SizeDetails
-        {
-            public string ChangeVector { get; set; }
-
-            public bool Exist { get; set; }
-
-            public override DynamicJsonValue ToJson()
-            {
-                var json = base.ToJson();
-                json[nameof(ChangeVector)] = ChangeVector;
-                json[nameof(Exist)] = Exist;
-                return json;
-            }
-        }
-
         private List<RevisionSizeDetails> GetRevisionsSizeByChangeVector(DocumentsOperationContext context, List<string> changeVectors)
         {
             var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
@@ -572,6 +557,21 @@ namespace Raven.Server.Documents.Handlers
 
                 AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisionsBin), HttpContext.Request.QueryString.Value, count, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
             }
+        }
+    }
+
+    public sealed class RevisionSizeDetails : SizeDetails
+    {
+        public string ChangeVector { get; set; }
+
+        public bool Exist { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(ChangeVector)] = ChangeVector;
+            json[nameof(Exist)] = Exist;
+            return json;
         }
     }
 }

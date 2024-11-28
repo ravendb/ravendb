@@ -772,16 +772,17 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public sealed class DocumentSizeDetails : SizeDetails
-        {
-            public string DocId { get; set; }
+    }
 
-            public override DynamicJsonValue ToJson()
-            {
-                var json = base.ToJson();
-                json[nameof(DocId)] = DocId;
-                return json;
-            }
+    public sealed class DocumentSizeDetails : SizeDetails
+    {
+        public string DocId { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(DocId)] = DocId;
+            return json;
         }
     }
 

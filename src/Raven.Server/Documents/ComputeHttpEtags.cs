@@ -3,10 +3,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
-using static Raven.Server.Documents.Handlers.RevisionsHandler;
 
 namespace Raven.Server.Documents
 {

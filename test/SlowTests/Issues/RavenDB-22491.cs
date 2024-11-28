@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
+using Raven.Server.Documents.Handlers;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
