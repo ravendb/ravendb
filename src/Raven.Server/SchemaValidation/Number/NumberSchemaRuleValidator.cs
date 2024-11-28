@@ -5,10 +5,6 @@ namespace Raven.Server.SchemaValidation.Number;
 //TODO Find better name
 public abstract class NumberSchemaRuleValidator : SchemaRuleValidator<decimal>
 {
-    protected NumberSchemaRuleValidator(string path) : base(path)
-    {
-    }
-    
     protected override bool CheckTypeAndGetValue(object value, out decimal tValue)
     {
         if (value is double d)

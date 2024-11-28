@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation;
 
-internal class SchemaValidator
+public class SchemaValidator
 {
     private ObjectSchemaRuleValidator _root;
 
@@ -17,8 +17,7 @@ internal class SchemaValidator
     public bool Validate(BlittableJsonReaderObject obj, out string errors)
     {
         var errorBuilder = new ErrorBuilder();
-        _root.Validate(obj, errorBuilder);
-        errors = errorBuilder.ToString();
-        return string.IsNullOrEmpty(errors);
+        _root.Validate(obj, new SchemaValidatorPath(), errorBuilder);
+        return errorBuilder.TryGetErrors(out errors) == false;
     }
 }

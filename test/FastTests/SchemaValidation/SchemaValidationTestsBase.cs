@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -22,6 +23,8 @@ public abstract class SchemaValidationTestsBase : ParallelTestBase
     }
     
     protected BlittableJsonReaderObject ReadObject(DynamicJsonValue obj) => _context.ReadObject(obj,"test object");
+
+    protected static string Regex([StringSyntax(StringSyntaxAttribute.Regex)] string pattern) => pattern;
     
     public override void Dispose()
     {

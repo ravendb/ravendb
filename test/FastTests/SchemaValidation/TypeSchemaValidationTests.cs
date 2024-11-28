@@ -261,7 +261,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 using var obj = ReadObject(new DynamicJsonValue { ["prop"] = 17.3 });
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("root.prop should be of type Boolean but actual type is Number.", errors);
+                AssertError("prop should be of type Boolean but actual type is Number.", errors);
             });
     }
     
@@ -296,7 +296,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 using var obj = ReadObject(new DynamicJsonValue { ["prop"] = 17.3 });
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("root.prop should be of type Null but actual type is Number.", errors);
+                AssertError("prop should be of type Null but actual type is Number.", errors);
             });
     }
 
@@ -345,21 +345,21 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 using var obj = ReadObject(new DynamicJsonValue { ["prop"] = "16" });
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value '16' at 'root.prop' is not an allowed value. Expected one of: 15, somevalue, {\"prop\":8}.", errors);
+                AssertError("The value '16' at 'prop' is not an allowed value. Expected one of: 15, somevalue, {\"prop\":8}.", errors);
             },
             () =>
             {
                 using var obj = ReadObject(new DynamicJsonValue { ["prop"] = "someothervalue" });
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value 'someothervalue' at 'root.prop' is not an allowed value. Expected one of: 15, somevalue, {\"prop\":8}.", errors);
+                AssertError("The value 'someothervalue' at 'prop' is not an allowed value. Expected one of: 15, somevalue, {\"prop\":8}.", errors);
             },
             () =>
             {
                 using var obj = ReadObject(new DynamicJsonValue { ["prop"] = new DynamicJsonValue { ["prop"] = 9 } });
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value '{\"prop\":9}' at 'root.prop' is not an allowed value. Expected one of: 15, somevalue, {\"prop\":8}.", errors);
+                AssertError("The value '{\"prop\":9}' at 'prop' is not an allowed value. Expected one of: 15, somevalue, {\"prop\":8}.", errors);
             });
     }
 }
