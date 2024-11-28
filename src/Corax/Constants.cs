@@ -77,7 +77,7 @@ namespace Corax
 
             public static ReadOnlySpan<byte> LongTreeSuffix => "-L"u8;
 
-            public static readonly Slice LargePostingListsSetSlice, PostingListsSlice,  EntryIdToLocationSlice, LastEntryIdSlice, 
+            public static readonly Slice LargePostingListsSetSlice = Voron.Global.Constants.PostingList.PostingListRegister, PostingListsSlice,  EntryIdToLocationSlice, LastEntryIdSlice, 
                 StoredFieldsSlice, EntriesTermsContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice,
                 DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField, NullPostingLists, NonExistingPostingLists;            
             
@@ -103,7 +103,6 @@ namespace Corax
                 {
                     Slice.From(ctx, "Fields", ByteStringType.Immutable, out FieldsSlice);
                     Slice.From(ctx, "PostingLists", ByteStringType.Immutable, out PostingListsSlice);
-                    Slice.From(ctx, "LargePostingListsSet", ByteStringType.Immutable, out LargePostingListsSetSlice);
                     Slice.From(ctx, "StoredFields", ByteStringType.Immutable, out StoredFieldsSlice);
                     Slice.From(ctx, "EntriesTerms", ByteStringType.Immutable, out EntriesTermsContainerSlice);
                     Slice.From(ctx, "EntryIdToLocation", ByteStringType.Immutable, out EntryIdToLocationSlice);

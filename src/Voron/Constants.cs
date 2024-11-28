@@ -66,6 +66,19 @@ namespace Voron.Global
             public const int MaximumKeySize = 1024;
         }
 
+        public static class PostingList
+        {
+            public static readonly Slice PostingListRegister;
+            
+            static PostingList()
+            {
+                using (StorageEnvironment.GetStaticContext(out var ctx))
+                {
+                    Slice.From(ctx, "LargePostingListsSet", ByteStringType.Immutable, out PostingListRegister);
+                }
+            }
+        }
+
         public static class Graphs
         {
             public static class VectorId

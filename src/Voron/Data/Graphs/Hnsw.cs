@@ -730,6 +730,7 @@ public unsafe partial class Hnsw
         private readonly CompactTree _vectorsByHash;
         private readonly int _vectorBatchSizeInPages;
         private readonly long _globalVectorsContainerId;
+        private PostingList _largePostingListSet;
 
         public Registration(LowLevelTransaction llt, Slice name, Random random = null)
         {
@@ -1089,7 +1090,8 @@ public unsafe partial class Hnsw
 
             if(numberOfEntries is 0)
             {
-                // TODO: remove from large posting list tracking, see: IndexWriter.AddEntriesToTermResultViaLargePostingList
+                _largePostingListSet ??= _searchState.Llt.Transaction.OpenPostingList(Constants.PostingList.PostingListRegister);
+                _largePostingListSet.Remove(postingListId);
                 Container.Delete(_searchState.Llt, _searchState.Options.Container, postingListId);
                 return 0;
             }
@@ -1100,8 +1102,9 @@ public unsafe partial class Hnsw
         private long CreateNewPostingList(FastPForEncoder pforEncoder)
         {
             long setId = Container.Allocate(_searchState.Llt, _searchState.Options.Container, sizeof(PostingListState), out var setSpace);
-            
-            // TODO: Register those large posting lists for storage report, see: IndexWriter.AddNewTermToSet
+
+            _largePostingListSet ??= _searchState.Llt.Transaction.OpenPostingList(Constants.PostingList.PostingListRegister);
+            _largePostingListSet.Add(setId);
             
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
             PostingList.Create(_searchState.Llt, ref postingListState, pforEncoder);
