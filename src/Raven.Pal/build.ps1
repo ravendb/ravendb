@@ -77,13 +77,13 @@ Write-Output "Building Windows x64"
 zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86_64-windows -o runtimes/win-x64/native/librvnpal.dll  $shared $win_files 
 
 Write-Output "Building Linux x64"
-zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target x86_64-linux-gnu -o runtimes/linux-x64/native/librvnpal.so $shared $posix_files "src/posix/linuxonly.c" 
+zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target x86_64-linux-gnu ../../libs/liburing/liburing-2.8.1-x64.a -o runtimes/linux-x64/native/librvnpal.so $shared $posix_files "src/posix/linuxonly.c" 
 
 Write-Output "Building Linux ARM32 (Rasbperry Pi)"
 zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target arm-linux-gnueabihf -o runtimes/linux-arm/native/librvnpal.so $shared $posix_files "src/posix/linuxonly.c" 
 
 Write-Output "Building Linux ARM64"
-zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target aarch64-linux-gnu -o runtimes/linux-arm64/native/librvnpal.so $shared $posix_files "src/posix/linuxonly.c" 
+zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target aarch64-linux-gnu ../../libs/liburing/liburing-2.8.1-aarch64.a -o runtimes/linux-arm64/native/librvnpal.so $shared $posix_files "src/posix/linuxonly.c" 
 
 Write-Output "Building Linux Mac x64"
 zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86_64-macos-none -o runtimes/osx-x64/native/librvnpal.dylib $shared $posix_files "src/posix/maconly.c" 
