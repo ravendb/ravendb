@@ -131,10 +131,10 @@ bool _io_ring_supported()
 
 int32_t _setup_io_ring(struct handle_global_state *global_state, int32_t *detailed_error_code)
 {
-    if(!io_uring_queue_init(IO_RING_SIZE, &global_state->ring, 
-      IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_SINGLE_ISSUER))
+    int rc = io_uring_queue_init(IO_RING_SIZE, &global_state->ring, 0);
+    if(rc)
     {
-        *detailed_error_code = errno;
+        *detailed_error_code = -rc;
         return FAIL_CREATE_IO_RING;
     }
     return SUCCESS;
