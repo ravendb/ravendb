@@ -1,40 +1,27 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Server.Replication;
 using FastTests.Utils;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client;
+using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Http;
-using Raven.Client.Json;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.Admin;
-using Raven.Server.ServerWide;
-using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 
-namespace StressTests.Issues
+namespace SlowTests.Issues
 {
-    internal class RavenDB_23217 : ReplicationTestBase
+    public class RavenDB_23217 : ReplicationTestBase
     {
         public RavenDB_23217(ITestOutputHelper output) : base(output)
         {
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Shuould_Include_One_Revision_When_Using_RevisionBefore_Only_On_GetDocumentsCommand()
         {
             using var store = GetDocumentStore();
@@ -102,6 +89,7 @@ namespace StressTests.Issues
             }
 
         }
+
         private class User
         {
             public string Id { get; set; }
