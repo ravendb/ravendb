@@ -181,8 +181,8 @@ public struct VectorSearchMatch : IQueryMatch
             var pos = _matches.Results.BinarySearch(match);
             if (pos < 0)
                 continue;
-            
-            Unsafe.Add(ref scoresRef, i) = Unsafe.Add(ref distanceRef, pos);
+           
+            Unsafe.Add(ref scoresRef, i) = _nearestSearch.DistanceToScore(Unsafe.Add(ref distanceRef, pos));
         }
         
         _matches.Dispose();

@@ -55,7 +55,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         Assert.NotNull(streamResults.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
         var similarity = (float)streamResults.Current.Metadata.GetDouble(Constants.Documents.Metadata.IndexScore);
 
-        var expectedSimilarity = 1 - TensorPrimitives.CosineSimilarity(queryVector, doc.Singles);
+        var expectedSimilarity = TensorPrimitives.CosineSimilarity(queryVector, doc.Singles);
         
         Assert.Equal(expectedSimilarity, similarity, 0.0001f);
     }
@@ -94,7 +94,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         Assert.NotNull(streamResults.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
         var similarity = (float)streamResults.Current.Metadata.GetDouble(Constants.Documents.Metadata.IndexScore);
         
-        var expectedSimilarity = Hnsw.CosineSimilarityI8(MemoryMarshal.Cast<sbyte, byte>(queryVector), MemoryMarshal.Cast<sbyte, byte>(doc.Int8));
+        var expectedSimilarity = 1 - Hnsw.CosineSimilarityI8(MemoryMarshal.Cast<sbyte, byte>(queryVector), MemoryMarshal.Cast<sbyte, byte>(doc.Int8));
         Assert.Equal(expectedSimilarity, similarity, 0.0001f);
     }
     
@@ -136,7 +136,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         Assert.NotNull(streamResults.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
         var similarity = (float)streamResults.Current.Metadata.GetDouble(Constants.Documents.Metadata.IndexScore);
         
-        var hammingBitDistance = TensorPrimitives.HammingBitDistance<byte>(queryVector, doc.Binary);
+        var hammingBitDistance = (queryVector.Length * 8f - commonsBits) / (queryVector.Length * 8f);
         
         Assert.Equal(hammingBitDistance, similarity, 0.0001f);
     }

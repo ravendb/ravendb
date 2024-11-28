@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Numerics.Tensors;
+using System.Runtime.InteropServices;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -163,8 +165,11 @@ public class RavenDB_22076 : RavenTestBase
         var int8Embedding = VectorQuantizer.ToInt8(rawEmbedding);
         
         Assert.Equal([13, 19, -127, 64, 32, -64, -111, 0, 
-                      13, 19, -127, 64, 32, -64, -111, 0, 76], int8Embedding);
+                      13, 19, -127, 64, 32, -64, -111, 0, 76, /* magnitude part*/ 0, 0, 0, 64], int8Embedding);
 
+        var magn = MathF.Abs(TensorPrimitives.MaxMagnitude(rawEmbedding));
+        var magnitudeInEmbedding = MemoryMarshal.Read<float>(MemoryMarshal.Cast<sbyte, byte>(int8Embedding.AsSpan(rawEmbedding.Length)));
+        Assert.Equal(magn, magnitudeInEmbedding);
         var int1Embedding = VectorQuantizer.ToInt1(rawEmbedding);
         
         Assert.Equal([217, 217, 128], int1Embedding);

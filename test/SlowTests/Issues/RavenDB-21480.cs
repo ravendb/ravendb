@@ -1,6 +1,8 @@
 using System.Linq;
+using System.Reflection;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
 using Assert = Xunit.Assert;
@@ -12,8 +14,20 @@ public class RavenDB_21480 : RavenTestBase
     public RavenDB_21480(ITestOutputHelper output) : base(output)
     {
     }
+
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
+    public void DictionaryTrainingIsNotDisabled()
+    {
+        var type = typeof(CoraxIndexPersistence);
+        var fieldInfo = type.GetField("DisableDictionaryTraining", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(fieldInfo);
+        var disableDictionaryTraining = fieldInfo.GetValue(null);
+        Assert.NotNull(disableDictionaryTraining);
+        Assert.IsType<bool>(disableDictionaryTraining);
+        Assert.False((bool)disableDictionaryTraining);
+    }
     
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CheckIndexingStatsForDictionaryTraining(Options options)
     {
@@ -53,7 +67,7 @@ public class RavenDB_21480 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CheckIndexingStatsForDictionaryTrainingOnErroredIndex(Options options)
     {

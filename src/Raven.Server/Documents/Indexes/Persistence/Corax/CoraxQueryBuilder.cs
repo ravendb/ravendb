@@ -640,7 +640,7 @@ public static class CoraxQueryBuilder
 
         VectorOptions vectorOptions = null;
         if (builderParameters.FieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField))
-            vectorOptions = indexField.Vector;
+            vectorOptions = indexField?.Vector ?? VectorOptions.Default;
         else
             PortableExceptions.Throw<InvalidDataException>($"Cannot find `{fieldName}` field in the index.");
         

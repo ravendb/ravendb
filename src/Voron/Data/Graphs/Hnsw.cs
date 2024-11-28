@@ -170,8 +170,8 @@ public unsafe partial class Hnsw
             var count = (byte)(vectorId >> 1);
             var containerId = vectorId & ~0xFFF;
             var container = Container.Get(state.Llt, containerId);
-            var offset = count * state.Options.VectorSizeBytes + 1; // +1 to skip the count
-            Debug.Assert(offset > 0 && offset + state.Options.VectorSizeBytes <= container.Length, "offset > 0 && offset + state.Options.VectorSizeBytes <= container.Length");
+            var offset = count * state.Options.VectorSizeBytes;
+            Debug.Assert(offset >= 0 && offset + state.Options.VectorSizeBytes <= container.Length, "offset >= 0 && offset + state.Options.VectorSizeBytes <= container.Length");
             return new UnmanagedSpan(container.Address + offset, state.Options.VectorSizeBytes);
         }
     }
@@ -378,6 +378,20 @@ public unsafe partial class Hnsw
                     return 2f * (1.0f - minimumSimilarity);
                 case SimilarityMethod.HammingDistance:
                     return Options.VectorSizeBytes * 8 * (1f - minimumSimilarity);  // number_of_bits * minimum_similarity
+                default:
+                    throw new InvalidDataException($"Unknown similarity method {Options.SimilarityMethod}");
+            }
+        }
+
+        public float DistanceToScore(float score)
+        {
+            switch (Options.SimilarityMethod)
+            {
+                case SimilarityMethod.CosineSimilaritySingles:
+                case SimilarityMethod.CosineSimilarityI8:
+                    return 1 - score;
+                case SimilarityMethod.HammingDistance:
+                    return ((Options.VectorSizeBytes * 8) - score) / (8f * Options.VectorSizeBytes);  // number_of_bits * minimum_similarity
                 default:
                     throw new InvalidDataException($"Unknown similarity method {Options.SimilarityMethod}");
             }
@@ -883,15 +897,15 @@ public unsafe partial class Hnsw
                 Debug.Assert((batchId & 0xFFF) == 0, "We allocate > 1 page, so we get the full page container id");
                 _searchState.Options.LastUsedContainerId = batchId;
                 _searchState.Options.VectorBatchIndex = 1;
-                vector.CopyTo(vectorStorage.Slice(1)); // count (ptr+1)
+                vector.CopyTo(vectorStorage);
                 //container id | index    | marker  
                 return GetVectorId(batchId, 0);
             }
             var span = Container.GetMutable(_searchState.Llt, _searchState.Options.LastUsedContainerId);
             Debug.Assert(_searchState.Options.VectorBatchIndex < 32, "count < 32");
             var count = _searchState.Options.VectorBatchIndex++;
-            Debug.Assert(1 + ((count +1) * vector.Length) < span.Length, "1 + ((count +1) * vector.Length)");
-            var offset = 1 + count * vector.Length;
+            Debug.Assert(((count) * vector.Length) < span.Length, "1 + ((count +1) * vector.Length)");
+            var offset = count * vector.Length;
             vector.CopyTo(span[offset..]);
             offset += vector.Length;
             var id = GetVectorId(_searchState.Options.LastUsedContainerId, count);
@@ -1304,7 +1318,11 @@ public unsafe partial class Hnsw
             _searchState.Llt.Allocator.Release(ref _vector);
         }
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float MinimumSimilarityToMaximumDistance(float min) => _searchState.MinimumSimilarityToDistance(min);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public float DistanceToScore(float distance) => _searchState.DistanceToScore(distance);
 
         public int Fill(Span<long> matches, Span<float> distances)
         {
