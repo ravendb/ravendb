@@ -6,6 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation;
 
+//TODO Remove if not needed
 internal class ValueSchemaRuleValidatorFactory(Type classType, Type argType, string[] additionalInfoProps)
 {
     public Type ArgType => argType;
@@ -51,14 +52,14 @@ internal class ValueSchemaRuleValidatorFactory(Type classType, Type argType, str
         return GetGenericSchemaRuleValidatorType(type.BaseType);
     }
 
-    public bool TryCreate(string path, object[] args, out SchemaRuleValidator validator)
+    public bool TryCreate(object[] args, out SchemaRuleValidator validator)
     {
         var ctor = classType.GetConstructors().FirstOrDefault(x => x.GetParameters().Length == args.Length + 1);
         if (ctor == null)
             //TODO To log the error up
             throw new Exception();
 
-        var ctorParams = new List<object> { path };
+        var ctorParams = new List<object>();
         var ctorParamInfo = ctor.GetParameters();
         for (int i = 0; i < args.Length; i++)
         {

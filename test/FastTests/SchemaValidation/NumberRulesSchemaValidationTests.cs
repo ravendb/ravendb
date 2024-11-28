@@ -58,7 +58,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
             
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '-1' at 'root.longProp' should be greater than or equal to 0.", errors);
+            AssertError("The value '-1' at 'longProp' should be greater than or equal to 0.", errors);
         },
         () =>
         {
@@ -68,7 +68,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
             
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '-1.5' at 'root.longProp' should be greater than or equal to 0.", errors);
+            AssertError("The value '-1.5' at 'longProp' should be greater than or equal to 0.", errors);
         },
         () =>
         {
@@ -88,7 +88,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
             
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '-1' at 'root.doubleProp' should be greater than or equal to 0.5.", errors);
+            AssertError("The value '-1' at 'doubleProp' should be greater than or equal to 0.5.", errors);
         },
         () =>
         {
@@ -98,7 +98,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
             
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '-1.5' at 'root.doubleProp' should be greater than or equal to 0.5.", errors);
+            AssertError("The value '-1.5' at 'doubleProp' should be greater than or equal to 0.5.", errors);
         });
     }
 
@@ -143,14 +143,14 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             using var invalidObj = ReadObject(new DynamicJsonValue { [longProp] = 0 });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '0' at 'root.longProp' should be greater than 0.", errors);
+            AssertError("The value '0' at 'longProp' should be greater than 0.", errors);
         },
         () =>
         {
             using var invalidObj = ReadObject(new DynamicJsonValue { [longProp] = -0.5 });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '-0.5' at 'root.longProp' should be greater than 0.", errors);
+            AssertError("The value '-0.5' at 'longProp' should be greater than 0.", errors);
         },
         () =>
         {
@@ -164,14 +164,14 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             using var invalidObj = ReadObject(new DynamicJsonValue { [doubleProp] = 0 });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '0' at 'root.doubleProp' should be greater than 0.5.", errors);
+            AssertError("The value '0' at 'doubleProp' should be greater than 0.5.", errors);
         },
         () =>
         {
             using var invalidObj = ReadObject(new DynamicJsonValue { [doubleProp] = -1.5 });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '-1.5' at 'root.doubleProp' should be greater than 0.5.", errors);
+            AssertError("The value '-1.5' at 'doubleProp' should be greater than 0.5.", errors);
         });
     }
 
@@ -219,7 +219,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '1' at 'root.longProp' should be less than or equal to 0.", errors);
+            AssertError("The value '1' at 'longProp' should be less than or equal to 0.", errors);
         },
         () =>
         {
@@ -229,7 +229,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '0.5' at 'root.longProp' should be less than or equal to 0.", errors);
+            AssertError("The value '0.5' at 'longProp' should be less than or equal to 0.", errors);
         },
         () =>
         {
@@ -249,7 +249,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '1' at 'root.doubleProp' should be less than or equal to 0.5.", errors);
+            AssertError("The value '1' at 'doubleProp' should be less than or equal to 0.5.", errors);
         },
         () =>
         {
@@ -259,7 +259,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '1.5' at 'root.doubleProp' should be less than or equal to 0.5.", errors);
+            AssertError("The value '1.5' at 'doubleProp' should be less than or equal to 0.5.", errors);
         });
     }
     
@@ -311,7 +311,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '0' at 'root.longProp' should be less than 0.", errors);
+            AssertError("The value '0' at 'longProp' should be less than 0.", errors);
         },
         () =>
         {
@@ -321,7 +321,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '0.5' at 'root.longProp' should be less than 0.", errors);
+            AssertError("The value '0.5' at 'longProp' should be less than 0.", errors);
         },
         () =>
         {
@@ -341,7 +341,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '1' at 'root.doubleProp' should be less than 0.5.", errors);
+            AssertError("The value '1' at 'doubleProp' should be less than 0.5.", errors);
         },
         () =>
         {
@@ -351,7 +351,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '0.5' at 'root.doubleProp' should be less than 0.5.", errors);
+            AssertError("The value '0.5' at 'doubleProp' should be less than 0.5.", errors);
         });
     }
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -420,7 +420,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '4' at 'root.longProp' should be a multiple of 3.", errors);
+            AssertError("The value '4' at 'longProp' should be a multiple of 3.", errors);
         },
         () =>
         {
@@ -430,7 +430,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '4.5' at 'root.longProp' should be a multiple of 3.", errors);
+            AssertError("The value '4.5' at 'longProp' should be a multiple of 3.", errors);
         },
         () =>
         {
@@ -470,7 +470,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '0.5' at 'root.doubleProp' should be a multiple of 0.6.", errors);
+            AssertError("The value '0.5' at 'doubleProp' should be a multiple of 0.6.", errors);
         },
         () =>
         {
@@ -480,7 +480,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             });
 
             Assert.False(schemaValidator.Validate(invalidObj, out string errors));
-            AssertError("The value '1' at 'root.doubleProp' should be a multiple of 0.6.", errors);
+            AssertError("The value '1' at 'doubleProp' should be a multiple of 0.6.", errors);
         });
     }
 }

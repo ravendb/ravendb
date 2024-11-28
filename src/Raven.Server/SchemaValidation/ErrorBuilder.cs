@@ -14,5 +14,17 @@ public class ErrorBuilder : IErrorBuilder
     
     public void AddError(DefaultInterpolatedStringHandler message) => _errorBuilder.Append(message.ToStringAndClear());
 
-    public override string ToString() => _errorBuilder.ToString();
+    public bool TryGetErrors(out string message)
+    {
+        if (_errorBuilder.Length != 0)
+        {
+            message = _errorBuilder.ToString();
+            return true;
+        }
+        
+        message = string.Empty;
+        return false;
+    }
+    
+    public override string ToString() => _errorBuilder?.ToString();
 }

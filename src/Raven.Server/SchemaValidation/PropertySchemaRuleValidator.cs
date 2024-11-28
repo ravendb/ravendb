@@ -6,24 +6,22 @@ using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation;
 
-internal class PropertySchemaRuleValidator
+public abstract class PropertySchemaRuleValidator
 {
-    private readonly string _path;
-    private readonly string _property;
-    private readonly bool _isRequired;
-    private BlittableJsonToken[] _typesRestriction;
     private SchemaRuleValidator[] _ruleValidators;
+    private BlittableJsonToken[] _typesRestriction;
 
-    // ReSharper disable once ConvertToPrimaryConstructor
-    public PropertySchemaRuleValidator(string path, string property, bool isRequired) 
+    private readonly bool _isRequired;
+
+    protected PropertySchemaRuleValidator(bool isRequired = false)
     {
-        _path = path;
-        _property = property;
         _isRequired = isRequired;
     }
 
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {
+        if(schemaDefinition == null)
+            return;
         ReadTypeRestrictionsRule(schemaDefinition);
         ReadValueSchemaRuleValidators(schemaDefinition);
     }
@@ -48,17 +46,96 @@ internal class PropertySchemaRuleValidator
 
         _typesRestriction = allowedTypes.ToArray();
     }
-
-    private IEquatable<string> GetEquatable(object type)
+    
+    public abstract void Validate(BlittableJsonReaderObject parent, SchemaValidatorPath path, IErrorBuilder errorBuilder);
+    
+    protected void Validate(BlittableJsonReaderObject parent, string property, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
-        return type switch
+        if (TryGetPropertyType(parent, property, out BlittableJsonToken token) == false)
         {
-            LazyStringValue lazyStringValue => lazyStringValue,
-            LazyCompressedStringValue lazyCompressedStringValue => lazyCompressedStringValue.ToString(),
-            _ => throw new InvalidSchemaValidationDefinitionException($"Expected array or string for 'type', got {GetPublicType(type)}. Path '{_path}'.")
-        };
+            if (_isRequired)
+                //TODO To improve the error message
+                errorBuilder.AddError($"The required property '{property}' is missing at '{path}'.");
+
+            return;
+        }
+
+        if (IsOfRequiredType(token) == false)
+        {
+            errorBuilder.AddError($"{path} should be of type {string.Join(",", _typesRestriction.Select(GetActualPublicTypeName))} but actual type is {GetActualPublicTypeName(token)}.");
+            return;
+        }
+        
+        var value = parent[property];
+        if (_ruleValidators == null)
+            return;
+        
+        //TODO Maybe to filter _ruleValidators by afgument type and avoid cast and checking inside ruleValidator.Validate
+        foreach (var ruleValidator in _ruleValidators)
+        {
+            ruleValidator.Validate(value, path, errorBuilder);
+        }
     }
 
+    private bool TryGetPropertyType(BlittableJsonReaderObject parent, string property, out BlittableJsonToken token)
+    {
+        if (parent.TryGetPropertyType(new StringSegment(property), out var internalToken))
+        {
+            token = internalToken & BlittableJsonReaderBase.TypesMask;
+            return true;
+        }
+
+        token = 0;
+        return false;
+    }
+
+    private string GetActualPublicTypeName(BlittableJsonToken token)
+    {
+        if (token == BlittableJsonToken.Integer)
+            return "Integer";
+         
+        if(token is BlittableJsonToken.String or BlittableJsonToken.CompressedString)
+            return "String";
+
+        if(token == BlittableJsonToken.LazyNumber)
+            return "Number";
+
+        if (token == BlittableJsonToken.Boolean)
+            return "Boolean";
+
+        if (token == BlittableJsonToken.StartObject)
+            return "Object";
+
+        if(token == BlittableJsonToken.StartArray)
+            return "Array";
+
+        if(token == BlittableJsonToken.Null)
+            return "Null";
+
+        //TODO To think about the error message
+        throw new InvalidOperationException("some error");
+    }
+    
+    private bool IsOfRequiredType(BlittableJsonToken jsonToken) => _typesRestriction == null || _typesRestriction.Contains(jsonToken);
+
+    private void ReadValueSchemaRuleValidators(BlittableJsonReaderObject propertySchemaDefinition)
+    {
+        List<SchemaRuleValidator> ruleValidators = null;
+        foreach (var rule in propertySchemaDefinition.GetPropertyNames())
+        {
+            if (rule is SchemaValidatorConstants.type or SchemaValidatorConstants.description)
+                continue;
+
+            if(SchemaRuleValidatorFactory.TryCreateValidator(rule, propertySchemaDefinition, out SchemaRuleValidator validator) == false)
+                //TODO To check if we want to collect all the errors and return a full report. Also some time we need to ignore a rule like if "maximum" defined "maximumExclusive" handled as part of it.
+                continue;
+            
+            (ruleValidators??=new List<SchemaRuleValidator>()).Add(validator);
+        }
+
+        _ruleValidators = ruleValidators?.ToArray();
+    }
+    
     private IEnumerable<BlittableJsonToken> ConvertTypeToToken(object type)
     {
         var equatable = GetEquatable(type);
@@ -86,113 +163,20 @@ internal class PropertySchemaRuleValidator
             yield return BlittableJsonToken.Null;
         }
     }
-
-    private void ReadValueSchemaRuleValidators(BlittableJsonReaderObject propertySchemaDefinition)
+    
+    private IEquatable<string> GetEquatable(object type)
     {
-        var ruleValidators = new List<SchemaRuleValidator>();
-        foreach (var rule in propertySchemaDefinition.GetPropertyNames())
+        return type switch
         {
-            if (rule is SchemaValidatorConstants.type or SchemaValidatorConstants.description)
-                //TODO Check if there are more
-                continue;
-
-            if (propertySchemaDefinition.TryGet(rule, out object v) == false)
-                //TODO Should not happen
-                continue;
-
-            var foundAdditionalInfoProps = new List<object> { v };
-
-            if (ValueSchemaRuleValidatorFactory.TryGetValueSchemaRuleValidatorFactory(rule, out var validatorsInfo) == false)
-                //Can happen if the restriction rule is an additional info for another rule
-                continue;
-
-            foreach (var validatorInfo in validatorsInfo)
-            {
-                foreach (string additionalInfoProp in validatorInfo.AdditionalInfoProps)
-                {
-                    if (propertySchemaDefinition.TryGet(additionalInfoProp, out object additionalInfoPropValue) == false)
-                        continue;
-
-                    foundAdditionalInfoProps.Add(additionalInfoPropValue);
-                }
-
-                if(validatorInfo.TryCreate(_path, foundAdditionalInfoProps.ToArray(), out var validator) == false)
-                    continue;
-                ruleValidators.Add(validator);
-            }
-        }
-
-        _ruleValidators = ruleValidators.ToArray();
+            LazyStringValue lazyStringValue => lazyStringValue,
+            LazyCompressedStringValue lazyCompressedStringValue => lazyCompressedStringValue.ToString(),
+            // _ => throw new InvalidSchemaValidationDefinitionException($"Expected array or string for 'type', got {GetPublicType(type)}. Path '{_path}'.") TODO to add path for errors
+            _ => throw new InvalidSchemaValidationDefinitionException($"Expected array or string for 'type', got {GetPublicType(type)}.")
+        };
     }
 
     private string GetPublicType(object type)
     {
         throw new NotImplementedException();
     }
-
-    public void Validate(BlittableJsonReaderObject parent, IErrorBuilder errorBuilder)
-    {
-        if (TryGetPropertyType(parent, out BlittableJsonToken token) == false)
-        {
-            if (_isRequired)
-                //TODO To improve the error message
-                errorBuilder.AddError($"{_path} is required");
-
-            return;
-        }
-
-        if (IsOfRequiredType(token) == false)
-        {
-            errorBuilder.AddError($"{_path} should be of type {string.Join(",", _typesRestriction.Select(GetActualPublicTypeName))} but actual type is {GetActualPublicTypeName(token)}.");
-            return;
-        }
-
-        var value = parent[_property];
-        //TODO Maybe to filter _ruleValidators by afgument type and avoid cast and checking inside ruleValidator.Validate
-        foreach (var ruleValidator in _ruleValidators)
-        {
-            ruleValidator.Validate(value, errorBuilder);
-        }
-    }
-
-    private bool TryGetPropertyType(BlittableJsonReaderObject parent, out BlittableJsonToken token)
-    {
-        if (parent.TryGetPropertyType(new StringSegment(_property), out var internalToken))
-        {
-            token = internalToken & BlittableJsonReaderBase.TypesMask;
-            return true;
-        }
-
-        token = 0;
-        return false;
-    }
-
-    private string GetActualPublicTypeName(BlittableJsonToken token)
-     {
-         if (token == BlittableJsonToken.Integer)
-             return "Integer";
-         
-         if(token is BlittableJsonToken.String or BlittableJsonToken.CompressedString)
-             return "String";
-
-         if(token == BlittableJsonToken.LazyNumber)
-             return "Number";
-
-         if (token == BlittableJsonToken.Boolean)
-             return "Boolean";
-
-         if (token == BlittableJsonToken.StartObject)
-             return "Object";
-
-         if(token == BlittableJsonToken.StartArray)
-             return "Array";
-
-         if(token == BlittableJsonToken.Null)
-             return "Null";
-
-         //TODO To think about the error message
-         throw new InvalidOperationException("some error");
-     }
-    
-    private bool IsOfRequiredType(BlittableJsonToken jsonToken) => _typesRestriction == null || _typesRestriction.Contains(jsonToken);
 }

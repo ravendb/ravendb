@@ -44,7 +44,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 using var obj = ReadObject(new DynamicJsonValue { ["stringProp"] = "someothervalue" });
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value at 'root.stringProp' must be 'somevalue', but it is 'someothervalue'.", errors);
+                AssertError("The value at 'stringProp' must be 'somevalue', but it is 'someothervalue'.", errors);
             });
     }
     
@@ -79,7 +79,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 using var obj = ReadObject(new DynamicJsonValue { ["intProp"] = 21 + 3 });
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value at 'root.intProp' must be '21', but it is '24'.", errors);
+                AssertError("The value at 'intProp' must be '21', but it is '24'.", errors);
             });
     }
     
@@ -114,7 +114,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 using var obj = ReadObject(new DynamicJsonValue { ["doubleProp"] = 6.14 });
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value at 'root.doubleProp' must be '3.14', but it is '6.14'.", errors);
+                AssertError("The value at 'doubleProp' must be '3.14', but it is '6.14'.", errors);
             });
     }
     
@@ -149,7 +149,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 using var obj = ReadObject(new DynamicJsonValue { ["objectProp"] = new DynamicJsonValue{["anotherprop"] = 44} });
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The value at 'root.objectProp' must be '{\"prop\":44}', but it is '{\"anotherprop\":44}'.", errors);
+                AssertError("The value at 'objectProp' must be '{\"prop\":44}', but it is '{\"anotherprop\":44}'.", errors);
             },
             () =>
             {
@@ -157,7 +157,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 // using var obj = ReadObject(new DynamicJsonValue { ["objectProp"] = ReadObject(new DynamicJsonValue{["prop"] = 44}).ToString() });
                 //
                 // Assert.False(schemaValidator.Validate(obj, out var errors));
-                // AssertError("The value at 'root.objectProp' must be '{\"prop\":44}', but it is '{\"prop\": 44}'.", errors);
+                // AssertError("The value at 'objectProp' must be '{\"prop\":44}', but it is '{\"prop\": 44}'.", errors);
             });
     }
 
