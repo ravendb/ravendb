@@ -101,7 +101,7 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
         {
             foreach (var (prop, validator) in _namedPropertySchemaRuleValidators)
             {
-                validator.Validate(value, prop, path, errorBuilder);
+                ValidateProperty(validator, value, prop, path, errorBuilder);
             }
         }
 
@@ -116,7 +116,7 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
                         continue;
                 
                     hasValidator = true;
-                    validator.Validate(value, prop, path, errorBuilder);
+                    ValidateProperty(validator,value, prop, path, errorBuilder);
                 }
             }
 
@@ -128,10 +128,18 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
             {
                 errorBuilder.AddError($"The property '{prop}' at '{path}' is not defined and additional properties are not allowed.");
             }
-            else
+            else if (additionalPropertiesValidator != null)
             {
-                additionalPropertiesValidator?.Validate(value, prop, path, errorBuilder);
+                ValidateProperty(additionalPropertiesValidator, value, prop, path, errorBuilder);
             }
         }
+    }
+
+    private static void ValidateProperty(PropertySchemaRuleValidator validator, BlittableJsonReaderObject value, string prop, SchemaValidatorPath path,
+        IErrorBuilder errorBuilder)
+    {
+        path.StepIn(prop);
+        validator.Validate(value, prop, path, errorBuilder);
+        path.StepOut();
     }
 }
