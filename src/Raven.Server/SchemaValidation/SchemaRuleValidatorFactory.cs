@@ -17,6 +17,7 @@ public static class SchemaRuleValidatorFactory
         {MultipleOfSchemaRuleValidator.RuleName, MultipleOfSchemaRuleValidator.Create},
         #endregion
         
+        //TODO To find better name
         #region objects
         {ConstantSchemaRuleValidator.RuleName, ConstantSchemaRuleValidator.Create},
         {EnumSchemaRuleValidator.RuleName, EnumSchemaRuleValidator.Create},

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Server.SchemaValidation.Object;
 using Sparrow;
 using Sparrow.Json;
 
@@ -115,18 +116,32 @@ public abstract class PropertySchemaRuleValidator
     private void ReadValueSchemaRuleValidators(BlittableJsonReaderObject propertySchemaDefinition)
     {
         List<SchemaRuleValidator> ruleValidators = null;
+        var hasObjectRestrictions = false;
         foreach (var rule in propertySchemaDefinition.GetPropertyNames())
         {
             if (rule is SchemaValidatorConstants.type or SchemaValidatorConstants.description)
                 continue;
 
-            if(SchemaRuleValidatorFactory.TryCreateValidator(rule, propertySchemaDefinition, out SchemaRuleValidator validator) == false)
-                //TODO To check if we want to collect all the errors and return a full report. Also some time we need to ignore a rule like if "maximum" defined "maximumExclusive" handled as part of it.
+            if (rule is SchemaValidatorConstants.properties or SchemaValidatorConstants.patternProperties or SchemaValidatorConstants.additionalProperties or SchemaValidatorConstants.required)
+            {
+                hasObjectRestrictions = true;
                 continue;
+            }
             
+            if(SchemaRuleValidatorFactory.TryCreateValidator(rule, propertySchemaDefinition, out var validator) == false)
+            {
+                continue;
+            }
+            //TODO To check if we want to collect all the errors and return a full report. Also some time we need to ignore a rule like if "maximum" defined "maximumExclusive" handled as part of it.
             (ruleValidators??=new List<SchemaRuleValidator>()).Add(validator);
         }
 
+        if (hasObjectRestrictions)
+        {
+            var objValidator = new ObjectSchemaRuleValidator();
+            objValidator.Init(propertySchemaDefinition);
+            (ruleValidators??=new List<SchemaRuleValidator>()).Add(objValidator);
+        }
         _ruleValidators = ruleValidators?.ToArray();
     }
     

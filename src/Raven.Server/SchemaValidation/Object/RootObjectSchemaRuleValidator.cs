@@ -1,5 +1,6 @@
 ﻿namespace Raven.Server.SchemaValidation.Object;
 
-public class RootObjectSchemaRuleValidator() : ObjectSchemaRuleValidator("root", "root", true)
-{
-}
+//TODO To remove if not needed
+// public class RootObjectSchemaRuleValidator() : ObjectSchemaRuleValidator("root", "root", true)
+// {
+// }

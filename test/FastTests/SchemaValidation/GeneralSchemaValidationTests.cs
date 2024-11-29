@@ -44,7 +44,49 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
                 var invalidObj = ReadObject(new DynamicJsonValue { ["prop1"] = "123" });
 
                 Assert.False(schemaValidator.Validate(invalidObj, out var errors));
-                AssertError("The required property 'prop' is missing at 'prop'.", errors);
+                AssertError("The required property 'prop' is missing at ''.", errors);
+            });
+    }
+
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public void SchemaValidation_WhenHasRestrictionOnNestedObject()
+    {
+        const string prop = "prop";
+
+        var schemaValidator = new SchemaValidator();
+        using (var schemaDefinition = ReadObject(new DynamicJsonValue
+               {
+                   ["properties"] = new DynamicJsonValue
+                   {
+                       [prop] = new DynamicJsonValue
+                       {
+                           ["properties"] = new DynamicJsonValue
+                           {
+                               [prop] = new DynamicJsonValue
+                               {
+                                   ["const"] = 123
+                               }
+                           }
+                       }
+                   }
+               }))
+        {
+            schemaValidator.Init(schemaDefinition);
+        }
+
+        Assert.Multiple(() =>
+            {
+                var obj = ReadObject(new DynamicJsonValue { [prop] = new DynamicJsonValue { [prop] = 123 } });
+
+                if (schemaValidator.Validate(obj, out string errors) == false)
+                    Assert.Fail(string.Join("\n", errors));
+            },
+            () =>
+            {
+                var obj = ReadObject(new DynamicJsonValue { [prop] = new DynamicJsonValue { [prop] = 1234 } });
+
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The value at 'prop.prop' must be '123', but it is '1234'.", errors);
             });
     }
 }
