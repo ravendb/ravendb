@@ -111,7 +111,7 @@ rvn_truncate_journal(void* handle, int64_t size, int32_t* detailed_error_code)
         return FAIL_FLUSH_FILE;
     }
 
-    return _resize_file(handle, size, detailed_error_code);
+    return _truncate_file(handle, size, detailed_error_code);
 }
 
 

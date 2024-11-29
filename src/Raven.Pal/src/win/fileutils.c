@@ -9,7 +9,7 @@
 #include "internal_win.h"
 
 PRIVATE int32_t
-_resize_file(HANDLE handle, int64_t size, int32_t *detailed_error_code)
+_pre_allocate_file(HANDLE handle, int64_t size, int32_t *detailed_error_code)
 {
     assert(size % 4096 == 0);
 
@@ -25,6 +25,34 @@ _resize_file(HANDLE handle, int64_t size, int32_t *detailed_error_code)
     CloseHandle(hFileMap);
     return SUCCESS;
 }
+
+PRIVATE int32_t
+_truncate_file(HANDLE handle, int64_t size, int32_t *detailed_error_code)
+{
+    assert(size % 4096 == 0);
+
+    int32_t rc;
+    LARGE_INTEGER distance_to_move;
+    distance_to_move.QuadPart = size;
+    if (SetFilePointerEx(handle, distance_to_move, NULL, FILE_BEGIN) == FALSE)
+    {
+        rc = FAIL_SET_FILE_POINTER;
+        goto error_cleanup;
+    }
+
+    if (SetEndOfFile(handle) == FALSE)
+    {
+        rc = FAIL_SET_EOF;
+        goto error_cleanup;
+    }
+
+    return SUCCESS;
+
+    error_cleanup:
+        *detailed_error_code = GetLastError();
+    return rc;
+}
+
 
 PRIVATE int32_t
 _write_file_in_sections(void* handle, const char* buffer, int64_t size, int64_t offset, uint32_t section_size, int32_t* detailed_error_code)

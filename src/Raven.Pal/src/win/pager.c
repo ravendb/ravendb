@@ -367,7 +367,7 @@ int32_t _open_pager_file(HANDLE h,
     if (min_file_size > file_size.QuadPart && !(global_state->open_flags & OPEN_FILE_READ_ONLY))
     {
         file_size.QuadPart = min_file_size;
-        rc = _resize_file(h, min_file_size, detailed_error_code);
+        rc = _pre_allocate_file(h, min_file_size, detailed_error_code);
         if(rc != SUCCESS)
             goto Error;
     }
@@ -716,13 +716,14 @@ int32_t rvn_write_file_io(
             ov.OffsetHigh = (DWORD)(offset >> 32);
 
             int32_t size_to_write = (int32_t)(rvn_min(size, INT32_MAX));
-            if(!WriteFile(handle_ptr->file_handle, buffers[i].ptr, size_to_write, NULL, &ov))
+            if(WriteFile(handle_ptr->file_handle, buffers[i].ptr, size_to_write, NULL, &ov))
             {
-                *detailed_error_code = GetLastError();
-                return FAIL_WRITE_FILE;
+                offset += size_to_write;
+                size -= size_to_write;
+                continue;
             }    
-            offset += size_to_write;
-            size -= size_to_write;
+            *detailed_error_code = GetLastError();
+            return FAIL_WRITE_FILE;
         }
     }
     return SUCCESS;
