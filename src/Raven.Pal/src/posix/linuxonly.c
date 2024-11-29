@@ -178,29 +178,41 @@ int32_t _submit_and_wait(
 }
 
 int32_t rvn_write_io_ring(
-    void* handle,
+    void *handle,
     int32_t count,
     struct page_to_write *buffers,
-    int32_t *detailed_error_code
-)
+    int32_t *detailed_error_code)
 {
     int32_t rc = SUCCESS;
     struct handle *handle_ptr = handle;
     int32_t submitted = 0;
     for (size_t i = 0; i < count; i++)
     {
-      struct io_uring_sqe *sqe = io_uring_get_sqe(&handle_ptr->global_state->ring);
-      if (sqe == NULL)
-      {
-          rc = _submit_and_wait(&handle_ptr->global_state->ring, submitted, detailed_error_code);
-          if(rc != SUCCESS)
-          {
-              return rc;
-          }
-          submitted=0;
-      }
-      io_uring_prep_write(sqe, handle_ptr->file_fd, buffers[i].ptr, buffers[i].count_of_pages * VORON_PAGE_SIZE, buffers[i].page_num * VORON_PAGE_SIZE);
-      submitted++;
+        struct io_uring_sqe *sqe = io_uring_get_sqe(&handle_ptr->global_state->ring);
+        if (sqe == NULL)
+        {
+            rc = _submit_and_wait(&handle_ptr->global_state->ring, submitted, detailed_error_code);
+            if (rc != SUCCESS)
+            {
+                return rc;
+            }
+            submitted = 0;
+            sqe = io_uring_get_sqe(&handle_ptr->global_state->ring);
+            if (sqe == NULL)
+            {
+                // *after* we submitted, we have no entry? No recovery from this...
+                *detailed_error_code = ENOENT;
+                return FAIL_IO_RING_WRITE;
+            }
+        }
+        io_uring_prep_write(sqe,
+            handle_ptr->file_fd, 
+            buffers[i].ptr, 
+            buffers[i].count_of_pages * VORON_PAGE_SIZE, 
+            buffers[i].page_num * VORON_PAGE_SIZE
+        );
+
+        submitted++;
     }
 
     return _submit_and_wait(&handle_ptr->global_state->ring, submitted, detailed_error_code);
