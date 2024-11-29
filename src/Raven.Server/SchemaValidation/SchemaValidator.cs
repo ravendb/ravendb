@@ -9,7 +9,7 @@ public class SchemaValidator
 
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {
-        var root = new RootObjectSchemaRuleValidator();
+        var root = new ObjectSchemaRuleValidator();
         root.Init(schemaDefinition);
         _root = root;
     }

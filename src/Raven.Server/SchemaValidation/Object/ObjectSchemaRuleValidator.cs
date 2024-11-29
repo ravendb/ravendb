@@ -13,11 +13,6 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
     private (Regex Regex, SpecifiedPropertySchemaRuleValidator Validator)[] _patternPropertiesSchemaRuleValidators;
     private (bool Allowed, AdditionalPropertySchemaRuleValidator Validator) _additionalPropertiesSchemaRuleValidator;
 
-    // ReSharper disable once ConvertToPrimaryConstructor
-    protected ObjectSchemaRuleValidator(string path, string property, bool isRequired)
-    {
-    }
-
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {
         _requiredHashSet = schemaDefinition.TryGet(SchemaValidatorConstants.required, out BlittableJsonReaderArray required)
