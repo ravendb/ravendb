@@ -13,11 +13,6 @@ public abstract class PropertySchemaRuleValidator
 
     private readonly bool _isRequired;
 
-    protected PropertySchemaRuleValidator(bool isRequired = false)
-    {
-        _isRequired = isRequired;
-    }
-
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {
         if(schemaDefinition == null)
@@ -25,7 +20,7 @@ public abstract class PropertySchemaRuleValidator
         ReadTypeRestrictionsRule(schemaDefinition);
         ReadValueSchemaRuleValidators(schemaDefinition);
     }
-
+    
     private void ReadTypeRestrictionsRule(BlittableJsonReaderObject schemaDefinition)
     {
         if (schemaDefinition.TryGet(SchemaValidatorConstants.type, out object typesRestriction) == false) 
@@ -47,15 +42,14 @@ public abstract class PropertySchemaRuleValidator
         _typesRestriction = allowedTypes.ToArray();
     }
     
-    public abstract void Validate(BlittableJsonReaderObject parent, SchemaValidatorPath path, IErrorBuilder errorBuilder);
-    
-    protected void Validate(BlittableJsonReaderObject parent, string property, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    public void Validate(BlittableJsonReaderObject parent, string property, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
         if (TryGetPropertyType(parent, property, out BlittableJsonToken token) == false)
         {
-            if (_isRequired)
-                //TODO To improve the error message
-                errorBuilder.AddError($"The required property '{property}' is missing at '{path}'.");
+            //TODO Maybe to check _isRequired also here
+            // if (_isRequired)
+                // TODO To improve the error message
+                // errorBuilder.AddError($"The required property '{property}' is missing at '{path}'.");
 
             return;
         }

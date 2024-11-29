@@ -5,6 +5,8 @@ internal static class SchemaValidatorConstants
     // ReSharper disable InconsistentNaming
     public const string properties = "properties";
     public const string patternProperties = "patternProperties";
+    public const string additionalProperties = "additionalProperties";
+    
     public const string required = "required";
     public const string @enum = "enum";
     public const string type = "type";

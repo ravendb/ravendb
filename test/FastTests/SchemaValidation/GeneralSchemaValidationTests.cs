@@ -16,7 +16,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     [RavenTheory(RavenTestCategory.JavaScript)]
     [InlineData(true)]
     [InlineData(false)]
-    public void SchemaValidation_WhenValidateIsRequired(bool withAdditionalRestriction)
+    public void SchemaValidation_WhenPropIsRequired(bool withAdditionalRestriction)
     {
         const string prop = "prop";
 
