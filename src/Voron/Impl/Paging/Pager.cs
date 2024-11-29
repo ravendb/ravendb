@@ -81,6 +81,17 @@ public unsafe partial class Pager : IDisposable
 
     public static void RaiseError(string filename, int errorCode, PalFlags.FailCodes rc, long initialFileSize, [CallerMemberName] string? caller = null)
     {
+        if (rc == PalFlags.FailCodes.FailCreateIoRing)
+        {
+            if (Pal.rvn_get_error_meaning(errorCode) is PalFlags.ErrnoSpecialCodes.NoMem)
+            {
+                throw new InsufficientMemoryException(
+                    $"Failed to create IoRing because out of of memory error. This usually indicate that the kernel was unable to lock sufficient memory to create the ring.{Environment.NewLine}" +
+                    $"Check 'ulimit -l' for the actual value you have configured. You can raise the amount of memory you can lock using:{Environment.NewLine}" +
+                    $"sudo prlimit --memlock=1048576:1048576 --pid $${Environment.NewLine}");
+            }
+        }
+        
         if (rc == PalFlags.FailCodes.FailLockMemory)
             throw new InsufficientMemoryException(
                 $"Failed to increase the min working set size so we can lock memory for {filename}. With encrypted " +

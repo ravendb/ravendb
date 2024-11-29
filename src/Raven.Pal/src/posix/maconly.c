@@ -88,21 +88,9 @@ EXPORT
 rvn_writer rvn_get_writer(void* handle)
 {
     struct handle *handle_ptr = handle;
-    rvn_write_mode mode = _get_writer_mode();
-    switch (mode)
-    {
-        case rvn_write_mode_vectored_file_io:
-        case rvn_write_mode_file_io:
-            return rvn_write_file_io;
-        case rvn_write_mode_io_ring:
-            return rvn_write_invalid_setup;
-        case rvn_write_mode_mmap:
-            if(handle_ptr->write_address == NULL)
-                return rvn_write_invalid_setup;
-            return rvn_write_mmap;
-        default:
-            return rvn_write_file_io;
-    }
+     if(handle_ptr->write_address)
+        return rvn_write_mmap;
+    return rvn_write_file_io;
 }
 
 #endif

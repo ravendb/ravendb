@@ -12,26 +12,28 @@
 #include "internal_posix.h"
 
 EXPORT int32_t
+rvn_get_error_meaning(int32_t error)
+{
+	switch (error) {
+		case ENOMEM:
+			return ERRNO_SPECIAL_CODES_ENOMEM;
+		case ENOENT:
+			return ERRNO_SPECIAL_CODES_ENOENT;
+		case ENOSPC:
+			return ERRNO_SPECIAL_CODES_ENOSPC;
+		default:
+			return ERRNO_SPECIAL_CODES_NONE;
+	}
+}
+
+EXPORT int32_t
 rvn_get_error_string(int32_t error, 
 					 char* buf, 
 					 int32_t buf_size, 
 					 int32_t* special_errno_flags) 
 {
 	char* tmp_buf = NULL;
-	switch (error) {
-		case ENOMEM:
-			*special_errno_flags = ERRNO_SPECIAL_CODES_ENOMEM;
-			break;
-		case ENOENT:
-			*special_errno_flags = ERRNO_SPECIAL_CODES_ENOENT;
-			break;
-		case ENOSPC:
-			*special_errno_flags = ERRNO_SPECIAL_CODES_ENOSPC;
-			break;
-		default:
-			*special_errno_flags = ERRNO_SPECIAL_CODES_NONE;
-			break;
-	}
+	*special_errno_flags = rvn_get_error_meaning(error);
 	
 	tmp_buf = malloc(buf_size);
 	if(tmp_buf == NULL)

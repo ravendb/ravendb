@@ -220,6 +220,7 @@ rvn_init_pager(const char *filename,
         *detailed_error_code = ENOMEM;
         return FAIL_NOMEM;
     }
+    global_state->ring.ring_fd = -1;
     global_state->open_flags = open_flags;
     global_state->ref_count = 1;
     if(pthread_mutex_init(&global_state->lock, NULL))
@@ -230,18 +231,20 @@ rvn_init_pager(const char *filename,
     }
     if (_io_ring_supported())
     {
-        rc = _setup_io_ring(global_state, detailed_error_code);
-        if(rc != SUCCESS)
-            goto Error;
+        // we only setup the io ring if we are going to use it, we won't
+        // use it for writable maps
+        if((open_flags & OPEN_FILE_WRITABLE_MAP) == 0)
+        {
+            rc = _setup_io_ring(global_state, detailed_error_code);
+            if(rc != SUCCESS)
+                goto Error;
+        }
     }
     else if(writer_mode == rvn_write_mode_io_ring)
     {
+        *detailed_error_code = ENOTSUP;
         rc = FAIL_CREATE_IO_RING;
         goto Error;
-    }
-    else
-    {
-        global_state->ring.ring_fd = -1;
     }
 
     // have to copy, dirname is mutating the buffer
@@ -259,6 +262,13 @@ rvn_init_pager(const char *filename,
         goto Error;
 
     global_state->file_path = strdup(filename);
+    if(global_state->file_path == NULL)
+    {
+        *detailed_error_code = errno;
+        rc = FAIL_NOMEM;
+        goto Error;
+    }
+
 
     int flags = ((open_flags & OPEN_FILE_READ_ONLY) | (open_flags & OPEN_FILE_COPY_ON_WRITE)) ? O_RDONLY : O_RDWR | O_CREAT;
     fd = open(filename, flags, S_IWUSR | S_IRUSR);

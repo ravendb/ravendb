@@ -10,7 +10,7 @@ namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public const int PAL_VER = 69002; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 69006; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -68,6 +68,9 @@ namespace Sparrow.Server.Platform
             CopyOnWrite = 1 << 8,
             DoNotMap = 1 << 9,
         }
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.ErrnoSpecialCodes rvn_get_error_meaning(Int32 error);
         
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_mmap_anonymous(out void* mem,
