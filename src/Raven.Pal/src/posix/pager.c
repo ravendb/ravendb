@@ -552,11 +552,11 @@ int32_t rvn_write_file_io(
     {
         int64_t offset = buffers[i].page_num * VORON_PAGE_SIZE;
         int64_t size = (int64_t)buffers[i].count_of_pages * VORON_PAGE_SIZE;
-        if(rvn_pwrite(handle_ptr->file_fd, buffers[i].ptr, size, offset) <= 0)
-        {
-            *detailed_error_code = errno;
-            return FAIL_WRITE_FILE;
-        }
+        if(rvn_pwrite(handle_ptr->file_fd, buffers[i].ptr, size, offset) > 0)
+            continue;
+
+        *detailed_error_code = errno;
+        return FAIL_WRITE_FILE;
     }
     return SUCCESS;
 }

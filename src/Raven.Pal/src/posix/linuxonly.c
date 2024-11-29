@@ -114,20 +114,34 @@ error_cleanup:
     return rc;
 }
 
-bool _io_ring_supported()
+int _io_ring_supported_internal()
 {
+  
   if(sizeof(void*) != 8)
-    return false;
+    return 0;
 
    struct utsname buffer; 
    if (uname(&buffer) != 0)
-        return false;
+        return 0;
 
   int curr_major = 0, curr_minor = 0, curr_patch = 0;
   sscanf(buffer.release, "%d.%d.%d", &curr_major, &curr_minor, &curr_patch); 
   
   return curr_major > 5 || (curr_major==5 && curr_minor>=1);
 }
+
+static bool _io_ring_supported_flag = false;
+static bool _io_ring_supported_cached = false;
+
+bool _io_ring_supported()
+{
+    if(_io_ring_supported_cached)
+        return _io_ring_supported_flag == 1;
+    _io_ring_supported_flag = _io_ring_supported_internal();
+    _io_ring_supported_cached = true;
+    return _io_ring_supported_flag;
+}
+
 
 int32_t _setup_io_ring(struct handle_global_state *global_state, int32_t *detailed_error_code)
 {
@@ -186,6 +200,9 @@ int32_t rvn_write_io_ring(
     int32_t rc = SUCCESS;
     struct handle *handle_ptr = handle;
     int32_t submitted = 0;
+
+    pthread_mutex_lock(&handle_ptr->global_state->lock);
+
     for (size_t i = 0; i < count; i++)
     {
         struct io_uring_sqe *sqe = io_uring_get_sqe(&handle_ptr->global_state->ring);
@@ -202,7 +219,8 @@ int32_t rvn_write_io_ring(
             {
                 // *after* we submitted, we have no entry? No recovery from this...
                 *detailed_error_code = ENOENT;
-                return FAIL_IO_RING_WRITE;
+                rc = FAIL_IO_RING_WRITE;
+                break;
             }
         }
         io_uring_prep_write(sqe,
@@ -214,8 +232,12 @@ int32_t rvn_write_io_ring(
 
         submitted++;
     }
-
-    return _submit_and_wait(&handle_ptr->global_state->ring, submitted, detailed_error_code);
+    if(rc == SUCCESS && submitted)
+    {
+        rc = _submit_and_wait(&handle_ptr->global_state->ring, submitted, detailed_error_code);
+    }
+    pthread_mutex_unlock(&handle_ptr->global_state->lock);
+    return rc;
 }
 
 

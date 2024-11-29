@@ -789,7 +789,8 @@ int32_t rvn_write_io_ring(
             if (FAILED(hr))
             {
                 *detailed_error_code = hr;
-                return FAIL_IO_RING_WRITE;
+                rc = FAIL_IO_RING_WRITE;
+                break;
             }
             if(++submitted >= IO_RING_SIZE)
             {  
@@ -802,7 +803,7 @@ int32_t rvn_write_io_ring(
             }
         }
     }
-    if(rc == SUCCESS)
+    if(rc == SUCCESS && submitted)
     {
         rc =  _submit_and_wait(handle_ptr->global_state->io_ring, submitted, detailed_error_code);
     }

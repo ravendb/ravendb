@@ -54,7 +54,7 @@ rvn_open_journal_for_writes(const char* file_name, int32_t transaction_mode, int
 
     if (size.QuadPart <= initial_file_size)
     {
-        rc = _resize_file(h_file, initial_file_size, detailed_error_code);
+        rc = _pre_allocate_file(h_file, initial_file_size, detailed_error_code);
         if (rc != SUCCESS)
             goto error_clean_With_error;
         *actual_size = initial_file_size;

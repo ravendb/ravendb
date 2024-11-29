@@ -16,7 +16,7 @@ PRIVATE int32_t
 _pre_allocate_file(HANDLE handle, int64_t size, int32_t *detailed_error_code);
 
 PRIVATE int32_t
-_truncate_file(HANDLE handle, int64_t size, int32_t *detailed_error_code)
+_truncate_file(HANDLE handle, int64_t size, int32_t *detailed_error_code);
 
 PRIVATE int32_t
 _read_file(HANDLE handle, void* buffer, int64_t required_size, int64_t offset, int64_t* actual_size, int32_t* detailed_error_code);
