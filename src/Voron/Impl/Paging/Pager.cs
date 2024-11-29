@@ -88,7 +88,7 @@ public unsafe partial class Pager : IDisposable
                 throw new InsufficientMemoryException(
                     $"Failed to create IoRing because out of of memory error. This usually indicate that the kernel was unable to lock sufficient memory to create the ring.{Environment.NewLine}" +
                     $"Check 'ulimit -l' for the actual value you have configured. You can raise the amount of memory you can lock using:{Environment.NewLine}" +
-                    $"sudo prlimit --memlock=1048576:1048576 --pid $${Environment.NewLine}");
+                    $"sudo prlimit --memlock=8413752832:8413752832 --pid $${Environment.NewLine}");
             }
         }
         
