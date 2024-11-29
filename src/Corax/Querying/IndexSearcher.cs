@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics.X86;
 using System.Text;
 using Corax.Analyzers;
 using Corax.Mappings;
@@ -22,12 +20,10 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
-using Voron.Data.PostingLists;
 using Voron.Impl;
 using InvalidOperationException = System.InvalidOperationException;
 using static Voron.Data.CompactTrees.CompactTree;
 using Voron.Util;
-using System.Runtime.Intrinsics;
 
 namespace Corax.Querying;
 
@@ -39,9 +35,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private readonly IndexFieldsMapping _fieldMapping;
     private HashSet<long> _nullTermsMarkers;
     private HashSet<long> _nonExistingTermsMarkers;
+    private long[] _vectorFieldsMarkers;
     private Tree _persistedDynamicTreeAnalyzer;
     private long? _numberOfEntries;
-    public bool _nullTermsMarkersLoaded;
+    private bool _nullTermsMarkersLoaded;
     private bool _nonExistingTermsMarkersLoaded;
 
     /// <summary>
@@ -50,7 +47,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     /// </summary>
     public bool ForceNonAccelerated { get; set; }
 
-    public bool IsAccelerated => Vector256.IsHardwareAccelerated && !ForceNonAccelerated;
+    public bool IsAccelerated => AdvInstructionSet.IsAcceleratedVector256 && !ForceNonAccelerated;
 
     public long NumberOfEntries => _numberOfEntries ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
     
@@ -121,53 +118,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
-    
-    public EntryTermsReaderEnumerator GetEntryTermsReader(Span<long> ids, PageLocator pageLocator)
-    {
-        InitializeSpecialTermsMarkers();
-
-        return new EntryTermsReaderEnumerator(this, ids, pageLocator);
-    }
-
-    public ref struct EntryTermsReaderEnumerator
-    {
-        private readonly IndexSearcher _searcher;
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope _scope;
-        private readonly Span<UnmanagedSpan> _spans;
-        private int _index;
-
-        public EntryTermsReaderEnumerator(IndexSearcher searcher,Span<long> ids, PageLocator pageLocator)
-        {
-            _searcher = searcher;
-            _scope = searcher._transaction.Allocator.AllocateDirect(sizeof(UnmanagedSpan) * ids.Length, out var spanBuffer);
-            _spans = spanBuffer.ToSpan<UnmanagedSpan>();
-            
-            using var _ = searcher._transaction.Allocator.AllocateDirect(sizeof(long) * ids.Length, out var locationsBuffer);
-            var locations = locationsBuffer.ToSpan<long>();
-            searcher._entryIdToLocation.GetFor(ids, locations, -1);
-            Container.GetAll(searcher._transaction.LowLevelTransaction, locations, (UnmanagedSpan*)spanBuffer.Ptr, -1, pageLocator);
-            _index = -1;
-            Current = new(searcher._transaction.LowLevelTransaction, searcher._nullTermsMarkers, searcher._nonExistingTermsMarkers, searcher._dictionaryId);
-        }
-
-        public bool MoveNext()
-        {
-            if (++_index >= _spans.Length)
-                return false;
-            
-            Current.Reuse(_spans[_index].Address, _spans[_index].Length);
-            return true;
-        }
-
-        public EntryTermsReader Current;
-
-        public void Dispose()
-        {
-            Current.Reset();
-            _scope.Dispose();
-        }
-    } 
-    
     public void GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader, CompactKey existingKey)
     {
         if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
@@ -176,9 +126,25 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         InitializeSpecialTermsMarkers();
         
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId);
+        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, existingKey, _vectorFieldsMarkers);
     }
-    
+
+    public LowLevelTransaction.CompactKeyScope GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader)
+    {
+        if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
+            throw new InvalidOperationException("Unable to find entry id: " + id);
+
+        InitializeSpecialTermsMarkers();
+
+        var llt = _transaction.LowLevelTransaction;
+        var scope = llt.AcquireCompactKey(out var key);
+        
+        var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
+        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, key, _vectorFieldsMarkers);
+        
+        return scope;
+    }
+
     internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref ContextBoundNativeList<Slice> terms)
     {
         if (term.Length == 0 || term.SequenceEqual(Constants.EmptyStringCharSpan.Span))
@@ -625,8 +591,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             if (_nonExistingPostingListsTree != null)
                 LoadSpecialTermMarkers(_nonExistingPostingListsTree, _nonExistingTermsMarkers);
         }
-    }
 
+        _vectorFieldsMarkers ??= _metadataTree?.Read(Constants.IndexWriter.VectorFieldsRootPagesSlice)?.Reader.ToUnmanagedSpan<long>().ToSpan().ToArray() ?? [];
+    }
+    
     public static void LoadSpecialTermMarkers(Tree postingList, HashSet<long> termsMarkers)
     {
         using (var it = postingList.Iterate(prefetch: false))

@@ -46,6 +46,10 @@ namespace Corax.Indexing
         private FixedSizeTree _documentBoost;
         private Tree _indexMetadata;
         private long _numberOfTermModifications;
+        
+        private long[] _persistedVectorRootPages;
+        private HashSet<long> _newVectorRootPages;
+        
         private CompactKeyCacheScope _compactKeyScope;
 
         private bool _ownsTransaction;
@@ -147,6 +151,7 @@ namespace Corax.Indexing
             _entriesForTermsAdditionsBuffer = new NativeList<(long EntryId, long TermId)>();
 
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
+            ReadPersistedVectorRootPages(out _persistedVectorRootPages);
         }
         
         private void InitializeFieldRootPage(IndexedField field)
@@ -459,7 +464,9 @@ namespace Corax.Indexing
         
         private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage, HashSet<long> nullTermMarkers, HashSet<long> nonExistingTermMarkers, long dicId, long entryToDelete, int termsPerEntryIndex)
         {
-            var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId);
+            using var _ = llt.AcquireCompactKey(out var key);
+            var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId, key, _persistedVectorRootPages);
+            
             reader.Reset();
             while (reader.MoveNextStoredField())
             {
@@ -571,6 +578,37 @@ namespace Corax.Indexing
             return pageToField;
         }
 
+        private void ReadPersistedVectorRootPages(out long[] persistedVectorRootPages)
+        {
+            persistedVectorRootPages = _indexMetadata?.Read(Constants.IndexWriter.VectorFieldsRootPagesSlice)?.Reader.ToUnmanagedSpan<long>().ToSpan().ToArray() ?? [];
+        }
+
+        private void PersistVectorRootPages()
+        {
+            if (_newVectorRootPages is null)
+                return;
+
+            foreach (var vf in _persistedVectorRootPages)
+                _newVectorRootPages.Add(vf);
+
+            var newList = _newVectorRootPages.ToArray();
+            Sort.Run(newList);
+
+            using (_indexMetadata.DirectAdd(Constants.IndexWriter.VectorFieldsRootPagesSlice, newList.Length * sizeof(long), out var destination))
+                newList.CopyTo(new Span<long>(destination, newList.Length));
+
+            _newVectorRootPages = null;
+            _persistedVectorRootPages = null;
+        }
+
+        private void RegisterVectorRootPage(long rootPage)
+        {
+            if (_persistedVectorRootPages.AsSpan().Contains(rootPage)) 
+                return;
+            
+            _newVectorRootPages ??= new();
+            _newVectorRootPages.Add(rootPage);
+        }
 
         private Dictionary<long, IndexedField> GetIndexedFieldByRootPage(Tree fieldsTree)
         {
@@ -716,6 +754,7 @@ namespace Corax.Indexing
             _numberOfModifications = 0;
             _numberOfTermModifications = 0;
             _initialNumberOfEntries = _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+             ReadPersistedVectorRootPages(out _persistedVectorRootPages);
 
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
         }
@@ -887,6 +926,7 @@ namespace Corax.Indexing
                 if (indexedField.VectorIndexWriter != null)
                 {
                     using var __ = staticFieldScope.For(CommitOperation.VectorValues);
+                    RegisterVectorRootPage(indexedField.FieldRootPage);
                     indexedField.VectorIndexWriter.Commit();
                 }
                 
@@ -920,6 +960,8 @@ namespace Corax.Indexing
             _pForEncoder.Dispose();
             _pForEncoder = null;
 
+            PersistVectorRootPages();
+            
             // Check if we have suggestions to deal with. 
             if (_hasSuggestions)
             {

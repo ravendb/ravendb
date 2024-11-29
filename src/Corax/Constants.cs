@@ -79,7 +79,7 @@ namespace Corax
 
             public static readonly Slice LargePostingListsSetSlice = Voron.Global.Constants.PostingList.PostingListRegister, PostingListsSlice,  EntryIdToLocationSlice, LastEntryIdSlice, 
                 StoredFieldsSlice, EntriesTermsContainerSlice, FieldsSlice, NumberOfEntriesSlice, EntriesToSpatialSlice, EntriesToTermsSlice,
-                DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField, NullPostingLists, NonExistingPostingLists;            
+                DynamicFieldsAnalyzersSlice, NumberOfTermsInIndex, MultipleTermsInField, NullPostingLists, NonExistingPostingLists, VectorFieldsRootPagesSlice;            
             
             public const int DynamicField = -2;
 
@@ -115,6 +115,7 @@ namespace Corax
                     Slice.From(ctx, "MultipleTermsInField", ByteStringType.Immutable, out MultipleTermsInField);
                     Slice.From(ctx, "NullPostingLists", ByteStringType.Immutable, out NullPostingLists);
                     Slice.From(ctx, "NonExistingPostingLists", ByteStringType.Immutable, out NonExistingPostingLists);
+                    Slice.From(ctx, "VectorFieldsRootPages", ByteStringType.Immutable, out VectorFieldsRootPagesSlice);
                 }
             }
         }

@@ -718,8 +718,8 @@ public static class CoraxQueryBuilder
             (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[3]);
             numberOfCandidates = valueType switch
             {
-                ValueTokenType.Long => (int)value,
-                ValueTokenType.Double => (int)(double)value,
+                ValueTokenType.Long => Convert.ToInt32(value),
+                ValueTokenType.Double => Convert.ToInt32(value),
                 _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + valueType)
             };
         }

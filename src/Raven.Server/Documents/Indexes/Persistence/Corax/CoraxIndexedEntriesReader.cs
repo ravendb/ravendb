@@ -9,6 +9,7 @@ using Corax.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -100,35 +101,14 @@ public sealed unsafe class CoraxIndexedEntriesReader : IDisposable
                 // span.Length == 0 may be set if we stored an empty array (List | Raw | Empty) is marked
                 if (span.Length > 0)
                 {
-                    try
+                    if (entryReader.IsVectorHash)
+                    {
+                        SetValue(fieldName, Convert.ToBase64String(new Span<byte>(span.Address, span.Length)));
+                    }
+                    else
                     {
                         var blit = new BlittableJsonReaderObject(span.Address, span.Length, _ctx);
                         SetValue(fieldName, blit);
-                    }
-                    catch
-                    {
-                        var mem = span.Length % sizeof(float);
-                        if (mem == 0)
-                        {
-                            var mm = MemoryMarshal.Cast<byte, float>(new Span<byte>(span.Address, span.Length));
-                            var x = new DynamicJsonArray();
-                            foreach (var v in mm)
-                                x.Add(v);
-                            
-                            SetValue(fieldName + "_F", x);
-                        }
-                        
-                        mem = span.Length % sizeof(byte);
-                        if (mem == 0)
-                        {
-                            var mm = new Span<byte>(span.Address, span.Length);
-                            var x = new DynamicJsonArray();
-                            foreach (var v in mm)
-                                x.Add(v);
-                            
-                            SetValue(fieldName + "_B", x);
-                        }
-                        
                     }
                 }
             }

@@ -205,5 +205,11 @@ namespace Voron
         {
             return new Span<byte>(Base, _len);
         }
+
+        public UnmanagedSpan<T> ToUnmanagedSpan<T>() where T : unmanaged
+        {
+            PortableExceptions.ThrowIf<InvalidOperationException>(_len % Unsafe.SizeOf<T>() != 0, $"The length of the value is not a multiple of the size of the type {nameof(T)}");
+            return new UnmanagedSpan<T>(Base, _len);
+        }
     }
 }

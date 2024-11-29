@@ -9,12 +9,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
+using Voron.Data.Graphs;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Data.Tables;
@@ -157,6 +159,8 @@ namespace Voron.Debugging
                                     nestedSetReport.Name = treeReport.Name + "/" + nestedSetReport.Name +", FixedSizeTree";
                                     trees.Add(nestedSetReport);
                                     break;
+                                case RootObjectType.None when SliceComparer.CompareInline(it.CurrentKey, Hnsw.OptionsSlice) == 0 && it.Current->DataSize == Unsafe.SizeOf<Hnsw.Options>():
+                                    continue; // Hnsw options, 64 bytes 
                                 default:
                                     throw new ArgumentOutOfRangeException(rootObjectType.ToString());
 
