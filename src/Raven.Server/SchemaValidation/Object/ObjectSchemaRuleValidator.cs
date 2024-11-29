@@ -1,14 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Object;
 
 public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
-    private PropertySchemaRuleValidator[] _propertyValidators;
+    private HashSet<string> _requiredHashSet;
+    private Dictionary<string, SpecifiedPropertySchemaRuleValidator> _namedPropertySchemaRuleValidators;
+    private (Regex Regex, SpecifiedPropertySchemaRuleValidator Validator)[] _patternPropertiesSchemaRuleValidators;
+    private (bool Allowed, AdditionalPropertySchemaRuleValidator Validator) _additionalPropertiesSchemaRuleValidator;
 
     // ReSharper disable once ConvertToPrimaryConstructor
     protected ObjectSchemaRuleValidator(string path, string property, bool isRequired)
@@ -17,23 +20,50 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
 
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {
-        var rulesValidators = new List<PropertySchemaRuleValidator>();
-
-        //TODO To create an informative error when fails to read
-        ReadPropertyValidators(schemaDefinition, rulesValidators);
-        ReadPatternPropertyValidators(schemaDefinition, rulesValidators);
-        
-        _propertyValidators = rulesValidators.ToArray();
-    }
-
-    private void ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, List<PropertySchemaRuleValidator> validators)
-    {
-        //TODO To throw a good error if the required array contains not string valueds
-        var requiredHashSet = schemaDefinition.TryGet(SchemaValidatorConstants.required, out BlittableJsonReaderArray required)
+        _requiredHashSet = schemaDefinition.TryGet(SchemaValidatorConstants.required, out BlittableJsonReaderArray required)
             ? required.Select(x => x.ToString()).ToHashSet()
             : null;
+        
+        //TODO To create an informative error when fails to read
+        _namedPropertySchemaRuleValidators = ReadPropertyValidators(schemaDefinition, SchemaValidatorConstants.properties)?
+            .ToDictionary(x => x.PropertySpecifier);
+        _patternPropertiesSchemaRuleValidators = ReadPropertyValidators(schemaDefinition, SchemaValidatorConstants.patternProperties)?
+            .Select(x => (new Regex(x.PropertySpecifier), x)).ToArray();
 
-        if (schemaDefinition.TryGet(SchemaValidatorConstants.properties, out BlittableJsonReaderObject properties))
+        ReadAdditionalProperties(schemaDefinition);
+    }
+
+    private void ReadAdditionalProperties(BlittableJsonReaderObject schemaDefinition)
+    {
+        if (schemaDefinition.TryGet(SchemaValidatorConstants.additionalProperties, out object additionalProperties) == false)
+        {
+            _additionalPropertiesSchemaRuleValidator = (true, null);
+            return;
+        }
+
+        switch (additionalProperties)
+        {
+            case bool isAdditionalPropertiesAllowed:
+                _additionalPropertiesSchemaRuleValidator = (isAdditionalPropertiesAllowed, null);
+                break;
+            case BlittableJsonReaderObject additionalPropertiesSchema:
+            {
+                var validator = new AdditionalPropertySchemaRuleValidator();
+                validator.Init(additionalPropertiesSchema);
+                _additionalPropertiesSchemaRuleValidator = (true, validator);
+                break;
+            }
+            default:
+                //TODO To improve error message
+                throw new InvalidSchemaValidationDefinitionException("The schema definition is invalid.");
+        }
+    }
+
+    private static IEnumerable<SpecifiedPropertySchemaRuleValidator> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, string name)
+    {
+        List<SpecifiedPropertySchemaRuleValidator> validators = null;
+
+        if (schemaDefinition.TryGet(name, out BlittableJsonReaderObject properties))
         {
             foreach (var propertyName in properties.GetPropertyNames())
             {
@@ -44,62 +74,64 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
                     continue;
                 }
 
-                var isRequired = requiredHashSet?.Remove(propertyName) ?? false;
                 // var path = $"{Path}.{propertyName}"; TODO To add path for errors
-
-                var validator = new NamedPropertySchemaRuleValidator( propertyName, isRequired);
-                //TODO Maybe to init with parent and check isRequired there
+                //TODO To remove isRequired if not needed
+                var validator = new SpecifiedPropertySchemaRuleValidator(propertyName);
                 validator.Init(propertySchemaDefinition);
-                validators.Add(validator);
+                (validators??=new List<SpecifiedPropertySchemaRuleValidator>()).Add(validator);
             }
         }
-
-        if (requiredHashSet == null)
-            return;
         
-        foreach (var propertyName in requiredHashSet)
-        {
-            //TODO Maybe to implement RequiredPropertySchemaRuleValidator
-            var validator = new NamedPropertySchemaRuleValidator( propertyName, true);
-            //TODO Maybe to init with parent and check isRequired there
-            validator.Init(null);
-            validators.Add(validator);
-        }
-    }
-
-    private void ReadPatternPropertyValidators(BlittableJsonReaderObject schemaDefinition, List<PropertySchemaRuleValidator> validators)
-    {
-        if (schemaDefinition.TryGet(SchemaValidatorConstants.patternProperties, out BlittableJsonReaderObject patternProperties) == false) 
-            return;
-        
-        foreach (var propertyPattern in patternProperties.GetPropertyNames())
-        {
-            if (patternProperties.TryGet(propertyPattern, out BlittableJsonReaderObject propertySchemaDefinition) == false)
-            {
-                //TODO To throw error when it is not an object
-                Debug.Assert(false, "Should not happen");
-                continue;
-            }
-
-            // var path = $"{Path}.{propertyPattern}"; //TODO To add path for errors on init
-
-            var validator = new PatternPropertiesSchemaRuleValidator(propertyPattern);
-            validator.Init(propertySchemaDefinition);
-            validators.Add(validator);
-        }
+        return validators;
     }
 
     protected override void ValidateInternal(BlittableJsonReaderObject value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
-        foreach (var validator in _propertyValidators)
+        if (_requiredHashSet != null)
         {
-            validator.Validate(value, path, errorBuilder);
+            foreach (var required in _requiredHashSet)
+            {
+                if(value.Contains(required))
+                    continue;
+                errorBuilder.AddError($"The required property '{required}' is missing at '{path}'.");
+            }
         }
-    }
 
-    protected bool TryGetValueSchemaRuleValidator(string rule, out (Type Type, string[] AdditionalInfoProps) schemaRuleValidator)
-    {
-        //TODO To refactor and remove it if not needed
-        throw new NotImplementedException();
+        if (_namedPropertySchemaRuleValidators != null)
+        {
+            foreach (var (prop, validator) in _namedPropertySchemaRuleValidators)
+            {
+                validator.Validate(value, prop, path, errorBuilder);
+            }
+        }
+
+        foreach (string prop in value.GetPropertyNames())
+        {
+            var hasValidator = _namedPropertySchemaRuleValidators != null && _namedPropertySchemaRuleValidators.ContainsKey(prop);
+            if (_patternPropertiesSchemaRuleValidators != null)
+            {
+                foreach (var (regex, validator) in _patternPropertiesSchemaRuleValidators)
+                {
+                    if(regex.IsMatch(prop) == false)
+                        continue;
+                
+                    hasValidator = true;
+                    validator.Validate(value, prop, path, errorBuilder);
+                }
+            }
+
+            if (hasValidator) 
+                continue;
+            
+            var (allowed, additionalPropertiesValidator) = _additionalPropertiesSchemaRuleValidator;
+            if (allowed == false)
+            {
+                errorBuilder.AddError($"The property '{prop}' at '{path}' is not defined and additional properties are not allowed.");
+            }
+            else
+            {
+                additionalPropertiesValidator?.Validate(value, prop, path, errorBuilder);
+            }
+        }
     }
 }
