@@ -20,9 +20,23 @@ namespace FastTests.Issues
                 // internalCurrent and externalCurrent might be larger than requested 4096 because
                 // ByteStringMemoryCache uses a static pool so other tests might affect the actual size here
                 var initialTotalAllocated = allocator._totalAllocated;
-                var previousTotalAllocated = initialTotalAllocated;
-
+                
+                // We may have concurrency, such as the following line:
+                // which adds to the cache a large segment
+                // using (var concurrent = new ByteStringContext(SharedMultipleUseFlag.None))
+                // {
+                //     concurrent.Allocate(1024 * 512 - 10, out var buffer);
+                // }
+                
                 var size = 128 * 1024;
+                // allocate once, to "capture" a segment, and then we should be static 
+                // in term of allocations
+                using (allocator.Allocate(size, out var buffer))
+                {
+                    Assert.Equal(allocator._currentlyAllocated, buffer.Size);
+                }
+                var previousTotalAllocated = allocator._totalAllocated;
+
                 for (var i = 0; i < 100; i++)
                 {
                     using (allocator.Allocate(size, out var buffer))
@@ -31,16 +45,9 @@ namespace FastTests.Issues
                     }
 
                     Assert.Equal(0, allocator._currentlyAllocated);
-                    Assert.True(allocator._totalAllocated > 0);
-
-                    if (previousTotalAllocated != allocator._totalAllocated)
-                        Output.WriteLine($"{nameof(ByteStringContext_Should_Reuse_When_Large_Allocations_Are_Requested)} {i}: P: {previousTotalAllocated}: C: {allocator._totalAllocated}");
-
-                    previousTotalAllocated = allocator._totalAllocated;
+                    Assert.Equal(previousTotalAllocated, allocator._totalAllocated);
                 }
-
                 Assert.True(allocator._totalAllocated - initialTotalAllocated > 0);
-                Assert.True(allocator._totalAllocated - initialTotalAllocated < 1024 * 1024, $"{allocator._totalAllocated} < 1024 * 1024");
             }
         }
     }
