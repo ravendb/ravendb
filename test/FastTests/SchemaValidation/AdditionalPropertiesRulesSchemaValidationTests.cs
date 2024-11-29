@@ -97,7 +97,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
                 using var invalidObj = ReadObject(new DynamicJsonValue { [notDefinedProp] = "1234" });
 
                 Assert.False(schemaValidator.Validate(invalidObj, out var errors));
-                AssertError("The value at '' must be '1', but it is '1234'.", errors);
+                AssertError("The value at 'notDefinedProp' must be '1', but it is '1234'.", errors);
             });
     }
 }
