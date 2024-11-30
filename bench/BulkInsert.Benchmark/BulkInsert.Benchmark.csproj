@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+bench/BulkInsert.Benchmark/BulkInsert.Benchmark.csproj﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <RuntimeFrameworkVersion>8.0.11</RuntimeFrameworkVersion>
