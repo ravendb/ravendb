@@ -35,13 +35,11 @@ namespace Raven.Server.Documents.Includes
         {
             if (document == null)
                 return;
-            
-            if (_revisionsBeforeDateTime != default(DateTime))
+
+
+            if (AddRevisionByDateTimeBefore(_revisionsBeforeDateTime, document.Id) == false)
             {
-                var doc = _database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context: _context, id: document.Id, max: _revisionsBeforeDateTime.Value); 
-                if (doc is null) return; 
-                IdByRevisionsByDateTimeResults ??= new Dictionary<string, Dictionary<DateTime, Document>>(StringComparer.OrdinalIgnoreCase); 
-                IdByRevisionsByDateTimeResults[document.Id] = new Dictionary<DateTime, Document> (){{_revisionsBeforeDateTime.Value, doc}};
+                return;
             }
 
             if (_revisionsChangeVectors?.Count > 0)
@@ -123,19 +121,19 @@ namespace Raven.Server.Documents.Includes
             }  
         }
         
-        public void AddRevisionByDateTimeBefore(DateTime? dateTime, string documentId)
+        public bool AddRevisionByDateTimeBefore(DateTime? dateTime, string documentId)
         {
             if (dateTime.HasValue == false)
-                return;
+                return true;
 
             var doc = _database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context: _context, id: documentId, max: dateTime.Value); 
             if (doc is null)
-                return;
+                return false;
             
-            RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase); 
             IdByRevisionsByDateTimeResults ??= new Dictionary<string, Dictionary<DateTime, Document>>(StringComparer.OrdinalIgnoreCase); 
-            RevisionsChangeVectorResults[doc.ChangeVector] = doc;
             IdByRevisionsByDateTimeResults[documentId] = new Dictionary<DateTime, Document> (){{dateTime.Value, doc}};
+
+            return true;
         }
 
        
