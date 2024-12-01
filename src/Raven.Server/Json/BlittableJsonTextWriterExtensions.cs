@@ -1590,15 +1590,15 @@ namespace Raven.Server.Json
                 
                     writer.WriteStartObject();
                 
-                    writer.WritePropertyName("ChangeVector");
+                    writer.WritePropertyName(nameof(RevisionIncludeResult.ChangeVector));
                     writer.WriteString(key);
                     writer.WriteComma();
                 
-                    writer.WritePropertyName("Id");
+                    writer.WritePropertyName(nameof(RevisionIncludeResult.Before));
                     writer.WriteString(document.Id.ToString());
                     writer.WriteComma();
                 
-                    writer.WritePropertyName("Revision");
+                    writer.WritePropertyName(nameof(RevisionIncludeResult.Revision));
                     WriteDocument(writer, context, metadataOnly: false, document: document);
                     await writer.MaybeFlushAsync(token);
                 

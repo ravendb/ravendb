@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Includes
         {
             _revisionsChangeVectors = revisionIncludeField?.RevisionsChangeVectors ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             _pathsForRevisionsChangeVectors = revisionIncludeField?.RevisionsChangeVectorsPaths ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase); 
-            _revisionsBeforeDateTime = revisionIncludeField?.RevisionsBeforeDateTime ?? new DateTime();
+            _revisionsBeforeDateTime = revisionIncludeField?.RevisionsBeforeDateTime;
         }
 
         public void Fill(Document document)
@@ -36,11 +36,7 @@ namespace Raven.Server.Documents.Includes
             if (document == null)
                 return;
 
-
-            if (AddRevisionByDateTimeBefore(_revisionsBeforeDateTime, document.Id) == false)
-            {
-                return;
-            }
+            AddRevisionByDateTimeBefore(_revisionsBeforeDateTime, document.Id);
 
             if (_revisionsChangeVectors?.Count > 0)
             {
@@ -49,9 +45,10 @@ namespace Raven.Server.Documents.Includes
                     RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
                     if (RevisionsChangeVectorResults.ContainsKey(changeVector))
                         continue;
-                    var doc  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
-                    if (doc is null) return;
-                    RevisionsChangeVectorResults[changeVector] = doc;
+
+                    var revision  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
+                    if (revision is not null)
+                        RevisionsChangeVectorResults[changeVector] = revision;
                 }
             }
 
@@ -73,9 +70,9 @@ namespace Raven.Server.Documents.Includes
                                   RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
                                   if (RevisionsChangeVectorResults.ContainsKey(changeVector))
                                       continue;
-                                  var doc  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
-                                  if (doc is null) return;
-                                  RevisionsChangeVectorResults[changeVector] = doc;
+                                  var revision  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
+                                  if (revision is not null)
+                                    RevisionsChangeVectorResults[changeVector] = revision;
                               }
                               break;
                           }
@@ -85,9 +82,9 @@ namespace Raven.Server.Documents.Includes
                               RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
                               if (RevisionsChangeVectorResults.ContainsKey(cvAsLazyStringValue))
                                   continue;
-                              var doc  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:cvAsLazyStringValue);
-                              if (doc is null) return;
-                              RevisionsChangeVectorResults[cvAsLazyStringValue] = doc;
+                              var revision  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:cvAsLazyStringValue);
+                              if (revision is not null)
+                                RevisionsChangeVectorResults[cvAsLazyStringValue] = revision;
                               break;
                           }
                                     
@@ -97,9 +94,9 @@ namespace Raven.Server.Documents.Includes
                               RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
                               if (RevisionsChangeVectorResults.ContainsKey(cvAsLazyStringValue))
                                   continue;
-                              var doc  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:cvAsLazyStringValue);
-                              if (doc is null) return;
-                              RevisionsChangeVectorResults[cvAsLazyStringValue] = doc;
+                              var revision  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:cvAsLazyStringValue);
+                              if (revision is not null)
+                                RevisionsChangeVectorResults[cvAsLazyStringValue] = revision;
                               break;
                           }
                       }
@@ -121,19 +118,17 @@ namespace Raven.Server.Documents.Includes
             }  
         }
         
-        public bool AddRevisionByDateTimeBefore(DateTime? dateTime, string documentId)
+        public void AddRevisionByDateTimeBefore(DateTime? dateTime, string documentId)
         {
             if (dateTime.HasValue == false)
-                return true;
+                return;
 
             var doc = _database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context: _context, id: documentId, max: dateTime.Value); 
             if (doc is null)
-                return false;
+                return;
             
             IdByRevisionsByDateTimeResults ??= new Dictionary<string, Dictionary<DateTime, Document>>(StringComparer.OrdinalIgnoreCase); 
             IdByRevisionsByDateTimeResults[documentId] = new Dictionary<DateTime, Document> (){{dateTime.Value, doc}};
-
-            return true;
         }
 
        
