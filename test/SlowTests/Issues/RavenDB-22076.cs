@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
@@ -336,6 +337,31 @@ public class RavenDB_22076 : RavenTestBase
                 
                 Assert.Equal(1, indexErrors.Length);
                 Assert.Contains("Attempted to index embedding with 3 dimensions, but field Singles already contains indexed embedding with 256 dimensions, or was explicitly configured for embeddings with 256 dimensions.", indexErrors[0].Errors[0].Error);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestAutoIndexCreationWithExactSearch(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                var dto = new Dto(){EmbeddingSingles = new [] { 0.2f, 0.3f }};
+                var queriedEmbedding = new [] { 0.2f, 0.3f };
+                
+                session.Store(dto);
+                
+                session.SaveChanges();
+
+                _ = session.Query<Dto>().VectorSearch(x => x.WithEmbedding(d => d.EmbeddingSingles), factory => factory.ByEmbedding(queriedEmbedding), isExact: true).ToList();
+
+                var indexDefinitions = store.Maintenance.Send(new GetIndexesOperation(0, 10));
+                
+                Assert.Single(indexDefinitions);
+                Assert.Equal("Auto/Dtos/ByVector.search(EmbeddingSingles)", indexDefinitions.First().Name);
             }
         }
     }

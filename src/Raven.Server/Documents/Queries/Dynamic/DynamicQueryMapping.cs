@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             if (field.IsFullTextSearch)
                                 indexField.Indexing |= AutoFieldIndexing.Search;
 
-                            if (field.IsExactSearch)
+                            if (field.IsExactSearch && field.Vector == null)
                                 indexField.Indexing |= AutoFieldIndexing.Exact;
 
                             if (field.HasHighlighting)
