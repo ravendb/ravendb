@@ -438,7 +438,7 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeAllTimeSeries(DateTime? from = null, DateTime? to = null)
+        IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeAllTimeSeries(DateTime? from, DateTime? to)
         {
             IncludeTimeSeriesFromTo(string.Empty, Constants.TimeSeries.All, from, to);
             return this;
@@ -480,7 +480,7 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeAllTimeSeries(DateTime? from = null, DateTime? to = null)
+        IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeAllTimeSeries(DateTime? from, DateTime? to)
         {
             IncludeTimeSeriesFromTo(string.Empty, Constants.TimeSeries.All, from, to);
             return this;
@@ -522,7 +522,7 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeAllTimeSeries(DateTime? from = null, DateTime? to = null)
+        ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeAllTimeSeries(DateTime? from, DateTime? to)
         {
             IncludeTimeSeriesFromTo(string.Empty, Constants.TimeSeries.All, from, to);
             return this;
