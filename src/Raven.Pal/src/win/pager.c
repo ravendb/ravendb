@@ -68,13 +68,67 @@ struct handle
 extern MemoryLockCallback g_locked_memory_callback;
 extern RecoveryMemoryLockFailureCallback g_recovery_memory_lock_failure_callback;
 
+typedef HRESULT (WINAPI *PFN_QueryIoRingCapabilities)(IORING_CAPABILITIES*);
+typedef HRESULT (WINAPI *PFN_CloseIoRing)(HIORING);
+typedef HRESULT (WINAPI *PFN_CreateIoRing)(IORING_VERSION, IORING_CREATE_FLAGS, UINT32, UINT32, HIORING*);
+typedef HRESULT (WINAPI *PFN_SubmitIoRing)(HIORING, UINT32, UINT32, UINT32*);
+typedef HRESULT (WINAPI *PFN_PopIoRingCompletion)(HIORING, IORING_CQE*);
+typedef HRESULT (WINAPI *PFN_BuildIoRingWriteFile)(HIORING,IORING_HANDLE_REF,IORING_BUFFER_REF,UINT32,UINT64,FILE_WRITE_FLAGS,UINT_PTR,IORING_SQE_FLAGS);
 
-bool _IsIoRingSupported() {
-    IORING_CAPABILITIES capabilities; 
-    return IsWindowsVersionOrGreater(10, 0, 22000) && 
-        SUCCEEDED(QueryIoRingCapabilities(&capabilities)) &&
-        capabilities.MaxCompletionQueueSize != IORING_VERSION_INVALID;
+typedef struct {
+    PFN_QueryIoRingCapabilities QueryIoRingCapabilities;
+    PFN_CloseIoRing CloseIoRing;
+    PFN_CreateIoRing CreateIoRing;
+    PFN_SubmitIoRing SubmitIoRing;
+    PFN_PopIoRingCompletion PopIoRingCompletion;
+    PFN_BuildIoRingWriteFile BuildIoRingWriteFile;
+} IoRingFunctions;
+
+static HRESULT WINAPI _QueryIoRingCapabilitiesInitializeOnFirstUse(IORING_CAPABILITIES* capabilities);
+
+static IoRingFunctions IoRing = {.QueryIoRingCapabilities = _QueryIoRingCapabilitiesInitializeOnFirstUse};
+
+
+static HRESULT WINAPI _QueryIoRingCapabilitiesNotSupported(IORING_CAPABILITIES* capabilities) {
+    capabilities->MaxVersion = IORING_VERSION_INVALID;
+    capabilities->MaxSubmissionQueueSize = 0;
+    capabilities->MaxCompletionQueueSize = 0;
+    capabilities->FeatureFlags = IORING_FEATURE_FLAGS_NONE;
+    return S_OK;
 }
+
+static void _InitializeIoRingFunctions(IoRingFunctions *functions) {
+    memset(functions, 0, sizeof(IoRingFunctions));
+    HMODULE hKernelDll = LoadLibrary(TEXT("kernel32.dll"));
+    if (hKernelDll == NULL) {
+        functions->QueryIoRingCapabilities = _QueryIoRingCapabilitiesNotSupported;
+        return;
+    }
+
+    functions->QueryIoRingCapabilities = (PFN_QueryIoRingCapabilities)GetProcAddress(hKernelDll, "QueryIoRingCapabilities");
+    functions->CloseIoRing = (PFN_CloseIoRing)GetProcAddress(hKernelDll, "CloseIoRing");
+    functions->CreateIoRing = (PFN_CreateIoRing)GetProcAddress(hKernelDll, "CreateIoRing");
+    functions->SubmitIoRing = (PFN_SubmitIoRing)GetProcAddress(hKernelDll, "SubmitIoRing");
+    functions->PopIoRingCompletion = (PFN_PopIoRingCompletion)GetProcAddress(hKernelDll, "PopIoRingCompletion");
+    functions->BuildIoRingWriteFile = (PFN_BuildIoRingWriteFile)GetProcAddress(hKernelDll, "BuildIoRingWriteFile");
+
+    if( !functions->QueryIoRingCapabilities || 
+        !functions->CloseIoRing || 
+        !functions->CreateIoRing || 
+        !functions->SubmitIoRing || 
+        !functions->PopIoRingCompletion
+      ) {
+        functions->QueryIoRingCapabilities = _QueryIoRingCapabilitiesNotSupported;
+    }
+
+    FreeLibrary(hKernelDll);
+}
+
+static HRESULT WINAPI _QueryIoRingCapabilitiesInitializeOnFirstUse(IORING_CAPABILITIES* capabilities) {
+    _InitializeIoRingFunctions(&IoRing);
+    return IoRing.QueryIoRingCapabilities(capabilities);
+}
+
 
 uint64_t _GetNearestFileSize(uint64_t needed_size)
 {
@@ -319,7 +373,7 @@ void delete_global_state(struct handle_global_state* global_state)
     }
     if (global_state->io_ring != NULL)
     {
-        CloseIoRing(global_state->io_ring);
+        IoRing.CloseIoRing(global_state->io_ring);
     }
     if (global_state->file_path != NULL)
     {
@@ -330,7 +384,7 @@ void delete_global_state(struct handle_global_state* global_state)
 }
 
 
-int32_t _open_pager_file(HANDLE h,
+static int32_t _open_pager_file(HANDLE h,
                          struct handle_global_state* global_state,
                          int64_t req_file_size,
                          void **handle,
@@ -510,12 +564,14 @@ rvn_init_pager(const char *filename,
         rc = FAIL_NOMEM;
         goto Error;
     }
-    if (_IsIoRingSupported()) {
+    IORING_CAPABILITIES io_ring_capabilities = { 0 };
+    if (SUCCEEDED(IoRing.QueryIoRingCapabilities(&io_ring_capabilities)) &&
+        io_ring_capabilities.MaxVersion != IORING_VERSION_INVALID) {
         // For writable maps, we don't need to create an io ring
         if((open_flags & OPEN_FILE_WRITABLE_MAP) == 0)
         {
             IORING_CREATE_FLAGS flags = { 0 };
-            HRESULT hr = CreateIoRing(IORING_VERSION_3, flags, IO_RING_SIZE, IO_RING_SIZE * 2, &global_state->io_ring);
+            HRESULT hr = IoRing.CreateIoRing(IORING_VERSION_3, flags, IO_RING_SIZE, IO_RING_SIZE * 2, &global_state->io_ring);
             if (FAILED(hr)) {
                 *detailed_error_code = hr;
                 rc = FAIL_CREATE_IO_RING;
@@ -729,12 +785,12 @@ int32_t rvn_write_file_io(
     return SUCCESS;
 }
 
-int32_t _submit_and_wait(
+static int32_t _submit_and_wait(
     HIORING io_ring,
     int32_t count,
     int32_t* detailed_error_code)
 {
-    HRESULT hr = SubmitIoRing(io_ring, count, INFINITE, NULL);
+    HRESULT hr = IoRing.SubmitIoRing(io_ring, count, INFINITE, NULL);
     if (FAILED(hr))
     {
         *detailed_error_code = hr;
@@ -743,7 +799,7 @@ int32_t _submit_and_wait(
     IORING_CQE cqe;
     for(int i = 0; i < count; i++)
     {
-        hr = PopIoRingCompletion(io_ring, &cqe);
+        hr = IoRing.PopIoRingCompletion(io_ring, &cqe);
         if (hr != S_OK)
         {
             *detailed_error_code = hr;
@@ -780,7 +836,7 @@ int32_t rvn_write_io_ring(
         while(size > 0)
         {
             int32_t size_to_write = (int32_t)(rvn_min(size, INT32_MAX));
-            hr = BuildIoRingWriteFile(handle_ptr->global_state->io_ring, file_handle_ref, 
+            hr = IoRing.BuildIoRingWriteFile(handle_ptr->global_state->io_ring, file_handle_ref, 
                 buf, size_to_write, offset, FILE_WRITE_FLAGS_NONE, 0,
                 IOSQE_FLAGS_NONE);
             size -= size_to_write;
