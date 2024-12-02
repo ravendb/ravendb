@@ -51,6 +51,8 @@ namespace Raven.Client.Documents.Session.Loaders
         TBuilder IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time);
 
         TBuilder IncludeAllTimeSeries(TimeSeriesRangeType type, int count);
+
+        TBuilder IncludeAllTimeSeries(DateTime? from = null, DateTime? to = null);
     }
 
     public interface IRevisionIncludeBuilder<T, out TBuilder> 
@@ -436,6 +438,12 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
+        IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeAllTimeSeries(DateTime? from = null, DateTime? to = null)
+        {
+            IncludeTimeSeriesFromTo(string.Empty, Constants.TimeSeries.All, from, to);
+            return this;
+        }
+
         IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time)
         {
             IncludeTimeSeriesByRangeTypeAndTime(string.Empty, name, type, time);
@@ -472,6 +480,12 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
+        IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeAllTimeSeries(DateTime? from = null, DateTime? to = null)
+        {
+            IncludeTimeSeriesFromTo(string.Empty, Constants.TimeSeries.All, from, to);
+            return this;
+        }
+
         ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time)
         {
             IncludeTimeSeriesByRangeTypeAndTime(string.Empty, name, type, time);
@@ -505,6 +519,12 @@ namespace Raven.Client.Documents.Session.Loaders
         ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, int count)
         {
             IncludeTimeSeriesByRangeTypeAndCount(string.Empty, Constants.TimeSeries.All, type, count);
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeAllTimeSeries(DateTime? from = null, DateTime? to = null)
+        {
+            IncludeTimeSeriesFromTo(string.Empty, Constants.TimeSeries.All, from, to);
             return this;
         }
 
