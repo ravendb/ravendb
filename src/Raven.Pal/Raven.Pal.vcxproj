@@ -139,7 +139,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\shared_all.c" />
-    <ClCompile Include="test.c" />
+    <ClCompile Include="test-win.c" />
     <ClCompile Include="src\rvngetpalver.c" />
     <ClCompile Include="src\win\fileutils.c" />
     <ClCompile Include="src\win\getcurrentthreadid.c" />

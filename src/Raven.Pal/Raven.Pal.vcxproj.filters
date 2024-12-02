@@ -62,7 +62,7 @@
     <ClCompile Include="src\win\pager.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="test.c">
+    <ClCompile Include="test-win.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\shared_all.c">
