@@ -300,6 +300,7 @@ class indexPerformance extends shardViewModelBase {
             "TextualValues": undefined as string,
             "FloatingValues": undefined as string,
             "IntegerValues": undefined as string,
+            "VectorValues": undefined as string,
             "Deletions": undefined as string,
             "DynamicFields": undefined as string,
             "SpatialValues": undefined as string,

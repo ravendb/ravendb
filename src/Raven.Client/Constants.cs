@@ -620,6 +620,7 @@ namespace Raven.Client
             public const int DefaultNumberOfEdges = 8;
             public const int DefaultNumberOfCandidatesForQuerying = 16;
             public const int DefaultNumberOfCandidatesForIndexing = 16;
+            public const bool DefaultIsExact = false;
         }
     }
 }

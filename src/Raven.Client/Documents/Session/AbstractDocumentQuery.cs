@@ -1515,7 +1515,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         }
 
         internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory embeddingValueFactory,
-            float minimumSimilarity, int numberOfCandidates)
+            float minimumSimilarity, int numberOfCandidates, bool isExact)
         {
             var fieldName = embeddingFieldFactory.FieldName;
             var sourceQuantizationType = embeddingFieldFactory.SourceQuantizationType;
@@ -1555,14 +1555,14 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 isVectorBase64Encoded = true;
             }
             
-            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, isSourceBase64Encoded, isVectorBase64Encoded, minimumSimilarity, numberOfCandidates);
+            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, isSourceBase64Encoded, isVectorBase64Encoded, minimumSimilarity, numberOfCandidates, isExact);
 
             WhereTokens.AddLast(vectorSearchToken);
         }
 
-        public void VectorSearch(IVectorFieldFactory<T> fieldFactory, IVectorFieldValueFactory valueFactory, float minimumSimilarity, int numberOfCandidates)
+        public void VectorSearch(IVectorFieldFactory<T> fieldFactory, IVectorFieldValueFactory valueFactory, float minimumSimilarity, int numberOfCandidates, bool isExact)
         {
-            VectorSearch((VectorEmbeddingFieldFactory<T>)fieldFactory, (VectorFieldValueFactory)valueFactory, minimumSimilarity, numberOfCandidates);
+            VectorSearch((VectorEmbeddingFieldFactory<T>)fieldFactory, (VectorFieldValueFactory)valueFactory, minimumSimilarity, numberOfCandidates, isExact);
         }
 
         public void Distinct()

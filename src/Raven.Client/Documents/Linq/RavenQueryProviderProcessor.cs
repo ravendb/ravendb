@@ -1610,6 +1610,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     if (numberOfCandidatesObject is not int numberOfCandidates || numberOfCandidates <= 0)
                         throw new NotSupportedException("Number of candidates has to be positive.");
                     
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[5], out var isExactObject);
+
+                    if (isExactObject is not bool isExact)
+                        throw new NotSupportedException($"{nameof(isExact)} has to be boolean.");
+                    
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var fieldFactoryObject);
                     
                     var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
@@ -1660,7 +1665,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             throw new InvalidOperationException($"Unknown field factory type: {fieldFactoryObject.GetType().FullName}.");
                     }
                     
-                    DocumentQuery.VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates);
+                    DocumentQuery.VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates, isExact);
                     break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);

@@ -13,71 +13,87 @@ namespace FastTests.Corax.Vectors;
 
 public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Vector)]
-    public void SinglesToSinglesTest() => AutoIndexingTestingBase(
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void SinglesToSinglesTest(bool isExact) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(Singles)",
-        rql: "from 'AutoVecDocs' where vector.search(Singles, $p0)",
+        fieldRqlSelector: "vector.search(Singles, $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithEmbedding(f => f.Singles), 
-                value => value.ByEmbedding([0.1f, 0.1f])));
-   
-    [RavenFact(RavenTestCategory.Vector)]
-    public void SinglesToInt8Test() => AutoIndexingTestingBase(
+                value => value.ByEmbedding([0.1f, 0.1f]), isExact: isExact), isExact);
+    
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void SinglesToInt8Test(bool isExact) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.f32_i8(Singles))",
-        rql: "from 'AutoVecDocs' where vector.search(embedding.f32_i8(Singles), $p0)",
+        fieldRqlSelector: "vector.search(embedding.f32_i8(Singles), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithEmbedding(f => f.Singles).TargetQuantization(VectorEmbeddingType.Int8), 
-                value => value.ByEmbedding([0.1f, 0.1f])));
+                value => value.ByEmbedding([0.1f, 0.1f]), isExact: isExact), isExact);
     
-    [RavenFact(RavenTestCategory.Vector)]
-    public void SinglesToBinaryTest() => AutoIndexingTestingBase(
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void SinglesToBinaryTest(bool isExact) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.f32_i1(Singles))",
-        rql: "from 'AutoVecDocs' where vector.search(embedding.f32_i1(Singles), $p0)",
+        fieldRqlSelector: "vector.search(embedding.f32_i1(Singles), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithEmbedding(f => f.Singles).TargetQuantization(VectorEmbeddingType.Binary), 
-                value => value.ByEmbedding([0.1f, 0.1f])));
+                value => value.ByEmbedding([0.1f, 0.1f]), isExact: isExact), isExact);
 
-    [RavenFact(RavenTestCategory.Vector)]
-    public void Int8Test() => AutoIndexingTestingBase(
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Int8Test(bool isExact) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.i8(Int8))",
-        rql: "from 'AutoVecDocs' where vector.search(embedding.i8(Int8), $p0)",
-        vectorWhere: docs => docs.
-            VectorSearch(field => field.WithEmbedding(f => f.Int8, VectorEmbeddingType.Int8), 
-                value => value.ByEmbedding(new sbyte[]{(sbyte)-1, (sbyte)1})));
+        fieldRqlSelector: "vector.search(embedding.i8(Int8), $p0)",
+        vectorWhere: docs => docs.VectorSearch(field => field.WithEmbedding(f => f.Int8, VectorEmbeddingType.Int8),
+            value => value.ByEmbedding(new[]{(sbyte)-1, (sbyte)1}), isExact: isExact), isExact);
     
-    [RavenFact(RavenTestCategory.Vector)]
-    public void Int1Test() => AutoIndexingTestingBase(
+    
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Int1Test(bool isExact) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.i1(Binary))",
-        rql: "from 'AutoVecDocs' where vector.search(embedding.i1(Binary), $p0)",
+        fieldRqlSelector: "vector.search(embedding.i1(Binary), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithEmbedding(f => f.Binary, VectorEmbeddingType.Binary), 
-                value => value.ByEmbedding([1, 2])));
+                value => value.ByEmbedding([1, 2]), isExact: isExact), isExact);
     
-    [RavenFact(RavenTestCategory.Vector)]
-    public void TextToSinglesTest() => AutoIndexingTestingBase(
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TextToSinglesTest(bool isExact) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.text(Text))",
-        rql: "from 'AutoVecDocs' where vector.search(embedding.text(Text), $p0)",
+        fieldRqlSelector: "vector.search(embedding.text(Text), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithText(x => x.Text), 
-                value => value.ByText("test")));
+                value => value.ByText("test"), isExact: isExact), isExact);
     
-    [RavenFact(RavenTestCategory.Vector)]
-    public void TextToInt8Test() => AutoIndexingTestingBase(
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TextToInt8Test(bool isExact) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.text_i8(Text))",
-        rql: "from 'AutoVecDocs' where vector.search(embedding.text_i8(Text), $p0)",
+        fieldRqlSelector: "vector.search(embedding.text_i8(Text), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithText(x => x.Text).TargetQuantization(VectorEmbeddingType.Int8), 
-                value => value.ByText("test")));
+                value => value.ByText("test"), isExact: isExact), isExact);
     
-    [RavenFact(RavenTestCategory.Vector)]
-    public void TextToInt1Test() => AutoIndexingTestingBase(
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TextToInt1Test(bool isExact) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.text_i1(Text))",
-        rql: "from 'AutoVecDocs' where vector.search(embedding.text_i1(Text), $p0)",
+        fieldRqlSelector: "vector.search(embedding.text_i1(Text), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithText(x => x.Text).TargetQuantization(VectorEmbeddingType.Binary), 
-                value => value.ByText("test")));
+                value => value.ByText("test"), isExact: isExact), isExact);
     
-    private void AutoIndexingTestingBase(string autoIndexName, string rql, Func<IRavenQueryable<AutoVecDoc>, IRavenQueryable<AutoVecDoc>> vectorWhere)
+    private void AutoIndexingTestingBase(string autoIndexName, string fieldRqlSelector, Func<IRavenQueryable<AutoVecDoc>, IRavenQueryable<AutoVecDoc>> vectorWhere, bool isExact)
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         using var session = store.OpenSession();
@@ -88,6 +104,8 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         _ = baseQuery.ToList(); // evaluate
 
         Assert.Equal(autoIndexName, stats.IndexName);
+        fieldRqlSelector = isExact ? $"exact({fieldRqlSelector})" : fieldRqlSelector;
+        var rql = $"from 'AutoVecDocs' where {fieldRqlSelector}";
         Assert.Equal(rql, baseQuery.ToString());
     }
 

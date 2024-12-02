@@ -447,7 +447,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="textFieldFactory">Factory creating textual vector field for indexing purposes.</param>
         /// <param name="textValueFactory">Factory preparing queried data to be used in vector search.</param>
         /// <param name="minimumSimilarity">Minimum similarity between queried text and text stored in a document to be matched by the query.</param>
-        TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory, float minimumSimilarity = Constants.VectorSearch.DefaultMinimumSimilarity, int numberOfCandidates = Constants.VectorSearch.DefaultNumberOfCandidatesForQuerying);
+        TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> textValueFactory, float minimumSimilarity = Constants.VectorSearch.DefaultMinimumSimilarity, int numberOfCandidates = Constants.VectorSearch.DefaultNumberOfCandidatesForQuerying, bool isExact = Constants.VectorSearch.DefaultIsExact);
 
         /// <summary>
         /// Performs vector search on embedding data, by queried embedding.
@@ -455,7 +455,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="embeddingFieldFactory">Factory creating embedding vector field for indexing purposes.</param>
         /// <param name="embeddingValueFactory">Factory preparing queried data to be used in vector search.</param>
         /// <param name="minimumSimilarity">Minimum similarity between queried embedding and embedding stored in a document to be matched by the query.</param>
-        TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> embeddingValueFactory, float minimumSimilarity = Constants.VectorSearch.DefaultMinimumSimilarity, int numberOfCandidates = Constants.VectorSearch.DefaultNumberOfCandidatesForQuerying);
+        TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> embeddingValueFactory, float minimumSimilarity = Constants.VectorSearch.DefaultMinimumSimilarity, int numberOfCandidates = Constants.VectorSearch.DefaultNumberOfCandidatesForQuerying, bool isExact = Constants.VectorSearch.DefaultIsExact);
         
         /// <summary>
         /// Performs vector search on existing vector field.
@@ -463,7 +463,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="vectorFieldFactory">Factory using existing, already indexed vector field.</param>
         /// <param name="vectorValueFactory">Factory preparing queried data to be used in vector search.</param>
         /// <param name="minimumSimilarity">Minimum similarity between queried value and indexed value of a document to be matched by the query.</param>
-        TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorField> vectorFieldFactory, Action<IVectorFieldValueFactory> vectorValueFactory, float minimumSimilarity = Constants.VectorSearch.DefaultMinimumSimilarity, int numberOfCandidates = Constants.VectorSearch.DefaultNumberOfCandidatesForQuerying);
+        TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorField> vectorFieldFactory, Action<IVectorFieldValueFactory> vectorValueFactory, float minimumSimilarity = Constants.VectorSearch.DefaultMinimumSimilarity, int numberOfCandidates = Constants.VectorSearch.DefaultNumberOfCandidatesForQuerying, bool isExact = Constants.VectorSearch.DefaultIsExact);
     }
 
     public interface IGroupByDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>

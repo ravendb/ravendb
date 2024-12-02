@@ -353,8 +353,7 @@ namespace Raven.Client.Documents.Session
 
         void SuggestUsing(SuggestionBase suggestion);
 
-        void VectorSearch(IVectorFieldFactory<T> textFieldFactory, IVectorFieldValueFactory textValueFactory,
-            float minimumSimilarity, int numberOfCandidates);
+        void VectorSearch(IVectorFieldFactory<T> textFieldFactory, IVectorFieldValueFactory textValueFactory, float minimumSimilarity, int numberOfCandidates, bool isExact);
 
         string ParameterPrefix { get; set; }
     }
