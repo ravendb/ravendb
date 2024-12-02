@@ -12,7 +12,7 @@ namespace SlowTests.Voron.Graphs;
 
 public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
 {
-    [RavenFact(RavenTestCategory.Vector)]
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void CanReturnAllOfVector()
     {
         const int vectorSize = 1536;
@@ -41,7 +41,7 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
         using (var rTx = Env.ReadTransaction())
         {
             var qV = MemoryMarshal.Cast<float, byte>(storage[random.Next(storage.Count)]);
-            using var nearest = Hnsw.ApproximateNearest(rTx.LowLevelTransaction, nameof(CanReturnAllOfVector), 16, qV);
+            using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, nameof(CanReturnAllOfVector), 1024, qV);
 
             var totalReturned = 0;
             var matches = new long[64];
