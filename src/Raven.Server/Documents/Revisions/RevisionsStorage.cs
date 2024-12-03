@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Revisions
 {
     public partial class RevisionsStorage
     {
-        private static readonly Slice IdAndEtagSlice;
+        public static readonly Slice IdAndEtagSlice;
         public static readonly Slice DeleteRevisionEtagSlice;
         public static readonly Slice AllRevisionsEtagsSlice;
         public static readonly Slice CollectionRevisionsEtagsSlice;
@@ -1566,7 +1566,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
+        public unsafe ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
         {
             return GetKeyPrefix(context, lowerId.Content.Ptr, lowerId.Size, out prefixSlice);
         }
@@ -1589,7 +1589,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetKeyWithEtag(DocumentsOperationContext context, Slice lowerId, long etag, out Slice prefixSlice)
+        public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetKeyWithEtag(DocumentsOperationContext context, Slice lowerId, long etag, out Slice prefixSlice)
         {
             var scope = context.Allocator.Allocate(lowerId.Size + 1 + sizeof(long), out ByteString keyMem);
 
@@ -2402,11 +2402,11 @@ namespace Raven.Server.Documents.Revisions
 
         public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string id, long start, long take)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
-            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
-            using (GetLastKey(context, lowerId, out Slice lastKey))
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice idSlice))
+            using (GetKeyPrefix(context, idSlice, out Slice prefixSlice))
+            using (GetKeyWithEtag(context, idSlice, etag: long.MaxValue, out var compoundLastKey))
             {
-                var revisions = GetRevisions(context, prefixSlice, lastKey, start, take).ToArray();
+                var revisions = GetRevisions(context, prefixSlice: prefixSlice, lastKey: Slices.AfterAllKeys, start, take).ToArray();
                 var count = CountOfRevisions(context, prefixSlice);
                 return (revisions, count);
             }

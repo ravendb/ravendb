@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Sparrow.Platform;
 using Sparrow.Server;
 using Voron.Data.Compression;
 using Voron.Impl;
@@ -42,18 +41,28 @@ namespace Voron.Data.BTrees
             return _tree.GetDataSize(Current);
         }
 
+        public bool SeekBackward(Slice key)
+        {
+            return SeekInternal(key, backward: true);
+        }
+
         public bool Seek(Slice key)
+        {
+            return SeekInternal(key, backward: false);
+        }
+
+        private bool SeekInternal(Slice key, bool backward)
         {
             if (_disposed)
                 throw new ObjectDisposedException("TreeIterator " + _tree.Name);
 
             TreeNodeHeader* node;
             TreeCursorConstructor constructor;
-            _currentPage = _tree.FindPageFor(key, node: out node, cursor: out constructor, allowCompressed: _tree.IsLeafCompressionSupported);
+            _currentPage = _tree.FindPageFor(key, node: out node, cursor: out constructor, allowCompressed: _tree.IsLeafCompressionSupported, backward: backward);
             if (_currentPage.IsCompressed)
             {
                 DecompressedCurrentPage();
-                node = _currentPage.Search(_tx, key);
+                node = _currentPage.Search(_tx, key, backward: backward);
             }
 
             _cursor = constructor.Build(key);
@@ -70,12 +79,16 @@ namespace Voron.Data.BTrees
                 return true;
             }
 
-            // The key is not found in the db, but we are Seek()ing for equals or starts with.
-            // We know that the exact value isn't there, but it is possible that the next page has values 
-            // that is actually greater than the key, so we need to check it as well.
-
-            _currentPage.LastSearchPosition = _currentPage.NumberOfEntries; // force next MoveNext to move to the next _page_.
-            return MoveNext();
+            if (backward)
+            {
+                _currentPage.LastSearchPosition = -1; // force next MoveNext to move to the next _page_.
+                return MovePrev();
+            }
+            else
+            {
+                _currentPage.LastSearchPosition = _currentPage.NumberOfEntries; // force next MoveNext to move to the next _page_.
+                return MoveNext();
+            }
         }
 
         public Slice CurrentKey

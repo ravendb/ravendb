@@ -1302,7 +1302,7 @@ namespace Voron.Data.Tables
 
             using (var it = tree.Iterate(true))
             {
-                if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
+                if (it.SeekBackward(last) == false)
                     yield break;
 
                 if (prefix != null)
@@ -1747,8 +1747,7 @@ namespace Voron.Data.Tables
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
             {
-                if (it.Seek(key) == false &&
-                    it.SeekToLast() == false)
+                if (it.SeekBackward(key) == false)
                     yield break;
 
                 if (it.Skip(-skip) == false)
@@ -1757,9 +1756,6 @@ namespace Voron.Data.Tables
                 var result = new TableValueHolder();
                 do
                 {
-                    if (it.CurrentKey > key)
-                        continue;
-
                     GetTableValueReader(it, out result.Reader);
                     yield return result;
                 } while (it.MovePrev());

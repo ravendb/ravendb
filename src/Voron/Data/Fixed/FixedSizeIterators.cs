@@ -14,6 +14,7 @@ namespace Voron.Data.Fixed
         public interface IFixedSizeIterator : IDisposable
         {
             bool SeekToLast();
+            bool SeekBackward(TVal key);
             bool Seek(TVal key);
             TVal CurrentKey { get; }
             ByteStringContext.Scope Value(out Slice slice);
@@ -34,6 +35,11 @@ namespace Voron.Data.Fixed
             }
 
             public bool Seek(TVal key)
+            {
+                return false;
+            }
+
+            public bool SeekBackward(TVal key)
             {
                 return false;
             }
@@ -106,6 +112,17 @@ namespace Voron.Data.Fixed
                 if (_fst._lastMatch > 0)
                     _pos++; // We didn't find the key.
                 return _pos != _header->NumberOfEntries;
+            }
+
+            public bool SeekBackward(TVal key)
+            {
+                if (_header == null)
+                    return false;
+                _pos = _fst.BinarySearch(_dataStart, _header->NumberOfEntries, key, _fst._entrySize);
+                if (_fst._lastMatch < 0)
+                    _pos--; // We didn't find the key.
+
+                return _pos != -1;
             }
 
             public TVal CurrentKey
@@ -205,6 +222,12 @@ namespace Voron.Data.Fixed
             {
                 _currentPage = _parent.FindPageFor(key);
                 return _currentPage.LastMatch <= 0 || MoveNext();
+            }
+
+            public bool SeekBackward(TVal key)
+            {
+                _currentPage = _parent.FindPageFor(key);
+                return _currentPage.LastMatch >= 0 || MovePrev();
             }
 
             public bool SeekToLast()

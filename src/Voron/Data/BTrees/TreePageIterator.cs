@@ -38,11 +38,21 @@ namespace Voron.Data.BTrees
             OnDisposal?.Invoke(this);
         }
 
+        public bool SeekBackward(Slice key)
+        {
+            return SeekInternal(key, backward: true);
+        }
+
         public bool Seek(Slice key)
+        {
+            return SeekInternal(key, backward: false);
+        }
+
+        private bool SeekInternal(Slice key, bool backward)
         {
             if (_disposed)
                 throw new ObjectDisposedException("PageIterator");
-            var current = _page.Search(_tx, key);
+            var current = _page.Search(_tx, key, backward);
             if (current == null)
                 return false;
 
