@@ -153,7 +153,7 @@ namespace SlowTests.Issues
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
-                var numOfFixes = db.DocumentsStorage.CountersStorage.FixCountersForDocument(context, id);
+                var numOfFixes = db.CountersRepairTask.FixCountersForDocument(context, id);
                 Assert.Equal(1, numOfFixes);
 
                 tx.Commit();
@@ -163,7 +163,7 @@ namespace SlowTests.Issues
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenWriteTransaction())
             {
-                var numOfFixes = db.DocumentsStorage.CountersStorage.FixCountersForDocument(context, id);
+                var numOfFixes = db.CountersRepairTask.FixCountersForDocument(context, id);
                 Assert.Equal(0, numOfFixes);
             }
 
@@ -300,7 +300,7 @@ namespace SlowTests.Issues
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    var numOfFixes = db.DocumentsStorage.CountersStorage.FixCountersForDocument(context, id);
+                    var numOfFixes = db.CountersRepairTask.FixCountersForDocument(context, id);
                     Assert.Equal(1, numOfFixes);
 
                     tx.Commit();
@@ -407,7 +407,7 @@ namespace SlowTests.Issues
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
-                var numOfFixes = db.DocumentsStorage.CountersStorage.FixCountersForDocuments(context, docIdsToCorrupt, hasMore: false);
+                var numOfFixes = db.CountersRepairTask.FixCountersForDocuments(context, docIdsToCorrupt, hasMore: false);
                 Assert.Equal(4, numOfFixes);
 
                 tx.Commit();

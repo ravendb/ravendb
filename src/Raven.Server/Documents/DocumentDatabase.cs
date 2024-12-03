@@ -201,7 +201,7 @@ namespace Raven.Server.Documents
                 });
                 _hasClusterTransaction = new ManualResetEventSlim(false);
                 IdentityPartsSeparator = '/';
-                CountersRepairTask = new CountersRepairTask(this);
+                CountersRepairTask = new CountersRepairTask(this, DatabaseShutdown);
             }
             catch (Exception)
             {
@@ -395,7 +395,7 @@ namespace Raven.Server.Documents
 
                     var lastCounterFixed = DocumentsStorage.ReadLastFixedCounterKey(ctx.Transaction.InnerTransaction);
                     if (lastCounterFixed != CountersRepairTask.Completed)
-                        _ = Task.Run(() => CountersRepairTask.Start(lastCounterFixed), DatabaseShutdown);
+                        _ = Task.Run(() => CountersRepairTask.Start(lastCounterFixed));
                 }
 
                 _ = Task.Run(async () =>

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Client.Documents.Changes;
@@ -1161,136 +1160,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        public int FixCountersForDocuments(DocumentsOperationContext context, List<string> docIds, bool hasMore)
-        {
-            var numOfCounterGroupsFixed = 0;
-            foreach (var docId in docIds)
-            {
-                numOfCounterGroupsFixed += FixCountersForDocument(context, docId);
-            }
-
-            var lastProcessedKey = hasMore ? docIds[^1] : CountersRepairTask.Completed;
-            _documentsStorage.SetLastFixedCounterKey(context, lastProcessedKey);
-
-            return numOfCounterGroupsFixed;
-        }
-
-        public int FixCountersForDocument(DocumentsOperationContext context, string documentId)
-        {
-            List<string> allNames = null;
-            LazyStringValue collection = default;
-
-            Table writeTable = default;
-            int numOfCounterGroupFixed = 0;
-            CollectionName collectionName = default;
-            try
-            {
-                var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
-
-                using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice key, separator: SpecialChars.RecordSeparator))
-                {
-                    foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
-                    {
-                        var tvr = result.Value.Reader;
-                        BlittableJsonReaderObject data;
-
-                        using (data = GetCounterValuesData(context, ref tvr))
-                        {
-                            data = data.Clone(context);
-                        }
-
-                        data.TryGet(Values, out BlittableJsonReaderObject counterValues);
-                        data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames);
-
-                        if (counterValues.Count == counterNames.Count)
-                        {
-                            var counterValuesPropertyNames = counterValues.GetSortedPropertyNames();
-                            var counterNamesPropertyNames = counterNames.GetSortedPropertyNames();
-                            if (counterValuesPropertyNames.SequenceEqual(counterNamesPropertyNames))
-                                continue;
-                        }
-
-                        if (collection == null)
-                        {
-                            collection = TableValueToId(context, (int)CountersTable.Collection, ref tvr);
-                            collectionName = _documentsStorage.ExtractCollectionName(context, collection);
-
-                            writeTable = GetOrCreateTable(context.Transaction.InnerTransaction, CountersSchema, collectionName, CollectionTableType.CounterGroups);
-                        }
-
-                        BlittableJsonReaderObject.PropertyDetails prop = default;
-                        var originalNames = new DynamicJsonValue();
-
-                        for (int i = 0; i < counterValues.Count; i++)
-                        {
-                            counterValues.GetPropertyByIndex(i, ref prop);
-
-                            var lowerCasedCounterName = prop.Name;
-                            if (counterNames.TryGet(lowerCasedCounterName, out string counterNameToUse) == false)
-                            {
-                                // CounterGroup document is corrupted - missing counter name
-                                allNames ??= GetCountersForDocument(context, documentId).ToList();
-                                var location = allNames.BinarySearch(lowerCasedCounterName, StringComparer.OrdinalIgnoreCase);
-
-                                // if we don't have the counter name in its original casing - we'll use the lowered-case name instead
-                                counterNameToUse = location < 0
-                                    ? lowerCasedCounterName
-                                    : allNames[location];
-                            }
-
-                            originalNames[lowerCasedCounterName] = counterNameToUse;
-                        }
-
-                        data.Modifications = new DynamicJsonValue(data)
-                        {
-                            [CounterNames] = originalNames
-                        };
-
-                        using (var old = data)
-                        {
-                            data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                        }
-
-                        // we're using the same change vector and etag here, in order to avoid replicating
-                        // the counter group to other nodes (each node should fix its counters locally)
-                        using var changeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref tvr);
-                        var groupEtag = TableValueToEtag((int)CountersTable.Etag, ref tvr);
-
-                        using (var counterGroupKey = TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
-                        using (context.Allocator.Allocate(counterGroupKey.Size, out var buffer))
-                        {
-                            counterGroupKey.CopyTo(buffer.Ptr);
-
-                            using (var clonedKey = context.AllocateStringValue(null, buffer.Ptr, buffer.Length))
-                            using (Slice.External(context.Allocator, clonedKey, out var countersGroupKey))
-                            using (Slice.From(context.Allocator, changeVector, out var cv))
-                            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
-                            using (writeTable.Allocate(out TableValueBuilder tvb))
-                            {
-                                tvb.Add(countersGroupKey);
-                                tvb.Add(Bits.SwapBytes(groupEtag));
-                                tvb.Add(cv);
-                                tvb.Add(data.BasePointer, data.Size);
-                                tvb.Add(collectionSlice);
-                                tvb.Add(context.GetTransactionMarker());
-
-                                writeTable.Set(tvb);
-                            }
-                        }
-
-                        numOfCounterGroupFixed++;
-                    }
-                }
-            }
-            finally
-            {
-                collection?.Dispose();
-            }
-
-            return numOfCounterGroupFixed;
-
-        }
-
         private void UpdateMetricsForNewCounterGroup(BlittableJsonReaderObject data)
         {
             _documentDatabase.Metrics.Counters.BytesPutsPerSec.MarkSingleThreaded(data.Size);
@@ -2045,7 +1914,7 @@ namespace Raven.Server.Documents
             return GetOrCreateTable(tx, CounterTombstonesSchema, collection, CollectionTableType.CounterTombstones);
         }
 
-        private Table GetOrCreateTable(Transaction tx, TableSchema tableSchema, CollectionName collection, CollectionTableType type)
+        internal Table GetOrCreateTable(Transaction tx, TableSchema tableSchema, CollectionName collection, CollectionTableType type)
         {
             string tableName = collection.GetTableName(type);
 
