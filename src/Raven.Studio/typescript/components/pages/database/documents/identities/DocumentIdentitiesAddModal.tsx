@@ -20,11 +20,11 @@ interface DocumentIdentitiesAddModalProps extends ModalProps {
 }
 
 export default function DocumentIdentitiesAddModal({
-                                                       defaultValues,
-                                                       contentClassName,
-                                                       wrapClassName,
-                                                       ...props
-                                                   }: DocumentIdentitiesAddModalProps) {
+    defaultValues,
+    contentClassName,
+    wrapClassName,
+    ...props
+}: DocumentIdentitiesAddModalProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
     const form = useForm<AddIdentitiesFormData>({
@@ -46,7 +46,7 @@ export default function DocumentIdentitiesAddModal({
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [databaseName, databasesService, form, props]);
 
     return (
         <Modal
@@ -121,10 +121,7 @@ interface DocumentIdentitiesAddModalFormProps {
     isEditing?: boolean;
 }
 
-function DocumentIdentitiesAddModalForm({
-                                            control,
-                                            isEditing,
-                                        }: DocumentIdentitiesAddModalFormProps) {
+function DocumentIdentitiesAddModalForm({ control, isEditing }: DocumentIdentitiesAddModalFormProps) {
     const formFields: FormFields[] = useMemo(
         () => [
             {
@@ -141,7 +138,7 @@ function DocumentIdentitiesAddModalForm({
                 placeholder: "Enter identity value",
             },
         ],
-        []
+        [isEditing]
     );
 
     return (

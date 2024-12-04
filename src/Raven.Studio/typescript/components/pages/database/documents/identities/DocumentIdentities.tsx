@@ -1,5 +1,5 @@
 import { Button, Card, CardBody, Col, Input, Row } from "reactstrap";
-import React, { ChangeEvent, useCallback, useState } from "react";
+import React, { ChangeEvent, useState } from "react";
 import { AboutViewHeading } from "components/common/AboutView";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
@@ -59,10 +59,7 @@ function DocumentIdentitiesWithSize({ width }: DocumentIdentitiesWithSizeProps) 
         },
     });
 
-    const debouncedSearch = useCallback(
-        debounce((e: ChangeEvent<HTMLInputElement>) => setGlobalFilter(e.target.value), 300),
-        []
-    );
+    const debouncedSearch = debounce((e: ChangeEvent<HTMLInputElement>) => setGlobalFilter(e.target.value), 300);
 
     return (
         <>
