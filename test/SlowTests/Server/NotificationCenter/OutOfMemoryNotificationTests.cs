@@ -169,7 +169,7 @@ namespace SlowTests.Server.NotificationCenter
 
                     taskList.Add(Task.Run(() => database.NotificationCenter.OutOfMemory.Add(environment, new Exception("Second Message"))));
 
-                    Task.WaitAll(taskList.ToArray());
+                    await Task.WhenAll(taskList);
                 }
 
                 using (database.NotificationCenter.GetStored(out var notifications))
