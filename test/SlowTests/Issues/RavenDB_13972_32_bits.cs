@@ -86,7 +86,7 @@ namespace SlowTests.Issues
         [Theory]
         [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
         [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
-        public void CanStreamQueryWithPulsatingReadTransaction(int numberOfUsers)
+        public async Task CanStreamQueryWithPulsatingReadTransaction(int numberOfUsers)
         {
             using (var server = GetNewServer(new ServerCreationOptions
             {
@@ -105,14 +105,14 @@ namespace SlowTests.Issues
                 }
             }))
             {
-                CanStreamQueryWithPulsatingReadTransaction_ActualTest(numberOfUsers, store);
+                await CanStreamQueryWithPulsatingReadTransaction_ActualTestAsync(numberOfUsers, store);
             }
         }
 
         [Theory]
         [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
         [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
-        public void CanStreamCollectionQueryWithPulsatingReadTransaction(int numberOfUsers)
+        public async Task CanStreamCollectionQueryWithPulsatingReadTransaction(int numberOfUsers)
         {
             using (var server = GetNewServer(new ServerCreationOptions
             {
@@ -130,7 +130,7 @@ namespace SlowTests.Issues
                 }
             }))
             {
-                CanStreamCollectionQueryWithPulsatingReadTransaction_ActualTest(numberOfUsers, store);
+                await CanStreamCollectionQueryWithPulsatingReadTransaction_ActualTestAsync(numberOfUsers, store);
             }
         }
     }

@@ -24,9 +24,8 @@ namespace SlowTests.Client.Attachments
             X509Certificate2 adminCert = null;
             if (encrypted)
             {
-                var backupPath = NewDataPath(suffix: "BackupFolder");
-                var key = Encryption.EncryptedServer(out var certificates, out dbName);
-                adminCert = certificates.ServerCertificate.Value;
+                var result = await Encryption.EncryptedServerAsync();
+                adminCert = result.Certificates.ServerCertificate.Value;
             }
             else
             {
@@ -85,9 +84,8 @@ namespace SlowTests.Client.Attachments
             X509Certificate2 adminCert = null;
             if (encrypted)
             {
-                var backupPath = NewDataPath(suffix: "BackupFolder");
-                var key = Encryption.EncryptedServer(out var certificates, out dbName);
-                adminCert = certificates.ServerCertificate.Value;
+                var result = await Encryption.EncryptedServerAsync();
+                adminCert = result.Certificates.ServerCertificate.Value;
             }
             else
             {

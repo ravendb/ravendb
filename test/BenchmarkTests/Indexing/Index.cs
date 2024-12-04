@@ -191,8 +191,8 @@ namespace BenchmarkTests.Indexing
 
         public override async Task InitAsync(DocumentStore store)
         {
-            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(CreateDatabaseRecord(IndexDatabaseName)));
-            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(CreateDatabaseRecord(ReIndexDatabaseName)));
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(await CreateDatabaseRecord(IndexDatabaseName)));
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(await CreateDatabaseRecord(ReIndexDatabaseName)));
 
             await new Simple_Map_Index().ExecuteAsync(store, database: ReIndexDatabaseName);
             await new Simple_MapReduce_Index().ExecuteAsync(store, database: ReIndexDatabaseName);

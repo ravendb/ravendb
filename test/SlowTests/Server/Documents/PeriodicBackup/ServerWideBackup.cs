@@ -551,13 +551,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task ServerWideBackupShouldBeEncryptedForEncryptedDatabase(EncryptionMode encryptionMode)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
+            var result = await Encryption.EncryptedServerAsync();
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = certificates.ServerCertificate.Value,
-                ClientCertificate = certificates.ServerCertificate.Value,
-                ModifyDatabaseName = s => dbName,
+                AdminCertificate = result.Certificates.ServerCertificate.Value,
+                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
             }))
@@ -628,7 +628,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
                         EncryptionMode = EncryptionMode.UseProvidedKey,
-                        Key = key
+                        Key = result.Key
                     }
                 }))
                 {
