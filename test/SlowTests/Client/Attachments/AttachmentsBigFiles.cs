@@ -20,11 +20,12 @@ namespace SlowTests.Client.Attachments
         [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", true)]
         public async Task BatchRequestWithLongMultiPartSections(long size, string hash, bool encrypted)
         {
-            string dbName = null;
+            string dbName;
             X509Certificate2 adminCert = null;
             if (encrypted)
             {
                 var result = await Encryption.EncryptedServerAsync();
+                dbName = result.DatabaseName;
                 adminCert = result.Certificates.ServerCertificate.Value;
             }
             else
@@ -45,7 +46,7 @@ namespace SlowTests.Client.Attachments
                 await Databases.SetDatabaseId(store, dbId1);
 
                 using (var session = store.OpenSession())
-                using (var stream = new BigDummyStream(size))
+                await using (var stream = new BigDummyStream(size))
                 {
                     var user = new User { Name = "Fitzchak" };
                     session.Store(user, "users/1");
@@ -59,7 +60,7 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = session.Load<User>("users/1");
 
-                    using (var bigStream = new BigDummyStream(size))
+                    await using (var bigStream = new BigDummyStream(size))
                     using (var attachment = session.Advanced.Attachments.Get(user, "big-file"))
                     {
                         Assert.Contains("A:2", attachment.Details.ChangeVector);
@@ -68,7 +69,7 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal(size, attachment.Details.Size);
                         Assert.Equal("", attachment.Details.ContentType);
 
-                        attachment.Stream.CopyTo(bigStream);
+                        await attachment.Stream.CopyToAsync(bigStream);
                         Assert.Equal(size, bigStream.Position);
                     }
                 }
@@ -80,11 +81,12 @@ namespace SlowTests.Client.Attachments
         [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", true)]
         public async Task SupportHugeAttachment(long size, string hash, bool encrypted)
         {
-            string dbName = null;
+            string dbName;
             X509Certificate2 adminCert = null;
             if (encrypted)
             {
                 var result = await Encryption.EncryptedServerAsync();
+                dbName = result.DatabaseName;
                 adminCert = result.Certificates.ServerCertificate.Value;
             }
             else
