@@ -694,7 +694,11 @@ public unsafe partial class Hnsw
         /// </summary>
         /// <param name="entryId">Original entryId.</param>
         /// <returns>Internal Hnsw entryId</returns>
-        private long EntryIdToInternalEntryId(long entryId) => entryId << 2;
+        internal static long EntryIdToInternalEntryId(long entryId)
+        {
+            Debug.Assert(entryId > 0 && (~(long.MaxValue >> 2) & entryId) == 0, "entryId > 0 && (~(long.MaxValue >> 2) & entryId) == 0");
+            return entryId << 2;
+        }
 
         /// <summary>
         /// During indexing, we're shifting each ID 2 bits to the left to use the two lowest bits as a mask placeholder. This is for querying decoding.
@@ -704,11 +708,12 @@ public unsafe partial class Hnsw
         {
             var entriesPos = 0;
             ref var entriesRef = ref MemoryMarshal.GetReference(entries);
+            
             if (AdvInstructionSet.IsAcceleratedVector512)
             {
                 var N = Vector512<long>.Count;
-                var limit = entries.Length / N;
-                for (; entriesPos < limit; entriesPos += N)
+                
+                for (; entriesPos + N < entries.Length; entriesPos += N)
                 {
                     ref var currentMemory = ref Unsafe.Add(ref entriesRef, entriesPos);
                     var current = Vector512.LoadUnsafe(ref currentMemory);
@@ -719,15 +724,15 @@ public unsafe partial class Hnsw
             if (AdvInstructionSet.IsAcceleratedVector256)
             {
                 var N = Vector256<long>.Count;
-                var limit = (entries.Length - entriesPos) / N;
-                for (; entriesPos < limit; entriesPos += N)
+                
+                for (; entriesPos + N < entries.Length; entriesPos += N)
                 {
                     ref var currentMemory = ref Unsafe.Add(ref entriesRef, entriesPos);
                     var current = Vector256.LoadUnsafe(ref currentMemory);
                     Vector256.ShiftRightLogical(current, 2).StoreUnsafe(ref currentMemory);
                 }
             }
-            
+
             for (; entriesPos < entries.Length; entriesPos++)
                 Unsafe.Add(ref entriesRef, entriesPos) >>= 2;
         }

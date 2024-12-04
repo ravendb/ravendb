@@ -473,9 +473,19 @@ namespace Corax.Indexing
                 // Null/empty is not stored in container, just exists as marker.
                 if (reader.TermId == -1)
                     continue;
+
+                if (reader.IsVectorHash)
+                {
+                    bool exists = fieldsByRootPage.TryGetValue(reader.FieldRootPage, out var field);
+                    PortableExceptions.ThrowIfNot<InvalidOperationException>(exists, "Tried to remove vector but couldn't find the associated indexed field.");
+                    var vectorWriter = field!.GetVectorWriter(_transaction.LowLevelTransaction);
+                    Debug.Assert(vectorWriter != null && reader.StoredField is { Length: 32 });
+                    vectorWriter.Remove(entryToDelete, reader.StoredField.Value.ToSpan());
+                }
                 
                 Container.Delete(llt, _storedFieldsContainerId, reader.TermId);
             }
+            
             reader.Reset();
             while (reader.MoveNext())
             {
@@ -495,16 +505,11 @@ namespace Corax.Indexing
                     RemoveMarkerTerm(field, reader, Constants.NonExistingValueSlice, entryToDelete, termsPerEntryIndex);
                     continue;
                 }
+
+                if (reader.IsVectorHash)
+                    PortableExceptions.Throw<InvalidOperationException>($"Field with vector object should not have any textual/numerical/etc values!");
                 
                 var decodedKey = reader.Current.Decoded();
-
-                if (field.HasVector)
-                {
-                    var vectorWriter = field.GetVectorWriter(_transaction.LowLevelTransaction);
-                    vectorWriter.Remove(entryToDelete, decodedKey);
-                    continue;
-                }
-                
                 var scope = Slice.From(_entriesAllocator, decodedKey, out Slice termSlice);
                 if (field.HasSuggestions)
                     RemoveSuggestions(field, decodedKey);

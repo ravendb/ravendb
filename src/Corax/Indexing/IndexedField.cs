@@ -52,11 +52,14 @@ internal sealed class IndexedField
     public readonly bool IsVirtual;
     public bool HasMultipleTermsPerField;
     public long FieldRootPage;
+    
+    /// <summary>
+    /// Root page of the TermsVectorField (used for phrase queries)
+    /// </summary>
     public long TermsVectorFieldRootPage;
     public bool FieldSupportsPhraseQuery => _supportedFeatures.PhraseQuery && FieldIndexingMode is FieldIndexingMode.Search;
 
-    public bool HasVector => _vectorOptions != null;
-    private bool _hnswIsCreated = false;
+    private bool _hnswIsCreated;
     private readonly VectorOptions _vectorOptions;
     public override string ToString()
     {
@@ -158,6 +161,7 @@ internal sealed class IndexedField
     {
         PortableExceptions.ThrowIfNull<InvalidOperationException>(_vectorOptions, $"{nameof(_vectorOptions)} is null)");
         Hnsw.Create(llt, Name, vectorSize, _vectorOptions.NumberOfEdges, _vectorOptions.NumberOfCandidates, _vectorOptions.VectorEmbeddingType);
+        _hnswIsCreated = true;
     }
     
     public void Clear()

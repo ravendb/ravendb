@@ -4,23 +4,26 @@ import { th } from "cronstrue/dist/i18n/locales/th";
 
 class vectorOptions {
     dimensions = ko.observable<number>();
-    indexingStrategy = ko.observable<Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy>();
-    sourceEmbeddingType = ko.observable<Raven.Client.Documents.Indexes.Vector.EmbeddingType>();
-    destinationEmbeddingType = ko.observable<Raven.Client.Documents.Indexes.Vector.EmbeddingType>();
-
+    sourceEmbeddingType = ko.observable<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType>();
+    destinationEmbeddingType = ko.observable<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType>();
+    numberOfCandidatesForIndexing = ko.observable<number>();
+    numberOfEdges = ko.observable<number>();
+    
     constructor(dto: Raven.Client.Documents.Indexes.Vector.VectorOptions) {
         this.dimensions(dto.Dimensions);
-        this.indexingStrategy(dto.IndexingStrategy);
         this.sourceEmbeddingType(dto.SourceEmbeddingType);
         this.destinationEmbeddingType(dto.DestinationEmbeddingType);
+        this.numberOfCandidatesForIndexing(dto.NumberOfCandidatesForIndexing);
+        this.numberOfEdges(dto.NumberOfEdges);
     }
     
     toDto() : Raven.Client.Documents.Indexes.Vector.VectorOptions {
         return {
             Dimensions: this.dimensions(),
-            IndexingStrategy: this.indexingStrategy(),
             SourceEmbeddingType: this.sourceEmbeddingType(),
-            DestinationEmbeddingType: this.destinationEmbeddingType()
+            DestinationEmbeddingType: this.destinationEmbeddingType(),
+            NumberOfCandidatesForIndexing: this.numberOfCandidatesForIndexing(),
+            NumberOfEdges: this.numberOfEdges()
         };
     }
     
@@ -29,7 +32,8 @@ class vectorOptions {
             Dimensions: undefined,
             SourceEmbeddingType: "Single",
             DestinationEmbeddingType: "Single",
-            IndexingStrategy: "Exact"
+            NumberOfCandidatesForIndexing: 16,
+            NumberOfEdges: 8
         };
         
         return new vectorOptions(dto);

@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics.Tensors;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 using FastTests.Voron.FixedSize;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
+using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
 using Random = System.Random;
@@ -17,6 +19,25 @@ namespace FastTests.Voron.Graphs;
 
 public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 {
+    [RavenTheory(RavenTestCategory.Voron | RavenTestCategory.Vector)]
+    [InlineDataWithRandomSeed]
+    public void CanTransformIdsFromNormalToInternalAndReverse(int seed)
+    {
+        var random = new Random(seed);
+        var N512 = Vector512<long>.Count;
+        var N256 = Vector256<long>.Count;
+        
+        var sizeOfArray = N512 + N256 + 1; //Vec512 + Vec256 + Scalar
+        var arrayToProcess = Enumerable.Range(0, sizeOfArray).Select(_ => random.NextInt64(1, long.MaxValue >> 2)).ToArray();
+        var encoded = arrayToProcess.Select(Hnsw.Registration.EntryIdToInternalEntryId).ToArray();
+
+        foreach (var id in encoded)
+            Assert.Equal(id & Constants.Graphs.VectorId.EnsureIsSingleMask, 0);
+        
+        Hnsw.Registration.InternalEntryIdToEntryId(encoded);
+        Assert.Equal(arrayToProcess, encoded);
+    }
+    
     [RavenFact(RavenTestCategory.Voron)]
     public void CanCreateEmptyGraph()
     {

@@ -104,7 +104,7 @@ public partial class IndexWriter
                 : _parent.GetDynamicIndexedField(_parent._entriesAllocator, path);
             return field;
         }
-
+        
         void Insert(IndexedField field, ReadOnlySpan<byte> value)
         {
             if (field.Analyzer != null)

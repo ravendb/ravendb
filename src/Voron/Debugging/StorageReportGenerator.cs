@@ -126,6 +126,9 @@ namespace Voron.Debugging
                     {
                         do
                         {
+                            if (SliceComparer.CompareInline(it.CurrentKey, Hnsw.OptionsSlice) == 0 && it.Current->DataSize == Unsafe.SizeOf<Hnsw.Options>())
+                                continue; // Hnsw options, 64 bytes 
+                            
                             ReadResult readResult = tree.Read(it.CurrentKey);
                             RootObjectType rootObjectType = (RootObjectType)readResult.Reader.ReadByte();
                             switch (rootObjectType)
@@ -159,8 +162,6 @@ namespace Voron.Debugging
                                     nestedSetReport.Name = treeReport.Name + "/" + nestedSetReport.Name +", FixedSizeTree";
                                     trees.Add(nestedSetReport);
                                     break;
-                                case RootObjectType.None when SliceComparer.CompareInline(it.CurrentKey, Hnsw.OptionsSlice) == 0 && it.Current->DataSize == Unsafe.SizeOf<Hnsw.Options>():
-                                    continue; // Hnsw options, 64 bytes 
                                 default:
                                     throw new ArgumentOutOfRangeException(rootObjectType.ToString());
 
@@ -509,6 +510,8 @@ namespace Voron.Debugging
 
         public TreeReport GetContainerReport(string name, long page, bool includeDetails)
         {
+            name += $" (Container)";
+            
             List<double> pageDensities = null;
 
             if (includeDetails)
