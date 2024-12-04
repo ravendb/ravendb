@@ -71,6 +71,8 @@ import { restoreDatabaseFromBackupCommand } from "commands/resources/restoreData
 import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
 import saveCustomAnalyzerCommand from "commands/database/settings/saveCustomAnalyzerCommand";
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
+import getIdentitiesCommand from "commands/database/identities/getIdentitiesCommand";
+import seedIdentityCommand from "commands/database/identities/seedIdentityCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -350,5 +352,13 @@ export default class DatabasesService {
 
     async getDocumentsPreview(...args: ConstructorParameters<typeof getDocumentsPreviewCommand>) {
         return new getDocumentsPreviewCommand(...args).execute();
+    }
+
+    async getIdentities(...args: ConstructorParameters<typeof getIdentitiesCommand>) {
+        return new getIdentitiesCommand(...args).execute();
+    }
+
+    async seedIdentity(...args: ConstructorParameters<typeof seedIdentityCommand>) {
+        return new seedIdentityCommand(...args).execute();
     }
 }

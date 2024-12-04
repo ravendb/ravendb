@@ -49,6 +49,15 @@ const getHasDatabaseAccessWrite = (args: GetEffectiveAccessLevelArgs) => {
     return effectiveDatabaseAccessLevel === "DatabaseAdmin" || effectiveDatabaseAccessLevel === "DatabaseReadWrite";
 };
 
+const getHasDatabaseAccessRead = (args: GetEffectiveAccessLevelArgs) => {
+    const effectiveDatabaseAccessLevel = getEffectiveDatabaseAccessLevel(args);
+    return (
+        effectiveDatabaseAccessLevel === "DatabaseAdmin" ||
+        effectiveDatabaseAccessLevel === "DatabaseReadWrite" ||
+        effectiveDatabaseAccessLevel === "DatabaseRead"
+    );
+};
+
 // Selectors
 
 const selectIsOperatorOrAbove = createSelector(
@@ -114,6 +123,22 @@ const selectGetHasDatabaseAccessWrite = createSelector(
         }
 );
 
+const selectGetHasDatabaseAccessRead = createSelector(
+    [
+        (store: RootState) => store.accessManager.securityClearance,
+        (store: RootState) => store.accessManager.databaseAccess,
+        (store: RootState) => store.databases.activeDatabaseName,
+    ],
+    (
+        securityClearance: SecurityClearance,
+        databaseAccess: EntityState<DatabaseAccessInfo, string>,
+        activeDatabaseName: string
+    ) =>
+        (databaseName?: string) => {
+            return getHasDatabaseAccessRead({ securityClearance, databaseAccess, activeDatabaseName, databaseName });
+        }
+);
+
 const selectGetCanHandleOperation = createSelector(
     [
         (store: RootState) => store.accessManager.securityClearance,
@@ -169,6 +194,7 @@ export const accessManagerSelectors = {
     isClusterAdminOrClusterNode: selectIsClusterAdminOrClusterNode,
     getHasDatabaseAdminAccess: selectGetHasDatabaseAccessAdmin,
     getHasDatabaseWriteAccess: selectGetHasDatabaseAccessWrite,
+    getHasDatabaseReadAccess: selectGetHasDatabaseAccessRead,
     getEffectiveDatabaseAccessLevel: selectGetEffectiveDatabaseAccessLevel,
     getCanHandleOperation: selectGetCanHandleOperation,
 };

@@ -776,4 +776,23 @@ return docs[0];`,
             ],
         };
     }
+
+    static getIdentities(length = 1): Record<string, number> {
+        const object: Record<string, number> = {};
+        for (let i = 0; i < length; i++) {
+            const randomIdentity = this.getRandomIdentities();
+            Object.assign(object, randomIdentity);
+        }
+        return object;
+    }
+
+    private static getRandomIdentities(): Record<string, number> {
+        const randomRecord: Record<string, number> = {};
+
+        const randomKey = `key${Math.floor(Math.random() * 100000)}`;
+        const randomValue = Math.floor(Math.random() * 100000);
+        randomRecord[randomKey] = randomValue;
+
+        return randomRecord;
+    }
 }
