@@ -96,6 +96,11 @@ namespace Voron.Global
                 public const long SmallPostingList = 0b10;
                 public const long PostingList = 0b11;
             }
+
+            public static class VectorStorage
+            {
+                public const long VectorContainerInternalIndexer = 1;
+            }
         }
         
         public static class Tree

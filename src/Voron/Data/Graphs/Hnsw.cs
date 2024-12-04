@@ -78,8 +78,8 @@ public unsafe partial class Hnsw
                 var vectorSpan = new UnmanagedSpan(item.Address, item.Length);
                 Debug.Assert(state.Options.VectorSizeBytes == vectorSpan.Length, "state.Options.VectorSizeBytes == vectorSpan.Length");
                 return vectorSpan;
-                
             }
+            
             var count = (byte)(vectorId >> 1);
             var containerId = vectorId & ~0xFFF;
             var container = Container.Get(state.Llt, containerId);
@@ -813,6 +813,8 @@ public unsafe partial class Hnsw
                 var sizeInBytes = _vectorBatchSizeInPages * Constants.Storage.PageSize - PageHeader.SizeOf;
                 var batchId = Container.Allocate(_searchState.Llt, _globalVectorsContainerId,
                     sizeInBytes, out var vectorStorage);
+                
+                Debug.Assert(vectorStorage.Length / _searchState.Options.VectorSizeBytes > byte.MaxValue, "vectorStorage.Length == sizeInBytes");
                 Debug.Assert((batchId & 0xFFF) == 0, "We allocate > 1 page, so we get the full page container id");
                 _searchState.Options.LastUsedContainerId = batchId;
                 _searchState.Options.VectorBatchIndex = 1;
@@ -821,7 +823,6 @@ public unsafe partial class Hnsw
                 return GetVectorId(batchId, 0);
             }
             var span = Container.GetMutable(_searchState.Llt, _searchState.Options.LastUsedContainerId);
-            Debug.Assert(_searchState.Options.VectorBatchIndex < 32, "count < 32");
             var count = _searchState.Options.VectorBatchIndex++;
             Debug.Assert(((count) * vector.Length) < span.Length, "1 + ((count +1) * vector.Length)");
             var offset = count * vector.Length;
@@ -840,7 +841,7 @@ public unsafe partial class Hnsw
             {
                 Debug.Assert((containerId & Constants.Graphs.VectorId.EnsureIsSingleMask) == 0, $"Container id {containerId}");
                 //container id | index    | marker
-                return containerId | (uint)(index << 1) | 1;
+                return containerId | (uint)(index << 1) | Constants.Graphs.VectorStorage.VectorContainerInternalIndexer;
             }
         }
 
@@ -1111,7 +1112,7 @@ public unsafe partial class Hnsw
                         ref Node edge = ref _searchState.GetNodeByIndex(edgeIdx);
                         list.AddUnsafe(edge.NodeId);
                         Debug.Assert(edge.NodeId != node.NodeId, "edge.NodeId != node.NodeId");
-
+                        
                         ref var edgeList = ref edge.EdgesPerLevel[level];
                         edgeList.Add(_searchState.Llt.Allocator, node.NodeId);
 
