@@ -8,12 +8,9 @@ namespace Tests.Infrastructure;
 
 public static class AmazonSqsHelper
 {
-
-    private const string ConnectionStringEnvironmentVariable = "RAVEN_AMAZON_SQS_EMULATOR_URL";
-    
     private const string CannotConnectSkipMessage = "Test requires Elasticmq instance.";
 
-    private const string EnvironmentVariableNotFoundSkipMessage = $"'{ConnectionStringEnvironmentVariable}' environment variable not found.";
+    private const string EnvironmentVariableNotFoundSkipMessage = $"'{AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable}' environment variable not found.";
 
     private static bool CanConnectToElasticmq()
     {
@@ -43,7 +40,7 @@ public static class AmazonSqsHelper
             skipMessage = RavenTestHelper.SkipIntegrationMessage;
             return true;
         }
-        var connectionString = Environment.GetEnvironmentVariable(ConnectionStringEnvironmentVariable);
+        var connectionString = Environment.GetEnvironmentVariable(AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable);
         
         if (connectionString == null)
         {

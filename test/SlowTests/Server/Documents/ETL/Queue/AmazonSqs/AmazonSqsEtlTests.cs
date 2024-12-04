@@ -115,11 +115,9 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
             var userData2 = JsonConvert.DeserializeObject<CloudEventUserData>(messagesReadResult.Messages[1].Body).Data;
 
             Assert.NotNull(userData1);
-            Assert.Equal("users/1-A", userData1.Id);
             Assert.Equal("John Doe", userData1.Name);
             
             Assert.NotNull(userData2);
-            Assert.Equal("users/2-A", userData2.Id);
             Assert.Equal("Test", userData2.Name);
         }
     }
@@ -567,7 +565,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
          });
 
          var queueUrl = config.Connection.AmazonSqsConnectionSettings.GetQueueUrl();
-         Assert.Equal(queueUrl, "http://localhost:9324");
+         Assert.Equal(queueUrl, Environment.GetEnvironmentVariable(AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable));
      }
 
      

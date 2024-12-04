@@ -6,6 +6,8 @@ namespace Raven.Client.Documents.Operations.ETL.Queue;
 
 public sealed class AmazonSqsConnectionSettings
 {
+    internal const string EmulatorUrlEnvironmentVariable = "RAVEN_AMAZON_SQS_EMULATOR_URL";
+    
     public Basic Basic { get; set; }
 
     public bool Passwordless { get; set; }
@@ -64,7 +66,7 @@ public sealed class AmazonSqsConnectionSettings
     public string GetQueueUrl()
     {
         // this is just static part of the url, dynamic parts are not accessible
-        return UseEmulator ? Environment.GetEnvironmentVariable("RAVEN_AMAZON_SQS_EMULATOR_URL") : "https://queue.amazonaws.com/"; 
+        return UseEmulator ? Environment.GetEnvironmentVariable(EmulatorUrlEnvironmentVariable) : "https://queue.amazonaws.com/"; 
     }
 }
 

@@ -140,7 +140,14 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
             count += batchMessages.Count;
             if (queue.DeleteProcessedDocuments)
             {
-                idsToDelete.AddRange(batchMessages.Select(entry => entry.Id));
+                foreach (var entry in batchMessages)
+                {
+                    var originalItem = queue.Items.FirstOrDefault(item => item.ChangeVector == entry.Id);
+                    if (originalItem != null)
+                    {
+                        idsToDelete.Add(originalItem.DocumentId);
+                    }
+                }
             }
         }
 
@@ -154,11 +161,11 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
         {
             var sendMessageBatchRequest = new SendMessageBatchRequest
             {
-                QueueUrl = AsyncHelpers.RunSync(() => GetQueueUrl(_queueClient, queueName)),
+                QueueUrl = GetQueueUrl(_queueClient, queueName),
                 Entries = batchMessages
             };
 
-            var a = AsyncHelpers.RunSync(() => _queueClient.SendMessageBatchAsync(sendMessageBatchRequest));
+            AsyncHelpers.RunSync(() => _queueClient.SendMessageBatchAsync(sendMessageBatchRequest));
             return true;
         }
         catch (Exception ex)
@@ -179,7 +186,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
                 var sendMessageRequest = new SendMessageRequest
                 {
                     MessageGroupId = message.MessageGroupId,
-                    QueueUrl = AsyncHelpers.RunSync(() => GetQueueUrl(_queueClient, queueName)),
+                    QueueUrl = GetQueueUrl(_queueClient, queueName),
                     MessageBody = message.MessageBody
                 };
 
@@ -187,7 +194,11 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
 
                 if (queue.DeleteProcessedDocuments)
                 {
-                    idsToDelete.Add(message.Id);
+                    var originalItem = queue.Items.FirstOrDefault(item => item.ChangeVector == message.Id);
+                    if (originalItem != null)
+                    {
+                        idsToDelete.Add(originalItem.DocumentId);
+                    }
                 }
             }
             catch (AmazonSQSException sqsEx)
@@ -265,7 +276,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
         }
     }
     
-    private async Task<string> GetQueueUrl(IAmazonSQS queueClient, string queueName)
+    private string GetQueueUrl(IAmazonSQS queueClient, string queueName)
     {
         try
         {
@@ -273,7 +284,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
             
             if (string.IsNullOrEmpty(queueUrl))
             {
-                GetQueueUrlResponse getQueueUrlResponse = await queueClient.GetQueueUrlAsync(queueName);
+                GetQueueUrlResponse getQueueUrlResponse = AsyncHelpers.RunSync(() => queueClient.GetQueueUrlAsync(queueName));
                 _alreadyCreatedQueues.Add(queueName, getQueueUrlResponse.QueueUrl);
                 queueUrl = getQueueUrlResponse.QueueUrl;
             }

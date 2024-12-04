@@ -110,7 +110,7 @@ output('test output')";
     {
         IAmazonSQS queueClient = new AmazonSQSClient(new AmazonSQSConfig
         {
-            ServiceURL = Environment.GetEnvironmentVariable("RAVEN_AMAZON_SQS_EMULATOR_URL"), 
+            ServiceURL = Environment.GetEnvironmentVariable(AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable), 
             UseHttp = true,
         });
         return queueClient;

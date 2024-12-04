@@ -10,7 +10,6 @@ using Org.BouncyCastle.Utilities.IO.Pem;
 using RabbitMQ.Client;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Utils;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using ClientConfig = Confluent.Kafka.ClientConfig;
 using PemWriter = Org.BouncyCastle.OpenSsl.PemWriter;
@@ -168,11 +167,11 @@ public static class QueueBrokerConnectionHelper
         }
         else if (connectionSettings.UseEmulator)
         {
-            var emulatorUrl = Environment.GetEnvironmentVariable("RAVEN_AMAZON_SQS_EMULATOR_URL");
+            var emulatorUrl = Environment.GetEnvironmentVariable(AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable);
             if (string.IsNullOrEmpty(emulatorUrl))
             {
                 throw new InvalidOperationException(
-                    "The environment variable 'RAVEN_AMAZON_SQS_EMULATOR_URL' is required when using the Amazon SQS emulator.");
+                    $"The environment variable '{AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable}' is required when using the Amazon SQS emulator.");
             }
 
             sqsClient = new AmazonSQSClient(new AmazonSQSConfig { ServiceURL = emulatorUrl, UseHttp = true, });
