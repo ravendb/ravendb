@@ -7,6 +7,7 @@ using System.Threading;
 using Newtonsoft.Json;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Properties;
+using Raven.Client.Util;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Json;
@@ -298,7 +299,8 @@ namespace Raven.Server.Commercial
             {
                 if (TryValidateLicenseExpirationDate(deserializedLicense, out var deserializedLicenseExpirationDate))
                 {
-                    serverStore.LicenseManager.OnBeforeInitialize += () => serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure).Wait(serverStore.ServerShutdown);
+                    serverStore.LicenseManager.OnBeforeInitialize += () => AsyncHelpers.RunSync(() => serverStore.LicenseManager.TryActivateLicenseAsync
+                        (throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure).WaitAsync(TimeSpan.FromSeconds(30)));
                     return true;
                 }
 
