@@ -241,29 +241,29 @@ namespace SlowTests.Issues
             }
         }
 
-        protected void CanStreamQueryWithPulsatingReadTransaction_ActualTest(int numberOfUsers, DocumentStore store)
+        protected async Task CanStreamQueryWithPulsatingReadTransaction_ActualTestAsync(int numberOfUsers, DocumentStore store)
         {
-            using (var bulk = store.BulkInsert())
+            await using (var bulk = store.BulkInsert())
             {
                 for (int i = 0; i < numberOfUsers; i++)
                 {
-                    bulk.Store(new User(), "users/" + i);
+                    await bulk.StoreAsync(new User(), "users/" + i);
                 }
             }
 
-            new Users_ByName().Execute(store);
+            await new Users_ByName().ExecuteAsync(store);
 
             Indexes.WaitForIndexing(store);
 
-            using (var session = store.OpenSession())
+            using (var session = store.OpenAsyncSession())
             {
                 var query = session.Query<User, Users_ByName>();
 
-                var enumerator = session.Advanced.Stream<User>(query);
+                var enumerator = await session.Advanced.StreamAsync<User>(query);
 
                 var count = 0;
 
-                while (enumerator.MoveNext())
+                while (await enumerator.MoveNextAsync())
                 {
                     count++;
                 }
@@ -272,30 +272,30 @@ namespace SlowTests.Issues
             }
         }
 
-        protected static void CanStreamCollectionQueryWithPulsatingReadTransaction_ActualTest(int numberOfUsers, DocumentStore store)
+        protected static async Task CanStreamCollectionQueryWithPulsatingReadTransaction_ActualTestAsync(int numberOfUsers, DocumentStore store)
         {
             var uniqueUserNames = _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10;
 
-            using (var bulk = store.BulkInsert())
+            await using (var bulk = store.BulkInsert())
             {
                 for (int i = 0; i < numberOfUsers; i++)
                 {
-                    bulk.Store(new User()
-                        {
-                            Name = "users-" + (i % uniqueUserNames)
-                        }, "users/" + i);
+                    await bulk.StoreAsync(new User()
+                    {
+                        Name = "users-" + (i % uniqueUserNames)
+                    }, "users/" + i);
                 }
             }
 
-            using (var session = store.OpenSession())
+            using (var session = store.OpenAsyncSession())
             {
                 var query = session.Query<User>();
 
-                var enumerator = session.Advanced.Stream<User>(query);
+                var enumerator = await session.Advanced.StreamAsync<User>(query);
 
                 var count = 0;
 
-                while (enumerator.MoveNext())
+                while (await enumerator.MoveNextAsync())
                 {
                     count++;
                 }
@@ -305,18 +305,18 @@ namespace SlowTests.Issues
 
             // distinct
 
-            using (var session = store.OpenSession())
+            using (var session = store.OpenAsyncSession())
             {
                 var query = session.Query<User>().Select(x => new User
                 {
                     Name = x.Name
                 }).Distinct();
 
-                var enumerator = session.Advanced.Stream(query);
+                var enumerator = await session.Advanced.StreamAsync(query);
 
                 var count = 0;
 
-                while (enumerator.MoveNext())
+                while (await enumerator.MoveNextAsync())
                 {
                     count++;
                 }
@@ -326,18 +326,18 @@ namespace SlowTests.Issues
 
             // paging
 
-            using (var session = store.OpenSession())
+            using (var session = store.OpenAsyncSession())
             {
                 var skip = 100;
                 var take = _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10;
 
                 var query = session.Query<User>().Skip(skip).Take(take);
 
-                var enumerator = session.Advanced.Stream<User>(query);
+                var enumerator = await session.Advanced.StreamAsync<User>(query);
 
                 var count = 0;
 
-                while (enumerator.MoveNext())
+                while (await enumerator.MoveNextAsync())
                 {
                     count++;
                 }
