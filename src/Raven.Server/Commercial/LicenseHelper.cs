@@ -300,7 +300,7 @@ namespace Raven.Server.Commercial
                 if (TryValidateLicenseExpirationDate(deserializedLicense, out var deserializedLicenseExpirationDate))
                 {
                     serverStore.LicenseManager.OnBeforeInitialize += () => AsyncHelpers.RunSync(() => serverStore.LicenseManager.TryActivateLicenseAsync
-                        (throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure).WaitAsync(TimeSpan.FromSeconds(30)));
+                        (throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure).WaitAsync(serverStore.ServerShutdown));
                     return true;
                 }
 
