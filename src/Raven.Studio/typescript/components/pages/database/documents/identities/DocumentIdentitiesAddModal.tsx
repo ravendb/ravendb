@@ -35,18 +35,21 @@ export default function DocumentIdentitiesAddModal({
     const isEditing = !!defaultValues;
 
     const formValues = useWatch({ control: form.control });
-    const onSubmit: SubmitHandler<AddIdentitiesFormData> = useCallback(async ({ prefix, value }) => {
-        setIsLoading(true);
-        try {
-            await databasesService.seedIdentity(databaseName, prefix, value);
-            form.reset();
-            props.toggleModal(false);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [databaseName, databasesService, form, props]);
+    const onSubmit: SubmitHandler<AddIdentitiesFormData> = useCallback(
+        async ({ prefix, value }) => {
+            setIsLoading(true);
+            try {
+                await databasesService.seedIdentity(databaseName, prefix, value);
+                form.reset();
+                props.toggleModal(false);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [databaseName, databasesService, form, props]
+    );
 
     return (
         <Modal
