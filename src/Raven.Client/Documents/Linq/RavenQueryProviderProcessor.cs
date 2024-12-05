@@ -3445,6 +3445,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 switch (cur.Expression?.NodeType)
                 {
+                    case ExpressionType.MemberAccess:
                     case ExpressionType.Call:
                     case ExpressionType.Invoke:
                     case ExpressionType.Add:
