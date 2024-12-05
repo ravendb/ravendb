@@ -1674,13 +1674,13 @@ namespace Voron
             };
 
             var ranges = tx.SparseRegionsRecord;
-            if (ranges != null)
+            if (ranges?.Regions.Count > 0)
             {
                 _sparseRegionsToFlush.Enqueue(ranges);
-                Interlocked.Exchange(ref _currentSparseRegionsRecord, ranges);
             }
 
             // we don't _have_ to make it using interlocked, but let's publish it immediately
+            Interlocked.Exchange(ref _currentSparseRegionsRecord, ranges);
             Interlocked.Exchange(ref _currentStateRecord, updatedState);
 
             // We only want to flush to data pager transactions that have been flushed to the journal.
