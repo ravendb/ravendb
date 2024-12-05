@@ -250,6 +250,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     var now = dbInstance.Time.GetUtcNow();
                     FillReplicationInfo(dbInstance, report);
+                    report.LastClusterWideTransactionRaftIndex = dbInstance.ClusterWideTransactionIndexWaiter.LastIndex;
 
                     prevReport.TryGetValue(dbName, out var prevDatabaseReport);
                     if (SupportedFeatures.Heartbeats.SendChangesOnly &&
@@ -263,8 +264,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     using (var context = QueryOperationContext.Allocate(dbInstance, needsServerContext: true))
                     {
                         FillDocumentsInfo(prevDatabaseReport, dbInstance, report, context.Documents, documentsStorage);
-                        FillClusterTransactionInfo(report, dbInstance);
-
+                        
                         if (indexStorage != null)
                         {
                             foreach (var index in indexStorage.GetIndexes())
@@ -294,13 +294,6 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             return result;
-        }
-
-        private static void FillClusterTransactionInfo(DatabaseStatusReport report, DocumentDatabase dbInstance)
-        {
-            report.LastTransactionId = dbInstance.LastTransactionId;
-            report.LastCompletedClusterTransaction = dbInstance.LastCompletedClusterTransaction;
-            report.LastClusterWideTransactionRaftIndex = dbInstance.ClusterWideTransactionIndexWaiter.LastIndex;
         }
 
         private static void FillIndexInfo(Index index, QueryOperationContext context, DateTime now, DatabaseStatusReport report)
@@ -353,6 +346,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
                 }
             }
+            report.LastTransactionId = dbInstance.LastTransactionId;
+            report.LastCompletedClusterTransaction = dbInstance.LastCompletedClusterTransaction;
         }
 
         private static void FillReplicationInfo(DocumentDatabase dbInstance, DatabaseStatusReport report)
