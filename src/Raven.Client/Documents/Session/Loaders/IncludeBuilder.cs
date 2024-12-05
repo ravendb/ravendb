@@ -40,18 +40,64 @@ namespace Raven.Client.Documents.Session.Loaders
 
     public interface IAbstractTimeSeriesIncludeBuilder<T, out TBuilder>
     {
+        /// <summary>
+        /// Includes a specific time series by name and range type, with a specified time value.
+        /// </summary>
+        /// <param name="name">The name of the time series to include.</param>
+        /// <param name="type">The type of range to include, such as from a start time or for a duration.</param>
+        /// <param name="time">The time value defining the range.</param>
+        /// <returns>An instance of the builder for method chaining.</returns>
         TBuilder IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time);
 
+        /// <summary>
+        /// Includes a specific time series by name and range type, with a specified count of entries.
+        /// </summary>
+        /// <param name="name">The name of the time series to include.</param>
+        /// <param name="type">The type of range to include, such as from a start time or for a duration.</param>
+        /// <param name="count">The number of entries to include.</param>
+        /// <returns>An instance of the builder for method chaining.</returns>
         TBuilder IncludeTimeSeries(string name, TimeSeriesRangeType type, int count);
 
+        /// <summary>
+        /// Includes multiple time series by their names and range type, with a specified time value.
+        /// </summary>
+        /// <param name="names">An array of time series names to include.</param>
+        /// <param name="type">The type of range to include, such as from a start time or for a duration.</param>
+        /// <param name="time">The time value defining the range.</param>
+        /// <returns>An instance of the builder for method chaining.</returns>
         TBuilder IncludeTimeSeries(string[] names, TimeSeriesRangeType type, TimeValue time);
 
+        /// <summary>
+        /// Includes multiple time series by their names and range type, with a specified count of entries.
+        /// </summary>
+        /// <param name="names">An array of time series names to include.</param>
+        /// <param name="type">The type of range to include, such as from a start time or for a duration.</param>
+        /// <param name="count">The number of entries to include.</param>
+        /// <returns>An instance of the builder for method chaining.</returns>
         TBuilder IncludeTimeSeries(string[] names, TimeSeriesRangeType type, int count);
 
+        /// <summary>
+        /// Includes all time series of the entity, filtered by a range type and time value.
+        /// </summary>
+        /// <param name="type">The type of range to include, such as from a start time or for a duration.</param>
+        /// <param name="time">The time value defining the range.</param>
+        /// <returns>An instance of the builder for method chaining.</returns>
         TBuilder IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time);
 
+        /// <summary>
+        /// Includes all time series of the entity, filtered by a range type and a specified count of entries.
+        /// </summary>
+        /// <param name="type">The type of range to include, such as from a start time or for a duration.</param>
+        /// <param name="count">The number of entries to include.</param>
+        /// <returns>An instance of the builder for method chaining.</returns>
         TBuilder IncludeAllTimeSeries(TimeSeriesRangeType type, int count);
 
+        /// <summary>
+        /// Includes all time series of the entity, optionally filtered by a specific time range.
+        /// </summary>
+        /// <param name="from">The start date and time for the range to include. Can be <c>null</c> for no lower bound.</param>
+        /// <param name="to">The end date and time for the range to include. Can be <c>null</c> for no upper bound.</param>
+        /// <returns>An instance of the builder for method chaining.</returns>
         TBuilder IncludeAllTimeSeries(DateTime? from = null, DateTime? to = null);
     }
 
