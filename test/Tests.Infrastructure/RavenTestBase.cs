@@ -450,7 +450,7 @@ namespace FastTests
             }
         }
 
-        protected static async Task<T> WaitForValueAsync<T>(Func<T> act, T expectedVal, int timeout = 15000)
+        protected static async Task<T> WaitForValueAsync<T>(Func<T> act, T expectedVal, int timeout = 15000, int interval = 100)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -477,7 +477,7 @@ namespace FastTests
                         throw;
                     }
                 }
-                await Task.Delay(100);
+                await Task.Delay(interval);
             } while (true);
         }
 
