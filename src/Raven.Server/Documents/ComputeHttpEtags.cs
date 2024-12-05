@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
@@ -116,30 +115,6 @@ namespace Raven.Server.Documents
             foreach (var doc in revisions)
             {
                 HashChangeVector(state, doc?.ChangeVector);
-            }
-
-            return FinalizeHash(size, state);
-        }
-
-        public static unsafe string ComputeEtagForRevisionsSize(List<string> changeVectors, List<RevisionSizeDetails> sizes)
-        {
-            if(changeVectors.Count == 0)
-                return string.Empty;
-
-            if (changeVectors.Count == 1)
-                return changeVectors[0] + "_" + sizes[0].Exist;
-
-            var size = Sodium.crypto_generichash_bytes();
-            Debug.Assert((int)size == 32);
-            var cryptoGenerichashStatebytes = (int)Sodium.crypto_generichash_statebytes();
-            byte* state = stackalloc byte[cryptoGenerichashStatebytes];
-            if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
-                ThrowFailToInitHash();
-
-            HashNumber(state, changeVectors.Count);
-            for (int i = 0; i < changeVectors.Count; i++)
-            {
-                HashChangeVector(state, changeVectors[i] + "_" + sizes[i].Exist);
             }
 
             return FinalizeHash(size, state);

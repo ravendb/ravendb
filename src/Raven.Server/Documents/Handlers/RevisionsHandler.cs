@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -229,38 +230,12 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            var actualEtag = ComputeHttpEtags.ComputeEtagForRevisionsSize(changeVectors, sizes);
-
-            var etag = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-            if (etag == actualEtag)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                return;
-            }
-
-            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
-
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             await using (var writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName("Sizes");
-
-                writer.WriteStartArray();
-
-                var first = true;
-                foreach (var size in sizes)
-                {
-                    if (first)
-                        first = false;
-                    else
-                        writer.WriteComma();
-
-                    ctx.Write(writer, size.ToJson());
-                }
-
-                writer.WriteEndArray();
+                writer.WriteArray("Sizes", sizes.Select(size => size.ToJson()), ctx);
 
                 writer.WriteEndObject();
             }
