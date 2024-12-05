@@ -644,6 +644,17 @@ namespace Voron.Impl.Journal
                     }
 
                     _forTestingPurposes?.OnApplyLogsToDataFileUnderFlushingLock?.Invoke();
+                    _waj._env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
+                    long uptoTxIdExclusive = _waj._env.ActiveTransactions.OldestTransaction;
+
+                    var sparseRegionsToFlush = _waj._env.TryGetLatestSparseRegionsToFlush(uptoTxIdExclusive);
+                    if (sparseRegionsToFlush != null)
+                    {
+                        // This needs to happen _before_ we actually write to the disk
+                        // because we _first_ zero a range and then we may write data to that range (filling some of it up).
+                        // That is fine, and means that we don't need to track re-uses. 
+                        MarkSparseRegionsInDataFile(sparseRegionsToFlush);
+                    }
 
                     if (_applyLogsToDataFileStateFromPreviousFailedAttempt != null)
                     {
@@ -654,9 +665,8 @@ namespace Voron.Impl.Journal
                     else
                     {
                         // RavenDB-13302: we need to force a re-check this before we make decisions here
-                        _waj._env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
                         _applyLogsToDataFileStateFromPreviousFailedAttempt = _waj._env.TryGetLatestEnvironmentStateToFlush(
-                            uptoTxIdExclusive: _waj._env.ActiveTransactions.OldestTransaction);
+                            uptoTxIdExclusive: uptoTxIdExclusive);
                         if (_applyLogsToDataFileStateFromPreviousFailedAttempt == null)
                             return; // nothing to do
                     }
@@ -1307,15 +1317,10 @@ namespace Voron.Impl.Journal
                     Pager.PagerTransactionState txState = default;
                     try
                     {
-                        if (state.SparseRegions?.Count > 0)
-                        {
-                            // This needs to happen _before_ we actually write to the disk
-                            // because we _first_ zero a range and then we may write data to that range (filling some of it up).
-                            // That is fine, and means that we don't need to track re-uses. 
-                            MarkSparseRegionsInDataFile(dataPagerState,CollectionsMarshal.AsSpan(state.SparseRegions));
-                        }
-                        
                         Span<Page> pages = GetSortedPages(ref txState, record, pagesBuffer);
+
+                        if (pages.IsEmpty)
+                            return dataPagerState;
 
                         Page lastPage = pages[^1];
                         dataPager.EnsureContinuous(ref dataPagerState, lastPage.PageNumber, lastPage.GetNumberOfPages());
@@ -1324,11 +1329,10 @@ namespace Voron.Impl.Journal
                         {
                             PalHelper.ThrowLastError(rc, errorCode, $"Failed to get file handle for {dataPager.FileName}");
                         }
-
-                        (dataPagerState.TotalFileSize, dataPagerState.TotalDiskSpace) = dataPager.GetFileSize(dataPagerState);
                         
                         using (fileHandle)
                         {
+                            (dataPagerState.TotalFileSize, dataPagerState.TotalDiskSpace) = dataPager.GetFileSize(dataPagerState);
                             for (int i = 0; i < pages.Length; i++)
                             {
                                 int numberOfPages = pages[i].GetNumberOfPages();
@@ -1361,6 +1365,20 @@ namespace Voron.Impl.Journal
                 Interlocked.Add(ref _totalWrittenButUnsyncedBytes, written);
 
                 return dataPagerState;
+            }
+
+            private void MarkSparseRegionsInDataFile(Span<(long Start, long Count)> sparseRegions)
+            {
+                var currentStateRecord = _waj._env.CurrentStateRecord;
+                var dataPagerState = currentStateRecord.DataPagerState;
+             
+                foreach (var (start, count) in sparseRegions)
+                {
+                    _waj._env.DataPager.SetSparseRange(dataPagerState,
+                        start * Constants.Storage.PageSize,
+                        count * Constants.Storage.PageSize
+                    );
+                }
             }
 
             private void MarkSparseRegionsInDataFile(Pager.State dataPagerState, Span<long> sparseRegions)

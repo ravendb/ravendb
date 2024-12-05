@@ -5,5 +5,10 @@ namespace Voron.Impl;
 
 record ApplyLogsToDataFileState(
     List<PageFromScratchBuffer> Buffers,
-    List<long> SparseRegions,
-    EnvironmentStateRecord Record);
+    EnvironmentStateRecord Record)
+{
+    public override string ToString()
+    {
+        return Record.DataPagerState.Pager.FileName;
+    }
+}

@@ -118,9 +118,12 @@ namespace Voron
 
         internal TestingStuff _forTestingPurposes;
         private EnvironmentStateRecord _currentStateRecord;
+        private SparseRegionsRecord _currentSparseRegionsRecord;
         private readonly ConcurrentQueue<EnvironmentStateRecordHolder> _transactionsToFlush = new();
+        private readonly ConcurrentQueue<SparseRegionsRecord> _sparseRegionsToFlush = new();
 
         internal EnvironmentStateRecord CurrentStateRecord => _currentStateRecord;
+        internal SparseRegionsRecord CurrentSparseRegions => _currentSparseRegionsRecord;
 
         public DateTime LastWorkTime;
 
@@ -147,7 +150,7 @@ namespace Voron
                 _log = RavenLogManager.Instance.GetLoggerForVoron<StorageEnvironment>(options, options.BasePath.FullPath);
                 _options = options;
                 (_dataPager, var dataPagerState) = options.InitializeDataPager();
-                _freeSpaceHandling = new FreeSpaceHandling();
+                _freeSpaceHandling = new FreeSpaceHandling(options.DisableSparseRegions);
                 _headerAccessor = new HeaderAccessor(this);
                 TimeToSyncAfterFlushInSec = options.TimeToSyncAfterFlushInSec;
 
@@ -159,7 +162,6 @@ namespace Voron
                     default(TreeRootHeader), 
                     -1,
                     (null, -1),
-                    null, 
                     null);
                 
                 _lastValidPageAfterLoad = dataPagerState.NumberOfAllocatedPages;
@@ -364,9 +366,12 @@ namespace Voron
                     metadataTree?.Add("db-id", DbId.ToByteArray());
                 }
 
-                foreach (long freeSegment in _freeSpaceHandling.GetAllFullyEmptySegments(tx))
+                if (_options.DisableSparseRegions == false)
                 {
-                    tx.RecordSparseRange(freeSegment);
+                    foreach (long freeSegment in _freeSpaceHandling.GetCandidatesForSparseRegions(tx))
+                    {
+                        tx.RecordSparseRangeCandidate(freeSegment);
+                    }
                 }
 
                 tx.Commit();
@@ -924,7 +929,7 @@ namespace Voron
 
             return new SizeReport
             {
-                DataFileInBytes = StorageReportGenerator.PagesToBytes(numberOfAllocatedPages),
+                DataFileInBytes = _currentStateRecord.DataPagerState.TotalDiskSpace,
                 JournalsInBytes = journalsSize,
                 TempBuffersInBytes = tempBuffers,
                 TempRecyclableJournalsInBytes = tempRecyclableJournals
@@ -987,6 +992,7 @@ namespace Voron
 
             return generator.Generate(new ReportInput
             {
+                ActualSizeInBytes = tx.LowLevelTransaction.CurrentStateRecord.DataPagerState.TotalDiskSpace,
                 NumberOfAllocatedPages = numberOfAllocatedPages,
                 NumberOfFreePages = numberOfFreePages,
                 NextPageNumber = NextPageNumber,
@@ -1232,6 +1238,7 @@ namespace Voron
 
             var detailedReportInput = new DetailedReportInput
             {
+                ActualSizeInBytes = tx.LowLevelTransaction.CurrentStateRecord.DataPagerState.TotalDiskSpace,
                 NumberOfAllocatedPages = numberOfAllocatedPages,
                 NumberOfFreePages = numberOfFreePages,
                 NextPageNumber = NextPageNumber,
@@ -1664,8 +1671,14 @@ namespace Voron
                 NextPageNumber = tx.GetNextPageNumber(),
                 Root = tx.RootObjects.ReadHeader(),
                 DataPagerState = tx.DataPagerState,
-                SparsePageRanges = tx.GetSparsePageRanges()
             };
+
+            var ranges = tx.SparseRegionsRecord;
+            if (ranges != null)
+            {
+                _sparseRegionsToFlush.Enqueue(ranges);
+                Interlocked.Exchange(ref _currentSparseRegionsRecord, ranges);
+            }
 
             // we don't _have_ to make it using interlocked, but let's publish it immediately
             Interlocked.Exchange(ref _currentStateRecord, updatedState);
@@ -1679,7 +1692,6 @@ namespace Voron
         }
 
         private readonly List<PageFromScratchBuffer> _cachedScratchBuffers = [];
-        private readonly List<long> _cachedSparseRegionsList = [];
 
         internal ApplyLogsToDataFileState TryGetLatestEnvironmentStateToFlush(long uptoTxIdExclusive)
         {
@@ -1688,8 +1700,6 @@ namespace Voron
 
             var scratchBuffers = _cachedScratchBuffers;
             scratchBuffers.Clear();
-            var sparseRegions = _cachedSparseRegionsList;
-            sparseRegions.Clear();
             bool found = false;
             EnvironmentStateRecord record = null;
             while (true)
@@ -1700,7 +1710,7 @@ namespace Voron
                     if (found == false)
                         return null;
                     Debug.Assert(record is not null);
-                    return new ApplyLogsToDataFileState(scratchBuffers, sparseRegions, record);
+                    return new ApplyLogsToDataFileState(scratchBuffers,  record);
                 }
 
                 if (_transactionsToFlush.TryDequeue(out EnvironmentStateRecordHolder recordHolder) == false)
@@ -1713,10 +1723,7 @@ namespace Voron
 
                 recordHolder.EnvStateRecord = null; // this way we ensure that _transactionsToFlush won't hold reference in its internal slots preventing GC on EnvironmentStateRecord.ClientState object
 
-                if (record.SparsePageRanges != null)
-                {
-                    sparseRegions.AddRange(record.SparsePageRanges);
-                }
+
                 foreach (var (_, pageFromScratch) in record.ScratchPagesTable)
                 {
                     if (pageFromScratch.AllocatedInTransaction != record.TransactionId)
@@ -1726,6 +1733,75 @@ namespace Voron
 
                 found = true;
             }
+        }
+
+        private SparseRegionsRecord _lastPeek;
+        internal Span<(long Start, long Count)> TryGetLatestSparseRegionsToFlush(long uptoTxIdExclusive)
+        {
+            if (uptoTxIdExclusive == 0)
+                uptoTxIdExclusive = long.MaxValue;
+
+            bool found = false;
+            SparseRegionsRecord record = null;
+            var allRegions = new List<(long Start, long Count)>();
+            while (true)
+            {
+                if (_lastPeek is null)
+                {
+                    _sparseRegionsToFlush.TryPeek(out _lastPeek);
+                }
+
+                if (_lastPeek is null || _lastPeek.TransactionId >= uptoTxIdExclusive)
+                {
+                    if (found == false)
+                        return null;
+
+                    Debug.Assert(record is not null);
+                    break;
+                }
+
+                if (_sparseRegionsToFlush.TryDequeue(out record) == false)
+                    throw new InvalidOperationException("Failed to get transaction to flush after already peeked successfully");
+
+                // single thread is reading from this, so we can be sure that peek + take gets the same value
+                Debug.Assert(ReferenceEquals(record, _lastPeek));
+
+                _lastPeek = null;
+
+                allRegions.AddRange(record.Regions);
+
+                found = true;
+            }
+
+            Debug.Assert(allRegions.Count > 0, "allRegions.Count == 0");
+
+            // This sorts first by the start, then by the count, so 
+            allRegions.Sort();
+            int used = 0;
+            var span = CollectionsMarshal.AsSpan(allRegions);
+            ref var prev = ref span[0];
+            for (int i = 1; i < allRegions.Count; i++)
+            {
+                ref var inUsed = ref span[used];
+                ref var cur = ref span[i];
+                if (prev.Start == cur.Start)
+                {
+                    inUsed.Count = cur.Count;
+                }
+                else if (prev.Start + prev.Count >= cur.Start)
+                {
+                    inUsed.Count = Math.Max(prev.Start + prev.Count, cur.Start + cur.Count) - prev.Start;
+                }
+                else
+                {
+                    used++;
+                    prev = ref cur;
+                    span[used] = prev;
+                }
+            }
+
+            return span.Slice(0, used + 1);
+
         }
 
         internal void UpdateJournal(JournalFile file, long last4KWrite)

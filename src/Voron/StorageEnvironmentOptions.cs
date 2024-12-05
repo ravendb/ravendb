@@ -1202,7 +1202,8 @@ namespace Voron
 
         public int MaxNumberOfRecyclableJournals { get; set; } = 32;
         public bool DiscardVirtualMemory { get; set; } = true;
-        
+        public bool DisableSparseRegions { get; set; }
+
         private readonly RavenLogger _log;
 
         private readonly SortedList<long, string> _journalsForReuse = new SortedList<long, string>();

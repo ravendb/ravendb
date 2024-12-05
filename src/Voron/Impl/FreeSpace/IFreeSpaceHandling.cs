@@ -8,11 +8,12 @@ namespace Voron.Impl.FreeSpace
         long? TryAllocateFromFreeSpace(LowLevelTransaction tx, int num);
         List<long> AllPages(LowLevelTransaction tx);
         int GetFreePagesCount(LowLevelTransaction txLowLevelTransaction);
-        List<DynamicJsonValue> FreeSpaceSnapshot(LowLevelTransaction tx, bool hex);
-        IEnumerable<long> GetAllFullyEmptySegments(LowLevelTransaction tx);
+        DynamicJsonValue FreeSpaceSnapshot(LowLevelTransaction tx, bool hex);
+        IEnumerable<long> GetCandidatesForSparseRegions(LowLevelTransaction tx);
         void FreePage(LowLevelTransaction tx, long pageNumber);
         long GetFreePagesOverhead(LowLevelTransaction tx);
         IEnumerable<long> GetFreePagesOverheadPages(LowLevelTransaction tx);
         FreeSpaceHandlingDisabler Disable();
+        List<(long Start, long Count)> GetSparseRegions(LowLevelTransaction tx, HashSet<long> sparseRangeCandidate);
     }
 }

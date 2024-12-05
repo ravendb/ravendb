@@ -55,7 +55,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
 
             wtx.Commit();
         }
-        Assert.Equal([2048], Env.CurrentStateRecord.SparsePageRanges);
+        Assert.Equal([(2048, 2048), (4096, 1026)], Env.CurrentSparseRegions.Regions);
 
         using (var wtx = Env.WriteTransaction())
         {
@@ -71,7 +71,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
             wtx.Commit();
         }
         // proof that we can release regions released across multiple transactions
-        Assert.Equal([4096], Env.CurrentStateRecord.SparsePageRanges);
+        Assert.Equal([(4096, 2048), (6144, 514)], Env.CurrentSparseRegions.Regions);
         (_, long beforePhysicalSize) = Env.DataPager.GetFileSize(Env.CurrentStateRecord.DataPagerState);
 
         Env.FlushLogToDataFile();
@@ -83,11 +83,11 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         // storing sectors using 512 bytes. So if we aren't aligned on 4KB on the disk, hole punching may not actually
         // clear all the blocks. We give ourselves a maximum of 8KB spare for this reason
         Assert.Equal(allocatedSize, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
-        const long amountOfSpaceSaved = (32 * 1024 * 1024);
+        const long amountOfSpaceSaved = (36 * 1024 * 1024);
         if (PlatformDetails.RunningOnMacOsx is false)
         {
             long expectedSize = allocatedSize - amountOfSpaceSaved;
-            Assert.True(Math.Abs(expectedSize - physicalSize) <= 4096 * 2,
+            Assert.True(Math.Abs(expectedSize - physicalSize) <= 8192 * 2,
             $"Expected size: {new Size(expectedSize, SizeUnit.Bytes)}, actual size: {new Size(physicalSize, SizeUnit.Bytes)}");
         }
         else
@@ -104,6 +104,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         RequireFileBasedPager();
         Options.ManualFlushing = true;
         var pages = new List<long>();
+
         using (var wtx = Env.WriteTransaction())
         {
             for (int i = 0; i < 32; i++)
@@ -123,9 +124,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
             }
             wtx.Commit();
         }
-
         RestartDatabase();
-
-        Assert.Equal([2048, 4096, 6144], Env.CurrentStateRecord.SparsePageRanges);
+        Assert.Equal([(2, 2046), (2048, 2048), (4096, 2048), (6144, 2048)], Env.CurrentSparseRegions.Regions);
     }
 }

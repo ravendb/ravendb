@@ -47,9 +47,10 @@ namespace Voron.Debugging
             return $"{nameof(AllocatedSpaceInBytes)}: {new Size(AllocatedSpaceInBytes,SizeUnit.Bytes)}, {nameof(UsedSpaceInBytes)}: {new Size(UsedSpaceInBytes,SizeUnit.Bytes)}, {nameof(FreeSpaceInBytes)}: {new Size(FreeSpaceInBytes, SizeUnit.Bytes)}";
         }
 
-        public long AllocatedSpaceInBytes { get; set; }
-        public long UsedSpaceInBytes { get; set; }
-        public long FreeSpaceInBytes { get; set; }
+        public required long AllocatedSpaceInBytes { get; set; }
+        public required long ActualSpaceInBytes { get; set; }
+        public required long UsedSpaceInBytes { get; set; }
+        public required long FreeSpaceInBytes { get; set; }
     }
 
     public sealed class JournalsReport

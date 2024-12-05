@@ -28,11 +28,13 @@ using Voron.Util.Settings;
 
 namespace Voron.Debugging
 {
-    public sealed class ReportInput
+    public class ReportInput
     {
+
         public List<JournalFile> Journals;
         public JournalFile[] FlushedJournals { get; set; }
 
+        public required long ActualSizeInBytes { get; set; }
         public long NumberOfAllocatedPages { get; set; }
         public int NumberOfFreePages { get; set; }
         public long NextPageNumber { get; set; }
@@ -48,15 +50,10 @@ namespace Voron.Debugging
         public VoronPathSetting JournalPath { get; set; }
     }
 
-    public sealed class DetailedReportInput
+    public sealed class DetailedReportInput : ReportInput
     {
-        public long NumberOfAllocatedPages;
-        public long NumberOfFreePages;
-        public long NextPageNumber;
         public List<Tree> Trees;
         public List<FixedSizeTree> FixedSizeTrees;
-        public List<JournalFile> Journals;
-        public JournalFile[] FlushedJournals { get; set; }
         public List<Table> Tables;
         public Dictionary<Slice, long> Containers;
         public List<PostingList> PostingLists;
@@ -64,8 +61,6 @@ namespace Voron.Debugging
         public List<Lookup<Int64LookupKey>> NumericLookups;
         public List<Lookup<CompactTree.CompactKeyLookup>> TextualLookups;
         public bool IncludeDetails { get; set; }
-        public VoronPathSetting TempPath { get; set; }
-        public VoronPathSetting JournalPath { get; set; }
         public long LastFlushedTransactionId { get; set; }
         public long LastFlushedJournalId { get; set; }
         public long TotalWrittenButUnsyncedBytes { get; set; }
@@ -87,7 +82,7 @@ namespace Voron.Debugging
 
         public StorageReport Generate(ReportInput input)
         {
-            var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber);
+            var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber, input.ActualSizeInBytes);
 
             var journals = GenerateJournalsReport(input.Journals, input.FlushedJournals);
 
@@ -107,7 +102,7 @@ namespace Voron.Debugging
 
         public unsafe DetailedStorageReport Generate(DetailedReportInput input)
         {
-            var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber);
+            var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber, input.ActualSizeInBytes);
 
             long streamsAllocatedSpaceInBytes = 0;
             long treesAllocatedSpaceInBytes = 0;
@@ -278,12 +273,13 @@ namespace Voron.Debugging
             };
         }
 
-        private DataFileReport GenerateDataFileReport(long numberOfAllocatedPages, long numberOfFreePages, long nextPageNumber)
+        private DataFileReport GenerateDataFileReport(long numberOfAllocatedPages, long numberOfFreePages, long nextPageNumber, long actualSizeInBytes)
         {
             var unallocatedPagesAtEndOfFile = numberOfAllocatedPages - (nextPageNumber - 1);
 
             return new DataFileReport
             {
+                ActualSpaceInBytes = actualSizeInBytes,
                 AllocatedSpaceInBytes = PagesToBytes(numberOfAllocatedPages),
                 UsedSpaceInBytes = PagesToBytes((nextPageNumber - 1) - numberOfFreePages),
                 FreeSpaceInBytes = PagesToBytes(numberOfFreePages + unallocatedPagesAtEndOfFile)

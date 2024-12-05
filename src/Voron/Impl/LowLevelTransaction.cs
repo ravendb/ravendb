@@ -48,7 +48,7 @@ namespace Voron.Impl
         private readonly bool _isValidationEnabled;
         private ImmutableDictionary<long,PageFromScratchBuffer>.Builder _scratchPagesInUse;
         private readonly ImmutableDictionary<long,PageFromScratchBuffer> _scratchPagesForReads;
-        private List<long> _sparsePageRanges;
+        private HashSet<long> _sparsePageRanges;
         private readonly GetPageMethod _getPageMethod;
         private readonly long _id;
         
@@ -75,6 +75,7 @@ namespace Voron.Impl
         public Pager.PagerTransactionState PagerTransactionState;
         private readonly WriteAheadJournal _journal;
         public ImmutableDictionary<long, PageFromScratchBuffer> ModifiedPagesInTransaction;
+        private SparseRegionsRecord _sparseRangesInTransaction;
         private ImmutableDictionary<long, PageFromScratchBuffer> _scratchBuffersSnapshotToRollbackTo;
         internal sealed class WriteTransactionPool
         {
@@ -1137,7 +1138,15 @@ namespace Voron.Impl
             _env.Journal.Applicator.OnTransactionCommitted(this);
 
             ModifiedPagesInTransaction = _scratchPagesInUse.ToImmutable();
+
+            if (_sparsePageRanges != null && _sparsePageRanges.Count != 0)
+            {
+                var regions = _freeSpaceHandling.GetSparseRegions(this, _sparsePageRanges);
+                _sparseRangesInTransaction = new SparseRegionsRecord(Id, regions);
+            }
         }
+
+        public SparseRegionsRecord SparseRegionsRecord => _sparseRangesInTransaction;
 
         [DoesNotReturn]
         private static void ThrowNextPageNumberCannotBeSmallerOrEqualThanOne([CallerMemberName] string caller = null)
@@ -1513,12 +1522,10 @@ namespace Voron.Impl
             _scratchPagesInUse.Remove(value.PageNumberInDataFile);
         }
 
-        public void RecordSparseRange(long sectionPageNumber)
+        public void RecordSparseRangeCandidate(long sectionPageNumber)
         {
             _sparsePageRanges ??= new();
             _sparsePageRanges.Add(sectionPageNumber);
         }
-
-        public List<long> GetSparsePageRanges() => _sparsePageRanges;
     }
 }

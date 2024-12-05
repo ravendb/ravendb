@@ -16,8 +16,12 @@ public record EnvironmentStateRecord(
     TreeRootHeader Root,
     long NextPageNumber,
     (JournalFile Current, long Last4KWritePosition) Journal,
-    object ClientState,
-    List<long> SparsePageRanges);
+    object ClientState);
+
+public record SparseRegionsRecord(
+    long TransactionId,
+    List<(long Start, long Count)> Regions
+);
 
 internal sealed class EnvironmentStateRecordHolder
 {

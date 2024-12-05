@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
+using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron.Data.Fixed;
@@ -8,11 +11,13 @@ namespace Voron.Impl.FreeSpace
 {
     public sealed unsafe class FreeSpaceHandling : IFreeSpaceHandling
     {
+        private readonly bool _disableSparseRegions;
         private static readonly Slice FreeSpaceKey;
 
         private readonly FreeSpaceHandlingDisabler _disableStatus = new FreeSpaceHandlingDisabler();
 
         private readonly FreeSpaceRecursiveCallGuard _guard;
+        private const int NumberOfFreePagesForSparseConsideration = NumberOfPagesInSection/4;
 
         static FreeSpaceHandling()
         {
@@ -22,8 +27,9 @@ namespace Voron.Impl.FreeSpace
             }
         }
 
-        public FreeSpaceHandling()
+        public FreeSpaceHandling(bool disableSparseRegions)
         {
+            _disableSparseRegions = disableSparseRegions;
             _guard = new FreeSpaceRecursiveCallGuard(this);
         }
 
@@ -332,27 +338,44 @@ namespace Voron.Impl.FreeSpace
                 return freePages;
             }
         }
-        public List<DynamicJsonValue> FreeSpaceSnapshot(LowLevelTransaction tx, bool hex)
+        public DynamicJsonValue FreeSpaceSnapshot(LowLevelTransaction tx, bool hex)
         {
             var freeSpaceTree = GetFreeSpaceTree(tx);
-            if (freeSpaceTree.NumberOfEntries == 0)
-                return new List<DynamicJsonValue>();
-
+            var json = new DynamicJsonValue();
+            var freePages = new List<DynamicJsonValue>();
+            long totalNumberFreePages = 0;
+            var load = new Dictionary<int, int>();
             using (var it = freeSpaceTree.Iterate())
             {
-                if (it.Seek(0) == false)
-                    return new List<DynamicJsonValue>();
-
-                var freeSpace = new List<DynamicJsonValue>();
-
-                do
+                if (it.Seek(0))
                 {
-                    var stream = it.CreateReaderForCurrent();
-                    var current = new StreamBitArray(stream.Base);
-                    freeSpace.Add(current.ToJson(it.CurrentKey, hex));
-                } while (it.MoveNext());
+                    do
+                    {
+                        var stream = it.CreateReaderForCurrent();
+                        var current = new StreamBitArray(stream.Base);
+                        totalNumberFreePages += current.SetCount;
+                        freePages.Add(current.ToJson(it.CurrentKey, hex));
 
-                return freeSpace;
+                        CollectionsMarshal.GetValueRefOrAddDefault(load, current.SetCount, out _)++;
+
+                    } while (it.MoveNext());
+                }
+
+                json["FreePagesCount"] = totalNumberFreePages;
+                json["FreeSpaceSizeHumane"] = new Size(totalNumberFreePages * 8, SizeUnit.Kilobytes).ToString();
+                json["FreeSpaceSizeInKB"] = totalNumberFreePages * 8;
+                long sparseSize = load.Where(x => x.Key >= NumberOfFreePagesForSparseConsideration)
+                    .Sum(x => x.Value * x.Key) * 8;
+                json["ExpectedSparseSizeHumane"] = new Size(sparseSize, SizeUnit.Kilobytes).ToString();
+                json["ExpectedSparseSizeInKB"] = sparseSize;
+                json["FreeSections"] = load.OrderByDescending(x => x.Value)
+                    .Select(x => new DynamicJsonValue
+                    {
+                        ["NumberOfFreePages"] = x.Key,
+                        ["NumberOfSections"] = x.Value
+                    }).ToList();
+                json["FreePages"] = freePages;
+                return json;
             }
         }
 
@@ -381,7 +404,7 @@ namespace Voron.Impl.FreeSpace
             }
         }
 
-        public IEnumerable<long> GetAllFullyEmptySegments(LowLevelTransaction tx)
+        public IEnumerable<long> GetCandidatesForSparseRegions(LowLevelTransaction tx)
         {
             var freeSpaceTree = GetFreeSpaceTree(tx);
             using (var it = freeSpaceTree.Iterate())
@@ -392,9 +415,9 @@ namespace Voron.Impl.FreeSpace
                 do
                 {
                     int freePagesInSegment = it.CreateReaderForCurrent().Read<int>();
-                    if (freePagesInSegment == NumberOfPagesInSection)
+                    if (freePagesInSegment >= NumberOfFreePagesForSparseConsideration)
                     {
-                        yield return it.CurrentKey * NumberOfPagesInSection;
+                        yield return it.CurrentKey;
                     }
                 } while (it.MoveNext());
             }
@@ -417,9 +440,10 @@ namespace Voron.Impl.FreeSpace
                     sba = !result.HasValue ? new StreamBitArray() : new StreamBitArray(result.CreateReader().Base);
                 }
                 sba.Set((int)(pageNumber % NumberOfPagesInSection), true);
-                if (sba.SetCount == NumberOfPagesInSection)
+                
+                if (_disableSparseRegions == false && sba.SetCount > NumberOfFreePagesForSparseConsideration)
                 {
-                    tx.RecordSparseRange(section * NumberOfPagesInSection);
+                    tx.RecordSparseRangeCandidate(section);
                 }
 
                 sba.Write(freeSpaceTree, section);
@@ -447,6 +471,48 @@ namespace Voron.Impl.FreeSpace
         {
             _disableStatus.DisableCount++;
             return _disableStatus;
+        }
+
+        public List<(long Start, long Count)> GetSparseRegions(LowLevelTransaction tx ,HashSet<long> sparseRangeCandidate)
+        {
+            var freeSpaceTree = GetFreeSpaceTree(tx);
+            var results = new List<(long Start, long Count)>();
+            
+            foreach (long sectionId in sparseRangeCandidate)
+            {
+                using (freeSpaceTree.Read(sectionId, out Slice result))
+                {
+                    if(result.HasValue is false)
+                        continue;
+
+                    var section = new StreamBitArray(result.CreateReader().Base);
+                    if(section .SetCount < NumberOfFreePagesForSparseConsideration)
+                        continue;
+
+                    var start = -1;
+                    while (start < NumberOfPagesInSection)
+                    {
+                        start = section.FirstSetBit(start + 1);
+                        if (start == -1)
+                            break;
+
+                        int nextUnsetBit = section.NextUnsetBits(start + 1);
+                        if (nextUnsetBit == -1)
+                            nextUnsetBit = NumberOfPagesInSection;
+
+                        var freeRange = nextUnsetBit  - start;
+
+                        if (freeRange >= 128)
+                        {
+                            results.Add(((sectionId * NumberOfPagesInSection) + start, freeRange));
+                        }
+
+                        start = nextUnsetBit;
+                    }
+                }
+            }
+
+            return results;
         }
 
         private static FixedSizeTree GetFreeSpaceTree(LowLevelTransaction tx)

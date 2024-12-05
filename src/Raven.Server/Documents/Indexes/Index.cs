@@ -740,6 +740,7 @@ namespace Raven.Server.Documents.Indexes
             options.SkipChecksumValidationOnDatabaseLoading = documentDatabase.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = documentDatabase.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
             options.MaxNumberOfRecyclableJournals = documentDatabase.Configuration.Storage.MaxNumberOfRecyclableJournals;
+            options.DisableSparseRegions = documentDatabase.Configuration.Storage.DisableSparseRegions;
 
             if (documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor != null)
                 options.ScratchSpaceUsage.AddMonitor(documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor);

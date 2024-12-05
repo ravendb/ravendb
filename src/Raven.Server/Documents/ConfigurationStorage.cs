@@ -70,7 +70,7 @@ namespace Raven.Server.Documents
             options.SkipChecksumValidationOnDatabaseLoading = _db.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = _db.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
             options.MaxNumberOfRecyclableJournals = _db.Configuration.Storage.MaxNumberOfRecyclableJournals;
-
+            options.DisableSparseRegions = _db.Configuration.Storage.DisableSparseRegions;
             try
             {
                 DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, _db.Configuration.Storage, _db.Name, DirectoryExecUtils.EnvironmentType.Configuration, _logger);
