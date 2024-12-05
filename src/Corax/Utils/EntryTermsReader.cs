@@ -424,7 +424,10 @@ public unsafe struct EntryTermsReader
                 continue;
             }
 
-            // TODO: Handle vector here
+            if (IsVectorHash)
+            {
+                sb.Append($" vector hash: base64({Convert.ToBase64String(StoredField.Value.ToReadOnlySpan())})").AppendLine();
+            }
             if (IsRaw)
             {
                 using var ctx = JsonOperationContext.ShortTermSingleUse();

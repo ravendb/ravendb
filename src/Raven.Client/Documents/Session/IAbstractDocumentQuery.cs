@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
+using Raven.Client.Documents.Queries.Vector;
 using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Session

@@ -1,13 +1,13 @@
 using System;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
-namespace Raven.Client.Documents.Queries;
+
+namespace Raven.Client.Documents.Queries.Vector;
 
 public class VectorQuantizer
 {
-    private static ReadOnlySpan<byte> _binaryQuantizerLookup => [0b_1000_0000, 0b_0100_0000, 0b_0010_0000, 0b_0001_0000, 0b_0000_1000, 0b_0000_0100, 0b_0000_0010, 0b_0000_0001];
+    private static ReadOnlySpan<byte> BinaryQuantizerLookup => [0b_1000_0000, 0b_0100_0000, 0b_0010_0000, 0b_0001_0000, 0b_0000_1000, 0b_0000_0100, 0b_0000_0010, 0b_0000_0001];
 
     public static unsafe bool TryToInt8(ReadOnlySpan<float> rawEmbedding, ReadOnlySpan<sbyte> destination, out int usedBytes)
     {
@@ -65,7 +65,7 @@ public class VectorQuantizer
         
         ref var resultRef = ref MemoryMarshal.GetReference(destination);
         ref var embeddingRef = ref MemoryMarshal.GetReference(source);
-        ref var lookupTableRef = ref MemoryMarshal.GetReference(_binaryQuantizerLookup);
+        ref var lookupTableRef = ref MemoryMarshal.GetReference(BinaryQuantizerLookup);
         for (nuint j = 0; j < inputLength; j++)
         {
             var result = Unsafe.Add(ref embeddingRef, j) >= 0 

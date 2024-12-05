@@ -379,9 +379,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static object VectorFromEmbedding(IndexField currentIndexingField, object value)
         {
+            if (value is null)
+                return null;
+            
             var vectorOptions = currentIndexingField.Vector;
             var allocator = CurrentIndexingScope.Current.IndexContext.Allocator;
-            PortableExceptions.ThrowIf<InvalidDataException>(value is DynamicNullObject or null, "Cannot index data from a null value.");
             if (value is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject)
                 return Base64ToVector(value);
 
@@ -515,8 +517,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static object VectorFromText(IndexField indexField, object value)
         {
+            if (value is null)
+                return null;
+            
             object embedding = null;
-
             if (value is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject)
                 embedding = CreateVectorValue(value);
             else if (value is IEnumerable enumerable)

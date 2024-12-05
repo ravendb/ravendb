@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.IO; // do not delete
 using System.Linq.Expressions;
-using System.Numerics;
+using System.Numerics; // do not delete
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Extensions;
 using Sparrow;
-using Sparrow.Binary;
 
-namespace Raven.Client.Documents.Queries;
+namespace Raven.Client.Documents.Queries.Vector;
 
 public interface IVectorFieldFactory<T>
 {

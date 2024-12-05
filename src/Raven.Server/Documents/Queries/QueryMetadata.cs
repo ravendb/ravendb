@@ -2592,7 +2592,7 @@ function execute(doc, args){
                             destinationEmbedding = VectorEmbeddingType.Binary;
                             break;
                         default:
-                            throw new InvalidOperationException($"Unknown embedding method type. Supported: [{MethodType.Embedding_Text}, {MethodType.Embedding_Text_I8}, {MethodType.Embedding_Text_I1}, {MethodType.Embedding_F32}, {MethodType.Embedding_F32_I8}, {MethodType.Embedding_F32_I1}, {MethodType.Embedding_I8}, {MethodType.Embedding_I1}] but got `{embeddingType}`.");
+                            throw new InvalidQueryException($"Unknown embedding method type. Supported: [{MethodType.Embedding_Text}, {MethodType.Embedding_Text_I8}, {MethodType.Embedding_Text_I1}, {MethodType.Embedding_F32}, {MethodType.Embedding_F32_I8}, {MethodType.Embedding_F32_I1}, {MethodType.Embedding_I8}, {MethodType.Embedding_I1}] but got `{embeddingType}`.");
                     }
 
                     return (sourceEmbedding, destinationEmbedding);

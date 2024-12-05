@@ -97,7 +97,6 @@ namespace Raven.Server.Documents.Indexes
                 && SpatialOptions.Equals(Spatial, other.Spatial)
                 && VectorOptions.Equals(Vector, other.Vector)
                 && TermVector == other.TermVector
-                //todo: should we add spatial & vector as well here?
                 ;
         }
 
@@ -267,7 +266,7 @@ namespace Raven.Server.Documents.Indexes
                 return fields;
 
             var hasHighlighting = Indexing.HasFlag(AutoFieldIndexing.Highlighting);
-            
+
             if (Indexing.HasFlag(AutoFieldIndexing.Search) || hasHighlighting)
             {
                 fields.Add(new IndexField

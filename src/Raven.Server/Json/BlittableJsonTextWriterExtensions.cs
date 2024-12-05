@@ -1773,6 +1773,14 @@ namespace Raven.Server.Json
                 
                 writer.WritePropertyName(nameof(options.Vector.DestinationEmbeddingType));
                 writer.WriteString(options.Vector.DestinationEmbeddingType.ToString());
+                writer.WriteComma();
+                
+                writer.WritePropertyName(nameof(options.Vector.NumberOfEdges));
+                writer.WriteString(options.Vector.NumberOfEdges.ToString());
+                writer.WriteComma();
+                
+                writer.WritePropertyName(nameof(options.Vector.NumberOfCandidatesForIndexing));
+                writer.WriteString(options.Vector.NumberOfCandidatesForIndexing.ToString());
                 
                 writer.WriteEndObject();
             }

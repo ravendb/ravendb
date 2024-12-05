@@ -58,6 +58,7 @@ internal sealed class IndexedField
     /// </summary>
     public long TermsVectorFieldRootPage;
     public bool FieldSupportsPhraseQuery => _supportedFeatures.PhraseQuery && FieldIndexingMode is FieldIndexingMode.Search;
+    public bool HasVector => _vectorOptions != null;
 
     private bool _hnswIsCreated;
     private readonly VectorOptions _vectorOptions;

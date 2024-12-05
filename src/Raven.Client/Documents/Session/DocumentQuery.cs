@@ -9,6 +9,7 @@ using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Queries.Timings;
+using Raven.Client.Documents.Queries.Vector;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Util;

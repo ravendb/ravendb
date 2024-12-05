@@ -9,6 +9,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Vector;
 using Raven.Server.Config;
 using Sparrow.Server.Platform.Posix.macOS;
 using Tests.Infrastructure;

@@ -6,6 +6,7 @@ using System.Text;
 using Corax.Analyzers;
 using Corax.Pipeline;
 using Corax.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
@@ -117,15 +118,15 @@ public partial class IndexWriter
         {
             var field = GetField(fieldId, null);
             AnalyzeTerm(field, value, field.Analyzer, out Span<byte> wordsBuffer, out Span<Token> tokens);
-            if (tokens.Length == 0)
-                return ReadOnlySpan<byte>.Empty;
-            if (tokens.Length > 1)
-                ThrowTooManyTokens(tokens, value);
 
-            return wordsBuffer.Slice(tokens[0].Offset, (int)tokens[0].Length);
-
-
-            void ThrowTooManyTokens(Span<Token> tokens, ReadOnlySpan<byte> v)
+            return tokens.Length switch
+            {
+                0 => [],
+                1 => wordsBuffer.Slice(tokens[0].Offset, (int)tokens[0].Length),
+                _ => ThrowTooManyTokens(tokens, value)
+            };
+            
+            ReadOnlySpan<byte> ThrowTooManyTokens(Span<Token> tokens, ReadOnlySpan<byte> v)
             {
                 throw new InvalidOperationException("Expected to get a single token from term, but got: " + tokens.Length + ", tokens: " +
                                                     Encoding.UTF8.GetString(v));
@@ -167,7 +168,7 @@ public partial class IndexWriter
             }
         }
 
-        ref EntriesModifications ExactInsert(IndexedField field, ReadOnlySpan<byte> value)
+        private ref EntriesModifications ExactInsert(IndexedField field, ReadOnlySpan<byte> value)
         {
             Debug.Assert(field.FieldIndexingMode != FieldIndexingMode.No, "field.FieldIndexingMode != FieldIndexingMode.No");
             
@@ -222,9 +223,9 @@ public partial class IndexWriter
                     nativeEntryTerms.Grow(_parent._entriesAllocator, 1);
                     nativeEntryTerms.AddUnsafe(termLocation);
                 }
-                
-                if (nativeEntryTerms.Count >= Constants.IndexWriter.MaxSizeOfTermVectorList)
-                    ThrowDocumentExceedsPossibleTermAmount(field);
+
+                PortableExceptions.ThrowIf<NotSupportedException>(nativeEntryTerms.Count >= Constants.IndexWriter.MaxSizeOfTermVectorList,
+                    $"Field '{field.Name} exceeds the limit of terms. Search field can have up to {Constants.IndexWriter.MaxSizeOfTermVectorList} elements.");
             }
             
             if (field.HasSuggestions)
@@ -235,7 +236,7 @@ public partial class IndexWriter
             return ref term;
         }
 
-        void NumericInsert(IndexedField field, long lVal, double dVal)
+        private void NumericInsert(IndexedField field, long lVal, double dVal)
         {
             // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
             ref var doublesTermsLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, dVal, out bool fieldDoublesExist);
@@ -282,7 +283,10 @@ public partial class IndexWriter
         {
             if (value.Length <= 0) return; // we don't index missing / empty vectors 
             var field = GetField(fieldId, path);
-
+            
+            PortableExceptions.ThrowIfNot<InvalidOperationException>(field.HasVector, 
+                $"Field '{field.Name} didn't have vector options but tried to write a vector.");
+            
             var vectorWriter = field.GetVectorWriter(_parent._transaction.LowLevelTransaction, value.Length);
             var vectorHash = vectorWriter.Register(_entryId, value);
             
@@ -293,6 +297,10 @@ public partial class IndexWriter
         public void Write(int fieldId, string path, ReadOnlySpan<byte> value)
         {
             var field = GetField(fieldId, path);
+            
+            PortableExceptions.ThrowIf<InvalidOperationException>(field.HasVector, 
+                $"Field '{field.Name} has vector options, however tried to index textual value instead.");
+            
             if (value.Length > 0)
             {
                 if (field.ShouldStore)
@@ -332,12 +340,14 @@ public partial class IndexWriter
         public void Write(int fieldId, string path, ReadOnlySpan<byte> value, long longValue, double dblValue)
         {
             var field = GetField(fieldId, path);
-
+            
+            PortableExceptions.ThrowIf<InvalidOperationException>(field.HasVector, 
+                $"Field '{field.Name} has vector options, however tried to index numerical value instead.");
+            
             if (field.ShouldStore)
             {
                 RegisterTerm(field, value, StoredFieldType.Tuple | StoredFieldType.Term);
             }
-
 
             if (field.ShouldIndex)
             {
@@ -351,9 +361,12 @@ public partial class IndexWriter
         public void WriteSpatial(int fieldId, string path, CoraxSpatialPointEntry entry)
         {
             var field = GetField(fieldId, path);
-
-            if (field.ShouldIndex == false)
-                throw new InvalidOperationException($"Your spatial field '{field.Name}' has 'Indexing' set to 'No'. Spatial fields cannot be stored, so this field is useless because it cannot be searched or retrieved."); 
+            
+            PortableExceptions.ThrowIf<InvalidOperationException>(field.HasVector, 
+                $"Field '{field.Name} has vector options, however tried to index spatial value instead.");
+            
+            PortableExceptions.ThrowIfNot<InvalidOperationException>(field.ShouldIndex,
+                $"Your spatial field '{field.Name}' has 'Indexing' set to 'No'. Spatial fields cannot be stored, so this field is useless because it cannot be searched or retrieved.");
             
             RecordSpatialPointForEntry(field, (entry.Latitude, entry.Longitude));
 
@@ -457,11 +470,6 @@ public partial class IndexWriter
         public void RestoreList(int old)
         {
             _buildingList = old;
-        }
-
-        private static void ThrowDocumentExceedsPossibleTermAmount(IndexedField field)
-        {
-            throw new NotSupportedException($"Field '{field.Name} exceeds the limit of terms. Search field can have up to {Constants.IndexWriter.MaxSizeOfTermVectorList} elements.");
         }
     }
 }

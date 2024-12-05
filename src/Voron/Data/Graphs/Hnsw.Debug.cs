@@ -8,9 +8,12 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Compression;
 using Voron.Data.Containers;
+using Voron.Data.PostingLists;
 using Voron.Debugging;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Util;
+using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Graphs;
 
@@ -18,37 +21,42 @@ public unsafe partial class Hnsw
 {
     private static long GetPostingListCount(LowLevelTransaction llt,long postingListId)
     {
-        switch (postingListId & 0b11)
+        switch (postingListId & Constants.Graphs.VectorId.EnsureIsSingleMask)
         {
-            case 0:
+            case Constants.Graphs.VectorId.Tombstone:
                 return 0;
-            case 0b01:
+            case Constants.Graphs.VectorId.Single:
                 return 1;
-            case 0b10:
-                var item = Container.Get(llt, postingListId & ~0b11);
+            case Constants.Graphs.VectorId.SmallPostingList:
+            {
+                var item = Container.Get(llt, postingListId & Constants.Graphs.VectorId.ContainerType);
                 return VariableSizeEncoding.Read<int>(item.Address, out _);
-            case 0b11:
-                throw new NotImplementedException();
+            }
+            case Constants.Graphs.VectorId.PostingList:
+            {
+                var item = Container.Get(llt, postingListId & Constants.Graphs.VectorId.ContainerType);
+                return ((PostingListState*)item.Address)->NumberOfEntries;
+            }
         }
 
-        throw new NotSupportedException();
+        throw new NotSupportedException($"Got unknown {nameof(postingListId)} type: {postingListId}");
     }
     
     private static long GetEntryId(LowLevelTransaction llt,long postingListId)
     {
-        switch (postingListId & 0b11)
+        switch (postingListId & Constants.Graphs.VectorId.EnsureIsSingleMask)
         {
-            case 0:
+            case Constants.Graphs.VectorId.Tombstone:
                 return 0;
-            case 0b01:
-                return postingListId & ~0b11;
+            case Constants.Graphs.VectorId.Single:
+                return postingListId & Constants.Graphs.VectorId.ContainerType;
             case 0b10:
-                return -1;
+                return postingListId & Constants.Graphs.VectorId.ContainerType;
             case 0b11:
-                return -2;
+                return postingListId & Constants.Graphs.VectorId.ContainerType;
         }
 
-        throw new NotSupportedException();
+        throw new NotSupportedException($"Got unknown {nameof(postingListId)} type: {postingListId}");
     }
 
     public static void RenderAndShow(LowLevelTransaction llt, string name, Span<byte> vector)

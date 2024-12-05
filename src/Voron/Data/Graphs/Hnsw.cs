@@ -157,7 +157,8 @@ public unsafe partial class Hnsw
             return bufferSpan[..pos];
         }
 
-        public Span<byte> GetVector(in SearchState state)
+        //(in long vectorId, LowLevelTransaction llt, in Options options)
+        public Span<byte> GetVector(SearchState state)
         {
             if (_vectorSpan.Length > 0) 
                 return _vectorSpan.ToSpan();
@@ -229,7 +230,7 @@ public unsafe partial class Hnsw
         return vectorsContainerId;
     }
 
-    public unsafe struct SearchState
+    public class SearchState
     {
         private readonly PriorityQueue<int, float> _candidatesQ = new();
         private readonly PriorityQueue<int, float> _nearestEdgesQ = new();
@@ -239,8 +240,8 @@ public unsafe partial class Hnsw
         private readonly Lookup<Int64LookupKey> _nodeIdToLocations;
         public readonly LowLevelTransaction Llt;
         private int _visitsCounter;
-        public delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, float> SimilarityCalc;
-        public bool IsEmpty;
+        public readonly delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, float> SimilarityCalc;
+        public readonly bool IsEmpty;
         
         
         public Span<Node> Nodes => _nodes.ToSpan();
@@ -426,11 +427,11 @@ public unsafe partial class Hnsw
             if (vector.IsEmpty)
             {
                 ref var from = ref GetNodeByIndex(fromIdx);
-                vector = from.GetVector(in this);
+                vector = from.GetVector(this); // note we've to make a copy here since we cannot pass this as ref into ref value
             }
 
             ref var to = ref GetNodeByIndex(toIdx);
-            Span<byte> v2 = to.GetVector(in this);
+            Span<byte> v2 = to.GetVector(this);
             var distance = SimilarityCalc(vector, v2);
             return distance;
         }
@@ -795,7 +796,7 @@ public unsafe partial class Hnsw
             list.Add(_searchState.Llt.Allocator, entryId);
             return list;
         }
-
+        
         private long RegisterVector(ReadOnlySpan<byte> vector)
         {
             if (_searchState.Options.LastUsedContainerId is 0)
@@ -814,17 +815,17 @@ public unsafe partial class Hnsw
                 var batchId = Container.Allocate(_searchState.Llt, _globalVectorsContainerId,
                     sizeInBytes, out var vectorStorage);
                 
-                Debug.Assert(vectorStorage.Length / _searchState.Options.VectorSizeBytes > byte.MaxValue, "vectorStorage.Length == sizeInBytes");
+                Debug.Assert(vectorStorage.Length / _searchState.Options.VectorSizeBytes <= byte.MaxValue, "vectorStorage.Length / _searchState.Options.VectorSizeBytes <= byte.MaxValue");
                 Debug.Assert((batchId & 0xFFF) == 0, "We allocate > 1 page, so we get the full page container id");
                 _searchState.Options.LastUsedContainerId = batchId;
                 _searchState.Options.VectorBatchIndex = 1;
                 vector.CopyTo(vectorStorage);
-                //container id | index    | marker  
+                //container id | index    | marker
                 return GetVectorId(batchId, 0);
             }
             var span = Container.GetMutable(_searchState.Llt, _searchState.Options.LastUsedContainerId);
             var count = _searchState.Options.VectorBatchIndex++;
-            Debug.Assert(((count) * vector.Length) < span.Length, "1 + ((count +1) * vector.Length)");
+            Debug.Assert(((count) * vector.Length) < span.Length, "((count) * vector.Length) < span.Length");
             var offset = count * vector.Length;
             vector.CopyTo(span[offset..]);
             offset += vector.Length;
@@ -1084,7 +1085,7 @@ public unsafe partial class Hnsw
                     // it isn't _stable_ one and may move if the _nodes list is realloced
                     ref var node = ref _searchState.GetNodeByIndex(currentNodeIndex);
                     node.EdgesPerLevel.SetCapacity(_searchState.Llt.Allocator, nodeRandomLevel + 1);
-                    vector = node.GetVector(in _searchState);
+                    vector = node.GetVector(_searchState);
                     _searchState.SearchNearestAcrossLevels(vector, currentNodeIndex, currentMaxLevel, ref nearestNodesByLevel);
                 }
                 for (int level = nodeRandomLevel; level >= 0; level--)

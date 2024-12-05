@@ -8,6 +8,7 @@ using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Vector;
 using SmartComponents.LocalEmbeddings;
 using Sparrow;
 using Sparrow.Json;

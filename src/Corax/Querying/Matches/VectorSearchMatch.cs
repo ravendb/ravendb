@@ -195,7 +195,7 @@ public struct VectorSearchMatch : IQueryMatch
             parameters: new Dictionary<string, string>()
             {
                 { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },
-                { nameof(SimilarityMethod), _nearestSearch.SimilarityMethod.ToString() },
+                { nameof(Hnsw.SimilarityMethod), _nearestSearch.SimilarityMethod.ToString() },
                 { nameof(_maximumDistance), _maximumDistance.ToString() }
             });
     }
