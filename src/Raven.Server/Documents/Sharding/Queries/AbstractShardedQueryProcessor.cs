@@ -159,7 +159,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         else
             queryTemplate = Query.ToJson(Context);
 
-        if (Query.Metadata.IsCollectionQuery && Query.Metadata.DeclaredFunctions is null or { Count: 0 })
+        if (Query.Metadata.IsCollectionQuery && Query.Metadata.DeclaredFunctions is null or { Count: 0 } && Query.Metadata.HasIncludeOrLoad == false)
         {
             // * For collection queries that specify ids, we can turn that into a set of loads that 
             //   will hit the known servers
