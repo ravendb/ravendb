@@ -564,7 +564,6 @@ export class DatabasesStubs {
                             RegionName: "us-west-2",
                         },
                         Passwordless: false,
-                        UseEmulator: false,
                     },
                 },
             },

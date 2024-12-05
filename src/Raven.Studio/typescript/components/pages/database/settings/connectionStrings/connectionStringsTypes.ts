@@ -103,7 +103,6 @@ export interface AmazonSqsConnection extends ConnectionBase {
             regionName?: string;
             secretKey?: string;
         };
-        emulator?: boolean;
         passwordless?: boolean;
     };
 }

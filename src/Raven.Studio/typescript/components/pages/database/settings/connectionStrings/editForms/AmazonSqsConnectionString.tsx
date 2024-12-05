@@ -212,7 +212,6 @@ const schema = yupObjectSchema<FormData>({
             regionName: getStringRequiredSchema("basic"),
         }),
         passwordless: yup.boolean(),
-        emulator: yup.boolean(),
     }),
 });
 
@@ -226,7 +225,6 @@ function getDefaultValues(initialConnection: AmazonSqsConnection, isForNewConnec
                     secretKey: null,
                     regionName: null,
                 },
-                emulator: false,
                 passwordless: false,
             },
         };

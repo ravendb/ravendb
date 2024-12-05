@@ -42,7 +42,6 @@ class AmazonSqsBasicModel {
                 RegionName: this.regionName(),
                 SecretKey: this.secretKey()
             },
-            UseEmulator: false,
             Passwordless: false
         }
     }
@@ -83,8 +82,6 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
         switch (authenticationType) {
             case "basic":
                 return "Basic";
-            case "emulator":
-                return "Emulator";
             case "passwordless":
                 return "Passwordless";
             default:
@@ -103,8 +100,6 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
         const settings = dto.AmazonSqsConnectionSettings;
         if (settings.Passwordless) {
             this.authenticationType("passwordless");
-        } else if (settings.UseEmulator) {
-            this.authenticationType("emulator");
         } else if (settings.Basic) {
             this.authenticationType("basic");
             this.basicModel.update(settings.Basic);
@@ -139,7 +134,6 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
                     RegionName: ""
                 },
                 Passwordless: false,
-                UseEmulator: false
             }
         }, true, []);
     }
@@ -149,17 +143,10 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
         switch (authenticationType) {
             case "basic":
                 return this.basicModel.toDto();
-            case "emulator":
-                return {
-                    Basic: null,
-                    Passwordless: false,
-                    UseEmulator: true
-                }
             case "passwordless":
                 return {
                     Basic: null,
                     Passwordless: true,
-                    UseEmulator: false
                 }
             default:
                 assertUnreachable(authenticationType);

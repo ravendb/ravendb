@@ -168,7 +168,6 @@ export function mapAmazonSqsConnectionStringSettingsToDto(
                     AccessKey: connection.settings.basic.accessKey,
                     RegionName: connection.settings.basic.regionName,
                 },
-                UseEmulator: false,
                 Passwordless: false,
             };
         }
@@ -176,14 +175,6 @@ export function mapAmazonSqsConnectionStringSettingsToDto(
             return {
                 Basic: null,
                 Passwordless: true,
-                UseEmulator: false,
-            };
-        }
-        case "emulator": {
-            return {
-                Basic: null,
-                Passwordless: false,
-                UseEmulator: true,
             };
         }
         default:

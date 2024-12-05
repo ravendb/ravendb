@@ -303,7 +303,6 @@ export function mapAmazonSqsConnectionsFromDto(
                     name: connection.Name,
                     authType: getAmazonSqsAuthType(connection),
                     settings: {
-                        emulator: connection.AmazonSqsConnectionSettings.UseEmulator,
                         passwordless: connection.AmazonSqsConnectionSettings.Passwordless,
                         basic: {
                             accessKey: connection.AmazonSqsConnectionSettings.Basic?.AccessKey,
@@ -319,9 +318,6 @@ export function mapAmazonSqsConnectionsFromDto(
 function getAmazonSqsAuthType(dto: QueueConnectionStringDto): AmazonSqsAuthenticationType {
     if (dto.AmazonSqsConnectionSettings.Passwordless) {
         return "passwordless";
-    }
-    if (dto.AmazonSqsConnectionSettings.UseEmulator) {
-        return "emulator";
     }
     if (dto.AmazonSqsConnectionSettings.Basic) {
         return "basic";
