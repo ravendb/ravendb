@@ -6,6 +6,7 @@ using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron.Data.Fixed;
+using Voron.Global;
 
 namespace Voron.Impl.FreeSpace
 {
@@ -344,7 +345,7 @@ namespace Voron.Impl.FreeSpace
             var json = new DynamicJsonValue();
             var freePages = new List<DynamicJsonValue>();
             long totalNumberFreePages = 0;
-            var load = new Dictionary<int, int>();
+            var load = new Dictionary<long, long>();
             using (var it = freeSpaceTree.Iterate())
             {
                 if (it.Seek(0))
@@ -362,12 +363,12 @@ namespace Voron.Impl.FreeSpace
                 }
 
                 json["FreePagesCount"] = totalNumberFreePages;
-                json["FreeSpaceSizeHumane"] = new Size(totalNumberFreePages * 8, SizeUnit.Kilobytes).ToString();
-                json["FreeSpaceSizeInKB"] = totalNumberFreePages * 8;
+                json["FreeSpaceSizeHumane"] = new Size(totalNumberFreePages * Constants.Storage.PageSize, SizeUnit.Bytes).ToString();
+                json["FreeSpaceSize"] = totalNumberFreePages * Constants.Storage.PageSize;
                 long sparseSize = load.Where(x => x.Key >= NumberOfFreePagesForSparseConsideration)
-                    .Sum(x => x.Value * x.Key) * 8;
-                json["ExpectedSparseSizeHumane"] = new Size(sparseSize, SizeUnit.Kilobytes).ToString();
-                json["ExpectedSparseSizeInKB"] = sparseSize;
+                    .Sum(x => x.Value * x.Key) * Constants.Storage.PageSize;
+                json["ExpectedSparseSizeHumane"] = new Size(sparseSize, SizeUnit.Bytes).ToString();
+                json["ExpectedSparseSize"] = sparseSize;
                 json["FreeSections"] = load.OrderByDescending(x => x.Value)
                     .Select(x => new DynamicJsonValue
                     {
