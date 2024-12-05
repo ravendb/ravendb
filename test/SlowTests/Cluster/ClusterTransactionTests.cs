@@ -88,10 +88,10 @@ namespace SlowTests.Cluster
                            TransactionMode = TransactionMode.ClusterWide
                        }))
                 {
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", new byte[256 * 1024]);
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", new byte[2 * 256 * 1024]);
                     await session.StoreAsync(user3, "foo/bar");
                     var ex = await Assert.ThrowsAsync<RavenException>(() => session.SaveChangesAsync());
-                    Assert.Contains("The command 'ClusterTransactionCommand' size of 1.5 MBytes exceed the max allowed size", ex.Message);
+                    Assert.Contains("The command 'ClusterTransactionCommand' size of 3 MBytes exceed the max allowed size", ex.Message);
                 }
 
                 using (var session = leaderStore.OpenAsyncSession(new SessionOptions
