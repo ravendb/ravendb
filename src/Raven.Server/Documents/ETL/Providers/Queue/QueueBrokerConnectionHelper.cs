@@ -174,7 +174,8 @@ public static class QueueBrokerConnectionHelper
                     $"The environment variable '{AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable}' is required when using the Amazon SQS emulator.");
             }
 
-            sqsClient = new AmazonSQSClient(new AmazonSQSConfig { ServiceURL = emulatorUrl, UseHttp = true, });
+            sqsClient = new AmazonSQSClient("dummy-access-key", "dummy-secret-key",
+                new AmazonSQSConfig { ServiceURL = emulatorUrl, UseHttp = true });
         }
 
         return sqsClient;
