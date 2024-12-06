@@ -418,7 +418,7 @@ namespace Raven.Server.Documents.Indexes
             _stats.ReduceDetails.CurrentlyAllocated = allocations;
         }
 
-        public void RecordCommitStats(int numberOfModifiedPages, int numberOf4KbsWrittenToDisk)
+        public void RecordCommitStats(long numberOfModifiedPages, long numberOf4KbsWrittenToDisk)
         {
             if (_stats.CommitDetails == null)
                 _stats.CommitDetails = new StorageCommitDetails();

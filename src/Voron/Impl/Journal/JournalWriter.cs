@@ -48,15 +48,15 @@ namespace Voron.Impl.Journal
             NumberOfAllocated4Kb = (int)(actualSize / (4 * Constants.Size.Kilobyte));
         }
 
-        public void Write(long posBy4Kb, byte* p, int numberOf4Kb)
+        public void Write(long posBy4Kb, Pal.jounral_entry* entries, long numberOfEntries, long totalNumberOf4Kbs)
         {
             Debug.Assert(_options.IoMetrics != null);
 
-            using (var metrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite, numberOf4Kb * 4L * Constants.Size.Kilobyte))
+            using (var metrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite, totalNumberOf4Kbs * 4L * Constants.Size.Kilobyte))
             {
-                var result = Pal.rvn_write_journal(_writeHandle, p, numberOf4Kb * 4L * Constants.Size.Kilobyte, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
+                var result = Pal.rvn_write_journal(_writeHandle, entries, numberOfEntries, posBy4Kb * 4L * Constants.Size.Kilobyte, out var error);
                 if (result != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {numberOf4Kb * 4L * Constants.Size.Kilobyte}, numberOf4Kb={numberOf4Kb}");
+                    PalHelper.ThrowLastError(result, error, $"Attempted to write to journal file - Path: {FileName.FullPath} Size: {totalNumberOf4Kbs * 4L * Constants.Size.Kilobyte}, numberOf4Kb={totalNumberOf4Kbs}");
 
                 if (error == ERROR_WORKING_SET_QUOTA && _log.IsInfoEnabled && _workingSetQuotaLogged == false)
                 {

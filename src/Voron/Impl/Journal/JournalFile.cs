@@ -14,6 +14,7 @@ using Sparrow.Logging;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Server;
+using Sparrow.Server.Platform;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
 using Voron.Logging;
@@ -94,49 +95,38 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// Write a buffer of transactions (from lazy, usually) to the file
         /// </summary>
-        public void Write(long posBy4Kb, byte* p, int numberOf4Kbs)
+        public long Write(long posBy4Kb, Span<Pal.jounral_entry> entries)
         {
-            int posBy4Kbs = 0;
-            while (posBy4Kbs < numberOf4Kbs)
+            long totalNumberOf4Kbs = 0;
+            for (int i = 0; i < entries.Length; i++)
             {
-                var readTxHeader = (TransactionHeader*)(p + (posBy4Kbs * 4 * Constants.Size.Kilobyte));
-                var totalSize = readTxHeader->CompressedSize != -1 ? readTxHeader->CompressedSize +
-                    sizeof(TransactionHeader) : readTxHeader->UncompressedSize + sizeof(TransactionHeader);
-                var roundTo4Kb = (totalSize / (4 * Constants.Size.Kilobyte)) +
-                                   (totalSize % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1);
-                if (roundTo4Kb > int.MaxValue)
-                {
-                    MathFailure(numberOf4Kbs);
-                }
-
-                // We skip to the next transaction header.
-                posBy4Kbs += (int)roundTo4Kb;
-
+                var readTxHeader = (TransactionHeader*)entries[i].Base;
+                totalNumberOf4Kbs += entries[i].NumberOf4Kbs;
                 Debug.Assert(readTxHeader->HeaderMarker == Constants.TransactionHeaderMarker);
                 _transactionHeaders.Add(*readTxHeader);
             }
 
-            JournalWriter.Write(posBy4Kb, p, numberOf4Kbs);
-        }
-
-        private static void MathFailure(int numberOf4Kbs)
-        {
-            throw new InvalidOperationException("Math failed, total size is larger than 2^31*4KB but we have just: " + numberOf4Kbs + " * 4KB");
+            fixed (Pal.jounral_entry* pEntries = entries)
+            {
+                JournalWriter.Write(posBy4Kb, pEntries, entries.Length, totalNumberOf4Kbs);
+            }
+            
+            return totalNumberOf4Kbs;
         }
 
         /// <summary>
         /// write transaction's raw page data into journal
         /// </summary>
-        public void Write(LowLevelTransaction tx, CompressedPagesResult pages)
+        public void Write(LowLevelTransaction tx, Span<Pal.jounral_entry> pages)
         {
             var cur4KbPos = tx.CurrentStateRecord.Journal.Current == this ? tx.CurrentStateRecord.Journal.Last4KWritePosition : 0;
 
-            Debug.Assert(pages.NumberOf4Kbs > 0);
+            Debug.Assert(pages.IsEmpty is false && pages[0].NumberOf4Kbs > 0, "pages.IsEmpty is false && pages[0].NumberOf4Kbs > 0");
 
             try
             {
-                Write(cur4KbPos, pages.Base, pages.NumberOf4Kbs);
-                tx.UpdateJournal(this, cur4KbPos + pages.NumberOf4Kbs);
+                long totalSizeIn4Kbs = Write(cur4KbPos, pages);
+                tx.UpdateJournal(this, cur4KbPos + totalSizeIn4Kbs);
                 LastTransactionId = tx.Id;
             }
             catch (Exception e)

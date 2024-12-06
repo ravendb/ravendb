@@ -2,8 +2,8 @@
 {
     public sealed class StorageCommitDetails 
     {
-        public int NumberOfModifiedPages { get; set; }
+        public long NumberOfModifiedPages { get; set; }
 
-        public int NumberOf4KbsWrittenToDisk { get; set; }
+        public long NumberOf4KbsWrittenToDisk { get; set; }
     }
 }

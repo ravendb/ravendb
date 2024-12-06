@@ -1369,6 +1369,12 @@ namespace Voron
         }
 
         internal TestingStuff ForTestingPurposes;
+        
+        /// <summary>
+        /// This is used when we have a branch environment, whose journal
+        /// is actually managed by a root environment
+        /// </summary>
+        public WriteAheadJournal RootJournal;
 
         internal TestingStuff ForTestingPurposesOnly()
         {

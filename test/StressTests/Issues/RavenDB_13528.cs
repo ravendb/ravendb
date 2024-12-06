@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using FastTests.Voron;
+using Sparrow.Server.Platform;
 using Tests.Infrastructure;
 using Voron.Global;
 using Xunit.Abstractions;
@@ -17,23 +18,22 @@ namespace StressTests.Issues
         public unsafe void Can_write_more_than_4GB_to_journal_file()
         {
             var size = 4_780_343_296L;
-            long _4Kb = 4L * Constants.Size.Kilobyte;
 
-            size = size + (_4Kb - (size % _4Kb));
-
-            var ptr = Marshal.AllocHGlobal(new IntPtr(size + _4Kb));
+            var ptr = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size , out var stats);
             try
             {
-                var pos = ptr.ToInt64() + (_4Kb - (ptr.ToInt64() % _4Kb));
 
                 RequireFileBasedPager();
 
                 using (var writer = Env.Options.CreateJournalWriter(10, size))
-                    writer.Write(1, (byte*)pos, (int)(size / _4Kb));
+                {
+                    Pal.jounral_entry entry = new() { Base = ptr, NumberOf4Kbs = (int)(size / 4096) };
+                    writer.Write(1, &entry, 1, entry.NumberOf4Kbs);
+                }
             }
             finally
             {
-                Marshal.FreeHGlobal(ptr);
+                PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, stats);
             }
         }
     }

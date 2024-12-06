@@ -82,7 +82,8 @@ namespace SlowTests.Voron.PalTest
             Marshal.Copy((IntPtr)buffer, expected, 0, 4096);
             try
             {
-                ret = Pal.rvn_write_journal(handle, buffer, 4096, 0, out errno);
+                Pal.jounral_entry entry = new() { Base = buffer, NumberOf4Kbs = 1 };
+                ret = Pal.rvn_write_journal(handle, &entry, 1, 0, out errno);
                 if (ret != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(ret, errno, "");
             }
@@ -118,7 +119,8 @@ namespace SlowTests.Voron.PalTest
             Marshal.Copy((IntPtr)buffer, expected, 4096, 4096);
             try
             {
-                ret = Pal.rvn_write_journal(handle, buffer, 4096, 4096, out errno);
+                Pal.jounral_entry entry = new() { Base = buffer, NumberOf4Kbs = 1 };
+                ret = Pal.rvn_write_journal(handle, &entry, 1, 4096, out errno);
                 if (ret != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(ret, errno, "");
             }
@@ -156,7 +158,8 @@ namespace SlowTests.Voron.PalTest
             Marshal.Copy((IntPtr)buffer, expected, offset, length);
             try
             {
-                ret = Pal.rvn_write_journal(handle, buffer, length, offset, out errno);
+                Pal.jounral_entry entry = new() { Base = buffer, NumberOf4Kbs = length/4096 };
+                ret = Pal.rvn_write_journal(handle, &entry, 1, offset, out errno);
                 if (ret != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(ret, errno, "");
             }
@@ -206,7 +209,10 @@ namespace SlowTests.Voron.PalTest
             Marshal.Copy((IntPtr)buffer + offset, expected, 0, 500);
             try
             {
-                ret = Pal.rvn_write_journal(handle, buffer, fileSize, 0, out errno);
+                
+                
+                Pal.jounral_entry entry = new() { Base = buffer, NumberOf4Kbs = fileSize/4096 };
+                ret = Pal.rvn_write_journal(handle, &entry, 1, 0, out errno);
                 if (ret != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(ret, errno, "");
             }

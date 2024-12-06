@@ -59,6 +59,8 @@ namespace Sparrow.Server.Platform
             FailIoRingWriteResult = 49,
             FailIoRingNoResult = 50,
             FailFlushViewOfFile = 51,
+            FailMutexInit = 52,
+            FailHardLink = 53,
         };
 
         [Flags]

@@ -2,7 +2,7 @@
 {
     public sealed class CommitStats
     {
-        public int NumberOfModifiedPages;
-        public int NumberOf4KbsWrittenToDisk;
+        public long NumberOfModifiedPages;
+        public long NumberOf4KbsWrittenToDisk;
     }
 }

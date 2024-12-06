@@ -939,7 +939,7 @@ namespace Voron.Impl
 
             CommitStage1_CompleteTransaction();
 
-            if (WriteToJournalIsRequired())
+            if (WriteToJournalIsRequired() || _journal.HasBranchCommits)
             {
                 Environment.LastWorkTime = DateTime.UtcNow;
                 CommitStage2_WriteToJournal();
@@ -1078,7 +1078,7 @@ namespace Voron.Impl
             throw new InvalidOperationException("Cannot call EndAsyncCommit when we don't have an async op running");
         }
 
-        private bool WriteToJournalIsRequired()
+        public bool WriteToJournalIsRequired()
         {
             return _dirtyPages.Count > 0 || _hasFreePages;
         }
@@ -1087,7 +1087,7 @@ namespace Voron.Impl
         {
             try
             {
-                var numberOfWrittenPages = _journal.WriteToJournal(this);
+                (long numberOfUncompressedPages, long numberOf4Kbs) = _journal.WriteToJournal(this);
 
                 if (_forTestingPurposes?.SimulateThrowingOnCommitStage2 == true)
                     _forTestingPurposes.ThrowSimulateErrorOnCommitStage2();
@@ -1095,8 +1095,8 @@ namespace Voron.Impl
                 if (_requestedCommitStats == null) 
                     return;
 
-                _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
-                _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
+                _requestedCommitStats.NumberOfModifiedPages = numberOfUncompressedPages;
+                _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOf4Kbs;
             }
             catch
             {
