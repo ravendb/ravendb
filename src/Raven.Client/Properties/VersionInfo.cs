@@ -4,7 +4,7 @@ using System.Reflection;
 using Raven.Client.Extensions;
 using Raven.Client.Properties;
 
-[assembly: RavenVersion(Build = "62", CommitHash = "a377982", Version = "6.2", FullVersion = "6.2.2-custom-62", ReleaseDateString = "2024-10-30")]
+[assembly: RavenVersion(Build = "70", CommitHash = "a377982", Version = "7.0", FullVersion = "7.0.0-custom-70", ReleaseDateString = "2024-10-30")]
 
 namespace Raven.Client.Properties
 {
@@ -61,7 +61,7 @@ namespace Raven.Client.Properties
 
                     _buildVersion = int.TryParse(Build, out var buildVersion)
                         ? buildVersion
-                        : 62;
+                        : 70;
                 }
 
                 return _buildVersion.Value;
