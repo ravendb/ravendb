@@ -61,7 +61,7 @@ namespace Voron.Impl.Journal
             journalWriter = null;
         }
 
-        public void SetLastReadTxHeader(long maxTransactionId, ref TransactionHeader lastReadTxHeader)
+        public TransactionHeader GetLastReadTxHeader(long maxTransactionId)
         {
             int low = 0;
             int high = _transactionHeaders.Count - 1;
@@ -77,20 +77,18 @@ namespace Voron.Impl.Journal
                     high = mid - 1;
                 else // found the max tx id
                 {
-                    lastReadTxHeader = _transactionHeaders[mid];
-                    return;
+                    return _transactionHeaders[mid];
                 }
             }
             if (low == 0)
             {
-                lastReadTxHeader.TransactionId = -1; // not found
-                return;
+                return new TransactionHeader{ TransactionId = -1}; // not found
             }
             if (high != _transactionHeaders.Count - 1)
             {
                 throw new InvalidOperationException("Found a gap in the transaction headers held by this journal file in memory, shouldn't be possible");
             }
-            lastReadTxHeader = _transactionHeaders[_transactionHeaders.Count - 1];
+            return _transactionHeaders[^1];
         }
 
         /// <summary>
