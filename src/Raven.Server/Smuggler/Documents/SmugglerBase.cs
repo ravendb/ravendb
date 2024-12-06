@@ -475,13 +475,13 @@ namespace Raven.Server.Smuggler.Documents
                             continue;
                         }
                     }
-                    
+
                     if (_options.IncludeArtificial == false && item.Document.Flags.HasFlag(DocumentFlags.Artificial))
                     {
                         SkipDocument(item, result.Documents);
                         continue;
                     }
-                    
+
                     if (_options.IncludeArchived == false && item.Document.Flags.HasFlag(DocumentFlags.Archived))
                     {
                         SkipDocument(item, result.Documents);
@@ -622,7 +622,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         continue;
                     }
-                    
+
                     if (_options.IncludeArchived == false && // skip archived tombstones - we don't track archived data
                         tombstone.Flags.Contain(DocumentFlags.Archived))
                     {
@@ -1158,6 +1158,7 @@ namespace Raven.Server.Smuggler.Documents
                 case BuildVersionType.V4:
                 case BuildVersionType.V5:
                 case BuildVersionType.V6:
+                case BuildVersionType.V7:
                 case BuildVersionType.GreaterThanCurrent:
                     {
                         if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)

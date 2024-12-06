@@ -6,11 +6,13 @@ namespace Raven.Server.Smuggler.Documents.Processors
         {
             return buildVersion switch
             {
-                >= 70 and < 1000 => BuildVersionType.GreaterThanCurrent,
+                >= 80 and < 1000 => BuildVersionType.GreaterThanCurrent,
+                >= 70 and < 80 => BuildVersionType.V7,
                 >= 60 and < 70 => BuildVersionType.V6,
                 >= 50 and < 60 => BuildVersionType.V5,
                 >= 40 and < 50 => BuildVersionType.V4,
-                >= 70000 => BuildVersionType.GreaterThanCurrent,
+                >= 80000 => BuildVersionType.GreaterThanCurrent,
+                >= 70000 and <= 79999 => BuildVersionType.V7,
                 >= 60000 and <= 69999 => BuildVersionType.V6,
                 >= 50000 and <= 59999 => BuildVersionType.V5,
                 >= 40000 and <= 49999 => BuildVersionType.V4,
@@ -26,6 +28,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
         V4,
         V5,
         V6,
+        V7,
         GreaterThanCurrent
     }
 }
