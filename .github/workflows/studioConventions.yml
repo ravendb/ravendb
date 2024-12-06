@@ -3,11 +3,11 @@ name: Studio conventions
 on:
   push:
     branches:
-        - v7.0
+        - v7.1
 
   pull_request:
     branches:
-        - v7.0
+        - v7.1
 jobs:
   conventions:
     name: Studio Conventions

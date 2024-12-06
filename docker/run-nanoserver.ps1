@@ -140,9 +140,9 @@ $dockerArgs += '-p'
 $dockerArgs += "$($BindTcpPort):38888"
 
 if ($UseNightly) {
-    $RAVEN_IMAGE = 'ravendb/ravendb-nightly:7.0-windows-nanoserver-latest'
+    $RAVEN_IMAGE = 'ravendb/ravendb-nightly:7.1-windows-nanoserver-latest'
 } else {
-    $RAVEN_IMAGE = 'ravendb/ravendb:7.0-windows-nanoserver-latest'
+    $RAVEN_IMAGE = 'ravendb/ravendb:7.1-windows-nanoserver-latest'
 }
 
 $dockerArgs += $RAVEN_IMAGE

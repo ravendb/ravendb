@@ -14,7 +14,7 @@ function SetTagInTeamCity ($tag) {
     Write-Host "##teamcity[addBuildTag '$tag']"
 }
 
-$DEV_BUILD_NUMBER = 70
+$DEV_BUILD_NUMBER = 71
 function GetBuildNumber () {
     if ($env:BUILD_NUMBER) {
         $result = $env:BUILD_NUMBER
@@ -98,7 +98,7 @@ function BumpVersion ($projectDir, $versionPrefix, $buildType, $dryRun = $False)
     $repo = @{
         "Owner"  = "ravendb"
         "Name"   = "ravendb"
-        "Branch" = "release/v7.0"
+        "Branch" = "release/v7.1"
     }
 
     $remoteFilePath = 'src/CommonAssemblyInfo.cs'
@@ -231,13 +231,13 @@ function GetVersionInfoWithBumpedVersion ($projectDir, $newVersion, $srcFileCont
 
     $result = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($srcFileContent))
 
-    $pattern = [regex]'\[assembly: RavenVersion\(Build = "70", CommitHash = "([^"]*)", Version = "7.0", FullVersion = "[^"]*", ReleaseDateString = "[^"]*"\)\]'
+    $pattern = [regex]'\[assembly: RavenVersion\(Build = "71", CommitHash = "([^"]*)", Version = "7.1", FullVersion = "[^"]*", ReleaseDateString = "[^"]*"\)\]'
     $m = $pattern.Match($result)
     $commit = $m.Groups[1]
     $releaseDate = $(Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
     $result = $pattern.Replace(
         $result,
-        "[assembly: RavenVersion(Build = ""70"", CommitHash = ""$commit"", Version = ""7.0"", FullVersion = ""$newVersion-custom-70"", ReleaseDateString = ""$releaseDate"")]")
+        "[assembly: RavenVersion(Build = ""71"", CommitHash = ""$commit"", Version = ""7.1"", FullVersion = ""$newVersion-custom-71"", ReleaseDateString = ""$releaseDate"")]")
 
     if (!$result) {
         throw "Could not get VersionInfo.cs file contents with bumped version."
