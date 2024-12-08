@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -1180,6 +1182,7 @@ where predicate.call(doc)"
 
                 var docs = new HashSet<string>();
                 var workers = new List<SubscriptionWorker<User>>();
+                var subscriptionLog = new List<(string WorkerId, DateTime Date, string Message)>();
                 try
                 {
                     for (int i = 0; i < 10; i++)
@@ -1212,6 +1215,20 @@ where predicate.call(doc)"
                             Strategy = SubscriptionOpeningStrategy.Concurrent,
                             MaxDocsPerBatch = 1
                         });
+
+                        w.OnSubscriptionConnectionRetry += e =>
+                        {
+                            subscriptionLog.Add((w.WorkerId, DateTime.UtcNow, $"OnSubscriptionConnectionRetry: {e}"));
+                  
+                        };
+                        w.OnEstablishedSubscriptionConnection += () =>
+                        {
+                            subscriptionLog.Add((w.WorkerId, DateTime.UtcNow, $"OnEstablishedSubscriptionConnection: {((IPEndPoint)w?._tcpClient?.Client?.RemoteEndPoint)?.Address.ToString()}"));
+                        };
+                        w.OnUnexpectedSubscriptionError += ex =>
+                        {
+                            subscriptionLog.Add((w.WorkerId, DateTime.UtcNow, $"OnUnexpectedSubscriptionError: {ex}"));
+                        };
                         workers.Add(w);
 
                         var t2 = w.Run(x =>
@@ -1223,7 +1240,18 @@ where predicate.call(doc)"
                             }
                         });
 
-                        await AssertWaitForTrueAsync(() => Task.FromResult(docs.Count == i + 1), Convert.ToInt32(_reasonableWaitTime.TotalMilliseconds));
+                        var res = await WaitForValueAsync(() => Task.FromResult(docs.Count), i + 1, Convert.ToInt32(_reasonableWaitTime.TotalMilliseconds));
+                        if (res != i+1)
+                        {
+                            subscriptionLog.Add((w.WorkerId, DateTime.UtcNow, $"Expected to have 'docs.Count': {docs.Count} but processed 'i + 1':{i + 1}"));
+
+                            Assert.Fail(string.Join(Environment.NewLine, subscriptionLog.Select(x => $"#### {x.WorkerId}: {x.Date.GetDefaultRavenFormat()}: {x.Message}")));
+                        }
+                        else
+                        {
+                            subscriptionLog.Add((w.WorkerId, DateTime.UtcNow, $"Processed {i + 1}/{docs.Count} docs."));
+                        }
+
                         await AssertNoLeftovers(store, id);
                     }
                 }
