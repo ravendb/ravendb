@@ -2,6 +2,8 @@
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -692,7 +694,10 @@ public static class SettingsZipFileHelper
 
     internal static string IpAddressToUrl(string address, int port, string scheme)
     {
-        var url = scheme + "://" + address;
+        var parsed = IPAddress.Parse(address);
+        var ip = parsed.AddressFamily == AddressFamily.InterNetworkV6 ? $"[{address}]" : address; 
+        
+        var url = scheme + "://" + ip;
         if ((scheme == "http" && port != 80) || (scheme == "tcp" && port != 0) || (scheme == "https" && port != 443))
             url += ":" + port;
 
