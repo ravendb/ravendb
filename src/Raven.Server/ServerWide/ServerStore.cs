@@ -1398,6 +1398,7 @@ namespace Raven.Server.ServerWide
                                 Cluster.DeleteCertificate(context, oldThumbprint);
 
                             tx.Commit();
+                            ForTestingPurposes?.OnConfirmCertificateReplacedValueChanged?.Invoke();
                         }
 
                         if (Logger.IsOperationsEnabled)
@@ -3535,6 +3536,7 @@ namespace Raven.Server.ServerWide
         internal class TestingStuff
         {
             internal Action BeforePutLicenseCommandHandledInOnValueChanged;
+            internal Action OnConfirmCertificateReplacedValueChanged;
             internal bool StopIndex;
             internal Action<CompareExchangeCommandBase> ModifyCompareExchangeTimeout;
             internal Action RestoreDatabaseAfterSavingDatabaseRecord;
