@@ -60,6 +60,10 @@ enum
     FAIL_IO_RING_NO_RESULT      =      50,
     FAIL_FLUSH_VIEW_OF_FILE     =      51,
     FAIL_MUTEX_INIT             =      52,
+    FAIL_HARD_LINK              =      53,
+    FAIL_CREATE_EVENT           =      54,
+    FAIL_WRITE_COMPLETION       =      55,
+    FAIL_MATH_OVERFLOW          =      56,
 };
 
 #define ERRNO_SPECIAL_CODES_NONE        0

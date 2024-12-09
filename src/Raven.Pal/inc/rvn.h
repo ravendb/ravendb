@@ -76,6 +76,12 @@ struct page_to_write
     void* ptr;
 };
 
+struct journal_entry
+{
+    void* base;
+    int64_t number_of_4kbs;
+};
+
 typedef int32_t (*rvn_writer)(
     void* handle,
     int32_t count,
@@ -178,7 +184,10 @@ EXPORT int32_t
 rvn_close_journal(void* handle, int32_t* detailed_error_code);
 
 EXPORT int32_t
-rvn_write_journal(void* handle, void* buffer, int64_t size, int64_t offset, int32_t* detailed_error_code);
+rvn_write_journal(void* handle, struct journal_entry* buffer, int64_t count_of_entries, int64_t offset, int32_t* detailed_error_code);
+
+EXPORT int32_t 
+rvn_hard_link(const char *src, const char *dst, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_open_journal_for_reads(const char *file_name, void **handle, int32_t *detailed_error_code);

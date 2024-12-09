@@ -55,12 +55,13 @@ _truncate_file(HANDLE handle, int64_t size, int32_t *detailed_error_code)
 
 
 PRIVATE int32_t
-_write_file_in_sections(void* handle, const char* buffer, int64_t size, int64_t offset, uint32_t section_size, int32_t* detailed_error_code)
+_write_file_in_sections(struct journal_handle* handle, const char* buffer, int64_t size, int64_t offset, uint32_t section_size, int32_t* detailed_error_code)
 {
     OVERLAPPED overlapped;
     memset(&overlapped, 0, sizeof(overlapped));
     overlapped.Offset = (int)(offset & 0xffffffff);
     overlapped.OffsetHigh = (int)(offset >> 32);
+    overlapped.hEvent = handle->hEvent;
 
     DWORD actual_size_to_write;
     while (size > 0)
@@ -73,11 +74,22 @@ _write_file_in_sections(void* handle, const char* buffer, int64_t size, int64_t 
         {
             actual_size_to_write = section_size;
         }
-
-        if (WriteFile(handle, buffer, actual_size_to_write, NULL, &overlapped) == FALSE)
+        ResetEvent(handle->hEvent);
+        if (WriteFile(handle->hFile, buffer, actual_size_to_write, NULL, &overlapped) == FALSE)
         {
-            *detailed_error_code = GetLastError();
-            return FAIL_WRITE_FILE;
+            DWORD err = GetLastError();
+            if (err != ERROR_IO_PENDING)
+            {
+                *detailed_error_code = err;
+                return FAIL_WRITE_FILE;
+            }
+            DWORD expectedSize;
+            if(!GetOverlappedResult(handle->hFile, &overlapped, &expectedSize, TRUE) || 
+                expectedSize != actual_size_to_write)
+            {
+                *detailed_error_code = GetLastError();
+                return FAIL_WRITE_COMPLETION;
+            }
         }
 
         buffer += actual_size_to_write;
@@ -92,7 +104,7 @@ _write_file_in_sections(void* handle, const char* buffer, int64_t size, int64_t 
 }
 
 PRIVATE int32_t
-_write_file(void* handle, const void* buffer, int64_t size, int64_t offset, int32_t* detailed_error_code)
+_write_file(struct journal_handle* handle, const void* buffer, int64_t size, int64_t offset, int32_t* detailed_error_code)
 {
     const int32_t WRITE_INCREMENT = 4096;
     const int32_t NUMBER_OF_BYTES_TO_WRITE = (UINT32_MAX / WRITE_INCREMENT) * WRITE_INCREMENT;

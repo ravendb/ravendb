@@ -11,17 +11,13 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "rvn.h"
+#include "rvn_internal.h"
 #include "status_codes.h"
 #include "internal_posix.h"
 
-struct journal_handle
-{
-    int fd;
-    const char *path;
-    bool delete_on_close;
-};
 
 PRIVATE void 
 _free_journal_handle(struct journal_handle* handle)
@@ -164,12 +160,6 @@ cleanup:
     return rc;
 }
 
-EXPORT int32_t
-rvn_write_journal(void *handle, void *buffer, int64_t size, int64_t offset, int32_t *detailed_error_code)
-{
-    struct journal_handle *jfh = (struct journal_handle *)handle;
-    return _pwrite(jfh->fd, buffer, size, offset, detailed_error_code);
-}
 
 EXPORT int32_t
 rvn_open_journal_for_reads(const char *file_name, void **handle, int32_t *detailed_error_code)
@@ -237,4 +227,16 @@ rvn_truncate_journal(void *handle, int64_t size, int32_t *detailed_error_code)
 error_cleanup:
     *detailed_error_code = errno;
     return rc;
+}
+
+EXPORT int32_t 
+rvn_hard_link(const char *src, const char *dst, int32_t *detailed_error_code)
+{
+    if (!link(src, dst))
+    {    
+        *detailed_error_code = errno;
+        return FAIL_HARD_LINK;
+    }
+    // we need to persist the new file in the new directory
+    return _sync_directory_for(dst, detailed_error_code);
 }

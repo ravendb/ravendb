@@ -1,5 +1,7 @@
 #include "rvn.h"
 
+#define SYS_PAGE_SIZE               4096
+
 typedef enum rvn_write_mode
 {
     rvn_mode_default,
@@ -11,3 +13,6 @@ typedef enum rvn_write_mode
 
 PRIVATE
 rvn_write_mode _get_writer_mode();
+
+PRIVATE
+uint64_t nextPowerOf2(uint64_t n);

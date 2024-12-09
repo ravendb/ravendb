@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef INTERNALPOSIX_H
 #define INTERNALPOSIX_H
 
@@ -27,6 +29,13 @@ struct io_uring
 #define rvn_pwrite pwrite64
 #define rvn_pwritev pwritev64
 #endif
+
+struct journal_handle
+{
+    int fd;
+    const char *path;
+    bool delete_on_close;
+};
 
 
 #if defined(__unix__) || defined(__APPLE__)

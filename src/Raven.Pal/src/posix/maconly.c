@@ -93,4 +93,25 @@ rvn_writer rvn_get_writer(void* handle)
     return rvn_write_file_io;
 }
 
+EXPORT int32_t
+rvn_write_journal(void* handle, struct journal_entry* buffer, int64_t count_of_entries, int64_t offset, int32_t* detailed_error_code)
+{
+    struct journal_handle *jfh = (struct journal_handle *)handle;
+    for (size_t i = 0; i < count_of_entries; i++)
+    {
+        int32_t size = buffer[i].number_of_4kbs * SYS_PAGE_SIZE;
+        if(size / SYS_PAGE_SIZE != buffer[i].number_of_4kbs)
+        {
+            *detailed_error_code = EOVERFLOW;
+            return FAIL_MATH_OVERFLOW;
+        }
+        int32_t rc = _pwrite(jfh->fd, buffer[i].base, size, offset, detailed_error_code);
+        if (rc != SUCCESS)
+            return rc;
+        offset += size;
+    }
+    
+    return SUCCESS;
+}
+
 #endif

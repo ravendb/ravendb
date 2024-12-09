@@ -311,4 +311,43 @@ rvn_writer rvn_get_writer(void* handle)
     }
 }
 
+
+EXPORT int32_t
+rvn_write_journal(void* handle, struct journal_entry* buffer, int64_t count_of_entries, int64_t offset, int32_t* detailed_error_code)
+{
+    struct journal_handle* jfh = handle;
+    struct iovec elements[IOV_MAX];
+    int32_t index = 0;
+    for (size_t i = 0; i < count_of_entries; i++)
+    {
+        elements[index].iov_base = buffer[i].base;
+        elements[index].iov_len = buffer[i].number_of_4kbs * SYS_PAGE_SIZE;
+        if(elements[index].iov_len / SYS_PAGE_SIZE != buffer[i].number_of_4kbs)
+        {
+            *detailed_error_code = EOVERFLOW;
+            return FAIL_MATH_OVERFLOW;
+        }
+        index++;
+        if(index == IOV_MAX)
+        {
+            if(rvn_pwritev(jfh->fd, elements, index, offset) == -1)
+            {
+                *detailed_error_code = errno;
+                return FAIL_WRITE_FILE;
+            }
+            offset += index * SYS_PAGE_SIZE;
+            index = 0;
+        }
+    }
+    if(index > 0)
+    {
+        if(rvn_pwritev(jfh->fd, elements, index, offset) == -1)
+        {
+            *detailed_error_code = errno;
+            return FAIL_WRITE_FILE;
+        }
+    }
+    return SUCCESS;
+}
+
 #endif

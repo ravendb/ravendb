@@ -61,6 +61,9 @@ namespace Sparrow.Server.Platform
             FailFlushViewOfFile = 51,
             FailMutexInit = 52,
             FailHardLink = 53,
+            FailCreateEvent = 54,
+            FailWriteCompletion = 55,
+            FailMathOverflow = 56,
         };
 
         [Flags]
