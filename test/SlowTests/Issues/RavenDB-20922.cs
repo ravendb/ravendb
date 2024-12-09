@@ -162,34 +162,48 @@ namespace SlowTests.Issues
                 documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                 IndexDefinition[] index = await CreateAutoMapIndex(store);
 
+                string name;
+                if (index == null)
+                {
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        return documentDatabase.IndexStore.GetIndexes().Count();
+                    }, 1);
+
+                    var indexes = documentDatabase.IndexStore.GetIndexes();
+                    Assert.Equal(1, indexes.Count());
+                    name = indexes.First().Name;
+                }
+                else
+                {
+                    name = index.First().Name;
+                }
+
                 //Check index is enabled and running
                 foreach (var server in Servers)
                 {
-                    await CheckIndexStateInTheCluster(database, index[0].Name, IndexState.Normal);
+                    await CheckIndexStateInTheCluster(database, name, IndexState.Normal);
                     await WaitForValueAsync(async () =>
                     {
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                        return documentDatabase.IndexStore.GetIndex(index[0].Name).Status;
+                        return documentDatabase.IndexStore.GetIndex(name).Status;
                     }, IndexRunningStatus.Running);
-                    Assert.Equal(IndexRunningStatus.Running, documentDatabase.IndexStore.GetIndex(index[0].Name).Status);
+                    Assert.Equal(IndexRunningStatus.Running, documentDatabase.IndexStore.GetIndex(name).Status);
                 }
 
-                documentDatabase = await Servers[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                var autoIndex = documentDatabase.IndexStore.GetIndex(index[0].Name);
-
-                var count = 0;
                 string info = "";
 
-                await ActionWithLeader((l) => l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(index[0].Name, IndexState.Disabled, database, Guid.NewGuid().ToString())),
+                await ActionWithLeader((l) => l.ServerStore.Engine.SendToLeaderAsync(new SetIndexStateCommand(name, IndexState.Disabled, database, Guid.NewGuid().ToString())),
                     Servers);
                 //Check index is disabled
-                await CheckIndexStateInTheCluster(database, index[0].Name, IndexState.Disabled);
+                await CheckIndexStateInTheCluster(database, name, IndexState.Disabled);
 
                 //Set index to normal
-                autoIndex = documentDatabase.IndexStore.GetIndex(index[0].Name);
+                var autoIndex = documentDatabase.IndexStore.GetIndex(name);
                 autoIndex.SetState(IndexState.Normal);
 
-                count = 0;
+                int count = 0;
 
                 await WaitForValueAsync(async () =>
                 {
@@ -198,7 +212,7 @@ namespace SlowTests.Issues
                     foreach (var server in Servers)
                     {
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                        var index2 = documentDatabase.IndexStore.GetIndex(index[0].Name);
+                        var index2 = documentDatabase.IndexStore.GetIndex(name);
                         var state = index2.State;
                         info += $"Index state for node {server.ServerStore.NodeTag} is {state} in definition {index2.Definition.State}.  ";
                         foreach (var error in index2.GetErrors())
