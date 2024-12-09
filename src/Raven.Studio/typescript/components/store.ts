@@ -13,6 +13,7 @@ import { collectionsTrackerSlice } from "./common/shell/collectionsTrackerSlice"
 import { conflictResolutionSlice } from "./pages/database/settings/conflictResolution/store/conflictResolutionSlice";
 import { connectionStringsSlice } from "./pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { connectionStringsUpdateUrlMiddleware } from "./pages/database/settings/connectionStrings/store/connectionStringsMiddleware";
+import { certificatesSlice } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -31,6 +32,7 @@ export function createStoreConfiguration() {
             collectionsTracker: collectionsTrackerSlice.reducer,
             conflictResolution: conflictResolutionSlice.reducer,
             connectionStrings: connectionStringsSlice.reducer,
+            certificates: certificatesSlice.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({

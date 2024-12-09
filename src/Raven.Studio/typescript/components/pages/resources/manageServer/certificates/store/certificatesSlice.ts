@@ -3,7 +3,9 @@ import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
 import {
     CertificateItem,
+    CertificatesClearance,
     CertificatesSortMode,
+    CertificatesState,
 } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { RootState } from "components/store";
 
@@ -15,8 +17,8 @@ interface InitialState {
     wellKnownIssuers: string[];
     nameOrThumbprintFilter: string;
     databaseFilter: string;
-    clearanceFilter: string;
-    stateFilter: string;
+    clearanceFilter: CertificatesClearance[];
+    stateFilter: CertificatesState[];
     sortMode: CertificatesSortMode;
 }
 
@@ -28,12 +30,12 @@ const initialState: InitialState = {
     wellKnownIssuers: [],
     nameOrThumbprintFilter: "",
     databaseFilter: "",
-    clearanceFilter: "",
-    stateFilter: "",
+    clearanceFilter: [],
+    stateFilter: [],
     sortMode: "Default",
 };
 
-const certificatesSlice = createSlice({
+export const certificatesSlice = createSlice({
     name: "certificates",
     initialState,
     reducers: {
@@ -43,10 +45,10 @@ const certificatesSlice = createSlice({
         databaseFilterSet: (state, action: PayloadAction<string>) => {
             state.databaseFilter = action.payload;
         },
-        clearanceFilterSet: (state, action: PayloadAction<string>) => {
+        clearanceFilterSet: (state, action: PayloadAction<CertificatesClearance[]>) => {
             state.clearanceFilter = action.payload;
         },
-        stateFilterSet: (state, action: PayloadAction<string>) => {
+        stateFilterSet: (state, action: PayloadAction<CertificatesState[]>) => {
             state.stateFilter = action.payload;
         },
         sortModeSet: (state, action: PayloadAction<CertificatesSortMode>) => {
@@ -57,17 +59,27 @@ const certificatesSlice = createSlice({
         builder.addCase(
             fetchData.fulfilled,
             (state, { payload: { lastUsed, certificatesDto } }: PayloadAction<FetchDataLastUsedResult>) => {
-                // state.certificates = action.payload.certificatesDto.certificates;
+                state.certificates = certificatesDto.Certificates.filter((x) => !x.CollectionPrimaryKey).map(
+                    (cert) => ({
+                        ...cert,
+                        Thumbprints: [cert.Thumbprint],
+                        LastUsedDate: lastUsed[cert.Thumbprint] ?? null,
+                    })
+                );
 
-                // Fill last used date
-                Object.keys(lastUsed).map((thumbprint) => {
-                    const lastUsedDate = lastUsed[thumbprint];
+                // secondary certs
+                certificatesDto.Certificates.filter((x) => x.CollectionPrimaryKey).forEach((cert) => {
+                    const thumbprint = cert.CollectionPrimaryKey;
+                    const primaryCert = state.certificates.find((x) => x.Thumbprint === thumbprint);
 
-                    const certificateToApply = state.certificates.find((x) => x.Thumbprint === thumbprint);
-                    if (certificateToApply) {
-                        certificateToApply.LastUsedDate = lastUsedDate;
+                    if (primaryCert) {
+                        primaryCert.Thumbprints.push(cert.Thumbprint);
                     }
                 });
+
+                state.loadedServerCert = certificatesDto.LoadedServerCert;
+                state.wellKnownAdminCerts = certificatesDto.WellKnownAdminCerts ?? [];
+                state.wellKnownIssuers = certificatesDto.WellKnownIssuers ?? [];
 
                 state.certificatesLoadStatus = "success";
             }

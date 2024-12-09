@@ -45,6 +45,9 @@ export function sortBy<T>(array: T[], valueAccessor: (value: T) => any): T[] {
     return _.sortBy(array, valueAccessor);
 }
 
+export function orderBy<T>(array: T[], valueAccessor: (value: T) => any, order: ("asc" | "desc")[]): T[] {
+    return _.orderBy(array, valueAccessor, order);
+}
 
 export function compareSets<T extends string | number>(set1: T[], set2: T[]): boolean {
     if (Array.isArray(set1) === false || Array.isArray(set2) === false) {

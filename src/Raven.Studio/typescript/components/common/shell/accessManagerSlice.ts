@@ -11,6 +11,7 @@ interface AccessManagerState {
     securityClearance: SecurityClearance;
     isSecureServer: boolean;
     isAllowEncryptedDatabasesOverHttp: boolean;
+    clientCertificateThumbprint: string;
 }
 
 const databaseAccessAdapter = createEntityAdapter<DatabaseAccessInfo, string>({
@@ -24,6 +25,7 @@ const initialState: AccessManagerState = {
     securityClearance: null,
     isSecureServer: true,
     isAllowEncryptedDatabasesOverHttp: false,
+    clientCertificateThumbprint: null,
 };
 
 export const accessManagerSlice = createSlice({
@@ -47,6 +49,9 @@ export const accessManagerSlice = createSlice({
         },
         onIsAllowEncryptedDatabasesOverHttpSet: (state, action: PayloadAction<boolean>) => {
             state.isAllowEncryptedDatabasesOverHttp = action.payload;
+        },
+        clientCertificateThumbprintSet: (state, action: PayloadAction<string>) => {
+            state.clientCertificateThumbprint = action.payload;
         },
     },
 });

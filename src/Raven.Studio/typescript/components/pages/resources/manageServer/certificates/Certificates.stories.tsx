@@ -20,6 +20,8 @@ export const CertificatesStory: StoryObj<CertificatesStoryArgs> = {
         const { accessManager } = mockStore;
 
         accessManager.with_isServerSecure(args.isSecureServer);
+
+        manageServerService.withAdminStats();
         manageServerService.withCertificates();
 
         return <Certificates />;

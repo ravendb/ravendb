@@ -90,4 +90,8 @@ export default class MockManageServerService extends AutoMockService<ManageServe
     withCertificates(dto?: MockedValue<CertificatesResponseDto>) {
         return this.mockResolvedValue(this.mocks.getCertificates, dto, ManageServerStubs.certificates());
     }
+
+    withAdminStats(dto?: MockedValue<Raven.Server.ServerWide.ServerStatistics>) {
+        return this.mockResolvedValue(this.mocks.getAdminStats, dto, ManageServerStubs.adminStats());
+    }
 }

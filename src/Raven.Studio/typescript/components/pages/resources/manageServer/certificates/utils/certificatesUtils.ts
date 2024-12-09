@@ -23,7 +23,7 @@ function getClearance(
     }
 }
 
-function getState(notAfter: Date): CertificatesState {
+function getState(notAfter: string): CertificatesState {
     const expirationDate = moment.utc(notAfter);
     const nowPlusExpirationThreshold = moment
         .utc()

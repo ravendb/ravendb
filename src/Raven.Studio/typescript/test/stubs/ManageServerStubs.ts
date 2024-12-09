@@ -1,3 +1,4 @@
+import moment from "moment";
 import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
@@ -415,45 +416,89 @@ export class ManageServerStubs {
             Certificates: [
                 {
                     Name: "Server Certificate",
-                    Thumbprint: "BCD2B71A3021A644E94768CCEFF7BE56E2006144",
+                    Thumbprint: "0E719C75B5899C07FCEF270B58B1FF153069677A",
                     SecurityClearance: "ClusterNode",
                     Permissions: {},
-                    NotAfter: "2025-03-04T01:00:00.0000000",
-                    NotBefore: "2024-11-27T01:00:00.0000000",
+                    NotAfter: moment()
+                        .add(5 as const, "years")
+                        .format(),
+                    NotBefore: moment()
+                        .add(-10 as const, "days")
+                        .format(),
                     CollectionSecondaryKeys: [],
                     CollectionPrimaryKey: "",
-                    PublicKeyPinningHash: "C9tJ80ex6C4VOZVE4PrCQmS7fha+0j/zl9VzhPrQb20=",
+                    PublicKeyPinningHash: "SEZWHsvbycEsXVNFnj7a3Ou6r1B2xVmPQMhlmgw/NJc=",
                 },
                 {
-                    Name: "TEST",
-                    Thumbprint: "A292B8B456F62CA7D09648E048DE7DE59933BA3B",
-                    SecurityClearance: "ValidUser",
-                    Permissions: {
-                        PutUniqeValueToDifferentNode_1: "ReadWrite",
-                    },
-                    NotAfter: "2029-12-04T01:00:00.0000000",
-                    NotBefore: "2024-11-27T01:00:00.0000000",
+                    Name: "Valid cert",
+                    Thumbprint: "0F61904E1926ED2EDD5BB4BA8BC34742960B7839",
+                    SecurityClearance: "ClusterAdmin",
+                    Permissions: {},
+                    NotAfter: moment()
+                        .add(2 as const, "years")
+                        .format(),
+                    NotBefore: moment()
+                        .add(-10 as const, "days")
+                        .format(),
                     CollectionSecondaryKeys: [],
                     CollectionPrimaryKey: "",
-                    PublicKeyPinningHash: "2LHF+V8cNKKPwRX6xdl+3wyYDfismyLPNPor6wbXPGc=",
+                    PublicKeyPinningHash: "hyaqn9MDYitTWCf+oGwvu+GG9xqyxzZoZLANt5F/BL4=",
+                    HasTwoFactor: false,
+                },
+                {
+                    Name: "About to expire cert",
+                    Thumbprint: "05576326B5A2EC2CC59B4CDBFE51243ADC56187B",
+                    SecurityClearance: "ValidUser",
+                    Permissions: {
+                        db2: "Read",
+                        db1: "ReadWrite",
+                    },
+                    NotAfter: moment()
+                        .add(5 as const, "days")
+                        .format(),
+                    NotBefore: moment()
+                        .add(-10 as const, "days")
+                        .format(),
+                    CollectionSecondaryKeys: [],
+                    CollectionPrimaryKey: "",
+                    PublicKeyPinningHash: "FXoY7RVRnzcM8+m9ofo7IM5FnZp5SeDxHUOL74uzr+g=",
                     HasTwoFactor: true,
                 },
                 {
-                    Name: "client certificate",
-                    Thumbprint: "BD72E6C57AA2C89DD83D9621D30A452342BF7D28",
-                    SecurityClearance: "ClusterAdmin",
+                    Name: "Expired cert",
+                    Thumbprint: "6C19B1CD3171F10C55A7CC58E4E993D8524332B1",
+                    SecurityClearance: "Operator",
                     Permissions: {},
-                    NotAfter: "2029-12-04T01:00:00.0000000",
-                    NotBefore: "2024-11-27T01:00:00.0000000",
+                    NotAfter: moment()
+                        .add(-5 as const, "days")
+                        .format(),
+                    NotBefore: moment()
+                        .add(-10 as const, "days")
+                        .format(),
                     CollectionSecondaryKeys: [],
                     CollectionPrimaryKey: "",
-                    PublicKeyPinningHash: "ah0d8H9Ntv0FPmKd8OkH53uzNAzC+9VWCVlthKQTZWU=",
+                    PublicKeyPinningHash: "tYDktnF7XEos5gOGMC4t4eBi5MDSAHDpFqX1rV9oLCE=",
                     HasTwoFactor: false,
                 },
             ],
             LoadedServerCert: "BCD2B71A3021A644E94768CCEFF7BE56E2006144",
             WellKnownAdminCerts: null,
             WellKnownIssuers: [],
+        };
+    }
+
+    static adminStats(): Raven.Server.ServerWide.ServerStatistics {
+        return {
+            LastRequestTime: moment().format(),
+            LastAuthorizedNonClusterAdminRequestTime: null,
+            LastRequestTimePerCertificate: {
+                "0E719C75B5899C07FCEF270B58B1FF153069677A": moment()
+                    .add(-2 as const, "hours")
+                    .format(),
+                "0F61904E1926ED2EDD5BB4BA8BC34742960B7839": moment()
+                    .add(-2 as const, "minutes")
+                    .format(),
+            },
         };
     }
 }
