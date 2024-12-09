@@ -59,7 +59,7 @@ public partial class Hnsw
             12288 => 8, // 8 pages, 5 vectors, 4,032 bytes wasted, 807 bytes / vector wasted
 
             // in all sizes, we get a pretty good rate if we go with 5 vectors in a batch
-            _ => Paging.GetNumberOfOverflowPages(VectorSizeBytes * 5)
+            _ => VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(VectorSizeBytes * 5)
         };
     }
 }

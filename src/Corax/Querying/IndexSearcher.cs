@@ -126,23 +126,18 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         InitializeSpecialTermsMarkers();
         
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, existingKey, _vectorFieldsMarkers);
+        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers);
     }
 
-    public LowLevelTransaction.CompactKeyScope GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader)
+    public unsafe EntryTermsReader GetEntryTermsReader(long id, ref Page p)
     {
         if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
 
         InitializeSpecialTermsMarkers();
-
-        var llt = _transaction.LowLevelTransaction;
-        var scope = llt.AcquireCompactKey(out var key);
         
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, key, _vectorFieldsMarkers);
-        
-        return scope;
+        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers);
     }
 
     internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref ContextBoundNativeList<Slice> terms)
@@ -609,10 +604,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             }
         }
     }
-    
+
     private bool TryGetRootPageByFieldName(Slice fieldName, out long rootPage)
     {
-        if (_fieldsTree is null || _fieldsTree.TryRead(fieldName, out var reader) == false)
+        var result = _fieldsTree?.Read(fieldName);
+        if (result is null)
         {
             rootPage = -1;
             return false;

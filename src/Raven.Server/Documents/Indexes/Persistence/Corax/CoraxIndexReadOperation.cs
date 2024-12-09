@@ -1351,7 +1351,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             long i = Skip();
             Page page = default;
 
-            using var _ = documentsContext.Transaction.InnerTransaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
             while (true)
             {
                 token.ThrowIfCancellationRequested();

@@ -177,7 +177,7 @@ public unsafe partial class Hnsw
     public static void Create(LowLevelTransaction llt, Slice name, int vectorSizeBytes, int numberOfEdges, int numberOfCandidates, VectorEmbeddingType embeddingType)
     {
         var tree = llt.Transaction.CreateTree(name);
-        if (tree.ReadHeader().NumberOfEntries is not 0)
+        if (tree.State.Header.NumberOfEntries is not 0)
             return; // already created
 
         // global creation for all HNSWs in the database

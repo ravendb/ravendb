@@ -102,7 +102,7 @@ public unsafe struct EntryTermsReader
     public bool IsNonExisting;
 
     //rootPages has to be sorted.
-    public EntryTermsReader(LowLevelTransaction llt, HashSet<long> nullTermsMarkers, HashSet<long> nonExistingTermsMarkers, byte* cur, int size, long dicId, CompactKey key, long[] vectorFieldsMarkers)
+    public EntryTermsReader(LowLevelTransaction llt, HashSet<long> nullTermsMarkers, HashSet<long> nonExistingTermsMarkers, byte* cur, int size, long dicId, long[] vectorFieldsMarkers)
     {
         _llt = llt;
         _nullTermsMarkers = nullTermsMarkers;

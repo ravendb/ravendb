@@ -1485,6 +1485,32 @@ namespace Voron.Data.BTrees
 
             return (Lookup<TKey>)prep;
         }
+        
+        public bool TryGetLookupFor<TKey>(Slice key, out Lookup<TKey> lookup)
+            where TKey : struct, ILookupKey
+        {
+            if (_prepareLocator == null)
+            {
+                _prepareLocator = new SliceSmallSet<IPrepareForCommit>(128);
+                _llt.RegisterDisposable(_prepareLocator);
+            }
+
+            if (_prepareLocator.TryGetValue(key, out var prep) == false)
+            {
+                lookup = Lookup<TKey>.InternalCreate(this, key);
+                if (lookup == null)
+                    return false;
+                
+                var keyClone = key.Clone(_llt.Allocator);
+                _prepareLocator.Add(keyClone, lookup);
+                prep = lookup;
+            }
+
+            Debug.Assert(_state.Header.Flags.HasFlag(TreeFlags.Lookups));
+
+            lookup = (Lookup<TKey>)prep;
+            return true;
+        }
 
         public FixedSizeTree FixedTreeFor(Slice key, byte valSize = 0)
         {

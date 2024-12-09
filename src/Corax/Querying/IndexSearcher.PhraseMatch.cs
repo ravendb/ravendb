@@ -18,7 +18,8 @@ public partial class IndexSearcher
     public IQueryMatch PhraseQuery<TInner>(TInner inner, in FieldMetadata field, ReadOnlySpan<Slice> terms)
         where TInner : IQueryMatch
     {
-        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var compactTree) == false)
+        var compactTree = _fieldsTree?.CompactTreeFor(field.FieldName);
+        if (compactTree is null)
             return TermMatch.CreateEmpty(this, this.Allocator);
 
         Allocator.Allocate(terms.Length * sizeof(long), out var sequenceBuffer);
@@ -28,8 +29,6 @@ public partial class IndexSearcher
 
         if (TryGetRootPageByFieldName(termsVectorFieldName, out var vectorRootPage) == false || TryGetRootPageByFieldName(field.FieldName, out var rootPage) == false)
             return TermMatch.CreateEmpty(this, Allocator);
-        
-        using var _ = _fieldsTree.Llt.AcquireCompactKey(out var termKey);
         
         for (var i = 0; i < terms.Length; ++i)
         {
