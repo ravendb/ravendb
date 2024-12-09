@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server.Utils;
@@ -27,6 +26,11 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
                 return null;
 
             return new TimeSeriesIndexItem(timeSeries.LuceneKey, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
+        }
+
+        protected override string GetNextItemId(IndexItem indexItem)
+        {
+            return indexItem.LowerSourceDocumentId;
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server.Utils;
 using Voron;
@@ -27,6 +26,11 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
                 return null;
 
             return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
+        }
+
+        protected override string GetNextItemId(IndexItem indexItem)
+        {
+            return indexItem.LowerSourceDocumentId;
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

@@ -22,6 +22,11 @@ public class HandleNotNormalizedDocumentReferences : HandleDocumentReferences
         return GetNonNormalizedDocumentItem(databaseContext, key);
     }
 
+    protected override string GetNextItemId(IndexItem indexItem)
+    {
+        return indexItem.Id;
+    }
+
     public static unsafe IndexItem GetNonNormalizedDocumentItem(DocumentsOperationContext databaseContext, Slice key)
     {
         using (DocumentIdWorker.GetLower(databaseContext.Allocator, key.Content.Ptr, key.Size, out var loweredKey))
