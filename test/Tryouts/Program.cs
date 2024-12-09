@@ -20,6 +20,9 @@ using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftAntimalwareEngine;
 using NLog;
 using RachisTests;
 using SlowTests.SlowTests.MailingList;
+using FastTests.Issues;
+using Voron;
+using System.Threading;
 
 namespace Tryouts;
 
@@ -34,28 +37,29 @@ public static class Program
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
 
-        for (int i = 0; i < 1000; i++)
+        Parallel.For(0, 1000, i =>
         {
-            Console.WriteLine($"Starting to run {i}");
-
-            try
+            //for (int i = 0; i < 1000; i++)
             {
-                using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new RavenDB_23085(testOutputHelper))
+                try
                 {
-                    DebuggerAttachedTimeout.DisableLongTimespan = true;
-                   
-                    test.CanAccountForLockedMemory();
+
+                    using (var testOutputHelper = new ConsoleTestOutputHelper())
+                    using (var test = new FastTests.Voron.NextGenPagers.BasicNextGen(testOutputHelper))
+                    {
+                        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+                        test.WithRestartAndFlush();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(e);
+                    Console.ForegroundColor = ConsoleColor.White;
                 }
             }
-            catch (Exception e)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(e);
-                Console.ForegroundColor = ConsoleColor.White;
-                break;
-            }
-        }
+        });
     }
 
     private static void TryRemoveDatabasesFolder()

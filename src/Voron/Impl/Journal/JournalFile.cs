@@ -106,10 +106,7 @@ namespace Voron.Impl.Journal
                 _transactionHeaders.Add(*readTxHeader);
             }
 
-            fixed (Pal.jounral_entry* pEntries = entries)
-            {
-                JournalWriter.Write(posBy4Kb, pEntries, entries.Length, totalNumberOf4Kbs);
-            }
+            JournalWriter.Write(posBy4Kb, entries, totalNumberOf4Kbs);
             
             return totalNumberOf4Kbs;
         }

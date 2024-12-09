@@ -938,8 +938,10 @@ namespace Voron.Impl
                 return;// nothing to do
 
             CommitStage1_CompleteTransaction();
+            
+            Debug.Assert(_writeToJournalState is not WriteToJournalState.None, "_writeToJournalState is not WriteToJournalState.None");
 
-            if (WriteToJournalIsRequired() || _journal.HasBranchCommits)
+            if (_writeToJournalState is WriteToJournalState.ModifiedPages or WriteToJournalState.BranchCommits)
             {
                 Environment.LastWorkTime = DateTime.UtcNow;
                 CommitStage2_WriteToJournal();
@@ -965,11 +967,10 @@ namespace Voron.Impl
             if (_asyncCommitNextTransaction != null)
                 ThrowAsyncCommitAlreadyCalled();
 
-            // we have to check the state before we complete the transaction
-            // because that would change whether we need to write to the journal
-            var writeToJournalIsRequired = WriteToJournalIsRequired();
-
             CommitStage1_CompleteTransaction();
+            
+            Debug.Assert(_writeToJournalState is not WriteToJournalState.None, "_writeToJournalState is not WriteToJournalState.None");
+            bool writeToJournalIsRequired = _writeToJournalState is not WriteToJournalState.Skip;
 
             var nextTx = new LowLevelTransaction(this, persistentContext,
                 writeToJournalIsRequired ? Id + 1 : Id
@@ -1078,9 +1079,22 @@ namespace Voron.Impl
             throw new InvalidOperationException("Cannot call EndAsyncCommit when we don't have an async op running");
         }
 
-        public bool WriteToJournalIsRequired()
+        private enum WriteToJournalState
         {
-            return _dirtyPages.Count > 0 || _hasFreePages;
+            None,
+            Skip,
+            ModifiedPages,
+            BranchCommits
+        }
+
+        private WriteToJournalState _writeToJournalState;
+        public bool ShouldWriteTransactionChangesToJournal
+        {
+            get
+            {
+                Debug.Assert(_writeToJournalState is not WriteToJournalState.None);
+                return _writeToJournalState is WriteToJournalState.ModifiedPages;
+            }
         }
 
         private void CommitStage2_WriteToJournal()
@@ -1137,9 +1151,16 @@ namespace Voron.Impl
             _env.Journal.Applicator.OnTransactionCommitted(this);
 
             ModifiedPagesInTransaction = _scratchPagesInUse.ToImmutable();
+
+            if (_dirtyPages.Count > 0 || _hasFreePages)
+                _writeToJournalState = WriteToJournalState.ModifiedPages;
+            else if(_journal.HasBranchCommits)
+                _writeToJournalState = WriteToJournalState.BranchCommits;
+            else
+                _writeToJournalState = WriteToJournalState.Skip;
         }
 
-        [DoesNotReturn]
+    [DoesNotReturn]
         private static void ThrowNextPageNumberCannotBeSmallerOrEqualThanOne([CallerMemberName] string caller = null)
         {
             throw new InvalidOperationException($"{nameof(_envRecord.NextPageNumber)} cannot be <= 1 on {caller}.");

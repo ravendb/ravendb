@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
@@ -112,6 +113,32 @@ public class BasicNextGen : StorageTest
       
         RestartDatabase();
     }
+
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void WithRestartAndFlush()
+    {
+        RequireFileBasedPager();
+        Options.ManualFlushing = true;
+        using (var tx2 = Env.WriteTransaction())
+        {
+            tx2.LowLevelTransaction.AllocatePage(1);
+            tx2.Commit();
+        }
+
+        Env.FlushLogToDataFile();
+
+        try
+        {
+            RestartDatabase();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            Environment.FailFast("Failed to restart", e);
+        }
+    }
+
 
 
     [RavenFact(RavenTestCategory.Voron)]

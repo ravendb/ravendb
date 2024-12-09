@@ -431,10 +431,12 @@ namespace Voron.Impl.Journal
                     {
                         Memory.Set(ptr, 0, fourKb);
 
-                        Pal.jounral_entry entry = new() { NumberOf4Kbs = 1, Base = ptr };
+                        Span<Pal.jounral_entry> entries = stackalloc Pal.jounral_entry[1];
+                        entries[0].NumberOf4Kbs = 1;
+                        entries[0].Base = ptr;
                         for (long pos = CurrentFile.GetWritePosIn4KbPosition(_env.CurrentStateRecord); pos < CurrentFile.JournalWriter.NumberOfAllocated4Kb; pos++)
                         {
-                            CurrentFile.JournalWriter.Write(pos, &entry, 1, 1);
+                            CurrentFile.JournalWriter.Write(pos, entries, 1);
                         }
                     }
                     finally
@@ -1399,7 +1401,7 @@ namespace Voron.Impl.Journal
             private static void ThrowInvalidChecksumOnPageFromScratch(int scratchNumber, PageFromScratchBuffer pagePosition, PageHeader* page, ulong checksum, ulong expectedChecksum)
             {
                 var message = $"During apply logs to data, tried to copy {scratchNumber} / {pagePosition.File.Number} ({page->PageNumber}) " +
-                              $"has checksum {checksum} but expected {expectedChecksum}";
+                              $"has checksum {checksum} but expected {expectedChecksum}. ";
 
                 message += $"Page flags: {page->Flags}. ";
 
@@ -1570,8 +1572,7 @@ namespace Voron.Impl.Journal
                 try
                 {
                     var awaiter = _writeToJournalAsync.GetFrozenAwaiter();
-                    bool writeToJournalIsRequired = tx.WriteToJournalIsRequired();
-                    if (writeToJournalIsRequired)
+                    if (tx.ShouldWriteTransactionChangesToJournal)
                     {
                         var start = Stopwatch.GetTimestamp();
                         var entry = PrepareToWriteToJournal(tx, ref tempTxState, out numberOfUncompressedPages);
@@ -1592,7 +1593,7 @@ namespace Voron.Impl.Journal
                     }
                     else
                     {
-                        Debug.Assert(writeToJournalIsRequired, "writeToJournalIsRequired must be true for branch commit");
+                        Debug.Assert(tx.ShouldWriteTransactionChangesToJournal, "ShouldWriteTransactionChangesToJournal must be true for branch commit");
                         rootJournal.SubmitBranchJournalEntry(tx, awaiter);
                     }
 
@@ -1640,15 +1641,11 @@ namespace Voron.Impl.Journal
             
             tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
 
-            (Pal.jounral_entry Entry, LowLevelTransaction Transaction) cur = default;
             long requiredSizeIn4Kbs = 0;
             while (true)
             {
-                if (cur.Transaction is null && 
-                    _mergedCommits.TryDequeue(out cur) is false)
-                {
+                if (_mergedCommits.TryDequeue(out var cur) is false)
                     break;
-                }
 
                 long available4Kbs = CurrentFile?.GetAvailable4Kbs(tx.CurrentStateRecord) ?? long.MaxValue;
                 
@@ -1677,6 +1674,10 @@ namespace Voron.Impl.Journal
 
         private void FlushBuffersToFile(LowLevelTransaction tx, ref long requiredSizeIn4Kbs)
         {
+            var entries = CollectionsMarshal.AsSpan(_mergedEntriesBuffer);
+            if (entries.IsEmpty)
+                return;
+            
             if (CurrentFile == null ||
                 CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) < requiredSizeIn4Kbs)
             {
@@ -1687,28 +1688,37 @@ namespace Voron.Impl.Journal
 
             requiredSizeIn4Kbs = 0;
             var start = Stopwatch.GetTimestamp();
-            var entries = CollectionsMarshal.AsSpan(_mergedEntriesBuffer);
-            CurrentFile.Write(tx, entries);
-            
-            var elapsed = Stopwatch.GetElapsedTime(start);
-
-            _writeToJournalAsync.SetAndResetAtomically();
-            for (int i = 0; i < _mergedEntriesBuffer.Count; i++)
+            try
             {
-                _mergedTransactionsBuffer[i].WrittenToJournalNumber = CurrentFile.Number;;
+                CurrentFile.Write(tx, entries);
+
+                var elapsed = Stopwatch.GetElapsedTime(start);
+
+                _writeToJournalAsync.SetAndResetAtomically();
+                for (int i = 0; i < _mergedEntriesBuffer.Count; i++)
+                {
+                    _mergedTransactionsBuffer[i].WrittenToJournalNumber = CurrentFile.Number;
+                }
+
+                _lastCompressionAccelerationInfo.WriteDuration = elapsed;
+                _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
+
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug(
+                        $"Writing {new Size(4 * requiredSizeIn4Kbs, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {elapsed} with journal entries from {_mergedEntriesBuffer.Count:D19} environments");
+
+                if (CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) == 0)
+                {
+                    CurrentFile = null;
+                }
             }
-            
-            _lastCompressionAccelerationInfo.WriteDuration = elapsed;
-            _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
-            
-            if (_logger.IsDebugEnabled)
-                _logger.Debug($"Writing {new Size(4 * requiredSizeIn4Kbs, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {elapsed} with journal entries from {_mergedEntriesBuffer.Count:D19} environments");
-
-            if (CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) == 0)
+            finally
             {
-                CurrentFile = null;
+                _mergedEntriesBuffer.Clear();
+                _mergedTransactionsBuffer.Clear();
             }
         }
+
 
         private Pal.jounral_entry PrepareToWriteToJournal(LowLevelTransaction tx, ref Pager.PagerTransactionState txState, out long numberOfUncompressedPages)
         {

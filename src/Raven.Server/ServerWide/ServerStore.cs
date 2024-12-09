@@ -645,7 +645,8 @@ namespace Raven.Server.ServerWide
             StorageEnvironmentOptions options;
             if (Configuration.Core.RunInMemory)
             {
-                options = StorageEnvironmentOptions.CreateMemoryOnly(null, null, null, CatastrophicFailureNotification, LoggingResource.Server, LoggingComponent.ServerStore);
+                options = StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, null, null, 
+                    CatastrophicFailureNotification, LoggingResource.Server, LoggingComponent.ServerStore);
             }
             else
             {
