@@ -972,7 +972,7 @@ namespace Raven.Client.Util
             public LoadSupport()
             {
             }
-            
+
             public LoadSupport(HashSet<Type> loadedTypes)
             {
                 _loadedTypes = loadedTypes;
@@ -1024,13 +1024,11 @@ namespace Raven.Client.Util
             }
         }
 
-        internal sealed class IncludeSupport : JavascriptConversionExtension
+        internal sealed class IncludeSupport(string fromAlias) : JavascriptConversionExtension
         {
             public bool HasInclude;
             public bool HadAnyIncludes;
-            public IncludeSupport()
-            {
-            }
+            public readonly string Alias = fromAlias;
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -1041,6 +1039,14 @@ namespace Raven.Client.Util
 
                 if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
                     return;
+                if (methodCallExpression.Arguments.Count != 1)
+                    return;
+                if (methodCallExpression.Arguments[0] is not UnaryExpression { Operand: LambdaExpression le })
+                    return;
+
+                var body = le.Body;
+                var parameter = le.Parameters[0];
+                var replacedBody = ReplaceParameter(body, parameter, Alias);
 
                 HasInclude = HadAnyIncludes = true;
                 context.PreventDefault();
@@ -1048,8 +1054,24 @@ namespace Raven.Client.Util
                 using (writer.Operation(methodCallExpression))
                 {
                     writer.Write("include(");
-                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                    context.Visitor.Visit(replacedBody);
                     writer.Write(")");
+                }
+            }
+
+            private static Expression ReplaceParameter(Expression body, ParameterExpression oldParam, string alias)
+            {
+
+                var newParam = Expression.Parameter(oldParam.Type, alias);
+
+                var replacer = new ParameterReplacer(oldParam, newParam);
+                return replacer.Visit(body);
+            }
+            private class ParameterReplacer(ParameterExpression oldParam, ParameterExpression newParam) : ExpressionVisitor
+            {
+                protected override Expression VisitParameter(ParameterExpression node)
+                {
+                    return node == oldParam ? newParam : base.VisitParameter(node);
                 }
             }
         }
@@ -1225,29 +1247,20 @@ namespace Raven.Client.Util
             }
         }
 
-        internal sealed class ReplaceParameterWithNewName : JavascriptConversionExtension
+        internal sealed class ReplaceParameterWithNewName(ParameterExpression parameter, string newName) : JavascriptConversionExtension
         {
-            private readonly string _newName;
-            private readonly ParameterExpression _parameter;
-
-            public ReplaceParameterWithNewName(ParameterExpression parameter, string newName)
-            {
-                _newName = newName;
-                _parameter = parameter;
-            }
-
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                var parameter = context.Node as ParameterExpression;
-                if (parameter == null || parameter != _parameter)
+                var parameter1 = context.Node as ParameterExpression;
+                if (parameter1 == null || parameter1 != parameter)
                     return;
 
                 context.PreventDefault();
                 var writer = context.GetWriter();
 
-                using (writer.Operation(parameter))
+                using (writer.Operation(parameter1))
                 {
-                    writer.Write(_newName);
+                    writer.Write(newName);
                 }
             }
         }

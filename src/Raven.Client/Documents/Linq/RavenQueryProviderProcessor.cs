@@ -3415,7 +3415,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 new JavascriptConversionExtensions.DictionarySupport(),
                 JavascriptConversionExtensions.LinqMethodsSupport.Instance,
-                _includeSupport ??= new JavascriptConversionExtensions.IncludeSupport(),
+                _includeSupport ??= new JavascriptConversionExtensions.IncludeSupport(FromAlias),
                 loadSupport ?? new JavascriptConversionExtensions.LoadSupport(_loadTypes ??= new()),
                 JavascriptConversionExtensions.MetadataSupport.Instance,
                 JavascriptConversionExtensions.CompareExchangeSupport.Instance,
