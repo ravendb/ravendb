@@ -31,6 +31,11 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
             return new TimeSeriesIndexItem(timeSeries.LuceneKey, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
 
+        protected override string GetNextItemId(IndexItem indexItem)
+        {
+            return indexItem.LowerSourceDocumentId;
+        }
+
         public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             using (DocumentIdWorker.GetSliceFromId(indexContext, tombstone.LowerId, out Slice documentIdPrefixWithTsKeySeparator, SpecialChars.RecordSeparator))
