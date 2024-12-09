@@ -52,11 +52,15 @@ namespace SlowTests.Issues
 
                     using (var bulk = store.BulkInsert())
                     {
+                        var baseDate = new DateTime(2024, 9, 1);
                         for (var i = 0; i < _employeesCount; i++)
                         {
+                            var date = baseDate.AddDays(i);
+                            var dateString = date.ToString("yyyy-MM-dd");
                             await bulk.StoreAsync(new Employee
                             {
-                                CompanyId = company.Id
+                                CompanyId = company.Id,
+                                Id = $"Employees/Accounts/937-A/{dateString}"
                             });
                         }
                     }
@@ -447,11 +451,15 @@ namespace SlowTests.Issues
 
                 using (var bulk = store.BulkInsert())
                 {
+                    var baseDate = new DateTime(2024, 9, 1);
                     for (var i = 0; i < _employeesCount; i++)
                     {
+                        var date = baseDate.AddDays(i);
+                        var dateString = date.ToString("yyyy-MM-dd");
                         await bulk.StoreAsync(new Employee
                         {
-                            CompanyId = _commonName
+                            CompanyId = _commonName,
+                            Id = $"Employees/Accounts/937-A/{dateString}"
                         });
                     }
                 }
