@@ -857,12 +857,16 @@ namespace SlowTests.Issues
             });
 
             var db = await GetDatabase(store.Database);
-            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+
+            Assert.True(await WaitForValueAsync(() =>
             {
-                var lastCounterFixed = DocumentsStorage.ReadLastFixedCounterKey(context.Transaction.InnerTransaction);
-                Assert.Equal(CountersRepairTask.Completed, lastCounterFixed);
-            }
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var lastCounterFixed = DocumentsStorage.ReadLastFixedCounterKey(context.Transaction.InnerTransaction);
+                    return lastCounterFixed == CountersRepairTask.Completed;
+                }
+            }, expectedVal: true));
 
             await ReloadDatabase(store);
             db = await GetDatabase(store.Database);
