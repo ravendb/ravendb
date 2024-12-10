@@ -8,11 +8,18 @@ namespace Raven.Server.SchemaValidation.Object;
 
 public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
+    private readonly string _schemaPath;
     private HashSet<string> _requiredHashSet;
-    private Dictionary<string, SpecifiedPropertySchemaRuleValidator> _namedPropertySchemaRuleValidators;
-    private (Regex Regex, SpecifiedPropertySchemaRuleValidator Validator)[] _patternPropertiesSchemaRuleValidators;
-    private (bool Allowed, AdditionalPropertySchemaRuleValidator Validator) _additionalPropertiesSchemaRuleValidator;
+    private Dictionary<string, PropertySchemaRuleValidator> _namedPropertySchemaRuleValidators;
+    private (Regex Regex, PropertySchemaRuleValidator Validator)[] _patternPropertiesSchemaRuleValidators;
+    private (bool Allowed, PropertySchemaRuleValidator Validator) _additionalPropertiesSchemaRuleValidator;
 
+    // ReSharper disable once ConvertToPrimaryConstructor
+    public ObjectSchemaRuleValidator(string schemaPath)
+    {
+        _schemaPath = schemaPath;
+    }
+    
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {
         _requiredHashSet = schemaDefinition.TryGet(SchemaValidatorConstants.required, out BlittableJsonReaderArray required)
@@ -30,6 +37,9 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
 
     private void ReadAdditionalProperties(BlittableJsonReaderObject schemaDefinition)
     {
+        //TODO Maybe change the schema path to full path
+        const string propertySpecifier = "#/additionalProperties"; //Used for error messages
+
         if (schemaDefinition.TryGet(SchemaValidatorConstants.additionalProperties, out object additionalProperties) == false)
         {
             _additionalPropertiesSchemaRuleValidator = (true, null);
@@ -43,40 +53,45 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
                 break;
             case BlittableJsonReaderObject additionalPropertiesSchema:
             {
-                var validator = new AdditionalPropertySchemaRuleValidator();
+                var validator = new PropertySchemaRuleValidator(propertySpecifier, _schemaPath);
                 validator.Init(additionalPropertiesSchema);
                 _additionalPropertiesSchemaRuleValidator = (true, validator);
                 break;
             }
             default:
                 //TODO To improve error message
-                throw new InvalidSchemaValidationDefinitionException("The schema definition is invalid.");
+                throw new InvalidSchemaValidationDefinitionException(
+                    $"The value of 'additionalProperties' at '{_schemaPath}' must be a boolean or an object, but received a value of type '{SchemaValidationHelper.GetPublicTypeOfObj(additionalProperties)}'."
+                );
         }
     }
 
-    private static IEnumerable<SpecifiedPropertySchemaRuleValidator> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, string name)
+    private List<PropertySchemaRuleValidator> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, string name)
     {
-        List<SpecifiedPropertySchemaRuleValidator> validators = null;
+        if (schemaDefinition.TryGet(name, out object readPropertySpecifiers) == false) 
+            return null;
 
-        if (schemaDefinition.TryGet(name, out BlittableJsonReaderObject properties))
+        if (readPropertySpecifiers is BlittableJsonReaderObject propertySpecifiers == false)
+            throw new InvalidSchemaValidationDefinitionException($"The value of '{name}' at '{_schemaPath}' must be an object, but received a value of type '{SchemaValidationHelper.GetPublicTypeOfObj(readPropertySpecifiers)}'.");
+            
+        List<PropertySchemaRuleValidator> validators = null;
+        foreach (var propertySpecifier in propertySpecifiers.GetPropertyNames())
         {
-            foreach (var propertyName in properties.GetPropertyNames())
+            if (propertySpecifiers.TryGet(propertySpecifier, out BlittableJsonReaderObject propertySchemaDefinition) == false)
             {
-                if (properties.TryGet(propertyName, out BlittableJsonReaderObject propertySchemaDefinition) == false)
-                {
-                    //TODO To put better message
-                    Debug.Assert(false, "Should not happen");
-                    continue;
-                }
-
-                // var path = $"{Path}.{propertyName}"; TODO To add path for errors
-                //TODO To remove isRequired if not needed
-                var validator = new SpecifiedPropertySchemaRuleValidator(propertyName);
-                validator.Init(propertySchemaDefinition);
-                (validators??=new List<SpecifiedPropertySchemaRuleValidator>()).Add(validator);
+                //TODO To put better message
+                Debug.Assert(false, "Should not happen");
+                // ReSharper disable once HeuristicUnreachableCode
+                continue;
             }
+
+            // var path = $"{Path}.{propertyName}"; TODO To add path for errors
+            //TODO To remove isRequired if not needed
+            var validator = new PropertySchemaRuleValidator(propertySpecifier, _schemaPath);
+            validator.Init(propertySchemaDefinition);
+            (validators ??= new List<PropertySchemaRuleValidator>()).Add(validator);
         }
-        
+
         return validators;
     }
 

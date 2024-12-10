@@ -1,31 +1,19 @@
 ﻿using System;
+using System.Linq;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Number;
 
-[SchemaRule("maximum")]
 public class MaximumSchemaRuleValidator : NumberSchemaRuleValidator
 {
     public const string RuleName = "maximum";
-    private const string ExclusiveMaximumRuleName = "exclusiveMaximum";
+    public const string ExclusiveMaximumRuleName = "exclusiveMaximum";
     
     private readonly decimal _maximum;
     private readonly Action<decimal, SchemaValidatorPath, IErrorBuilder> _validatePredicate;
 
-    public static MaximumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition)
-    {
-        if (schemaDefinition.TryGet(RuleName, out decimal maximum) == false)
-            //TODO Should not happen. Also maybe collect all error to return full error report
-            return null;
-
-        schemaDefinition.TryGet(ExclusiveMaximumRuleName, out bool exclusiveMaximum);
-        //TODO Maybe also to handle old version of exclusiveMaximum
-        
-        return new MaximumSchemaRuleValidator(maximum, exclusiveMaximum);
-    }
-    
     // ReSharper disable once IntroduceOptionalParameters.Global
-    private MaximumSchemaRuleValidator(decimal maximum, bool exclusiveMinimum)
+    public MaximumSchemaRuleValidator(decimal maximum, bool exclusiveMinimum)
     {
         _maximum = maximum;
         _validatePredicate = exclusiveMinimum ? ExclusiveValidate : NonExclusiveValidate;
@@ -45,5 +33,33 @@ public class MaximumSchemaRuleValidator : NumberSchemaRuleValidator
     {
         if (value.CompareTo(_maximum) >= 0)
             errorBuilder.AddError($"The value '{value}' at '{path}' should be less than {_maximum}.");
+    }
+}
+
+public class MaximumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
+{
+    protected override string Rule => MaximumSchemaRuleValidator.RuleName;
+
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    {
+        if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
+            return null;
+
+        if (NumberTypes.Contains(type) == false)
+            TrowRuleTypeError(Rule, schemaDefinition[Rule], NumberTypes, type, schemaPath);
+
+        if (schemaDefinition.TryGet(Rule, out decimal maximum) == false)
+            throw new InvalidOperationException($"'{Rule}' must to convertable to decimal here. Should not happen");
+        
+        const string exclusive = MaximumSchemaRuleValidator.ExclusiveMaximumRuleName;
+        if (TryGetPropertyType(schemaDefinition, exclusive, out type))
+        {
+            if (type != BlittableJsonToken.Boolean)
+                TrowRuleTypeError(exclusive, schemaDefinition[exclusive], BlittableJsonToken.Boolean, type, schemaPath);
+            //TODO Maybe also to handle old version of exclusiveMaximum and add test
+        }
+        schemaDefinition.TryGet(exclusive, out bool exclusiveMaximum);
+        
+        return new MaximumSchemaRuleValidator(maximum, exclusiveMaximum);
     }
 }

@@ -9,16 +9,7 @@ public class ConstantSchemaRuleValidator : SchemaRuleValidator<object>
     
     private readonly object _constantValue;
 
-    public static ConstantSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition)
-    {
-        if (schemaDefinition.TryGet(RuleName, out object @const) == false)
-            //TODO Should not happen. Also maybe collect all error to return full error report
-            return null;
-
-        return new ConstantSchemaRuleValidator(@const);
-    }
-    
-    private ConstantSchemaRuleValidator(object constantValue)
+    public ConstantSchemaRuleValidator(object constantValue)
     {
         _constantValue = ConvertType(constantValue);
     }
@@ -62,5 +53,17 @@ public class ConstantSchemaRuleValidator : SchemaRuleValidator<object>
     {
         tValue = ConvertType(value);
         return true;
+    }
+}
+
+public class ConstantSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
+{
+    protected override string Rule => ConstantSchemaRuleValidator.RuleName;
+
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    {
+        return schemaDefinition.TryGet(Rule, out object multipleOf)
+            ? new ConstantSchemaRuleValidator(multipleOf) 
+            : null;
     }
 }

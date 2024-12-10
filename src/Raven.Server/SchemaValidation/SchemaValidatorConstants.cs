@@ -1,5 +1,6 @@
 ﻿namespace Raven.Server.SchemaValidation;
 
+//TODO Maybe move to object avlidator
 internal static class SchemaValidatorConstants
 {
     // ReSharper disable InconsistentNaming
@@ -8,7 +9,6 @@ internal static class SchemaValidatorConstants
     public const string additionalProperties = "additionalProperties";
     
     public const string required = "required";
-    public const string @enum = "enum";
     public const string type = "type";
     public const string description = "description";
     // ReSharper restore InconsistentNaming

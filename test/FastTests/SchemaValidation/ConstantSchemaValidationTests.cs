@@ -160,5 +160,4 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 // AssertError("The value at 'objectProp' must be '{\"prop\":44}', but it is '{\"prop\": 44}'.", errors);
             });
     }
-
 }

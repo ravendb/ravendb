@@ -26,7 +26,7 @@ internal class ValueSchemaRuleValidatorFactory(Type classType, Type argType, str
 
         var schemaRuleValidators = Assembly.GetExecutingAssembly().GetTypes()
             .Select(x => (Type: x, RuleInfo: x.GetCustomAttribute<SchemaRuleAttribute>()))
-            .Where(x => typeof(SchemaRuleValidator).IsAssignableFrom(x.Type) && !x.Type.IsAbstract && x.RuleInfo != null);
+            .Where(x => typeof(ISchemaRuleValidator).IsAssignableFrom(x.Type) && !x.Type.IsAbstract && x.RuleInfo != null);
 
         foreach (var validator in schemaRuleValidators)
         {
@@ -52,7 +52,7 @@ internal class ValueSchemaRuleValidatorFactory(Type classType, Type argType, str
         return GetGenericSchemaRuleValidatorType(type.BaseType);
     }
 
-    public bool TryCreate(object[] args, out SchemaRuleValidator validator)
+    public bool TryCreate(object[] args, out ISchemaRuleValidator validator)
     {
         var ctor = classType.GetConstructors().FirstOrDefault(x => x.GetParameters().Length == args.Length + 1);
         if (ctor == null)
@@ -72,7 +72,7 @@ internal class ValueSchemaRuleValidatorFactory(Type classType, Type argType, str
             ctorParams.Add(args[i]);
         }
 
-        validator = (SchemaRuleValidator)ctor.Invoke(ctorParams.ToArray());
+        validator = (ISchemaRuleValidator)ctor.Invoke(ctorParams.ToArray());
         return true;
     }
 

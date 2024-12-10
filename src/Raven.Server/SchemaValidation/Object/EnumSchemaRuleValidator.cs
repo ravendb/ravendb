@@ -11,16 +11,7 @@ public class EnumSchemaRuleValidator : SchemaRuleValidator<object>
 
     private readonly object[] _enums;
 
-    public static EnumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition)
-    {
-        if (schemaDefinition.TryGet(RuleName, out BlittableJsonReaderArray @enum) == false)
-            //TODO Should not happen. Also maybe collect all error to return full error report on read
-            return null;
-        
-        return new EnumSchemaRuleValidator(@enum);
-    }
-    
-    private EnumSchemaRuleValidator(IEnumerable<object> enums)
+    public EnumSchemaRuleValidator(IEnumerable<object> enums)
     {
         _enums = enums.Select(ConvertType).ToArray();
     }
@@ -58,5 +49,25 @@ public class EnumSchemaRuleValidator : SchemaRuleValidator<object>
     {
         tValue = ConvertType(value);
         return true;
+    }
+}
+
+public class EnumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory
+{
+    protected override string Rule => EnumSchemaRuleValidator.RuleName;
+
+    public override ISchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, string schemaPath)
+    {
+        if(TryGetPropertyType(schemaDefinition, Rule, out var type) == false)
+            return null;
+
+        if (type != BlittableJsonToken.StartArray)
+            TrowRuleTypeError(Rule, schemaDefinition[Rule], BlittableJsonToken.StartArray, type, schemaPath);
+
+        if (schemaDefinition.TryGet(Rule, out BlittableJsonReaderArray enums) == false)
+            throw new InvalidOperationException($"'{Rule}' must to convertable to decimal here. Should not happen");
+        
+        
+        return new EnumSchemaRuleValidator(enums);
     }
 }
