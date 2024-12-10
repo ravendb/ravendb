@@ -12,29 +12,26 @@ using Sparrow.Collections;
 namespace Voron.Impl
 {
     // The concept of the small set is about a normal dictionary optimized for accessing recently accessed items. 
-    // In a sense it behaves like a LRU cache over a dictionary, however, it will not use the backing dictionary unless it has to.
+    // In a sense it behaves like an LRU cache over a dictionary, however, it will not use the backing dictionary unless it has to.
     // It is specially designed to deal with sequence values stored in byte pointers. The main difference with a
     // dictionary is that the small set will calculate the hash ONLY if there are strong candidates that match already. 
     public sealed class SliceSmallSet<TValue> : IDisposable
     {
-        private sealed class ArrayPoolContainer
-        {
-            public readonly ArrayPool<int> KeySizesPool = ArrayPool<int>.Create();
-            public readonly ArrayPool<ulong> KeyHashesPool = ArrayPool<ulong>.Create();
-            public readonly ArrayPool<Slice> KeysPool = ArrayPool<Slice>.Create();
-            public readonly ArrayPool<TValue> ValuesPool = ArrayPool<TValue>.Create();
-        }
-
-        private static readonly LockFreeRingBuffer<ArrayPoolContainer> PerCoreArrayPools = new(128);
-        private readonly ArrayPoolContainer _perCorePools;
+        private static readonly LockFreeRingBuffer<ArrayPool<SetItem>> PerCoreArrayPools = new(128);
+        private readonly ArrayPool<SetItem> _perCorePools;
 
         private const int Invalid = -1;
 
+        private struct SetItem
+        {
+            public int Size;
+            public ulong Hash;
+            public Slice Key;
+            public TValue Value;
+        }
+
         private readonly int _length;
-        private readonly int[] _keySizes;
-        private readonly ulong[] _keyHashes;
-        private readonly Slice[] _keys;
-        private readonly TValue[] _values;
+        private readonly SetItem[] _items;
         private Dictionary<Slice, TValue> _overflowStorage;
         private int _currentIdx;
 
@@ -44,14 +41,11 @@ namespace Voron.Impl
 
             if (PerCoreArrayPools.TryDequeue(out _perCorePools) == false)
             {
-                _perCorePools = new ArrayPoolContainer();
-
+                _perCorePools = ArrayPool<SetItem>.Create();
             }
-            
-            _keySizes = _perCorePools.KeySizesPool.Rent(_length);
-            _keyHashes = _perCorePools.KeyHashesPool.Rent(_length);
-            _keys = _perCorePools.KeysPool.Rent(_length);
-            _values = _perCorePools.ValuesPool.Rent(_length);
+
+            _items = _perCorePools.Rent(_length);
+
             _overflowStorage = null;
             _currentIdx = Invalid;
         }
@@ -69,8 +63,9 @@ namespace Voron.Impl
                     // RavenDB-20947: This may be the case of the "Cannot add a value in a read only transaction on $Root in Read"
                     // If we don't check for 'HasValue' or that the key size is bigger than zero, we may be returning a removed
                     // value. 
-                    if (_keySizes[i] != 0)
-                        yield return _values[i];
+                    ref var item = ref _items[i];
+                    if (item.Size != 0)
+                        yield return item.Value;
                 }
             }
             else
@@ -96,10 +91,11 @@ namespace Voron.Impl
             }
 
             Done:
-            _keys[idx] = key;
-            _keySizes[idx] = key.Size;
-            _keyHashes[idx] = Hashing.XXHash64.CalculateInline(key.Content.Ptr, (ulong)key.Size);
-            _values[idx] = value;
+            ref var item = ref _items[idx];
+            item.Key = key;
+            item.Size = key.Size;
+            item.Hash = Hashing.XXHash64.CalculateInline(key.Content.Ptr, (ulong)key.Size);
+            item.Value = value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -115,12 +111,9 @@ namespace Voron.Impl
 
             ulong keyHash = 0;
 
-            Slice[] keys = _keys;
-            int[] keySizes = _keySizes;
-            ulong[] keyHashes = _keyHashes;
             byte* keyPtr = key.Content.Ptr;
 
-            // PERF: It may seems strange to increase the size to decrement it as the first
+            // PERF: It may seem strange to increase the size to decrement it as the first
             // loop operation. The reason behind this is to be able to just jump back immediately
             // to the top of the loop as soon as we know the item is not the item we are looking
             // for. 
@@ -130,8 +123,10 @@ namespace Voron.Impl
                 var currentIdx = elementIdx;
                 elementIdx--;
 
+                ref var item = ref _items[currentIdx];
+
                 // First check, we are not going to look into any string that is not of the correct size
-                if (keySizes[currentIdx] != keyLength)
+                if (item.Size != keyLength)
                     continue;
 
                 // PERF: Assuming a uniformly random symbol distribution, the chance that first two symbols match
@@ -139,7 +134,7 @@ namespace Voron.Impl
                 // match(i.e.that S1[1] = S2[1] and S1[2] = S2[2]) is equal to 1/σ^2, etc. More generally,
                 // the probability that there is a match between all characters up to a 1 - indexed position i
                 // is equal to 1 / σ^i. We are using that knowledge to quickly get rid of elements.
-                ref var candidateKey = ref keys[currentIdx];
+                ref var candidateKey = ref item.Key;
 
                 Debug.Assert(candidateKey.HasValue, "If there is no way candidate key not have a value since then key size stored would be inconsistent.");
 
@@ -153,7 +148,7 @@ namespace Voron.Impl
                 if (keyHash == 0)
                     keyHash = Hashing.XXHash64.CalculateInline(keyPtr, (ulong)key.Size);
 
-                if (keyHashes[currentIdx] != keyHash)
+                if (item.Hash != keyHash)
                     continue;
 
                 // We now know that we have an almost sure hit. We will do a final verification at this time.
@@ -177,11 +172,13 @@ namespace Voron.Impl
 
                 for (int i = 0; i < _length; i++)
                 {
+                    ref var item = ref _items[i];
+
                     // If the key size is 0 then there are no keys in there.
-                    if (_keySizes[i] == 0)
+                    if (item.Size == 0)
                         continue;
 
-                    storage[_keys[i]] = _values[i];
+                    storage[item.Key] = item.Value;
                 }
 
                 _overflowStorage = storage;
@@ -196,7 +193,8 @@ namespace Voron.Impl
             int idx = FindKey(key);
             if (idx != Invalid)
             {
-                value = _values[idx];
+                ref var item = ref _items[idx];
+                value = item.Value;
                 return true;
             }
 
@@ -211,29 +209,22 @@ namespace Voron.Impl
 
         public void Clear()
         {
-            Array.Fill(_keySizes, 0);
-            Array.Fill(_keyHashes, 0ul);
-            Array.Fill(_keys, default);
-            Array.Fill(_values, default);
+            Array.Fill(_items, default);
+
             _overflowStorage?.Clear();
             _currentIdx = Invalid;
         }
 
         public void Dispose()
         {
-            _perCorePools.KeySizesPool.Return(_keySizes);
-            _perCorePools.KeyHashesPool.Return(_keyHashes);
-            _perCorePools.KeysPool.Return(_keys);
-
             // If we are holding references, then we will clear the portion of the values array
             // that it is in use.
             if (RuntimeHelpers.IsReferenceOrContainsReferences<TValue>())
             {
-                int valuesLength = Math.Min(_currentIdx, _length - 1) + 1;
-                if (valuesLength >= 0)
-                    _values.AsSpan(0, valuesLength).Clear();
+                Array.Fill(_items, default);
             }
-            _perCorePools.ValuesPool.Return(_values);
+
+            _perCorePools.Return(_items);
 
             PerCoreArrayPools.TryEnqueue(_perCorePools);
         }
@@ -248,10 +239,7 @@ namespace Voron.Impl
                 return;
 
             // If we have found it, we are retiring it from the cache.
-            _keys[idx] = default;
-            _keySizes[idx] = 0;
-            _keyHashes[idx] = 0ul;
-            _values[idx] = default;
+            _items[idx] = default;
         }
     }
 }
