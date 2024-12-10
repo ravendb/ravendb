@@ -11,13 +11,28 @@ using Sparrow.Collections;
 
 namespace Voron.Impl
 {
-    // The concept of the small set is about a normal dictionary optimized for accessing recently accessed items. 
-    // In a sense it behaves like an LRU cache over a dictionary, however, it will not use the backing dictionary unless it has to.
-    // It is specially designed to deal with sequence values stored in byte pointers. The main difference with a
-    // dictionary is that the small set will calculate the hash ONLY if there are strong candidates that match already. 
+    // Represents a specialized, small, and partially LRU-like set optimized for frequently accessed items.
+    // Unlike a standard dictionary, this structure attempts to keep recently accessed items in a fast-access cache 
+    // (the "small set"). When needed, it falls back to a larger backing dictionary. This design is particularly
+    // suited for scenarios involving sequence values stored in unmanaged memory, and it defers expensive hash
+    // computations unless necessary. Effectively, it works as an LRU cache over a dictionary without always relying 
+    // on the dictionary for lookups.
     public sealed class SliceSmallSet<TValue> : IDisposable
     {
         private static readonly LockFreeRingBuffer<ArrayPool<SetItem>> PerCoreArrayPools = new(128);
+
+        static SliceSmallSet()
+        {
+            // We preallocate several array pools and store them in a lock-free ring buffer.
+            // By doing so, we reduce memory allocation overhead and better distribute the load across 
+            // multiple processors. This approach helps handle bursty workloads more evenly.
+            int processors = Math.Min(Environment.ProcessorCount / 2, PerCoreArrayPools.Count);
+            while (PerCoreArrayPools.Count < processors)
+            {
+                PerCoreArrayPools.TryEnqueue(ArrayPool<SetItem>.Create());
+            }
+        }
+
         private readonly ArrayPool<SetItem> _perCorePools;
 
         private const int Invalid = -1;
@@ -32,13 +47,25 @@ namespace Voron.Impl
 
         private readonly int _length;
         private readonly SetItem[] _items;
+
+        // If we exceed the capacity of _items, we use a dictionary as an overflow storage.
+        // Once we switch to this overflow mode, we consider the "small set" no longer fully reliable.
         private Dictionary<Slice, TValue> _overflowStorage;
+
+        // _currentIdx tracks the last used position in _items. 
+        // If _currentIdx < _length, we rely mainly on _items; 
+        // otherwise, we rely on _overflowStorage.
         private int _currentIdx;
 
         public SliceSmallSet(int size = 0)
         {
             _length = size > Vector<long>.Count ? (size - size % Vector<long>.Count) : Vector<long>.Count;
 
+            // RavenDB-23148: We will dequeue, rent and then return it immediately after use. The idea is that
+            // when we got it, rent, and then return it so someone else can use it; effectively behaving
+            // as a critical section. While it may happen that multiple threads will be returning arrays at the same time
+            // the expectation is that the distribution is time will be more even than trying to allocate 1000s of
+            // queries that come as a bundle. 
             if (PerCoreArrayPools.TryDequeue(out _perCorePools) == false)
             {
                 _perCorePools = ArrayPool<SetItem>.Create();
@@ -48,6 +75,8 @@ namespace Voron.Impl
 
             _overflowStorage = null;
             _currentIdx = Invalid;
+
+            PerCoreArrayPools.TryEnqueue(_perCorePools);
         }
 
         public IEnumerable<TValue> Values => ReturnValues();
@@ -78,11 +107,12 @@ namespace Voron.Impl
 
         public unsafe void Add(Slice key, TValue value)
         {
+            // We attempt to find the key among the recently accessed items (LRU section).
             int idx = FindKey(key);
             if (idx != Invalid)
                 goto Done;
 
-            // side effect, overflow if needed
+            // we request a writable bucket in the small set. If the small set is full, we switch to overflow storage.
             idx = RequestWritableBucket();
             if (idx == Invalid || _currentIdx >= _length)
             {
@@ -103,6 +133,7 @@ namespace Voron.Impl
         {
             Debug.Assert(key.HasValue, "The key is invalid.");
 
+            // If the small set is empty, return immediately.
             if (_currentIdx == Invalid)
                 return Invalid;
 
@@ -225,8 +256,6 @@ namespace Voron.Impl
             }
 
             _perCorePools.Return(_items);
-
-            PerCoreArrayPools.TryEnqueue(_perCorePools);
         }
 
         public void Remove(Slice name)
