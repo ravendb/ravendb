@@ -233,7 +233,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 var dbInstance = dbTask.Result;
                 var currentHash = dbInstance.GetEnvironmentsHash();
                 report.EnvironmentsHash = currentHash;
-                report.LastCompareExchangeIndex = _server.Cluster.GetLastCompareExchangeIndexForDatabase(ctx, dbName);
 
                 var documentsStorage = dbInstance.DocumentsStorage;
                 var indexStorage = dbInstance.IndexStore;
@@ -250,7 +249,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     var now = dbInstance.Time.GetUtcNow();
                     FillReplicationInfo(dbInstance, report);
-                    report.LastClusterWideTransactionRaftIndex = dbInstance.ClusterWideTransactionIndexWaiter.LastIndex;
+                    FillClusterInfo(ctx, report, dbInstance, dbName);
 
                     prevReport.TryGetValue(dbName, out var prevDatabaseReport);
                     if (SupportedFeatures.Heartbeats.SendChangesOnly &&
@@ -294,6 +293,13 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             return result;
+        }
+
+        private void FillClusterInfo(TransactionOperationContext ctx, DatabaseStatusReport report, DocumentDatabase dbInstance, string dbName)
+        {
+            report.LastClusterWideTransactionRaftIndex = dbInstance.ClusterWideTransactionIndexWaiter.LastIndex;
+            report.LastCompareExchangeIndex = _server.Cluster.GetLastCompareExchangeIndexForDatabase(ctx, dbName);
+            report.LastCompletedClusterTransaction = dbInstance.LastCompletedClusterTransaction;
         }
 
         private static void FillIndexInfo(Index index, QueryOperationContext context, DateTime now, DatabaseStatusReport report)
@@ -347,7 +353,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
             report.LastTransactionId = dbInstance.LastTransactionId;
-            report.LastCompletedClusterTransaction = dbInstance.LastCompletedClusterTransaction;
         }
 
         private static void FillReplicationInfo(DocumentDatabase dbInstance, DatabaseStatusReport report)
