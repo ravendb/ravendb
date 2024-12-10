@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow;
-using Sparrow.Json;
-using Sparrow.Server;
+using Sparrow.Collections;
+
 // ReSharper disable StaticMemberInGenericType
 
 namespace Voron.Impl
@@ -25,7 +25,7 @@ namespace Voron.Impl
             public readonly ArrayPool<TValue> ValuesPool = ArrayPool<TValue>.Create();
         }
 
-        private static readonly PerCoreContainer<ArrayPoolContainer> PerCoreArrayPools = new();
+        private static readonly LockFreeRingBuffer<ArrayPoolContainer> PerCoreArrayPools = new(128);
         private readonly ArrayPoolContainer _perCorePools;
 
         private const int Invalid = -1;
@@ -42,9 +42,12 @@ namespace Voron.Impl
         {
             _length = size > Vector<long>.Count ? (size - size % Vector<long>.Count) : Vector<long>.Count;
 
-            if (PerCoreArrayPools.TryPull(out _perCorePools) == false)
+            if (PerCoreArrayPools.TryDequeue(out _perCorePools) == false)
+            {
                 _perCorePools = new ArrayPoolContainer();
 
+            }
+            
             _keySizes = _perCorePools.KeySizesPool.Rent(_length);
             _keyHashes = _perCorePools.KeyHashesPool.Rent(_length);
             _keys = _perCorePools.KeysPool.Rent(_length);
@@ -232,7 +235,7 @@ namespace Voron.Impl
             }
             _perCorePools.ValuesPool.Return(_values);
 
-            PerCoreArrayPools.TryPush(_perCorePools);
+            PerCoreArrayPools.TryEnqueue(_perCorePools);
         }
 
         public void Remove(Slice name)
