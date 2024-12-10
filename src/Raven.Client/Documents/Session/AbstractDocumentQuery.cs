@@ -1516,7 +1516,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         }
 
         internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory embeddingValueFactory,
-            float minimumSimilarity, int numberOfCandidates, bool isExact)
+            float? minimumSimilarity, int? numberOfCandidates, bool isExact)
         {
             var fieldName = embeddingFieldFactory.FieldName;
             var sourceQuantizationType = embeddingFieldFactory.SourceQuantizationType;
@@ -1561,7 +1561,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             WhereTokens.AddLast(vectorSearchToken);
         }
 
-        public void VectorSearch(IVectorFieldFactory<T> fieldFactory, IVectorFieldValueFactory valueFactory, float minimumSimilarity, int numberOfCandidates, bool isExact)
+        public void VectorSearch(IVectorFieldFactory<T> fieldFactory, IVectorFieldValueFactory valueFactory, float? minimumSimilarity, int? numberOfCandidates, bool isExact)
         {
             VectorSearch((VectorEmbeddingFieldFactory<T>)fieldFactory, (VectorFieldValueFactory)valueFactory, minimumSimilarity, numberOfCandidates, isExact);
         }

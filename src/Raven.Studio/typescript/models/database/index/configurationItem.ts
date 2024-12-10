@@ -44,8 +44,11 @@ class configurationItem {
         "Indexing.Corax.IncludeSpatialDistance",
         "Indexing.Corax.MaxMemoizationSizeInMb",
         "Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb",
-        "Indexing.Corax.Static.ComplexFieldIndexingBehavior"
-
+        "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
+        "Indexing.Corax.VectorSearch.DefaultMinimumSimilarity",
+        "Indexing.Corax.VectorSearch.DefaultNumberOfEdges",
+        "Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForIndexing",
+        "Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForQuerying"
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
             Obsolete keys:

@@ -140,8 +140,8 @@ public static class CoraxIndexingHelpers
 
                 coraxVectorOptions = new VectorOptions()
                 {
-                    NumberOfCandidates = field.Vector.NumberOfCandidatesForIndexing,
-                    NumberOfEdges = field.Vector.NumberOfEdges,
+                    NumberOfCandidates = field.Vector.NumberOfCandidatesForIndexing ?? index.Configuration.CoraxVectorDefaultNumberOfCandidatesForIndexing,
+                    NumberOfEdges = field.Vector.NumberOfEdges ?? index.Configuration.CoraxVectorDefaultNumberOfEdges,
                     VectorEmbeddingType = vectorEmbeddingType
                 };
             }

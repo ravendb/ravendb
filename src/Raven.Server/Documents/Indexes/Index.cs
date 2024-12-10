@@ -5239,23 +5239,50 @@ namespace Raven.Server.Documents.Indexes
             return _vectorFields.GetOrAdd(name, _ =>
             {
                 if (Definition.MapFields.TryGetValue(name, out var field) == false)
-                    return IndexField.Create(name, new IndexFieldOptions() { Vector = isText ? VectorOptions.Default : VectorOptions.DefaultText}, null, Corax.Constants.IndexWriter.DynamicField);
+                {
+                    return IndexField.Create(name, new IndexFieldOptions()
+                        {
+                            Vector = CreateVectorOptionsBasedOnConfiguration()
+                        }, null, Corax.Constants.IndexWriter.DynamicField);
+                }
 
-                // Setting default values when the user hasn't explicitly configured them
+                // When field doesn't contain vector options we've to create it manually by default values.
                 if (field is IndexField { Vector: null } indexField)
                 {
-                    var vector = isText ? VectorOptions.DefaultText : VectorOptions.Default;
-                    indexField.Vector = vector;
+                    indexField.Vector = CreateVectorOptionsBasedOnConfiguration();
                 }
                 
                 return field switch
                 {
-                    //todo: revisit it later
-                    AutoIndexField autoField => throw new InvalidDataException($"{nameof(AutoIndexField)} should not be in this codepath!)"),
+                    AutoIndexField => throw new InvalidOperationException($"{nameof(AutoIndexField)} should be created via AutoIndex builder. Cannot create vector field '{name}' dynamically for {(isText ? "numerical" : "textual")} values."),
                     IndexField staticField => staticField,
-                    _ => throw new InvalidDataException("Cannot create an vector field without specific configuration!")
+                    _ => throw new InvalidOperationException($"Unknown configuration error. Cannot create vector field '{name}' dynamically for {(isText ? "numerical" : "textual")} values.")
                 };
             });
+
+            VectorOptions CreateVectorOptionsBasedOnConfiguration()
+            {
+                if (isText)
+                {
+                    return new VectorOptions()
+                    {
+                        SourceEmbeddingType = VectorOptions.DefaultText.SourceEmbeddingType,
+                        DestinationEmbeddingType = VectorOptions.DefaultText.DestinationEmbeddingType,
+                        Dimensions = VectorOptions.DefaultText.Dimensions,
+                        NumberOfEdges = Configuration.CoraxVectorDefaultNumberOfEdges,
+                        NumberOfCandidatesForIndexing = Configuration.CoraxVectorDefaultNumberOfCandidatesForIndexing,
+                    };
+                }
+                
+                return new VectorOptions()
+                {
+                    SourceEmbeddingType = VectorOptions.Default.SourceEmbeddingType,
+                    DestinationEmbeddingType = VectorOptions.Default.DestinationEmbeddingType,
+                    Dimensions = VectorOptions.Default.Dimensions,
+                    NumberOfEdges = Configuration.CoraxVectorDefaultNumberOfEdges,
+                    NumberOfCandidatesForIndexing = Configuration.CoraxVectorDefaultNumberOfCandidatesForIndexing,
+                };
+            }
         }
 
         private static bool TryFindIndexDefinition(string directoryName, RawDatabaseRecord record, out IndexDefinition staticDef, out AutoIndexDefinition autoDef)

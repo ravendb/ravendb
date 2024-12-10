@@ -586,6 +586,30 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.Static.ComplexFieldIndexingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public CoraxComplexFieldIndexingBehavior CoraxStaticIndexComplexFieldIndexingBehavior { get; protected set; }
 
+        [Description("Default minimum similarity for vector search (0.0f - 1.0f, default is 0.75f)")]
+        [DefaultValue(0.75f)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultMinimumSimilarity", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public float CoraxVectorSearchDefaultMinimumSimilarity { get; protected set; }
+        
+        [Description("Default number of edges for vector indexing.")]
+        [DefaultValue(12)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultNumberOfEdges", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public int CoraxVectorDefaultNumberOfEdges { get; protected set; }
+        
+        [Description("Default number of candidates for vector indexing.")]
+        [DefaultValue(16)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForIndexing", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public int CoraxVectorDefaultNumberOfCandidatesForIndexing { get; protected set; }
+        
+        [Description("Default number of candidates for vector querying.")]
+        [DefaultValue(16)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForQuerying", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public int CoraxVectorDefaultNumberOfCandidatesForQuerying { get; protected set; }
+        
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

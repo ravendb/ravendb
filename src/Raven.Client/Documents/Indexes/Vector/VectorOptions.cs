@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO;
 using Sparrow;
 
 namespace Raven.Client.Documents.Indexes.Vector;
@@ -52,9 +51,9 @@ public class VectorOptions
     /// </summary>
     public VectorEmbeddingType DestinationEmbeddingType { get; set; }
 
-    public int NumberOfCandidatesForIndexing { get; set; } = Constants.VectorSearch.DefaultNumberOfCandidatesForIndexing;
+    public int? NumberOfCandidatesForIndexing { get; set; }
     
-    public int NumberOfEdges { get; set; } = Constants.VectorSearch.DefaultNumberOfEdges;
+    public int? NumberOfEdges { get; set; }
 
     [Conditional("DEBUG")]
     internal void ValidateDebug() => Validate();
@@ -92,7 +91,9 @@ public class VectorOptions
         
         return options.Dimensions == Dimensions 
                && options.SourceEmbeddingType == SourceEmbeddingType
-               && options.DestinationEmbeddingType == DestinationEmbeddingType;
+               && options.DestinationEmbeddingType == DestinationEmbeddingType
+               && options.NumberOfEdges == NumberOfEdges
+               && options.NumberOfCandidatesForIndexing == NumberOfCandidatesForIndexing;
     }
 
     public override int GetHashCode()
@@ -101,7 +102,9 @@ public class VectorOptions
         {
             var hashCode = SourceEmbeddingType.GetHashCode();
             hashCode = (hashCode * 397) ^ DestinationEmbeddingType.GetHashCode();
-            hashCode = (hashCode * 397) ^ Dimensions.GetHashCode();
+            hashCode = (hashCode * 397) ^ (Dimensions ?? 0).GetHashCode();
+            hashCode = (hashCode * 397) ^ (NumberOfEdges ?? 0).GetHashCode();
+            hashCode = (hashCode * 397) ^ (NumberOfCandidatesForIndexing ?? 0).GetHashCode();
             
             return hashCode;
         }

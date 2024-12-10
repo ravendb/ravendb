@@ -1776,12 +1776,19 @@ namespace Raven.Server.Json
                 writer.WriteComma();
                 
                 writer.WritePropertyName(nameof(options.Vector.NumberOfEdges));
-                writer.WriteString(options.Vector.NumberOfEdges.ToString());
+                if (options.Vector.NumberOfEdges.HasValue)
+                    writer.WriteString(options.Vector.NumberOfEdges.ToString());
+                else
+                    writer.WriteNull();
+                
                 writer.WriteComma();
-                
+
                 writer.WritePropertyName(nameof(options.Vector.NumberOfCandidatesForIndexing));
-                writer.WriteString(options.Vector.NumberOfCandidatesForIndexing.ToString());
-                
+                if (options.Vector.NumberOfCandidatesForIndexing.HasValue)
+                    writer.WriteString(options.Vector.NumberOfCandidatesForIndexing.ToString());
+                else
+                    writer.WriteNull();
+
                 writer.WriteEndObject();
             }
             else

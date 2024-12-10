@@ -693,19 +693,20 @@ public static class CoraxQueryBuilder
             transformedEmbedding = GenerateEmbeddings.FromArray(vectorOptions, memScope, mem, bytesUsed);
         }
         
-        var minimumMatch = RavenConstants.VectorSearch.DefaultMinimumSimilarity;
+        var minimumMatch = builderParameters.Index.Configuration.CoraxVectorSearchDefaultMinimumSimilarity;
         if (me.Arguments.Count > 2)
         {
             (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[2]);
             minimumMatch = valueType switch
             {
+                ValueTokenType.Null => builderParameters.Index.Configuration.CoraxVectorSearchDefaultMinimumSimilarity,
                 ValueTokenType.Long => (long)value,
                 ValueTokenType.Double => (float)(double)value,
                 _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + valueType)
             };
         }
 
-        var numberOfCandidates = 12;
+        int numberOfCandidates = builderParameters.Index.Configuration.CoraxVectorDefaultNumberOfCandidatesForQuerying;
         if (me.Arguments.Count > 3)
         {
             (value, valueType) = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)me.Arguments[3]);
@@ -713,10 +714,10 @@ public static class CoraxQueryBuilder
             {
                 ValueTokenType.Long => Convert.ToInt32(value),
                 ValueTokenType.Double => Convert.ToInt32(value),
+                ValueTokenType.Null => builderParameters.Index.Configuration.CoraxVectorDefaultNumberOfCandidatesForQuerying,
                 _ => throw new NotSupportedException("vector.search() minimumMatch must be a float, but was: " + valueType)
             };
         }
-
         
         return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, transformedEmbedding, minimumMatch, numberOfCandidates, exact);
     }

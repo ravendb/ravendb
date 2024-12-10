@@ -338,7 +338,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> queriedTextFactory, float minimumSimilarity, int numberOfCandidatesForQuerying, bool isExact)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingTextField> textFieldFactory, Action<IVectorEmbeddingTextFieldValueFactory> queriedTextFactory, float? minimumSimilarity, int? numberOfCandidatesForQuerying, bool isExact)
         {
             var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
             var valueBuilder = new VectorFieldValueFactory();
@@ -352,7 +352,7 @@ namespace Raven.Client.Documents.Session
         }
         
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> queriedEmbeddingFactory, float minimumSimilarity, int numberOfCandidates, bool isExact)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> queriedEmbeddingFactory, float? minimumSimilarity, int? numberOfCandidates, bool isExact)
         {
             var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
             var valueBuilder = new VectorFieldValueFactory();
@@ -366,7 +366,7 @@ namespace Raven.Client.Documents.Session
         }
         
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorField> vectorFieldFactory, Action<IVectorFieldValueFactory> queriedEmbeddingFactory, float minimumSimilarity, int numberOfCandidates, bool isExact)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.VectorSearch(Func<IVectorFieldFactory<T>, IVectorField> vectorFieldFactory, Action<IVectorFieldValueFactory> queriedEmbeddingFactory, float? minimumSimilarity, int? numberOfCandidates, bool isExact)
         {
             var fieldBuilder = new VectorEmbeddingFieldFactory<T>();
             var valueBuilder = new VectorFieldValueFactory();

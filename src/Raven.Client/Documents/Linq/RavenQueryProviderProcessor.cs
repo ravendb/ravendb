@@ -1603,14 +1603,22 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var minimumSimilarityObject);
 
-                    if (minimumSimilarityObject is not float minimumSimilarity || minimumSimilarity is < -1.0f or > 1.0f)
-                        throw new NotSupportedException($"The minimum similarity parameter should be a float in the range [-1, 1]. However, it was '{minimumSimilarityObject.GetType().FullName}' with the value '{minimumSimilarityObject.ToString()}'.");
+                    if (minimumSimilarityObject != null)
+                    {
+                        if (minimumSimilarityObject is not float minimumSimilarity || minimumSimilarity is < -1.0f or > 1.0f)
+                            throw new NotSupportedException($"The minimum similarity parameter should be a float in the range [-1, 1]. However, it was '{minimumSimilarityObject.GetType().FullName}' with the value '{minimumSimilarityObject.ToString()}'.");
+                    }
+                    
+                    
 
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[4], out var numberOfCandidatesObject);
 
-                    if (numberOfCandidatesObject is not int numberOfCandidates || numberOfCandidates <= 0)
-                        throw new NotSupportedException("Number of candidates has to be positive.");
-                    
+                    if (numberOfCandidatesObject != null)
+                    {
+                        if (numberOfCandidatesObject is not int numberOfCandidates || numberOfCandidates <= 0)
+                            throw new NotSupportedException("Number of candidates has to be positive.");
+                    }
+
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[5], out var isExactObject);
 
                     if (isExactObject is not bool isExact)
@@ -1666,7 +1674,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             throw new InvalidOperationException($"Unknown field factory type: {fieldFactoryObject.GetType().FullName}.");
                     }
                     
-                    DocumentQuery.VectorSearch(fieldBuilder, valueBuilder, minimumSimilarity, numberOfCandidates, isExact);
+                    
+                    DocumentQuery.VectorSearch(fieldBuilder, valueBuilder, minimumSimilarityObject as float?, numberOfCandidatesObject as int?, isExact);
                     break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);

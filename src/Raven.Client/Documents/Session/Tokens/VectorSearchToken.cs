@@ -3,21 +3,22 @@ using System.IO;
 using System.Text;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Extensions;
 using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Session.Tokens;
 
 public sealed class VectorSearchToken : WhereToken
 {
-    private readonly float _similarityThreshold;
+    private readonly float? _similarityThreshold;
     private readonly VectorEmbeddingType _sourceQuantizationType;
     private readonly VectorEmbeddingType _targetQuantizationType;
     private bool _isSourceBase64Encoded;
     private bool _isVectorBase64Encoded;
-    private readonly int _numberOfCandidatesForQuerying;
+    private readonly int? _numberOfCandidatesForQuerying;
     private bool _isExact;
     
-    public VectorSearchToken(string fieldName, string parameterName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, bool isSourceBase64Encoded, bool isVectorBase64Encoded, float similarityThreshold, int numberOfCandidatesForQuerying, bool isExact)
+    public VectorSearchToken(string fieldName, string parameterName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, bool isSourceBase64Encoded, bool isVectorBase64Encoded, float? similarityThreshold, int? numberOfCandidatesForQuerying, bool isExact)
     {
         FieldName = fieldName;
         ParameterName = parameterName;
@@ -51,13 +52,13 @@ public sealed class VectorSearchToken : WhereToken
         
         writer.Append($", ${ParameterName}");
 
-        bool parametersAreDefault = _similarityThreshold.AlmostEquals(Constants.VectorSearch.DefaultMinimumSimilarity) &&
-                                    _numberOfCandidatesForQuerying == Constants.VectorSearch.DefaultNumberOfCandidatesForQuerying;
+        bool parametersAreDefault = _similarityThreshold is null &&
+                                    _numberOfCandidatesForQuerying is null;
 
         if (parametersAreDefault == false)
         {
-            writer.Append($", {_similarityThreshold}");
-            writer.Append($", {_numberOfCandidatesForQuerying}");
+            writer.Append($", {_similarityThreshold?.ToInvariantString() ?? "null"}");
+            writer.Append($", {_numberOfCandidatesForQuerying?.ToInvariantString() ?? "null" }");
         }
         
         writer.Append(')');
