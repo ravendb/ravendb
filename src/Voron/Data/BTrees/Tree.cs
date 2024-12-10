@@ -225,8 +225,8 @@ namespace Voron.Data.BTrees
         /// </summary>
         public long Increment(Slice key, long delta)
         {
-            Debug.Assert((State.Header.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
-            
+            Debug.Assert((State.Header.Flags & TreeFlags.MultiValue) == TreeFlags.None, "(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
+
             long currentValue = 0;
 
             var read = Read(key);
@@ -258,13 +258,13 @@ namespace Voron.Data.BTrees
         public int? ReadInt32(Slice key)
         {
             var read = Read(key);
-            if (read == null) 
+            if (read == null)
                 return null;
             Debug.Assert(read.Reader.Length == sizeof(int));
             return *(int*)read.Reader.Base;
 
         }
-        
+
         /// <summary>
         /// This is using little endian
         /// </summary>
@@ -272,7 +272,7 @@ namespace Voron.Data.BTrees
             where T : unmanaged
         {
             var read = Read(key);
-            if (read == null) 
+            if (read == null)
                 return null;
             Debug.Assert(read.Reader.Length == sizeof(T));
             return *(T*)read.Reader.Base;
@@ -287,7 +287,7 @@ namespace Voron.Data.BTrees
 
         public void Add(Slice key, long value)
         {
-            Debug.Assert((State.Header.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
+            Debug.Assert((State.Header.Flags & TreeFlags.MultiValue) == TreeFlags.None, "(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
             using (DirectAdd(key, sizeof(long), out byte* ptr))
                 *(long*)ptr = value;
         }
@@ -334,10 +334,10 @@ namespace Voron.Data.BTrees
 
         public void Add(Slice key, ReadOnlySpan<byte> value)
         {
-            if (value == null)
+            if (value == ReadOnlySpan<byte>.Empty)
                 ThrowNullReferenceException();
 
-            Debug.Assert(value != null);
+            Debug.Assert(value != ReadOnlySpan<byte>.Empty);
 
             using (DirectAdd(key, value.Length, out byte* ptr))
                 value.CopyTo(new Span<byte>(ptr, value.Length));
@@ -345,15 +345,15 @@ namespace Voron.Data.BTrees
 
         public void Add(Slice key, Slice value)
         {
-            Debug.Assert((State.Header.Flags & TreeFlags.MultiValue) == TreeFlags.None,"(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
-            
+            Debug.Assert((State.Header.Flags & TreeFlags.MultiValue) == TreeFlags.None, "(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
+
             if (!value.HasValue)
                 ThrowNullReferenceException();
 
             using (DirectAdd(key, value.Size, out byte* ptr))
                 value.CopyTo(ptr);
         }
-        
+
 
         public static int CalcSizeOfEmbeddedEntry(int keySize, int entrySize)
         {
@@ -384,7 +384,7 @@ namespace Voron.Data.BTrees
             {
                 if ((nodeType & TreeNodeFlags.NewOnly) == TreeNodeFlags.NewOnly)
                     ThrowConcurrencyException();
-                
+
                 node = page.GetNode(page.LastSearchPosition);
 
 #if DEBUG
@@ -422,7 +422,7 @@ namespace Voron.Data.BTrees
                 ref var state = ref State.Modify();
                 state.NumberOfEntries++;
             }
-            
+
             nodeType &= ~TreeNodeFlags.NewOnly;
             Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
 
@@ -1322,7 +1322,7 @@ namespace Voron.Data.BTrees
                     {
                         if (State.Header.RootObjectType == RootObjectType.Table) // tables might have mixed values, fixed size trees inside have dedicated handling
                             continue;
-                        
+
                         if ((State.Header.Flags & TreeFlags.FixedSizeTrees) == TreeFlags.FixedSizeTrees)
                         {
                             var valueReader = GetValueReaderFromHeader(node);
@@ -1369,7 +1369,8 @@ namespace Voron.Data.BTrees
 
         internal void PrepareForCommit()
         {
-            if (_prepareLocator == null) return;
+            if (_prepareLocator == null)
+                return;
             foreach (var ct in _prepareLocator.Values)
                 ct.PrepareForCommit();
         }
@@ -1430,7 +1431,7 @@ namespace Voron.Data.BTrees
             using var _ = Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out var keySlice);
             return CompactTreeFor(keySlice);
         }
-        
+
         // RavenDB-21678: If you're keeping a reference to CompactTree, it may happen that you can actually override the prepareLocator and 
         // have more than one object of the same tree in memory but with different states. It's dangerous to mix usage since the object retains states.
         public CompactTree CompactTreeFor(Slice key)

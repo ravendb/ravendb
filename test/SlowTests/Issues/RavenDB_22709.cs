@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -62,8 +63,8 @@ namespace SlowTests.Issues
 
             await CreateDatabaseInCluster(hubStore.Database, replicationFactor: 3, leadersUrl: hubCluster.Leader.WebUrl, certificate: hubClusterCert);
 
-            var pullCert1 = new X509Certificate2(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
-            var pullCert2 = new X509Certificate2(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate3Path), (string)null, X509KeyStorageFlags.Exportable);
+            var pullCert1 = CertificateHelper.CreateCertificateFromPfx(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
+            var pullCert2 = CertificateHelper.CreateCertificateFromPfx(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate3Path), (string)null, X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
@@ -134,7 +135,7 @@ namespace SlowTests.Issues
             await CreateDatabaseInCluster(hubStore.Database, replicationFactor: 3, leadersUrl: hubCluster.Leader.WebUrl, certificate: hubClusterCert);
             await CreateDatabaseInCluster(sinkStore.Database, replicationFactor: 3, leadersUrl: sinkCluster.Leader.WebUrl, certificate: sinkClusterCert);
 
-            var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
+            var pullCert = CertificateHelper.CreateCertificateFromPfx(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
 
             var pullDefinition = new PullReplicationDefinition
             {
@@ -240,7 +241,7 @@ namespace SlowTests.Issues
             await CreateDatabaseInCluster(hubStore.Database, replicationFactor: 1, leadersUrl: hubCluster.Leader.WebUrl, certificate: hubClusterCert);
             await CreateDatabaseInCluster(sinkStore.Database, replicationFactor: 3, leadersUrl: sinkCluster.Leader.WebUrl, certificate: sinkClusterCert);
 
-            var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
+            var pullCert = CertificateHelper.CreateCertificateFromPfx(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {

@@ -1,19 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <RuntimeFrameworkVersion>8.0.11</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>9.0.0</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>EmbeddedTests</AssemblyName>
     <PackageId>EmbeddedTests</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
     <GenerateRequiresPreviewFeaturesAttribute>False</GenerateRequiresPreviewFeaturesAttribute>
+    <SuppressTfmSupportBuildWarnings>True</SuppressTfmSupportBuildWarnings>
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-    <TargetFrameworks>net8.0;net7.0;net6.0;net462</TargetFrameworks>
+    <TargetFrameworks>net9.0;net8.0;net6.0;net462</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
-    <TargetFrameworks>net8.0;net7.0;net6.0;</TargetFrameworks>
+    <TargetFrameworks>net9.0;net8.0;net6.0;</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Include="..\..\src\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />

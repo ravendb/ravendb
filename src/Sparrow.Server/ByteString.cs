@@ -1540,7 +1540,7 @@ namespace Sparrow.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public InternalScope From(ReadOnlySpan<char> value, ByteStringType type, out ByteString str)
         {
-            Debug.Assert(value != null, $"{nameof(value)} cant be null.");
+            Debug.Assert(value != ReadOnlySpan<char>.Empty, $"{nameof(value)} cant be null.");
 
             var byteCount = Encodings.Utf8.GetMaxByteCount(value.Length) + 1;
             str = AllocateInternal(byteCount, type);
@@ -1553,7 +1553,7 @@ namespace Sparrow.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public InternalScope From(ReadOnlySpan<char> value, byte endSeparator, ByteStringType type, out ByteString str)
         {
-            Debug.Assert(value != null, $"{nameof(value)} cant be null.");
+            Debug.Assert(value != ReadOnlySpan<char>.Empty, $"{nameof(value)} cant be null.");
 
             var byteCount = Encodings.Utf8.GetMaxByteCount(value.Length) + 1;
             str = AllocateInternal(byteCount, type);
@@ -1591,7 +1591,7 @@ namespace Sparrow.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public InternalScope From(ReadOnlySpan<char> value, Encoding encoding, ByteStringType type, out ByteString str)
         {
-            Debug.Assert(value != null, $"{nameof(value)} cant be null.");
+            Debug.Assert(value != ReadOnlySpan<char>.Empty, $"{nameof(value)} cant be null.");
 
             var byteCount = Encodings.Utf8.GetMaxByteCount(value.Length) + 1;
 
@@ -1607,7 +1607,7 @@ namespace Sparrow.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public InternalScope From(ReadOnlySpan<byte> value, int offset, int count, ByteStringType type, out ByteString str)
         {
-            Debug.Assert(value != null, $"{nameof(value)} cant be null.");
+            Debug.Assert(value != ReadOnlySpan<byte>.Empty, $"{nameof(value)} cant be null.");
 
             str = AllocateInternal(count, type);
             value.Slice(offset, count).CopyTo(new Span<byte>(str._pointer->Ptr, count));
@@ -1625,7 +1625,7 @@ namespace Sparrow.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public InternalScope From(ReadOnlySpan<byte> value, int size, ByteStringType type, out ByteString str)
         {
-            Debug.Assert(value != null, $"{nameof(value)} cant be null.");
+            Debug.Assert(value != ReadOnlySpan<byte>.Empty, $"{nameof(value)} cant be null.");
 
             str = AllocateInternal(size, type);
             value.Slice(0,size).CopyTo(new Span<byte>(str._pointer->Ptr, size));

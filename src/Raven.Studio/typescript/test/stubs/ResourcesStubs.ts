@@ -29,7 +29,7 @@ export class ResourcesStubs {
                 },
                 {
                     NodeTag: "B",
-                    FullPath: `C:/Workspace/ravendb/test/RachisTests/bin/Debug/net8.0/Databases/GetNewServer-B.0-3`,
+                    FullPath: `C:/Workspace/ravendb/test/RachisTests/bin/Debug/net9.0/Databases/GetNewServer-B.0-3`,
                     FreeSpaceInBytes: 6126075904,
                     FreeSpaceHumane: "5.705 GBytes",
                     TotalSpaceInBytes: 20738408448,

@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 .Query(q => q
                     .Terms(p => p
                         .Field(index.DocumentIdProperty)
-                        .Term(new TermsQueryField(idsToDelete)))
+                        .Terms(new TermsQueryField(idsToDelete)))
                 )
             ));
 

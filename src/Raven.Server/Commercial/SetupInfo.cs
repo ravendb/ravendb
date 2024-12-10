@@ -148,7 +148,7 @@ namespace Raven.Server.Commercial
             try
             {
                 var localCertBytes = Convert.FromBase64String(Certificate);
-                return CertificateLoaderUtil.CreateCertificate(localCertBytes, Password);
+                return CertificateLoaderUtil.CreateCertificateFromPfx(localCertBytes, Password);
             }
             catch (Exception e)
             {

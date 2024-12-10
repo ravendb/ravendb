@@ -30,7 +30,10 @@ namespace FastTests.Issues
             nameof(string.EnumerateRunes),
             "get_Chars",
             nameof(string.TryCopyTo),
-            nameof(string.ReplaceLineEndings)
+            nameof(string.ReplaceLineEndings),
+            nameof(string.Trim),
+            nameof(string.TrimStart),
+            nameof(string.TrimEnd)
         };
 
         [Fact]

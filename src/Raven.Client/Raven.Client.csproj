@@ -3,7 +3,7 @@
     <Version></Version>
     <Description>RavenDB Client is the client library for accessing RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFrameworks>net8.0;net7.0;net6.0;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net9.0;net8.0;net6.0;netstandard2.1;netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Client</AssemblyName>
@@ -58,21 +58,21 @@
       <Pack>true</Pack>
     </Content>
     <!-- this is required for the nuget build to properly include the right files -->
-    <Content Include="..\Sparrow\bin\Release\net7.0\Sparrow.dll">
-      <PackagePath>lib/net7.0/</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-    <Content Include="..\Sparrow\bin\Release\net7.0\Sparrow.xml">
-      <PackagePath>lib/net7.0/</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-    <!-- this is required for the nuget build to properly include the right files -->
     <Content Include="..\Sparrow\bin\Release\net8.0\Sparrow.dll">
       <PackagePath>lib/net8.0/</PackagePath>
       <Pack>true</Pack>
     </Content>
     <Content Include="..\Sparrow\bin\Release\net8.0\Sparrow.xml">
       <PackagePath>lib/net8.0/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+    <!-- this is required for the nuget build to properly include the right files -->
+    <Content Include="..\Sparrow\bin\Release\net9.0\Sparrow.dll">
+      <PackagePath>lib/net9.0/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+    <Content Include="..\Sparrow\bin\Release\net9.0\Sparrow.xml">
+      <PackagePath>lib/net9.0/</PackagePath>
       <Pack>true</Pack>
     </Content>
   </ItemGroup>
@@ -153,5 +153,8 @@
     <PackageReference Include="System.Buffers" />
     <PackageReference Include="System.Memory" />
     <PackageReference Include="System.Threading.Tasks.Extensions" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework) == 'net6.0'">
+    <PackageReference Include="System.Collections.Immutable" VersionOverride="8.0.0" />
   </ItemGroup>
 </Project>

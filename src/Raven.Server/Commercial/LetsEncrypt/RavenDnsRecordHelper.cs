@@ -168,6 +168,7 @@ public static class RavenDnsRecordHelper
         }
     }
 
+#if !RVN
     public static async Task AssertDnsUpdatedSuccessfully(string serverUrl, IPEndPoint[] expectedAddresses, CancellationToken token)
     {
         // First we'll try to resolve the hostname through google's public dns api
@@ -228,6 +229,7 @@ public static class RavenDnsRecordHelper
                                                     Environment.NewLine + "Another temporary solution is to configure your local network connection to use Google's DNS server (8.8.8.8).");
         }
     }
+#endif
 
     public static async Task<bool> CanResolveHostNameLocally(string serverUrl, IPEndPoint[] expectedAddresses)
     {
