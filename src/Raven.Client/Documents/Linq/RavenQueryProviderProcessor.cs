@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -1606,7 +1607,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     if (minimumSimilarityObject != null)
                     {
                         if (minimumSimilarityObject is not float minimumSimilarity || minimumSimilarity is < -1.0f or > 1.0f)
-                            throw new NotSupportedException($"The minimum similarity parameter should be a float in the range [-1, 1]. However, it was '{minimumSimilarityObject.GetType().FullName}' with the value '{minimumSimilarityObject.ToString()}'.");
+                            throw new InvalidDataException($"The minimum similarity parameter should be a float in the range [-1, 1]. However, it was '{minimumSimilarityObject.GetType().FullName}' with the value '{minimumSimilarityObject.ToString()}'.");
                     }
                     
                     
@@ -1616,7 +1617,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     if (numberOfCandidatesObject != null)
                     {
                         if (numberOfCandidatesObject is not int numberOfCandidates || numberOfCandidates <= 0)
-                            throw new NotSupportedException("Number of candidates has to be positive.");
+                            throw new InvalidDataException("Number of candidates has to be positive.");
                     }
 
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[5], out var isExactObject);

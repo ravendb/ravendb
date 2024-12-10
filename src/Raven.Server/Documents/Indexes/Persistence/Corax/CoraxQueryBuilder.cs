@@ -661,9 +661,7 @@ public static class CoraxQueryBuilder
         }
         else if (value is StringSegment stringSegment)
         {
-            transformedEmbedding = default;
-            // var embeddings = GenerateEmbeddings.FromArray(vectorOptions, Convert.FromBase64String(stringSegment.ToString()));
-            // transformedEmbedding = embeddings.EmbeddingAsBytes;
+            transformedEmbedding = GenerateEmbeddings.FromArray(vectorOptions, allocator: builderParameters.Allocator, stringSegment.ToString());
         }
         else
         {
