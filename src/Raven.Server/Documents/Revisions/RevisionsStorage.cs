@@ -2406,7 +2406,7 @@ namespace Raven.Server.Documents.Revisions
             using (GetKeyPrefix(context, idSlice, out Slice prefixSlice))
             using (GetKeyWithEtag(context, idSlice, etag: long.MaxValue, out var compoundLastKey))
             {
-                var revisions = GetRevisions(context, prefixSlice: prefixSlice, lastKey: Slices.AfterAllKeys, start, take).ToArray();
+                var revisions = GetRevisions(context, prefixSlice: prefixSlice, lastKey: compoundLastKey, start, take).ToArray();
                 var count = CountOfRevisions(context, prefixSlice);
                 return (revisions, count);
             }
