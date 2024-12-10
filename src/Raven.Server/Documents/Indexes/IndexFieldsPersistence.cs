@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes
                         // In case of VectorEmbeddingType.Single the embedding length is multiplied by 4 (for every float we have 4 bytes), so to match this behavior we 
                         // have to multiply the length here
                         VectorEmbeddingType.Single => fieldDimensions.Value * sizeof(float),
-                        VectorEmbeddingType.Int8 => fieldDimensions.Value,
+                        VectorEmbeddingType.Int8 => fieldDimensions.Value + sizeof(float),
                         // We don't restore original number of binary vector dimensions, so this value is not relevant 
                         VectorEmbeddingType.Binary => fieldDimensions.Value,
                         _ => throw new InvalidDataException($"Unexpected embedding type - {indexField.Vector.DestinationEmbeddingType}.")

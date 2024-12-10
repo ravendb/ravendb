@@ -341,6 +341,33 @@ public class RavenDB_22076 : RavenTestBase
             }
         }
     }
+    
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TestEmbeddingDimensionsMismatchExceptionWithExplicitlySetDimensionsForInt8(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                var singles = new float[] { 0.1f, 0.2f, 0.3f, 0.7f };
+                var dto = new Dto() { EmbeddingSingles = singles };
+                
+                session.Store(dto);
+                
+                session.SaveChanges();
+
+                var index = new IndexWithSetDimensionsInt8();
+                
+                index.Execute(store);
+                
+                var indexErrors = Indexes.WaitForIndexingErrors(store);
+                
+                Assert.Equal(1, indexErrors.Length);
+                Assert.Contains("Attempted to index embedding with 4 dimensions, but field Sbytes already contains indexed embedding with 22 dimensions, or was explicitly configured for embeddings with 22 dimensions.", indexErrors[0].Errors[0].Error);
+            }
+        }
+    }
 
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
@@ -350,7 +377,7 @@ public class RavenDB_22076 : RavenTestBase
         {
             using (var session = store.OpenSession())
             {
-                var dto = new Dto(){EmbeddingSingles = new [] { 0.2f, 0.3f }};
+                var dto = new Dto(){ EmbeddingSingles = new [] { 0.2f, 0.3f } };
                 var queriedEmbedding = new [] { 0.2f, 0.3f };
                 
                 session.Store(dto);
@@ -401,6 +428,17 @@ public class RavenDB_22076 : RavenTestBase
                 select new { Singles = CreateVector(dto.EmbeddingSingles) };
             
             Vector("Singles", factory => factory.Dimensions(256));
+        }
+    }
+    
+    private class IndexWithSetDimensionsInt8 : AbstractIndexCreationTask<Dto>
+    {
+        public IndexWithSetDimensionsInt8()
+        {
+            Map = dtos => from dto in dtos
+                select new { Sbytes = CreateVector(dto.EmbeddingSingles) };
+            
+            Vector("Sbytes", factory => factory.Dimensions(22).DestinationEmbedding(VectorEmbeddingType.Int8));
         }
     }
 }

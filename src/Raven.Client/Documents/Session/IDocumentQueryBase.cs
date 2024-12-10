@@ -463,7 +463,7 @@ namespace Raven.Client.Documents.Session
         TSelf VectorSearch(Func<IVectorFieldFactory<T>, IVectorEmbeddingField> embeddingFieldFactory, Action<IVectorEmbeddingFieldValueFactory> embeddingValueFactory, float? minimumSimilarity = null, int? numberOfCandidates = null, bool isExact = Constants.VectorSearch.DefaultIsExact);
         
         /// <summary>
-        /// Performs vector search on existing vector field.
+        /// Performs vector search on existing vector index field.
         /// </summary>
         /// <param name="vectorFieldFactory">Factory using existing, already indexed vector field.</param>
         /// <param name="vectorValueFactory">Factory preparing queried data to be used in vector search.</param>
