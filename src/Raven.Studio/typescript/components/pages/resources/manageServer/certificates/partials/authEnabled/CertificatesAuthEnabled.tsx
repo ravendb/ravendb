@@ -40,7 +40,7 @@ export default function CertificatesAuthEnabled() {
     }, [dispatch]);
 
     const debouncedUpdateNameOrThumbprintFilter = useMemo(
-        () => debounce((value: string) => dispatch(certificatesActions.nameOrThumbprintFilterSet(value))),
+        () => debounce((value: string) => dispatch(certificatesActions.nameOrThumbprintFilterSet(value)), 300),
         [dispatch]
     );
 
@@ -162,6 +162,5 @@ const sortOptions: SelectOptionWithIconAndSeparator<CertificatesSortMode>[] = [
         value: "By Last Used Date - Desc",
         label: "By Last Used Date - Desc",
         icon: "arrow-down",
-        horizontalSeparatorLine: true,
     },
 ];
