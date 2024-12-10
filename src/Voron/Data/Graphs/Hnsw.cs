@@ -1149,13 +1149,13 @@ public unsafe partial class Hnsw
         return new Registration(llt, name, random);
     }
 
-    public static NearestSearch ExactNearest(LowLevelTransaction llt, string name, int numberOfCandidates, ReadOnlySpan<byte> vector)
+    public static NearestSearch ExactNearest(LowLevelTransaction llt, string name, int numberOfCandidates, ReadOnlySpan<byte> vector, float minimumSimilarity)
     {
         Slice.From(llt.Allocator, name, out var slice);
-        return ExactNearest(llt, slice, numberOfCandidates, vector);
+        return ExactNearest(llt, slice, numberOfCandidates, vector, minimumSimilarity);
     }
 
-    public static NearestSearch ExactNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, ReadOnlySpan<byte> vector)
+    public static NearestSearch ExactNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, ReadOnlySpan<byte> vector, float minimumSimilarity)
     {
         var searchState = new SearchState(llt, name);
         var pq = new PriorityQueue<long, float>();
@@ -1184,35 +1184,35 @@ public unsafe partial class Hnsw
             candidates.Add(nodeIdx);
         }
         candidates.Inner.Reverse();
-        return new NearestSearch(searchState, candidates, vector);
+        return new NearestSearch(searchState, candidates, vector, minimumSimilarity);
     }
 
-    public static NearestSearch ApproximateNearest(LowLevelTransaction llt, string name, int numberOfCandidates, ReadOnlySpan<byte> vector)
+    public static NearestSearch ApproximateNearest(LowLevelTransaction llt, string name, int numberOfCandidates, ReadOnlySpan<byte> vector, float minimumSimilarity)
     {
         Slice.From(llt.Allocator, name, out var slice);
-        return ApproximateNearest(llt, slice, numberOfCandidates, vector);
+        return ApproximateNearest(llt, slice, numberOfCandidates, vector, minimumSimilarity);
     }
 
-    public static NearestSearch ApproximateNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, ReadOnlySpan<byte> vector)
+    public static NearestSearch ApproximateNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, ReadOnlySpan<byte> vector, float minimumSimilarity)
     {
         var searchState = new SearchState(llt, name);
         var nearestNodesByLevel = new ContextBoundNativeList<int>(llt.Allocator);
         nearestNodesByLevel.EnsureCapacityFor(searchState.Options.MaxLevel + 1);
 
         if (searchState.Options.CountOfVectors == 0)
-            return new NearestSearch(searchState, nearestNodesByLevel, vector);
+            return new NearestSearch(searchState, nearestNodesByLevel, vector, minimumSimilarity);
         
         searchState.SearchNearestAcrossLevels(vector, -1, searchState.Options.MaxLevel, ref nearestNodesByLevel.Inner);
         var nearest = nearestNodesByLevel[0];
         nearestNodesByLevel.Clear();
         searchState.NearestEdges(nearest, -1, vector, level: 0, numberOfCandidates: numberOfCandidates, candidates: ref nearestNodesByLevel.Inner, 
             SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists);
-        return new NearestSearch(searchState, nearestNodesByLevel, vector);
+        return new NearestSearch(searchState, nearestNodesByLevel, vector, minimumSimilarity);
     }
 
     public struct NearestSearch : IDisposable
     {
-        public NearestSearch(SearchState searchState, ContextBoundNativeList<int> indexes, ReadOnlySpan<byte> vector)
+        public NearestSearch(SearchState searchState, ContextBoundNativeList<int> indexes, ReadOnlySpan<byte> vector, float minimumSimilarity)
         {
             _searchState = searchState;
             _indexes = indexes;
@@ -1220,6 +1220,7 @@ public unsafe partial class Hnsw
             _pforDecoder = new(searchState.Llt.Allocator);
             searchState.Llt.Allocator.AllocateDirect(vector.Length, out _vector);
             vector.CopyTo(_vector.ToSpan());
+            _maximumDistance = searchState.MinimumSimilarityToDistance(minimumSimilarity);
         }
 
         private ContextBoundNativeList<int> _indexes;
@@ -1230,6 +1231,7 @@ public unsafe partial class Hnsw
         private ByteString _vector;
         private PostingList.Iterator _postingListIterator;
         private PostingList _postingList;
+        private readonly float _maximumDistance;
         public SimilarityMethod SimilarityMethod => _searchState.Options.SimilarityMethod;
         public bool IsEmpty => _searchState.IsEmpty;
 
@@ -1290,6 +1292,13 @@ public unsafe partial class Hnsw
                 ref var node = ref _searchState.GetNodeByIndex(nodeIdx);
                 var rawPostingListId = node.PostingListId & Constants.Graphs.VectorId.ContainerType;
                 distance = _searchState.Distance(_vector.ToSpan(), -1, nodeIdx);
+
+                if (distance > _maximumDistance)
+                {
+                    _currentNode++;
+                    continue;
+                }
+                
                 switch (node.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask)
                 {
                     case Constants.Graphs.VectorId.Tombstone: // empty

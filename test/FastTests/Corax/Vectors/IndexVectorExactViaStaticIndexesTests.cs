@@ -7,21 +7,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.Indexes;
-using SmartComponents.LocalEmbeddings;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Corax.Vectors;
 
-public class IndexVectorExactViaStaticIndexesTests : RavenTestBase
+public class IndexVectorExactViaStaticIndexesTests(ITestOutputHelper output) : RavenTestBase(output)
 {
-    public IndexVectorExactViaStaticIndexesTests(ITestOutputHelper output) : base(output)
-    {
-    }
-
     [RavenFact(RavenTestCategory.Corax)]
-    public async Task AssertIndexDefinictionViaStaticIndexes()
+    public async Task AssertIndexDefinitionViaStaticIndexes()
     {
         using var store = CreateDocumentStore();
         var localIndexDefinition = new IndexDefinition()
@@ -159,7 +154,7 @@ select new
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void EmbeddingSingleIndexTest() => StaticIndexApi<EmbeddingSingleIndex>();
-
+    
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     public void MultiEmbeddingSingleIndexTest() => StaticIndexApi<MultiEmbeddingSingleIndex>();
 
@@ -187,7 +182,6 @@ select new
                 EmbeddingsAsBase64 = [Convert.ToBase64String(embAsByte), Convert.ToBase64String(embAsByte2)]
             });
             session.SaveChanges();
-            WaitForUserToContinueTheTest(store);
         }
 
         new TIndex().Execute(store);

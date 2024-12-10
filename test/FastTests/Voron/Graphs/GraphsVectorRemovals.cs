@@ -40,7 +40,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
 
         using (var rTx = Env.ReadTransaction())
         {
-            using var s = Hnsw.ExactNearest(rTx.LowLevelTransaction, TreeName, 1, v1AsBytes);
+            using var s = Hnsw.ExactNearest(rTx.LowLevelTransaction, TreeName, 1, v1AsBytes, 0f);
             Span<long> docs = new long[4];
             Span<float> distances = new float[4];
             var r = s.Fill(docs, distances);
@@ -61,7 +61,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         
         using (var rTx = Env.ReadTransaction())
         {
-            using var s = Hnsw.ApproximateNearest(rTx.LowLevelTransaction, TreeName, 12, v1AsBytes);
+            using var s = Hnsw.ApproximateNearest(rTx.LowLevelTransaction, TreeName, 12, v1AsBytes, 0f);
             Span<long> docs = new long[4];
             Span<float> distances = new float[4];
             var r = s.Fill(docs, distances);
@@ -98,7 +98,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
     
         using (var rTx = Env.ReadTransaction())
         {
-            using var s = Hnsw.ExactNearest(rTx.LowLevelTransaction, TreeName, 2, v1AsBytes);
+            using var s = Hnsw.ExactNearest(rTx.LowLevelTransaction, TreeName, 2, v1AsBytes, 0f);
             Span<long> docs = new long[4];
             Span<float> distances = new float[4];
             var r = s.Fill(docs, distances);
@@ -117,7 +117,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
         
         using (var rTx = Env.ReadTransaction())
         {
-            using var s = Hnsw.ApproximateNearest(rTx.LowLevelTransaction, TreeName, 12, v1AsBytes);
+            using var s = Hnsw.ApproximateNearest(rTx.LowLevelTransaction, TreeName, 12, v1AsBytes, 0f);
             Span<long> docs = new long[4];
             Span<float> distances = new float[4];
             var r = s.Fill(docs, distances);
@@ -191,7 +191,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
             
             using (var rTx = Env.ReadTransaction())
             {
-                using var s = Hnsw.ExactNearest(rTx.LowLevelTransaction, TreeName, 12, v1AsBytes);
+                using var s = Hnsw.ExactNearest(rTx.LowLevelTransaction, TreeName, 12, v1AsBytes, 0f);
                 var docs = new long[4];
                 var distances = new float[4];
                 var r = s.Fill(docs, distances);
@@ -230,7 +230,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
             Span<float> distances = new float[8];
             using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
                 numberOfCandidates: 32,
-                v1AsBytes);
+                v1AsBytes, 0f);
             int read = nearest.Fill(matches, distances);
             Assert.Equal(1, read);
         }
@@ -252,7 +252,7 @@ public class GraphsVectorRemovals(ITestOutputHelper output) : StorageTest(output
             Span<float> distances = new float[8];
             using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
                 numberOfCandidates: 32,
-                v1AsBytes);
+                v1AsBytes, 0f);
             int read = nearest.Fill(matches, distances);
             Assert.Equal(0, read);
         }

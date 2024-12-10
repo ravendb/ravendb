@@ -48,8 +48,8 @@ void TestRecall(string path)
             {
                 var vector = new Span<float>(vectors, i * 768, 768);
                 
-                using var enn = Hnsw.ExactNearest(txr.LowLevelTransaction, "wiki", 10, MemoryMarshal.AsBytes(vector));
-                using var ann = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "wiki", 64, MemoryMarshal.AsBytes(vector));
+                using var enn = Hnsw.ExactNearest(txr.LowLevelTransaction, "wiki", 10, MemoryMarshal.AsBytes(vector), 0f);
+                using var ann = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "wiki", 64, MemoryMarshal.AsBytes(vector), 0f);
 
                 var aRead = ann.Fill(annMatches, annDistances);
                 var eRead = enn.Fill(ennMatches, ennDistances);

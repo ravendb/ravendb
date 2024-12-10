@@ -17,7 +17,6 @@ public struct VectorSearchMatch : IQueryMatch
 {
     private Hnsw.NearestSearch _nearestSearch;
     private readonly IndexSearcher _indexSearcher;
-    private float _maximumDistance;
     private readonly FieldMetadata _metadata;
     public bool IsBoosting { get; init; }
     
@@ -33,17 +32,16 @@ public struct VectorSearchMatch : IQueryMatch
         _metadata = metadata;
         _indexSearcher = searcher;
         _nearestSearch = isExact == false
-            ? Hnsw.ApproximateNearest(searcher.Transaction.LowLevelTransaction, metadata.FieldName, numberOfCandidates, vectorToSearch.GetEmbedding())
-            : Hnsw.ExactNearest(searcher.Transaction.LowLevelTransaction, metadata.FieldName, numberOfCandidates, vectorToSearch.GetEmbedding());
+            ? Hnsw.ApproximateNearest(searcher.Transaction.LowLevelTransaction, metadata.FieldName, numberOfCandidates, vectorToSearch.GetEmbedding(), minimumMatch)
+            : Hnsw.ExactNearest(searcher.Transaction.LowLevelTransaction, metadata.FieldName, numberOfCandidates, vectorToSearch.GetEmbedding(), minimumMatch);
 
-        vectorToSearch.Dispose(); // release memory from querying since search has own copy
+        vectorToSearch.Dispose();
         if (_nearestSearch.IsEmpty)
         {
             _isEmpty = true;
             return;
         }
         
-        _maximumDistance = _nearestSearch.MinimumSimilarityToMaximumDistance(minimumMatch);
         IsBoosting = metadata.HasBoost;
     }
 
@@ -86,46 +84,20 @@ public struct VectorSearchMatch : IQueryMatch
         if (_distances.Capacity < sizeof(float) * matches.Length)
             CreateDistanceBuffer(matches.Length);
 
-        var idX = 0;
-        var workingBuffer = matches;
-        
-        var read = 0;
-        while (workingBuffer.IsEmpty == false && (read = _nearestSearch.Fill(workingBuffer, _distances.GetSpace())) != 0)
-        {
-            var currentBatch = DiscardDocumentUnderSimilarity(workingBuffer.Slice(0, read), _distances.GetSpace().Slice(0, read));
-            workingBuffer = workingBuffer.Slice(currentBatch);
-            idX += currentBatch;
-        }
-
+        var read = _nearestSearch.Fill(matches, _distances.GetSpace());
         if (read == 0)
         {
             _distances.Dispose();
             _nearestSearch.Dispose(); //no more matches
             _returnedAllResults = true;
+            return 0;
         }
-
-        // Fill have to return sorted array
-        Sort.Run(matches.Slice(0, idX));
-        return idX;
+        
+        // We've to sort inner batch and remove duplicates
+        Sort.Run(matches[..read]);
+        return RemoveDuplicates(matches[..read], _distances.GetSpace()[..read]);
     }
 
-    private int DiscardDocumentUnderSimilarity(Span<long> matches, Span<float> distances)
-    {
-        ref var distanceRef = ref MemoryMarshal.GetReference(distances);
-        ref var matchesRef = ref MemoryMarshal.GetReference(matches);
-        int idX = 0;
-        for (var i = 0; i < matches.Length; ++i)
-        {
-            if (Unsafe.Add(ref distanceRef, i) > _maximumDistance) 
-                continue;
-            
-            Unsafe.Add(ref matchesRef, idX) = Unsafe.Add(ref matchesRef, i);
-            Unsafe.Add(ref distanceRef, idX++) = Unsafe.Add(ref distanceRef, i);
-        }
-
-        return idX;
-    }
-    
     private void CreateDistanceBuffer(int length)
     {
         ref var distances = ref _distances;
@@ -145,14 +117,73 @@ public struct VectorSearchMatch : IQueryMatch
             var mBuf = matches.GetSpace();
             var dBuf = distances.GetSpace();
             currentRead = _nearestSearch.Fill(mBuf, dBuf);
-            var matched = DiscardDocumentUnderSimilarity(mBuf.Slice(0, currentRead), dBuf.Slice(0, currentRead));
-            matches.AddUsage(matched);
-            distances.AddUsage(matched);
+            matches.AddUsage(currentRead);
+            distances.AddUsage(currentRead);
         } while (currentRead != 0);
             
         matches.Results.Sort(distances.Results);
+        
+        //Truncate the buffer to the actual size
+        var matchesCount = RemoveDuplicates(matches.Results, distances.Results);
+        distances.Truncate(matchesCount);
+        matches.Truncate(matchesCount);
         _nearestSearch.Dispose();
         _resultsNotPersisted = false;
+    }
+
+    /// <summary>
+    /// Deduplicates the original matches buffer and retains the lowest distance value among duplicates.
+    /// </summary>
+    /// <param name="matches">sorted matches</param>
+    /// <param name="distances">Distances buffer</param>
+    /// <returns>Unique elements.</returns>
+    internal static int RemoveDuplicates(Span<long> matches, Span<float> distances)
+    {
+        Debug.Assert(IsSorted(matches));
+        if (matches.Length <= 1)
+            return matches.Length;
+
+        var outputPos = 0;
+        ref var matchesRef = ref MemoryMarshal.GetReference(matches);
+        ref var distancesRef = ref MemoryMarshal.GetReference(distances);
+        
+        for (int i = 0; i < matches.Length - 1; ++i)
+        {
+            var currentMatch = Unsafe.Add(ref matchesRef, i);
+            var nextMatch = Unsafe.Add(ref matchesRef, i + 1);
+            if (currentMatch == nextMatch)
+            {
+                ref var nextDistance = ref Unsafe.Add(ref distancesRef, i + 1);
+                nextDistance = MathF.Min(
+                    Unsafe.Add(ref distancesRef, i), 
+                    nextDistance);
+                continue;
+            }
+            
+            Unsafe.Add(ref matchesRef, outputPos) = currentMatch;
+            Unsafe.Add(ref distancesRef, outputPos) = Unsafe.Add(ref distancesRef, i);
+            outputPos++;
+        }
+        
+        Unsafe.Add(ref matchesRef, outputPos) = Unsafe.Add(ref matchesRef, matches.Length - 1);
+        Unsafe.Add(ref distancesRef, outputPos) = Unsafe.Add(ref distancesRef, matches.Length - 1);
+        outputPos++;
+        
+        return outputPos;
+    }
+
+    private static bool IsSorted(Span<long> matches)
+    {
+        if (matches.Length <= 1)
+            return true;
+
+        for (int i = 1; i < matches.Length; ++i)
+        {
+            if (matches[i - 1] > matches[i])
+                return false;
+        }
+
+        return true;
     }
     
     public int AndWith(Span<long> buffer, int matches)
@@ -196,7 +227,6 @@ public struct VectorSearchMatch : IQueryMatch
             {
                 { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },
                 { nameof(Hnsw.SimilarityMethod), _nearestSearch.SimilarityMethod.ToString() },
-                { nameof(_maximumDistance), _maximumDistance.ToString() }
             });
     }
 

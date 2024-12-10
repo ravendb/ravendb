@@ -129,6 +129,6 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         
         WaitForUserToContinueTheTest(store);
     }
-
+    
     private record AutoVecDoc(string Text, float[] Singles, sbyte[] Int8, byte[] Binary, string Id = null);
 }
