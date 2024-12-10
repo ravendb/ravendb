@@ -14,13 +14,14 @@ class twoFactorShell extends viewModelBase {
 
     certificateName = ko.observable<string>();
 
-    focusProceed = ko.observable<boolean>(false);
+    proceedHasFocus = ko.observable<boolean>(false);
     
     sessionDurationInMin = ko.observable<number>();
     maxSessionDurationInMin = ko.observable<number>();
     
-    code = ko.observable<string>();
+    code = ko.observable<string>("");
     limitType = ko.observable<LimitType>("browser");
+    codeHasFocus = ko.observable<boolean>(false);
     
     constructor() {
         super();
@@ -29,7 +30,7 @@ class twoFactorShell extends viewModelBase {
         
         this.code.subscribe(c => {
             if (c?.length === 6) {
-                this.focusProceed(true);
+                this.proceedHasFocus(true);
             }
         })
         
@@ -59,8 +60,29 @@ class twoFactorShell extends viewModelBase {
         super.compositionComplete();
         $("body").removeClass('loading-active');
         
+        const container = document.querySelector("body");   
+
+        const keyHandler = (event: KeyboardEvent) => {
+            if (event.key === "Backspace") {
+                if (this.proceedHasFocus()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.code(this.code().slice(0, -1));
+                    this.codeHasFocus(true);
+                }
+            }
+        }
+        
+        container.addEventListener("keydown", keyHandler);
+        
+        this.registerDisposable({
+            dispose: () => container.removeEventListener("keydown", keyHandler)
+        });
+        
         this.studioLoadingFakeRequest.markCompleted();
         this.studioLoadingFakeRequest = null;
+        
+        this.codeHasFocus(true);
     }
 
     verify() {
@@ -72,7 +94,11 @@ class twoFactorShell extends viewModelBase {
             .execute()
             .done(() => {
                 location.href = location.origin;
-            });
+            })
+            .fail(() => {
+                this.code("");
+                this.codeHasFocus(true);
+            })
     }
 }
 

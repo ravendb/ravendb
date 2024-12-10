@@ -52,7 +52,8 @@
     <form data-bind="submit: verify" class="tfa-form">
         <div class="d-flex justify-content-center">
             <div class="tfa-input-wrap field-real">
-                <input type="text" class="tfa-token-input w-input" maxlength="6" placeholder="000000" minlength="6" autocomplete="off" data-bind="textInput: code" autofocus="true"/>
+                <input type="text" class="tfa-token-input w-input" maxlength="6" placeholder="000000" 
+                       minlength="6" autocomplete="off" data-bind="textInput: code, hasFocus: codeHasFocus" />
                 <div class="tfa-input field-fake"></div>
                 <div class="tfa-input field-fake"></div>
                 <div class="tfa-input field-fake"></div>
@@ -98,6 +99,6 @@
                 </div>
             </div>
         </div>
-        <button class="btn btn-primary rounded-pill" data-bind="hasFocus: focusProceed"><i class="icon-arrow-thin-right"></i> Proceed</button>
+        <button class="btn btn-primary rounded-pill" data-bind="hasFocus: proceedHasFocus"><i class="icon-arrow-thin-right"></i> Proceed</button>
     </form>
 </div>
