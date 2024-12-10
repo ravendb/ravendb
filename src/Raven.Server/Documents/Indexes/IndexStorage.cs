@@ -1216,6 +1216,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal Dictionary<string, int> ReadVectorDimensions()
         {
+            // (string FieldName, int VectorSizeInBytes)
             Dictionary<string, int> container = new();
 
             using (var tx = _environment.ReadTransaction())
