@@ -1450,6 +1450,10 @@ namespace Sparrow.Json
             var lazyName = _context.GetLazyStringForFieldWithCaching(propertyName);
             return Contains(lazyName);
         }
+
+        public bool TryGetPropertyType(string name, out BlittableJsonToken jsonToken)
+            => TryGetPropertyType(new StringSegment(name), out jsonToken);
+        
         //TODO Maybe use LazyStringValue
         public  bool TryGetPropertyType(StringSegment name, out BlittableJsonToken jsonToken)
         {

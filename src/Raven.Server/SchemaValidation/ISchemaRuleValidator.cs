@@ -1,11 +1,11 @@
 ﻿namespace Raven.Server.SchemaValidation;
 
-public interface SchemaRuleValidator
+public interface ISchemaRuleValidator
 {
     void Validate(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder);
 }
 
-public abstract class SchemaRuleValidator<T> : SchemaRuleValidator
+public abstract class SchemaRuleValidator<T> : ISchemaRuleValidator
 {
     protected abstract void ValidateInternal(T value, SchemaValidatorPath path, IErrorBuilder errorBuilder);
     
