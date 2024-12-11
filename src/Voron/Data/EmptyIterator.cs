@@ -64,6 +64,11 @@ namespace Voron.Data
             get;
         }
 
+        public Slice RequiredSuffix
+        {
+            get;
+        }
+
         public void SetRequiredPrefix(Slice prefix)
         {
         }

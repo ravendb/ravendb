@@ -163,6 +163,12 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
             if (document.TryGetCollection(out string collectionStr))
             {
+                if (options.DatabaseRecord.RetiredAttachments == null)
+                {
+                    // no configuration, we don't care about this collection
+                    return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+                }
+
                 if (options.DatabaseRecord.RetiredAttachments.RetirePeriods.ContainsKey(collectionStr) == false)
                 {
                     // we don't care about this collection, it was removed from the configuration

@@ -10,6 +10,7 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
@@ -192,6 +193,9 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
 
         await AssertAllRetiredAttachments(store, cloudObjects, size);
+
+        var stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
+        Assert.Equal(attachmentsCount, stats.CountOfRetiredAttachments);
     }
 
     protected async Task CanUploadRetiredAttachmentToCloudAndDeleteInternal(int attachmentsCount, int size, List<string> collections = null, bool storageOnly = false)

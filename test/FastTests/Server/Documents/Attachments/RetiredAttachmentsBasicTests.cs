@@ -169,8 +169,7 @@ namespace FastTests.Server.Documents.Attachments
 
                 await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(c));
 
-
-                using var profileStream2 = new MemoryStream([3,2,1]);
+                using var profileStream2 = new MemoryStream([3, 2, 1]);
                 await store.Operations.SendAsync(new PutAttachmentOperation(id, "test2.png", profileStream2, "image/png"));
 
                 var res2 = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test2.png", AttachmentType.Document, null));
@@ -179,16 +178,29 @@ namespace FastTests.Server.Documents.Attachments
                 Assert.Equal(AttachmentFlags.None, res2.Details.Flags);
                 Assert.NotNull(res2.Details.RetireAt);
 
-                var res3= await store.Operations.SendAsync(new GetAttachmentOperation(id, "test.png", AttachmentType.Document, null));
+                var res3 = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test.png", AttachmentType.Document, null));
                 Assert.Equal("test.png", res3.Details.Name);
                 Assert.Equal(AttachmentFlags.None, res3.Details.Flags);
 
 
-                // TODO: what should happen? shouldn't this have retireAt to as well, since I added retired config...
+                // TODO: what should happen? shouldn't this have retireAt to as well, since I have added retired config...
                 // marked as notnull for now so the test fails
                 Assert.NotNull(res3.Details.RetireAt);
+
+                // try override the attachment? so I will have RetireAt
+                Assert.Null(res3.Details.RetireAt);
+                using (var stream = new MemoryStream())
+                {
+                    await res3.Stream.CopyToAsync(stream);
+                    stream.Position = 0;
+                    store.Operations.Send(new PutAttachmentOperation(res3.Details.DocumentId, res3.Details.Name, stream, res3.Details.ContentType));
+                }
+
+                var res4 = await store.Operations.SendAsync(new GetAttachmentOperation(res3.Details.DocumentId, res3.Details.Name, AttachmentType.Document, null));
+                Assert.Equal("test.png", res4.Details.Name);
+                Assert.Equal(AttachmentFlags.None, res4.Details.Flags);
+                Assert.NotNull(res4.Details.RetireAt);
             }
         }
-
     }
 }

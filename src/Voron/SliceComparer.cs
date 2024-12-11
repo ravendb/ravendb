@@ -110,6 +110,19 @@ namespace Voron
 
             return Memory.CompareInline(prefixPtr, valuePtr, prefix.Size) == 0;
         }
+
+        public static unsafe bool EndsWith(Slice value, Slice suffix)
+        {
+            int suffixSize = suffix.Content.Length;
+            if (value.Content.HasValue == false || suffixSize > value.Content.Length)
+                return false;
+
+            byte* suffixPtr = suffix.Content.Ptr;
+            var offset = value.Content.Length - suffixSize;
+            byte* valuePtr = offset > 0 ? value.Content.Ptr + offset : value.Content.Ptr;
+
+            return Memory.CompareInline(suffixPtr, valuePtr, suffix.Size) == 0;
+        }
     }
 
     public struct SliceStructComparer : IEqualityComparer<Slice>, IComparer<Slice>

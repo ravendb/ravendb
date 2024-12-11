@@ -24,5 +24,5 @@ public sealed class DetailedDatabaseStatistics : DatabaseStatistics
     ///// <summary>
     ///// Total number of Retired Attachments values in database.
     ///// </summary>
-    //public long CountOfRetiredAttachments { get; set; }
+    public long CountOfRetiredAttachments { get; set; }
 }

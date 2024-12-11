@@ -2,13 +2,14 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using FastTests.Voron.Tables;
 using Tests.Infrastructure;
 using Raven.Server.Utils;
 using SlowTests.Corax;
 using SlowTests.Sharding.Cluster;
 using Xunit;
 using FastTests.Voron.Util;
-using static System.Net.Mime.MediaTypeNames;
+using SlowTests.Server.Documents.Attachments;
 
 namespace Tryouts;
 
@@ -19,7 +20,7 @@ public static class Program
         XunitLogging.RedirectStreams = false;
     }
 
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
 
@@ -28,14 +29,35 @@ public static class Program
             Console.WriteLine($"Starting to run {i}");
 
             try
-            {
+            {//CanInsertThenReadByDynamic
+
+                //using (var testOutputHelper = new ConsoleTestOutputHelper())
+                //using (var test = new RavenDB_17760(testOutputHelper))
+                //{
+                //    DebuggerAttachedTimeout.DisableLongTimespan = true;
+                //    //   await test.AddRetiredAttachmentThenExternalReplicateToDatabaseWithoutRetiredConfig(1, 3);
+                //    //
+                //    test.CanInsertThenReadByDynamic();
+                //}
+
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new PForEncoderTests(testOutputHelper))
+                using (var test = new S3RetiredAttachmentsSlowTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    //test.CanRoundTripSmallContainer("GreaterThan42B");
-                    test.CanRespectBufferBoundaryForPage2();
+                    //   await test.AddRetiredAttachmentThenExternalReplicateToDatabaseWithoutRetiredConfig(1, 3);
+                    //
+                    await test.CanUploadRetiredAttachmentToS3AndGet(1, 3);
                 }
+
+
+                //using (var testOutputHelper = new ConsoleTestOutputHelper())
+                //using (var test = new RavenDB_22226(testOutputHelper))
+                //{
+                //    DebuggerAttachedTimeout.DisableLongTimespan = true;
+                //    //   await test.AddRetiredAttachmentThenExternalReplicateToDatabaseWithoutRetiredConfig(1, 3);
+                //    //
+                //     test.CanInsertUpdateThenReadByDynamic();
+                //}
             }
             catch (Exception e)
             {

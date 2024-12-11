@@ -27,6 +27,12 @@ namespace SlowTests.Server.Documents.Attachments
         //TODO: egor test CanUploadRetiredAttachmentToS3IfItAlreadyExists - will rewrite the retired attachment, even if it is the same - is it the behaviour we want?
         //TODO: egor do big attachments tests
         //TODO: egor test for "now we delete doc with retired attachemnt, it will delete the retire attachment from cloud!"
+
+        //TODO: egor move & copy attachment tests
+        //            // test: WaitForIndexesAfterSaveChangesSupportsMoveToDifferentCollection
+        //session.Advanced.Attachments.Move
+        //session.Advanced.Attachments.Copy
+
         public S3RetiredAttachmentsSlowTests(ITestOutputHelper output) : base(output)
         {
         }
@@ -746,7 +752,50 @@ namespace SlowTests.Server.Documents.Attachments
             await CanExternalReplicateRetiredAttachmentAndThenUploadToCloudAndGet(attachmentsCount, size);
         }
 
+        [AmazonS3RetryTheory]
+        [InlineData(1, 3)]
+        public async Task AddRetiredAttachmentThenExternalReplicateToDatabaseWithoutRetiredConfig(int attachmentsCount, int size)
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                //await SetupReplicationAsync(store2, store1);
+                await using (var holder = CreateCloudSettings())
+                {
+                    int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+                    List<string> collections = null;
+                    await PutRetireAttachmentsConfiguration(store1, Settings);
+                    await CreateDocs(store1, docsCount, ids);
+                    await PopulateDocsWithRandomAttachments(store1, size, ids, attachmentsPerDoc);
 
+                    await SetupReplicationAsync(store1, store2);
+                    //Console.WriteLine(store1.Urls.First());
+
+
+                    await EnsureReplicatingAsync(store1, store2);
+
+                    var database2 = (await GetDocumentDatabaseInstanceForAsync(store2.Database));
+                    GetStorageAttachmentsMetadataFromAllAttachments(database2);
+                    //await PutRetireAttachmentsConfiguration(store2, Settings);
+
+                    Assert.Equal(attachmentsCount, Attachments.Count);
+
+                    //TODO: egor I dont have config.. so I should not have items in tree?
+                    // its 0 now so it fails
+                    S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database2,0);
+
+
+                    // move in time & start retire
+                    //database2.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    //await database2.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    //var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
+                    //await AssertAllRetiredAttachments(store2, cloudObjects, size);
+
+                    //TODO: egor setup s2->s1 replication & after I retire the attachment on s2, I should see it on s1?
+                }
+            }
+        }
         [AmazonS3RetryTheory]
         [InlineData(1, 3)]
         //[InlineData(64, 3)]

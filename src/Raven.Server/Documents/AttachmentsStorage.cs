@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
@@ -376,12 +377,13 @@ namespace Raven.Server.Documents
                                         {
                                             var existingEtag = TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
                                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                                            //TODO: egor if we update retired attachment (can this even happen?) we might delete the old one from cloud storage... I think need to check if it is retired && if it has purgeOn delete ?
                                             var existingAttachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref partialTvr);
                                             var existingRetireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref partialTvr);
 
                                             if (existingAttachmentFlags.Contain(AttachmentFlags.Retired))
                                             {
+                                                //we update retired attachment need to check if it is retired && if it has PurgeOnDelete
+
                                                 var dbRecord2 = _documentDatabase.ReadDatabaseRecord();
                                                 if (dbRecord2.RetiredAttachments is { Disabled: false })
                                                 {
@@ -566,7 +568,7 @@ namespace Raven.Server.Documents
                 tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
                 tvb.Add(size);
                 tvb.Add(Bits.SwapBytes((int)flags));
-                if(retireAt.HasValue)
+                if (retireAt.HasValue)
                     tvb.Add(retireAt.Value.Ticks);
                 else
                     tvb.Add(-1L);
@@ -577,6 +579,7 @@ namespace Raven.Server.Documents
             if (isRevision == false)
             {
                 // TODO: egor do I need to check for retired config here ?
+                // TODO: egor  write test that add attachment with retireAt, then send it in external replication to DB that doesn't have config for retire attachments see what happen
                 if (flags.Contain(AttachmentFlags.Retired) == false && retireAt.HasValue)
                     RetiredAttachmentsStorage.Put(context, key, retireAt.Value.GetDefaultRavenFormat());
             }
@@ -1347,6 +1350,7 @@ namespace Raven.Server.Documents
             if (attachment == null)
                 AttachmentDoesNotExistException.ThrowFor(sourceDocumentId, sourceName);
             //TODO: egor can I do this for retired?
+            // test: WaitForIndexesAfterSaveChangesSupportsMoveToDifferentCollection
             var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Flags,attachment.Size, retireAtDt: null, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
             DeleteAttachment(context, sourceDocumentId, sourceName, changeVector, out var sourceCollectionName, updateDocument, hash, contentType, usePartialKey, extractCollectionName: extractCollectionName);
 
@@ -1802,6 +1806,15 @@ namespace Raven.Server.Documents
         {
             foreach (var hash in attachmentHashesToMaybeDelete)
                 DeleteAttachmentStream(context, hash);
+        }
+
+        public long GetNumberOfRetiredAttachments(DocumentsOperationContext context)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            using var scope = context.Allocator.Allocate(sizeof(int), out ByteString keyMem);
+            *(int*)(keyMem.Ptr) = Bits.SwapBytes((int)AttachmentFlags.Retired);
+            var slice = new Slice(SliceOptions.Key, keyMem);
+            return table.GetCountOfMatchesForSuffix(AttachmentsSchema.DynamicKeyIndexes[AttachmentsHashAndFlagSlice], slice);
         }
     }
 }
