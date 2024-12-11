@@ -67,7 +67,7 @@ namespace FastTests.Voron.Bugs
             Env.FlushLogToDataFile();
             Assert.Equal(1, Env.Journal.Files.Count);
 
-            Env.Cleanup(tryCleanupRecycledJournals: true);
+            Env.Cleanup();
 
             var scratchBufferPoolInfo = Env.ScratchBufferPool.InfoForDebug(Env.PossibleOldestReadTransaction(null));
             Assert.False(old.Any(j => Env.Journal.Files.Contains(j)));

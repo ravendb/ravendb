@@ -141,14 +141,14 @@ namespace Voron.Impl.Journal
             _transactionHeaders = [.. transactionHeaders];
         }
 
-        public bool DeleteOnClose
+        public bool ShouldDelete
         {
             set
             {
                 var writer = journalWriter;
 
                 if (writer != null)
-                    writer.DeleteOnClose = value;
+                    writer.ShouldDelete = value;
             }
         }
     }

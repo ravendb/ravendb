@@ -1078,7 +1078,7 @@ namespace Voron.Impl.Journal
                             continue;
 
                         if (parent._waj._env.Options.IncrementalBackupEnabled == false)
-                            toDelete.DeleteOnClose = true;
+                            toDelete.ShouldDelete = true;
 
                         parent._journalsToDelete.TryRemove(toDelete.Number, out _);
                         toDelete.Release();
@@ -1140,8 +1140,6 @@ namespace Voron.Impl.Journal
                     }
 
                     _lastFlushed.DoneFlag.Raise();
-
-                    parent._waj._env.Options.SetLastReusedJournalCountOnSync(_lastFlushed.JournalsToDelete.Count);
 
                     return true;
                 }
@@ -1569,7 +1567,7 @@ namespace Voron.Impl.Journal
                     header.Journal.Flags |= JournalInfoFlags.IgnoreMissingLastSyncJournal;
                 });
 
-                current.DeleteOnClose = true;
+                current.ShouldDelete = true;
                 current.Release();
             }
         }

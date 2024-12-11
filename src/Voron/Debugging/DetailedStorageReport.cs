@@ -79,7 +79,6 @@ namespace Voron.Debugging
     public enum TempBufferType
     {
         Scratch,
-        RecyclableJournal
     }
 
     public sealed class TreeReport

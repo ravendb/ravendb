@@ -153,10 +153,5 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.Encrypted.DisableBuffersPooling", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableEncryptionBuffersPooling { get; set; }
 
-        [Description("Max number of recyclable journals that will be reused. ")]
-        [DefaultValue(32)]
-        [MinValue(0)]
-        [ConfigurationEntry("Storage.MaxNumberOfRecyclableJournals", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int MaxNumberOfRecyclableJournals { get; set; }
     }
 }

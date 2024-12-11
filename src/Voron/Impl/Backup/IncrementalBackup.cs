@@ -212,7 +212,7 @@ namespace Voron.Impl.Backup
                                 jrnl.Number < lastSyncedJournal)
                             // prevent deletion of journals that aren't synced with the data file
                             {
-                                jrnl.DeleteOnClose = true;
+                                jrnl.ShouldDelete = true;
                             }
                         }
 

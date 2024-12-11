@@ -23,6 +23,7 @@ namespace Voron.Impl.Journal
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly StorageEnvironmentOptions _options;
+        private readonly long _journalNumber;
 
         private readonly SafeJournalHandle _writeHandle;
         private readonly RavenLogger _log;
@@ -33,11 +34,12 @@ namespace Voron.Impl.Journal
         public int NumberOfAllocated4Kb { get; }
         public bool Disposed => _disposed.IsRaised();
         public VoronPathSetting FileName { get; }
-        public bool DeleteOnClose { get; set; }
+        public bool ShouldDelete { get; set; }
 
-        public JournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long size, PalFlags.JournalMode mode = PalFlags.JournalMode.Safe)
+        public JournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long journalNumber, long size, PalFlags.JournalMode mode = PalFlags.JournalMode.Safe)
         {
             _options = options;
+            _journalNumber = journalNumber;
             FileName = filename;
             _log = RavenLogManager.Instance.GetLoggerForVoron<JournalWriter>(options, options.BasePath.FullPath);
 
@@ -161,9 +163,9 @@ namespace Voron.Impl.Journal
             if (exceptions != null)
                 throw new AggregateException("Failed to dispose journal writer", exceptions);
 
-            if (DeleteOnClose)
+            if (ShouldDelete)
             {
-                _options.TryStoreJournalForReuse(FileName);
+                _options.TryDeleteJournal(_journalNumber);
             }
 
             void TryExecute(Action a)

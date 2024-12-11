@@ -262,7 +262,7 @@ namespace Voron.Impl.Backup
                             if (journalFile.Number < lastWrittenLogFile && // prevent deletion of the current journal and journals with a greater number
                                 journalFile.Number < lastSyncedJournal) // prevent deletion of journals that aren't synced with the data file
                             {
-                                journalFile.DeleteOnClose = true;
+                                journalFile.ShouldDelete = true;
                             }
                         }
 

@@ -388,9 +388,9 @@ namespace Voron.Impl.Journal
             current = (TransactionHeader*)
                 (_journalPager.AcquirePagePointer(_journalPagerState, ref txState, pageNumber) + positionInsidePage);
 
-            if (current->HeaderMarker != Constants.TransactionHeaderMarker || IsOldTransactionFromRecycledJournal(current))
+            if (current->HeaderMarker != Constants.TransactionHeaderMarker)
             {
-                // If the header marker is zero or garbage or we got old transaction, we are probably in the area at the end of the log file.
+                // If the header marker is zero or garbage, we are probably in the area at the end of the log file.
                 // So we don't expect to have any additional transaction log records to read from it.
                 // This can happen if the next transaction was too big to fit in the current log file.
 
@@ -405,9 +405,9 @@ namespace Voron.Impl.Journal
                         // due to the reuse of journals we no longer can assume we have zeros in the end of the journal
                         // we might have there random garbage or old transactions we can ignore, so we have the following scenarios:
 
-                        // * TxId < current Id      ::  we can ignore old transaction of the reused journal and continue
                         // * TxId == current Id + 1  ::  valid, but if hash is invalid. Transaction hasn't been committed
                         // * TxId >  current Id + 1  ::  if hash is invalid we can ignore reused/random, but if hash valid then we might missed TXs 
+                        // * TxId < current Id       ::  if hash is invalid we can ignore reused/random, but if hash valid then we might missed TXs 
 
                         var lastRead4Kb = _readAt4Kb;
                         var lastReadTransactionHeader = LastTransactionHeader;
@@ -417,9 +417,8 @@ namespace Voron.Impl.Journal
                         TransactionHeader* unexpectedValidHeader = null;
                         var encounteredUnexpectedValidHeader = false;
 
-                        using
-                            (options
-                                .DisableOnRecoveryErrorHandler()) // disable error handlers so we'll get InvalidDataException instead of raising false positive alerts 
+                        // disable error handlers so we'll get InvalidDataException instead of raising false positive alerts
+                        using(options.DisableOnRecoveryErrorHandler())  
                         using (options.DisableOnIntegrityErrorOfAlreadySyncedDataHandler()) // in this mode we expect to get garbage
                         {
                             while (_readAt4Kb < _journalPagerNumberOfAllocated4Kb)
@@ -678,19 +677,6 @@ namespace Voron.Impl.Journal
 
             return options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions &&
                    IsAlreadySyncTransaction(currentTx);
-        }
-
-        private bool IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx)
-        {
-            // when reusing journal we might encounter a transaction with valid Id but it comes from already deleted (and reused) journal - recyclable one
-
-            if (_firstValidTransactionHeader != null && currentTx->TransactionId < _firstValidTransactionHeader->TransactionId)
-                return true;
-
-            if (LastTransactionHeader != null && currentTx->TransactionId < LastTransactionHeader->TransactionId)
-                return true;
-
-            return false;
         }
 
         private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, ref Pager.PagerTransactionState txState, long pageNumber, long positionInsidePage)

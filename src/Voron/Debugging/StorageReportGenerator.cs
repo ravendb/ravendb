@@ -349,31 +349,6 @@ namespace Voron.Debugging
                 }
             }).Where(x => x != null).ToList();
 
-            if (journalPath != null)
-            {
-                var recyclableJournals = GetFiles(journalPath.FullPath, $"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}.*").Select(filePath =>
-                {
-                    try
-                    {
-                        var file = new FileInfo(filePath);
-
-                        return new TempBufferReport
-                        {
-                            Name = file.Name,
-                            AllocatedSpaceInBytes = file.Length,
-                            Type = TempBufferType.RecyclableJournal
-                        };
-                    }
-                    catch (FileNotFoundException)
-                    {
-                        // could be deleted meanwhile
-                        return null;
-                    }
-                }).Where(x => x != null).ToList();
-
-                tempFiles.AddRange(recyclableJournals);
-            }
-
             return tempFiles;
 
             IEnumerable<string> GetFiles(string path, string searchPattern)

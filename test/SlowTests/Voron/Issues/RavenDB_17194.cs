@@ -62,14 +62,6 @@ namespace SlowTests.Voron.Issues
 
             Assert.Equal(1, Env.Journal.Files.Count);
 
-            var journalPath = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).JournalPath.FullPath;
-
-
-            var journalsForReuse = new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
-
-            Assert.Equal(1, journalsForReuse.Length);
-
-
             using (var tx = Env.WriteTransaction())
             {
                 // we are writing big values in this tx to ensure we'll have NextFile() call that will create a new journal (based on the recyclable journal file that exists)
@@ -128,15 +120,6 @@ namespace SlowTests.Voron.Issues
             }
 
             Assert.Equal(2, Env.Journal.Files.Count);
-
-
-            var journalPath = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).JournalPath.FullPath;
-
-
-            var journalsForReuse = new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
-
-            Assert.Equal(0, journalsForReuse.Length);
-
 
             using (var tx = Env.WriteTransaction())
             {
@@ -238,13 +221,6 @@ namespace SlowTests.Voron.Issues
             {
                 operation.SyncDataFile();
             }
-
-            var journalPath = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).JournalPath.FullPath;
-
-
-            var journalsForReuse = new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
-
-            Assert.Equal(1, journalsForReuse.Length);
 
 
             using (var tx = Env.WriteTransaction())
