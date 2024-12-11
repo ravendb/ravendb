@@ -8,12 +8,12 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
 {
     internal const string CoraxSkipMessage = $"Corax tests are skipped on v5.4";
 
-    private readonly RavenTestCategory _category;
+    public readonly RavenTestCategory Category;
     private string _skip;
 
     public RavenTheoryAttribute(RavenTestCategory category)
     {
-        _category = category;
+        Category = category;
     }
 
     public bool LicenseRequired { get; set; }
@@ -26,7 +26,7 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
             if (skip != null)
                 return skip;
 
-            if (_category.HasFlag(RavenTestCategory.Corax))
+            if (Category.HasFlag(RavenTestCategory.Corax))
             {
                 return CoraxSkipMessage;
             }

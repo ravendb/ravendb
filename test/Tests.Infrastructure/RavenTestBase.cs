@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
@@ -30,6 +31,7 @@ using Sparrow.Collections;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace FastTests
 {
@@ -119,13 +121,16 @@ namespace FastTests
                     }
 
                     options.ModifyDatabaseRecord?.Invoke(doc);
-                    if (doc.DocumentsCompression != null && options.IgnoreDocumentCompression == false)
+
+                    var isCompressionTest = IsCompressionTest();
+
+                    if (doc.DocumentsCompression != null && isCompressionTest == false)
                     {
                         // check in DatabaseRecord if document compression is enabled, without setting IgnoreDocumentCompression=true
-                        Assert.Fail("Need to setup IgnoreDocumentCompression=true when DocumentsCompression is used in tests");
+                        Assert.Fail($"Please mark compression test with {nameof(RavenFactAttribute)} or {nameof(RavenTheoryAttribute)} attributes with {nameof(RavenTestCategory)}.{nameof(RavenTestCategory.Compression)} set.");
                     }
 
-                    if (RavenTestHelper.RunTestsWithDocsCompression && options.IgnoreDocumentCompression == false && doc.DocumentsCompression == null)
+                    if (RavenTestHelper.RunTestsWithDocsCompression && doc.DocumentsCompression == null && isCompressionTest == false)
                     {
                         doc.DocumentsCompression = new DocumentsCompressionConfiguration
                         {
@@ -133,6 +138,7 @@ namespace FastTests
                             CompressRevisions = true
                         };
                     }
+
                     var store = new DocumentStore
                     {
                         Urls = UseFiddler(serverToUse.WebUrl),
@@ -150,21 +156,6 @@ namespace FastTests
                     store.RequestExecutorCreated += (sender, executor) =>
                     {
                         executor.AdditionalErrorInformation += sb => sb.AppendLine().Append(Cluster.GetLastStatesFromAllServersOrderedByTime());
-                    };
-
-                    store.OnBeforeRequest += (sender, args) =>
-                    {
-                        if (args.Request.Method != HttpMethod.Post)
-                            return;
-                        if (string.IsNullOrEmpty(args.Database))
-                            return;
-                        if (args.Url.EndsWith("/admin/documents-compression/config") == false)
-                            return;
-
-                        if (options.IgnoreDocumentCompression == false)
-                        {
-                            Assert.Fail("Need to setup IgnoreDocumentCompression=true when DocumentsCompression is used in tests");
-                        }
                     };
 
                     store.Initialize();
@@ -254,6 +245,23 @@ namespace FastTests
                     CreatedStores.Add(store);
 
                     return store;
+
+                    bool IsCompressionTest()
+                    {
+                        var testMethod = Context?.Test?.TestCase?.TestMethod?.Method as ReflectionMethodInfo;
+                        if (testMethod == null)
+                            return false;
+
+                        var ravenFactAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenFactAttribute>();
+                        if (ravenFactAttribute != null)
+                            return ravenFactAttribute.Category.HasFlag(RavenTestCategory.Compression);
+
+                        var ravenTheoryAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenTheoryAttribute>();
+                        if (ravenTheoryAttribute != null)
+                            return ravenTheoryAttribute.Category.HasFlag(RavenTestCategory.Compression);
+
+                        return false;
+                    }
                 }
             }
             catch (TimeoutException te)
@@ -629,7 +637,7 @@ namespace FastTests
             }
         }
 
-        protected override void Dispose(ExceptionAggregator exceptionAggregator)
+        protected override void Dispose(Raven.Server.Utils.ExceptionAggregator exceptionAggregator)
         {
             foreach (var store in CreatedStores)
             {
@@ -671,7 +679,7 @@ namespace FastTests
 
             public static Options ForSearchEngine(RavenSearchEngineMode mode)
             {
-                var config = new RavenTestParameters() {SearchEngine = mode};
+                var config = new RavenTestParameters() { SearchEngine = mode };
                 return ForSearchEngine(config);
             }
 
@@ -822,16 +830,6 @@ namespace FastTests
                     {
                         ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true;
                     }
-                }
-            }
-
-            public bool IgnoreDocumentCompression
-            {
-                get => _ignoreDocumentCompression;
-                set
-                {
-                    AssertNotFrozen();
-                    _ignoreDocumentCompression = value;
                 }
             }
 

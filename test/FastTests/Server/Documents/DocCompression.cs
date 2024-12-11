@@ -41,7 +41,7 @@ namespace FastTests.Server.Documents
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Compression, LicenseRequired = true)]
         public void Can_compact_from_no_compression_to_compressed()
         {
             var path = NewDataPath();
@@ -51,7 +51,6 @@ namespace FastTests.Server.Documents
             {
                 Path = path,
                 RunInMemory = false,
-                IgnoreDocumentCompression = true
             });
 
             store.Maintenance.Send(new CreateSampleDataOperation());
@@ -90,7 +89,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Compression, LicenseRequired = true)]
         public void Can_compact_from_compression_to_not_compressed()
         {
             var path = NewDataPath();
@@ -100,7 +99,6 @@ namespace FastTests.Server.Documents
             {
                 Path = path,
                 RunInMemory = false,
-                IgnoreDocumentCompression = true,
                 ModifyDatabaseRecord = r => r.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Orders")
             });
 
@@ -140,7 +138,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Compression, LicenseRequired = true)]
         public void Can_compact_db_with_compressed_collections()
         {
             var path = NewDataPath();
@@ -151,7 +149,6 @@ namespace FastTests.Server.Documents
                 Path = path,
                 RunInMemory = false,
                 ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Orders"),
-                IgnoreDocumentCompression = true,
             });
 
             store.Maintenance.Send(new CreateSampleDataOperation());
@@ -181,14 +178,13 @@ namespace FastTests.Server.Documents
             operation.WaitForCompletion(TimeSpan.FromMinutes(5));
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Compression, LicenseRequired = true)]
         public void Can_write_many_documents_without_breakage()
         {
             var random = new Random(654);
             using var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users"),
-                IgnoreDocumentCompression = true,
             });
 
             var rnd = Enumerable.Range(1, 10)
@@ -210,10 +206,7 @@ namespace FastTests.Server.Documents
         public void Can_set_collection_compressed_when_it_has_docs()
         {
             var random = new Random(343);
-            using var store = GetDocumentStore(new Options()
-            {
-                IgnoreDocumentCompression = true
-            });
+            using var store = GetDocumentStore();
 
             var rnd = Enumerable.Range(1, 10)
                 .Select(i => new string((char)(65 + i), 256))
@@ -296,14 +289,13 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Compression, LicenseRequired = true)]
         public void Can_update_many_documents_without_breakage()
         {
             var random = new Random(654);
             using var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users"),
-                IgnoreDocumentCompression = true,
             });
 
             var rnd = Enumerable.Range(1, 10)
@@ -341,14 +333,13 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Compression, LicenseRequired = true)]
         public void Can_update_many_documents_without_breakage_to_be_smaller()
         {
             var random = new Random(654);
             using var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users"),
-                IgnoreDocumentCompression = true,
             });
 
             var rnd = Enumerable.Range(1, 10)
