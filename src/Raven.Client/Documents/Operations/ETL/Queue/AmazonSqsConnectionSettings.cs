@@ -8,7 +8,7 @@ public sealed class AmazonSqsConnectionSettings
 {
     internal const string EmulatorUrlEnvironmentVariable = "RAVEN_AMAZON_SQS_EMULATOR_URL";
     
-    public Basic Basic { get; set; }
+    public AmazonSqsCredentials Basic { get; set; }
 
     public bool Passwordless { get; set; }
 
@@ -56,9 +56,13 @@ public sealed class AmazonSqsConnectionSettings
                     [nameof(Basic.SecretKey)] = Basic?.SecretKey,
                     [nameof(Basic.RegionName)] = Basic?.RegionName
                 },
-            [nameof(Passwordless)] = Passwordless,
-            [nameof(UseEmulator)] = UseEmulator
+            [nameof(Passwordless)] = Passwordless
         };
+        
+        if (UseEmulator)
+        {
+            json[nameof(UseEmulator)] = UseEmulator;
+        }
 
         return json;
     }
@@ -70,7 +74,7 @@ public sealed class AmazonSqsConnectionSettings
     }
 }
 
-public class Basic
+public class AmazonSqsCredentials
 {
     public string AccessKey { get; set; }
 

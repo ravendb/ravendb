@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -1208,32 +1208,26 @@ namespace Raven.Server.Documents.ETL
             switch (testScript.Configuration.EtlType)
             {
                 case EtlType.Sql:
-                    using (var sqlEtl = new SqlEtl(testScript.Configuration.Transforms[0],
-                               testScript.Configuration as SqlEtlConfiguration, database,
-                               database.ServerStore))
+                    using (var sqlEtl = new SqlEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SqlEtlConfiguration, database,
+                        database.ServerStore))
                     using (sqlEtl.EnterTestMode(out debugOutput))
                     {
                         sqlEtl.EnsureThreadAllocationStats();
 
-                        var sqlItem = testScript.IsDelete
-                            ? new RelationalDatabaseItem(tombstone, docCollection)
-                            : new RelationalDatabaseItem(document, docCollection);
+                        var sqlItem = testScript.IsDelete ? new RelationalDatabaseItem(tombstone, docCollection) : new RelationalDatabaseItem(document, docCollection);
 
-                        var transformed = sqlEtl.Transform(new[] { sqlItem }, context,
-                            new EtlStatsScope(new EtlRunStats()),
+                        var transformed = sqlEtl.Transform(new[] { sqlItem }, context, new EtlStatsScope(new EtlRunStats()),
                             new EtlProcessState());
 
                         Debug.Assert(relationalTestScript != null);
 
-                        var result = sqlEtl.RunTest(context, transformed,
-                            relationalTestScript.PerformRolledBackTransaction);
+                        var result = sqlEtl.RunTest(context, transformed, relationalTestScript.PerformRolledBackTransaction);
                         result.DebugOutput = debugOutput;
                         return result;
                     }
                 case EtlType.Raven:
-                    using (var ravenEtl = new RavenEtl(testScript.Configuration.Transforms[0],
-                               testScript.Configuration as RavenEtlConfiguration, database,
-                               database.ServerStore))
+                    using (var ravenEtl = new RavenEtl(testScript.Configuration.Transforms[0], testScript.Configuration as RavenEtlConfiguration, database,
+                        database.ServerStore))
                     using (ravenEtl.EnterTestMode(out debugOutput))
                     {
                         ravenEtl.EnsureThreadAllocationStats();
@@ -1242,17 +1236,12 @@ namespace Raven.Server.Documents.ETL
                             ? new RavenEtlItem(tombstone, docCollection, EtlItemType.Document)
                             : new RavenEtlItem(document, docCollection);
 
-                        var results = ravenEtl.Transform(new[] { ravenEtlItem }, context,
-                            new EtlStatsScope(new EtlRunStats()),
-                            new EtlProcessState
-                            {
-                                SkippedTimeSeriesDocs = new HashSet<string> { testScript.DocumentId }
-                            });
+                        var results = ravenEtl.Transform(new[] { ravenEtlItem }, context, new EtlStatsScope(new EtlRunStats()),
+                            new EtlProcessState { SkippedTimeSeriesDocs = new HashSet<string> { testScript.DocumentId } });
 
                         return new RavenEtlTestScriptResult
                         {
-                            TransformationErrors =
-                                ravenEtl.Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
+                            TransformationErrors = ravenEtl.Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
                             Commands = results.ToList(),
                             DebugOutput = debugOutput
                         };
@@ -1266,24 +1255,18 @@ namespace Raven.Server.Documents.ETL
 
                     olapTestScriptConfiguration.Connection = new OlapConnectionString();
 
-                    using (var olapElt = new OlapEtl(testScript.Configuration.Transforms[0],
-                               olapTestScriptConfiguration, database, database.ServerStore))
+                    using (var olapElt = new OlapEtl(testScript.Configuration.Transforms[0], olapTestScriptConfiguration, database, database.ServerStore))
                     using (olapElt.EnterTestMode(out debugOutput))
                     {
                         olapElt.EnsureThreadAllocationStats();
 
                         if (testScript.IsDelete)
-                            throw new InvalidOperationException(
-                                "OLAP ETL doesn't deal with deletions. It's append only process");
+                            throw new InvalidOperationException("OLAP ETL doesn't deal with deletions. It's append only process");
 
                         var olapEtlItem = new ToOlapItem(document, docCollection);
 
-                        var results = olapElt.Transform(new[] { olapEtlItem }, context,
-                            new OlapEtlStatsScope(new EtlRunStats()),
-                            new EtlProcessState
-                            {
-                                SkippedTimeSeriesDocs = new HashSet<string> { testScript.DocumentId }
-                            });
+                        var results = olapElt.Transform(new[] { olapEtlItem }, context, new OlapEtlStatsScope(new EtlRunStats()),
+                            new EtlProcessState { SkippedTimeSeriesDocs = new HashSet<string> { testScript.DocumentId } });
 
                         var itemsByPartition = new List<OlapEtlTestScriptResult.PartitionItems>();
 
@@ -1306,7 +1289,9 @@ namespace Raven.Server.Documents.ETL
 
                                         partitionItems.Columns.Add(new OlapEtlTestScriptResult.PartitionColumn
                                         {
-                                            Name = field.Name, Type = field.ClrType.Name, Values = columnData.Value
+                                            Name = field.Name,
+                                            Type = field.ClrType.Name,
+                                            Values = columnData.Value
                                         });
                                     }
 
@@ -1320,26 +1305,20 @@ namespace Raven.Server.Documents.ETL
 
                         return new OlapEtlTestScriptResult
                         {
-                            TransformationErrors =
-                                olapElt.Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
+                            TransformationErrors = olapElt.Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
                             ItemsByPartition = itemsByPartition,
                             DebugOutput = debugOutput
                         };
                     }
                 case EtlType.ElasticSearch:
-                    using (var elasticSearchEtl = new ElasticSearchEtl(testScript.Configuration.Transforms[0],
-                               testScript.Configuration as ElasticSearchEtlConfiguration, database,
-                               database.ServerStore))
+                    using (var elasticSearchEtl = new ElasticSearchEtl(testScript.Configuration.Transforms[0], testScript.Configuration as ElasticSearchEtlConfiguration, database, database.ServerStore))
                     using (elasticSearchEtl.EnterTestMode(out debugOutput))
                     {
                         elasticSearchEtl.EnsureThreadAllocationStats();
 
-                        var elasticSearchItem = testScript.IsDelete
-                            ? new ElasticSearchItem(tombstone, docCollection)
-                            : new ElasticSearchItem(document, docCollection);
+                        var elasticSearchItem = testScript.IsDelete ? new ElasticSearchItem(tombstone, docCollection) : new ElasticSearchItem(document, docCollection);
 
-                        var results = elasticSearchEtl.Transform(new[] { elasticSearchItem }, context,
-                            new EtlStatsScope(new EtlRunStats()),
+                        var results = elasticSearchEtl.Transform(new[] { elasticSearchItem }, context, new EtlStatsScope(new EtlRunStats()),
                             new EtlProcessState());
 
                         var result = elasticSearchEtl.RunTest(results, context);
@@ -1347,8 +1326,7 @@ namespace Raven.Server.Documents.ETL
                         return result;
                     }
                 case EtlType.Queue:
-                    using (var queueEtl = QueueEtl<QueueItem>.CreateInstance(testScript.Configuration.Transforms[0],
-                               testScript.Configuration as QueueEtlConfiguration, database,
+                    using (var queueEtl = QueueEtl<QueueItem>.CreateInstance(testScript.Configuration.Transforms[0], testScript.Configuration as QueueEtlConfiguration, database,
                                database.ServerStore))
                     {
                         switch (queueEtl)
@@ -1360,8 +1338,7 @@ namespace Raven.Server.Documents.ETL
 
                                     var queueItem = new QueueItem(document, docCollection);
 
-                                    var results = kafkaEtl.Transform(new[] { queueItem }, context,
-                                        new EtlStatsScope(new EtlRunStats()),
+                                    var results = kafkaEtl.Transform(new[] { queueItem }, context, new EtlStatsScope(new EtlRunStats()),
                                         new EtlProcessState());
 
                                     var result = kafkaEtl.RunTest(results, context);
@@ -1375,8 +1352,7 @@ namespace Raven.Server.Documents.ETL
 
                                     var queueItem = new QueueItem(document, docCollection);
 
-                                    var results = rabbitMqEtl.Transform(new[] { queueItem }, context,
-                                        new EtlStatsScope(new EtlRunStats()),
+                                    var results = rabbitMqEtl.Transform(new[] { queueItem }, context, new EtlStatsScope(new EtlRunStats()),
                                         new EtlProcessState());
 
                                     var result = rabbitMqEtl.RunTest(results, context);
@@ -1390,14 +1366,13 @@ namespace Raven.Server.Documents.ETL
 
                                     var queueItem = new QueueItem(document, docCollection);
 
-                                    var results = azureQueueStorageEtl.Transform(new[] { queueItem }, context,
-                                        new EtlStatsScope(new EtlRunStats()),
+                                    var results = azureQueueStorageEtl.Transform(new[] { queueItem }, context, new EtlStatsScope(new EtlRunStats()),
                                         new EtlProcessState());
 
                                     var result = azureQueueStorageEtl.RunTest(results, context);
                                     result.DebugOutput = debugOutput;
 
-                                    return result;
+                                        return result;
                                 }
                             case AmazonSqsEtl amazonSqsEtl:
                                 using (amazonSqsEtl.EnterTestMode(out debugOutput))
@@ -1416,38 +1391,32 @@ namespace Raven.Server.Documents.ETL
                                     return result;
                                 }
                             default:
-                                throw new NotSupportedException(
-                                    $"Unknown Queue ETL type in script test: {queueEtl.GetType().FullName}");
+                                throw new NotSupportedException($"Unknown Queue ETL type in script test: {queueEtl.GetType().FullName}");
+                            }
+                    }
+                        
+                    case EtlType.Snowflake:
+                        using (var snowflakeEtl = new SnowflakeEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SnowflakeEtlConfiguration, database,
+                            database.ServerStore))
+                        using (snowflakeEtl.EnterTestMode(out debugOutput))
+                        {
+                            snowflakeEtl.EnsureThreadAllocationStats();
+
+                            var snowflakeItem = testScript.IsDelete ? new RelationalDatabaseItem(tombstone, docCollection) : new RelationalDatabaseItem(document, docCollection);
+
+                            var transformed = snowflakeEtl.Transform(new[] { snowflakeItem }, context, new EtlStatsScope(new EtlRunStats()),
+                                new EtlProcessState());
+
+                            Debug.Assert(relationalTestScript != null);
+
+                            var result = snowflakeEtl.RunTest(context, transformed, relationalTestScript.PerformRolledBackTransaction);
+                            result.DebugOutput = debugOutput;
+                            return result;
                         }
-                    }
-
-                case EtlType.Snowflake:
-                    using (var snowflakeEtl = new SnowflakeEtl(testScript.Configuration.Transforms[0],
-                               testScript.Configuration as SnowflakeEtlConfiguration, database,
-                               database.ServerStore))
-                    using (snowflakeEtl.EnterTestMode(out debugOutput))
-                    {
-                        snowflakeEtl.EnsureThreadAllocationStats();
-
-                        var snowflakeItem = testScript.IsDelete
-                            ? new RelationalDatabaseItem(tombstone, docCollection)
-                            : new RelationalDatabaseItem(document, docCollection);
-
-                        var transformed = snowflakeEtl.Transform(new[] { snowflakeItem }, context,
-                            new EtlStatsScope(new EtlRunStats()),
-                            new EtlProcessState());
-
-                        Debug.Assert(relationalTestScript != null);
-
-                        var result = snowflakeEtl.RunTest(context, transformed,
-                            relationalTestScript.PerformRolledBackTransaction);
-                        result.DebugOutput = debugOutput;
-                        return result;
-                    }
-                default:
-                    throw new NotSupportedException(
-                        $"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
-            }
+                        
+                    default:
+                        throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
+                }
         }
 
         private IDisposable EnterTestMode(out List<string> debugOutput)
