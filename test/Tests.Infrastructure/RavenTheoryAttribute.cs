@@ -7,11 +7,11 @@ namespace Tests.Infrastructure;
 public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
 {
     private string _skip;
-    private readonly RavenTestCategory _category;
+    public readonly RavenTestCategory Category;
 
     public RavenTheoryAttribute(RavenTestCategory category)
     {
-        _category = category;
+        Category = category;
     }
 
     public bool LicenseRequired { get; set; }
@@ -26,7 +26,7 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
     {
         get
         {
-            return ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, s3Required: S3Required, azureRequired: AzureRequired);
+            return ShouldSkip(_skip, Category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, s3Required: S3Required, azureRequired: AzureRequired);
         }
 
         set => _skip = value;

@@ -6,11 +6,12 @@ namespace Tests.Infrastructure;
 [TraitDiscoverer("Tests.Infrastructure.XunitExtensions.RavenTraitDiscoverer", "Tests.Infrastructure")]
 public class RavenFactAttribute : FactAttribute, ITraitAttribute
 {
+    public readonly RavenTestCategory Category;
     private string _skip;
-    private readonly RavenTestCategory _category;
+
     public RavenFactAttribute(RavenTestCategory category)
     {
-        _category = category;
+        Category = category;
     }
 
     public bool LicenseRequired { get; set; }
@@ -25,7 +26,7 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
     {
         get
         {
-            return ShouldSkip(_skip,  _category,  licenseRequired: LicenseRequired,  nightlyBuildRequired: NightlyBuildRequired,  msSqlRequired: MsSqlRequired,  elasticSearchRequired: ElasticSearchRequired);
+            return ShouldSkip(_skip, Category,  licenseRequired: LicenseRequired,  nightlyBuildRequired: NightlyBuildRequired,  msSqlRequired: MsSqlRequired,  elasticSearchRequired: ElasticSearchRequired);
         }
 
         set => _skip = value;
