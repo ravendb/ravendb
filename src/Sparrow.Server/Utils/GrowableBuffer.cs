@@ -91,7 +91,7 @@ public unsafe struct GrowableBuffer<TNumber, TGrowth> : IDisposable
     public void Init(ByteStringContext context, in long initialSize)
     {
         _context = context;
-        _context.Allocate(_growthCalculator.GetInitialSize(initialSize * sizeof(TNumber)), out _buffer);
+        _context.Allocate(_growthCalculator.GetInitialSize(initialSize), out _buffer);
         IsInitialized = true;
     }
 

@@ -116,6 +116,8 @@ public struct VectorSearchMatch : IQueryMatch
         {
             var mBuf = matches.GetSpace();
             var dBuf = distances.GetSpace();
+            Debug.Assert(mBuf.Length == dBuf.Length, "mBuf.Length == dBuf.Length");
+            
             currentRead = _nearestSearch.Fill(mBuf, dBuf);
             matches.AddUsage(currentRead);
             distances.AddUsage(currentRead);
