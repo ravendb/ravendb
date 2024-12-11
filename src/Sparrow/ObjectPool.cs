@@ -6,12 +6,13 @@
 // 
 //#define TRACE_LEAKS
 
-// define DETECT_LEAKS to detect possible leaks
+//#define DETECT_LEAKS to detect possible leaks
 //#if DEBUG
 //    #define DETECT_LEAKS  //for now always enable DETECT_LEAKS in debug.
 //#endif
 
 
+using Sparrow.Collections;
 using Sparrow.Utils;
 
 namespace Sparrow
@@ -75,11 +76,6 @@ namespace Sparrow
     {
         private static readonly TResetBehavior Behavior = new TResetBehavior();
 
-        private struct Element
-        {
-            internal T Value;
-        }
-
         /// <remarks>
         /// Not using System.Func{T} because this file is linked into the (debugger) Formatter,
         /// which does not have that type (since it compiles against .NET 2.0).
@@ -89,7 +85,7 @@ namespace Sparrow
         // Storage for the pool objects. The first item is stored in a dedicated field because we
         // expect to be able to satisfy most requests from it.
         private T _firstItem;
-        private readonly Element[] _items;
+        private readonly LockFreeRingBuffer<T> _ringBuffer;
 
         // factory is stored for the lifetime of the pool. We will call this only when pool needs to
         // expand. compared to "new T()", Func gives more flexibility to implementers and faster
@@ -145,7 +141,7 @@ namespace Sparrow
         {
             Debug.Assert(size >= 1);
             _factory = factory;
-            _items = new Element[size - 1];
+            _ringBuffer = new LockFreeRingBuffer<T>(size);
         }
 
         private T CreateInstance()
@@ -178,7 +174,8 @@ namespace Sparrow
             T inst = _firstItem;
             if (inst == null || inst != Interlocked.CompareExchange(ref _firstItem, null, inst))
             {
-                inst = AllocateSlow();
+                if (_ringBuffer.TryDequeue(out inst) == false)
+                    inst = CreateInstance();
             }
 
 #if DETECT_LEAKS
@@ -192,28 +189,6 @@ namespace Sparrow
 #endif
             return inst;
         }  
-
-        private T AllocateSlow()
-        {
-            var items = _items;
-
-            for (int i = 0; i < items.Length; i++)
-            {
-                // Note that the initial read is optimistically not synchronized. That is intentional. 
-                // We will interlock only when we have a candidate. in a worst case we may miss some
-                // recently returned objects. Not a big deal.
-                T inst = items[i].Value;
-                if (inst != null)
-                {
-                    if (inst == Interlocked.CompareExchange(ref items[i].Value, null, inst))
-                    {
-                        return inst;
-                    }
-                }
-            }
-
-            return CreateInstance();
-        }
 
         /// <summary>
         /// Returns objects to the pool.
@@ -231,33 +206,11 @@ namespace Sparrow
 
             Behavior.Reset(obj);
 
-            if (_firstItem == null)
-            {
-                // Intentionally not using interlocked here. 
-                // In a worst case scenario two objects may be stored into same slot.
-                // It is very unlikely to happen and will only mean that one of the objects will get collected.
-                _firstItem = obj;
-            }
-            else
-            {
-                FreeSlow(obj);
-            }
-        }
+            T inst = _firstItem;
+            if (inst == null && Interlocked.CompareExchange(ref _firstItem, obj, null) == null)
+                return; // Successfully stored in _firstItem; no further action required.
 
-        private void FreeSlow(T obj)
-        {
-            var items = _items;
-            for (int i = 0; i < items.Length; i++)
-            {
-                if (items[i].Value == null)
-                {
-                    // Intentionally not using interlocked here. 
-                    // In a worst case scenario two objects may be stored into same slot.
-                    // It is very unlikely to happen and will only mean that one of the objects will get collected.
-                    items[i].Value = obj;
-                    break;
-                }
-            }
+            _ringBuffer.TryEnqueue(obj);
         }
 
         /// <summary>
@@ -303,20 +256,18 @@ namespace Sparrow
 
         [Conditional("DEBUG")]
         [Conditional("DETECT_LEAKS")]
-        private void Validate(object obj)
+        private void Validate(T obj)
         {
             Debug.Assert(obj != null, "freeing null?");
 
-            var items = _items;
-            for (int i = 0; i < items.Length; i++)
+            int count = _ringBuffer.Count;
+            for (int i = 0; i < count; i++)
             {
-                var value = items[i].Value;
-                if (value == null)
+                if (_ringBuffer.TryDequeue(out var item))
                 {
-                    return;
+                    Debug.Assert(item != obj, "freeing twice?");
+                    _ringBuffer.TryEnqueue(item);
                 }
-
-                Debug.Assert(value != obj, "freeing twice?");
             }
         }
     }
