@@ -4,6 +4,7 @@ using Raven.Server.Config.Settings;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
+using Voron.Impl.FileHeaders;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,10 +28,7 @@ namespace SlowTests.Voron
 
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(dataDir)))
             {
-                unsafe
-                {
-                    Assert.Equal(Constants.CurrentVersion, env.HeaderAccessor.Get(ptr => ptr->Version));
-                }
+                Assert.Equal(Constants.CurrentVersion, env.HeaderAccessor.Get((in FileHeader header) => header.Version));
             }
         }
 

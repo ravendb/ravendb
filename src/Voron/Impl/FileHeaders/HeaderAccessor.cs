@@ -7,6 +7,7 @@
 using Sparrow;
 using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -41,13 +42,12 @@ namespace Voron.Impl.FileHeaders
                 if (_disposed)
                     throw new ObjectDisposedException("Cannot access the header after it was disposed");
 
-                var hasOne = env.Options.ReadHeader(HeaderFileNames[0], out var headerOne);
-                var hasTwo = env.Options.ReadHeader(HeaderFileNames[1], out var headerTwo);
-                if (hasOne  is false && hasTwo is false)
+                var hasOne = env.Options.ReadValidHeader(HeaderFileNames[0], out var headerOne);
+                var hasTwo = env.Options.ReadValidHeader(HeaderFileNames[1], out var headerTwo);
+                if (hasOne is false && hasTwo is false)
                 {
                     // new 
                     FillInEmptyHeader(ref headerOne);
-                    headerOne.Hash = CalculateFileHeaderHash(MemoryMarshal.AsBytes(new Span<FileHeader>(ref headerOne)), headerOne.TransactionId);
                     env.Options.WriteHeader(HeaderFileNames[0], headerOne);
                     env.Options.WriteHeader(HeaderFileNames[1], headerOne);
 
@@ -58,21 +58,13 @@ namespace Voron.Impl.FileHeaders
                 if (headerOne.MagicMarker != Constants.MagicMarker && headerTwo.MagicMarker != Constants.MagicMarker)
                     throw new InvalidDataException("None of the header files start with the magic marker, probably not db files or fatal corruption on " + env.Options.BasePath);
 
-                var headerOneBytes = MemoryMarshal.AsBytes(new System.Span<FileHeader>(ref headerOne));
-                var headerOneValid = headerOne.Hash == CalculateFileHeaderHash(headerOneBytes, headerOne.TransactionId);
-                var headerTwoBytes = MemoryMarshal.AsBytes(new System.Span<FileHeader>(ref headerTwo));
-                var headerTwoValid = headerTwo.Hash == CalculateFileHeaderHash(headerTwoBytes, headerTwo.TransactionId);
-
-                if (headerOneValid is false && headerTwoValid is false)
-                    throw new InvalidDataException("None of the header files have a valid hash, possible corruption on " + env.Options.BasePath);
-
                 // if one of the files is corrupted, but the other isn't, restore to the valid file
-                if (headerOne.MagicMarker != Constants.MagicMarker || headerOneValid is false)
+                if (headerOne.MagicMarker != Constants.MagicMarker || hasOne is false)
                 {
                     headerOne = headerTwo;
                 }
                 
-                if (headerTwo.MagicMarker != Constants.MagicMarker || headerTwoValid is false)
+                if (headerTwo.MagicMarker != Constants.MagicMarker || hasTwo is false)
                 {
                     headerTwo = headerOne;
                 }
@@ -80,14 +72,7 @@ namespace Voron.Impl.FileHeaders
                 if (headerOne.TransactionId < 0)
                     throw new InvalidDataException("The transaction number cannot be negative on " + env.Options.BasePath);
 
-                if (headerOne.HeaderRevision > headerTwo.HeaderRevision)
-                {
-                    _theHeader = headerOne;
-                }
-                else
-                {
-                    _theHeader = headerTwo;
-                }
+                _theHeader = headerOne.HeaderRevision > headerTwo.HeaderRevision ? headerOne : headerTwo;
                 _revision = _theHeader.HeaderRevision;
 
                 if (_theHeader.Version != Constants.CurrentVersion)
@@ -174,10 +159,8 @@ namespace Voron.Impl.FileHeaders
                 _theHeader.HeaderRevision = _revision;
 
                 var file = HeaderFileNames[_revision & 1];
-
-                _theHeader.Hash = CalculateFileHeaderHash(
-                    MemoryMarshal.AsBytes(new Span<FileHeader>(ref _theHeader)),
-                    _theHeader.TransactionId);
+                var buffer = MemoryMarshal.AsBytes(new Span<FileHeader>(ref _theHeader));
+                _theHeader.Hash = Hashing.XXHash64.CalculateInline(buffer[..^sizeof(ulong)], (ulong)_theHeader.TransactionId);
                 env.Options.WriteHeader(file, _theHeader);
             }
             finally
@@ -206,7 +189,9 @@ namespace Voron.Impl.FileHeaders
             header.IncrementalBackup.LastBackedUpJournalPage = -1;
             header.IncrementalBackup.LastCreatedJournal = -1;
             header.PageSize = env.Options.PageSize;
-            header.DatabaseId=Guid.Empty;
+            header.DatabaseId = Guid.Empty;
+            var buffer = MemoryMarshal.AsBytes(new Span<FileHeader>(ref header));
+            header.Hash = Hashing.XXHash64.CalculateInline(buffer[..^sizeof(ulong)], (ulong)header.TransactionId);
         }
 
         private bool IsEmptyHeader(in FileHeader header)
@@ -226,29 +211,6 @@ namespace Voron.Impl.FileHeaders
                    header.DatabaseId == Guid.Empty;
         }
 
-   
-        public static ulong CalculateFileHeaderHash(Span<byte> header, long transactionId)
-        {
-            var ctx = new Hashing.Streamed.XXHash64Context
-            {
-                Seed = (ulong)transactionId
-            };
-            Hashing.Streamed.XXHash64.Begin(ref ctx);
-
-            fixed (byte* p = header)
-            {
-                // First part of header, until the Hash field
-                Hashing.Streamed.XXHash64.Process(ref ctx, p, FileHeader.HashOffset);
-
-                // Second part of header, after the hash field
-                var secondPartOfHeaderLength = header.Length - (FileHeader.HashOffset + sizeof(ulong));
-                if (secondPartOfHeaderLength > 0)
-                    Hashing.Streamed.XXHash64.Process(ref ctx, p + FileHeader.HashOffset + sizeof(ulong), secondPartOfHeaderLength);
-
-            }
-            return Hashing.Streamed.XXHash64.End(ref ctx);
-        }
-
         public JournalInfo CopyHeaders(BackupZipArchive package, DataCopier copier, StorageEnvironmentOptions envOptions, string basePath)
         {
             _locker.EnterReadLock(); //race between reading the headers while modifying them
@@ -259,7 +221,7 @@ namespace Voron.Impl.FileHeaders
                 var success = false;
                 foreach (var headerFileName in HeaderFileNames)
                 {
-                    if (envOptions.ReadHeader(headerFileName, out var header) == false)
+                    if (envOptions.ReadValidHeader(headerFileName, out var header) == false)
                         continue;
 
                     success = true;

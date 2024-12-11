@@ -153,10 +153,10 @@ namespace Voron.Impl.Journal
             journal.RegisteredEnvironments[_env] = _journalIndex;
             _files = _files.Append(journal);
 
-            _headerAccessor.Modify(header =>
+            _headerAccessor.Modify((ref FileHeader header) =>
             {
-                header->Journal.CurrentJournal = journal.Number;
-                header->IncrementalBackup.LastCreatedJournal = journal.Number;
+                header.Journal.CurrentJournal = journal.Number;
+                header.IncrementalBackup.LastCreatedJournal = journal.Number;
             });
 
             return journal;
@@ -168,9 +168,9 @@ namespace Voron.Impl.Journal
             // fashion on db startup
             var requireHeaderUpdate = false;
 
-            var logInfo = _headerAccessor.Get(ptr => ptr->Journal);
-            var currentFileHeader = _headerAccessor.Get(ptr => *ptr);
-
+            var currentFileHeader = _headerAccessor.CopyHeader();
+            var logInfo = currentFileHeader.Journal;
+            
             if (_env.Options.IncrementalBackupEnabled == false && _env.Options.CopyOnWriteMode == false)
             {
                 // we want to check that we cleanup old log files if they aren't needed
@@ -377,6 +377,7 @@ namespace Voron.Impl.Journal
                     }
                     else
                     {
+                        journalFile.RegisteredEnvironments[_env] = journalFile.Number;
                         _files = _files.Append(journalFile);
                     }
                 }
@@ -419,11 +420,10 @@ namespace Voron.Impl.Journal
                 // we didn't process all journals due to encountered errors
                 // we must update the header and set current journal to the last processed one
 
-                _headerAccessor.Modify(
-                    header =>
+                _headerAccessor.Modify((ref FileHeader header) =>
                     {
-                        header->Journal.CurrentJournal = lastProcessedJournal;
-                        header->IncrementalBackup.LastCreatedJournal = lastProcessedJournal;
+                        header.Journal.CurrentJournal = lastProcessedJournal;
+                        header.IncrementalBackup.LastCreatedJournal = lastProcessedJournal;
                     });
 
                 if (CurrentFile != null)
@@ -502,7 +502,7 @@ namespace Voron.Impl.Journal
 
         public JournalInfo GetCurrentJournalInfo()
         {
-            return _headerAccessor.Get(ptr => ptr->Journal);
+            return _headerAccessor.Get((in FileHeader header) => header.Journal);
         }
 
         public sealed class JournalApplicator : IDisposable
@@ -649,6 +649,11 @@ namespace Voron.Impl.Journal
                     }
 
                     _forTestingPurposes?.OnApplyLogsToDataFileUnderFlushingLock?.Invoke();
+
+                    if (_waj._env.DataPager.FileName.Contains("Indexes"))
+                    {
+                        Console.WriteLine();
+                    }
 
                     if (_applyLogsToDataFileStateFromPreviousFailedAttempt != null)
                     {
@@ -856,7 +861,11 @@ namespace Voron.Impl.Journal
             {
                 _forTestingPurposes?.OnUpdateJournalStateUnderWriteTransactionLock?.Invoke();
 
-                JournalFile journalFile = _waj._files.First(x => x.Number == flushedRecord.WrittenToJournalNumber);
+                JournalFile journalFile = _waj._files.FirstOrDefault(x => x.Number == flushedRecord.WrittenToJournalNumber);
+                if (journalFile is null)
+                {
+                    throw new InvalidOperationException($"Unable to find journal file {flushedRecord.WrittenToJournalNumber} in {_waj._env.DataPager.FileName}");
+                }
 
                 var unusedJournals = new List<JournalFile>();
                 _waj._files = _waj._files.RemoveWhile(x =>
@@ -1427,22 +1436,25 @@ namespace Voron.Impl.Journal
                 var transactionId = flushState.TransactionId;
                 var lastPageNumber = flushState.LastPageNumber;
 
-                _waj._headerAccessor.Modify(header =>
+                _waj._headerAccessor.Modify((ref FileHeader header) =>
                 {
-                    header->TransactionId = transactionId;
-                    header->LastPageNumber = lastPageNumber;
+                    header.TransactionId = transactionId;
+                    header.LastPageNumber = lastPageNumber;
 
-                    header->Journal.LastSyncedJournal = lastSyncedJournal;
-                    header->Journal.LastSyncedTransactionId = lastSyncedTransactionId;
+                    header.Journal.LastSyncedJournal = lastSyncedJournal;
+                    header.Journal.LastSyncedTransactionId = lastSyncedTransactionId;
 
-                    Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
+                    for (int i = 0; i < JournalInfo.NumberOfReservedBytes; i++)
+                    {
+                        header.Journal.Reserved[i] = 0;
+                    }
 
                     if (ignoreLastSyncJournalMissing)
-                        header->Journal.Flags |= JournalInfoFlags.IgnoreMissingLastSyncJournal;
+                        header.Journal.Flags |= JournalInfoFlags.IgnoreMissingLastSyncJournal;
                     else
-                        header->Journal.Flags &= ~JournalInfoFlags.IgnoreMissingLastSyncJournal;
+                        header.Journal.Flags &= ~JournalInfoFlags.IgnoreMissingLastSyncJournal;
 
-                    header->Root = treeRootHeader;
+                    header.Root = treeRootHeader;
                 });
             }
 
@@ -1529,7 +1541,7 @@ namespace Voron.Impl.Journal
 
                 var current = _waj._files.First();
 
-                var logInfo = _waj._env.HeaderAccessor.Get(ptr => ptr->Journal);
+                var logInfo = _waj._env.HeaderAccessor.Get((in FileHeader header) => header.Journal);
 
                 if (current.Number != logInfo.LastSyncedJournal)
                     throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile?.Number ?? -1, _lastFlushed.JournalId));
@@ -1541,17 +1553,20 @@ namespace Voron.Impl.Journal
                 _waj._files = _waj._files.RemoveFront(1);
                 _waj.CurrentFile = null;
 
-                _waj._headerAccessor.Modify(header =>
+                _waj._headerAccessor.Modify((ref FileHeader header) =>
                 {
-                    header->Journal.CurrentJournal = -1;
+                    header.Journal.CurrentJournal = -1;
 
-                    if (current.Number != header->Journal.LastSyncedJournal)
+                    if (current.Number != header.Journal.LastSyncedJournal)
                     {
-                        throw new InvalidOperationException($"Attempted to remove a journal ({current.Number}) that hasn't been synced yet (last synced journal: {header->Journal.LastSyncedJournal})");
+                        throw new InvalidOperationException($"Attempted to remove a journal ({current.Number}) that hasn't been synced yet (last synced journal: {header.Journal.LastSyncedJournal})");
                     }
 
-                    Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
-                    header->Journal.Flags |= JournalInfoFlags.IgnoreMissingLastSyncJournal;
+                    for (int i = 0; i < JournalInfo.NumberOfReservedBytes; i++)
+                    {
+                        header.Journal.Reserved[i] = 0;
+                    }
+                    header.Journal.Flags |= JournalInfoFlags.IgnoreMissingLastSyncJournal;
                 });
 
                 current.DeleteOnClose = true;
@@ -1757,10 +1772,10 @@ namespace Voron.Impl.Journal
             _journalIndex++;
             matchingJournalNumber = journalIndex;
             
-            _headerAccessor.Modify(header =>
+            _headerAccessor.Modify((ref FileHeader header) =>
             {
-                header->Journal.CurrentJournal = journalIndex;
-                header->IncrementalBackup.LastCreatedJournal = journalIndex;
+                header.Journal.CurrentJournal = journalIndex;
+                header.IncrementalBackup.LastCreatedJournal = journalIndex;
             });
             
             return journalIndex;
@@ -1964,6 +1979,7 @@ namespace Voron.Impl.Journal
             txHeader.CompressedSize = reportedCompressionLength;
             txHeader.UncompressedSize = totalSizeWritten;
             txHeader.PageCount = numberOfPages;
+            txHeader.DatabaseId = _env.DbId;
             
             if (_env.Options.Encryption.IsEnabled == false)
             {
@@ -1981,7 +1997,6 @@ namespace Voron.Impl.Journal
 
             // Copy the transaction header to the output buffer. 
             Unsafe.Copy(txHeaderPtr, ref txHeader);
-            ((TransactionHeader*)txHeaderPtr)->DatabaseId = _env.DbId;
             Debug.Assert(((long)txHeaderPtr % (4 * Constants.Size.Kilobyte)) == 0, "Memory must be 4kb aligned");
 
             if (_env.Options.Encryption.IsEnabled)

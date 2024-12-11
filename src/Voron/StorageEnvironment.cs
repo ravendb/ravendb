@@ -305,10 +305,10 @@ namespace Voron
 
         private unsafe void LoadExistingDatabase()
         {
-            var header = stackalloc TransactionHeader[1];
+            var txHeader = stackalloc TransactionHeader[1];
 
             Options.AddToInitLog?.Invoke(LogLevel.Debug, "Starting Recovery");
-            bool hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog);
+            bool hadIntegrityIssues = _journal.RecoverDatabase(txHeader, Options.AddToInitLog);
             var successString = hadIntegrityIssues ? "(with integrity issues)" : "(successfully)";
             Options.AddToInitLog?.Invoke(LogLevel.Debug, $"Recovery Ended {successString}");
 
@@ -319,19 +319,19 @@ namespace Voron
                 _options.InvokeRecoveryError(this, message, null);
             }
 
-            var entry = _headerAccessor.CopyHeader();
-            var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
+            var fileHeader = _headerAccessor.CopyHeader();
+            var nextPageNumber = (txHeader->TransactionId == 0 ? fileHeader.LastPageNumber : txHeader->LastPageNumber) + 1;
             
             _currentStateRecord = _currentStateRecord with
             {
-                TransactionId = header->TransactionId == 0 ? entry.TransactionId : header->TransactionId,
+                TransactionId = txHeader->TransactionId == 0 ? fileHeader.TransactionId : txHeader->TransactionId,
                 NextPageNumber = nextPageNumber
             };
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             using (var writeTx = new Transaction(tx))
             {
-                var rootHeader = header->TransactionId == 0 ? entry.Root : header->Root;
+                var rootHeader = txHeader->TransactionId == 0 ? fileHeader.Root : txHeader->Root;
                 var root = Tree.Open(tx, null, Constants.RootTreeNameSlice, rootHeader);
                 tx.UpdateRootsIfNeeded(root);
 
@@ -359,14 +359,14 @@ namespace Voron
                 if (_options.GenerateNewDatabaseId == false)
                 {
                     databaseGuidId = new Guid(buffer);
-                    if (entry.DatabaseId == Guid.Empty)
+                    if (fileHeader.DatabaseId == Guid.Empty)
                     {
-                        _headerAccessor.Modify((ref FileHeader fileHeader) =>
+                        _headerAccessor.Modify((ref FileHeader h) =>
                         {
-                            fileHeader.DatabaseId = databaseGuidId;
+                            h.DatabaseId = databaseGuidId;
                         });
                     }
-                    else if (entry.DatabaseId != databaseGuidId)
+                    else if (fileHeader.DatabaseId != databaseGuidId)
                     {
                         VoronUnrecoverableErrorException.Raise(tx,
                             "The db id value in metadata tree did not match the db id in the header file. Possible corruption or mismatch?");
@@ -375,9 +375,9 @@ namespace Voron
                 else
                 {
                     databaseGuidId = Guid.NewGuid();
-                    _headerAccessor.Modify((ref FileHeader fileHeader) =>
+                    _headerAccessor.Modify((ref FileHeader h) =>
                     {
-                        fileHeader.DatabaseId = databaseGuidId;
+                        h.DatabaseId = databaseGuidId;
                     });
                 }
 
@@ -386,7 +386,7 @@ namespace Voron
                 if (_options.GenerateNewDatabaseId)
                 {
                     // save the new database id
-                    metadataTree?.Add("db-id", DbId.ToByteArray());
+                    metadataTree.Add("db-id", DbId.ToByteArray());
                 }
 
                 foreach (long freeSegment in _freeSpaceHandling.GetAllFullyEmptySegments(tx))
@@ -514,7 +514,7 @@ namespace Voron
                     FillBase64Id(dbId);
 
                     var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
-                    metadataTree.Add("db-id", DbId.ToByteArray());
+                    metadataTree.Add("db-id", dbId.ToByteArray());
                     metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(Options.SchemaVersion));
 
                     treesTx.PrepareForCommit();

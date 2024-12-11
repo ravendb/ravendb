@@ -7,9 +7,14 @@ using Voron.Impl.Journal;
 namespace Voron.Impl.FileHeaders
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
-    public struct FileHeader
+    public unsafe struct FileHeader
     {
-        public static int HashOffset = (int)Marshal.OffsetOf<FileHeader>(nameof(Hash));
+        /// <summary>
+        /// This is _always_ the last 8 bytes
+        /// </summary>
+        public static int HashOffset = sizeof(FileHeader) - sizeof(ulong);
+        
+        public static int TransactionIdOffset = (int)Marshal.OffsetOf<FileHeader>(nameof(TransactionId));
 
         /// <summary>
         /// Just a value chosen to mark our files headers, this is used to 
@@ -67,16 +72,16 @@ namespace Voron.Impl.FileHeaders
         public int PageSize;
 
         /// <summary>
-        /// Hash of the header used for validation
-        /// </summary>
-        [FieldOffset(154)]
-        public ulong Hash;
-
-        /// <summary>
         /// The database id for this file
         /// </summary>
-        [FieldOffset(162)]
+        [FieldOffset(154)]
         public Guid DatabaseId;
+        
+        /// <summary>
+        /// Hash of the header used for validation
+        /// </summary>
+        [FieldOffset(170)]
+        public ulong Hash;
  
         public override string ToString()
         {

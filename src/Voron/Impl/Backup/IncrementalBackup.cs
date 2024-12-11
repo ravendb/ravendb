@@ -188,10 +188,10 @@ namespace Voron.Impl.Backup
                         numberOfBackedUpPages += numberOf4KbsToCopy;
                     }
 
-                    env.HeaderAccessor.Modify(header =>
+                    env.HeaderAccessor.Modify((ref FileHeader header) =>
                     {
-                        header->IncrementalBackup.LastBackedUpJournal = lastBackedUpFile;
-                        header->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
+                        header.IncrementalBackup.LastBackedUpJournal = lastBackedUpFile;
+                        header.IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
                     });
                 }
                 catch (Exception)
@@ -201,7 +201,7 @@ namespace Voron.Impl.Backup
                 }
                 finally
                 {
-                    var lastSyncedJournal = env.HeaderAccessor.Get(header => header->Journal).LastSyncedJournal;
+                    var lastSyncedJournal = env.HeaderAccessor.Get((in FileHeader header) => header.Journal.LastSyncedJournal);
 
                     foreach (var jrnl in usedJournals)
                     {
@@ -327,7 +327,7 @@ namespace Voron.Impl.Backup
             {
                 TransactionHeader* lastTxHeader = null;
                 var lastTxHeaderStackLocation = stackalloc TransactionHeader[1];
-                long lastTxId = env.HeaderAccessor.Get(x => x->TransactionId);
+                long lastTxId = env.HeaderAccessor.Get((in FileHeader header) => header.TransactionId);
 
                 long journalNumber = -1;
                 var rc = Pal.rvn_pager_get_file_handle(txw.DataPagerState.Handle, out var fileHandle, out int errorCode);
@@ -401,17 +401,20 @@ namespace Voron.Impl.Backup
                 
                 txw.Commit();
                 
-                env.HeaderAccessor.Modify(header =>
+                env.HeaderAccessor.Modify((ref FileHeader header) => 
                 {
-                    header->TransactionId = lastTxHeader->TransactionId;
-                    header->LastPageNumber = lastTxHeader->LastPageNumber;
+                    header.TransactionId = lastTxHeader->TransactionId;
+                    header.LastPageNumber = lastTxHeader->LastPageNumber;
                     
-                    header->Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
+                    header.Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
                 
-                    header->Root = lastTxHeader->Root;
-                    
-                    Sparrow.Memory.Set(header->Journal.Reserved, 0, JournalInfo.NumberOfReservedBytes);
-                    header->Journal.Flags = JournalInfoFlags.None;
+                    header.Root = lastTxHeader->Root;
+
+                    for (int i = 0; i < JournalInfo.NumberOfReservedBytes; i++)
+                    {
+                        header.Journal.Reserved[i] = 0;
+                    }
+                    header.Journal.Flags = JournalInfoFlags.None;
                 });
             }
             finally

@@ -8,14 +8,17 @@ namespace Voron.Schema.Updates
     {
         public unsafe bool Update(int currentVersion, StorageEnvironmentOptions options, HeaderAccessor headerAccessor, out int versionAfterUpgrade)
         {
-            headerAccessor.Modify(header =>
+            headerAccessor.Modify((ref FileHeader header) => 
             {
-                Memory.Set(header->Journal.Reserved, 0, 3);
+                for (int i = 0; i < 3; i++)
+                {
+                    header.Journal.Reserved[i] = 0;
+                }
                 
-                if (options.JournalExists(header->Journal.LastSyncedJournal))
-                    header->Journal.Flags = JournalInfoFlags.None;
+                if (options.JournalExists(header.Journal.LastSyncedJournal))
+                    header.Journal.Flags = JournalInfoFlags.None;
                 else
-                    header->Journal.Flags = JournalInfoFlags.IgnoreMissingLastSyncJournal;
+                    header.Journal.Flags = JournalInfoFlags.IgnoreMissingLastSyncJournal;
             });
 
             versionAfterUpgrade = 23;

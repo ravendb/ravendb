@@ -765,12 +765,12 @@ namespace Voron
                 return true;
             }
 
-            public override bool ReadHeader(string filename, out FileHeader header)
+            public override bool ReadValidHeader(string filename, out FileHeader header)
             {
+                header = default;
                 var path = _basePath.Combine(filename);
                 if (File.Exists(path.FullPath) == false)
                 {
-                    header = default;
                     return false;
                 }
 
@@ -789,6 +789,19 @@ namespace Voron
                     
                     // we _explicitly_ support reading less than the amount we expect
                     // to support increasing the file size in future versions
+
+                    // We expect the size to have at least the transaction id
+                    if (totalRead < FileHeader.TransactionIdOffset ||
+                        MemoryMarshal.TryRead(buffer[FileHeader.TransactionIdOffset..], out long transactionId) is false)
+                    {
+                        return false;
+                    }
+
+                    ulong hash = Hashing.XXHash64.CalculateInline(buffer[..^sizeof(ulong)], (ulong)transactionId);
+                    if (MemoryMarshal.TryRead(buffer[^sizeof(ulong)..], out ulong expectedHash) is false ||
+                        expectedHash != hash)
+                        return false;
+
                     header = headerBuf[0];
                     return true;
                 }
@@ -1073,7 +1086,7 @@ namespace Voron
                 return true;
             }
 
-            public override bool ReadHeader(string filename, out FileHeader header)
+            public override bool ReadValidHeader(string filename, out FileHeader header)
             {
                 if (Disposed)
                     throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
@@ -1174,7 +1187,7 @@ namespace Voron
 
         public abstract bool TryDeleteJournal(long number);
 
-        public abstract bool ReadHeader(string filename, out FileHeader header);
+        public abstract bool ReadValidHeader(string filename, out FileHeader header);
 
         public abstract void WriteHeader(string filename, FileHeader header);
 

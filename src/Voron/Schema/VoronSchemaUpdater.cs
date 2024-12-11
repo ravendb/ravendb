@@ -17,9 +17,9 @@ namespace Voron.Schema
 
         public unsafe void Update()
         {
-            while (_headerAccessor.Get(header => header->Version) < Constants.CurrentVersion)
+            while (_headerAccessor.Get((in FileHeader header) => header.Version) < Constants.CurrentVersion)
             {
-                var currentVersion = _headerAccessor.Get(header => header->Version);
+                var currentVersion = _headerAccessor.Get((in FileHeader header) => header.Version);
                 var name = $"Voron.Schema.Updates.From{currentVersion}";
 
                 var schemaUpdateType = typeof(IVoronSchemaUpdate).Assembly.GetType(name);
@@ -28,10 +28,10 @@ namespace Voron.Schema
 
                 var schemaUpdate = (IVoronSchemaUpdate)Activator.CreateInstance(schemaUpdateType);
 
-                if (schemaUpdate.Update(currentVersion, _options, _headerAccessor, out var versionAfterUpdate) == false)
+                if (schemaUpdate!.Update(currentVersion, _options, _headerAccessor, out var versionAfterUpdate) == false)
                     break;
 
-                _headerAccessor.Modify(header => header->Version = versionAfterUpdate);
+                _headerAccessor.Modify((ref FileHeader header) => header.Version = versionAfterUpdate);
             }
         }
     }
