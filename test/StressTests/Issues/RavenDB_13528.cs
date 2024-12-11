@@ -28,7 +28,7 @@ namespace StressTests.Issues
                 using (var writer = Env.Options.CreateJournalWriter(10, size))
                 {
                     Pal.jounral_entry entry = new() { Base = ptr, NumberOf4Kbs = (int)(size / 4096) };
-                    writer.Write(1, &entry, 1, entry.NumberOf4Kbs);
+                    writer.Write(1, new[]{entry}, entry.NumberOf4Kbs);
                 }
             }
             finally

@@ -126,17 +126,10 @@ public class BasicNextGen : StorageTest
             tx2.Commit();
         }
 
-        Env.FlushLogToDataFile();
+        RestartDatabase();
 
-        try
-        {
-            RestartDatabase();
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            Environment.FailFast("Failed to restart", e);
-        }
+        Env.FlushLogToDataFile();
+        Env.SyncDataFileImmediately();
     }
 
 

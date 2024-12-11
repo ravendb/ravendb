@@ -45,11 +45,18 @@ namespace FastTests.Voron
         {
             var isFileBasedEnv = Options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions;
 
+
+            var manualFlush = Options.ManualFlushing;
+            var manualSync = Options.ManualSyncing;
+
             StopDatabase(shouldDisposeOptions: isFileBasedEnv);
+
 
             if (isFileBasedEnv)
             {
                 Options = StorageEnvironmentOptions.ForPathForTests(DataDir);
+                Options.ManualSyncing = manualSync;
+                Options.ManualFlushing = manualFlush;
                 ForceConstantCompressionAcceleration(Options);
                 Configure(Options);
             }

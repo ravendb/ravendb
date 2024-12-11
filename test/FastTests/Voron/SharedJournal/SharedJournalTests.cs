@@ -1,4 +1,6 @@
-﻿using Tests.Infrastructure;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Xunit;
@@ -15,14 +17,17 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
         string branchPath = NewDataPath(suffix: "branch");
         {
             using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
-            using var branchOptions = StorageEnvironmentOptions.ForPathForTests(branchPath);
+            rootOptions.ManualFlushing = true;
 
             using var root = new StorageEnvironment(rootOptions);
 
-            branchOptions.RootJournal = root.Journal;
-
-            using var branch = new StorageEnvironment(branchOptions);
-
+            var mre = new ManualResetEventSlim(false);
+            
+            root.Journal.OnBranchJournalEntrySubmitted += () =>
+            {
+                mre.Set();
+            };
+            
             using (var rootTx = root.WriteTransaction())
             {
                 Tree tree = rootTx.CreateTree("rootTree");
@@ -31,13 +36,33 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
                 rootTx.Commit();
             }
 
-            using (var branchTx = branch.WriteTransaction())
+            var task = Task.Run(() =>
             {
-                Tree tree = branchTx.CreateTree("branchTree");
-                tree.Add("root", "no");
-                tree.Add("branch", "yes");
-                branchTx.Commit();
+                using var branchOptions = StorageEnvironmentOptions.ForPathForTests(branchPath);
+                branchOptions.RootJournal = root.Journal;
+                branchOptions.ManualFlushing = true;
+                
+                using var branch = new StorageEnvironment(branchOptions);
+                using (var branchTx = branch.WriteTransaction())
+                {
+                    Tree tree = branchTx.CreateTree("branchTree");
+                    tree.Add("root", "no");
+                    tree.Add("branch", "yes");
+                    branchTx.Commit();
+                }
+            });
+
+            for (int i = 0; i < 2; i++)
+            {
+                mre.Wait();
+                mre.Reset();
+                using (var tx = root.WriteTransaction())
+                {
+                    tx.Commit();
+                }
             }
+
+            task.Wait();
         }
 
         // here we restart the environments
