@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -57,47 +58,6 @@ namespace Voron.Platform.Posix
                 }
             }
             return filesystem;
-        }
-
-        public static unsafe bool TryReadFileHeader(FileHeader* header, VoronPathSetting path)
-        {
-            var fd = Syscall.open(path.FullPath, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
-            try
-            {
-                if (fd == -1)
-                {
-                    var lastError = Marshal.GetLastWin32Error();
-                    if (((Errno)lastError) == Errno.EACCES)
-                        return false;
-                    Syscall.ThrowLastError(lastError);
-                }
-                int remaining = sizeof(FileHeader);
-                var ptr = ((byte*)header);
-                while (remaining > 0)
-                {
-                    var read = Syscall.read(fd, ptr, (ulong)remaining);
-                    if (read == -1)
-                    {
-                        var err = Marshal.GetLastWin32Error();
-                        Syscall.ThrowLastError(err);
-                    }
-
-                    if (read == 0)
-                        return false; // truncated file?
-
-                    remaining -= (int)read;
-                    ptr += read;
-                }
-                return true;
-            }
-            finally
-            {
-                if (fd != -1)
-                {
-                    Syscall.close(fd);
-                    fd = -1;
-                }
-            }
         }
 
         public static string FixLinuxPath(string path)

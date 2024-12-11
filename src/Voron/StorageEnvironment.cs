@@ -44,6 +44,7 @@ using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
+using static Voron.Impl.Journal.WriteAheadJournal.JournalApplicator;
 
 namespace Voron
 {
@@ -354,7 +355,31 @@ namespace Voron
                     VoronUnrecoverableErrorException.Raise(tx,
                         "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
 
-                var databaseGuidId = _options.GenerateNewDatabaseId == false ? new Guid(buffer) : Guid.NewGuid();
+                Guid databaseGuidId;
+                if (_options.GenerateNewDatabaseId == false)
+                {
+                    databaseGuidId = new Guid(buffer);
+                    if (entry.DatabaseId == Guid.Empty)
+                    {
+                        _headerAccessor.Modify((ref FileHeader fileHeader) =>
+                        {
+                            fileHeader.DatabaseId = databaseGuidId;
+                        });
+                    }
+                    else if (entry.DatabaseId != databaseGuidId)
+                    {
+                        VoronUnrecoverableErrorException.Raise(tx,
+                            "The db id value in metadata tree did not match the db id in the header file. Possible corruption or mismatch?");
+                    }
+                }
+                else
+                {
+                    databaseGuidId = Guid.NewGuid();
+                    _headerAccessor.Modify((ref FileHeader fileHeader) =>
+                    {
+                        fileHeader.DatabaseId = databaseGuidId;
+                    });
+                }
 
                 FillBase64Id(databaseGuidId);
 
@@ -470,6 +495,12 @@ namespace Voron
             if (Options.SimulateFailureOnDbCreation)
                 ThrowSimulateFailureOnDbCreation();
 
+            Guid dbId = Guid.NewGuid();
+            _headerAccessor.Modify((ref FileHeader header) =>
+            {
+                header.DatabaseId = dbId;
+            });
+
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
@@ -480,7 +511,7 @@ namespace Voron
 
                 using (var treesTx = new Transaction(tx))
                 {
-                    FillBase64Id(Guid.NewGuid());
+                    FillBase64Id(dbId);
 
                     var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
                     metadataTree.Add("db-id", DbId.ToByteArray());
@@ -1751,6 +1782,14 @@ namespace Voron
             }
             value = default;
             return false;
+        }
+
+        internal bool SyncDataFileImmediately()
+        {
+            using (var operation = new SyncOperation(Journal.Applicator))
+            {
+                return operation.SyncDataFile();
+            }
         }
     }
 

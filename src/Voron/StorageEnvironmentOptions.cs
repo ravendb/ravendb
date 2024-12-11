@@ -765,14 +765,17 @@ namespace Voron
                 return true;
             }
 
-            public override Span<byte> ReadHeader(string filename, Span<byte> buffer)
+            public override bool ReadHeader(string filename, out FileHeader header)
             {
                 var path = _basePath.Combine(filename);
                 if (File.Exists(path.FullPath) == false)
                 {
-                    return Span<byte>.Empty;
+                    header = default;
+                    return false;
                 }
 
+                Span<FileHeader> headerBuf = stackalloc FileHeader[1];
+                var buffer = MemoryMarshal.AsBytes(headerBuf);
                 using (var fs = SafeFileStream.Create(path.FullPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))
                 {
                     var totalRead = 0;
@@ -783,20 +786,20 @@ namespace Voron
                             break;
                         totalRead += read;
                     }
-
-                    return buffer[..totalRead];
+                    
+                    // we _explicitly_ support reading less than the amount we expect
+                    // to support increasing the file size in future versions
+                    header = headerBuf[0];
+                    return true;
                 }
             }
 
-            public override unsafe void WriteHeader(string filename, Span<byte> header)
+            public override unsafe void WriteHeader(string filename, FileHeader header)
             {
                 var path = _basePath.Combine(filename);
-                fixed (byte* p = header)
-                {
-                    var rc = Pal.rvn_write_header(path.FullPath, p, header.Length, out var errorCode);
-                    if (rc != PalFlags.FailCodes.Success)
+                var rc = Pal.rvn_write_header(path.FullPath, (byte*)&header, sizeof(FileHeader), out var errorCode);
+                if (rc != PalFlags.FailCodes.Success)
                         PalHelper.ThrowLastError(rc, errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FailCodes)rc).ToString()}");
-                }
             }
 
             public void DeleteAllTempFiles()
@@ -937,7 +940,7 @@ namespace Voron
 
             private readonly Dictionary<string, JournalWriter> _logs = new(StringComparer.OrdinalIgnoreCase);
             private readonly HashSet<SafeFileHandle> _handles = [];
-            private readonly Dictionary<string, byte[]> _headers = new(StringComparer.OrdinalIgnoreCase);
+            private readonly Dictionary<string, FileHeader> _headers = new(StringComparer.OrdinalIgnoreCase);
             private readonly int _instanceId;
 
 
@@ -1070,29 +1073,19 @@ namespace Voron
                 return true;
             }
 
-            public override Span<byte> ReadHeader(string filename, Span<byte> buffer)
+            public override bool ReadHeader(string filename, out FileHeader header)
             {
                 if (Disposed)
                     throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
-                if (_headers.TryGetValue(filename, out var existingBuf) == false)
-                {
-                    return Span<byte>.Empty;
-                }
-
-                existingBuf.CopyTo(buffer);
-                return buffer[..existingBuf.Length];
+                return _headers.TryGetValue(filename, out header) ;
             }
 
-            public override void WriteHeader(string filename, Span<byte> header)
+            public override void WriteHeader(string filename, FileHeader header)
             {
                 if (Disposed)
                     throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
 
-                if (_headers.TryGetValue(filename, out var buf) == false)
-                {
-                    _headers[filename] = buf = new byte[header.Length];
-                }
-                header.CopyTo(buf);
+                _headers[filename] = header;
             }
 
             public override (Pager Pager, Pager.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted)
@@ -1181,9 +1174,9 @@ namespace Voron
 
         public abstract bool TryDeleteJournal(long number);
 
-        public abstract Span<byte> ReadHeader(string filename, Span<byte> buffer);
+        public abstract bool ReadHeader(string filename, out FileHeader header);
 
-        public abstract void WriteHeader(string filename, Span<byte> header);
+        public abstract void WriteHeader(string filename, FileHeader header);
 
         public abstract (Pager Pager, Pager.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted);
 

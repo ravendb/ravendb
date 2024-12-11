@@ -75,7 +75,7 @@ namespace Voron.Impl.Journal
         public long TimeStampTicksUtc; // DateTime.UtcNow.Ticks when the tx happened
 
         [FieldOffset(120)]
-        public fixed byte Reserved[16];
+        public Guid DatabaseId;
 
         [FieldOffset(152)]
         public fixed byte Nonce[24];

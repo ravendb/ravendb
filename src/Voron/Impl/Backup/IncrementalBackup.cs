@@ -107,8 +107,7 @@ namespace Voron.Impl.Backup
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var txw = env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
-                backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
-                journalInfo = env.HeaderAccessor.Get(ptr => ptr->Journal);
+                (backupInfo, journalInfo) = env.HeaderAccessor.Get((in FileHeader header) => (header.IncrementalBackup, header.Journal));
 
                 if (env.Journal.CurrentFile != null)
                 {

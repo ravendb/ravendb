@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿﻿using System;
+ using System.Runtime.InteropServices;
 using Voron.Data.BTrees;
 using Voron.Impl.Backup;
 using Voron.Impl.Journal;
@@ -71,6 +72,12 @@ namespace Voron.Impl.FileHeaders
         [FieldOffset(154)]
         public ulong Hash;
 
+        /// <summary>
+        /// The database id for this file
+        /// </summary>
+        [FieldOffset(162)]
+        public Guid DatabaseId;
+ 
         public override string ToString()
         {
             return
