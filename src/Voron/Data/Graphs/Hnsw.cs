@@ -157,7 +157,6 @@ public unsafe partial class Hnsw
             return bufferSpan[..pos];
         }
 
-        //(in long vectorId, LowLevelTransaction llt, in Options options)
         public Span<byte> GetVector(SearchState state)
         {
             if (_vectorSpan.Length > 0) 
@@ -505,7 +504,9 @@ public unsafe partial class Hnsw
             ref NativeList<int> candidates,
             NearestEdgesFlags flags)
         {
-            Debug.Assert(_candidatesQ.Count is 0 && _nearestEdgesQ.Count is 0);
+            Debug.Assert(_candidatesQ.Count == 0, "_candidatesQ.Count == 0");
+            Debug.Assert(_nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
+            
             float lowerBound = -Distance(vector, dstIdx, startingPointIndex);
             var visitedCounter = ++_visitsCounter; 
             ref var startingPoint = ref GetNodeByIndex(startingPointIndex);
@@ -517,10 +518,12 @@ public unsafe partial class Hnsw
             
             _candidatesQ.Enqueue(startingPointIndex, -lowerBound);
             if (flags.HasFlag(NearestEdgesFlags.StartingPointAsEdge) && 
-                    (startingPoint.PostingListId != 0 || flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false))
+                    ((startingPoint.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) != Constants.Graphs.VectorId.Tombstone 
+                     || flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false))
             {
                 _nearestEdgesQ.Enqueue(startingPointIndex, lowerBound);
             }
+            
             var indexes = new NativeList<int>();
             var nodeIds = new NativeList<long>();
             while (_candidatesQ.TryDequeue(out var cur, out var curDistance))
@@ -544,13 +547,15 @@ public unsafe partial class Hnsw
                     if(next.Visited == visitedCounter)
                         continue; // already checked it
                     next.Visited = visitedCounter;
-            
+                    var isDeleted = (next.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone;
+
                     float nextDist = -Distance(vector, dstIdx, nextIndex);
                     if (_nearestEdgesQ.Count < numberOfCandidates)
                     {
                         _candidatesQ.Enqueue(nextIndex, -nextDist);
-                        if (next.PostingListId is not 0 ||
-                            flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false)
+                        
+                        if (nextIndex != dstIdx && 
+                            (isDeleted == false || flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false))
                         {
                             _nearestEdgesQ.Enqueue(nextIndex, nextDist);
                         }
@@ -558,8 +563,9 @@ public unsafe partial class Hnsw
                     else if (lowerBound < nextDist)
                     {
                         _candidatesQ.Enqueue(nextIndex, -nextDist);
-                        if (next.PostingListId  is not 0 ||
-                            flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists)  is false)
+                        
+                        if (nextIndex != dstIdx && 
+                            (isDeleted == false || flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false))
                         {
                             _nearestEdgesQ.EnqueueDequeue(nextIndex, nextDist);
                         }
@@ -576,12 +582,15 @@ public unsafe partial class Hnsw
 
             _candidatesQ.Clear();
             candidates.EnsureCapacityFor(Llt.Allocator, _nearestEdgesQ.Count);
+            
             while (_nearestEdgesQ.TryDequeue(out var edgeId, out var d))
             {
                 candidates.AddUnsafe(edgeId);
             }
-            candidates.Reverse();
 
+            candidates.Reverse();
+            Debug.Assert(candidates.ToSpan().Contains(dstIdx) == false, "candidates.ToSpan().Contains(dstIdx) == false");
+            
             nodeIds.Dispose(Llt.Allocator);
             indexes.Dispose(Llt.Allocator);
         }
