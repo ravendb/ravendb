@@ -219,13 +219,13 @@ namespace Voron.Data.Tables
 
         public void DirectRead(long id, out TableValueReader tvr)
         {
-            var rawData = DirectRead(id, out int size);
+            var rawData = DirectRead(id, out int size/*, out _*/);
             tvr = new TableValueReader(id, rawData, size);
         }
 
-        public byte* DirectRead(long id, out int size)
+        public byte* DirectRead(long id, out int size/*, out bool compressed*/)
         {
-            var result = DirectReadRaw(id, out size, out var compressed);
+            var result = DirectReadRaw(id, out size, out var  compressed);
             if (compressed == false)
                 return result;
 
@@ -349,7 +349,6 @@ namespace Voron.Data.Tables
                 oldDataDecompressedScope = DecompressValue(_tx, oldData, oldDataSize, out var buffer);
                 oldData = buffer.Ptr;
                 oldDataSize = buffer.Length;
-                _tx.CachedDecompressedBuffersByStorageId?.Remove(id);
             }
 
             // first, try to fit in place, either in small or large sections
@@ -363,7 +362,11 @@ namespace Voron.Data.Tables
                         ref tvr,
                         builder,
                         forceUpdate);
-                    oldDataDecompressedScope.Dispose();
+                    if (oldCompressed)
+                    {
+                        oldDataDecompressedScope.Dispose();
+                        _tx.ForgetAbout(id);
+                    }
 
                     builder.CopyTo(pos);
 
@@ -387,7 +390,12 @@ namespace Voron.Data.Tables
 
                     var tvr = new TableValueReader(oldData, oldDataSize);
                     UpdateValuesFromIndex(id, ref tvr, builder, forceUpdate);
-                    oldDataDecompressedScope.Dispose();
+
+                    if (oldCompressed)
+                    {
+                        oldDataDecompressedScope.Dispose();
+                        _tx.ForgetAbout(id);
+                    }
 
                     // MemoryCopy into final position.
                     page.OverflowSize = builder.Size;
@@ -402,10 +410,11 @@ namespace Voron.Data.Tables
                     return id;
                 }
             }
-            oldDataDecompressedScope.Dispose();
 
             // can't fit in place, will just delete & insert instead
-            Delete(id);
+            Delete(id, oldData, oldDataSize);
+            oldDataDecompressedScope.Dispose();
+
             return Insert(builder);
         }
 
@@ -475,22 +484,43 @@ namespace Voron.Data.Tables
             var ptr = DirectReadRaw(id, out int size, out bool compressed);
 
             if (compressed)
+            {
                 _tx.ForgetAbout(id);
 
-            ByteStringContext<ByteStringMemoryCache>.InternalScope decompressValue = default;
+                using (var decompressValue = DecompressValue(_tx, ptr, size, out ByteString buffer))
+                {
+                    ptr = buffer.Ptr;
+                    size = buffer.Length;
 
-            if (compressed)
-            {
-                decompressValue = DecompressValue(_tx, ptr, size, out var buffer);
-                ptr = buffer.Ptr;
-                size = buffer.Length;
+                    var tvr = new TableValueReader(ptr, size);
+                    DeleteValueFromIndex(id, ref tvr);
+                }
             }
+            else
+            {
+                var tvr = new TableValueReader(ptr, size);
+                DeleteValueFromIndex(id, ref tvr);
+            }
+
+            DeleteInternal(id);
+        }
+
+        public void Delete(long id, byte* ptr, int size)
+        {
+            if (IsOwned(id) == false)
+                ThrowNotOwned(id);
+
+            AssertWritableTable();
 
             var tvr = new TableValueReader(ptr, size);
             DeleteValueFromIndex(id, ref tvr);
 
-            decompressValue.Dispose();
+            _tx.ForgetAbout(id);
+            DeleteInternal(id);
+        }
 
+        private void DeleteInternal(long id)
+        {
             var largeValue = (id % Constants.Storage.PageSize) == 0;
             if (largeValue)
             {
@@ -1570,7 +1600,7 @@ namespace Voron.Data.Tables
                             {
                                 value.Release(_tx.Allocator);
                                 value = it.CurrentKey.Clone(_tx.Allocator);
-                                Delete(id);
+                                Delete(id, ptr, size);
                                 break;
                             }
 
@@ -1919,9 +1949,14 @@ namespace Voron.Data.Tables
                             return deleted;
                         }
                         beforeDelete?.Invoke(tableValueHolder);
+
+                        Delete(id, ptr, size);
+                    }
+                    else
+                    {
+                        Delete(id);
                     }
 
-                    Delete(id);
                     deleted = true;
                 }
             }
@@ -1966,9 +2001,14 @@ namespace Voron.Data.Tables
                                 return deleted;
                             }
                             beforeDelete?.Invoke(tableValueHolder);
+                            Delete(fstIt.CurrentKey, ptr, size);
+                        }
+                        else
+                        {
+                            Delete(fstIt.CurrentKey);
                         }
 
-                        Delete(fstIt.CurrentKey);
+     
                         deleted++;
                     }
                 }
@@ -2011,7 +2051,7 @@ namespace Voron.Data.Tables
                         if (beforeDelete(tableValueHolder) == false)
                             return deleted;
 
-                        Delete(fstIt.CurrentKey);
+                        Delete(fstIt.CurrentKey, ptr, size);
                         deleted++;
                     }
                 }
@@ -2050,7 +2090,7 @@ namespace Voron.Data.Tables
                     if (currentIndex > upToIndex)
                         return false;
 
-                    Delete(id);
+                    Delete(id, ptr, size);
                     deleted++;
                 }
             }
