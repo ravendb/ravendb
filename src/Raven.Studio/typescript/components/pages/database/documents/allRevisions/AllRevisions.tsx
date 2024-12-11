@@ -24,6 +24,8 @@ import { MultiRadioToggle } from "components/common/MultiRadioToggle";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import { HStack } from "components/common/utilities/HStack";
 import { VStack } from "components/common/utilities/VStack";
+import AllRevisionsAboutView from "./AllRevisionsAboutView";
+import { FlexGrow } from "components/common/FlexGrow";
 
 type RevisionType = Raven.Server.Documents.Revisions.RevisionsStorage.RevisionType;
 
@@ -85,16 +87,20 @@ export default function AllRevisions() {
     return (
         <VStack className="content-padding" gap={2}>
             <VStack>
-                <ButtonWithSpinner
-                    color="danger"
-                    onClick={handleRemoveConfirmation}
-                    disabled={selectedRows.length === 0}
-                    isSpinning={asyncRemoveRevisions.loading}
-                    icon="trash"
-                    className="w-fit-content rounded-pill"
-                >
-                    Remove {selectedRows.length != 0 && selectedRows.length} revisions
-                </ButtonWithSpinner>
+                <HStack gap={2} className="my-3">
+                    <ButtonWithSpinner
+                        color="danger"
+                        onClick={handleRemoveConfirmation}
+                        disabled={selectedRows.length === 0}
+                        isSpinning={asyncRemoveRevisions.loading}
+                        icon="trash"
+                        className="w-fit-content rounded-pill"
+                    >
+                        Remove {selectedRows.length != 0 && selectedRows.length} revisions
+                    </ButtonWithSpinner>
+                    <FlexGrow />
+                    <AllRevisionsAboutView />
+                </HStack>
                 <HStack gap={2} className="my-3">
                     <div>
                         <Label className="small-label">Filter by collection</Label>

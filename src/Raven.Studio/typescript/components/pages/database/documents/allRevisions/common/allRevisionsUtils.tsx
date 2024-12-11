@@ -122,7 +122,7 @@ const getColumnDefs = (
                         />
                         <Icon
                             icon="trash"
-                            title="Revision deleted"
+                            title="Deleted Revision"
                             className={classNames({ "deleted-revision": flags.includes("DeleteRevision") })}
                         />
                     </span>
