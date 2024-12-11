@@ -59,7 +59,7 @@ namespace Raven.Client.Http
         public RavenCommandResponseType ResponseType { get; protected set; }
 
         public TimeSpan? Timeout { get; protected internal set; }
-        public bool CanCache { get; protected set; }
+        public bool CanCache { get; protected internal set; }
         public bool CanCacheAggressively { get; protected set; }
         public string SelectedNodeTag { get; protected set; }
         public int NumberOfAttempts { get; internal set; }
@@ -154,7 +154,7 @@ namespace Raven.Client.Http
                     using (var stream = new StreamWithTimeout(responseStream))
                     {
                         var json = await context.ReadForMemoryAsync(stream, "response/object").ConfigureAwait(false);
-                        if (cache != null) //precaution
+                        if (cache != null && CanCache)
                         {
                             CacheResponse(cache, url, response, json);
                         }

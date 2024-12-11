@@ -904,9 +904,8 @@ namespace Raven.Client.Http
             if (request == null)
                 return;
 
-            var noCaching = sessionInfo?.NoCaching ?? false;
-
-            using (var cachedItem = GetFromCache(context, command, !noCaching, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
+            
+            using (var cachedItem = GetFromCache(context, command, sessionInfo, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
             {
                 if (cachedChangeVector != null)
                 {
@@ -1387,9 +1386,12 @@ namespace Raven.Client.Http
             throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{timeout}'.");
         }
 
-        private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, bool useCache, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
+        private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, SessionInfo sessionInfo, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
         {
-            if (useCache && command.CanCache && command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
+            if (sessionInfo?.NoCaching == true)
+                command.CanCache = false;
+
+            if (command.CanCache && command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
             {
                 return Cache.Get(context, url, out cachedChangeVector, out cachedValue);
             }
