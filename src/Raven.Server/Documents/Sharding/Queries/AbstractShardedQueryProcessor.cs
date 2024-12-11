@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
+using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
@@ -159,7 +160,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         else
             queryTemplate = Query.ToJson(Context);
 
-        if (Query.Metadata.IsCollectionQuery && Query.Metadata.DeclaredFunctions is null or { Count: 0 } && Query.Metadata.HasIncludeOrLoad == false)
+        if (Query.Metadata.IsCollectionQuery && Query.Metadata.DeclaredFunctions is null or { Count: 0 })
         {
             // * For collection queries that specify ids, we can turn that into a set of loads that 
             //   will hit the known servers
@@ -638,6 +639,21 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         var queryData = Query.Metadata.QueryData;
         if (queryData != null)
             documentQuery.SelectFields<dynamic>(queryData);
+
+        if (Query.Metadata.Query.Load is { Count: > 0 })
+        {
+            var loadTokens = new List<LoadToken>();
+            foreach (var loadItem in Query.Metadata.Query.Load)
+            {
+                if (loadItem.Expression == null || !loadItem.Alias.HasValue)
+                    continue;
+
+                var argument = loadItem.Expression.GetTextWithAlias(null);
+                var alias = loadItem.Alias.Value.Value;
+                loadTokens.Add(LoadToken.Create(argument, alias));
+            }
+            documentQuery.Load(loadTokens);
+        }
 
         var queryText = documentQuery.ToString();
 

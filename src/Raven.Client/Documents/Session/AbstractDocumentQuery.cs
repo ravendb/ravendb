@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Session
 
         protected readonly IEnumerable<DeclareToken> DeclareTokens;
 
-        protected readonly List<LoadToken> LoadTokens;
+        protected List<LoadToken> LoadTokens;
 
         public FieldsToFetchToken FieldsToFetchToken { get; set; }
 
