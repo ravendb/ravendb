@@ -26,7 +26,6 @@ public sealed class ShardDocumentSubscriptionFetcher : DocumentSubscriptionFetch
                 }
 
                 records.Add(current.Etag, document);
-                DocsContext.Transaction.ForgetAbout(current);
             }
         }
 

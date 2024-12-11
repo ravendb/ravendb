@@ -669,7 +669,10 @@ namespace SlowTests.Sharding.Cluster
         {
             const string id = "companies/1";
 
-            using (var store = Sharding.GetDocumentStore())
+            using (var store = Sharding.GetDocumentStore(new Options()
+            {
+                IgnoreDocumentCompression = true
+            }))
             {
                 var bucket = await Sharding.GetBucketAsync(store, id);
 

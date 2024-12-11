@@ -449,7 +449,7 @@ namespace SlowTests.Server.Documents.Expiration
                     record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                 }
             };
-
+            options.IgnoreDocumentCompression = true;
             using (var store = GetDocumentStore(options))
             {
                 foreach (var dateTimeFormat in utcFormats)
@@ -546,6 +546,7 @@ namespace SlowTests.Server.Documents.Expiration
         [RavenData(5, false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task ExpirationWithMaxItemsToProcessConfiguredShouldWork(Options options, int batchSize, bool compressed)
         {
+            options.IgnoreDocumentCompression = true;
             using (var store = GetDocumentStore(options))
             {
                 if (compressed)

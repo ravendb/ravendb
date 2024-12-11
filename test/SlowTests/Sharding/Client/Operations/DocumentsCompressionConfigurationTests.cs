@@ -23,7 +23,8 @@ namespace SlowTests.Sharding.Client.Operations
         {
             var dbname = "CompressAllCollectionsDB";
             options.ModifyDatabaseName = _ => dbname;
-           
+            options.IgnoreDocumentCompression = true;
+
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())

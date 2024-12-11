@@ -112,7 +112,6 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
                                     toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, document.Id));
                                     totalCount++;
-                                    options.Context.Transaction.ForgetAbout(document);
                                 }
                             }
                             catch (DocumentConflictException)

@@ -57,8 +57,10 @@ namespace SlowTests.Server.Documents.DataArchival
                     if (compressed)
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
+                        
                     }
-                }
+                },
+                IgnoreDocumentCompression = true
             }))
             {
                 using (var session = store.OpenAsyncSession())
@@ -112,7 +114,8 @@ namespace SlowTests.Server.Documents.DataArchival
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                }
+                },
+                IgnoreDocumentCompression = true
             }))
             {
                 await SetupDataArchival(store);
@@ -183,7 +186,8 @@ namespace SlowTests.Server.Documents.DataArchival
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                }
+                },
+                IgnoreDocumentCompression = true
             }))
             using (var dstStore = GetDocumentStore(new Options 
             {
@@ -193,7 +197,8 @@ namespace SlowTests.Server.Documents.DataArchival
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                }
+                },
+                IgnoreDocumentCompression = true
             }))
             {
                 await SetupDataArchival(srcStore);
@@ -223,7 +228,8 @@ namespace SlowTests.Server.Documents.DataArchival
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                }
+                },
+                IgnoreDocumentCompression = true
             }))
             {
                 using (var session = store.OpenAsyncSession())
@@ -244,6 +250,7 @@ namespace SlowTests.Server.Documents.DataArchival
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task ArchiveDocsWithMaxItemsToProcessConfiguredShouldWork(Options options, bool compressed)
         {
+            options.IgnoreDocumentCompression = true;
             using (var store = GetDocumentStore(options))
             {
                 if (compressed)

@@ -316,12 +316,12 @@ internal class CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
         var coraxDocumentTrainDocumentSource = new CoraxDocumentTrainSourceEnumerator(_documentStorage);
         
         if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-            return new TransactionForgetAboutDocumentEnumerator(new PulsedTransactionEnumerator<Document, CoraxDocumentTrainSourceState>(docsContext,
-                state => coraxDocumentTrainDocumentSource.GetDocumentsForDictionaryTraining(docsContext, state), new(docsContext, size, take, token)), docsContext); 
+            return new PulsedTransactionEnumerator<Document, CoraxDocumentTrainSourceState>(docsContext,
+                state => coraxDocumentTrainDocumentSource.GetDocumentsForDictionaryTraining(docsContext, state), new(docsContext, size, take, token)); 
 
-        return new TransactionForgetAboutDocumentEnumerator(new PulsedTransactionEnumerator<Document,CoraxDocumentTrainSourceState>(docsContext, 
+        return new PulsedTransactionEnumerator<Document,CoraxDocumentTrainSourceState>(docsContext, 
             state =>  coraxDocumentTrainDocumentSource.GetDocumentsForDictionaryTraining(docsContext, collection, state)
-            , new CoraxDocumentTrainSourceState(docsContext, size, take, token)), docsContext);
+            , new CoraxDocumentTrainSourceState(docsContext, size, take, token));
     }
 
     private IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext docsContext, string collection, long take, CancellationToken token)

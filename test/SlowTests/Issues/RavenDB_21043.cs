@@ -25,7 +25,7 @@ public class RavenDB_21043 : RavenTestBase
         const int numberOfAddresses = 16;
 
         DoNotReuseServer();
-
+        options.IgnoreDocumentCompression = true;
         using (var store = GetDocumentStore(options))
         {
             // turn on compression

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
@@ -233,6 +234,12 @@ namespace FastTests
                     options.ModifyDatabaseRecord?.Invoke(doc);
                     var sharded = doc.IsSharded;
 
+                    if (doc.DocumentsCompression != null && options.IgnoreDocumentCompression == false)
+                    {
+                        // check in DatabaseRecord if document compression is enabled, without setting IgnoreDocumentCompression=true
+                        Assert.Fail("Need to setup IgnoreDocumentCompression=true when DocumentsCompression is used in tests");
+                    }
+
                     if (RavenTestHelper.RunTestsWithDocsCompression && options.IgnoreDocumentCompression == false && doc.DocumentsCompression == null)
                     {
                         doc.DocumentsCompression = new DocumentsCompressionConfiguration
@@ -257,6 +264,21 @@ namespace FastTests
                     {
                         store.Urls = GetUrls(serverToUse, store.Conventions.DisableTopologyUpdates);
                     }
+
+                    store.OnBeforeRequest += (sender, args) =>
+                    {
+                        if (args.Request.Method != HttpMethod.Post)
+                            return;
+                        if (string.IsNullOrEmpty(args.Database))
+                            return;
+                        if (args.Url.EndsWith("/admin/documents-compression/config") == false)
+                            return;
+
+                        if (options.IgnoreDocumentCompression == false)
+                        {
+                            Assert.Fail("Need to setup IgnoreDocumentCompression=true when DocumentsCompression is used in tests");
+                        }
+                    };
 
                     store.Initialize();
 

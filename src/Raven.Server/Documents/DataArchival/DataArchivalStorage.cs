@@ -42,7 +42,6 @@ public sealed class DataArchivalStorage : AbstractBackgroundWorkStorage
             {
                 Database.DocumentsStorage.Put(context, id, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
             }
-            context.Transaction.ForgetAbout(doc); 
         }
     }
 
