@@ -108,7 +108,7 @@ output('test output')";
 
     protected static IAmazonSQS CreateQueueClient()
     {
-        IAmazonSQS queueClient = new AmazonSQSClient(new AmazonSQSConfig
+        IAmazonSQS queueClient = new AmazonSQSClient("dummy-access-key", "dummy-secret-key", new AmazonSQSConfig
         {
             ServiceURL = Environment.GetEnvironmentVariable(AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable), 
             UseHttp = true,
