@@ -285,6 +285,9 @@ namespace Raven.Server.Documents.Revisions
         {
             docConfiguration = GetRevisionsConfiguration(collectionName.Name, documentFlags);
 
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromImport))
+                return false;
+
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return false;
 

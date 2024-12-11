@@ -53,7 +53,7 @@ namespace SlowTests.Issues
 
                     await AssertAttachment(store2);
 
-                    await AssertRevision(store2, 1);
+                    await AssertRevision(store2, 0);
 
                     using (var store3 = GetDocumentStore())
                     {
@@ -67,7 +67,7 @@ namespace SlowTests.Issues
 
                         await AssertAttachment(store3);
 
-                        await AssertRevision(store3, 2);
+                        await AssertRevision(store3, 0);
                     }
                 }
             }

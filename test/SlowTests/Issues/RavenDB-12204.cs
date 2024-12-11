@@ -65,7 +65,7 @@ namespace SlowTests.Issues
                     var metadata = session.Advanced.GetMetadataFor(await session.LoadAsync<User>(id));
                     Assert.Equal("HasRevisions, HasCounters", metadata.GetString("@flags"));
                     var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
-                    Assert.Equal(13, revisionsMetadata.Count);  // +1 revision added when importing
+                    Assert.Equal(12, revisionsMetadata.Count);
                     var dic = await session.CountersFor(id).GetAllAsync();
                     Assert.Equal(3, dic.Count);
                     Assert.Equal(int.MaxValue, dic["Downloads"]);
@@ -126,7 +126,7 @@ namespace SlowTests.Issues
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal("HasRevisions, HasCounters", metadata.GetString("@flags"));
                     var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
-                    Assert.Equal(3, revisionsMetadata.Count);  // +1 revision added when importing
+                    Assert.Equal(2, revisionsMetadata.Count); 
                     var dic = await session.CountersFor(id).GetAllAsync();
                     Assert.Equal(1, dic.Count);
                     Assert.Equal(322, dic["ShouldBeKeptAfterSmugglerImport"]);

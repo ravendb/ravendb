@@ -226,8 +226,7 @@ namespace Raven.Server.Documents
                     flags |= DocumentFlags.HasRevisions;
                 }
 
-                if (collectionName.IsHiLo == false && flags.Contain(DocumentFlags.Artificial) == false &&
-                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromImport) == false)
+                if (collectionName.IsHiLo == false && flags.Contain(DocumentFlags.Artificial) == false)
                 {
 
                     Recreate(context, id, oldDoc, ref document, ref flags, nonPersistentFlags, ref documentDebugHash);

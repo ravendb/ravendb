@@ -382,8 +382,8 @@ namespace SlowTests.Client.Attachments
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
-                    Assert.Equal(3, stats.CountOfRevisionDocuments);
-                    Assert.Equal(2 + 1, stats.CountOfAttachments); // the imported document will create 1 additional revision with 1 attachment
+                    Assert.Equal(2, stats.CountOfRevisionDocuments);
+                    Assert.Equal(2 , stats.CountOfAttachments);
                     Assert.Equal(1, stats.CountOfUniqueAttachments);
 
                     using (var session = store2.OpenSession())
