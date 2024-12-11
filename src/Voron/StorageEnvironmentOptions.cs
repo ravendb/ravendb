@@ -236,6 +236,8 @@ namespace Voron
         /// </summary>
         internal bool CopyOnWriteMode { get; set; }
 
+        public abstract void LinkFiles(long journalNumber, string fileName);
+        
         public abstract JournalWriter CreateJournalWriter(long journalNumber, long journalSize);
 
         public abstract VoronPathSetting GetJournalPath(long journalNumber);
@@ -534,6 +536,18 @@ namespace Voron
 
             public override VoronPathSetting BasePath => _basePath;
 
+            public override void LinkFiles(long journalNumber, string fileName)
+            {
+                var name = JournalName(journalNumber);
+                var path = JournalPath.Combine(name);
+                if (File.Exists(path.FullPath)) // TODO: this is wrong
+                    throw new InvalidOperationException("Unable to link file " + fileName + " to " + path + " because it already exists");
+
+                var rc = Pal.rvn_hard_link(fileName, path.FullPath, out var errorCode);
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, "Failed to link files " + fileName + " to " + path.FullPath);
+            }
+
             public override JournalWriter CreateJournalWriter(long journalNumber, long journalSize)
             {
                 var name = JournalName(journalNumber);
@@ -751,31 +765,38 @@ namespace Voron
                 return true;
             }
 
-            public override unsafe bool ReadHeader(string filename, FileHeader* header)
+            public override Span<byte> ReadHeader(string filename, Span<byte> buffer)
             {
                 var path = _basePath.Combine(filename);
                 if (File.Exists(path.FullPath) == false)
                 {
-                    return false;
+                    return Span<byte>.Empty;
                 }
 
-                var success = RunningOnPosix ?
-                    PosixHelper.TryReadFileHeader(header, path) :
-                    Win32Helper.TryReadFileHeader(header, path);
+                using (var fs = SafeFileStream.Create(path.FullPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))
+                {
+                    var totalRead = 0;
+                    while (totalRead < buffer.Length)
+                    {
+                        var read = fs.Read(buffer[totalRead..]);
+                        if (read == 0)
+                            break;
+                        totalRead += read;
+                    }
 
-                if (!success)
-                    return false;
-
-                return header->Hash == HeaderAccessor.CalculateFileHeaderHash(header);
+                    return buffer[..totalRead];
+                }
             }
 
-
-            public override unsafe void WriteHeader(string filename, FileHeader* header)
+            public override unsafe void WriteHeader(string filename, Span<byte> header)
             {
                 var path = _basePath.Combine(filename);
-                var rc = Pal.rvn_write_header(path.FullPath, header, sizeof(FileHeader), out var errorCode);
-                if (rc != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FailCodes)rc).ToString()}");
+                fixed (byte* p = header)
+                {
+                    var rc = Pal.rvn_write_header(path.FullPath, p, header.Length, out var errorCode);
+                    if (rc != PalFlags.FailCodes.Success)
+                        PalHelper.ThrowLastError(rc, errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FailCodes)rc).ToString()}");
+                }
             }
 
             public void DeleteAllTempFiles()
@@ -916,7 +937,7 @@ namespace Voron
 
             private readonly Dictionary<string, JournalWriter> _logs = new(StringComparer.OrdinalIgnoreCase);
             private readonly HashSet<SafeFileHandle> _handles = [];
-            private readonly Dictionary<string, IntPtr> _headers = new(StringComparer.OrdinalIgnoreCase);
+            private readonly Dictionary<string, byte[]> _headers = new(StringComparer.OrdinalIgnoreCase);
             private readonly int _instanceId;
 
 
@@ -942,11 +963,11 @@ namespace Voron
             public override unsafe (Pager Pager, Pager.State State) InitializeDataPager()
             {
                 var flags = Pal.OpenFileFlags.Temporary;
-                if(Encryption.IsEnabled)
+                if (Encryption.IsEnabled)
                     flags |= Pal.OpenFileFlags.Encrypted;
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                     flags |= Pal.OpenFileFlags.DoNotMap;
-                var (pager,state) = Pager.Create(this, _filename, InitialFileSize ?? 0, flags);
+                var (pager, state) = Pager.Create(this, _filename, InitialFileSize ?? 0, flags);
                 try
                 {
                     var rc = Pal.rvn_pager_get_file_handle(state.Handle, out var handle, out var error);
@@ -959,8 +980,9 @@ namespace Voron
                     state.Dispose();
                     pager.Dispose();
                     throw;
-            }
-                return (pager,state);
+                }
+
+                return (pager, state);
             }
 
             public override string ToString()
@@ -969,6 +991,17 @@ namespace Voron
             }
 
             public override VoronPathSetting BasePath { get; } = new MemoryVoronPathSetting();
+            
+            public override void LinkFiles(long journalNumber, string fileName)
+            {
+                var path = GetJournalPath(journalNumber);
+                if (File.Exists(path.FullPath)) // TODO: this is wrong
+                    throw new InvalidOperationException("Unable to link file " + fileName + " to " + path + " because it already exists");
+
+                var rc = Pal.rvn_hard_link(fileName, path.FullPath, out var errorCode);
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, "Failed to link files " + fileName + " to " + path.FullPath);
+            }
 
             public override JournalWriter CreateJournalWriter(long journalNumber, long journalSize)
             {
@@ -1019,11 +1052,6 @@ namespace Voron
                     virtualPager.Value.Dispose();
                 }
 
-                foreach (var headerSpace in _headers)
-                {
-                    Marshal.FreeHGlobal(headerSpace.Value);
-                }
-
                 _headers.Clear();
             }
 
@@ -1042,32 +1070,29 @@ namespace Voron
                 return true;
             }
 
-            public override unsafe bool ReadHeader(string filename, FileHeader* header)
+            public override Span<byte> ReadHeader(string filename, Span<byte> buffer)
             {
                 if (Disposed)
                     throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
-                IntPtr ptr;
-                if (_headers.TryGetValue(filename, out ptr) == false)
+                if (_headers.TryGetValue(filename, out var existingBuf) == false)
                 {
-                    return false;
+                    return Span<byte>.Empty;
                 }
-                *header = *((FileHeader*)ptr);
 
-                return header->Hash == HeaderAccessor.CalculateFileHeaderHash(header);
+                existingBuf.CopyTo(buffer);
+                return buffer[..existingBuf.Length];
             }
 
-            public override unsafe void WriteHeader(string filename, FileHeader* header)
+            public override void WriteHeader(string filename, Span<byte> header)
             {
                 if (Disposed)
                     throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
 
-                IntPtr ptr;
-                if (_headers.TryGetValue(filename, out ptr) == false)
+                if (_headers.TryGetValue(filename, out var buf) == false)
                 {
-                    ptr = (IntPtr)NativeMemory.AllocateMemory(sizeof(FileHeader));
-                    _headers[filename] = ptr;
+                    _headers[filename] = buf = new byte[header.Length];
                 }
-                Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
+                header.CopyTo(buf);
             }
 
             public override (Pager Pager, Pager.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted)
@@ -1156,9 +1181,9 @@ namespace Voron
 
         public abstract bool TryDeleteJournal(long number);
 
-        public abstract unsafe bool ReadHeader(string filename, FileHeader* header);
+        public abstract Span<byte> ReadHeader(string filename, Span<byte> buffer);
 
-        public abstract unsafe void WriteHeader(string filename, FileHeader* header);
+        public abstract void WriteHeader(string filename, Span<byte> header);
 
         public abstract (Pager Pager, Pager.State State) CreateTemporaryBufferPager(string name, long initialSize, bool encrypted);
 

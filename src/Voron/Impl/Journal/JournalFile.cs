@@ -25,6 +25,8 @@ namespace Voron.Impl.Journal
     {
         public long LastTransactionId;
 
+        public Dictionary<StorageEnvironment, long> RegisteredEnvironments = new();
+
         internal List<TransactionHeader> _transactionHeaders = new();
 
         public override string ToString()
