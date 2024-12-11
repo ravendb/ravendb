@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Voron.Impl;
@@ -29,12 +29,11 @@ namespace Voron
             return locator;
         }
 
-        public void FreePageLocator(PageLocator locator)
+        internal void FreePageLocator(PageLocator locator)
         {
             Debug.Assert(locator != null);
             if (_pageLocators.Count < 1024)
                 _pageLocators.Push(locator);
         }
-
     }
 }

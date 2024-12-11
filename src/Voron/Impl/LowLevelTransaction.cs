@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Collections;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Sparrow.Server.Utils;
@@ -195,9 +196,21 @@ namespace Voron.Impl
 
             Flags = TransactionFlags.Read;
 
-            _pageLocator = transactionPersistentContext.AllocatePageLocator();
+            _pageLocator = AllocatePageLocator();
 
             InitializeRoots();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public PageLocator AllocatePageLocator()
+        {
+            return PersistentContext.AllocatePageLocator();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void FreePageLocator(PageLocator locator)
+        {
+            PersistentContext.FreePageLocator(locator);
         }
 
         private LowLevelTransaction(LowLevelTransaction previous, TransactionPersistentContext persistentContext, long txId)
@@ -256,7 +269,8 @@ namespace Voron.Impl
             _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
             _pagesToFreeOnCommit = new Stack<long>();
 
-            _pageLocator = PersistentContext.AllocatePageLocator();
+            _pageLocator = AllocatePageLocator();
+
             InitializeRoots();
             InitTransactionHeader();
         }
@@ -310,6 +324,7 @@ namespace Voron.Impl
             _scratchPagesInUse = _env.WriteTransactionPool.ScratchPagesInUse;
             _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
             _pagesToFreeOnCommit = new Stack<long>();
+            _pageLocator = AllocatePageLocator();
 
             InitializeRoots();
             InitTransactionHeader();
@@ -798,7 +813,7 @@ namespace Voron.Impl
 
                 _txStatus |= TxStatus.Disposed;
 
-                PersistentContext.FreePageLocator(_pageLocator);
+                FreePageLocator(_pageLocator);
             }
             finally
             {

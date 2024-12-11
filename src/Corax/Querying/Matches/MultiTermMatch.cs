@@ -146,7 +146,7 @@ namespace Corax.Querying.Matches
                 _itBuffer = (long*)bs.Ptr;
                 _containerItemsScope = _allocator.Allocate(BufferSize * sizeof(UnmanagedSpan), out bs);
                 _containerItems = (UnmanagedSpan*)bs.Ptr;
-                _pageLocator = new PageLocator();
+                _pageLocator = searcher.Transaction.LowLevelTransaction.AllocatePageLocator();
             }
 
             public void Reset(ref MultiTermMatch<TTermProvider> match)
@@ -295,6 +295,7 @@ namespace Corax.Querying.Matches
                 _smallPostListIds.Dispose();
                 _containerItemsScope.Dispose();
                 _itBufferScope.Dispose();
+                _searcher.Transaction.LowLevelTransaction.FreePageLocator(_pageLocator);
             }
         }
 
