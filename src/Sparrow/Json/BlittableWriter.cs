@@ -16,20 +16,40 @@ namespace Sparrow.Json
     {
         private readonly JsonOperationContext _context;
         private TWriter _unmanagedWriteBuffer;
+        
+        // A buffer allocated specifically for handling data compression tasks.
+        // This buffer temporarily stores compressed data during serialization processes where string or data compression
+        // is necessary to optimize memory usage and reduce data size.
         private AllocatedMemoryData _compressionBuffer;
+        
+        // A buffer used internally to store temporary data or intermediate results during write operations.
+        // This buffer supports tasks such as variable-size encoding and other short-term data manipulations
+        // that require efficient, reusable memory storage.
         private AllocatedMemoryData _innerBuffer;
+
+        // Tracks the current writing position within the unmanaged buffer.
+        // This field is important for maintaining proper offsets and managing data placement as data is written sequentially.
         private int _position;
+        
+        // Stores the size of the last data chunk written to the buffer.
+        // This value assists in determining buffer requirements and optimizing memory allocation during context resets
+        // or when reallocating buffers
         private int _lastSize;
+
+        // Tracks a unique identifier for the current document being written within the context.
+        // It ensures that the cached properties remain consistent and detects potential changes
+        // or resets in context-related properties during the write process.
+        // Initialized to -1 to indicate that it has not been set for the current session.
         private int _documentNumber = -1;
+        
         public int Position => _position;
 
         public int SizeInBytes => _unmanagedWriteBuffer.SizeInBytes;
 
         public unsafe BlittableJsonReaderObject CreateReader()
         {
-            byte* ptr;
-            int size;
-            _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out size);
+            _unmanagedWriteBuffer.EnsureSingleChunk(out byte* ptr, out int size);
+            
             _lastSize = size;
             var reader = new BlittableJsonReaderObject(
                 ptr,
@@ -99,15 +119,13 @@ namespace Sparrow.Json
         public int WriteValue(double value)
         {
             var s = EnsureDecimalPlace(value, value.ToString("R", CultureInfo.InvariantCulture));
-            BlittableJsonToken token;
-            return WriteValue(s, out token);
+            return WriteValue(s, out BlittableJsonToken _);
         }
 
         public int WriteValue(decimal value)
         {
             var s = EnsureDecimalPlace(value, value.ToString("G", CultureInfo.InvariantCulture));
-            BlittableJsonToken token;
-            return WriteValue(s, out token);
+            return WriteValue(s, out BlittableJsonToken _);
         }
 
         public int WriteValue(float value)
@@ -168,8 +186,7 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.Dispose();
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream(_lastSize);
             _position = 0;
-            if (_innerBuffer == null)
-                _innerBuffer = _context.GetMemory(32);
+            _innerBuffer ??= _context.GetMemory(32);
         }
 
         public WriteToken WriteObjectMetadata(FastList<AbstractBlittableJsonDocumentBuilder.PropertyTag> properties, long firstWrite, int maxPropId)
@@ -187,10 +204,8 @@ namespace Sparrow.Json
             _position += WriteVariableSizeInt(properties.Count);
 
             // Write object metadata
-            for (int i = 0; i < properties.Count; i++)
+            foreach (var sortedProperty in properties)
             {
-                var sortedProperty = properties[i];
-
                 WriteNumber(objectMetadataStart - sortedProperty.Position, positionSize);
                 WriteNumber(sortedProperty.Property.PropertyId, propertyIdSize);
                 _unmanagedWriteBuffer.WriteByte(sortedProperty.Type);
@@ -432,9 +447,7 @@ namespace Sparrow.Json
             {
                 for (int i = count - 1; i >= count / 2; i--)
                 {
-                    var tmp = buffer[i];
-                    buffer[i] = buffer[count - 1 - i];
-                    buffer[count - 1 - i] = tmp;
+                    (buffer[i], buffer[count - 1 - i]) = (buffer[count - 1 - i], buffer[i]);
                 }
                 _unmanagedWriteBuffer.Write(buffer, count);
             }

@@ -767,6 +767,40 @@ namespace Sparrow.Json
             _pos = auxPos;
         }
 
+        public void WriteInteger(ulong val)
+        {
+            if (val == 0)
+            {
+                EnsureBuffer(1);
+                Unsafe.WriteUnaligned(_buffer + _pos, (byte)'0');
+                _pos++;
+
+                return;
+            }
+
+            var localBuffer = stackalloc byte[32];
+
+            int idx = 0;
+
+            do
+            {
+                var v = val % 10;
+                localBuffer[idx++] = (byte)('0' + v);
+                val /= 10;
+            } while (val != 0);
+
+            EnsureBuffer(idx);
+
+            var buffer = _buffer;
+            int auxPos = _pos;
+
+            do
+                buffer[auxPos++] = localBuffer[--idx];
+            while (idx > 0);
+
+            _pos = auxPos;
+        }
+        
         public void WriteDouble(LazyNumberValue val)
         {
             if (val.IsNaN())
