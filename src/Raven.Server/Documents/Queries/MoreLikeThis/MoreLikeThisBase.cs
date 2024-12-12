@@ -391,7 +391,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
                    !token.HasFlag(BlittableJsonToken.String) &&
                    !token.HasFlag(BlittableJsonToken.Boolean) &&
                    !token.HasFlag(BlittableJsonToken.EmbeddedBlittable) &&
-                   !token.HasFlag(BlittableJsonToken.Reserved2) &&
+                   !token.HasFlag(BlittableJsonToken.Reserved3) &&
                    !token.HasFlag(BlittableJsonToken.Reserved4) &&
                    !token.HasFlag(BlittableJsonToken.Reserved6);
         }

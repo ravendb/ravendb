@@ -1,6 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow.Collections;
+using InvalidOperationException = System.InvalidOperationException;
 
 namespace Sparrow.Json.Parsing
 {
@@ -15,8 +17,8 @@ namespace Sparrow.Json.Parsing
         public JsonParserToken CurrentTokenType;
         public JsonParserTokenContinuation Continuation;
 
-        public readonly FastList<int> EscapePositions = new FastList<int>();
-       
+        public readonly FastList<int> EscapePositions = new();
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteVariableSizeInt(ref byte* dest, int value)
         {
@@ -217,6 +219,199 @@ namespace Sparrow.Json.Parsing
             CurrentTokenType = JsonParserToken.None;
             Continuation = JsonParserTokenContinuation.None;
             EscapePositions.Clear();
+
+            // We will change this value to MinValue because the 0 magnitude number is valid as the content of a vector.
+            _maxLongMagnitude = long.MinValue;
+            _maxDoubleMagnitude = double.MinValue;
+        }
+
+        internal FastList<(JsonParserToken, long)> _bufferedSequence;
+        private long _maxLongMagnitude;
+        private double _maxDoubleMagnitude;
+        private bool _hasNegativeValue;
+
+        internal bool IsBufferedFloat { get; private set; }
+
+        internal void ClearBuffered()
+        {
+            _bufferedSequence.WeakClear();
+
+            // We will change this value to MinValue because the 0 magnitude number is valid as the content of a vector.
+            _maxLongMagnitude = long.MinValue;
+            _maxDoubleMagnitude = double.MinValue;
+        }
+
+        internal BlittableVectorType GetBufferedOptimalType()
+        {
+            if (IsBufferedFloat)
+            {
+                // We need to check both because we can convert longs to doubles, but not the other
+                // way around. 
+                double maxValue = Math.Max(_maxDoubleMagnitude, _maxLongMagnitude);
+                
+                // If handling floating-point values, use a simple check first.
+                return Math.Abs(maxValue) switch
+                {
+                    <= float.MaxValue => BlittableVectorType.Float,
+                    _ => BlittableVectorType.Double,
+                };
+            }
+
+            // At this point we know we are only working with integers.
+            return (_maxBufferedLongMagnitude: _maxLongMagnitude, _hasNegativeLongValue: _hasNegativeValue) switch
+            {
+                ( <= sbyte.MaxValue, true) => BlittableVectorType.SByte,
+                ( <= byte.MaxValue, false) => BlittableVectorType.Byte,
+                ( <= short.MaxValue, true) => BlittableVectorType.Int16,
+                ( <= ushort.MaxValue, false) => BlittableVectorType.UInt16,
+                ( <= int.MaxValue, true) => BlittableVectorType.Int32,
+                ( <= uint.MaxValue, false) => BlittableVectorType.UInt32,
+                (_, true) => BlittableVectorType.Int64,
+                (_, false) => BlittableVectorType.UInt64, // Fallback for unsigned long
+            };
+        }
+
+        internal void AddBuffered(long stateLong)
+        {
+            _bufferedSequence ??= new();
+
+            _maxLongMagnitude = Math.Max(Math.Abs(stateLong), _maxLongMagnitude);
+            _hasNegativeValue |= stateLong < 0;
+
+            _bufferedSequence.Add((JsonParserToken.Integer, stateLong));
+        }
+
+        internal void AddBuffered(double stateFloat)
+        {
+            _bufferedSequence ??= new();
+
+            // Since if floating point we don't really care if it has negative values, we ignore it.
+            // On the other handle we do care to find the maximum magnitude of the floating point
+            // in order to know if we can use a float instead of a double.
+            IsBufferedFloat = true;
+
+            // We only care about the magnitude.
+            _maxDoubleMagnitude = Math.Max(Math.Abs(stateFloat), _maxDoubleMagnitude);
+
+            // We don't want to do a proper casting, what we need is to reinterpret the bitstream here. 
+            _bufferedSequence.Add((JsonParserToken.Float, Unsafe.As<double, long>(ref stateFloat)));
+        }
+
+        internal int FillVector<T>(Span<T> vector) where T : unmanaged
+        {
+            PortableExceptions.ThrowIfOnDebug<ArgumentException>(vector.Length < _bufferedSequence.Count);
+
+            var sequence = _bufferedSequence;
+            for (int i = 0; i < vector.Length; i++)
+            {
+                ref var item = ref sequence.GetAsRef(i);
+
+                if (item.Item1 == JsonParserToken.Float)
+                {
+                    // Since we have stored a double in the value we will reinterpret it back into a double,
+                    // and then we are going to perform the casting to the proper type we are required to 
+                    // return.
+                    double valueAsFloatingPoint = Unsafe.As<long, double>(ref item.Item2);
+                    if (typeof(T) == typeof(double))
+                    {
+                        vector[i] = (T)(object)valueAsFloatingPoint;
+                        continue;
+                    }
+
+                    if (typeof(T) == typeof(float))
+                    {
+                        vector[i] = (T)(object)(float)valueAsFloatingPoint;
+                        continue;
+                    }
+                    
+#if NET6_0_OR_GREATER
+                    if (typeof(T) == typeof(Half))
+                    {
+                        vector[i] = (T)(object)(Half)valueAsFloatingPoint;
+                        continue;
+                    }
+#endif
+                    // This shouldn't happen. If it does, there is a defect in the implementation.
+                    PortableExceptions.Throw<InvalidOperationException>($"The type {typeof(T).Name} is not supported when we have buffered floating point values.");
+                }
+                else
+                {
+                    // Since we have stored a long value we will reinterpret it back into the proper type we are required to 
+                    // return. We know this is an integer value.
+                    long valueAsLong = item.Item2;
+
+                    if (typeof(T) == typeof(double))
+                    {
+                        vector[i] = (T)(object)(double)valueAsLong;
+                        continue;
+                    }
+
+                    if (typeof(T) == typeof(float))
+                    {
+                        vector[i] = (T)(object)(float)valueAsLong;
+                        continue;
+                    }
+#if NET6_0_OR_GREATER
+                    if (typeof(T) == typeof(Half))
+                    {
+                        vector[i] = (T)(object)(Half)valueAsLong;
+                        continue;
+                    }
+#endif
+                    if (typeof(T) == typeof(long))
+                    {
+                        vector[i] = (T)(object)valueAsLong;
+                        continue;
+                    }
+
+                    if (typeof(T) == typeof(ulong))
+                    {
+                        vector[i] = (T)(object)(ulong)valueAsLong;
+                        continue;
+                    }
+
+                    if (typeof(T) == typeof(int))
+                    {
+                        vector[i] = (T)(object)(int)valueAsLong;
+                        continue;
+                    }
+
+                    if (typeof(T) == typeof(uint))
+                    {
+                        vector[i] = (T)(object)(uint)valueAsLong;
+                        continue;
+                    }
+
+                    if (typeof(T) == typeof(short))
+                    {
+                        vector[i] = (T)(object)(short)valueAsLong;
+                        continue;
+                    }
+
+                    if (typeof(T) == typeof(ushort))
+                    {
+                        vector[i] = (T)(object)(ushort)valueAsLong;
+                        continue;
+                    }
+
+                    if (typeof(T) == typeof(sbyte))
+                    {
+                        vector[i] = (T)(object)(sbyte)valueAsLong;
+                        continue;
+                    }
+
+                    if (typeof(T) == typeof(byte))
+                    {
+                        vector[i] = (T)(object)(byte)valueAsLong;
+                        continue;
+                    }
+
+                    // This shouldn't happen. If it does, there is a defect in the implementation.
+                    PortableExceptions.Throw<InvalidOperationException>($"The type {typeof(T).Name} is not supported when we have buffered floating point values.");
+                }
+            }
+
+            return sequence.Count;
         }
     }
 }

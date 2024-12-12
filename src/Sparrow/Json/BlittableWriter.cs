@@ -703,6 +703,52 @@ namespace Sparrow.Json
             return startPos;
         }
 
+        public int WriteVector<T>(ReadOnlySpan<T> vector)
+            where T : unmanaged
+        {
+            BlittableVectorType GetVectorType()
+            {
+                var type = typeof(T);
+                if (type == typeof(sbyte))
+                    return BlittableVectorType.SByte;
+                if (type == typeof(short))
+                    return BlittableVectorType.Int16;
+                if (type == typeof(int))
+                    return BlittableVectorType.Int32;
+                if (type == typeof(long))
+                    return BlittableVectorType.Int64;
+                if (type == typeof(byte))
+                    return BlittableVectorType.Byte;
+                if (type == typeof(ushort))
+                    return BlittableVectorType.UInt16;
+                if (type == typeof(uint))
+                    return BlittableVectorType.UInt32;
+                if (type == typeof(ulong))
+                    return BlittableVectorType.UInt64;
+                if (type == typeof(float))
+                    return BlittableVectorType.Float;
+                if (type == typeof(double))
+                    return BlittableVectorType.Double;
+                throw new NotSupportedException($"Type {type.Name} is not supported in vectors.");
+            }
+            
+            var startPos = _position;
+            BlittableVectorType vectorType = GetVectorType();
+
+            // Prepare the header
+            BlittableVectorHeader header = new(vectorType, vector.Length);
+
+            // Write the header
+            _unmanagedWriteBuffer.Write(in header);
+            _position += Unsafe.SizeOf<BlittableVectorHeader>();
+
+            // Write the vector data
+            _unmanagedWriteBuffer.Write(vector);
+            _position += Unsafe.SizeOf<T>() * vector.Length;
+            
+            return startPos;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe int TryCompressValue(ref byte* buffer, ref int position, int size, ref BlittableJsonToken token, UsageMode mode, int? initialCompressedSize, int maxGoodCompressionSize)
         {

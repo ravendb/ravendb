@@ -2,16 +2,19 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
-    public unsafe interface IUnmanagedWriteBuffer : IDisposable
+    public unsafe interface IUnmanagedWriteBuffer : IDisposableQueryable, IDisposable
     {
         int SizeInBytes { get; }
         void Write(byte[] buffer, int start, int count);
         void Write(byte* buffer, int length);
+        void Write<T>(in T value) where T : unmanaged;
+        void Write<T>(in ReadOnlySpan<T> buffer) where T : unmanaged;
         void WriteByte(byte data);
         void EnsureSingleChunk(JsonParserState state);
         void EnsureSingleChunk(out byte* ptr, out int size);
@@ -24,6 +27,8 @@ namespace Sparrow.Json
         public int Used;
         private readonly JsonOperationContext.MemoryBuffer _buffer;
         private readonly JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
+        private bool _isDisposed;
+
         public int SizeInBytes => _sizeInBytes;
 
         public UnmanagedStreamBuffer(JsonOperationContext context, Stream stream)
@@ -32,6 +37,7 @@ namespace Sparrow.Json
             _sizeInBytes = 0;
             Used = 0;
             _returnBuffer = context.GetMemoryBuffer(out _buffer);
+            _isDisposed = false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -87,6 +93,17 @@ namespace Sparrow.Json
             } while (bufferPosition < count);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write<T>(in T value) where T : unmanaged
+        {
+            throw new NotImplementedException();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write<T>(in ReadOnlySpan<T> vector) where T : unmanaged
+        {
+            throw new NotImplementedException();
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteByte(byte data)
@@ -119,6 +136,8 @@ namespace Sparrow.Json
                     _stream.Write(_buffer.Memory.Memory.Span.Slice(0, Used));
                 Used = 0;
             }
+
+            _isDisposed = true;
         }
 
         public void EnsureSingleChunk(JsonParserState state)
@@ -129,6 +148,8 @@ namespace Sparrow.Json
         {
             throw new NotSupportedException();
         }
+
+        public bool IsDisposed => _isDisposed;
     }
 
     public unsafe struct UnmanagedWriteBuffer : IUnmanagedWriteBuffer
@@ -294,6 +315,95 @@ namespace Sparrow.Json
                 amountPending -= amountWrittenInRound;
                 buffer += amountWrittenInRound;
             } while (amountPending > 0);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write<T>(in T value) where T : unmanaged
+        {
+            DisposableExceptions.ThrowIfDisposedOnDebug(this);
+
+            int count = Unsafe.SizeOf<T>();
+            
+            var head = _head;
+            if (head.Allocation.SizeInBytes - head.Used > count)
+            {
+                *(T*)(head.Address + head.Used) = value;
+
+                head.AccumulatedSizeInBytes += count;
+                head.Used += count;
+            }
+            else
+            {
+                WriteUnlikely(value);
+            }
+        }
+
+        private void WriteUnlikely<T>(in T value) where T: unmanaged
+        {
+            int count = Unsafe.SizeOf<T>();
+            AllocateNextSegment(count, true);
+            
+            var head = _head;
+
+            // Update Segment invariants
+            *(T*)(head.Address) = value;
+            head.AccumulatedSizeInBytes += count;
+            head.Used += count;
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write<T>(in ReadOnlySpan<T> vector) where T : unmanaged
+        {
+            DisposableExceptions.ThrowIfDisposedOnDebug(this);
+
+            var vectorAsBytes = MemoryMarshal.Cast<T, byte>(vector);
+
+            int count = vectorAsBytes.Length;
+            if (count == 0)
+                return;
+
+            var head = _head;
+            if (head.Allocation.SizeInBytes - head.Used > count)
+            {
+                vectorAsBytes.CopyTo(
+                    new Span<byte>(head.Address + head.Used, count)
+                );
+
+                head.AccumulatedSizeInBytes += count;
+                head.Used += count;
+            }
+            else
+                WriteUnlikely(vectorAsBytes);
+        }
+
+        private void WriteUnlikely(ReadOnlySpan<byte> vector)
+        {
+            var head = _head;
+            do
+            {
+                var availableSpace = head.Allocation.SizeInBytes - head.Used;
+                // If the current Segment does not have any space left, allocate a new one
+                if (availableSpace == 0)
+                {
+                    AllocateNextSegment(vector.Length, true);
+                    head = _head;
+                }
+
+                // Write as much as we can in the current Segment
+                var amountWrittenInRound = Math.Min(vector.Length, availableSpace);
+
+                vector.Slice(0, amountWrittenInRound)
+                      .CopyTo(new Span<byte>(head.Address + head.Used, amountWrittenInRound));
+                
+                // Update Segment invariants
+                head.AccumulatedSizeInBytes += amountWrittenInRound;
+                head.Used += amountWrittenInRound;
+
+                // Update loop invariants
+                vector = vector.Slice(amountWrittenInRound);
+            } 
+            while (vector.Length > 0);
         }
 
         private void AllocateNextSegment(int required, bool allowGrowth)

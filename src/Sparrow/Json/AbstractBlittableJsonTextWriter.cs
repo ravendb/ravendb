@@ -197,9 +197,119 @@ namespace Sparrow.Json
                     WriteRawString(blob.Address, blob.Length);
                     break;
 
+                case BlittableJsonToken.Vector:
+                    WriteVectorToStream((BlittableJsonReaderVector)val);
+                    break;
+                
                 default:
                     throw new DataMisalignedException($"Unidentified Type {token}");
             }
+        }
+
+        private void WriteVectorToStream(BlittableJsonReaderVector vectorReader)
+        {
+
+            void WriteValues<T>(ReadOnlySpan<T> values) 
+                where T : unmanaged
+            {
+                for (var i = 0; i < values.Length; i++)
+                {
+                    if (i != 0)
+                    {
+                        WriteComma();
+                    }
+
+                    if (typeof(T) == typeof(float))
+                    {
+                        WriteDouble((float)(object)values[i]);
+                    }
+                    else if (typeof(T) == typeof(double))
+                    {
+                        WriteDouble((double)(object)values[i]);
+                    }
+#if NET6_0_OR_GREATER
+                    else if (typeof(T) == typeof(Half))
+                    {
+                        WriteDouble((double)(object)values[i]);
+                    }
+#endif
+                    else if (typeof(T) == typeof(sbyte))
+                    {
+                        WriteInteger((sbyte)(object)values[i]);
+                    }
+                    else if (typeof(T) == typeof(byte))
+                    {
+                        WriteInteger((byte)(object)values[i]);
+                    }
+                    else if (typeof(T) == typeof(short))
+                    {
+                        WriteInteger((short)(object)values[i]);
+                    }
+                    else if (typeof(T) == typeof(int))
+                    {
+                        WriteInteger((int)(object)values[i]);
+                    }
+                    else if (typeof(T) == typeof(ushort))
+                    {
+                        WriteInteger((ushort)(object)values[i]);
+                    }
+                    else if (typeof(T) == typeof(uint))
+                    {
+                        WriteInteger((uint)(object)values[i]);
+                    }
+                    else if (typeof(T) == typeof(ulong))
+                    {
+                        WriteInteger((ulong)(object)values[i]);
+                    }
+                    else
+                    {
+                        WriteInteger((long)(object)values[i]);
+                    }
+                }
+            }
+
+
+            WriteStartArray();
+
+            switch (vectorReader.Type)
+            {
+                case BlittableVectorType.SByte:
+                    WriteValues(vectorReader.ReadArray<sbyte>());
+                    break;
+                case BlittableVectorType.Int16:
+                    WriteValues(vectorReader.ReadArray<short>());
+                    break;
+                case BlittableVectorType.Int32:
+                    WriteValues(vectorReader.ReadArray<int>());
+                    break;
+                case BlittableVectorType.Int64:
+                    WriteValues(vectorReader.ReadArray<long>());
+                    break;
+                case BlittableVectorType.Byte:
+                    WriteValues(vectorReader.ReadArray<byte>());
+                    break;
+                case BlittableVectorType.UInt16:
+                    WriteValues(vectorReader.ReadArray<ushort>());
+                    break;
+                case BlittableVectorType.UInt32:
+                    WriteValues(vectorReader.ReadArray<uint>());
+                    break;
+                case BlittableVectorType.UInt64:
+                    WriteValues(vectorReader.ReadArray<ulong>());
+                    break;
+#if NET6_0_OR_GREATER
+                case BlittableVectorType.Half:
+                    WriteValues(vectorReader.ReadArray<Half>()); break;
+#endif
+                case BlittableVectorType.Float:
+                    WriteValues(vectorReader.ReadArray<float>());
+                    break;
+                case BlittableVectorType.Double:
+                    WriteValues(vectorReader.ReadArray<double>());
+                    break;
+            }
+
+            WriteEndArray();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
