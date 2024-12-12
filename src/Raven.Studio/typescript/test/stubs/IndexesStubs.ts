@@ -186,7 +186,7 @@ export class IndexesStubs {
                             Name: {
                                 Analyzer: null,
                                 Spatial: null,
-                                Vector: null
+                                Vector: null,
                             },
                         },
                         Configuration: {},
