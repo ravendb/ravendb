@@ -18,7 +18,7 @@ namespace SlowTests.Voron.Issues
             options.ManualFlushing = true;
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         public void Should_properly_clear_transaction_after_begin_async_commit_failure()
         {
             var tx1 = Env.WriteTransaction();

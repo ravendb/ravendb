@@ -16,7 +16,7 @@ namespace SlowTests.SlowTests.Indexes
         {
         }
 
-        [MultiplatformTheory(RavenArchitecture.X64)]
+        [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes, RavenArchitecture.X64)]
         [InlineData(RavenSearchEngineMode.Corax)]
         [InlineData(RavenSearchEngineMode.Lucene)]
         public void WillNotProduceAnyErrors(RavenSearchEngineMode mode)

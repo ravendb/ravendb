@@ -29,12 +29,12 @@ public class PostingListTestsExtended : NoDisposalNoOutputNeeded
     [InlineData(506431817, 2)]
     public void CanDeleteAndInsertInRandomOrder(int seed, int size) => CanDeleteAndInsertInRandomOrderBase(seed, size);
 
-    [MultiplatformTheory(RavenArchitecture.X64)]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenArchitecture.X64)]
     [InlineData(1477187726, 1828658, Skip = RavenTheoryAttribute.CoraxSkipMessage)]
     [MemberData("Configuration", Skip = RavenTheoryAttribute.CoraxSkipMessage)]
     public void CanDeleteAndInsertInRandomOrderX64Only(int seed, int size) => CanDeleteAndInsertInRandomOrderBase(seed, size);
     
-    [MultiplatformTheory(RavenPlatform.Windows, RavenArchitecture.X64)]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenPlatform.Windows, RavenArchitecture.X64)]
     [InlineData(391060845, 31707323, Skip = RavenTheoryAttribute.CoraxSkipMessage)]
     public void CanDeleteAndInsertInRandomOrderWindows(int seed, int size) => CanDeleteAndInsertInRandomOrderBase(seed, size);
 

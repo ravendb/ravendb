@@ -1683,7 +1683,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }, interval: _waitInterval);
         }
 
-        [MultiplatformTheory(RavenArchitecture.AllX64)]
+        [RavenMultiplatformTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries, RavenArchitecture.AllX64)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         [ClassData(typeof(TestDataForDocChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndMultipleSegmentOfTimeSeriesInSameSession_ShouldDestBeAsSrc(
@@ -1740,7 +1740,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }
         }
 
-        [MultiplatformTheory(RavenArchitecture.AllX64)]
+        [RavenMultiplatformTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries, RavenArchitecture.AllX64)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndMultipleSegmentOfTimeSeriesInAnotherSession_ShouldDestBeAsSrc(
             string justForXUint,

@@ -16,7 +16,7 @@ namespace FastTests.Voron.Bugs
             options.ManualFlushing = true;
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         public void Flushing_should_not_throw_on_freeing_scratch_page_async_commit()
         {
             var tx1 = Env.WriteTransaction();

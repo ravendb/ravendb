@@ -70,7 +70,7 @@ namespace InterversionTests
         {
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows)]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows)]
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
         [InlineData(ExcludeOn.Import)]
@@ -136,7 +136,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows)]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows)]
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
         [InlineData(ExcludeOn.Import)]
@@ -203,7 +203,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows)]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Smuggler, RavenPlatform.Windows)]
         [InlineData(ExcludeOn.Non)]
         [InlineData(ExcludeOn.Export)]
         [InlineData(ExcludeOn.Import)]
@@ -274,7 +274,7 @@ namespace InterversionTests
         }
 
         //Migrator
-        [MultiplatformFact(RavenPlatform.Windows)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion, RavenPlatform.Windows)]
         public async Task CanMigrateFrom42ToCurrent()
         {
             using var store42 = await GetDocumentStoreAsync(Server42Version);
@@ -311,7 +311,7 @@ namespace InterversionTests
             Assert.Equal(fromMetadataCount, toMetadataCount);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion, RavenPlatform.Windows)]
         public async Task CanMigrateFromCurrentTo42()
         {
             using var store42 = await GetDocumentStoreAsync(Server42Version);

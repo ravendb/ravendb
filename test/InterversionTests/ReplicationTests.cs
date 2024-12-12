@@ -22,7 +22,7 @@ namespace InterversionTests
         {
         }
 
-        [MultiplatformFact(RavenPlatform.Windows, Skip = "TODO: Add compatible version of v4.2 when released")]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion, RavenPlatform.Windows, Skip = "TODO: Add compatible version of v4.2 when released")]
         public async Task CannotReplicateTimeSeriesToV42()
         {
             var version = "4.2.101"; // todo:Add compatible version of v4.2 when released
@@ -53,7 +53,7 @@ namespace InterversionTests
             Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Select(x => x.Message).Any(x => x.Contains("TimeSeries"))));
         }
 
-        [MultiplatformFact(RavenPlatform.Windows)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion, RavenPlatform.Windows)]
         public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersionV42()
         {
             // https://issues.hibernatingrhinos.com/issue/RavenDB-17346
@@ -61,7 +61,7 @@ namespace InterversionTests
             await CanReplicateToOldServerWithLowerReplicationProtocolVersion(version);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersionV52()
         {
             // https://issues.hibernatingrhinos.com/issue/RavenDB-17346
@@ -93,7 +93,7 @@ namespace InterversionTests
         }
 
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Interversion, RavenPlatform.Windows | RavenPlatform.Linux)]
         public async Task ShouldNotReplicateIncrementalTimeSeriesToOldServer()
         {
             const string version = "5.2.3";

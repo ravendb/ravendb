@@ -58,4 +58,5 @@ public enum RavenTestCategory : long
     Security = 1L << 43,
     Monitoring = 1L << 44,
     Core = 1L << 45,
+    Interversion = 1L << 46,
 }

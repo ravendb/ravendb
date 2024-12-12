@@ -27,7 +27,7 @@ namespace InterversionTests
         {
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion, RavenPlatform.Windows | RavenPlatform.Linux)]
         [InlineData("5.4.107")]
         [InlineData("5.4.109")]
         public async Task UpgradeLeaderToLatest(string latest)
@@ -73,7 +73,7 @@ namespace InterversionTests
             }
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion, RavenPlatform.Windows | RavenPlatform.Linux)]
         [InlineData("5.4.107")]
         [InlineData("5.4.109")]
         public async Task UpgradeFollowerToLatest(string latest)

@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [MultiplatformFact(RavenArchitecture.X64)]
+        [RavenMultiplatformFact(RavenTestCategory.Querying, RavenArchitecture.X64)]
         public void ShouldNotErrorIndexOnInvalidProgramException()
         {
             // this test has been added initially to workaround the following issue: https://github.com/dotnet/coreclr/issues/14672

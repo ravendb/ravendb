@@ -256,13 +256,13 @@ namespace StressTests.Client.TimeSeries
             }
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.TimeSeries, RavenArchitecture.AllX64)]
         public async Task PatchTimestamp_IntegrationTest_x64()
         {
             await PatchTimestamp_IntegrationTest(8_192);
         }
 
-        [MultiplatformFact(RavenArchitecture.AllX86)]
+        [RavenMultiplatformFact(RavenTestCategory.TimeSeries, RavenArchitecture.AllX86)]
         public async Task PatchTimestamp_IntegrationTest_x86()
         {
             await PatchTimestamp_IntegrationTest(4_096);
