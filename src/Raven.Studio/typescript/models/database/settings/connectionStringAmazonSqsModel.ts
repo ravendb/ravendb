@@ -46,7 +46,7 @@ class AmazonSqsBasicModel {
         }
     }
 
-    update(dto: Raven.Client.Documents.Operations.ETL.Queue.Basic) {
+    update(dto: Raven.Client.Documents.Operations.ETL.Queue.AmazonSqsCredentials) {
         this.accessKey(dto.AccessKey);
         this.secretKey(dto.SecretKey);
         this.regionName(dto.RegionName);
