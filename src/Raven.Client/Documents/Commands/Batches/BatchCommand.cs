@@ -19,9 +19,10 @@ namespace Raven.Client.Documents.Commands.Batches
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
 
         public ClusterWideBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options = null, bool? disableAtomicDocumentsWrites = null) :
-            base(conventions, context: null, commands, options, TransactionMode.ClusterWide)
+            base(conventions, context: null, commands, options)
         {
             DisableAtomicDocumentWrites = disableAtomicDocumentsWrites;
+            Mode = TransactionMode.ClusterWide;
         }
 
         protected override void AppendOptions(StringBuilder sb)
@@ -43,14 +44,14 @@ namespace Raven.Client.Documents.Commands.Batches
         private readonly DocumentConventions _conventions;
         private readonly IList<ICommandData> _commands;
         private readonly BatchOptions _options;
-        private readonly TransactionMode _mode;
+        protected TransactionMode Mode;
 
-        public SingleNodeBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode)
+        public SingleNodeBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             _options = options;
-            _mode = mode;
+            Mode = TransactionMode.SingleNode;
 
             _commandsAsJson = new BlittableJsonReaderObject[_commands.Count];
             foreach (var command in commands)
@@ -102,7 +103,7 @@ namespace Raven.Client.Documents.Commands.Batches
                     {
                         writer.WriteStartObject();
                         writer.WriteArray("Commands", _commandsAsJson);
-                        if (_mode == TransactionMode.ClusterWide)
+                        if (Mode == TransactionMode.ClusterWide)
                         {
                             writer.WriteComma();
                             writer.WritePropertyName(nameof(TransactionMode));

@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Operations.Counters
         /// Gets or sets a value indicating whether the batch originated from an ETL process.
         /// This is used internally to identify and manage counter operations triggered by ETL pipelines.
         /// </summary>
-        public bool FromEtl;
+        internal bool FromEtl;
     }
 
     /// <summary>

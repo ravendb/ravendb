@@ -90,7 +90,7 @@ public class BatchCommandWithNoReplyFlagTest : RavenTestBase
     
     private class TestSingleNodeBatchCommand : SingleNodeBatchCommand
     {
-        public TestSingleNodeBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode) : base(conventions, context, commands, options, mode)
+        public TestSingleNodeBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null) : base(conventions, context, commands, options)
         {
         }
 
