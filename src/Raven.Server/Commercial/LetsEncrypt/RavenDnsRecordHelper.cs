@@ -215,19 +215,19 @@ public static class RavenDnsRecordHelper
         
         async Task AssertIpv4DnsUpdated(CancellationTokenSource cts)
         {
-            var googleDnsIps = await GetGoogleDnsResult(DnsRecordType.A, cts.Token);
+            var googleDnsIps = await GetGoogleDnsResultAsync(DnsRecordType.A, cts.Token);
             AssertExpectedIpsEqualGoogleIps(googleDnsIps);
             
-            var localDnsIps = await GetLocalDnsResult(AddressFamily.InterNetwork, cts.Token);
+            var localDnsIps = await GetLocalDnsResultAsync(AddressFamily.InterNetwork, cts.Token);
             AssertExpectedIpsEqualLocalIps(localDnsIps);
         }
 
         async Task AssertIpv6DnsUpdated(CancellationTokenSource cts)
         {
-            var googleDnsIps = await GetGoogleDnsResult(DnsRecordType.AAAA, cts.Token);
+            var googleDnsIps = await GetGoogleDnsResultAsync(DnsRecordType.AAAA, cts.Token);
             AssertExpectedIpsEqualGoogleIps(googleDnsIps);
             
-            var localDnsIps = await GetLocalDnsResult(AddressFamily.InterNetworkV6, cts.Token);
+            var localDnsIps = await GetLocalDnsResultAsync(AddressFamily.InterNetworkV6, cts.Token);
             AssertExpectedIpsEqualLocalIps(localDnsIps);
         }
 
@@ -236,8 +236,8 @@ public static class RavenDnsRecordHelper
             HashSet<string> allGoogleIps;
             try
             {
-                var task1 = GetGoogleDnsResult(DnsRecordType.A, cts.Token);
-                var task2 = GetGoogleDnsResult(DnsRecordType.AAAA, cts.Token);
+                var task1 = GetGoogleDnsResultAsync(DnsRecordType.A, cts.Token);
+                var task2 = GetGoogleDnsResultAsync(DnsRecordType.AAAA, cts.Token);
             
                 var result = await Task.WhenAll(task1,task2);
                 allGoogleIps = result[0].Concat(result[1]).ToHashSet();
@@ -253,8 +253,8 @@ public static class RavenDnsRecordHelper
             HashSet<string> allLocalIps;
             try
             {
-                var task1 = GetLocalDnsResult(AddressFamily.InterNetwork, cts.Token);
-                var task2 = GetLocalDnsResult(AddressFamily.InterNetworkV6, cts.Token);
+                var task1 = GetLocalDnsResultAsync(AddressFamily.InterNetwork, cts.Token);
+                var task2 = GetLocalDnsResultAsync(AddressFamily.InterNetworkV6, cts.Token);
                 var result = await Task.WhenAll(task1, task2);
                 allLocalIps = result[0].Concat(result[1]).ToHashSet();
             }
@@ -272,8 +272,8 @@ public static class RavenDnsRecordHelper
             var allExpectedIps = GetAllExpectedIps();
             
             if (actualGoogleIps.SetEquals(allExpectedIps) == false)
-                throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({GoogleDnsApi}).{Environment.NewLine}" +
-                                                    $"Expected to get these ips: {string.Join(", ", allExpectedIps)} while Google's actual result was: {string.Join(", ", actualGoogleIps)}" +
+                throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's API ({GoogleDnsApi}).{Environment.NewLine}" +
+                                                    $"Expected to get these IPs: {string.Join(", ", allExpectedIps)} while Google's actual result was: {string.Join(", ", actualGoogleIps)}" +
                                                     Environment.NewLine +
                                                     "Please wait a while until DNS propagation is finished and try again. If you are trying to update existing DNS records, it might take hours to update because of DNS caching. If the issue persists, contact RavenDB's support.");
         }
@@ -284,27 +284,21 @@ public static class RavenDnsRecordHelper
             
             if (allExpectedIps.SetEquals(actualLocalIps) == false)
                 throw new InvalidOperationException($"Tried to resolve '{hostname}' locally but got an outdated result." +
-                                                    Environment.NewLine + $"Expected to get these ips: {string.Join(", ", allExpectedIps)} while the actual result was: {string.Join(", ", actualLocalIps)}" +
-                                                    Environment.NewLine + $"If we try resolving through Google's api ({GoogleDnsApi}), it works well." +
+                                                    Environment.NewLine + $"Expected to get these IPs: {string.Join(", ", allExpectedIps)} while the actual result was: {string.Join(", ", actualLocalIps)}" +
+                                                    Environment.NewLine + $"If we try resolving through Google's API ({GoogleDnsApi}), it works well." +
                                                     Environment.NewLine + "Try to clear your local/network DNS cache or wait a few minutes and try again." +
                                                     Environment.NewLine + "Another temporary solution is to configure your local network connection to use Google's DNS server (8.8.8.8).");
         }
         
         HashSet<string> GetAllExpectedIps()
         {
-            var expectedIpsV4 = expectedAddresses
-                .Where(x => x.Address.AddressFamily == AddressFamily.InterNetwork)
+            return expectedAddresses
+                .Where(x => x.Address.AddressFamily is AddressFamily.InterNetwork or AddressFamily.InterNetworkV6)
                 .Select(address => address.Address.ToString())
                 .ToHashSet();
-            var expectedIpsV6 = expectedAddresses
-                .Where(x => x.Address.AddressFamily == AddressFamily.InterNetworkV6)
-                .Select(address => address.Address.ToString())
-                .ToHashSet();
-            
-            return expectedIpsV4.Concat(expectedIpsV6).ToHashSet();
         }
 
-        async Task<HashSet<string>> GetGoogleDnsResult(DnsRecordType recordType, CancellationToken ct)
+        async Task<HashSet<string>> GetGoogleDnsResultAsync(DnsRecordType recordType, CancellationToken ct)
         {
             using (var client = new RavenHttpClient { BaseAddress = new Uri(GoogleDnsApi) })
             {
@@ -312,7 +306,7 @@ public static class RavenDnsRecordHelper
                 var responseString = await response.Content.ReadAsStringWithZstdSupportAsync(ct).ConfigureAwait(false);
                 
                 if (response.IsSuccessStatusCode == false)
-                    throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({GoogleDnsApi}).{Environment.NewLine}" +
+                    throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's API ({GoogleDnsApi}).{Environment.NewLine}" +
                                                         $"Request failed with status {response.StatusCode}.{Environment.NewLine}{responseString}");
                 
                 dynamic dnsResult = JsonConvert.DeserializeObject(responseString);
@@ -320,7 +314,7 @@ public static class RavenDnsRecordHelper
                 // DNS response format: https://developers.google.com/speed/public-dns/docs/dns-over-https
                 
                 if (dnsResult?.Status != 0)
-                    throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({GoogleDnsApi}).{Environment.NewLine}" +
+                    throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's API ({GoogleDnsApi}).{Environment.NewLine}" +
                                                         $"Got a DNS failure response:{Environment.NewLine}{responseString}" +
                                                         Environment.NewLine +
                                                         "Please wait a while until DNS propagation is finished and try again. If you are trying to update existing DNS records, it might take hours to update because of DNS caching. If the issue persists, contact RavenDB's support.");
@@ -330,7 +324,7 @@ public static class RavenDnsRecordHelper
             }
         }
 
-        async Task<HashSet<string>> GetLocalDnsResult(AddressFamily addressFamily, CancellationToken ct)
+        async Task<HashSet<string>> GetLocalDnsResultAsync(AddressFamily addressFamily, CancellationToken ct)
         {
             try
             {
@@ -339,7 +333,7 @@ public static class RavenDnsRecordHelper
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Cannot resolve '{hostname}' locally but succeeded resolving the address using Google's api ({GoogleDnsApi})." +
+                throw new InvalidOperationException($"Cannot resolve '{hostname}' locally but succeeded resolving the address using Google's API ({GoogleDnsApi})." +
                                                     Environment.NewLine + "Try to clear your local/network DNS cache or wait a few minutes and try again." +
                                                     Environment.NewLine + "Another temporary solution is to configure your local network connection to use Google's DNS server (8.8.8.8).", e);
             }       
