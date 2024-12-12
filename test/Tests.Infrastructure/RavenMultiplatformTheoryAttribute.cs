@@ -24,8 +24,6 @@ public class RavenMultiplatformTheoryAttribute : RavenTheoryAttribute
         _architecture = architecture;
     }
 
-    public bool LicenseRequired { get; set; }
-
     public override string Skip
     {
         get

@@ -123,7 +123,7 @@ public class RavenDB_19529 : ReplicationTestBase
         const string documentToDeleteId = "users/2-A";
 
         using (var server = GetNewServer())
-        using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, IgnoreDocumentCompression = true }))
+        using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -168,17 +168,13 @@ public class RavenDB_19529 : ReplicationTestBase
         const string specificSizeAndContentDocumentId = "users/1-A";
         const string documentToConflictId = "users/2-A";
 
-        using (var storeSrc = GetDocumentStore(new Options()
-        {
-            IgnoreDocumentCompression = true
-        }))
+        using (var storeSrc = GetDocumentStore())
         using (var storeDst = GetDocumentStore(new Options
         {
             ModifyDatabaseRecord = record =>
             {
                 record.ConflictSolverConfig = new ConflictSolver { ResolveToLatest = false, ResolveByCollection = new Dictionary<string, ScriptResolver>() };
-            },
-            IgnoreDocumentCompression = true
+            }
         }))
         {
             storeDst.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration { CompressAllCollections = true }));

@@ -32,7 +32,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Smuggler | RavenTestCategory.Compression)]
         public async Task ExceptionWhenImportingAdditionalAssembliesWithCommunityLicense()
         {
             DoNotReuseServer();
@@ -76,7 +76,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.BackupExportImport)]
         public async Task ExceptionWhenImportingSnapshotWithCommunityLicense()
         {
             DoNotReuseServer();
@@ -115,7 +115,7 @@ namespace SlowTests.Issues
 
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.BackupExportImport)]
         public async Task ExceptionWhenImportingSnapshotWithProLicense()
         {
             DoNotReuseServer();
@@ -157,7 +157,7 @@ namespace SlowTests.Issues
         }
 
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Replication)]
         public async Task ExceptionWhenImportingExternalReplicationWithCommunityLicense()
         {
             DoNotReuseServer();
@@ -205,7 +205,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Replication)]
         public async Task ExceptionWhenImportingDelayedExternalReplicationWithProLicense()
         {
             DoNotReuseServer();
@@ -253,7 +253,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.TimeSeries)]
         public async Task ExceptionWhenImportingTsRollupAndRetentionWithCommunityLicense()
         {
             DoNotReuseServer();
@@ -300,7 +300,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Compression)]
         public async Task ExceptionWhenImportingCompressionWithCommunityLicense()
         {
             DoNotReuseServer();
@@ -336,7 +336,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Compression)]
         public async Task ExceptionWhenImportingCompressionWithProLicense()
         {
             DoNotReuseServer();
@@ -372,7 +372,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Replication)]
         public async Task ExceptionWhenImportingPullReplicationAsSinkWithCommunityLicense()
         {
             DoNotReuseServer();
@@ -411,7 +411,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Replication)]
         public async Task ExceptionWhenImportingPullReplicationAsHubWithCommunityLicense()
         {
             DoNotReuseServer();
@@ -447,7 +447,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Replication)]
         public async Task ExceptionWhenImportingPullReplicationAsHubWithProLicense()
         {
             DoNotReuseServer();
@@ -482,7 +482,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Etl)]
         public async Task ExceptionWhenImportingRavenEtlWithCommunityLicense()
         {
             DoNotReuseServer();

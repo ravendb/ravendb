@@ -757,7 +757,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [RavenTheory(RavenTestCategory.BackupExportImport), Trait("Category", "Smuggler")]
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Compression), Trait("Category", "Smuggler")]
         [InlineData(null, CompressionLevel.Optimal)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.Optimal)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.Optimal)]
@@ -778,8 +778,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Collections = new[] { "Orders" },
                         CompressRevisions = true
                     };
-                },
-                IgnoreDocumentCompression = true
+                }
             }))
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation());
@@ -826,14 +825,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Compression), Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_compression_config()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options()
-            {
-                IgnoreDocumentCompression = true
-            }))
+            using (var store = GetDocumentStore())
             {
                 var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
                 record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users");

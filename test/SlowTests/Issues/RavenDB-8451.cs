@@ -31,7 +31,7 @@ namespace SlowTests.Issues
             await CanRecoverEncryptedDatabaseInternal();
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenArchitecture.AllX64, Skip = "RavenDB-13765")]
+        [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption | RavenTestCategory.Compression, RavenArchitecture.AllX64, Skip = "RavenDB-13765")]
         public async Task CanRecoverEncryptedDatabase_Compressed()
         {
             await CanRecoverEncryptedDatabaseInternal(compressDocuments: true);
@@ -75,8 +75,7 @@ namespace SlowTests.Issues
                         };
                     }
                 },
-                Path = dbPath,
-                IgnoreDocumentCompression = compressDocuments
+                Path = dbPath
             }))
             {
                 await Samples.CreateLegacyNorthwindDatabaseAsync(store);

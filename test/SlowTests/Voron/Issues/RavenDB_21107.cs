@@ -32,7 +32,7 @@ public class RavenDB_21107 : RavenTestBase
     public async Task Recovery_Compression_Dictionaries_Should_Be_Consistent_Even_If_Previous_Files_Corrupted(Options options, string scenarioName)
     {
         var path = NewDataPath();
-        using (var store = GetDocumentStore(new Options { Path = path, RunInMemory = false, IgnoreDocumentCompression = true }))
+        using (var store = GetDocumentStore(new Options { Path = path, RunInMemory = false }))
         {
             await store.Maintenance.SendAsync(
                 new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true)));

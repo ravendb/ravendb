@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,16 +26,13 @@ namespace SlowTests.Issues
             public List<string> Lines = new();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Compression)]
         [InlineData(3)]
         [InlineData(6)]
         [InlineData(10)]
         public void CompressAndDecompressDocument(int size)
         {
-            using (var store = GetDocumentStore(options: new Options()
-            {
-                IgnoreDocumentCompression = true
-            }))
+            using (var store = GetDocumentStore())
             {
                 var documentsCompression = new DocumentsCompressionConfiguration(true, true, "Orders");
                 store.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(documentsCompression));
