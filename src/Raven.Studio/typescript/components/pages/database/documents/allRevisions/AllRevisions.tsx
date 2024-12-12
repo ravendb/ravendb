@@ -24,8 +24,7 @@ import { MultiRadioToggle } from "components/common/MultiRadioToggle";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import { HStack } from "components/common/utilities/HStack";
 import { VStack } from "components/common/utilities/VStack";
-import AllRevisionsAboutView from "./AllRevisionsAboutView";
-import { FlexGrow } from "components/common/FlexGrow";
+import AllRevisionsAboutView from "components/pages/database/documents/allRevisions/partials/AllRevisionsAboutView";
 
 type RevisionType = Raven.Server.Documents.Revisions.RevisionsStorage.RevisionType;
 
@@ -87,7 +86,7 @@ export default function AllRevisions() {
     return (
         <VStack className="content-padding" gap={2}>
             <VStack>
-                <HStack gap={2} className="my-3">
+                <HStack className="justify-content-between">
                     <ButtonWithSpinner
                         color="danger"
                         onClick={handleRemoveConfirmation}
@@ -98,7 +97,6 @@ export default function AllRevisions() {
                     >
                         Remove {selectedRows.length != 0 && selectedRows.length} revisions
                     </ButtonWithSpinner>
-                    <FlexGrow />
                     <AllRevisionsAboutView />
                 </HStack>
                 <HStack gap={2} className="my-3">
