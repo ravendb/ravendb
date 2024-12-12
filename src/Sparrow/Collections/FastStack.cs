@@ -26,7 +26,7 @@ namespace Sparrow.Collections
     // A simple stack of objects.  Internally it is implemented as an array,
     // so Push can be O(n).  Pop is O(1).
     [DebuggerDisplay("Count = {Count}")]
-    public sealed class FastStack<T> : IEnumerable<T>       
+    public sealed class FastStack<T> : IEnumerable<T>
     {
         private T[] _array;     // Storage for stack elements
         private int _size;           // Number of items in the stack.
@@ -51,16 +51,33 @@ namespace Sparrow.Collections
 
         public int Count => _size;
 
-        // Removes all Objects from the Stack.
+        /// <summary>
+        /// Removes all objects from the Stack but clearing the backing array unless the type is native.
+        /// </summary>
         public void Clear()
         {
-            Array.Clear(_array, 0, _size);
+            if (typeof(T) == typeof(int) || typeof(T) == typeof(uint) || typeof(T) == typeof(byte) ||
+                typeof(T) == typeof(short) || typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
+                typeof(T) == typeof(nint) || typeof(T) == typeof(nuint) || typeof(T) == typeof(IntPtr))
+            {
+                _size = 0;
+                _version++;
+
+                return;
+            }
+
+            int size = _size;
 
             _size = 0;
             _version++;
+            if (size > 0)
+                Array.Clear(_array, 0, size); // Clear the elements so that the gc can reclaim the references.
         }
 
-        // Removes all Objects from the Stack.
+        /// <summary>
+        /// This method is like Clear but will not release the references contained in it; therefore
+        /// the garbage collector will not collect those objects even if they are not being used.
+        /// </summary>
         public void WeakClear()
         {
             _size = 0;
@@ -95,7 +112,7 @@ namespace Sparrow.Collections
         public void CopyTo(FastStack<T> srcStack)
         {
             Debug.Assert(srcStack._array != _array);
-           
+
             int srcSize = srcStack._size;
             int dstIndex = _size;
             if (dstIndex + srcSize > _array.Length)
@@ -136,8 +153,18 @@ namespace Sparrow.Collections
 
             return _array[_size - 1];
 
-            Error:
+        Error:
             return ThrowForEmptyStack();
+        }
+
+        // Returns the top object on the stack without removing it.  If the stack
+        // is empty, Peek throws an InvalidOperationException.        
+        public ref T TopByRef()
+        {
+            if (_size != 0)
+                return ref _array[_size - 1];
+
+            throw new InvalidOperationException("The stack is empty.");
         }
 
         public bool TryPeek(out T result)
@@ -170,16 +197,13 @@ namespace Sparrow.Collections
         public T Pop()
         {
             if (_size == 0)
-                goto Error;
+                throw new InvalidOperationException("The stack is empty.");
 
             _version++;
             T item = _array[--_size];
-            _array[_size] = default(T);
+            _array[_size] = default;
 
             return item;
-
-            Error:
-            return ThrowForEmptyStack();
         }
 
         public bool TryPop(out T result)
@@ -199,7 +223,7 @@ namespace Sparrow.Collections
 
         // Pushes an item to the top of the stack.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Push(T item)
+        public void Push(in T item)
         {
             if (_size == _array.Length)
                 goto Grow;
@@ -208,8 +232,31 @@ namespace Sparrow.Collections
             _version++;
             return;
 
-            Grow:
+        Grow:
             PushUnlikely(item);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ref T PushByRef()
+        {
+            if (_size == _array.Length)
+                goto Grow;
+
+            ref var item = ref _array[_size++];
+            _version++;
+            return ref item;
+
+        Grow:
+            return ref PushUnlikelyByRef();
+        }
+
+        private ref T PushUnlikelyByRef()
+        {
+            Array.Resize(ref _array, (_array.Length == 0) ? DefaultCapacity : 2 * _array.Length);
+            ref var item = ref _array[_size++];
+            _version++;
+
+            return ref item;
         }
 
         private void PushUnlikely(T item)
@@ -281,10 +328,7 @@ namespace Sparrow.Collections
                 }
 
                 retval = (--_index >= 0);
-                if (retval)
-                    _currentElement = _stack._array[_index];
-                else
-                    _currentElement = default(T);
+                _currentElement = retval ? _stack._array[_index] : default;
 
                 return retval;
             }
