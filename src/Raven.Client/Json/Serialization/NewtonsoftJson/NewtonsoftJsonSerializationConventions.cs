@@ -201,6 +201,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             jsonSerializer.Converters.Add(DateOnlyConverter.Instance);
             jsonSerializer.Converters.Add(TimeOnlyConverter.Instance);
 #endif
+            jsonSerializer.Converters.Add(VectorConverter.Instance);
 
             jsonSerializer.Converters.Add(_jsonEnumerableConverter);
 
