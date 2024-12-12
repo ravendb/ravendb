@@ -21,7 +21,7 @@ public class RavenDB_23076 : RavenTestBase
             {
                 var sampleObject = new
                 {
-                    Vector = new RavenVector<float>(new []{ 0.1f, 0.2f }),
+                    Vector = new RavenVector<float>(new []{ 0.1f, 0.2f })
                 };
                 
                 session.Store(sampleObject);

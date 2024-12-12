@@ -107,6 +107,11 @@ namespace Sparrow.Json
                 return Comparer.CompareTo(other.Comparer);
             }
 
+            public int ComparePropertyNameToBytes(ReadOnlySpan<byte> other)
+            {
+                return Comparer.AsReadOnlySpan().SequenceCompareTo(other);
+            }
+
             public override string ToString()
             {
                 return $"Value: {Comparer}, GlobalSortOrder: {GlobalSortOrder}, PropertyId: {PropertyId}";
