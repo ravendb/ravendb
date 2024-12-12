@@ -297,3 +297,49 @@ rvn_write_journal_file(void* handle, struct journal_entry* buffer, int64_t count
     }
     return SUCCESS;
 }
+
+EXPORT int32_t
+rvn_is_same_hard_link(const char *src, const char *dst, bool *is_same, int32_t *detailed_error_code) {
+    BY_HANDLE_FILE_INFORMATION src_info, dst_info;
+    HANDLE src_handle = INVALID_HANDLE_VALUE;
+    HANDLE dst_handle = INVALID_HANDLE_VALUE;
+    int32_t rc = SUCCESS;
+    src_handle = CreateFileW(src, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (src_handle == INVALID_HANDLE_VALUE) {
+        *detailed_error_code = GetLastError();
+        rc = FAIL_OPEN_FILE;
+        goto End;
+    }
+
+    dst_handle = CreateFileW(dst, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (dst_handle == INVALID_HANDLE_VALUE) {
+        *detailed_error_code = GetLastError();
+        rc = FAIL_OPEN_FILE;
+        goto End;
+    }
+
+    // Get file information for source and destination
+    if (!GetFileInformationByHandle(src_handle, &src_info)) {
+        *detailed_error_code = GetLastError();
+        rc = FAIL_STAT_FILE;
+        goto End;
+    }
+
+    if (!GetFileInformationByHandle(dst_handle, &dst_info)) {
+        *detailed_error_code = GetLastError();
+        rc = FAIL_STAT_FILE;
+        goto End;
+    }
+
+    // if same volume and same file index, then they are hard links
+    *is_same = (src_info.dwVolumeSerialNumber == dst_info.dwVolumeSerialNumber) &&
+               (src_info.nFileIndexHigh == dst_info.nFileIndexHigh) &&
+               (src_info.nFileIndexLow == dst_info.nFileIndexLow);
+
+    End:
+    if(src_handle != INVALID_HANDLE_VALUE)
+        CloseHandle(src_handle);
+    if(dst_handle != INVALID_HANDLE_VALUE)
+        CloseHandle(dst_handle);
+    return rc;
+}

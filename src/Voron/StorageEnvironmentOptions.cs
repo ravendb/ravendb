@@ -222,6 +222,8 @@ namespace Voron
         internal bool CopyOnWriteMode { get; set; }
 
         public abstract void LinkFiles(long journalNumber, string fileName);
+
+        public abstract bool IsLinked(long journalNumber, string fileName);
         
         public abstract JournalWriter CreateJournalWriter(long journalNumber, long journalSize);
 
@@ -479,12 +481,23 @@ namespace Voron
             {
                 var name = JournalName(journalNumber);
                 var path = JournalPath.Combine(name);
-                if (File.Exists(path.FullPath)) // TODO: this is wrong
-                    throw new InvalidOperationException("Unable to link file " + fileName + " to " + path + " because it already exists");
 
                 var rc = Pal.rvn_hard_link(fileName, path.FullPath, out var errorCode);
                 if (rc != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(rc, errorCode, "Failed to link files " + fileName + " to " + path.FullPath);
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to link files {fileName} to {path.FullPath}");
+            }
+
+            public override bool IsLinked(long journalNumber, string fileName)
+            {
+                var name = JournalName(journalNumber);
+                var path = JournalPath.Combine(name);
+                if (File.Exists(path.FullPath) is false)
+                    return false;
+
+                var rc = Pal.rvn_is_same_hard_link(fileName, path.FullPath, out var isSame, out var errorCode);
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to check if files {fileName} and {path.FullPath} are the same");
+                return isSame;
             }
 
             public override JournalWriter CreateJournalWriter(long journalNumber, long journalSize)
@@ -798,16 +811,25 @@ namespace Voron
             }
 
             public override VoronPathSetting BasePath { get; } = new MemoryVoronPathSetting();
-            
+
+            public override bool IsLinked(long journalNumber, string fileName)
+            {
+                var path = GetJournalPath(journalNumber);
+                if (File.Exists(path.FullPath) is false)
+                    return false;
+                var rc = Pal.rvn_is_same_hard_link(fileName, path.FullPath, out var isSame, out var errorCode);
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to check if files {fileName} and {path.FullPath} are the same");
+
+                return isSame;
+            }
+
             public override void LinkFiles(long journalNumber, string fileName)
             {
                 var path = GetJournalPath(journalNumber);
-                if (File.Exists(path.FullPath)) // TODO: this is wrong
-                    throw new InvalidOperationException("Unable to link file " + fileName + " to " + path + " because it already exists");
-
                 var rc = Pal.rvn_hard_link(fileName, path.FullPath, out var errorCode);
                 if (rc != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(rc, errorCode, "Failed to link files " + fileName + " to " + path.FullPath);
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to link files {fileName} to {path.FullPath}");
             }
 
             public override JournalWriter CreateJournalWriter(long journalNumber, long journalSize)

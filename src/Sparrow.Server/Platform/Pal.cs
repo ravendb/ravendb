@@ -10,7 +10,7 @@ namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public const int PAL_VER = 69047; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 69049; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -261,6 +261,18 @@ namespace Sparrow.Server.Platform
             IntPtr handle,
             out Int32 errorCode
         );
+
+        public static PalFlags.FailCodes rvn_is_same_hard_link(string src, string dst, out bool isSame, out Int32 errorCode)
+        {
+            using var convertSrc = new Converter(src);
+            using var convertDst = new Converter(dst);
+            return rvn_is_same_hard_link(convertSrc.Pointer, convertDst.Pointer, out isSame, out errorCode);
+        }
+        
+        
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        private static extern PalFlags.FailCodes
+            rvn_is_same_hard_link(byte* src, byte* dst, out bool isSame, out Int32 errorCode);
 
         public static PalFlags.FailCodes rvn_hard_link(string src, string dst, out Int32 errorCode)
         {

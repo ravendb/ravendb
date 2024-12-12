@@ -1765,9 +1765,17 @@ namespace Voron.Impl.Journal
             if (exists)
                 return matchingJournalNumber;
 
-            long journalIndex = _journalIndex + 1;
-            _env.Options.LinkFiles(journalIndex, journalFile.JournalWriter.FileName.FullPath);
+            if (_env.Options.IsLinked(_journalIndex, journalFile.JournalWriter.FileName.FullPath))
+            {
+                // The file is already linked, so we can reuse the file link
+                matchingJournalNumber = _journalIndex;
+                return matchingJournalNumber;
+            }
             
+            long journalIndex = _journalIndex + 1;
+
+            _env.Options.LinkFiles(journalIndex,journalFile.JournalWriter.FileName.FullPath);
+
             // we modify the in memory state _after_ we created the file, because we have to make sure that 
             // we have created it successfully first. 
             _journalIndex++;

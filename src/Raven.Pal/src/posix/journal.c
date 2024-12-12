@@ -240,3 +240,23 @@ rvn_hard_link(const char *src, const char *dst, int32_t *detailed_error_code)
     // we need to persist the new file in the new directory
     return _sync_directory_for(dst, detailed_error_code);
 }
+
+EXPORT int32_t
+rvn_is_same_hard_link(const char *src, const char *dst, bool *is_same, int32_t *detailed_error_code) {
+    struct stat src_stat, dst_stat;
+    
+    if (lstat(src, &src_stat) == -1 || lstat(dst, &dst_stat) == -1) {
+        *detailed_error_code = errno;
+        return FAIL_STAT_FILE;
+    }
+    
+    if (!S_ISREG(src_stat.st_mode) || !S_ISREG(dst_stat.st_mode)) {
+        *is_same = false;
+        *detailed_error_code = 0;  
+        return SUCCESS;
+    }
+
+    // If the inode and device are the same, then both entries point to the same file
+    *is_same = (src_stat.st_ino == dst_stat.st_ino) && (src_stat.st_dev == dst_stat.st_dev);
+    return SUCCESS;
+}
