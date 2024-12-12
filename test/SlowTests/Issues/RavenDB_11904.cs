@@ -26,7 +26,7 @@ namespace SlowTests.Issues
             return CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(false);
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Compression, RavenArchitecture.AllX64)]
         public Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteModeCompressed()
         {
             return CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(true);
@@ -53,8 +53,7 @@ namespace SlowTests.Issues
                             CompressRevisions = true
                         };
                     }
-                },
-                IgnoreDocumentCompression = compressed
+                }
             }))
             {
                 await Samples.CreateLegacyNorthwindDatabaseAsync(store);

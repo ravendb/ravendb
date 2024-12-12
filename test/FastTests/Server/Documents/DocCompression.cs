@@ -197,7 +197,7 @@ namespace FastTests.Server.Documents
 
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Compression, LicenseRequired = true)]
         public void Can_set_collection_compressed_when_it_has_docs()
         {
             var random = new Random(343);

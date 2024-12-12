@@ -85,20 +85,15 @@ namespace SlowTests.Smuggler
                 }
             }
         }
-        [Fact]
+
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.Compression)]
         public async Task CanExportAndImportDocumentCompressionConfiguration()
         {
             var file = GetTempFileName();
             try
             {
-                using (var store1 = GetDocumentStore(options: new Options()
-                       {
-                           IgnoreDocumentCompression = true
-                       }))
-                using (var store2 = GetDocumentStore(options: new Options()
-                       {
-                           IgnoreDocumentCompression = true
-                       }))
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
                 {
                     await store1.Maintenance.SendAsync(
                         new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true, collections: new string[] { "Foo", "foo", "bar" })));

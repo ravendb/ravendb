@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public class MultiLicenseRequiredFactAttribute : FactAttribute
+    public class RavenMultiLicenseRequiredFactAttribute : RavenFactAttribute
     {
         private static readonly bool RavenLicense;
         private static readonly bool RavenLicenseDeveloper;
@@ -18,11 +18,15 @@ namespace Tests.Infrastructure
                                              $"'RAVEN_LICENSE_COMMUNITY' - {IsSet(RavenLicenseCommunity)} . " +
                                              $"'RAVEN_LICENSE_PROFESSIONAL' - {IsSet(RavenLicenseProfessional)} . ";
 
+        public RavenMultiLicenseRequiredFactAttribute(RavenTestCategory category) : base(category)
+        {
+        }
+
         internal static string IsSet(bool licenseSet)
         {
             return licenseSet ? "is set" : "is not set";
         }
-        static MultiLicenseRequiredFactAttribute()
+        static RavenMultiLicenseRequiredFactAttribute()
         {
             RavenLicense = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAVEN_LICENSE")) == false;
             RavenLicenseDeveloper = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAVEN_LICENSE_DEVELOPER")) == false;

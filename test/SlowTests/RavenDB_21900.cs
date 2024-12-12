@@ -19,14 +19,13 @@ public class RavenDB_21900 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Querying)]
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Compression)]
     public void CanReferencePreviousDocumentInStreamCollectionQuery()
     {
         string orderId;
         using (var store = GetDocumentStore(new Options
         {
-            ModifyDatabaseRecord = x => x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true),
-            IgnoreDocumentCompression = true
+            ModifyDatabaseRecord = x => x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true)
         }))
         {
             using (var session = store.OpenSession())
@@ -60,13 +59,12 @@ public class RavenDB_21900 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Querying)]
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Compression)]
     public void CanReferencePreviousDocumentInStreamCollectionQuery2()
     {
         using (var store = GetDocumentStore(new Options
         {
-            ModifyDatabaseRecord = x => x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true),
-            IgnoreDocumentCompression = true
+            ModifyDatabaseRecord = x => x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true)
         }))
         {
             using (var session = store.OpenSession())
@@ -115,13 +113,12 @@ public class RavenDB_21900 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Querying)]
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Compression)]
     public void PreviouslyLoadedDocumentIsCurrentDocument()
     {
         using (var store = GetDocumentStore(new Options
         {
-            ModifyDatabaseRecord = x => x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true),
-            IgnoreDocumentCompression = true
+            ModifyDatabaseRecord = x => x.DocumentsCompression = new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true)
         }))
         {
             using (var session = store.OpenSession())

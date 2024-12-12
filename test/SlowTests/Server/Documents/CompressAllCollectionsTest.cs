@@ -5,6 +5,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,15 +17,14 @@ namespace SlowTests.Server.Documents
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Compression)]
         public async Task CompressAllCollectionsAfterDocsChange()
         {
             var dbname = "CompressAllCollectionsDB";
             using var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = (name) => dbname,
-                RunInMemory = false,
-                IgnoreDocumentCompression = true
+                RunInMemory = false
             });
 
             using (var session = store.OpenAsyncSession())
@@ -96,15 +96,14 @@ namespace SlowTests.Server.Documents
             Assert.True(originalUserSize * 0.25 > compressedUserSize);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Compression)]
         public async Task CompressAllCollectionsAfterCompactDatabaseCalled()
         {
             var dbname = "CompressAllCollectionsDB";
             using var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = (name) => dbname,
-                RunInMemory = false,
-                IgnoreDocumentCompression = true
+                RunInMemory = false
             });
             
             using (var session = store.OpenAsyncSession())
@@ -173,7 +172,7 @@ namespace SlowTests.Server.Documents
             Assert.True(originalUserSize * 0.25 > compressedUserSize);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Compression)]
         public async Task SetupCompressAllCollectionsBeforeDocsAdded()
         {
             var dbname = "CompressAllCollectionsDB";
@@ -184,8 +183,7 @@ namespace SlowTests.Server.Documents
                 ModifyDatabaseRecord = (record) =>
                 {
                     record.DocumentsCompression = new DocumentsCompressionConfiguration(false, true);
-                },
-                IgnoreDocumentCompression = true
+                }
             });
 
             using (var session = store.OpenAsyncSession())

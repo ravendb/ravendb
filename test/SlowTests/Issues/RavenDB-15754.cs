@@ -103,7 +103,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Indexes)]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Compression)]
         public async Task CanIndexReferencedCompressedDocumentsAndParentDocumentChange()
         {
             using (var store = GetDocumentStore(new Options
