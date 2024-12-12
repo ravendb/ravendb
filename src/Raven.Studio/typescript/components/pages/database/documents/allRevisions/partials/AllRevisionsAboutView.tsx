@@ -21,7 +21,7 @@ export default function AllRevisionsAboutView() {
                     This view displays all revisions for every document in the database.
                     <br />
                     You can filter the revisions by their <strong>Collection</strong> or <strong>Type</strong>:
-                    <p className={"mt-2"}>
+                    <p className="mt-3">
                         <strong>Regular revisions</strong>:
                         <ul>
                             <li>A regular revision is created for a document whenever it is modified.</li>
