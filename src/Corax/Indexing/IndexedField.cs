@@ -27,7 +27,7 @@ internal sealed class IndexedField
     public Dictionary<long, SpatialEntry> Spatial;
     public readonly FastList<EntriesModifications> Storage;
     public readonly Dictionary<Slice, int> Textual;
-    public Hnsw.Registration VectorIndexWriter;
+    public Hnsw.Registration VectorIndexer;
 
     /// <summary>
     /// Position matches position from _entryToTerms from IndexWriter which creates relation between entry and field
@@ -94,7 +94,7 @@ internal sealed class IndexedField
         FieldIndexingMode = fieldIndexingMode;
         ShouldIndex = supportedFeatures.StoreOnly == false || fieldIndexingMode != FieldIndexingMode.No;
         NameForStatistics = nameForStatistics ?? $"Field_{Name}";
-        VectorIndexWriter = _parent.VectorIndexWriter;
+        VectorIndexer = _parent.VectorIndexer;
         
         IsVirtual = true;
         if (fieldIndexingMode is FieldIndexingMode.Search && _parent.EntryToTerms.IsValid == false)
@@ -150,12 +150,12 @@ internal sealed class IndexedField
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Hnsw.Registration GetVectorWriter(LowLevelTransaction llt, int vectorSize = Constants.IndexWriter.Hnsw.TreeExists)
+    public Hnsw.Registration GetVectorIndexer(LowLevelTransaction llt, int vectorSize = Constants.IndexWriter.Hnsw.TreeExists)
     {
         if (_hnswIsCreated == false && vectorSize != Constants.IndexWriter.Hnsw.TreeExists)
             CreateHnswTree(llt, vectorSize);
         
-        return VectorIndexWriter ??= Hnsw.RegistrationFor(llt, Name);
+        return VectorIndexer ??= Hnsw.RegistrationFor(llt, Name);
     }
 
     private void CreateHnswTree(LowLevelTransaction llt, int vectorSize)
@@ -174,7 +174,7 @@ internal sealed class IndexedField
         Textual?.Clear();
         EntryToTerms = default;
         
-        PortableExceptions.ThrowIfOnDebug<InvalidOperationException>(VectorIndexWriter is { IsCommited: false }, "VectorIndexer is { IsDisposed: false }");
-        VectorIndexWriter = null; // after Commit it will be recreated from scratch
+        PortableExceptions.ThrowIfOnDebug<InvalidOperationException>(VectorIndexer is { IsCommited: false }, "VectorIndexer is { IsDisposed: false }");
+        VectorIndexer = null; // after Commit it will be recreated from scratch
     }
 }

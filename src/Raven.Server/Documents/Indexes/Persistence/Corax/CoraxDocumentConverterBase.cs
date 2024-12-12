@@ -421,13 +421,10 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 builder.WriteSpatial(fieldId, path,  (CoraxSpatialPointEntry)value);
                 break;
             case ValueType.CoraxDynamicItem:
-                var old = builder.ResetList(); // For lists of CreatedField(), we ignoring the list
-                if (value is CoraxDynamicItem standardCdi)
-                    InsertRegularField(standardCdi.Field, standardCdi.Value, indexContext, builder, sourceDocument, out shouldSkip);
-                else
-                    throw new NotSupportedInCoraxException($"Unknown path for `CoraxDynamicItem`. Got type: {value.GetType().FullName}");
-                
+                var cdi = (CoraxDynamicItem)value;
                 //we want to unpack item here.
+                var old = builder.ResetList(); // For lists of CreatedField(), we ignoring the list
+                InsertRegularField(cdi!.Field, cdi.Value, indexContext, builder, sourceDocument, out shouldSkip);
                 builder.RestoreList(old);
                 break;
             case ValueType.Stream:

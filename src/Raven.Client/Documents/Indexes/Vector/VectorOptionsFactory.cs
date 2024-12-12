@@ -1,4 +1,7 @@
-﻿namespace Raven.Client.Documents.Indexes.Vector;
+﻿using System;
+using Sparrow;
+
+namespace Raven.Client.Documents.Indexes.Vector;
 
 public sealed class VectorOptionsFactory
 {
@@ -29,6 +32,9 @@ public sealed class VectorOptionsFactory
     
     public VectorOptionsFactory DestinationEmbedding(VectorEmbeddingType destinationType)
     {
+        PortableExceptions.ThrowIf<InvalidOperationException>(_vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Int8 or VectorEmbeddingType.Binary && _vectorOptions.SourceEmbeddingType != destinationType,
+            $"Cannot change the quantization of the already quantizied vector.");
+
         _vectorOptions.DestinationEmbeddingType = destinationType;
         return this;
     }

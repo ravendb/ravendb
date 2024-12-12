@@ -49,7 +49,7 @@ public struct VectorSearchMatch : IQueryMatch
 
     public SkipSortingResult AttemptToSkipSorting()
     {
-        return SkipSortingResult.ResultsNativelySorted;
+        return SkipSortingResult.SortingIsRequired;
     }
 
     public QueryCountConfidence Confidence => QueryCountConfidence.Low;

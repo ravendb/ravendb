@@ -111,7 +111,7 @@ public class VectorJavaScriptIndexing : RavenTestBase
             Maps = [@$"map('VecDocs', function (e) {{
     return {{ 
         Name: e.Name,
-        Vector: createVectorSearch(e.{fieldName})
+        Vector: createVector(e.{fieldName})
     }};
 }})"];
 

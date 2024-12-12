@@ -342,25 +342,41 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public object CreateVector(string fieldName, object value)
         {
-            if (value is DynamicNullObject)
+            if (value is null or DynamicNullObject)
                 return null;
             
-            var currentIndexingField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, false);
-            PortableExceptions.ThrowIf<InvalidDataException>(currentIndexingField?.Vector is null,
+            // We're supporting two defaults:
+            // when Options are not set, we'll decide what is configuration in following manner:
+            // - value is textual or array of textual we're treating them as text input
+            // - otherwise, we will write as array of numerical values
+            var currentIndexingScope = CurrentIndexingScope.Current;
+
+            var fieldExists = currentIndexingScope.Index.Definition.IndexFields.TryGetValue(fieldName, out var indexField);
+            if (fieldExists == false || indexField?.Vector is null)
+            {
+                var isText = value is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject;
+                if (isText == false && value is IEnumerable enumerable)
+                {
+                    foreach (var item in enumerable)
+                    {
+                        isText = item is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject;
+                        break;
+                    }
+                }
+                
+                indexField = currentIndexingScope.GetOrCreateVectorField(fieldName, isText);
+            }
+
+            PortableExceptions.ThrowIf<InvalidDataException>(indexField?.Vector is null,
                 $"Field '{fieldName}' does not exist in this indexing scope. Cannot index as vector.");
 
-            currentIndexingField!.Vector!.ValidateDebug();
-            return CreateVector(currentIndexingField, value);
-        }
-        
-        public object CreateVectorSearch(string fieldName, object value)
-        {
-            var currentIndexingField = CurrentIndexingScope.Current.GetOrCreateVectorField(fieldName, true);
-            PortableExceptions.ThrowIf<InvalidDataException>(currentIndexingField?.Vector is null,
-                $"Field '{fieldName}' does not exist in this indexing scope. Cannot index as vector.");
-            
-            currentIndexingField!.Vector!.ValidateDebug();
-            return VectorFromText(currentIndexingField, value);
+            indexField!.Vector!.ValidateDebug();
+
+            return indexField.Vector.SourceEmbeddingType switch
+            {
+                VectorEmbeddingType.Text => VectorFromText(indexField, value),
+                _ => VectorFromEmbedding(indexField, value)
+            };
         }
 
         /// <summary>
@@ -371,10 +387,11 @@ namespace Raven.Server.Documents.Indexes.Static
         /// <returns></returns>
         internal static object CreateVector(IndexField indexField, object value)
         {
-            if (indexField!.Vector!.SourceEmbeddingType is VectorEmbeddingType.Text)
-                return VectorFromText(indexField, value);
-            
-            return VectorFromEmbedding(indexField, value);
+            return indexField!.Vector!.SourceEmbeddingType switch
+            {
+                VectorEmbeddingType.Text => VectorFromText(indexField, value),
+                _ => VectorFromEmbedding(indexField, value)
+            };
         }
 
         private static object VectorFromEmbedding(IndexField currentIndexingField, object value)
@@ -663,8 +680,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 mapIndexDefinition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
             }
 
-            var field = IndexField.Create(name, new IndexFieldOptions { Storage = options?.Storage, TermVector = options?.TermVector, Indexing = options?.Indexing, },
-                allFields, Corax.Constants.IndexWriter.DynamicField);
+            var field = IndexField.Create(name, new IndexFieldOptions
+            {
+                Storage = options?.Storage,
+                TermVector = options?.TermVector,
+                Indexing = options?.Indexing,
+            }, allFields, Corax.Constants.IndexWriter.DynamicField);
 
             scope.DynamicFields ??= new Dictionary<string, IndexField>();
             if (scope.DynamicFields.TryGetValue(name, out var existing) == false)
@@ -921,14 +942,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
             return CurrentIndexingScope.Current.GetOrCreateSpatialField(name);
         }
-        
-        // internal static IndexField GetOrCreateVectorField(string name)
-        // {
-        //     if (CurrentIndexingScope.Current == null)
-        //         throw new InvalidOperationException("Indexing scope was not initialized.");
-        //
-        //     return CurrentIndexingScope.Current.GetOrCreateVectorField(name);
-        // }
 
         private static double? ConvertToDouble(object value)
         {

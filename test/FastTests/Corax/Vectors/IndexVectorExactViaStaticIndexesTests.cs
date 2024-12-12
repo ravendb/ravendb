@@ -27,7 +27,7 @@ public class IndexVectorExactViaStaticIndexesTests(ITestOutputHelper output) : R
                 @"from doc in docs.Vector
 select new 
 {
-    vec = CreateVectorSearch(doc.Vector)
+    vec = CreateVector(doc.Vector)
 }
 "
             },
@@ -115,7 +115,7 @@ select new
         public TextVectorIndex(VectorEmbeddingType vectorEmbeddingType)
         {
             Map = docs => from doc in docs
-                select new { Id = doc.Id, Vector = CreateVectorSearch(doc.Text) };
+                select new { Id = doc.Id, Vector = CreateVector(doc.Text) };
 
 
             VectorIndexes.Add(x => x.Vector,

@@ -5,11 +5,11 @@ using Sparrow;
 
 namespace Raven.Client.Documents.Queries.Vector;
 
-public class VectorQuantizer
+public static class VectorQuantizer
 {
     private static ReadOnlySpan<byte> BinaryQuantizerLookup => [0b_1000_0000, 0b_0100_0000, 0b_0010_0000, 0b_0001_0000, 0b_0000_1000, 0b_0000_0100, 0b_0000_0010, 0b_0000_0001];
 
-    public static unsafe bool TryToInt8(ReadOnlySpan<float> rawEmbedding, ReadOnlySpan<sbyte> destination, out int usedBytes)
+    internal static bool TryToInt8(ReadOnlySpan<float> rawEmbedding, ReadOnlySpan<sbyte> destination, out int usedBytes)
     {
         usedBytes = 0;
         if (destination.Length < rawEmbedding.Length)

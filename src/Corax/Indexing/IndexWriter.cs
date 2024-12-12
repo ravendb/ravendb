@@ -477,9 +477,9 @@ namespace Corax.Indexing
                 {
                     bool exists = fieldsByRootPage.TryGetValue(reader.FieldRootPage, out var field);
                     PortableExceptions.ThrowIfNot<InvalidOperationException>(exists, "Tried to remove vector but couldn't find the associated indexed field.");
-                    var vectorWriter = field!.GetVectorWriter(_transaction.LowLevelTransaction);
-                    Debug.Assert(vectorWriter != null && reader.StoredField is { Length: 32 });
-                    vectorWriter.Remove(entryToDelete, reader.StoredField.Value.ToSpan());
+                    var vectorIndexer = field!.GetVectorIndexer(_transaction.LowLevelTransaction);
+                    Debug.Assert(vectorIndexer != null && reader.StoredField is { Length: 32 });
+                    vectorIndexer.Remove(entryToDelete, reader.StoredField.Value.ToSpan());
                 }
                 
                 Container.Delete(llt, _storedFieldsContainerId, reader.TermId);
@@ -927,11 +927,11 @@ namespace Corax.Indexing
                 
                 using var staticFieldScope = stats.For(indexedField.NameForStatistics);
 
-                if (indexedField.VectorIndexWriter != null)
+                if (indexedField.VectorIndexer != null)
                 {
                     using var __ = staticFieldScope.For(CommitOperation.VectorValues);
                     RegisterVectorRootPage(indexedField.FieldRootPage);
-                    indexedField.VectorIndexWriter.Commit();
+                    indexedField.VectorIndexer.Commit();
                 }
                 
                 if (indexedField.Textual.Count == 0)
@@ -2148,10 +2148,10 @@ namespace Corax.Indexing
             _jsonOperationContext?.Dispose();
             
             foreach (var indexedField in _knownFieldsTerms)
-                indexedField.VectorIndexWriter?.Dispose();
+                indexedField.VectorIndexer?.Dispose();
             
             foreach (var (_,indexedField) in _dynamicFieldsTerms)
-                indexedField.VectorIndexWriter?.Dispose();
+                indexedField.VectorIndexer?.Dispose();
             
             if (_ownsTransaction)
                 _transaction?.Dispose();

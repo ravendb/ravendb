@@ -213,18 +213,6 @@ namespace Raven.Client.Documents.Indexes
         }
         
         /// <summary>
-        /// Creates a vector field in the index, generating embeddings from the provided value
-        /// </summary>
-        /// <param name="value">Source of text to generate tokens</param>
-        public object CreateVectorSearch(string value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        
-        /// <summary>
-        /// Creates a vector field in the index, generating embeddings from the provided value
-        /// </summary>
-        /// <param name="value">Source of texts to generate tokens</param>
-        public object CreateVectorSearch(IEnumerable<string> value) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        
-        /// <summary>
         /// Creates a vector field in the index from the provided value
         /// </summary>
         /// <param name="value">Source of embedding</param>

@@ -130,7 +130,6 @@ namespace Raven.Server.Documents.Indexes
                 hashCode = (hashCode * 397) ^ (HasSuggestions ? 233 : 343);
                 hashCode = (hashCode * 397) ^ (Spatial?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Vector?.GetHashCode() ?? 0);
-                //todo: vector & spatial as well?
                 return hashCode;
             }
         }

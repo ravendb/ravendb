@@ -7,9 +7,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
 /// <summary>
 /// Rewrites method like:
-/// FieldName = CreateVectorSearch(x.Textual)
+/// FieldName = CreateVector(x.Textual)
 /// into
-/// FieldName = CreateVectorSearch("FieldName", x.Textual)
+/// FieldName = CreateVector("FieldName", x.Textual)
 /// to provide a way to create dynamic field with vector
 /// </summary>
 public sealed class VectorFieldRewriter : CSharpSyntaxRewriter
@@ -23,8 +23,6 @@ public sealed class VectorFieldRewriter : CSharpSyntaxRewriter
         {
             case $"this.{nameof(StaticIndexBase.CreateVector)}":
             case $"{nameof(StaticIndexBase.CreateVector)}":
-            case $"{nameof(StaticIndexBase.CreateVectorSearch)}":
-            case $"this.{nameof(StaticIndexBase.CreateVectorSearch)}":
                 var parent = GetAnonymousObjectMemberDeclaratorSyntax(node);
                 var name = parent.NameEquals.Name.Identifier.Text;
 

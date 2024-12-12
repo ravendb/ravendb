@@ -1601,7 +1601,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 
                 // Root, field factory, value factory, similarity, number of neighbors, isExact 
-                // e.g. Query<Dto>.VectorSearch(x => x.WithText("TextField"), factory => factory.ByText("SomeText"), 0.7, 16, true)
+                // e.g. Query<Dto>.VectorSearch(x => x.WithText("TextField"), factory => factory.ByText("SomeText"), minimumSimilarity (nullable): 0.7, numberOfCandidates: (nullable) 16, isExact: true (default: Raven.Client.Constants.VectorSearch.DefaultIsExact))
                 case nameof(LinqExtensions.VectorSearch):
                     VisitExpression(expression.Arguments[0]);
                     
