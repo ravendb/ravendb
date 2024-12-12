@@ -4,7 +4,7 @@ import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOp
 import genUtils = require("common/generalUtils");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
-type configurationOrigin = "Default" | "Server" | "Database";
+export type configurationOrigin = "Default" | "Server" | "Database";
 
 function findMatchingKey(availableKeys: string[], values: Record<string, Raven.Server.Config.ConfigurationEntrySingleValue>): string | undefined {
     const objectKeys = Object.keys(values);
@@ -42,6 +42,8 @@ export abstract class settingsEntry<T extends Raven.Server.Config.ConfigurationE
     entryClassForSummaryMode: KnockoutComputed<string>;
     descriptionHtml: KnockoutComputed<string>;
 
+    descriptionText: KnockoutComputed<string>;
+
     protected constructor(data: T) {
         this.data = data;
 
@@ -64,7 +66,13 @@ export abstract class settingsEntry<T extends Raven.Server.Config.ConfigurationE
                 `<div>${genUtils.escapeHtml(rawDescription)}</div>` :
                 `<div class="text-muted">No description is available</div>`;
         });
-        
+
+        this.descriptionText = ko.pureComputed(() => {
+            const description = data.Metadata.Description;
+            return description ?
+                genUtils.escapeHtml(description) : "No description is available";
+        });
+
         this.entryClassForSummaryMode = ko.pureComputed(() => {
             return this.hasPendingContent() ||
                    this.effectiveValueOrigin() === "Database" ? "highlight-key" : "";

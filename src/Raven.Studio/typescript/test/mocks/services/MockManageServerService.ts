@@ -62,4 +62,8 @@ export default class MockManageServerService extends AutoMockService<ManageServe
             SharedStubs.nodeConnectionTestSuccessResult()
         );
     }
+
+    withServerSettings(dto?: MockedValue<Raven.Server.Config.SettingsResult>) {
+        return this.mockResolvedValue(this.mocks.getServerSettings, dto, ManageServerStubs.serverSettings());
+    }
 }

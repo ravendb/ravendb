@@ -4,9 +4,10 @@ import classNames from "classnames";
 interface CellValueProps {
     value: unknown;
     title?: string;
+    className?: string;
 }
 
-export default function CellValue({ value, title }: CellValueProps) {
+export default function CellValue({ value, title, className }: CellValueProps) {
     if (value === undefined) {
         return null;
     }
@@ -17,7 +18,7 @@ export default function CellValue({ value, title }: CellValueProps) {
 
     if (typeof value === "object") {
         return (
-            <span className="cell-value">
+            <span className={classNames("cell-value", className)}>
                 {Array.isArray(value) ? (
                     <>
                         <span className="value-object">[...]</span>
@@ -35,14 +36,14 @@ export default function CellValue({ value, title }: CellValueProps) {
 
     if (typeof value === "number") {
         return (
-            <span title={title} className="cell-value value-number">
+            <span title={title} className={classNames("cell-value value-number", className)}>
                 {value.toLocaleString()}
             </span>
         );
     }
 
     return (
-        <span title={title} className={classNames("cell-value", `value-${typeof value}`)}>
+        <span title={title} className={classNames("cell-value", `value-${typeof value}`, className)}>
             {String(value)}
         </span>
     );

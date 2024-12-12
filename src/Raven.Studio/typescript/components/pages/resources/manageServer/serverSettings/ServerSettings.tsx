@@ -1,62 +1,85 @@
 import React from "react";
-import { Col, Input, Row } from "reactstrap";
+import { Col, Row } from "reactstrap";
 import { AboutViewHeading } from "components/common/AboutView";
-import { todo } from "common/developmentHelper";
-import { ServerSettingsVirtualGrid } from "components/pages/resources/manageServer/serverSettings/ServerSettingsVirtualGrid";
+import { ServerSettingsVirtualTable } from "components/pages/resources/manageServer/serverSettings/ServerSettingsVirtualTable";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { Icon } from "components/common/Icon";
 import { ServerSettingsInfoHub } from "components/pages/resources/manageServer/serverSettings/ServerSettingsInfoHub";
+import SizeGetter from "components/common/SizeGetter";
+import { useServices } from "hooks/useServices";
+import { useAsync } from "react-async-hook";
+import { settingsEntry } from "models/database/settings/databaseSettingsModels";
+import { sortBy } from "common/typeUtils";
+import { useAppSelector } from "components/store";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import FeatureNotAvailable from "components/common/FeatureNotAvailable";
+import { ServerSettingsColumns } from "components/pages/resources/manageServer/serverSettings/useServerSettingsColumns";
 
-interface ServerSettingsProps {}
+export function ServerSettings() {
+    const asyncFetchServerSettings = useFetchServerSettings();
+    const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
 
-export function ServerSettings(props: ServerSettingsProps) {
-    todo("Feature", "Damian", "Add logic");
-    todo("Feature", "Damian", "Connect to studio");
-    todo("Feature", "Damian", "Remove old code");
-    todo("Other", "Danielle", "Fill Info Hub");
+    if (!isClusterAdminOrClusterNode) {
+        return (
+            <div className="h-100 d-flex align-items-center justify-content-center">
+                <FeatureNotAvailable badgeText="Insufficient access">
+                    You are not authorized to view this page
+                </FeatureNotAvailable>
+            </div>
+        );
+    }
+
     return (
-        <div className="content-margin">
-            <Col xxl={12}>
-                <Row className="gy-sm">
-                    <Col>
-                        <AboutViewHeading icon="server-settings" title="Server Settings" />
-                        <div className="d-flex justify-content-between align-items-end flex-wrap gap-3 my-3">
-                            <div className="flex-grow-1">
-                                <div className="small-label ms-1 mb-1">Filter by configuration key</div>
-                                <div className="clearable-input">
-                                    <Input
-                                        type="text"
-                                        accessKey="/"
-                                        placeholder="e.g. Cluster.Tcp"
-                                        title="Filter server settings"
-                                        className="filtering-input rounded-pill"
-                                        style={{ maxWidth: "240px" }}
-                                        // value={filter.searchText}
-                                        // onChange={(e) => onFilterValueChange("searchText", e.target.value)}
-                                    />
-                                    {/*{filter.searchText && (*/}
-                                    {/*    <div className="clear-button">*/}
-                                    {/*        <Button color="secondary" size="sm"*/}
-                                    {/*                onClick={() => onFilterValueChange("searchText", "")}>*/}
-                                    {/*            <Icon icon="clear" margin="m-0"/>*/}
-                                    {/*        </Button>*/}
-                                    {/*    </div>*/}
-                                    {/*)}*/}
-                                </div>
-                            </div>
-                            <ButtonWithSpinner isSpinning={false}>
+        <Row className="content-padding">
+            <Col className="h-100" md={12} lg={7}>
+                <div className="h-100 flex-column d-flex mb-4">
+                    <AboutViewHeading title="Server Settings" icon="server-settings" />
+                    {asyncFetchServerSettings.status !== "error" && (
+                        <div className="d-flex justify-content-end">
+                            <ButtonWithSpinner
+                                className="justify-content-end"
+                                onClick={asyncFetchServerSettings.execute}
+                                isSpinning={asyncFetchServerSettings.loading}
+                            >
                                 <Icon icon="refresh" /> Refresh
                             </ButtonWithSpinner>
                         </div>
-                        <div className="position-relative" style={{ height: "640px" }}>
-                            <ServerSettingsVirtualGrid />
-                        </div>
-                    </Col>
-                    <Col sm={12} lg={4}>
-                        <ServerSettingsInfoHub />
-                    </Col>
-                </Row>
+                    )}
+                    <SizeGetter
+                        render={(props) => (
+                            <ServerSettingsVirtualTable
+                                isLoading={asyncFetchServerSettings.loading}
+                                data={asyncFetchServerSettings.result ?? []}
+                                status={asyncFetchServerSettings.status}
+                                reload={asyncFetchServerSettings.execute}
+                                {...props}
+                            />
+                        )}
+                    />
+                </div>
             </Col>
-        </div>
+            <Col md={12} lg={5}>
+                <ServerSettingsInfoHub />
+            </Col>
+        </Row>
     );
+}
+
+function useFetchServerSettings() {
+    const { manageServerService } = useServices();
+
+    return useAsync(async () => {
+        const serverSettings = await manageServerService.getServerSettings();
+        const mappedSettings = serverSettings.Settings.map((setting) => settingsEntry.getEntry(setting));
+        const sortedSettings = sortBy(mappedSettings, (setting) => setting.keyName());
+
+        return sortedSettings.map(
+            (setting): ServerSettingsColumns => ({
+                configurationKey: setting.keyName(),
+                configurationKeyTooltip: setting.descriptionText(),
+                effectiveValue: setting.effectiveValue(),
+                origin: setting.effectiveValueOrigin(),
+            })
+        );
+    }, []);
 }
