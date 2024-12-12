@@ -16,7 +16,7 @@ namespace Sparrow.Json
         private readonly JsonOperationContext _context;
         private UsageMode _mode;
         private readonly IJsonParser _reader;
-        private readonly bool _allowVectorCompression;
+        private bool _isVector;
         public IBlittableDocumentModifier _modifier;
         private readonly BlittableWriter<UnmanagedWriteBuffer> _writer;
         private readonly JsonParserState _state;
@@ -29,15 +29,13 @@ namespace Sparrow.Json
 
         public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, IJsonParser reader,
             BlittableWriter<UnmanagedWriteBuffer> writer = null,
-            IBlittableDocumentModifier modifier = null,
-            bool allowVectorCompression = false)
+            IBlittableDocumentModifier modifier = null)
         {
             _context = context;
             _state = state;
             _reader = reader;
             _modifier = modifier;
             _writer = writer ?? new BlittableWriter<UnmanagedWriteBuffer>(context);
-            _allowVectorCompression = allowVectorCompression;
         }
 
         public BlittableJsonDocumentBuilder(
@@ -198,15 +196,22 @@ namespace Sparrow.Json
                         goto ErrorExpectedStartOfObject;
 
                     case ContinuationState.ReadArray:
-                        if (state.CurrentTokenType == JsonParserToken.StartArray)
+                        if (state.CurrentTokenType != JsonParserToken.StartArray)
+                            goto ErrorExpectedStartOfArray;
+
+                        currentState.Types = _tokensCache.Allocate();
+                        currentState.Positions = _positionsCache.Allocate();
+
+                        // todo check property name here instead in ReadPropertyName
+                        if (_isVector == false)
                         {
-                            currentState.Types = _tokensCache.Allocate();
-                            currentState.Positions = _positionsCache.Allocate();
                             currentState.State = ContinuationState.ReadArrayValue;
-                            continue;
+                            goto case ContinuationState.ReadArrayValue;
                         }
 
-                        goto ErrorExpectedStartOfArray;
+                        _isVector = false;
+                        currentState.State = ContinuationState.ReadBufferedArrayValue;
+                        goto case ContinuationState.ReadBufferedArrayValue;
 
                     case ContinuationState.ReadArrayValue:
                         if (reader.Read() == false)
@@ -266,6 +271,10 @@ namespace Sparrow.Json
 
                         var property = CreateLazyStringValueFromParserState();
                         currentState.CurrentProperty = _context.CachedProperties.GetProperty(property);
+
+                        if (currentState.CurrentProperty.Comparer.ToString() == "@vector")
+                            _isVector = true;
+
                         currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);
                         currentState.State = ContinuationState.ReadPropertyValue;
                         continue;
