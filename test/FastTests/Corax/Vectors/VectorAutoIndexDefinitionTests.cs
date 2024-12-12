@@ -12,6 +12,7 @@ namespace FastTests.Corax.Vectors;
 public class VectorAutoIndexDefinitionTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     private DynamicQueryMapping _sut;
+    
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
     [InlineData(Constants.VectorSearch.EmbeddingText, VectorEmbeddingType.Text, VectorEmbeddingType.Single, false)]
     [InlineData(Constants.VectorSearch.EmbeddingTextInt8, VectorEmbeddingType.Text, VectorEmbeddingType.Int8, false)]

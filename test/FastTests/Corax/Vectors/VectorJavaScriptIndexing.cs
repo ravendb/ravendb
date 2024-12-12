@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries.Vector;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
@@ -55,7 +56,7 @@ public class VectorJavaScriptIndexing : RavenTestBase
     [InlineData(nameof(VecDoc.Int8Base64))]
     [InlineData(nameof(VecDoc.Int8Enumerable))]
     [InlineData(nameof(VecDoc.Int8EnumerableBase64))]
-    public void Int8Test(string fieldName) => JsIndexingTestingBase(fieldName, VectorEmbeddingType.Int8, VectorEmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([-1, 1])));
+    public void Int8Test(string fieldName) => JsIndexingTestingBase(fieldName, VectorEmbeddingType.Int8, VectorEmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding(VectorQuantizer.ToInt8([-1, 1]))));
         
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
     [InlineData(nameof(VecDoc.Binary))]
@@ -74,7 +75,7 @@ public class VectorJavaScriptIndexing : RavenTestBase
         var single1Base64 = Convert.ToBase64String(MemoryMarshal.Cast<float, byte>(singles[1]));
         
         
-        sbyte[][] i8 = [[-1, 1], [-5, 5]];
+        sbyte[][] i8 = [VectorQuantizer.ToInt8([-1, 1]), VectorQuantizer.ToInt8([-5, 5])];
         var i8_0Base64 = Convert.ToBase64String(MemoryMarshal.Cast<sbyte, byte>(i8[0]));
         var i8_1Base64 = Convert.ToBase64String(MemoryMarshal.Cast<sbyte, byte>(i8[1]));
         

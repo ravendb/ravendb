@@ -101,18 +101,30 @@ public static class GenerateEmbeddings
             }
             case VectorEmbeddingType.Int8:
             {
+                PortableExceptions.ThrowIf<InvalidOperationException>(embeddingSourceType != VectorEmbeddingType.Single, "Cannot quantize already quantized array.");
+                
                 var destination = mem.ToSpan<sbyte>();
-
-                if (mem.Length < usedBytes + sizeof(float))
+                bool isFromManaged = false;
+                byte[] rentedMem = null;
+                
+                if (mem.Length < usedBytes / sizeof(float) + sizeof(float))
                 {
-                    var rentedMem = Allocator.Rent(mem.Length + sizeof(float));
-
+                    isFromManaged = true;
+                    rentedMem = Allocator.Rent(mem.Length + sizeof(float));
                     destination = MemoryMarshal.Cast<byte, sbyte>(rentedMem);
                 }
-
-                bool result = VectorQuantizer.TryToInt8(mem.ToSpan<float>().Slice(0, usedBytes / sizeof(float)), destination, out usedBytes);
+                
+                bool result = VectorQuantizer.TryToInt8(mem
+                    .ToSpan<float>().Slice(0, usedBytes / sizeof(float))
+                    , destination, 
+                    out usedBytes);
+                
                 PortableExceptions.ThrowIfNot<InvalidDataException>(result, "Error during quantization of the array.");
-                return new VectorValue(disposable, mem, usedBytes);
+                if (isFromManaged == false)
+                    return new VectorValue(disposable, mem, usedBytes);
+                
+                disposable.Dispose();
+                return new VectorValue(Allocator, rentedMem, new(rentedMem, 0, usedBytes));
             }
             case VectorEmbeddingType.Binary:
             {

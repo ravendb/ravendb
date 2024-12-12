@@ -4,6 +4,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries.Vector;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
@@ -50,7 +51,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.i8(Int8))",
         fieldRqlSelector: "vector.search(embedding.i8(Int8), $p0)",
         vectorWhere: docs => docs.VectorSearch(field => field.WithEmbedding(f => f.Int8, VectorEmbeddingType.Int8),
-            value => value.ByEmbedding(new[]{(sbyte)-1, (sbyte)1}), isExact: isExact), isExact);
+            value => value.ByEmbedding(VectorQuantizer.ToInt8([-1f, 1f])), isExact: isExact), isExact);
     
     
     [RavenTheory(RavenTestCategory.Vector)]
@@ -61,7 +62,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         fieldRqlSelector: "vector.search(embedding.i1(Binary), $p0)",
         vectorWhere: docs => docs.
             VectorSearch(field => field.WithEmbedding(f => f.Binary, VectorEmbeddingType.Binary), 
-                value => value.ByEmbedding([1, 2]), isExact: isExact), isExact);
+                value => value.ByEmbedding(VectorQuantizer.ToInt1([1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0])), isExact: isExact), isExact);
     
     [RavenTheory(RavenTestCategory.Vector)]
     [InlineData(true)]
@@ -97,11 +98,12 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         using var session = store.OpenSession();
-        session.Store(new AutoVecDoc("Test", [1.0f, 1.0f], [-1, 1], [1, 1]));
+        session.Store(new AutoVecDoc("Test", [1.0f, 1.0f], VectorQuantizer.ToInt8([-1, 1]), VectorQuantizer.ToInt1([1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0])));
         session.SaveChanges();
         var baseQuery = session.Query<AutoVecDoc>().Statistics(out var stats).Customize(x => x.WaitForNonStaleResults());
         baseQuery = vectorWhere(baseQuery);
         _ = baseQuery.ToList(); // evaluate
+        WaitForUserToContinueTheTest(store);
 
         Assert.Equal(autoIndexName, stats.IndexName);
         fieldRqlSelector = isExact ? $"exact({fieldRqlSelector})" : fieldRqlSelector;
