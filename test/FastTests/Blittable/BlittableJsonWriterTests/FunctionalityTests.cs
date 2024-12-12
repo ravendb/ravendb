@@ -118,6 +118,35 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         }
 
         [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(10)]
+        [InlineData(1000)]
+        public async Task EnsureArrayBecomesIntVector(int repeatSize)
+        {
+            var sampleObject = new
+            {
+                SomeProperty = "text",
+                EmptyArray = new int[] {},
+                SomeArray = Enumerable.Repeat(1, repeatSize),
+            };
+            var str = sampleObject.ToJsonString();
+
+            using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
+            using (var doc = await blittableContext.ReadForDiskAsync(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            {
+                dynamic dynamicObject = new DynamicBlittableJson(doc);
+                Assert.Equal(0, dynamicObject.EmptyArray.Length);
+                Assert.Equal(repeatSize, dynamicObject.SomeArray.Length);
+                
+                var ms = new MemoryStream();
+                await blittableContext.WriteAsync(ms, doc);
+                Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
+            }
+        }
+
+        [Theory]
         [InlineData(1)]
         [InlineData(10)]
         [InlineData(100)]
@@ -144,6 +173,9 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             using (var doc = await blittableContext.ReadForDiskAsync(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicObject = new DynamicBlittableJson(doc);
+
+                var test = dynamicObject.SomeArray;
+
                 Assert.Equal(sampleObject.Value, dynamicObject.Value);
                 Assert.Equal(sampleObject.SomeNumber, dynamicObject.SomeNumber);
                 Assert.Equal(sampleObject.SomeArray.Length, dynamicObject.SomeArray.Length);

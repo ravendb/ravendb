@@ -506,6 +506,47 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         }
 
         [Fact]
+        public void ObjectWithNestedIntVectorTest()
+        {
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
+            {
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                {
+                    builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+                    builder.StartWriteObjectDocument();
+
+                    builder.StartWriteObject();
+                    {
+                        builder.WritePropertyName("MyNestedVectorOfNumbers");
+                        builder.WriteVector<int>(new []{0, 1, 2, 3, 4, 5, 6, 7});
+                        
+                        builder.WritePropertyName("Height");
+                        {
+                            builder.WriteValue(55);
+                        }
+                        builder.WriteObjectEnd();
+                    }
+                    builder.FinalizeDocument();
+
+                    var reader = builder.CreateReader();
+
+                    Assert.Equal(2, reader.Count);
+
+                    var vector = reader["MyNestedVectorOfNumbers"] as BlittableJsonReaderVector;
+                    Assert.Equal(8, vector.Length);
+                    Assert.True(vector.IsOfType<int>());
+
+                    var arrayReader = vector.ReadArray<int>();
+
+                    for (var i = 0; i < 8; i++)
+                        Assert.Equal(i, arrayReader[i]);
+
+                    Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
+                }
+            }
+        }
+
+        [Fact]
         public void FlatObjectWithObjectArray()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -895,4 +936,5 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
     }
+
 }

@@ -21,7 +21,6 @@ internal static class DisposableExceptions
         ThrowIfDisposed(disposable, message, paramName);
     }
 
-
     public static void ThrowIfDisposed<T>(
         T disposable, string message = "The object has already been disposed.",
 #if NET6_0_OR_GREATER        

@@ -966,6 +966,10 @@ namespace Sparrow.Json
                 case BlittableJsonToken.LazyNumber:
                     isBlittableJsonReader = false;
                     return new LazyNumberValue(ReadStringLazily(position));
+
+                case BlittableJsonToken.Vector:
+                    isBlittableJsonReader = true;
+                    return new BlittableJsonReaderVector(_mem + position, _size - position, _context);
             }
 
             throw new ArgumentOutOfRangeException(nameof(type), type.ToString(), "Unexpected type: " + type);
@@ -1299,6 +1303,18 @@ namespace Sparrow.Json
                         ReadVariableSizeInt(propValueOffset, out _);
                         break;
 
+                    case BlittableJsonToken.Vector:
+                        var header = (BlittableVectorHeader*)(_mem + propValueOffset);
+#if NET6_0_OR_GREATER
+                        if (Enum.IsDefined(header->Type) == false)
+#else
+                        if (Enum.IsDefined(typeof(BlittableVectorHeader), header->Type) == false)
+#endif
+                            ThrowInvalidVectorHeader();
+                        
+                        // TODO: Perform more validations. 
+                        break;
+
                     default:
                         ThrowInvalidTokenType();
                         break;
@@ -1362,6 +1378,11 @@ namespace Sparrow.Json
         private static void ThrowInvalidNumberOfProperties()
         {
             throw new InvalidDataException("Number of properties not valid");
+        }
+
+        private static void ThrowInvalidVectorHeader()
+        {
+            throw new InvalidDataException("The vector header is invalid.");
         }
 
         public override bool Equals(object obj)
