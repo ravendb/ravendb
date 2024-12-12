@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -9,6 +10,9 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StreamCsvBlittableQueryResultWriter : StreamCsvResultWriter<BlittableJsonReaderObject>
     {
+        protected override (string, string)[] GetProperties(BlittableJsonReaderObject entity, bool writeIds) => 
+            GetPropertiesRecursive((string.Empty, string.Empty), entity, writeIds).ToArray();
+
         public override async ValueTask AddResultAsync(BlittableJsonReaderObject res, CancellationToken token)
         {
             WriteCsvHeaderIfNeeded(res, false);

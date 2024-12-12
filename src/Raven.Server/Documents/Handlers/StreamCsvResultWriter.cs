@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers
         private (string, string)[] _properties;
         private bool _writeHeader = true;
 
-        private readonly HashSet<string> _metadataPropertiesToSkip = new HashSet<string>
+        private static readonly HashSet<string> MetadataPropertiesToSkip = new HashSet<string>
         {
             Constants.Documents.Metadata.Attachments,
             Constants.Documents.Metadata.Counters,
@@ -51,13 +51,14 @@ namespace Raven.Server.Documents.Handlers
             _properties = properties?.Select(p => (p, Escape(p))).ToArray();
         }
 
-        protected void WriteCsvHeaderIfNeeded(BlittableJsonReaderObject blittable, bool writeIds = true)
+        protected void WriteCsvHeaderIfNeeded(T entity, bool writeIds = true)
         {
             if (_writeHeader == false)
                 return;
+
             if (_properties == null)
             {
-                _properties = GetPropertiesRecursive((string.Empty, string.Empty), blittable, writeIds).ToArray();
+                _properties = GetProperties(entity, writeIds);
             }
             _writeHeader = false;
             foreach ((var property, var path) in _properties)
@@ -67,6 +68,8 @@ namespace Raven.Server.Documents.Handlers
 
             _csvWriter.NextRecord();
         }
+
+        protected abstract (string, string)[] GetProperties(T entity, bool writeIds);
 
         private readonly char[] _splitter = { '.' };
 
@@ -109,7 +112,7 @@ namespace Raven.Server.Documents.Handlers
             return _properties;
         }
 
-        private IEnumerable<(string Property, string Path)> GetPropertiesRecursive((string ParentProperty, string ParentPath) propertyTuple, BlittableJsonReaderObject obj, bool addId = true)
+        public static IEnumerable<(string Property, string Path)> GetPropertiesRecursive((string ParentProperty, string ParentPath) propertyTuple, BlittableJsonReaderObject obj, bool addId = true)
         {
             var inMetadata = Constants.Documents.Metadata.Key.Equals(propertyTuple.ParentPath);
             if (addId)
@@ -120,14 +123,14 @@ namespace Raven.Server.Documents.Handlers
             foreach (var p in obj.GetPropertyNames())
             {
                 // skip reserved metadata properties
-                if (inMetadata && p.StartsWith('@') && _metadataPropertiesToSkip.Contains(p))
+                if (inMetadata && p.StartsWith('@') && MetadataPropertiesToSkip.Contains(p))
                     continue;
 
                 if (p.StartsWith('@') && p.Equals(Constants.Documents.Metadata.Key) == false && propertyTuple.ParentPath.Equals(Constants.Documents.Metadata.Key) == false)
                     continue;
 
                 var path = string.IsNullOrEmpty(propertyTuple.ParentPath) ? BlittablePath.EscapeString(p) : $"{propertyTuple.ParentPath}.{BlittablePath.EscapeString(p)}";
-                var property = string.IsNullOrEmpty(propertyTuple.ParentPath) ? p : $"{propertyTuple.ParentPath}.{p}";
+                var property = string.IsNullOrEmpty(propertyTuple.ParentProperty) ? p : $"{propertyTuple.ParentProperty}.{p}";
                 if (obj.TryGetMember(p, out var res) && res is BlittableJsonReaderObject)
                 {
                     foreach (var nested in GetPropertiesRecursive((property, path), res as BlittableJsonReaderObject, addId: false))

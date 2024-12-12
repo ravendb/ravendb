@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -10,25 +11,41 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StreamCsvDocumentQueryResultWriter : StreamCsvResultWriter<Document>
     {
+        protected override (string, string)[] GetProperties(Document entity, bool writeIds)
+        {
+            var properties = GetPropertiesRecursive((string.Empty, string.Empty), entity.Data, writeIds);
+            using var tsCsvWriter = new TimeSeriesCsvWriter(entity.TimeSeriesStream);
+            {
+                return properties.Concat(tsCsvWriter.GetProperties()).ToArray();
+            }
+        }
+
         public override async ValueTask AddResultAsync(Document res, CancellationToken token)
         {
             // add @id property if res.Id != null, res.Id is null in map-reduce index
-            WriteCsvHeaderIfNeeded(res.Data, res.Id != null);
+            WriteCsvHeaderIfNeeded(res, res.Id != null);
 
-            foreach (var (property, path) in GetProperties())
+            using var tsCsvWriter = new TimeSeriesCsvWriter(res.TimeSeriesStream);
+            do
             {
-                if (Constants.Documents.Metadata.Id == property)
+                foreach (var (property, path) in GetProperties())
                 {
-                    GetCsvWriter().WriteField(res.Id.ToString());
-                }
-                else
-                {
-                    var o = new BlittablePath(path).Evaluate(res.Data);
-                    GetCsvWriter().WriteField(o?.ToString());
-                }
-            }
+                    if (Constants.Documents.Metadata.Id == property)
+                    {
+                        GetCsvWriter().WriteField(res.Id.ToString());
+                    }
+                    else
+                    {
+                        var o = path.StartsWith(TimeSeriesCsvWriter.TimeSeriesPathPrefix) ? 
+                            tsCsvWriter.GetValue(property) : 
+                            new BlittablePath(path).Evaluate(res.Data);
 
-            await GetCsvWriter().NextRecordAsync();
+                        GetCsvWriter().WriteField(o?.ToString());
+                    }
+                }
+                await GetCsvWriter().NextRecordAsync();
+
+            } while (tsCsvWriter.MoveNext());
         }
 
         public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null,

@@ -42,8 +42,8 @@ namespace SlowTests.Issues
                     cv = session.Advanced.GetChangeVectorFor(_testCompany);
                 }
 
-                var client = new HttpClient();
-                var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query={query}&format=csv");
+                var client = store.GetRequestExecutor().HttpClient;
+                await using var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query={query}&format=csv");
 
                 using (var commands = store.Commands())
                 {
@@ -100,8 +100,8 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var client = new HttpClient();
-                var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?fromDocument=queries%2F1&format=csv");
+                var client = store.GetRequestExecutor().HttpClient;
+                await using var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?fromDocument=queries%2F1&format=csv");
 
                 using (var commands = store.Commands())
                 {
@@ -137,8 +137,8 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var client = new HttpClient();
-                var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?fromDocument=queries%2F1&format=csv");
+                var client = store.GetRequestExecutor().HttpClient;
+                await using var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?fromDocument=queries%2F1&format=csv");
 
                 using (var commands = store.Commands())
                 {

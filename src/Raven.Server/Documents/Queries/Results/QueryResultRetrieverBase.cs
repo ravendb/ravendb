@@ -355,7 +355,7 @@ namespace Raven.Server.Documents.Queries.Results
         protected (Document Document, List<Document> List) AddProjectionToResult(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
         {
             if (_query.IsStream &&
-                key.StartsWith(Constants.TimeSeries.QueryFunction))
+                (key.StartsWith(Constants.TimeSeries.QueryFunction) || fieldsToFetch.AnyTimeSeries))
             {
                 doc.TimeSeriesStream ??= new TimeSeriesStream();
                 var value = (TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult)fieldVal;
