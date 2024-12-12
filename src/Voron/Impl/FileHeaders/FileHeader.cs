@@ -88,7 +88,7 @@ namespace Voron.Impl.FileHeaders
             return
                 $"{nameof(Version)}: {Version}, {nameof(HeaderRevision)}: {HeaderRevision}, {nameof(TransactionId)}: {TransactionId}, {nameof(LastPageNumber)}: {LastPageNumber}, " +
                 $"{nameof(Root.RootPageNumber)}: {Root.RootPageNumber}, " +
-                $"{nameof(Journal.CurrentJournal)}: {Journal.CurrentJournal},  {nameof(Journal.LastSyncedJournal)}: {Journal.LastSyncedJournal},  {nameof(Journal.LastSyncedTransactionId)}: {Journal.LastSyncedJournal}, {nameof(Journal.Flags)}: {Journal.Flags}";
+                $"{nameof(Journal.CurrentJournal)}: {Journal.CurrentJournal}, {nameof(DatabaseId)}: {DatabaseId},  {nameof(Journal.LastSyncedJournal)}: {Journal.LastSyncedJournal},  {nameof(Journal.LastSyncedTransactionId)}: {Journal.LastSyncedJournal}, {nameof(Journal.Flags)}: {Journal.Flags}";
         }
     }
 }

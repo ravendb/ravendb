@@ -73,7 +73,7 @@ namespace Voron.Impl.Journal
             if (_readAt4Kb >= _journalPagerNumberOfAllocated4Kb)
                 return false;
 
-            if (TryReadAndValidateHeader(options, ref txState, ReadExpectation.ValidTransaction, out TransactionHeader* current) == false)
+            if (TryReadAndValidateHeader(options, ref txState, out TransactionHeader* current) == false)
             {
                 return false;
             }
@@ -361,192 +361,78 @@ namespace Voron.Impl.Journal
             if (rc != 0)
                 throw new InvalidOperationException($"Unable to decrypt transaction {num}, rc={rc}");
         }
-
-        private enum ReadExpectation
+        
+        private bool TryValidateTransaction(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState, out TransactionHeader* current)
         {
-            ValidTransaction,
-
-            // We don't expect any valid transactions but continue to read to verify that.
-            // We ignore zeros and garbage that we might read due to the reuse of journal files
-            // Reading in this mode suppresses recovery / integrity errors handlers and RequireHeaderUpdate calls
-            ZerosOrGarbage
-        }
-
-        private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState, ReadExpectation readExpectation,
-            out TransactionHeader* current)
-        {
-            if (_readAt4Kb > _journalPagerNumberOfAllocated4Kb)
-            {
-                current = null;
-                return false; // end of journal
-            }
-
             const int pageTo4KbRatio = Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte);
             var pageNumber = _readAt4Kb / pageTo4KbRatio;
             var positionInsidePage = (_readAt4Kb % pageTo4KbRatio) * (4 * Constants.Size.Kilobyte);
 
-            current = (TransactionHeader*)
-                (_journalPager.AcquirePagePointer(_journalPagerState, ref txState, pageNumber) + positionInsidePage);
-
+            current = (TransactionHeader*)(_journalPager.AcquirePagePointer(_journalPagerState, ref txState, pageNumber) + positionInsidePage);
             if (current->HeaderMarker != Constants.TransactionHeaderMarker)
-            {
-                // If the header marker is zero or garbage, we are probably in the area at the end of the log file.
-                // So we don't expect to have any additional transaction log records to read from it.
-                // This can happen if the next transaction was too big to fit in the current log file.
+                return false;
 
-                // We're about to stop reading this journal file and move to the next one but first we need to verify there is no valid later tx in the journal file.
-                // This would mean we have true corruption rather than random garbage being a result of the reuse of journals.
+            var numberOfPages = GetNumberOfPagesFor(
+                positionInsidePage + sizeof(TransactionHeader) + 
+                    (current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize)
+            );
 
-                // note : we might encounter a "valid" TransactionHeaderMarker which is still garbage, so we will test that later when reading in ReadExpectation.ZerosOrGarbage mode
+            if (pageNumber + numberOfPages > _journalPagerState.NumberOfAllocatedPages)
+                return false;
+            
+            _journalPager.EnsureMapped(_journalPagerState, ref txState, pageNumber, numberOfPages);
 
-                switch (readExpectation)
-                {
-                    case ReadExpectation.ValidTransaction:
-                        // due to the reuse of journals we no longer can assume we have zeros in the end of the journal
-                        // we might have there random garbage or old transactions we can ignore, so we have the following scenarios:
+            var pageHeader = _journalPager.AcquirePagePointer(_journalPagerState, ref txState, pageNumber)
+                             + positionInsidePage;
 
-                        // * TxId == current Id + 1  ::  valid, but if hash is invalid. Transaction hasn't been committed
-                        // * TxId >  current Id + 1  ::  if hash is invalid we can ignore reused/random, but if hash valid then we might missed TXs 
-                        // * TxId < current Id       ::  if hash is invalid we can ignore reused/random, but if hash valid then we might missed TXs 
-
-                        var lastRead4Kb = _readAt4Kb;
-                        var lastReadTransactionHeader = LastTransactionHeader;
-
-                        _readAt4Kb++;
-
-                        TransactionHeader* unexpectedValidHeader = null;
-                        var encounteredUnexpectedValidHeader = false;
-
-                        // disable error handlers so we'll get InvalidDataException instead of raising false positive alerts
-                        using(options.DisableOnRecoveryErrorHandler())  
-                        using (options.DisableOnIntegrityErrorOfAlreadySyncedDataHandler()) // in this mode we expect to get garbage
-                        {
-                            while (_readAt4Kb < _journalPagerNumberOfAllocated4Kb)
-                            {
-                                try
-                                {
-                                    if (TryReadAndValidateHeader(options, ref txState, ReadExpectation.ZerosOrGarbage, out unexpectedValidHeader))
-                                    {
-                                        // found a valid transaction header - that isn't expected since we already got garbage
-
-                                        if (_skippedLastTx && options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions)
-                                        {
-                                            // BUT the last read transaction was skipped and we're running in "ignore already synced but corrupted transactions" mode
-                                            // so this transaction can be either:
-                                            // - first not synced (but valid) after reading the garbage but ignoring it
-                                            // - synced - so we'll ignore it anyway
-                                            // in both cases we can stop reading in ReadExpectation.ZerosOrGarbage and continue the recovery
-
-                                            current = unexpectedValidHeader;
-                                            return true;
-                                        }
-
-                                        encounteredUnexpectedValidHeader = true;
-                                        break;
-                                    }
-                                }
-                                catch (InvalidDataException)
-                                {
-                                    // ignored - data errors are expected
-                                }
-                                //catch (InvalidJournalException)
-                                //{
-                                // found that the journal is invalid
-                                // we must not ignore even when reading in ReadExpectation.ZerosOrGarbage mode
-                                //}
-
-                                _readAt4Kb++;
-                            }
-                        }
-
-                        if (encounteredUnexpectedValidHeader)
-                        {
-                            RequireHeaderUpdate = true;
-
-                            var message =
-                                $"Got header marker set to {(current->HeaderMarker == 0 ? "zero" : "garbage")} value at position {lastRead4Kb * 4 * Constants.Size.Kilobyte} when reading journal {_journalPager}. ";
-
-                            if (lastReadTransactionHeader != null)
-                                message += $"Last read transaction was:{Environment.NewLine}{lastReadTransactionHeader->ToString()}.{Environment.NewLine}";
-
-                            message +=
-                                $"Although further reading found a valid transaction at position {_readAt4Kb * 4 * Constants.Size.Kilobyte}:{Environment.NewLine}{unexpectedValidHeader->ToString()}.{Environment.NewLine}" +
-                                "Journal file is likely to be corrupted.";
-
-                            throw new InvalidJournalException(message, _journalInfo);
-                        }
-
-                        // we didn't find any valid transaction when reading the rest of the journal in ReadExpectation.ZerosOrGarbage mode
-                        // it means we can stop reading current journal and continue the recovery process using next ones (if there are any)
-
-                        _readAt4Kb = lastRead4Kb;
-                        LastTransactionHeader = lastReadTransactionHeader;
-
-                        RequireHeaderUpdate = false;
-                        return false;
-
-                    case ReadExpectation.ZerosOrGarbage:
-                        return false;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(readExpectation), readExpectation, "Unsupported enum value");
-                }
-            }
-
-
-            if (readExpectation == ReadExpectation.ZerosOrGarbage)
-            {
-                if (current->TransactionId < 0)
-                    return false;
-            }
-
-            current = EnsureTransactionMapped(current, ref txState, pageNumber, positionInsidePage);
-            bool hashIsValid;
-            if (options.Encryption.IsEnabled)
-            {
-                // We use temp buffers to hold the transaction before decrypting, and release the buffers afterwards.
-                var pagesSize = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
-                var size = (4 * Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + pagesSize);
-
-                var ptr = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out var thread);
-                var buffer = new Pager.EncryptionBuffer(options.Encryption.EncryptionBuffersPool, thread, ptr, size);
-
-                _encryptionBuffers.Add(buffer);
-                Memory.Copy(buffer.Pointer, (byte*)current, size);
-                current = (TransactionHeader*)buffer.Pointer;
-
-                try
-                {
-                    DecryptTransaction((byte*)current, options);
-                    hashIsValid = true;
-                }
-                catch (InvalidOperationException ex)
-                {
-                    if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
-                    {
-                        options.InvokeIntegrityErrorOfAlreadySyncedData(this,
-                            $"Unable to decrypt data of transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
-                            "Safely continuing the startup recovery process.",
-                            ex);
-
-                        return true;
-                    }
-
-                    RequireHeaderUpdate = true;
-                    options.InvokeRecoveryError(this, $"Could not decrypt transaction {current->TransactionId}. It could be not committed", ex);
-
-                    return false;
-                }
-            }
-            else
+            current = (TransactionHeader*)pageHeader;
+            if (options.Encryption.IsEnabled is false)
             {
                 if ((current->Flags & TransactionPersistenceModeFlags.Encrypted) == TransactionPersistenceModeFlags.Encrypted)
                     throw new InvalidOperationException(
                         "Encountered an encrypted transaction when opening a non encrypted storage. Did you forget to provide the encryption key?");
 
-                hashIsValid = ValidatePagesHash(options, current);
+                return ValidatePagesHash(options, current);
             }
 
-            long lastTxId;
+            // We use temp buffers to hold the transaction before decrypting, and release the buffers afterwards.
+            var pagesSize = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
+            var sizeIn4Kbs = (4 * Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + pagesSize);
+
+            var ptr = PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(sizeIn4Kbs, out var thread);
+            var buffer = new Pager.EncryptionBuffer(options.Encryption.EncryptionBuffersPool, thread, ptr, sizeIn4Kbs);
+
+            _encryptionBuffers.Add(buffer);
+            Memory.Copy(buffer.Pointer, (byte*)current, sizeIn4Kbs);
+            current = (TransactionHeader*)buffer.Pointer;
+
+            try
+            {
+                DecryptTransaction((byte*)current, options);
+                return true;
+            }
+            catch (InvalidOperationException ex)
+            {
+                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                {
+                    options.InvokeIntegrityErrorOfAlreadySyncedData(this,
+                        $"Unable to decrypt data of transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
+                        "Safely continuing the startup recovery process.",
+                        ex);
+
+                    return true;
+                }
+
+                RequireHeaderUpdate = true;
+                options.InvokeRecoveryError(this, $"Could not decrypt transaction {current->TransactionId}. It could be not committed", ex);
+
+                return false;
+            }
+        }
+
+        private bool TransactionIsExpected(StorageEnvironmentOptions options, TransactionHeader* current)
+        {
+             long lastTxId;
 
             if (LastTransactionHeader != null)
             {
@@ -558,7 +444,7 @@ namespace Voron.Impl.Journal
 
                 if (_journalInfo.LastSyncedTransactionId == -1 || current->TransactionId <= _journalInfo.LastSyncedTransactionId)
                 {
-                    if (hashIsValid == false && CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                    if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
                     {
                         options.InvokeIntegrityErrorOfAlreadySyncedData(this,
                             $"Invalid hash of data of first transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
@@ -569,10 +455,10 @@ namespace Voron.Impl.Journal
 
                     AssertValidLastPageNumber(current);
 
-                    if (hashIsValid && _firstValidTransactionHeader == null)
+                    if (_firstValidTransactionHeader == null)
                         _firstValidTransactionHeader = current;
 
-                    return hashIsValid;
+                    return true;
                 }
 
                 lastTxId = _journalInfo.LastSyncedTransactionId;
@@ -588,7 +474,7 @@ namespace Voron.Impl.Journal
                     if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
                     {
                         options.InvokeIntegrityErrorOfAlreadySyncedData(this,
-                            $"Encountered integrity error of transaction data which has been already synced  when reading {_journalPager.FileName} file (tx id: {current->TransactionId}, current journal: {_journalInfo.CurrentJournal}, last synced tx: {_journalInfo.LastSyncedTransactionId}, last synced journal: {_journalInfo.LastSyncedJournal}). Negative tx id diff: {txIdDiff}. " +
+                            $"Encountered integrity error of transaction data which has been already synced when reading {_journalPager.FileName} file (tx id: {current->TransactionId}, current journal: {_journalInfo.CurrentJournal}, last synced tx: {_journalInfo.LastSyncedTransactionId}, last synced journal: {_journalInfo.LastSyncedJournal}). Negative tx id diff: {txIdDiff}. " +
                             "Safely continuing the startup recovery process.", null);
 
                         return true;
@@ -597,53 +483,35 @@ namespace Voron.Impl.Journal
                     return false;
                 }
 
-                if (txIdDiff > 1 || txIdDiff == 0)
+                if (txIdDiff is > 1 or 0)
                 {
-                    if (hashIsValid)
+                    // TxId is bigger then the last one by more than '1' but has valid hash which mean we lost transactions in the middle
+
+                    if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
                     {
-                        // TxId is bigger then the last one by more than '1' but has valid hash which mean we lost transactions in the middle
+                        // when running in ignore data integrity errors mode then we could skip corrupted but already sync data
+                        // so it's expected in this case that txIdDiff > 1, let it continue to work then
+                        options.InvokeIntegrityErrorOfAlreadySyncedData(this,
+                            $"Encountered integrity error of transaction data which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). Tx diff is: {txIdDiff}. " +
+                            $"Safely continuing the startup recovery process. Debug details - file header {_currentFileHeader}", null);
 
-                        if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
-                        {
-                            // when running in ignore data integrity errors mode then we could skip corrupted but already sync data
-                            // so it's expected in this case that txIdDiff > 1, let it continue to work then
-                            options.InvokeIntegrityErrorOfAlreadySyncedData(this,
-                                $"Encountered integrity error of transaction data which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). Tx diff is: {txIdDiff}. " +
-                                $"Safely continuing the startup recovery process. Debug details - file header {_currentFileHeader}", null);
+                        return true;
+                    }
 
-                            return true;
-                        }
-
-                        if (LastTransactionHeader != null)
-                        {
-                            throw new InvalidJournalException(
-                                $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}. Tx diff is: {txIdDiff}{AddSkipTxInfoDetails()}." +
-                                $" Journal file {_journalPager.FileName} might be corrupted or some journals are missing. Debug details - file header {_currentFileHeader}",
-                                _journalInfo);
-                        }
-
+                    if (LastTransactionHeader != null)
+                    {
                         throw new InvalidJournalException(
+                            $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}. Tx diff is: {txIdDiff}{AddSkipTxInfoDetails()}." +
+                            $" Journal file {_journalPager.FileName} might be corrupted or some journals are missing. Debug details - file header {_currentFileHeader}",
+                            _journalInfo);
+                    }
+
+                    throw new InvalidJournalException(
                             $"The last synced transaction id was {_journalInfo.LastSyncedTransactionId} (in journal: {_journalInfo.LastSyncedJournal}) but the first transaction being read in the recovery process is {current->TransactionId} in journal {_journalPager.FileName} (transaction has valid hash). Tx diff is: {txIdDiff}{AddSkipTxInfoDetails()}. " +
                             $"Some journals might be missing. Debug details - file header {_currentFileHeader}", _journalInfo);
-                    }
                 }
 
                 AssertValidLastPageNumber(current);
-            }
-
-            if (hashIsValid == false)
-            {
-                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
-                {
-                    options.InvokeIntegrityErrorOfAlreadySyncedData(this,
-                        $"Invalid hash of data of transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
-                        "Safely continuing the startup recovery process.", null);
-
-                    return true;
-                }
-
-                RequireHeaderUpdate = true;
-                return false;
             }
 
             if (_firstValidTransactionHeader == null)
@@ -670,6 +538,78 @@ namespace Voron.Impl.Journal
             }
         }
 
+        private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState, out TransactionHeader* current)
+        {
+            for (; _readAt4Kb < _journalPagerNumberOfAllocated4Kb; _readAt4Kb++)
+            {
+                if (TryValidateTransaction(options, ref txState, out current) is false)
+                {
+                    if (current == null || current->DatabaseId != _currentFileHeader.DatabaseId) 
+                        return false;
+                    
+                    if(CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                    {
+                        options.InvokeIntegrityErrorOfAlreadySyncedData(this,
+                            $"Invalid hash of data of transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
+                            "Safely continuing the startup recovery process.", null);
+
+                        return true;
+
+                    }
+                    RequireHeaderUpdate = true;
+                    return false;
+                }
+                if (
+                    // not our env, skip processing it
+                    current->DatabaseId != _currentFileHeader.DatabaseId || 
+                    // old transaction from recycled journals
+                    Legacy_IsOldTransactionFromRecycledJournal(current))
+                {
+                    _readAt4Kb += GetTransactionSizeIn4Kb(current);
+                    continue;
+                }
+
+                if (TransactionIsExpected(options, current) is false)
+                    return false;
+                
+                LastTransactionHeader = current;
+                return true;
+            }
+            // now need to verify if there are any _valid_ transactions after we found an invalid one
+            for (; _readAt4Kb < _journalPagerNumberOfAllocated4Kb; _readAt4Kb++)
+            {
+                if (TryValidateTransaction(options, ref txState, out current) is false)
+                    continue;
+                if (current->DatabaseId != _currentFileHeader.DatabaseId || 
+                    Legacy_IsOldTransactionFromRecycledJournal(current))
+                {
+                    _readAt4Kb += GetTransactionSizeIn4Kb(current);
+                    continue;
+                }
+                
+                RequireHeaderUpdate = true;
+
+                ThrowUnexpectedValidTransaction(current);
+            }
+            current = null;
+            return false; // end of journal
+
+            void ThrowUnexpectedValidTransaction(TransactionHeader* current)
+            {
+                var message =
+                    $"Got header marker set to {(current->HeaderMarker == 0 ? "zero" : "garbage")} value at position {_readAt4Kb * 4 * Constants.Size.Kilobyte} when reading journal {_journalPager}. ";
+
+                if (LastTransactionHeader != null)
+                    message += $"Last read transaction was:{Environment.NewLine}{LastTransactionHeader->ToString()}.{Environment.NewLine}";
+
+                message +=
+                    $"Although further reading found a valid transaction at position {_readAt4Kb * 4 * Constants.Size.Kilobyte}:{Environment.NewLine}{current->ToString()}.{Environment.NewLine}" +
+                    "Journal file is likely to be corrupted.";
+
+                throw new InvalidJournalException(message, _journalInfo);
+            }
+        }
+
         private bool CanIgnoreDataIntegrityErrorBecauseTxWasSynced(TransactionHeader* currentTx, StorageEnvironmentOptions options)
         {
             // if we have a journal which contains transactions that has been synced and this is the case for current transaction 
@@ -678,17 +618,20 @@ namespace Voron.Impl.Journal
             return options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions &&
                    IsAlreadySyncTransaction(currentTx);
         }
-
-        private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, ref Pager.PagerTransactionState txState, long pageNumber, long positionInsidePage)
+        
+        private bool Legacy_IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx)
         {
-            var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
-            var numberOfPages = GetNumberOfPagesFor(positionInsidePage + sizeof(TransactionHeader) + size);
-            _journalPager.EnsureMapped(_journalPagerState, ref txState, pageNumber, numberOfPages);
+            // when reusing journal we might encounter a transaction with valid Id but it comes from already deleted (and reused) journal - recyclable one
+            if (currentTx->DatabaseId == Guid.Empty )
+                return false;
 
-            var pageHeader = _journalPager.AcquirePagePointer(_journalPagerState, ref txState, pageNumber)
-                             + positionInsidePage;
+            if (_firstValidTransactionHeader != null && currentTx->TransactionId < _firstValidTransactionHeader->TransactionId)
+                return true;
 
-            return (TransactionHeader*)pageHeader;
+            if (LastTransactionHeader != null && currentTx->TransactionId < LastTransactionHeader->TransactionId)
+                return true;
+
+            return false;
         }
 
         private bool ValidatePagesHash(StorageEnvironmentOptions options, TransactionHeader* current)
