@@ -16,7 +16,7 @@ namespace Sparrow.Json
         private readonly JsonOperationContext _context;
         private UsageMode _mode;
         private readonly IJsonParser _reader;
-        private bool _isVector;
+
         public IBlittableDocumentModifier _modifier;
         private readonly BlittableWriter<UnmanagedWriteBuffer> _writer;
         private readonly JsonParserState _state;
@@ -26,6 +26,8 @@ namespace Sparrow.Json
 
         private WriteToken _writeToken;
         private string _debugTag;
+
+        private bool _isVectorProperty;
 
         public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, IJsonParser reader,
             BlittableWriter<UnmanagedWriteBuffer> writer = null,
@@ -203,13 +205,13 @@ namespace Sparrow.Json
                         currentState.Positions = _positionsCache.Allocate();
 
                         // todo check property name here instead in ReadPropertyName
-                        if (_isVector == false)
+                        if (_isVectorProperty == false)
                         {
                             currentState.State = ContinuationState.ReadArrayValue;
                             goto case ContinuationState.ReadArrayValue;
                         }
 
-                        _isVector = false;
+                        _isVectorProperty = false;
                         currentState.State = ContinuationState.ReadBufferedArrayValue;
                         goto case ContinuationState.ReadBufferedArrayValue;
 
@@ -273,7 +275,7 @@ namespace Sparrow.Json
                         currentState.CurrentProperty = _context.CachedProperties.GetProperty(property);
 
                         if (currentState.CurrentProperty.Comparer.ToString() == "@vector")
-                            _isVector = true;
+                            _isVectorProperty = true;
 
                         currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);
                         currentState.State = ContinuationState.ReadPropertyValue;
