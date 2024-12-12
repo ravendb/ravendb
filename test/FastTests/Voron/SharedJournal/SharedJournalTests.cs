@@ -18,6 +18,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
         {
             using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
             rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
 
             using var root = new StorageEnvironment(rootOptions);
 
@@ -41,6 +42,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
                 using var branchOptions = StorageEnvironmentOptions.ForPathForTests(branchPath);
                 branchOptions.RootJournal = root.Journal;
                 branchOptions.ManualFlushing = true;
+                branchOptions.ManualSyncing = true;
                 
                 using var branch = new StorageEnvironment(branchOptions);
                 using (var branchTx = branch.WriteTransaction())
@@ -64,12 +66,18 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
 
             task.Wait();
         }
-
+        
         // here we restart the environments
         
         {
             using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+
             using var branchOptions = StorageEnvironmentOptions.ForPathForTests(branchPath);
+            branchOptions.ManualFlushing = true;
+            branchOptions.ManualSyncing = true;
+
             using var root = new StorageEnvironment(rootOptions);
             branchOptions.RootJournal = root.Journal;
             using var branch = new StorageEnvironment(branchOptions);
@@ -78,13 +86,14 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             {
                 Assert.Equal("yes", rootTx.ReadTree("rootTree").Read("root").Reader.ToString());
                 Assert.Equal("no", rootTx.ReadTree("rootTree").Read("branch").Reader.ToString());
-                
+                Assert.Null(rootTx.ReadTree("branchTree"));
             }
 
             using (var branchTx = branch.ReadTransaction())
             {
-                Assert.Equal("no", branchTx.ReadTree("rootTree").Read("root").Reader.ToString());
-                Assert.Equal("yes", branchTx.ReadTree("rootTree").Read("branch").Reader.ToString());
+                Assert.Null(branchTx.ReadTree("rootTree"));
+                Assert.Equal("no", branchTx.ReadTree("branchTree").Read("root").Reader.ToString());
+                Assert.Equal("yes", branchTx.ReadTree("branchTree").Read("branch").Reader.ToString());
             }
         }
     }

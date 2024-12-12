@@ -254,12 +254,15 @@ namespace Voron.Impl.Journal
 
                         journalPager.Dispose(); // need to close it before we open the journal writer
 
-                        var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
-                        var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
-                        jrnlFile.InitFrom(_env, journalReader, transactionHeaders);
-                        jrnlFile.AddRef(); // creator reference - write ahead log
+                        if(_env.Options.RootJournal is null)
+                        {
+                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
+                            var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
+                            jrnlFile.InitFrom(_env, journalReader, transactionHeaders);
+                            jrnlFile.AddRef(); // creator reference - write ahead log
 
-                        journalFiles.Add(jrnlFile);
+                            journalFiles.Add(jrnlFile);
+                        }
 
                         lastProcessedJournal = journalNumber;
 
