@@ -36,21 +36,24 @@ if ! (test -f "${CACHED_TARBALL}" || wget -O ${CACHED_TARBALL} -N --progress=dot
     exit 1
 fi
 
+# add dotnet backports feed
+if ! command -v add-apt-repository; then
+  apt update
+  apt install software-properties-common -y
+fi
+
+add-apt-repository -y ppa:dotnet/backports
+apt update
+
 DOTNET_FULL_VERSION=$(tar xf ${CACHED_TARBALL} RavenDB/runtime.txt -O | sed 's/\r$//' | sed -n "s/.NET Core Runtime: \([0-9.]\)/\1/p" )
 DOTNET_VERSION_MINOR=$(egrep -o -e '^[0-9]+.[0-9]+' <<< $DOTNET_FULL_VERSION)
 export DOTNET_DEPS_VERSION="$DOTNET_FULL_VERSION"
 export DOTNET_RUNTIME_VERSION="$DOTNET_VERSION_MINOR"
 
-if [[ $release -eq 24 && $RAVEN_PLATFORM == "raspberry-pi" ]]; then
+if [[ $release -ge 22 && $RAVEN_PLATFORM == "raspberry-pi" ]]; then
     DOTNET_RUNTIME_DEPS="libicu74, libc6 (>= 2.38), libgcc-s1 (>= 3.0), liblttng-ust1t64 (>= 2.13.0), libssl3t64 (>= 3.0.0), libstdc++6 (>= 13.1), zlib1g (>= 1:1.1.4)"
 else
-    if [[ $release -ge 24 ]]; then
-        DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-$DOTNET_RUNTIME_VERSION"
-    else
-        # Show dependencies for amd64 since that's the only platform Microsoft ships package for,
-        # however the dependencies are the same at the moment.
-        DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-deps-$DOTNET_RUNTIME_VERSION:amd64"
-    fi
+    DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-${DOTNET_RUNTIME_VERSION}"
     
     # get depenencies and remove dotnet-host* dependencies
     DOTNET_RUNTIME_DEPS=$(apt show $DOTNET_RUNTIME_DEPS_PKG 2>/dev/null | sed -n -e 's/Depends: //p' | sed -E 's/(^|, )dotnet-host[^,]*(, |$)/\1/; s/, $//')

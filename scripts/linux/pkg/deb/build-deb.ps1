@@ -67,7 +67,7 @@ if ($env:TARBALL_DIR)
 
 docker run --rm -t `
     --platform $env:DOCKER_BUILDPLATFORM `
-    -v "$($env:OUTPUT_DIR):/dist" `
+    -v "$($distroOutputDir):/dist" `
     -v "$($packageFileDir):/cache" `
     -e RAVENDB_VERSION=$ravenVersion  `
     -e "DOTNET_RUNTIME_VERSION=$env:DOTNET_RUNTIME_VERSION" `
