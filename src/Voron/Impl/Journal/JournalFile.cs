@@ -151,5 +151,22 @@ namespace Voron.Impl.Journal
                     writer.ShouldDelete = value;
             }
         }
+
+        public bool HasLegacyTransaction
+        {
+            get
+            {
+                foreach (var tx in _transactionHeaders)
+                {
+                    // if this journal contains any transaction with empty database 
+                    // then we cannot use it for current writes, since it may be a 
+                    // root environment and confuse any branch env reading from it
+                    if (tx.DatabaseId == Guid.Empty)
+                        return true;
+                }
+
+                return false;
+            }
+        }
     }
 }

@@ -411,7 +411,8 @@ namespace Voron.Impl.Journal
             if (_files.Count > 0)
             {
                 var lastFile = _files.Last();
-                if (lastFile.GetAvailable4Kbs(_env.CurrentStateRecord) >= 2)
+                if (lastFile.GetAvailable4Kbs(_env.CurrentStateRecord) >= 2 && 
+                    lastFile.HasLegacyTransaction is false)
                     // it must have at least one page for the next transaction header and one 4kb for data
                     CurrentFile = lastFile;
             }

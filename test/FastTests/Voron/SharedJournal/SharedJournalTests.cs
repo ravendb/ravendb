@@ -141,7 +141,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
         return new StorageEnvironment(branchOptions);
     }
 
-    private static void WaitForTaskAndExecuteBranchTransactions(Task task, ManualResetEventSlim mre, StorageEnvironment root)
+    public static void WaitForTaskAndExecuteBranchTransactions(Task task, ManualResetEventSlim mre, StorageEnvironment root)
     {
         while(task.IsCompleted is false)
         {

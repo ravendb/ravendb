@@ -97,7 +97,7 @@ namespace Voron
                                                $"An exception has been thrown because there isn't a listener to the {nameof(OnRecoveryError)} event on the storage options.", e);
             }
 
-            handler(this, new RecoveryErrorEventArgs(message, e));
+            handler(sender, new RecoveryErrorEventArgs(message, e));
         }
 
         internal DisposableAction DisableOnIntegrityErrorOfAlreadySyncedDataHandler()
