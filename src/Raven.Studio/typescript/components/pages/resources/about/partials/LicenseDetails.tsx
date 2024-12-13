@@ -6,6 +6,7 @@ import classNames from "classnames";
 import { aboutPageUrls } from "components/pages/resources/about/partials/common";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { useRavenLink } from "hooks/useRavenLink";
 
 export function LicenseDetails() {
     const licenseId = useAppSelector(licenseSelectors.statusValue("Id"));
@@ -68,6 +69,8 @@ function LicenseTable(props: LicenseTableProps) {
         window.open(`https://ravendb.net/buy`, "_blank");
     };
 
+    const developerLicenseLink = useRavenLink({ hash: "ZOVGRA", isDocs: false });
+
     const getEffectiveValue = (feature: FeatureAvailabilityItem, column: LicenseColumn) => {
         if (column !== currentColumn || !feature.fieldInLicense) {
             return feature[column].value;
@@ -107,6 +110,8 @@ function LicenseTable(props: LicenseTableProps) {
     };
 
     const showUpgradeButton = licenseType !== "Enterprise";
+
+    const isDeveloperOrEnterprise = licenseType === "Developer" || licenseType === "Enterprise";
 
     return (
         <>
@@ -231,6 +236,16 @@ function LicenseTable(props: LicenseTableProps) {
                         />
                     </div>
                 </div>
+            )}
+            {!isDeveloperOrEnterprise && (
+                <small className="pb-2 text-center text-muted">
+                    <Icon icon="info" />
+                    We offer a free{" "}
+                    <a href={developerLicenseLink} target="_blank" className="text-developer">
+                        Developer license <Icon icon="newtab" margin="m-0" />
+                    </a>{" "}
+                    for development purposes
+                </small>
             )}
         </>
     );

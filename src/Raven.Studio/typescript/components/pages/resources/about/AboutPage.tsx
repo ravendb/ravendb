@@ -46,8 +46,8 @@ export function AboutPage({ initialChangeLogMode = "hidden" }: AboutPageProps) {
         <div className="d-flex flex-column">
             <div className="m-4 vstack flex-wrap gap-4 flex-grow-1 align-items-stretch justify-content-evenly about-page">
                 <div className="hstack flex-wrap gap-4 flex-grow-1 align-items-stretch">
-                    <div className="d-flex" style={{ maxWidth: "600px", minWidth: "540px" }}>
-                        <div className="vstack gap-4 flex-grow-0">
+                    <div className="d-flex" style={{ minWidth: "540px", flexGrow: 1, flexBasis: "30%" }}>
+                        <div className="vstack gap-4">
                             <PassiveState />
                             <LicenseSummary
                                 recheckConnectivity={refreshLicenseServerConnectivity}
@@ -63,7 +63,7 @@ export function AboutPage({ initialChangeLogMode = "hidden" }: AboutPageProps) {
                             <SupportSummary asyncCheckLicenseServerConnectivity={asyncCheckLicenseServerConnectivity} />
                         </div>
                     </div>
-                    <Card className="flex-grow">
+                    <Card className="flex-grow" style={{ flexBasis: "60%" }}>
                         <Row className="about-page-tabs">
                             <Col>
                                 <a

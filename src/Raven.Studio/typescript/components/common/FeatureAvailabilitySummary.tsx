@@ -10,6 +10,8 @@ import { Icon } from "./Icon";
 import "./FeatureAvailabilitySummary.scss";
 import { AccordionItemWrapper } from "./AboutView";
 import RichAlert from "components/common/RichAlert";
+import appUrl from "common/appUrl";
+import { HrHeader } from "components/common/HrHeader";
 
 export type AvailabilityValue = boolean | number | string;
 
@@ -222,6 +224,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                 </div>
             )}
             {currentLicense !== "Enterprise" && currentLicense !== "None" && <UpgradeLinkSection />}
+            {currentLicense !== "Enterprise" && currentLicense !== "Developer" && <DeveloperLicenseSection />}
         </>
     );
 }
@@ -274,40 +277,46 @@ function formatAvailabilityValue(data: FeatureAvailabilityValueData, canBeEnable
 
 function UpgradeLinkSection() {
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
-
-    const ravenBuyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const cloudPricingLink = "https://cloud.ravendb.net/pricing";
 
     return (
-        <div className="hstack gap-4 justify-content-center mt-4 flex-wrap">
+        <div className="mt-4">
             {isCloud ? (
-                <>
-                    Upgrade Instance
-                    <a
-                        href={cloudPricingLink}
-                        target="_blank"
-                        color="primary"
-                        className="btn btn-primary btn-lg rounded-pill px-4"
-                    >
-                        <Icon icon="license" margin="me-3" />
+                <div className="vstack gap-2 justify-content-center align-items-center">
+                    Explore the options for upgrading your instance
+                    <a href={cloudPricingLink} target="_blank" className="btn btn-cloud rounded-pill">
+                        <Icon icon="cloud" />
                         Cloud pricing
                     </a>
-                </>
+                </div>
             ) : (
-                <>
-                    Upgrade License
-                    <a
-                        href={ravenBuyLink}
-                        target="_blank"
-                        color="primary"
-                        className="btn btn-primary btn-lg rounded-pill px-4"
-                    >
-                        <Icon icon="license" margin="me-3" />
-                        Pricing plans
+                <div className="vstack gap-2 justify-content-center align-items-center">
+                    Find out which license suits you best
+                    <a href={appUrl.forAbout()} className="btn btn-primary rounded-pill">
+                        <Icon icon="license" />
+                        See full comparison
                     </a>
-                </>
+                </div>
             )}
         </div>
+    );
+}
+
+function DeveloperLicenseSection() {
+    const developerLicenseLink = useRavenLink({ hash: "ZOVGRA", isDocs: false });
+    return (
+        <>
+            <HrHeader margin="mt-5 mb-2">
+                <Icon icon="console" />
+                Are you developing?
+            </HrHeader>
+            <span className="text-muted">
+                You may test this and many more features using free{" "}
+                <a href={developerLicenseLink} target="_blank" className="text-developer">
+                    Developer license <Icon icon="newtab" margin="m-0" />
+                </a>
+            </span>
+        </>
     );
 }
 

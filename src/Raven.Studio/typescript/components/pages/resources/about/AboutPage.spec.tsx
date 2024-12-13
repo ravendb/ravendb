@@ -33,6 +33,9 @@ describe("AboutPage", function () {
             expect(screen.queryByText(selectors.registerLicense)).toBeInTheDocument();
             expect(screen.queryByText(selectors.forceUpdate)).not.toBeInTheDocument();
             expect(screen.queryByText(selectors.replaceLicense)).not.toBeInTheDocument();
+            expect(
+                screen.queryByText("We offer a free Developer license for development purposes")
+            ).toBeInTheDocument();
         });
 
         it("enterprise", async () => {
@@ -46,6 +49,9 @@ describe("AboutPage", function () {
             expect(screen.queryByText(selectors.registerLicense)).not.toBeInTheDocument();
             expect(screen.queryByText(selectors.forceUpdate)).toBeInTheDocument();
             expect(screen.queryByText(selectors.replaceLicense)).toBeInTheDocument();
+            expect(
+                screen.queryByText("We offer a free Developer license for development purposes")
+            ).not.toBeInTheDocument();
         });
 
         it("professional", async () => {
@@ -59,6 +65,9 @@ describe("AboutPage", function () {
             expect(screen.queryByText(selectors.registerLicense)).not.toBeInTheDocument();
             expect(screen.queryByText(selectors.forceUpdate)).toBeInTheDocument();
             expect(screen.queryByText(selectors.replaceLicense)).toBeInTheDocument();
+            expect(
+                screen.queryByText("We offer a free Developer license for development purposes")
+            ).toBeInTheDocument();
         });
 
         it("community", async () => {
@@ -72,6 +81,9 @@ describe("AboutPage", function () {
             expect(screen.queryByText(selectors.registerLicense)).not.toBeInTheDocument();
             expect(screen.queryByText(selectors.forceUpdate)).toBeInTheDocument();
             expect(screen.queryByText(selectors.replaceLicense)).toBeInTheDocument();
+            expect(
+                screen.queryByText("We offer a free Developer license for development purposes")
+            ).toBeInTheDocument();
         });
 
         it("essential", async () => {
@@ -85,6 +97,9 @@ describe("AboutPage", function () {
             expect(screen.queryByText(selectors.registerLicense)).not.toBeInTheDocument();
             expect(screen.queryByText(selectors.forceUpdate)).toBeInTheDocument();
             expect(screen.queryByText(selectors.replaceLicense)).toBeInTheDocument();
+            expect(
+                screen.queryByText("We offer a free Developer license for development purposes")
+            ).toBeInTheDocument();
         });
 
         it("developer", async () => {
@@ -98,6 +113,9 @@ describe("AboutPage", function () {
             expect(screen.queryByText(selectors.registerLicense)).not.toBeInTheDocument();
             expect(screen.queryByText(selectors.forceUpdate)).toBeInTheDocument();
             expect(screen.queryByText(selectors.replaceLicense)).toBeInTheDocument();
+            expect(
+                screen.queryByText("We offer a free Developer license for development purposes")
+            ).not.toBeInTheDocument();
         });
     });
 

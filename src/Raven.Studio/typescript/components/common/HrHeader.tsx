@@ -9,15 +9,16 @@ interface HrHeaderProps {
     right?: ReactNode | ReactNode[];
     className?: string;
     count?: number;
+    margin?: string;
 }
 
 export function HrHeader(props: HrHeaderProps) {
-    const { right, children, className, count, ...rest } = props;
+    const { right, children, className, count, margin, ...rest } = props;
 
     return (
-        <div className="hstack align-items-center my-3">
+        <div className={classNames("hstack align-items-center", margin ? margin : "my-3")}>
             {children && (
-                <h5 className={classNames("m-0 me-3 text-uppercase", className)} {...rest}>
+                <h5 className={classNames("m-0 me-3 fw-semibold", className)} {...rest}>
                     {children}
                 </h5>
             )}
