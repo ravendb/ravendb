@@ -203,8 +203,7 @@ namespace Sparrow.Json
 
                         currentState.Types = _tokensCache.Allocate();
                         currentState.Positions = _positionsCache.Allocate();
-
-                        // todo check property name here instead in ReadPropertyName
+                        
                         if (_isVectorProperty == false)
                         {
                             currentState.State = ContinuationState.ReadArrayValue;

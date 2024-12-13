@@ -395,6 +395,38 @@ namespace Sparrow.Json.Parsing
                     current = modifications;
                     continue;
                 }
+                
+                if (current is BlittableJsonReaderVector bjrv)
+                {
+                    if (bjrv.Modifications == null)
+                        bjrv.Modifications = new DynamicJsonArray();
+                    
+                    if (_seenValues.Add(bjrv.Modifications))
+                    {
+                        _elements.Push(bjrv);
+                        bjrv.Modifications.SourceIndex = bjrv.Modifications.SkipOriginalArray ? bjrv.Length : -1;
+                        bjrv.Modifications.ModificationsIndex = 0;
+                        _state.CurrentTokenType = JsonParserToken.StartArray;
+                        return true;
+                    }
+                    
+                    var modifications = bjrv.Modifications;
+                    modifications.SourceIndex++;
+                    if (modifications.SourceIndex < bjrv.Length)
+                    {
+                        if (modifications.Removals != null && modifications.Removals.Contains(modifications.SourceIndex))
+                        {
+                            continue;
+                        }
+
+                        current = bjrv[modifications.SourceIndex];
+                        _elements.Push(bjrv);
+                        continue;
+                    }
+                    
+                    current = modifications;
+                    continue;
+                }
 
                 if (current is IBlittableJsonContainer dbj)
                 {
