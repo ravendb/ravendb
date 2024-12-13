@@ -108,7 +108,6 @@ done
 find /build -type d -exec chmod 755 {} +
 find /build -type f -exec chmod 644 {} +
 
-export DEB_BUILD_OPTIONS="nostrip"
 dpkg-buildpackage -us -uc -b 
 
 cp -v "/build/$GENERATEDFILENAME" "$OUTPUT_DIR/$PACKAGEFILENAME"
