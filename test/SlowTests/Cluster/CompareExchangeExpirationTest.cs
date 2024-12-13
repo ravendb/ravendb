@@ -28,6 +28,8 @@ using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using System.Text.Json;
+using Raven.Client.Exceptions;
 
 namespace SlowTests.Cluster
 {
@@ -66,14 +68,13 @@ namespace SlowTests.Cluster
                     server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow;
                     var local = server.ServerStore.Observer._lastExpiredCompareExchangeCleanupTimeInTicks = DateTime.UtcNow.Ticks;
 
-                    var rnd = new Random(DateTime.Now.Millisecond);
-                    var user = new User { Name = new string(Enumerable.Repeat(_chars, 10).Select(s => s[rnd.Next(s.Length)]).ToArray()) };
+                    var user = new User { Name = Guid.NewGuid().ToString() };
                     var expiry = DateTime.Now.AddMinutes(2);
 
                     if (dateTimeFormat.Value == DateTimeKind.Utc)
                         expiry = expiry.ToUniversalTime();
 
-                    var key = new string(Enumerable.Repeat(_chars, 10).Select(s => s[rnd.Next(s.Length)]).ToArray());
+                    var key = Guid.NewGuid().ToString();
                     using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
                         var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, user);
@@ -544,28 +545,48 @@ namespace SlowTests.Cluster
                     var expirationDate = res.Metadata.GetString(Constants.Documents.Metadata.Expires);
                     Assert.NotNull(expirationDate);
                     var dateTime = DateTime.ParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-                    Assert.Equal(expiry.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"), expirationDate);
+                    Assert.Equal(expiry.Value, dateTime);
                 }
             }
         }
 
         private static async Task AddCompareExchangesWithExpire(int count, Dictionary<string, User> compareExchanges, DocumentStore store, DateTime? expiry = null)
         {
-            for (int i = 0; i < count; i++)
+            try
             {
-                var rnd = new Random(DateTime.Now.Millisecond);
-                var user = new User { Name = new string(Enumerable.Repeat(_chars, 10).Select(s => s[rnd.Next(s.Length)]).ToArray()) };
-                var key = $"{new string(Enumerable.Repeat(_chars, 10).Select(s => s[rnd.Next(s.Length)]).ToArray())}{i}";
-                compareExchanges[key] = user;
-                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                for (int i = 0; i < count; i++)
                 {
-                    var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, user);
-                    if (expiry != null)
+                    var key = $"user{Guid.NewGuid()}{i}";
+                    var user = new User { Name = key };
+                    compareExchanges[key] = user;
+                    using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
-                        result.Metadata[Constants.Documents.Metadata.Expires] = expiry;
+                        var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, user);
+                        if (expiry != null)
+                        {
+                            result.Metadata[Constants.Documents.Metadata.Expires] = expiry?.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                        }
+                        await session.SaveChangesAsync();
                     }
-                    await session.SaveChangesAsync();
                 }
+            }
+            catch (ClusterTransactionConcurrencyException e)
+            {
+                Exception toThrow;
+                try
+                {
+                    using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<User>("user", pageSize:1000);
+                        toThrow = new AggregateException($"Compare exchange values : [{string.Join(",", result.Values.Select(x => JsonSerializer.Serialize(x)))}]", e);
+                    }
+                }
+                catch (Exception ie)
+                {
+                    toThrow = new AggregateException(e, ie);
+                }
+
+                throw toThrow;
             }
         }
     }
