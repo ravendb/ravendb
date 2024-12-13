@@ -595,17 +595,23 @@ namespace Voron
                     // to support increasing the file size in future versions
 
                     // We expect the size to have at least the transaction id
-                    if (totalRead < FileHeader.TransactionIdOffset ||
-                        MemoryMarshal.TryRead(buffer[FileHeader.TransactionIdOffset..], out long transactionId) is false)
+                    if (totalRead < FileHeader.TransactionIdOffset + sizeof(long))
                     {
                         return false;
                     }
 
-                    ulong hash = Hashing.XXHash64.CalculateInline(buffer[..^sizeof(ulong)], (ulong)transactionId);
-                    if (MemoryMarshal.TryRead(buffer[^sizeof(ulong)..], out ulong expectedHash) is false ||
+                    int startOfHash = totalRead - sizeof(ulong);
+                    ulong hash = Hashing.XXHash64.CalculateInline(buffer[..startOfHash], (ulong)headerBuf[0].TransactionId);
+                    if (MemoryMarshal.TryRead(buffer[startOfHash..], out ulong expectedHash) is false ||
                         expectedHash != hash)
                         return false;
 
+                    // handle upgrading to larger file header size, we'll zero the remainder
+                    // and re-calculate the hash
+                    buffer[startOfHash..].Clear();
+                    
+                    headerBuf[0].Hash = Hashing.XXHash64.CalculateInline(buffer[..FileHeader.HashOffset], (ulong)headerBuf[0].TransactionId);
+                    
                     header = headerBuf[0];
                     return true;
                 }

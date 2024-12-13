@@ -544,7 +544,12 @@ namespace Voron.Impl.Journal
             {
                 if (TryValidateTransaction(options, ref txState, out current) is false)
                 {
-                    if (current == null || current->DatabaseId != _currentFileHeader.DatabaseId) 
+                    if (current == null) 
+                        return false;
+                    if(current->HeaderMarker != Constants.TransactionHeaderMarker)
+                        continue; // not a transaction, skip to the next one
+                    if (current->DatabaseId != _currentFileHeader.DatabaseId &&
+                        current->DatabaseId != Guid.Empty)
                         return false;
                     
                     if(CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
@@ -559,14 +564,18 @@ namespace Voron.Impl.Journal
                     RequireHeaderUpdate = true;
                     return false;
                 }
-                if (
-                    // not our env, skip processing it
-                    current->DatabaseId != _currentFileHeader.DatabaseId || 
-                    // old transaction from recycled journals
-                    Legacy_IsOldTransactionFromRecycledJournal(current))
+                // not our env, skip processing it
+                if (current->DatabaseId != _currentFileHeader.DatabaseId)
                 {
-                    _readAt4Kb += GetTransactionSizeIn4Kb(current);
-                    continue;
+                    if (current->DatabaseId != Guid.Empty || 
+                        Legacy_IsOldTransactionFromRecycledJournal(current) )
+                    {
+                        _readAt4Kb += GetTransactionSizeIn4Kb(current);
+                        continue;
+                    }
+                    // Here we are dealing with a valid transaction (in terms of tx id)
+                    // that has zeroed DatabaseId, probably a legacy transaction for the 
+                    // current database (non-shared journal mode), allowing it
                 }
 
                 if (TransactionIsExpected(options, current) is false)
@@ -621,9 +630,7 @@ namespace Voron.Impl.Journal
         
         private bool Legacy_IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx)
         {
-            // when reusing journal we might encounter a transaction with valid Id but it comes from already deleted (and reused) journal - recyclable one
-            if (currentTx->DatabaseId == Guid.Empty )
-                return false;
+            Debug.Assert(currentTx->DatabaseId == Guid.Empty, "currentTx->DatabaseId == Guid.Empty");
 
             if (_firstValidTransactionHeader != null && currentTx->TransactionId < _firstValidTransactionHeader->TransactionId)
                 return true;

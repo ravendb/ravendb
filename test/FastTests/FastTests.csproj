@@ -106,4 +106,8 @@
     <None Remove="Corax\Bugs\Corax.PostingList.AddsBiggerThanInt" />
     <EmbeddedResource Include="Corax\Bugs\Corax.PostingList.AddsBiggerThanInt.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Remove="Voron\SharedJournal\Legacy-db.zip" />
+    <EmbeddedResource Include="Voron\SharedJournal\Legacy-db.zip" />
+  </ItemGroup>
 </Project>
