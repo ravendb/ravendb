@@ -204,6 +204,10 @@
                     <div class="name">Power BI Support</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPowerBI') }"></i></div>
                 </div>
             </div>
+            <div data-bind="attr: { class: developerLicense() ? 'hidden' : 'padding padding-xs margin-left-sm margin-right-sm flex-horizontal justify-content-between' }">
+                <h4 class="d-flex align-items-center"><i class="icon-info"></i><span>We offer a special free <a href="https://ravendb.net/l/ZOVGRA" target="_blank" class="text-developer">Developer license</a> for development purposes only</span></h4>
+            </div>
+            <hr class="w-100 m-0"/>
             <div class="padding">
                 <div class="license-actions flex-horizontal">
                     <!-- ko if: !registered() -->
