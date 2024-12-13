@@ -39,7 +39,7 @@ public class BatchCommandWithNoReplyFlagTest : RavenTestBase
             var patchRequest = new PatchRequest{Script = "this.Name = args.val_0;", Values = new Dictionary<string, object>{{"val_0", user1Value}}};
             result.SessionCommands.Add(new PatchCommandData(user1Id, null, patchRequest));
             
-            var sbc = new TestSingleNodeBatchCommand(DocumentConventions.Default, context, result.SessionCommands, result.Options);
+            var sbc = new TestSingleNodeBatchCommand(DocumentConventions.Default, result.SessionCommands, result.Options);
             
             await requestExecutor.ExecuteAsync(sbc, context);
         }
@@ -70,7 +70,7 @@ public class BatchCommandWithNoReplyFlagTest : RavenTestBase
             var jpd = new JsonPatchDocument();
             jpd.Add("/Name", user2Value);
             result.SessionCommands.Add(new JsonPatchCommandData(user2Id, jpd));
-            var sbc = new TestSingleNodeBatchCommand(DocumentConventions.Default, context, result.SessionCommands, result.Options);
+            var sbc = new TestSingleNodeBatchCommand(DocumentConventions.Default, result.SessionCommands, result.Options);
             
             await requestExecutor.ExecuteAsync(sbc, context);
         }
@@ -90,7 +90,8 @@ public class BatchCommandWithNoReplyFlagTest : RavenTestBase
     
     private class TestSingleNodeBatchCommand : SingleNodeBatchCommand
     {
-        public TestSingleNodeBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null) : base(conventions, context, commands, options)
+        public TestSingleNodeBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options = null) 
+            : base(conventions, commands, options)
         {
         }
 

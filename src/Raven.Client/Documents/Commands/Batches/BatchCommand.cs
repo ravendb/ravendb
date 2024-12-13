@@ -18,11 +18,10 @@ namespace Raven.Client.Documents.Commands.Batches
         public bool? DisableAtomicDocumentWrites { get; }
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
 
-        public ClusterWideBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options = null, bool? disableAtomicDocumentsWrites = null) :
-            base(conventions, context: null, commands, options)
+        public ClusterWideBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options = null, bool? disableAtomicDocumentsWrites = null)
+            : base(conventions, commands, options, TransactionMode.ClusterWide)
         {
             DisableAtomicDocumentWrites = disableAtomicDocumentsWrites;
-            Mode = TransactionMode.ClusterWide;
         }
 
         protected override void AppendOptions(StringBuilder sb)
@@ -37,21 +36,26 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public class SingleNodeBatchCommand : RavenCommand<BatchCommandResult>, IDisposable
     {
-        private BlittableJsonReaderObject[] _commandsAsJson;
+        private readonly BlittableJsonReaderObject[] _commandsAsJson;
         private bool? _supportsAtomicWrites;
         private readonly List<Stream> _attachmentStreams;
         private readonly HashSet<Stream> _uniqueAttachmentStreams;
         private readonly DocumentConventions _conventions;
         private readonly IList<ICommandData> _commands;
         private readonly BatchOptions _options;
-        protected TransactionMode Mode;
+        private readonly TransactionMode _mode;
 
-        public SingleNodeBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null)
+        public SingleNodeBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options = null)
+            : this(conventions, commands, options, TransactionMode.SingleNode)
+        {
+        }
+
+        protected SingleNodeBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options, TransactionMode mode)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             _options = options;
-            Mode = TransactionMode.SingleNode;
+            _mode = mode;
 
             _commandsAsJson = new BlittableJsonReaderObject[_commands.Count];
             foreach (var command in commands)
@@ -103,7 +107,7 @@ namespace Raven.Client.Documents.Commands.Batches
                     {
                         writer.WriteStartObject();
                         writer.WriteArray("Commands", _commandsAsJson);
-                        if (Mode == TransactionMode.ClusterWide)
+                        if (_mode == TransactionMode.ClusterWide)
                         {
                             writer.WriteComma();
                             writer.WritePropertyName(nameof(TransactionMode));
