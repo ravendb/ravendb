@@ -59,8 +59,6 @@ namespace Sparrow.Json
         public bool IsUnsigned => (BlittableVectorType)((byte)_type & UnsignedFlag) != 0;
 
         public int ElementSize => ((byte)Type) & TypeMask;
-        
-        
     }
     
     public sealed unsafe class BlittableJsonReaderVector : BlittableJsonReaderBase, IEnumerable
@@ -71,6 +69,8 @@ namespace Sparrow.Json
         public int Length => _header->Count;
 
         public BlittableVectorType Type => _header->Type;
+        
+        public DynamicJsonArray Modifications;
 
         public BlittableJsonReaderVector(byte* mem, int bufferSize, JsonOperationContext context)
             : base(context)
