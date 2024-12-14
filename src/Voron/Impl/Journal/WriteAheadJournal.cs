@@ -1760,22 +1760,34 @@ namespace Voron.Impl.Journal
             }
         }
 
+        /// <summary>
+        /// This is effectively single threaded, even though it is used _across_ environments.
+        /// If we have a single root environment, then the write lock protect it, as usual.
+        /// Across environments, this is only called from the _root_ environment, across all branches,
+        /// so this is safe to use without worrying about concurrency
+        /// </summary>
         private long EnsureRegistered(JournalFile journalFile)
         {
             ref var matchingJournalNumber = ref CollectionsMarshal.GetValueRefOrAddDefault(journalFile.RegisteredEnvironments, _env, out var exists);
             if (exists)
                 return matchingJournalNumber;
 
-            if (_env.Options.IsLinked(_journalIndex, journalFile.JournalWriter.FileName.FullPath))
+            JournalWriter journalWriter;
+            if (_env.Options.IsLinked(_journalIndex, journalFile.JournalWriter.FileName.FullPath, out var existingJournalFileName))
             {
                 // The file is already linked, so we can reuse the file link
                 matchingJournalNumber = _journalIndex;
+                journalWriter = _env.Options.CreateJournalWriterForBranchEnvironment(_journalIndex, existingJournalFileName, journalFile);
+                _files = _files.Append(new JournalFile(_env, journalWriter, _journalIndex));
                 return matchingJournalNumber;
             }
             
             long journalIndex = _journalIndex + 1;
 
-            _env.Options.LinkFiles(journalIndex,journalFile.JournalWriter.FileName.FullPath);
+            _env.Options.LinkFiles(journalIndex,journalFile.JournalWriter.FileName.FullPath, out existingJournalFileName);
+            journalWriter = _env.Options.CreateJournalWriterForBranchEnvironment(_journalIndex, existingJournalFileName, journalFile);
+            _files = _files.Append(new JournalFile(_env, journalWriter, _journalIndex));
+
 
             // we modify the in memory state _after_ we created the file, because we have to make sure that 
             // we have created it successfully first. 

@@ -3,14 +3,10 @@ using System.Runtime.InteropServices;
 
 namespace Sparrow.Server.Platform
 {
-    public sealed class SafeJournalHandle : SafeHandle
+    public sealed class SafeJournalHandle() : SafeHandle(IntPtr.Zero, true)
     {
         public PalFlags.FailCodes FailCode; 
         public int ErrorNo;
-        
-        public SafeJournalHandle() : base(IntPtr.Zero, true)
-        {
-        }
 
         protected override bool ReleaseHandle()
         {

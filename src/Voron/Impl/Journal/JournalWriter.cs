@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Logging;
@@ -21,13 +22,13 @@ namespace Voron.Impl.Journal
     {
         private const int ERROR_WORKING_SET_QUOTA = 0x5AD;
 
-        private readonly SingleUseFlag _disposed = new SingleUseFlag();
+        private readonly SingleUseFlag _disposed = new();
         private readonly StorageEnvironmentOptions _options;
         private readonly long _journalNumber;
 
         private readonly SafeJournalHandle _writeHandle;
         private readonly RavenLogger _log;
-        private SafeJournalHandle _readHandle = new SafeJournalHandle();
+        private SafeJournalHandle _readHandle = new();
         private int _refs;
         private bool _workingSetQuotaLogged = false;
 
@@ -36,6 +37,18 @@ namespace Voron.Impl.Journal
         public VoronPathSetting FileName { get; }
         public bool ShouldDelete { get; set; }
 
+        /// <summary>
+        /// This is used when we want to create a branch writer from an existing JournalFile in the root environment 
+        /// </summary>
+        public JournalWriter(StorageEnvironmentOptions options, string filename, long journalNumber, JournalFile sourceFile)
+        {
+            _options = options;
+            FileName = new VoronPathSetting(filename);
+            _journalNumber = journalNumber;
+            _writeHandle = new SafeJournalHandle();
+            NumberOfAllocated4Kb = (int)(sourceFile.JournalSize.GetValue(SizeUnit.Bytes) / (4 * Constants.Size.Kilobyte));
+        }
+        
         public JournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long journalNumber, long size, PalFlags.JournalMode mode = PalFlags.JournalMode.Safe)
         {
             _options = options;

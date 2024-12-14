@@ -25,9 +25,10 @@ namespace Voron.Impl.Journal
     {
         public long LastTransactionId;
 
-        public Dictionary<StorageEnvironment, long> RegisteredEnvironments = new();
+        public readonly Dictionary<StorageEnvironment, long> RegisteredEnvironments = new();
 
-        internal List<TransactionHeader> _transactionHeaders = new();
+        private List<TransactionHeader> _transactionHeaders = new();
+        private JournalWriter _journalWriter = journalWriter;
 
         public override string ToString()
         {
@@ -39,15 +40,15 @@ namespace Voron.Impl.Journal
         public long Number { get; } = journalNumber;
 
 
-        public long GetAvailable4Kbs(EnvironmentStateRecord record) => (journalWriter?.NumberOfAllocated4Kb - GetWritePosIn4KbPosition(record)) ?? 0;
+        public long GetAvailable4Kbs(EnvironmentStateRecord record) => (_journalWriter?.NumberOfAllocated4Kb - GetWritePosIn4KbPosition(record)) ?? 0;
 
-        public Size JournalSize => new Size(journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes);
+        public Size JournalSize => new Size(_journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes);
 
-        internal JournalWriter JournalWriter => journalWriter;
+        internal JournalWriter JournalWriter => _journalWriter;
 
         public void Release()
         {
-            if (journalWriter?.Release() != true)
+            if (_journalWriter?.Release() != true)
                 return;
 
             Dispose();
@@ -55,13 +56,13 @@ namespace Voron.Impl.Journal
 
         public void AddRef()
         {
-            journalWriter?.AddRef();
+            _journalWriter?.AddRef();
         }
 
         public void Dispose()
         {
             _transactionHeaders = null;
-            journalWriter = null;
+            _journalWriter = null;
         }
 
         public TransactionHeader GetLastReadTxHeader(long maxTransactionId)
@@ -145,7 +146,7 @@ namespace Voron.Impl.Journal
         {
             set
             {
-                var writer = journalWriter;
+                var writer = _journalWriter;
 
                 if (writer != null)
                     writer.ShouldDelete = value;

@@ -221,11 +221,13 @@ namespace Voron
         /// </summary>
         internal bool CopyOnWriteMode { get; set; }
 
-        public abstract void LinkFiles(long journalNumber, string fileName);
+        public abstract void LinkFiles(long journalNumber, string fileName, out string finalFileName);
 
-        public abstract bool IsLinked(long journalNumber, string fileName);
+        public abstract bool IsLinked(long journalNumber, string fileName, out string finalFileName);
         
         public abstract JournalWriter CreateJournalWriter(long journalNumber, long journalSize);
+        
+        public abstract JournalWriter CreateJournalWriterForBranchEnvironment(long journalNumber, string fileName, JournalFile journalFile);
 
         public abstract VoronPathSetting GetJournalPath(long journalNumber);
 
@@ -477,20 +479,21 @@ namespace Voron
 
             public override VoronPathSetting BasePath => _basePath;
 
-            public override void LinkFiles(long journalNumber, string fileName)
+            public override void LinkFiles(long journalNumber, string fileName, out string finalFileName)
             {
                 var name = JournalName(journalNumber);
                 var path = JournalPath.Combine(name);
-
+                finalFileName = path.FullPath;
                 var rc = Pal.rvn_hard_link(fileName, path.FullPath, out var errorCode);
                 if (rc != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(rc, errorCode, $"Failed to link files {fileName} to {path.FullPath}");
             }
 
-            public override bool IsLinked(long journalNumber, string fileName)
+            public override bool IsLinked(long journalNumber, string fileName, out string finalFileName)
             {
                 var name = JournalName(journalNumber);
                 var path = JournalPath.Combine(name);
+                finalFileName = path.FullPath;
                 if (File.Exists(path.FullPath) is false)
                     return false;
 
@@ -498,6 +501,23 @@ namespace Voron
                 if (rc != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(rc, errorCode, $"Failed to check if files {fileName} and {path.FullPath} are the same");
                 return isSame;
+            }
+
+            public override JournalWriter CreateJournalWriterForBranchEnvironment(long journalNumber, string fileName, JournalFile journalFile)
+            {
+                var name = JournalName(journalNumber);
+                var result = _journals.GetOrAdd(name, _ =>
+                    new LazyWithExceptionRetry<JournalWriter>(() => new JournalWriter(this,fileName, journalNumber, journalFile)));
+
+                if (result.Value.Disposed)
+                {
+                    var newWriter = new LazyWithExceptionRetry<JournalWriter>(() => new JournalWriter(this, fileName, journalNumber, journalFile));
+                    if (_journals.TryUpdate(name, newWriter, result) == false)
+                        throw new InvalidOperationException("Could not update journal pager");
+                    result = newWriter;
+                }
+
+                return result.Value;
             }
 
             public override JournalWriter CreateJournalWriter(long journalNumber, long journalSize)
@@ -818,9 +838,10 @@ namespace Voron
 
             public override VoronPathSetting BasePath { get; } = new MemoryVoronPathSetting();
 
-            public override bool IsLinked(long journalNumber, string fileName)
+            public override bool IsLinked(long journalNumber, string fileName, out string finalFileName)
             {
                 var path = GetJournalPath(journalNumber);
+                finalFileName = path.FullPath;
                 if (File.Exists(path.FullPath) is false)
                     return false;
                 var rc = Pal.rvn_is_same_hard_link(fileName, path.FullPath, out var isSame, out var errorCode);
@@ -830,12 +851,24 @@ namespace Voron
                 return isSame;
             }
 
-            public override void LinkFiles(long journalNumber, string fileName)
+            public override void LinkFiles(long journalNumber, string fileName, out string finalFileName)
             {
                 var path = GetJournalPath(journalNumber);
+                finalFileName = path.FullPath; 
                 var rc = Pal.rvn_hard_link(fileName, path.FullPath, out var errorCode);
                 if (rc != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(rc, errorCode, $"Failed to link files {fileName} to {path.FullPath}");
+            }
+
+            public override JournalWriter CreateJournalWriterForBranchEnvironment(long journalNumber, string fileName, JournalFile journalFile)
+            {
+                var name = JournalName(journalNumber);
+                if (_logs.TryGetValue(name, out JournalWriter value))
+                    return value;
+                value = new JournalWriter(this, fileName, journalNumber, journalFile);
+
+                _logs[name] = value;
+                return value;
             }
 
             public override JournalWriter CreateJournalWriter(long journalNumber, long journalSize)
