@@ -17,7 +17,7 @@ public class RavenDB_21043 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Compression)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void Should_Be_Able_To_Train_Corax_Dictionary_on_Compare_Exchange_Values_and_compressed_docs(Options options)
     {
@@ -25,7 +25,6 @@ public class RavenDB_21043 : RavenTestBase
         const int numberOfAddresses = 16;
 
         DoNotReuseServer();
-        options.IgnoreDocumentCompression = true;
         using (var store = GetDocumentStore(options))
         {
             // turn on compression

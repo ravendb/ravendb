@@ -17,13 +17,12 @@ namespace SlowTests.Sharding.Client.Operations
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Compression)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanPostAndGetDocumentsCompressionConfiguration(Options options)
         {
             var dbname = "CompressAllCollectionsDB";
             options.ModifyDatabaseName = _ => dbname;
-            options.IgnoreDocumentCompression = true;
 
             using (var store = GetDocumentStore(options))
             {

@@ -45,7 +45,7 @@ namespace SlowTests.Server.Documents.DataArchival
             await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
         }
 
-        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [RavenTheory(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Compression)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task CanSetupDataArchival(bool compressed)
@@ -59,8 +59,7 @@ namespace SlowTests.Server.Documents.DataArchival
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                         
                     }
-                },
-                IgnoreDocumentCompression = true
+                }
             }))
             {
                 using (var session = store.OpenAsyncSession())
@@ -98,7 +97,7 @@ namespace SlowTests.Server.Documents.DataArchival
             }
         }
 
-        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [RavenTheory(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Compression)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task WillArchiveAllDocumentsToBeArchivedInSingleRun_EvenWhenMoreThanBatchSize(bool compressed)
@@ -114,8 +113,7 @@ namespace SlowTests.Server.Documents.DataArchival
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                },
-                IgnoreDocumentCompression = true
+                }
             }))
             {
                 await SetupDataArchival(store);
@@ -173,7 +171,7 @@ namespace SlowTests.Server.Documents.DataArchival
             }
         }
 
-        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [RavenTheory(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Compression)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task ShouldImportTask(bool compressed)
@@ -186,8 +184,7 @@ namespace SlowTests.Server.Documents.DataArchival
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                },
-                IgnoreDocumentCompression = true
+                }
             }))
             using (var dstStore = GetDocumentStore(new Options 
             {
@@ -197,8 +194,7 @@ namespace SlowTests.Server.Documents.DataArchival
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                },
-                IgnoreDocumentCompression = true
+                }
             }))
             {
                 await SetupDataArchival(srcStore);
@@ -215,7 +211,7 @@ namespace SlowTests.Server.Documents.DataArchival
             }
         }
 
-        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [RavenTheory(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Compression)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task ThrowsIfUsingWrongArchiveAtDateTimeFormat(bool compressed)
@@ -228,8 +224,7 @@ namespace SlowTests.Server.Documents.DataArchival
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration { CompressAllCollections = true, };
                     }
-                },
-                IgnoreDocumentCompression = true
+                }
             }))
             {
                 using (var session = store.OpenAsyncSession())
@@ -245,12 +240,11 @@ namespace SlowTests.Server.Documents.DataArchival
             }
         }
 
-        [RavenTheory(RavenTestCategory.Configuration)]
+        [RavenTheory(RavenTestCategory.Configuration | RavenTestCategory.Compression)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task ArchiveDocsWithMaxItemsToProcessConfiguredShouldWork(Options options, bool compressed)
         {
-            options.IgnoreDocumentCompression = true;
             using (var store = GetDocumentStore(options))
             {
                 if (compressed)

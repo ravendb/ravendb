@@ -43,7 +43,7 @@ namespace SlowTests.Issues
         private const string RL_DEV = "RAVEN_LICENSE_DEVELOPER";
         private const string RL_PRO = "RAVEN_LICENSE_PROFESSIONAL";
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Sharding)]
         public async Task Prevent_License_Downgrade_Multi_Node_Sharding()
         {
             DoNotReuseServer();
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Etl)]
         public async Task Prevent_License_Downgrade_QueueSink()
         {
             DoNotReuseServer();
@@ -131,7 +131,7 @@ namespace SlowTests.Issues
             await TryToChangeLicense(Server, RL_PRO, LimitType.QueueSink);
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.ExpirationRefresh)]
         public async Task Prevent_License_Downgrade_DataArchival()
         {
             DoNotReuseServer();
@@ -144,7 +144,7 @@ namespace SlowTests.Issues
             await TryToChangeLicense(Server, RL_PRO, LimitType.DataArchival);
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Indexes)]
         public async Task Prevent_License_Downgrade_Static_Index_Count_Per_Database()
         {
             DoNotReuseServer();
@@ -163,7 +163,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Indexes)]
         public async Task Prevent_License_Downgrade_Static_Index_Count_Per_Cluster()
         {
             DoNotReuseServer();
@@ -189,7 +189,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Indexes)]
         public async Task Prevent_License_Downgrade_Auto_Index_Count_Per_Database()
         {
             DoNotReuseServer();
@@ -208,7 +208,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Indexes)]
         public async Task Prevent_License_Downgrade_Auto_Index_Count_Per_Cluster()
         {
             DoNotReuseServer();
@@ -235,7 +235,7 @@ namespace SlowTests.Issues
 
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Revisions)]
         public async Task Prevent_License_Downgrade_Revision_Default_Configuration()
         {
             DoNotReuseServer();
@@ -267,7 +267,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.BackupExportImport)]
         public async Task Prevent_License_Downgrade_PeriodicBackup()
         {
             DoNotReuseServer();
@@ -281,7 +281,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing)]
         public async Task Prevent_License_Downgrade_Sorters_Per_Database()
         {
             DoNotReuseServer();
@@ -307,7 +307,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing)]
         public async Task Prevent_License_Downgrade_Sorters_Per_Cluster()
         {
             DoNotReuseServer();
@@ -337,7 +337,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing)]
         public async Task Prevent_License_Downgrade_Analyzer_Per_Database()
         {
             DoNotReuseServer();
@@ -363,7 +363,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing)]
         public async Task Prevent_License_Downgrade_Analyzer_Per_Cluster()
         {
             DoNotReuseServer();
@@ -394,7 +394,7 @@ namespace SlowTests.Issues
 
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.ClientApi)]
         public async Task Prevent_License_Downgrade_ClientConfiguration()
         {
             DoNotReuseServer();
@@ -404,7 +404,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing)]
         public async Task Prevent_License_Downgrade_StudioConfiguration()
         {
             DoNotReuseServer();
@@ -417,7 +417,7 @@ namespace SlowTests.Issues
             await TryToChangeLicense(Server, RL_COMM, LimitType.StudioConfiguration);
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.ExpirationRefresh)]
         public async Task Prevent_License_Downgrade_Expiration_Configuration()
         {
             DoNotReuseServer();
@@ -431,7 +431,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [MultiLicenseRequiredFact]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.ExpirationRefresh)]
         public async Task Prevent_License_Downgrade_Refresh_Configuration()
         {
             DoNotReuseServer();
