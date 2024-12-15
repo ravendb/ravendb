@@ -7,6 +7,7 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Commands.Streaming;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Streaming;
 using Raven.Server.ServerWide.Context;
@@ -47,8 +48,9 @@ namespace Raven.Server.Documents.Sharding.Queries
         public override Task<ShardedStreamQueryResult> ExecuteShardedOperations(QueryTimingsScope scope)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Missing scope usage");
 
-            var documentsComparer = GetComparer(Query);
+            var documentsComparer = string.IsNullOrEmpty(_debug) ? GetComparer(Query) : ConstantComparer.Instance;
 
             var commands = GetOperationCommands(null);
 

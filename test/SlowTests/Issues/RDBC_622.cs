@@ -11,6 +11,7 @@ using Raven.Server.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues;
 
@@ -23,10 +24,11 @@ public class RDBC_622 : RavenTestBase
     {
     }
 
-    [Fact]
-    public async Task JsonlStreamReturnsCorrectData()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task JsonlStreamReturnsCorrectData(Options options)
     {
-        using var store = await PrepareDataForTest();
+        using var store = await PrepareDataForTest(options);
         using var client = new HttpClient().WithConventions(store.Conventions);
         string jsonResult;
         await using (var stream = await client.GetStreamAsync(UrlGenerator(store, "")))
@@ -41,8 +43,9 @@ public class RDBC_622 : RavenTestBase
         
         await using var jsonlStream = await client.GetStreamAsync(UrlGenerator(store, "jsonl"));
         using var jsonlReader = new StreamReader(jsonlStream);
-        
-        var jsonlOutput = JsonConvert.DeserializeObject(await jsonlReader.ReadLineAsync() ?? ThrowStreamIsEmpty()) as JObject;
+
+        var r = await jsonlReader.ReadLineAsync() ?? ThrowStreamIsEmpty();
+        var jsonlOutput = JsonConvert.DeserializeObject(r) as JObject;
         Assert.NotNull(jsonlOutput);
         jsonlOutput = jsonlOutput["Stats"] as JObject;
         Assert.NotNull(jsonlOutput);
@@ -59,8 +62,8 @@ public class RDBC_622 : RavenTestBase
         {
             var standardResult = child as JObject;
             Assert.NotNull(standardResult);
-            
-            var jsonlResultItem = (JsonConvert.DeserializeObject(await jsonlReader.ReadLineAsync() ?? ThrowStreamIsEmpty()) as JObject)?["Item"] as JObject;
+            r = await jsonlReader.ReadLineAsync() ?? ThrowStreamIsEmpty();
+            var jsonlResultItem = (JsonConvert.DeserializeObject(r) as JObject)?["Item"] as JObject;
             Assert.Equal(standardResult["Name"], jsonlResultItem!["Name"]);
             Assert.Equal(standardResult["LastName"], jsonlResultItem["LastName"]);
             Assert.Equal(standardResult["AddressId"], jsonlResultItem["AddressId"]);
@@ -76,9 +79,9 @@ public class RDBC_622 : RavenTestBase
     private string UrlGenerator(IDocumentStore store, string format) =>
         $"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Users/CoolCount\'&format={format}";
     
-    private async Task<IDocumentStore> PrepareDataForTest()
+    private async Task<IDocumentStore> PrepareDataForTest(Options options)
     {
-        var store = GetDocumentStore();
+        var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         for (var i = 0; i < 10; i++)
         {
@@ -106,7 +109,7 @@ public class RDBC_622 : RavenTestBase
                 Name = "Users/CoolCount"
             }
         }));
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
         
         return store;
     }

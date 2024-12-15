@@ -55,7 +55,8 @@ public sealed class ShardedQueryResultDocument : Document
             TransactionMarker = doc.TransactionMarker,
             Id = doc.Id,
             LowerId = doc.LowerId,
-            Data = doc.Data
+            Data = doc.Data,
+            TimeSeriesStream = doc.TimeSeriesStream
         };
     }
 

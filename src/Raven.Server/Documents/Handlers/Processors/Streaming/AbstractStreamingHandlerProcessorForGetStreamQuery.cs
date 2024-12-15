@@ -37,16 +37,75 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
         protected abstract IDisposable AllocateContext(out TOperationContext context);
 
         protected abstract QueryMetadataCache GetQueryMetadataCache();
-
-        protected abstract IStreamQueryResultWriter<BlittableJsonReaderObject> GetBlittableQueryResultWriter(string format, bool isDebug, JsonOperationContext context,
-            HttpResponse response, Stream responseBodyStream, bool fromSharded,
-            string[] propertiesArray, string fileNamePrefix = null);
-
+       
         protected abstract ValueTask ExecuteAndWriteQueryStreamAsync(TOperationContext context, IndexQueryServerSide query, string format,
-            string[] propertiesArray, string fileNamePrefix, bool ignoreLimit, bool fromSharded, OperationCancelToken token);
+            string[] propertiesArray, string fileNamePrefix, OperationCancelToken token);
 
-        protected abstract ValueTask ExecuteAndWriteIndexQueryStreamEntriesAsync(TOperationContext context, IndexQueryServerSide query, string format, string debug,
-            string[] propertiesArray, string fileNamePrefix, bool ignoreLimit, bool fromSharded, OperationCancelToken token);
+        protected abstract ValueTask ExecuteAndWriteIndexQueryStreamEntriesAsync(TOperationContext context, IndexQueryServerSide query, string format,
+            string[] propertiesArray, string fileNamePrefix, bool ignoreLimit, OperationCancelToken token);
+
+        protected IStreamQueryResultWriter<TSource> GetResultWriter<TSource>(string format, JsonOperationContext context, HttpResponse response,  Stream responseBodyStream, string[] propertiesArray,
+            string fileNamePrefix = null)
+        {
+            var t = typeof(TSource);
+            if (t == typeof(BlittableJsonReaderObject))
+                return (IStreamQueryResultWriter<TSource>)GetBlittableQueryResultWriter(format, response, context, responseBodyStream, propertiesArray, fileNamePrefix);
+            if (t == typeof(Document))
+                return (IStreamQueryResultWriter<TSource>)GetDocumentQueryResultWriter(format, response, context, responseBodyStream, propertiesArray, fileNamePrefix);
+
+            throw new ArgumentException($"Unknown writer type {t.FullName}");
+        }
+
+         private IStreamQueryResultWriter<BlittableJsonReaderObject> GetBlittableQueryResultWriter(string format, HttpResponse response, JsonOperationContext context, Stream responseBodyStream,
+            string[] propertiesArray, string fileNamePrefix = null)
+        {
+            var queryFormat = GetQueryResultFormat(format);
+            switch (queryFormat)
+            {
+                case QueryResultFormat.Default:
+                    return new StreamBlittableDocumentQueryResultWriter(responseBodyStream, context);
+                case QueryResultFormat.Json:
+                    //does not write query stats to stream
+                    return new StreamJsonFileBlittableQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
+                case QueryResultFormat.Csv:
+                    //does not write query stats to stream
+                    return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+                case QueryResultFormat.Jsonl:
+                    return new StreamJsonlBlittableQueryResultWriter(responseBodyStream, context);
+                default:
+                    ThrowUnsupportedException($"You have selected \"{format}\" file format, for 'GetBlittableQueryResultWriter' which is not supported.");
+                    return null;
+            }
+        }
+
+        private IStreamQueryResultWriter<Document> GetDocumentQueryResultWriter(string format, HttpResponse response, JsonOperationContext context, Stream responseBodyStream,
+            string[] propertiesArray, string fileNamePrefix = null)
+        {
+            var queryFormat = GetQueryResultFormat(format);
+            switch (queryFormat)
+            {
+                case QueryResultFormat.Json:
+                    return new StreamJsonFileDocumentQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
+                case QueryResultFormat.Csv:
+                    return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
+            }
+
+            if (propertiesArray != null)
+            {
+                ThrowUnsupportedException($"Using '{queryFormat}' output format with custom fields is not supported.");
+            }
+
+            switch (queryFormat)
+            {
+                case QueryResultFormat.Default:
+                    return new StreamJsonDocumentQueryResultWriter(responseBodyStream, context);
+                case QueryResultFormat.Jsonl:
+                    return new StreamJsonlDocumentQueryResultWriter(responseBodyStream, context);
+                default:
+                    ThrowUnsupportedException($"You have selected \"{format}\" file format for 'GetDocumentQueryResultWriter', which is not supported.");
+                    return null;
+            }
+        }
 
         public override async ValueTask ExecuteAsync()
         {
@@ -83,9 +142,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                                 $"Expected {fromDocument} to have a property named 'Query' of type 'String' but couldn't locate such property.");
                         }
                     }
-                    query = await IndexQueryServerSide.CreateAsync(HttpContext, start, pageSize, context, tracker, overrideQuery: overrideQuery)
-                                                      .ConfigureAwait(false);
-                    query.IsStream = true;
+
+                    query = await IndexQueryServerSide.CreateAsync(HttpContext, start, pageSize, context, tracker, overrideQuery: overrideQuery);
                 }
                 else
                 {
@@ -93,12 +151,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     var queryJson = await context.ReadForMemoryAsync(stream, "index/query")
                                                  .ConfigureAwait(false);
                     query = IndexQueryServerSide.Create(HttpContext, queryJson, GetQueryMetadataCache(), tracker);
-                    query.IsStream = true;
                 }
+                query.IsStream = true;
 
-                var fromSharded = RequestHandler.HttpContext.Request.IsFromOrchestrator();
-
-                if (fromSharded)
+                if (RequestHandler.HttpContext.Request.IsFromOrchestrator())
                     query.ReturnOptions = IndexQueryServerSide.QueryResultReturnOptions.CreateForSharding(query);
 
                 if (TrafficWatchManager.HasRegisteredClients)
@@ -117,7 +173,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 {
                     if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
                     {
-                        await ExecuteAndWriteIndexQueryStreamEntriesAsync(context, query, format, debug, propertiesArray, fileNamePrefix, ignoreLimit, fromSharded, token)
+                        await ExecuteAndWriteIndexQueryStreamEntriesAsync(context, query, format, propertiesArray, fileNamePrefix, ignoreLimit, token)
                                     .ConfigureAwait(false);
                     }
                     else
@@ -127,12 +183,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 }
                 else
                 {
-                    await ExecuteAndWriteQueryStreamAsync(context, query, format, propertiesArray, fileNamePrefix, ignoreLimit, fromSharded, token)
+                    await ExecuteAndWriteQueryStreamAsync(context, query, format, propertiesArray, fileNamePrefix, token)
                                 .ConfigureAwait(false);
                 }
             }
         }
-
         protected static QueryResultFormat GetQueryResultFormat(string format)
         {
             return Enum.TryParse<QueryResultFormat>(format, ignoreCase: true, out var queryFormat)
@@ -141,7 +196,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
         }
 
         [DoesNotReturn]
-        protected void ThrowUnsupportedException(string message)
+        protected static void ThrowUnsupportedException(string message)
         {
             throw new NotSupportedException(message);
         }

@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers;
@@ -37,6 +40,16 @@ public class StreamJsonFileBlittableQueryResultWriter : AbstractStreamJsonFileBl
                     Writer.WriteComma();
                 else
                     innerFirst = false;
+
+                if (Constants.Documents.Metadata.Id == property)
+                {
+                    if (res.TryGetMetadata(out var metadata) && metadata.TryGetId(out var id))
+                    {
+                        Writer.WritePropertyName(Constants.Documents.Metadata.Id);
+                        Writer.WriteString(id.ToString(CultureInfo.InvariantCulture));
+                        continue;
+                    }
+                }
 
                 var propertyIndex = res.GetPropertyIndex(property);
                 if (propertyIndex == -1)

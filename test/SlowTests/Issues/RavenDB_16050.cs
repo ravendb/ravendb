@@ -19,10 +19,11 @@ public class RavenDB_16050 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Querying)]
-    public async Task Can_Export_Query_To_Json_File()
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task Can_Export_Query_To_Json_File(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.Indexes));
 
@@ -55,7 +56,7 @@ public class RavenDB_16050 : RavenTestBase
 
             // Map
             using var client = new HttpClient().WithConventions(store.Conventions);
-            await using (var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Orders/Totals\'&format=json"))
+            await using (var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Orders/Totals\' order by id()&format=json"))
             using (var sr = new StreamReader(stream))
             {
                 var array = JArray.Parse(await sr.ReadToEndAsync());
@@ -68,10 +69,11 @@ public class RavenDB_16050 : RavenTestBase
                 Assert.Equal("employees/2", order2[nameof(Order.Employee)]?.Value<string>());
             }
 
-            await using (var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Orders/Totals\'&format=json&field=@id&field=Company"))
+            await using (var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Orders/Totals\' order by id()&format=json&field=@id&field=Company"))
             using (var sr = new StreamReader(stream))
             {
-                var array = JArray.Parse(await sr.ReadToEndAsync());
+                var r = await sr.ReadToEndAsync();
+                var array = JArray.Parse(r);
                 Assert.Equal(2, array.Count);
                 var order1 = array[0].Value<JObject>();
                 Assert.Equal("orders/1", order1[Constants.Documents.Metadata.Id]?.Value<string>());
@@ -82,6 +84,9 @@ public class RavenDB_16050 : RavenTestBase
                 Assert.Equal("companies/2", order2[nameof(Order.Company)]?.Value<string>());
                 Assert.Null(order2[nameof(Order.Employee)]);
             }
+
+            if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                return; // not supported in sharded database
 
             // Map-Reduce
             await using (var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Orders/ByCompany\'&format=json"))

@@ -3278,7 +3278,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task StreamIndexEntriesQuery(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
             IndexQueryServerSide query, QueryOperationContext queryContext, bool ignoreLimit, OperationCancelToken token)
         {
-            var result = new StreamDocumentIndexEntriesQueryResult(response, writer, Definition.ClusterState.LastIndex, token);
+            var result = new StreamDocumentIndexQueryResult(response, writer, Definition.ClusterState.LastIndex, token);
             await IndexEntriesQueryInternal(result, query, queryContext, ignoreLimit, token);
             result.Flush();
 

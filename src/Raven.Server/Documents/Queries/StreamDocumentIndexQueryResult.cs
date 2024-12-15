@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public sealed class StreamDocumentIndexEntriesQueryResult : StreamQueryResult<BlittableJsonReaderObject>
+    public sealed class StreamDocumentIndexQueryResult : StreamQueryResult<BlittableJsonReaderObject>
     {
         public override async ValueTask AddResultAsync(BlittableJsonReaderObject result, CancellationToken token)
         {
@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Queries
             GetToken().Delay();
         }
 
-        public StreamDocumentIndexEntriesQueryResult(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, long? indexDefinitionRaftIndex, OperationCancelToken token) : base(response, writer, indexDefinitionRaftIndex, token)
+        public StreamDocumentIndexQueryResult(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, long? indexDefinitionRaftIndex, OperationCancelToken token) : base(response, writer, indexDefinitionRaftIndex, token)
         {
             if (response.HasStarted)
                 throw new InvalidOperationException("You cannot start streaming because response has already started.");

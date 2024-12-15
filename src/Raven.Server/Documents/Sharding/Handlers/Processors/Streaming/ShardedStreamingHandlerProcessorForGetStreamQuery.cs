@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -13,7 +12,6 @@ using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Streaming;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.Streaming;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication.Senders;
@@ -58,29 +56,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             return RequestHandler.DatabaseContext.QueryMetadataCache;
         }
 
-        protected override IStreamQueryResultWriter<BlittableJsonReaderObject> GetBlittableQueryResultWriter(string format, bool isDebug, JsonOperationContext context, HttpResponse response, Stream responseBodyStream, bool fromSharded,
-            string[] propertiesArray, string fileNamePrefix = null)
+        protected override ValueTask ExecuteAndWriteIndexQueryStreamEntriesAsync(TransactionOperationContext context, IndexQueryServerSide query, string format,
+            string[] propertiesArray,
+            string fileNamePrefix, bool ignoreLimit, OperationCancelToken token)
         {
-            var queryFormat = GetQueryResultFormat(format);
-            switch (queryFormat)
-            {
-                case QueryResultFormat.Json:
-                    //does not write query stats to stream
-                    return new StreamJsonFileBlittableQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
-                case QueryResultFormat.Csv:
-                    //does not write query stats to stream
-                    return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, propertiesArray, fileNamePrefix);
-            }
-
-            if (isDebug)
-            {
-                ThrowUnsupportedException($"You have selected \"{format}\" file format, which is not supported.");
-            }
-
-            return new StreamBlittableDocumentQueryResultWriter(responseBodyStream, context);
+            return ExecuteAndWriteQueryStreamAsync(context, query, format, propertiesArray, fileNamePrefix, debug: "entries", ignoreLimit, token);
         }
 
-        private async ValueTask<ShardedStreamQueryResult> ExecuteQueryAsync(TransactionOperationContext context, IndexQueryServerSide query, string debug, bool ignoreLimit, OperationCancelToken token)
+        private async ValueTask<ShardedStreamQueryResult> ExecuteShardedQueryAsync(TransactionOperationContext context, IndexQueryServerSide query, string debug, bool ignoreLimit, OperationCancelToken token)
         {
             var indexName = AbstractQueryRunner.GetIndexName(query);
 
@@ -94,28 +77,35 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             }
         }
 
-        protected override async ValueTask ExecuteAndWriteQueryStreamAsync(TransactionOperationContext context, IndexQueryServerSide query, string format,
-            string[] propertiesArray, string fileNamePrefix, bool ignoreLimit, bool _, OperationCancelToken token)
+        protected override ValueTask ExecuteAndWriteQueryStreamAsync(TransactionOperationContext context, IndexQueryServerSide query, string format, string[] propertiesArray, string fileNamePrefix,
+            OperationCancelToken token)
+        {
+            return ExecuteAndWriteQueryStreamAsync(context, query, format, propertiesArray, fileNamePrefix, debug: null, ignoreLimit: false, token);
+        }
+
+        private async ValueTask ExecuteAndWriteQueryStreamAsync(TransactionOperationContext context, IndexQueryServerSide query, string format, string[] propertiesArray, string fileNamePrefix, string debug, bool ignoreLimit,
+            OperationCancelToken token)
         {
             //writer is blittable->document or blittable->csv
-
-            await using (var writer = GetBlittableQueryResultWriter(format, isDebug: false, context, HttpContext.Response, RequestHandler.ResponseBodyStream(),
-                             fromSharded: false, propertiesArray, fileNamePrefix))
+            await using (var writer = GetResultWriter<BlittableJsonReaderObject>(format, context, HttpContext.Response, RequestHandler.ResponseBodyStream(), propertiesArray, fileNamePrefix))
             {
                 try
                 {
-                    using (var result = await ExecuteQueryAsync(context, query, null, ignoreLimit, token))
+                    using (var result = await ExecuteShardedQueryAsync(context, query, debug, ignoreLimit, token))
                     {
-                        var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, indexDefinitionRaftIndex: null, token); // writes blittable docs as blittable docs
+                        var queryResult = GetStreamQueryResult(context, format, query, writer, token); 
                         queryResult.TotalResults = result.Statistics.TotalResults;
                         queryResult.IndexName = result.Statistics.IndexName;
                         queryResult.IndexTimestamp = result.Statistics.IndexTimestamp;
                         queryResult.IsStale = result.Statistics.IsStale;
                         queryResult.ResultEtag = result.Statistics.ResultEtag;
 
-                        foreach (BlittableJsonReaderObject doc in result.GetEnumerator())
+                        using (var it = result.GetEnumerator())
                         {
-                            await queryResult.AddResultAsync(doc, token.Token);
+                            foreach (BlittableJsonReaderObject doc in it)
+                            {
+                                await queryResult.AddResultAsync(doc, token.Token);
+                            }    
                         }
 
                         queryResult.Flush();
@@ -129,33 +119,21 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             }
         }
 
-        protected override async ValueTask ExecuteAndWriteIndexQueryStreamEntriesAsync(TransactionOperationContext context, IndexQueryServerSide query, string format, string debug, string[] propertiesArray,
-            string fileNamePrefix, bool ignoreLimit, bool _, OperationCancelToken token)
+        private StreamQueryResult<BlittableJsonReaderObject> GetStreamQueryResult(JsonOperationContext context, string format, IndexQueryServerSide query, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
+            OperationCancelToken token)
         {
-            //from debug
-
-            await using (var writer = GetBlittableQueryResultWriter(format, isDebug: true, context, HttpContext.Response, RequestHandler.ResponseBodyStream(), fromSharded: false, propertiesArray,
-                             fileNamePrefix))
+            var queryFormat = GetQueryResultFormat(format);
+            switch (queryFormat)
             {
-                try
-                {
-                    using (var result = await ExecuteQueryAsync(context, query, debug, ignoreLimit, token))
-                    {
-                        var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, indexDefinitionRaftIndex: null, token);
-
-                        foreach (BlittableJsonReaderObject doc in result.GetEnumerator())
-                        {
-                            await queryResult.AddResultAsync(doc, token.Token);
-                        }
-
-                        queryResult.Flush();
-                    }
-                }
-                catch (IndexDoesNotExistException)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
-                }
+                // writes blittable docs as blittable docs
+                case QueryResultFormat.Default:
+                case QueryResultFormat.Json:
+                case QueryResultFormat.Jsonl:
+                    return new StreamDocumentIndexQueryResult(HttpContext.Response, writer, indexDefinitionRaftIndex: null, token);
+                case QueryResultFormat.Csv:
+                    return new ShardedStreamQueryCsvResult(context, HttpContext.Response, writer, query, token);
+                default:
+                    throw new ArgumentOutOfRangeException($"Unknown format {format}");
             }
         }
     }

@@ -33,6 +33,9 @@ namespace Raven.Server.Documents.Handlers
             Constants.Documents.Metadata.Id,
             Constants.Documents.Metadata.LastModified,
             Constants.Documents.Metadata.IndexScore,
+            Constants.Documents.Metadata.Sharding.Querying.OrderByFields,
+            Constants.Documents.Metadata.Sharding.Querying.ResultDataHash,
+            Constants.Documents.Metadata.Sharding.Querying.SuggestionsPopularityFields,
         };
 
         protected StreamCsvResultWriter(HttpResponse response, Stream stream, string[] properties = null, string csvFileNamePrefix = "export")
@@ -127,9 +130,6 @@ namespace Raven.Server.Documents.Handlers
             {
                 // skip reserved metadata properties
                 if (inMetadata && p.StartsWith('@') && MetadataPropertiesToSkip.Contains(p))
-                    continue;
-
-                if (p.StartsWith('@') && p.Equals(Constants.Documents.Metadata.Key) == false && propertyTuple.ParentPath.Equals(Constants.Documents.Metadata.Key) == false)
                     continue;
 
                 var path = string.IsNullOrEmpty(propertyTuple.ParentPath) ? BlittablePath.EscapeString(p) : $"{propertyTuple.ParentPath}.{BlittablePath.EscapeString(p)}";

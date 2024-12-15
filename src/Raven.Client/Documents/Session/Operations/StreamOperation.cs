@@ -314,7 +314,7 @@ namespace Raven.Client.Documents.Session.Operations
         {
             public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult response, bool isQueryStream, bool isTimeSeriesStream, bool isAsync, StreamQueryStatistics streamQueryStatistics, CancellationToken token = default)
             {
-                _response = response ?? throw new InvalidOperationException("The index does not exists, failed to stream results");
+                _response = response ?? throw new IndexDoesNotExistException("The index does not exists, failed to stream results");
                 _builderReturnContext = session.RequestExecutor.ContextPool.AllocateOperationContext(out _builderContext);
                 _peepingTomStream = new PeepingTomStream(_response.Stream, session.Context);
                 _inputContext = session.Context;
@@ -328,7 +328,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             public YieldStreamResults(Func<(JsonOperationContext, IDisposable)> allocateJsonContext, StreamResult response, bool isQueryStream, bool isTimeSeriesStream, bool isAsync, StreamQueryStatistics streamQueryStatistics, CancellationToken token = default)
             {
-                _response = response ?? throw new InvalidOperationException("The index does not exists, failed to stream results");
+                _response = response ?? throw new IndexDoesNotExistException("The index does not exists, failed to stream results");
                 (_builderContext, _builderReturnContext) = allocateJsonContext();
                 (_inputContext, _inputReturnContext) = allocateJsonContext();
 
