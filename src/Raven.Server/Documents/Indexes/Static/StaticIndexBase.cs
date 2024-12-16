@@ -426,6 +426,16 @@ namespace Raven.Server.Documents.Indexes.Static
                 return HandleBlittableJsonReaderArray(bjra);
             }
 
+            if (value is BlittableJsonReaderObject bjro)
+            {
+                if (bjro.TryGetMember("@vector", out var vector) && vector is BlittableJsonReaderVector bjrv)
+                {
+                    return HandleBlittableJsonReaderVector(bjrv);
+                }
+
+                throw new ArgumentException($"Expected BlittableJsonReaderVector, but got {value.GetType().FullName}");
+            }
+
             if (value is JsArray js)
                 return HandleJsArray(js);
 
@@ -438,13 +448,14 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             object HandleBlittableJsonReaderArray(BlittableJsonReaderArray data)
             {
+                var dataLength = data.Length;
                 var first = data[0];
                 
                 //Array of base64s
                 if (IsBase64(first))
                 {
-                    var values = new object[data.Length];
-                    for (var i = 0; i < data.Length; i++)
+                    var values = new object[dataLength];
+                    for (var i = 0; i < dataLength; i++)
                         values[i] = Base64ToVector(data[i].ToString());
 
                     return values;
@@ -453,15 +464,14 @@ namespace Raven.Server.Documents.Indexes.Static
                 //Array of arrays
                 if (first is BlittableJsonReaderArray)
                 {
-                    var values = new object[data.Length];
-                    for (var i = 0; i < data.Length; i++)
+                    var values = new object[dataLength];
+                    for (var i = 0; i < dataLength; i++)
                         values[i] = HandleBlittableJsonReaderArray((BlittableJsonReaderArray)data[i]);
 
                     return values;
                 }
-
-                var len = data.Length;
-                var bufferSize = data.Length * (vectorOptions.SourceEmbeddingType) switch
+                
+                var bufferSize = dataLength * (vectorOptions.SourceEmbeddingType) switch
                 {
                     VectorEmbeddingType.Single => sizeof(float),
                     _ => sizeof(byte)
@@ -472,7 +482,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 ref var sbyteRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, sbyte>(mem.Span));
                 ref var byteRef = ref MemoryMarshal.GetReference(mem.Span);
                 
-                for (int i = 0; i < len; ++i)
+                for (int i = 0; i < dataLength; ++i)
                 {
                     switch (vectorOptions.SourceEmbeddingType)
                     {
@@ -488,6 +498,37 @@ namespace Raven.Server.Documents.Indexes.Static
                     }
                 }
 
+                return GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, bufferSize);
+            }
+
+            object HandleBlittableJsonReaderVector(BlittableJsonReaderVector bjrv)
+            {
+                var type = bjrv[0].GetType();
+
+                if (type == typeof(float))
+                    return HandleBjrvInternal(bjrv.ReadArray<float>());
+                if (type == typeof(double))
+                    return HandleBjrvInternal(bjrv.ReadArray<double>());
+                if (type == typeof(byte))
+                    return HandleBjrvInternal(bjrv.ReadArray<byte>());
+                if (type == typeof(sbyte))
+                    return HandleBjrvInternal(bjrv.ReadArray<sbyte>());
+                
+                throw new NotSupportedException($"Embeddings of type {type.FullName} are not supported.");
+            }
+
+            object HandleBjrvInternal<T>(ReadOnlySpan<T> embedding) where T : unmanaged
+            {
+                var bufferSize = embedding.Length * (vectorOptions.SourceEmbeddingType) switch
+                {
+                    VectorEmbeddingType.Single => sizeof(float),
+                    _ => sizeof(byte)
+                };
+                
+                var memScope = allocator.Allocate(bufferSize, out Memory<byte> mem);
+                
+                MemoryMarshal.Cast<T, byte>(embedding).CopyTo(mem.Span);
+                
                 return GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, bufferSize);
             }
 
