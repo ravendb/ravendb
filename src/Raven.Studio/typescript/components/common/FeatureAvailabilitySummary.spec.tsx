@@ -1,9 +1,15 @@
 import { composeStories } from "@storybook/react";
 import * as stories from "./FeatureAvailabilitySummary.stories";
 import { rtlRender } from "test/rtlTestUtils";
-import React from "react";
+
+type LicenseType = Raven.Server.Commercial.LicenseType;
 
 const { FeatureAvailabilitySummaryStory } = composeStories(stories);
+
+const selectors = {
+    developerLicenseLink: /Developer license/,
+    areYouDevelopingText: /Are you developing?/,
+};
 
 describe("FeatureAvailabilitySummary", () => {
     it("can render", () => {
@@ -12,45 +18,35 @@ describe("FeatureAvailabilitySummary", () => {
         expect(screen.getByText(/See which plans offer this and more exciting features/)).toBeInTheDocument();
     });
 
-    it("can show 'Upgrade Instance' for cloud license", () => {
+    it("can show 'Cloud pricing' for cloud license", () => {
         const { screen } = rtlRender(<FeatureAvailabilitySummaryStory isCloud />);
 
-        expect(screen.getByText(/Upgrade Instance/)).toBeInTheDocument();
         expect(screen.getByRole("link", { name: /Cloud pricing/ })).toBeInTheDocument();
     });
 
-    it("can show 'Upgrade License' for non-cloud license", () => {
+    it("can show 'See full comparison' for non-cloud license", () => {
         const { screen } = rtlRender(<FeatureAvailabilitySummaryStory />);
 
-        expect(screen.getByText(/Upgrade License/)).toBeInTheDocument();
-        expect(screen.getByRole("link", { name: /Pricing plans/ })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: /See full comparison/ })).toBeInTheDocument();
     });
 
-    it("shows 'Are you developing?' for Community license", () => {
-        const { screen } = rtlRender(<FeatureAvailabilitySummaryStory licenseType="Community" />);
+    it.each(["None", "Community", "Essential", "Professional"] satisfies LicenseType[])(
+        "can show 'Are you developing?' for %s license",
+        (licenseType) => {
+            const { screen } = rtlRender(<FeatureAvailabilitySummaryStory licenseType={licenseType} />);
 
-        expect(screen.queryByText(/Are you developing?/)).toBeInTheDocument();
-        expect(screen.queryByRole("link", { name: /Developer license/ })).toBeInTheDocument();
-    });
+            expect(screen.queryByText(selectors.areYouDevelopingText)).toBeInTheDocument();
+            expect(screen.queryByRole("link", { name: selectors.developerLicenseLink })).toBeInTheDocument();
+        }
+    );
 
-    it("shows 'Are you developing?' for Professional license", () => {
-        const { screen } = rtlRender(<FeatureAvailabilitySummaryStory licenseType="Professional" />);
+    it.each(["Developer", "Enterprise"] satisfies LicenseType[])(
+        "can hide 'Are you developing?' for %s license",
+        (licenseType) => {
+            const { screen } = rtlRender(<FeatureAvailabilitySummaryStory licenseType={licenseType} />);
 
-        expect(screen.queryByText(/Are you developing?/)).toBeInTheDocument();
-        expect(screen.queryByRole("link", { name: /Developer license/ })).toBeInTheDocument();
-    });
-
-    it("doesn't show 'Are you developing?' for Developer license", () => {
-        const { screen } = rtlRender(<FeatureAvailabilitySummaryStory licenseType="Developer" />);
-
-        expect(screen.queryByText(/Are you developing?/)).not.toBeInTheDocument();
-        expect(screen.queryByRole("link", { name: /Developer license/ })).not.toBeInTheDocument();
-    });
-
-    it("doesn't show 'Are you developing?' for Enterprise license", () => {
-        const { screen } = rtlRender(<FeatureAvailabilitySummaryStory licenseType="Enterprise" />);
-
-        expect(screen.queryByText(/Are you developing?/)).not.toBeInTheDocument();
-        expect(screen.queryByRole("link", { name: /Developer license/ })).not.toBeInTheDocument();
-    });
+            expect(screen.queryByText(selectors.areYouDevelopingText)).not.toBeInTheDocument();
+            expect(screen.queryByRole("link", { name: selectors.developerLicenseLink })).not.toBeInTheDocument();
+        }
+    );
 });
