@@ -509,7 +509,6 @@ namespace Sparrow.Server
             var segment = _segment;
             if (segment == null)
                 return;
-
             _segment = null;
             GC.SuppressFinalize(this);
 
