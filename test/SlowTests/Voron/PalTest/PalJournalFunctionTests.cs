@@ -82,7 +82,7 @@ namespace SlowTests.Voron.PalTest
             Marshal.Copy((IntPtr)buffer, expected, 0, 4096);
             try
             {
-                Pal.jounral_entry entry = new() { Base = buffer, NumberOf4Kbs = 1 };
+                Pal.journal_entry entry = new() { Base = buffer, NumberOf4Kbs = 1 };
                 ret = Pal.rvn_write_journal(handle, &entry, 1, 0, out errno);
                 if (ret != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(ret, errno, "");
@@ -119,7 +119,7 @@ namespace SlowTests.Voron.PalTest
             Marshal.Copy((IntPtr)buffer, expected, 4096, 4096);
             try
             {
-                Pal.jounral_entry entry = new() { Base = buffer, NumberOf4Kbs = 1 };
+                Pal.journal_entry entry = new() { Base = buffer, NumberOf4Kbs = 1 };
                 ret = Pal.rvn_write_journal(handle, &entry, 1, 4096, out errno);
                 if (ret != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(ret, errno, "");
@@ -158,7 +158,7 @@ namespace SlowTests.Voron.PalTest
             Marshal.Copy((IntPtr)buffer, expected, offset, length);
             try
             {
-                Pal.jounral_entry entry = new() { Base = buffer, NumberOf4Kbs = length/4096 };
+                Pal.journal_entry entry = new() { Base = buffer, NumberOf4Kbs = length/4096 };
                 ret = Pal.rvn_write_journal(handle, &entry, 1, offset, out errno);
                 if (ret != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(ret, errno, "");
@@ -211,7 +211,7 @@ namespace SlowTests.Voron.PalTest
             {
                 
                 
-                Pal.jounral_entry entry = new() { Base = buffer, NumberOf4Kbs = fileSize/4096 };
+                Pal.journal_entry entry = new() { Base = buffer, NumberOf4Kbs = fileSize/4096 };
                 ret = Pal.rvn_write_journal(handle, &entry, 1, 0, out errno);
                 if (ret != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(ret, errno, "");

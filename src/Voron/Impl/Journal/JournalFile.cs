@@ -8,16 +8,10 @@ using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.ExceptionServices;
-using Sparrow.Logging;
-using System.Threading;
-using Sparrow.Collections;
-using Sparrow.Server;
 using Sparrow.Server.Platform;
-using Voron.Util;
+using Sparrow.Threading;
 using Constants = Voron.Global.Constants;
-using Voron.Logging;
 
 namespace Voron.Impl.Journal
 {
@@ -25,30 +19,30 @@ namespace Voron.Impl.Journal
     {
         public long LastTransactionId;
 
-        public readonly Dictionary<StorageEnvironment, long> RegisteredEnvironments = new();
+        public readonly Dictionary<StorageEnvironment, JournalFile> RegisteredEnvironments = new();
 
         private List<TransactionHeader> _transactionHeaders = new();
-        private JournalWriter _journalWriter = journalWriter;
 
         public override string ToString()
         {
             return $"Number: {Number}";
         }
 
-        internal long GetWritePosIn4KbPosition(EnvironmentStateRecord record) => record.Journal.Current == this ? record.Journal.Last4KWritePosition : 0;
+        internal long GetWritePosIn4KbPosition(EnvironmentStateRecord record) => record.Journal.Number == Number ? record.Journal.Last4KWritePosition : 0;
 
         public long Number { get; } = journalNumber;
 
+        public SingleUseFlag DoneWriting;
 
-        public long GetAvailable4Kbs(EnvironmentStateRecord record) => (_journalWriter?.NumberOfAllocated4Kb - GetWritePosIn4KbPosition(record)) ?? 0;
+        public long GetAvailable4Kbs(EnvironmentStateRecord record) => (journalWriter?.NumberOfAllocated4Kb - GetWritePosIn4KbPosition(record)) ?? 0;
 
-        public Size JournalSize => new Size(_journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes);
+        public Size JournalSize => new Size(journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes);
 
-        internal JournalWriter JournalWriter => _journalWriter;
+        internal JournalWriter JournalWriter => journalWriter;
 
         public void Release()
         {
-            if (_journalWriter?.Release() != true)
+            if (journalWriter?.Release() != true)
                 return;
 
             Dispose();
@@ -56,13 +50,13 @@ namespace Voron.Impl.Journal
 
         public void AddRef()
         {
-            _journalWriter?.AddRef();
+            journalWriter?.AddRef();
         }
 
         public void Dispose()
         {
             _transactionHeaders = null;
-            _journalWriter = null;
+            journalWriter = null;
         }
 
         public TransactionHeader GetLastReadTxHeader(long maxTransactionId)
@@ -98,7 +92,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// Write a buffer of transactions (from lazy, usually) to the file
         /// </summary>
-        public long Write(long posBy4Kb, Span<Pal.jounral_entry> entries)
+        public long Write(long posBy4Kb, Span<Pal.journal_entry> entries)
         {
             long totalNumberOf4Kbs = 0;
             for (int i = 0; i < entries.Length; i++)
@@ -106,7 +100,6 @@ namespace Voron.Impl.Journal
                 var readTxHeader = (TransactionHeader*)entries[i].Base;
                 totalNumberOf4Kbs += entries[i].NumberOf4Kbs;
                 Debug.Assert(readTxHeader->HeaderMarker == Constants.TransactionHeaderMarker);
-                _transactionHeaders.Add(*readTxHeader);
             }
 
             JournalWriter.Write(posBy4Kb, entries, totalNumberOf4Kbs);
@@ -117,17 +110,17 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// write transaction's raw page data into journal
         /// </summary>
-        public void Write(LowLevelTransaction tx, Span<Pal.jounral_entry> pages)
+        public long Write(LowLevelTransaction tx, Span<Pal.journal_entry> pages)
         {
-            var cur4KbPos = tx.CurrentStateRecord.Journal.Current == this ? tx.CurrentStateRecord.Journal.Last4KWritePosition : 0;
+            var cur4KbPos = tx.CurrentStateRecord.Journal.Number == Number ? tx.CurrentStateRecord.Journal.Last4KWritePosition : 0;
 
             Debug.Assert(pages.IsEmpty is false && pages[0].NumberOf4Kbs > 0, "pages.IsEmpty is false && pages[0].NumberOf4Kbs > 0");
 
             try
             {
                 long totalSizeIn4Kbs = Write(cur4KbPos, pages);
-                tx.UpdateJournal(this, cur4KbPos + totalSizeIn4Kbs);
                 LastTransactionId = tx.Id;
+                return cur4KbPos + totalSizeIn4Kbs;
             }
             catch (Exception e)
             {
@@ -138,7 +131,7 @@ namespace Voron.Impl.Journal
 
         public void InitFrom(StorageEnvironment storageEnvironment, JournalReader journalReader, List<TransactionHeader> transactionHeaders)
         {
-            storageEnvironment.UpdateJournal(this, journalReader.Next4Kb);
+            storageEnvironment.UpdateJournal(Number, journalReader.Next4Kb);
             _transactionHeaders = [.. transactionHeaders];
         }
 
@@ -146,7 +139,7 @@ namespace Voron.Impl.Journal
         {
             set
             {
-                var writer = _journalWriter;
+                var writer = journalWriter;
 
                 if (writer != null)
                     writer.ShouldDelete = value;
@@ -168,6 +161,11 @@ namespace Voron.Impl.Journal
 
                 return false;
             }
+        }
+
+        public void SetTransactionFrom(Pal.journal_entry journalEntry)
+        {
+            _transactionHeaders.Add(*(TransactionHeader*)journalEntry.Base);
         }
     }
 }

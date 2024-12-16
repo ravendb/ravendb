@@ -50,13 +50,13 @@ namespace Voron.Impl.Journal
         private readonly StorageEnvironment _env;
         private readonly ConcurrentQueue<PendingJournalStateRecord> _mergedCommitsQueue = new();
         private readonly CancellationTokenSource _mergedCommitsTcs = new();
-        private readonly List<Pal.jounral_entry> _mergedEntriesBuffer = new();
+        private readonly List<Pal.journal_entry> _mergedEntriesBuffer = new();
         private readonly List<PendingJournalStateRecord> _mergedJournalRecordsBuffer = new();
 
         private record PendingJournalStateRecord(
             LowLevelTransaction Transaction,
             TaskCompletionSource Tcs,
-            Pal.jounral_entry Entry);
+            Pal.journal_entry Entry);
 
         private long _currentJournalFileSize;
         private DateTime _lastFile;
@@ -149,8 +149,9 @@ namespace Voron.Impl.Journal
             _lastFile = now;
 
             var journal = new JournalFile(_env, journalPager, _journalIndex);
+            journal.DoneWriting = new SingleUseFlag();
             journal.AddRef(); // one reference added by a creator - write ahead log
-            journal.RegisteredEnvironments[_env] = _journalIndex;
+            journal.RegisteredEnvironments[_env] = journal;
             _files = _files.Append(journal);
 
             _headerAccessor.Modify((ref FileHeader header) =>
@@ -258,6 +259,7 @@ namespace Voron.Impl.Journal
                         {
                             var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
                             var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
+                            jrnlFile.DoneWriting = new SingleUseFlag();
                             jrnlFile.InitFrom(_env, journalReader, transactionHeaders);
                             jrnlFile.AddRef(); // creator reference - write ahead log
 
@@ -380,7 +382,7 @@ namespace Voron.Impl.Journal
                     }
                     else
                     {
-                        journalFile.RegisteredEnvironments[_env] = journalFile.Number;
+                        journalFile.RegisteredEnvironments[_env] = journalFile;
                         _files = _files.Append(journalFile);
                     }
                 }
@@ -391,7 +393,7 @@ namespace Voron.Impl.Journal
                 {
                     // last flushed journal might not exist because it could be already deleted and the only journal we have is empty
                     TransactionHeader lastFlushedTxHeader = instanceOfLastFlushedJournal.GetLastReadTxHeader(lastFlushedTxId);
-                    _journalApplicator.SetLastFlushed(new JournalApplicator.LastFlushState(lastFlushedTxId, lastFlushedJournal,
+                    _journalApplicator.SetLastFlushed(new JournalApplicator.LastFlushState(lastFlushedTxId, 
                             instanceOfLastFlushedJournal, toDelete, lastFlushedTxHeader.TransactionId, 
                             lastFlushedTxHeader.Root, lastFlushedTxHeader.LastPageNumber));
                 }
@@ -445,7 +447,7 @@ namespace Voron.Impl.Journal
                     {
                         Memory.Set(ptr, 0, fourKb);
 
-                        Span<Pal.jounral_entry> entries = stackalloc Pal.jounral_entry[1];
+                        Span<Pal.journal_entry> entries = stackalloc Pal.journal_entry[1];
                         entries[0].NumberOf4Kbs = 1;
                         entries[0].Base = ptr;
                         for (long pos = CurrentFile.GetWritePosIn4KbPosition(_env.CurrentStateRecord); pos < CurrentFile.JournalWriter.NumberOfAllocated4Kb; pos++)
@@ -521,7 +523,6 @@ namespace Voron.Impl.Journal
             public int FlushInProgress;
 
             public sealed record LastFlushState(long TransactionId, 
-                long JournalId, 
                 JournalFile Journal, 
                 List<JournalFile> JournalsToDelete,
                 long FlushedTransactionId,
@@ -529,10 +530,11 @@ namespace Voron.Impl.Journal
                 long LastPageNumber)
             {
                 public readonly SingleUseFlag DoneFlag = new();
-                
+
+                public long JournalId => Journal?.Number ?? -1;
                 public bool IsValid => Journal != null && JournalsToDelete != null;
 
-                public static LastFlushState Empty => new(0, 0, null, null, -1, default, -1);
+                public static LastFlushState Empty => new(0, null, null, -1, default, -1);
             }
 
             private LastFlushState _lastFlushed = LastFlushState.Empty;
@@ -783,7 +785,7 @@ namespace Voron.Impl.Journal
                 if (edi != null)
                     edi.Throw();
                 else if (applied && executedSuccessfully == false)
-                    throw new InvalidOperationException($"Journal state was not applied successfully after the flush (waited - {sp.Elapsed}, last flushed tx: id - {record.TransactionId}, written to journal - {record.WrittenToJournalNumber})");
+                    throw new InvalidOperationException($"Journal state was not applied successfully after the flush (waited - {sp.Elapsed}, last flushed tx: id - {record.TransactionId}, written to journal - {record.Journal.Number})");
             }
 
             private bool WaitForJournalStateToBeUpdated(CancellationToken token, TransactionPersistentContext transactionPersistentContext,
@@ -865,19 +867,35 @@ namespace Voron.Impl.Journal
             {
                 _forTestingPurposes?.OnUpdateJournalStateUnderWriteTransactionLock?.Invoke();
 
-                JournalFile journalFile = _waj._files.FirstOrDefault(x => x.Number == flushedRecord.WrittenToJournalNumber);
+                JournalFile journalFile = _waj._files.FirstOrDefault(x => x.Number == flushedRecord.Journal.Number);
                 if (journalFile is null)
                 {
-                    throw new InvalidOperationException($"Unable to find journal file {flushedRecord.WrittenToJournalNumber} in {_waj._env.DataPager.FileName}");
+                    throw new InvalidOperationException($"Unable to find journal file {flushedRecord.Journal.Number} in {_waj._env.DataPager.FileName}");
                 }
 
                 var unusedJournals = new List<JournalFile>();
-                _waj._files = _waj._files.RemoveWhile(x =>
+                if (_waj._env.HasAdditionalTransactionsToFlush)
                 {
-                    if (x.Number < flushedRecord.WrittenToJournalNumber)
-                        return true;
-                    return x.Number == flushedRecord.WrittenToJournalNumber && x.GetAvailable4Kbs(flushedRecord) == 0;
-                }, unusedJournals);
+                    _waj._files = _waj._files.RemoveWhile(x =>
+                    {
+                        if (x.Number < flushedRecord.Journal.Number)
+                            return true;
+                        return x.Number == flushedRecord.Journal.Number && x.GetAvailable4Kbs(flushedRecord) == 0;
+                    }, unusedJournals);
+                }
+                else
+                {
+                    // this means that there are no additional transactions to flush, 
+                    // and since we are under the write lock, there are no new transactions 
+                    // created, so we can skip the latest journal state, since it may have
+                    // been updated using a branch env without creating a real transaction
+                    // on the root, or the root may have completed writing to the journal
+                    // without updating the branch. So we rely on the done writing flag
+                    // to tell us that the file is no longer meant for writing and since
+                    // there are no pending transactions to flush, we can safely delete
+                    // all journals that are done writing
+                    _waj._files = _waj._files.RemoveWhile(x => x.DoneWriting.IsRaised(), unusedJournals);
+                }
 
                 if (_waj._logger.IsDebugEnabled)
                 {
@@ -891,10 +909,8 @@ namespace Voron.Impl.Journal
                 }
 
                 var txHeader = journalFile.GetLastReadTxHeader(flushedRecord.TransactionId);
-
                 SetLastFlushed(new LastFlushState(
                     flushedRecord.TransactionId,
-                    flushedRecord.WrittenToJournalNumber,
                     journalFile,
                     _journalsToDelete.Values.ToList(),
                     txHeader.TransactionId,
@@ -1717,18 +1733,26 @@ namespace Voron.Impl.Journal
 
             foreach (var rec in _mergedJournalRecordsBuffer)
             {
-                rec.Transaction.WrittenToJournalNumber = rec.Transaction.Environment.Journal.EnsureRegistered(CurrentFile);
+                JournalFile journalFile = rec.Transaction.Environment.Journal.EnsureRegistered(CurrentFile);
+                rec.Transaction.WrittenToJournalNumber = journalFile.Number;
+                journalFile.SetTransactionFrom(rec.Entry);
             }
             
             var start = Stopwatch.GetTimestamp();
             try
             {
-                CurrentFile.Write(tx, entries);
+                long positionIn4Kbs = CurrentFile.Write(tx, entries);
+                // We must update the _root_ transaction as well here, since if we have a batch
+                // that does not include the root env, then we have to update the position of 
+                // the journal writer
+                tx.UpdateJournal(CurrentFile.Number, positionIn4Kbs);
 
                 var elapsed = Stopwatch.GetElapsedTime(start);
 
                 foreach (var rec in _mergedJournalRecordsBuffer)
                 {
+                    var llt = rec.Transaction;
+                    llt.UpdateJournal(llt.WrittenToJournalNumber, positionIn4Kbs);
                     rec.Tcs.TrySetResult();
                 }
 
@@ -1741,6 +1765,9 @@ namespace Voron.Impl.Journal
 
                 if (CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) == 0)
                 {
+                    // Note, if this is a root/branch situation, the same
+                    // flag is used by all instances of this journal file
+                    CurrentFile.DoneWriting.Raise();
                     CurrentFile = null;
                 }
             }
@@ -1766,45 +1793,51 @@ namespace Voron.Impl.Journal
         /// Across environments, this is only called from the _root_ environment, across all branches,
         /// so this is safe to use without worrying about concurrency
         /// </summary>
-        private long EnsureRegistered(JournalFile journalFile)
+        private JournalFile EnsureRegistered(JournalFile journalFile)
         {
-            ref var matchingJournalNumber = ref CollectionsMarshal.GetValueRefOrAddDefault(journalFile.RegisteredEnvironments, _env, out var exists);
+            ref var matchingJournal = ref CollectionsMarshal.GetValueRefOrAddDefault(journalFile.RegisteredEnvironments, _env, out var exists);
             if (exists)
-                return matchingJournalNumber;
+            {
+                return matchingJournal;
+            }
 
-            JournalWriter journalWriter;
             if (_env.Options.IsLinked(_journalIndex, journalFile.JournalWriter.FileName.FullPath, out var existingJournalFileName))
             {
                 // The file is already linked, so we can reuse the file link
-                matchingJournalNumber = _journalIndex;
-                journalWriter = _env.Options.CreateJournalWriterForBranchEnvironment(_journalIndex, existingJournalFileName, journalFile);
-                _files = _files.Append(new JournalFile(_env, journalWriter, _journalIndex));
-                return matchingJournalNumber;
+                matchingJournal = AddJournal(_journalIndex);
+                return matchingJournal;
             }
             
             long journalIndex = _journalIndex + 1;
 
             _env.Options.LinkFiles(journalIndex,journalFile.JournalWriter.FileName.FullPath, out existingJournalFileName);
-            journalWriter = _env.Options.CreateJournalWriterForBranchEnvironment(_journalIndex, existingJournalFileName, journalFile);
-            _files = _files.Append(new JournalFile(_env, journalWriter, _journalIndex));
-
+            matchingJournal = AddJournal(journalIndex);
 
             // we modify the in memory state _after_ we created the file, because we have to make sure that 
             // we have created it successfully first. 
             _journalIndex++;
-            matchingJournalNumber = journalIndex;
-            
+
             _headerAccessor.Modify((ref FileHeader header) =>
             {
                 header.Journal.CurrentJournal = journalIndex;
                 header.IncrementalBackup.LastCreatedJournal = journalIndex;
             });
             
-            return journalIndex;
+            return matchingJournal;
+
+            JournalFile AddJournal(long index)
+            {
+                var journalWriter = _env.Options.CreateJournalWriterForBranchEnvironment(index, existingJournalFileName, journalFile);
+                var journal = new JournalFile(_env, journalWriter, index);
+                journal.DoneWriting = journalFile.DoneWriting;
+                journal.AddRef();
+                _files = _files.Append(journal);
+                return journal;
+            }
         }
 
 
-        private Pal.jounral_entry PrepareToWriteToJournal(LowLevelTransaction tx, ref Pager.PagerTransactionState txState, out long numberOfUncompressedPages)
+        private Pal.journal_entry PrepareToWriteToJournal(LowLevelTransaction tx, ref Pager.PagerTransactionState txState, out long numberOfUncompressedPages)
         {
             var txPages = tx.GetTransactionPages();
             var numberOfPages = txPages.Count;
@@ -2026,7 +2059,7 @@ namespace Voron.Impl.Journal
 
             GC.KeepAlive(stateOfThePagerForPagesToBeCompressed);
             numberOfUncompressedPages = pagesCountIncludingAllOverflowPages;
-            return new Pal.jounral_entry
+            return new Pal.journal_entry
             {
                 Base = txHeaderPtr,
                 NumberOf4Kbs = entireBuffer4Kbs,

@@ -352,9 +352,9 @@ namespace Voron.Impl
             DataPagerState = dataPagerState;
         }
 
-        internal void UpdateJournal(JournalFile file, long last4KWrite)
+        internal void UpdateJournal(long journalNumber, long last4KWrite)
         {
-            _envRecord = _envRecord with { Journal = (file, last4KWrite) };
+            _envRecord = _envRecord with { Journal = (journalNumber, last4KWrite) };
         }
         
         internal void UpdateClientState(object state)
@@ -1064,7 +1064,7 @@ namespace Voron.Impl
             Debug.Assert(_asyncCommitNextTransaction.Committed == false, "_asyncCommitNextTransaction.Committed == false");
             // we need to update the state of the file position in the journal file, which happens in stage2 (async)
             // before we can actually commit the current transaction
-            _asyncCommitNextTransaction.UpdateJournal(CurrentStateRecord.Journal.Current, CurrentStateRecord.Journal.Last4KWritePosition);
+            _asyncCommitNextTransaction.UpdateJournal(CurrentStateRecord.Journal.Number, CurrentStateRecord.Journal.Last4KWritePosition);
             
             if (AsyncCommit.Result)
                 Environment.LastWorkTime = DateTime.UtcNow;

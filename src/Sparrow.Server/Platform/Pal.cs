@@ -286,7 +286,7 @@ namespace Sparrow.Server.Platform
             rvn_hard_link(byte* src, byte* dst, out Int32 errorCode);
 
         [StructLayout(LayoutKind.Sequential)]
-        public struct jounral_entry
+        public struct journal_entry
         {
             public void* Base;
             public Int64 NumberOf4Kbs;
@@ -295,7 +295,7 @@ namespace Sparrow.Server.Platform
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_write_journal(
             SafeJournalHandle handle,
-            jounral_entry* entries,
+            journal_entry* entries,
             Int64 countOfEntries,
             Int64 offset,
             out Int32 errorCode

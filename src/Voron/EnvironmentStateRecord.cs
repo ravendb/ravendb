@@ -12,10 +12,9 @@ public record EnvironmentStateRecord(
     Pager.State DataPagerState, 
     long TransactionId,
     ImmutableDictionary<long, PageFromScratchBuffer> ScratchPagesTable,
-    long WrittenToJournalNumber,
     TreeRootHeader Root,
     long NextPageNumber,
-    (JournalFile Current, long Last4KWritePosition) Journal,
+    (long Number, long Last4KWritePosition) Journal,
     object ClientState,
     List<long> SparsePageRanges);
 

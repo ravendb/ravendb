@@ -63,11 +63,11 @@ namespace Voron.Impl.Journal
             NumberOfAllocated4Kb = (int)(actualSize / (4 * Constants.Size.Kilobyte));
         }
 
-        public void Write(long posBy4Kb, Span<Pal.jounral_entry> entries, long totalNumberOf4Kbs)
+        public void Write(long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs)
         {
             Debug.Assert(_options.IoMetrics != null);
 
-            fixed (Pal.jounral_entry* pEntries = entries)
+            fixed (Pal.journal_entry* pEntries = entries)
             {
                 using var metrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite,
                     totalNumberOf4Kbs * 4L * Constants.Size.Kilobyte);

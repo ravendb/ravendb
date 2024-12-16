@@ -156,10 +156,9 @@ namespace Voron
                     dataPagerState,
                     0,
                     ImmutableDictionary<long, PageFromScratchBuffer>.Empty, 
-                    0,
                     default(TreeRootHeader), 
                     -1,
-                    (null, -1),
+                    (-1, -1),
                     null, 
                     null);
                 
@@ -1365,7 +1364,7 @@ namespace Voron
                     TransactionId = envStateRecord.TransactionId,
                     ScratchPagesTable = GetScratchTableSummary(envStateRecord.ScratchPagesTable),
                     NextPageNumber = envStateRecord.NextPageNumber,
-                    WrittenToJournalNumber = envStateRecord.WrittenToJournalNumber,
+                    WrittenToJournalNumber = envStateRecord.Journal.Number,
                     ClientStateType = envStateRecord.ClientState?.GetType().ToString()
                 },
                 TransactionsToFlush = _transactionsToFlush.ToList().Select(x =>
@@ -1377,7 +1376,7 @@ namespace Voron
                         TransactionId = record.TransactionId,
                         ScratchPagesTable = GetScratchTableSummary(record.ScratchPagesTable),
                         NextPageNumber = record.NextPageNumber,
-                        WrittenToJournalNumber = record.WrittenToJournalNumber,
+                        WrittenToJournalNumber = record.Journal.Number,
                         ClientStateType = record.ClientState?.GetType().ToString()
                     };
                 }).ToList(),
@@ -1654,6 +1653,7 @@ namespace Voron
         // We create a single thread-safe persistent dictionary locator with enough state to deal with almost any scenario.
         internal PersistentDictionaryLocator DictionaryLocator { get; } = new PersistentDictionaryLocator(1024);
         public bool IsFlushInProgress => Journal.Applicator.FlushInProgress != 0;
+        public bool HasAdditionalTransactionsToFlush => _transactionsToFlush.IsEmpty is false;
 
         public PersistentDictionary CreateEncodingDictionary(Page dictionaryPage)
         {
@@ -1679,7 +1679,6 @@ namespace Voron
                 // we may want to update the state of the transaction (scratch table, data pager state, etc)
                 // without incrementing the transaction id, since we didn't commit a transaction to the journal
                 TransactionId = tx.WrittenToJournalNumber == -1 ? currentStateRecord.TransactionId-1 : currentStateRecord.TransactionId,
-                WrittenToJournalNumber = tx.WrittenToJournalNumber == -1 ? currentStateRecord.WrittenToJournalNumber : tx.WrittenToJournalNumber,
                 ScratchPagesTable = tx.ModifiedPagesInTransaction,
                 NextPageNumber = tx.GetNextPageNumber(),
                 Root = tx.RootObjects.ReadHeader(),
@@ -1748,11 +1747,11 @@ namespace Voron
             }
         }
 
-        internal void UpdateJournal(JournalFile file, long last4KWrite)
+        internal void UpdateJournal(long jounalNumber, long last4KWrite)
         {
             // this should only happen during recovery, never during active operations
             Debug.Assert(ActiveTransactions.AllTransactions.Count == 0 , "ActiveTransactions.AllTransactions.Count == 0");
-            _currentStateRecord = _currentStateRecord with { Journal = (file, last4KWrite) };
+            _currentStateRecord = _currentStateRecord with { Journal = (jounalNumber, last4KWrite) };
         }
 
         internal void UpdateDataPagerState(Pager.State dataPagerState)
