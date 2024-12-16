@@ -1,6 +1,10 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import spatialOptions = require("models/database/index/spatialOptions");
 import jsonUtil = require("common/jsonUtil");
+import eventsCollector = require("common/eventsCollector");
+import models = require("models/database/settings/databaseSettingsModels");
+import getDatabaseSettingsCommand from "commands/database/settings/getDatabaseSettingsCommand";
+import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 
 function labelMatcher<T>(labels: Array<valueAndLabelItem<T, string>>): (arg: T) => string {
     return(arg) => labels.find(x => x.value === arg).label;
@@ -13,7 +17,12 @@ function yesNoLabelProvider(arg: boolean) {
 type indexingTypes = Raven.Client.Documents.Indexes.FieldIndexing | "Search (implied)";
 
 type preDefinedAnalyzerNameForUI = "Keyword Analyzer" | "LowerCase Keyword Analyzer" | "LowerCase Whitespace Analyzer" |
-                                   "NGram Analyzer" | "Simple Analyzer" | "Standard Analyzer" | "Stop Analyzer" | "Whitespace Analyzer";
+                                   "NGram Analyzer" | "Simple Analyzer" | "Raven Standard Analyzer" | "Stop Analyzer" | "Whitespace Analyzer";
+
+type indexingDatabaseSettings =
+    "Indexing.Analyzers.Default"
+    | "Indexing.Analyzers.Exact.Default"
+    | "Indexing.Analyzers.Search.Default"
 
 interface analyzerName {
     studioName: preDefinedAnalyzerNameForUI | string;
@@ -33,7 +42,7 @@ class indexFieldOptions {
         { studioName: "Simple Analyzer", serverName: "SimpleAnalyzer" },
         
         // default analyzer for Indexing.Search
-        { studioName: "Standard Analyzer", serverName: "StandardAnalyzer" },
+        { studioName: "Raven Standard Analyzer", serverName: "RavenStandardAnalyzer" },
         
         { studioName: "Stop Analyzer", serverName: "StopAnalyzer" },
         { studioName: "Whitespace Analyzer", serverName:"WhitespaceAnalyzer" }
@@ -45,8 +54,35 @@ class indexFieldOptions {
             .filter(x => x !== "LowerCase Keyword Analyzer");
     })
 
+    indexingAnalyzerSettings = ko.observable<Record<indexingDatabaseSettings[number], models.serverWideOnlyEntry | models.databaseEntry<string | number>>>({});
+
     static readonly DefaultFieldOptions = "__all_fields";
     
+    static readonly indexingAnalyzersDefaultsDatabaseSettingsKeys = ["Indexing.Analyzers.Default", "Indexing.Analyzers.Exact.Default", "Indexing.Analyzers.Search.Default"] as const;
+
+    private fetchDatabaseSettings() {
+        const db = activeDatabaseTracker.default.database();
+        eventsCollector.default.reportEvent("database-settings", "get");
+
+        return new getDatabaseSettingsCommand(db)
+            .execute()
+            .done((result: Raven.Server.Config.SettingsResult) => {
+                const settingsEntries = result.Settings.map(x => {
+                    const rawEntry = x as Raven.Server.Config.ConfigurationEntryDatabaseValue;
+                    return models.settingsEntry.getEntry(rawEntry);
+                });
+
+                const indexingAnalyzerSettings: Record<indexingDatabaseSettings[number], models.serverWideOnlyEntry | models.databaseEntry<string | number>> = Object.fromEntries(
+                    indexFieldOptions.indexingAnalyzersDefaultsDatabaseSettingsKeys.map(key => [
+                        key,
+                        settingsEntries.find(entry => entry.keyName() === key),
+                    ]),
+                );
+
+                this.indexingAnalyzerSettings(indexingAnalyzerSettings);
+            });
+    }
+
     static readonly TermVectors: Array<valueAndLabelItem<Raven.Client.Documents.Indexes.FieldTermVector, string>> = [{
             label: "No",
             value: "No"
@@ -60,7 +96,7 @@ class indexFieldOptions {
             label: "With positions and offsets",
             value: "WithPositionsAndOffsets"
         }, {
-            label: "Yes", 
+            label: "Yes",
             value: "Yes"
         }
     ];
@@ -212,6 +248,7 @@ class indexFieldOptions {
         
         _.bindAll(this, "toggleAdvancedOptions");
 
+        this.fetchDatabaseSettings();
         this.initObservables();
         this.initValidation();
 
@@ -350,7 +387,7 @@ class indexFieldOptions {
         });
         
         this.indexingDropdownOptions = ko.pureComputed(() => {
-           return this.analyzerDefinedWithoutIndexing() ? indexFieldOptions.IndexingWithSearchImplied : indexFieldOptions.Indexing; 
+           return this.analyzerDefinedWithoutIndexing() ? indexFieldOptions.IndexingWithSearchImplied : indexFieldOptions.Indexing;
         });
     }
 
@@ -403,6 +440,12 @@ class indexFieldOptions {
         const thisIndexing = this.indexing();
         const parentIndexing = this.parent() ? this.parent().indexing() : null;
 
+        const indexingAnalyzerSetting = this.indexingAnalyzerSettings()[`Indexing.Analyzers.${thisIndexing === "Default" ? `${thisIndexing}` : `${thisIndexing}.Default`}`];
+
+        const hasDefaultValueChangedInDbSettings = indexingAnalyzerSetting?.effectiveValue() !== indexingAnalyzerSetting?.serverOrDefaultValue();
+        const hasNewDbValueIncludeInAnalyzersNameDictionary = this.analyzersNamesDictionary().some((analyzerItem) => analyzerItem.serverName === indexingAnalyzerSetting?.effectiveValue());
+
+
         if (thisIndexing === "No" ||
            (!thisIndexing && parentIndexing === "No")) {
             this.analyzer(null);
@@ -413,16 +456,30 @@ class indexFieldOptions {
         
         if (thisIndexing === "Exact" ||
            (!thisIndexing && parentIndexing === "Exact")) {
-            this.analyzer(null);
-            placeHolder = "Keyword Analyzer";
-            this.disabledAnalyzerText("KeywordAnalyzer is used when selecting Indexing.Exact. " + helpMsg);
-        } 
-        
+            if (hasDefaultValueChangedInDbSettings && hasNewDbValueIncludeInAnalyzersNameDictionary) {
+                const studioName = this.analyzersNamesDictionary().find((item) => item.serverName === indexingAnalyzerSetting.effectiveValue()).studioName;
+                this.analyzer(studioName);
+                placeHolder = studioName;
+                this.disabledAnalyzerText(`${studioName} is used when selecting Indexing.Exact. ` + helpMsg);
+            } else {
+                this.analyzer(null);
+                placeHolder = "Keyword Analyzer";
+                this.disabledAnalyzerText("KeywordAnalyzer is used when selecting Indexing.Exact. " + helpMsg);
+            }
+        }
+
         if (thisIndexing === "Default" ||
            (!thisIndexing && (parentIndexing === "Default" || !parentIndexing))) {
-            this.analyzer(null);
-            placeHolder = "LowerCase Keyword Analyzer";
-            this.disabledAnalyzerText("LowerCaseKeywordAnalyzer is used when selecting Indexing.Default. " + helpMsg);
+            if (hasDefaultValueChangedInDbSettings && hasNewDbValueIncludeInAnalyzersNameDictionary) {
+                const studioName = this.analyzersNamesDictionary().find((item) => item.serverName === indexingAnalyzerSetting.effectiveValue()).studioName;
+                placeHolder = studioName;
+                this.analyzer(studioName);
+                this.disabledAnalyzerText(`${studioName} is used when selecting Indexing.Default. ` + helpMsg);
+            } else {
+                this.analyzer(null);
+                placeHolder = "LowerCase Keyword Analyzer";
+                this.disabledAnalyzerText("LowerCaseKeywordAnalyzer is used when selecting Indexing.Default. " + helpMsg);
+            }
         }
 
         if (thisIndexing === "Search (implied)") {
@@ -430,12 +487,24 @@ class indexFieldOptions {
         }
 
         if (!thisIndexing && parentIndexing === "Search") {
-            this.analyzer(null);
-            placeHolder = this.parent().analyzer() || "Standard Analyzer";
+            if (hasDefaultValueChangedInDbSettings && hasNewDbValueIncludeInAnalyzersNameDictionary) {
+                const studioName = this.analyzersNamesDictionary().find((item) => item.serverName === indexingAnalyzerSetting.effectiveValue()).studioName;
+                this.analyzer(studioName);
+                placeHolder = studioName;
+            } else {
+                this.analyzer(null);
+                placeHolder = this.parent().analyzer() || "Raven Standard Analyzer";
+            }
         }
 
         if (thisIndexing === "Search") {
-            placeHolder = "Standard Analyzer";
+            if (hasDefaultValueChangedInDbSettings && hasNewDbValueIncludeInAnalyzersNameDictionary) {
+                const studioName = this.analyzersNamesDictionary().find((item) => item.serverName === indexingAnalyzerSetting.effectiveValue()).studioName;
+                this.analyzer(studioName);
+                placeHolder = studioName;
+            } else {
+                placeHolder = "Raven Standard Analyzer";
+            }
         }
         
         // for issue RavenDB-12607
