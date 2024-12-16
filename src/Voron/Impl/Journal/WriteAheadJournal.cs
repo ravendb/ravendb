@@ -919,7 +919,9 @@ namespace Voron.Impl.Journal
 
 
                 if (_waj._files.Count == 0)
-                    _waj.CurrentFile = null;
+                {
+                    _waj.CurrentFileIsDone();
+                }
 
                 var scratchBufferPool = _waj._env.ScratchBufferPool;
                 if (scratchBufferPool == null)
@@ -1569,7 +1571,7 @@ namespace Voron.Impl.Journal
                     throw new InvalidOperationException("Cannot delete current journal because it hasn't synced everything up to the last write transaction");
 
                 _waj._files = _waj._files.RemoveFront(1);
-                _waj.CurrentFile = null;
+                _waj.CurrentFileIsDone();
 
                 _waj._headerAccessor.Modify((ref FileHeader header) =>
                 {
@@ -1590,6 +1592,14 @@ namespace Voron.Impl.Journal
                 current.ShouldDelete = true;
                 current.Release();
             }
+        }
+
+        private void CurrentFileIsDone()
+        {
+            // Note, if this is a root/branch situation, the same
+            // flag is used by all instances of this journal file
+            CurrentFile?.DoneWriting.Raise();
+            CurrentFile = null;
         }
 
         public (long NumberOfUncompressedPages, long NumberOf4Kbs) WriteToJournal(LowLevelTransaction tx)
@@ -1686,7 +1696,7 @@ namespace Voron.Impl.Journal
                         if (CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) < requiredSizeIn4Kbs + cur.Entry.NumberOf4Kbs)
                         {
                             FlushBuffersToFile(tx, ref requiredSizeIn4Kbs);
-                            CurrentFile = null;
+                            CurrentFileIsDone();
                         }
                     }
                     // there is no file available, so we want to buffer as much as possible, but not cross
@@ -1694,7 +1704,7 @@ namespace Voron.Impl.Journal
                     else if (requiredSizeIn4Kbs + cur.Entry.NumberOf4Kbs >= _env.Options.MaxLogFileSize)
                     {
                         FlushBuffersToFile(tx, ref requiredSizeIn4Kbs);
-                        CurrentFile = null;
+                        CurrentFileIsDone();
                     }
 
                     requiredSizeIn4Kbs += cur.Entry.NumberOf4Kbs;
@@ -1724,6 +1734,8 @@ namespace Voron.Impl.Journal
             if (CurrentFile == null ||
                 CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) < requiredSizeIn4Kbs)
             {
+                CurrentFileIsDone();
+
                 CurrentFile = NextFile(requiredSizeIn4Kbs);
                 if (_logger.IsDebugEnabled)
                     _logger.Debug($"New journal file created {CurrentFile.Number:D19} with size {CurrentFile.JournalSize}");
@@ -1765,10 +1777,7 @@ namespace Voron.Impl.Journal
 
                 if (CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) == 0)
                 {
-                    // Note, if this is a root/branch situation, the same
-                    // flag is used by all instances of this journal file
-                    CurrentFile.DoneWriting.Raise();
-                    CurrentFile = null;
+                    CurrentFileIsDone();
                 }
             }
             catch (Exception e)
