@@ -38,7 +38,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
 #                "$($repo):ubuntu-latest",
 #                "$($repo):ubuntu-latest-lts",
                 "$($repo):7.0-ubuntu-latest",
-                "$($repo):$($version)-ubuntu.22.04-x64"
+                "$($repo):$($version)-ubuntu.24.04-x64"
             )
             break;
         }
@@ -47,7 +47,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
 #                "$($repo):ubuntu-arm32v7-latest",
 #                "$($repo):ubuntu-arm32v7-latest-lts",
                 "$($repo):7.0-ubuntu-arm32v7-latest",
-                "$($repo):$($version)-ubuntu.22.04-arm32v7"
+                "$($repo):$($version)-ubuntu.24.04-arm32v7"
             )
             break;
         }
@@ -56,7 +56,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
 #                "$($repo):ubuntu-arm64v8-latest",
 #                "$($repo):ubuntu-arm64v8-latest-lts",
                 "$($repo):7.0-ubuntu-arm64v8-latest",
-                "$($repo):$($version)-ubuntu.22.04-arm64v8"
+                "$($repo):$($version)-ubuntu.24.04-arm64v8"
                 )
                 break;
         }
