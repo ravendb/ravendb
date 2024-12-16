@@ -263,9 +263,9 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             SourceEmbeddingType = Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType.Text,
             DestinationEmbeddingType = Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType.Single
         };
-        using var v1 = GenerateEmbeddings.FromText(vecOpt, "Cat has brown eyes.");
-        using var v2 = GenerateEmbeddings.FromText(vecOpt, "Apple usually is red.");
-        using var vQ = GenerateEmbeddings.FromText(vecOpt, "animal");
+        using var v1 = GenerateEmbeddings.FromText(Allocator, vecOpt, "Cat has brown eyes.");
+        using var v2 = GenerateEmbeddings.FromText(Allocator, vecOpt, "Apple usually is red.");
+        using var vQ = GenerateEmbeddings.FromText(Allocator, vecOpt, "animal");
 
         using (var wTx = Env.WriteTransaction())
         {

@@ -280,6 +280,7 @@ namespace Raven.Server.Documents.Indexes
         private bool _alreadyNotifiedAboutIncludingDocumentInOutput;
 
         public bool IsTestRun => TestRun != null;
+        public bool IsOnBeforeExecuteIndexing { get; private set; }
 
         public TestIndexRun TestRun;
         
@@ -1610,6 +1611,7 @@ namespace Raven.Server.Documents.Indexes
                         try
                         {
                             AddIndexingPerformance(onBeforeExecutionStats);
+                            IsOnBeforeExecuteIndexing = true;
                             IndexPersistence.OnBeforeExecuteIndexing(onBeforeExecutionStats, _indexingProcessCancellationTokenSource.Token);
                         }
                         catch (OperationCanceledException)
@@ -1618,6 +1620,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                         finally
                         {
+                            IsOnBeforeExecuteIndexing = false;
                             onBeforeExecutionStats.Complete();
                             NotifyAboutCompletedBatch(false);
                         }

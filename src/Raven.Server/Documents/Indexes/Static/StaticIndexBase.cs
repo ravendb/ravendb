@@ -350,7 +350,10 @@ namespace Raven.Server.Documents.Indexes.Static
             // - value is textual or array of textual we're treating them as text input
             // - otherwise, we will write as array of numerical values
             var currentIndexingScope = CurrentIndexingScope.Current;
-
+            if (currentIndexingScope != null && currentIndexingScope.Index.IsOnBeforeExecuteIndexing)
+                return null;
+            
+            
             var fieldExists = currentIndexingScope.Index.Definition.IndexFields.TryGetValue(fieldName, out var indexField);
             if (fieldExists == false || indexField?.Vector is null)
             {
@@ -387,6 +390,10 @@ namespace Raven.Server.Documents.Indexes.Static
         /// <returns></returns>
         internal static object CreateVector(IndexField indexField, object value)
         {
+            var currentIndexingScope = CurrentIndexingScope.Current;
+            if (currentIndexingScope != null && currentIndexingScope.Index.IsOnBeforeExecuteIndexing)
+                return null;
+            
             return indexField!.Vector!.SourceEmbeddingType switch
             {
                 VectorEmbeddingType.Text => VectorFromText(indexField, value),
@@ -418,7 +425,7 @@ namespace Raven.Server.Documents.Indexes.Static
             object Base64ToVector(object base64)
             {
                 var str = base64.ToString();
-                return GenerateEmbeddings.FromArray(vectorOptions, allocator, str);
+                return GenerateEmbeddings.FromBase64Array(vectorOptions, allocator, str);
             }
             object HandleBlittableJsonReaderArray(BlittableJsonReaderArray data)
             {
@@ -451,10 +458,10 @@ namespace Raven.Server.Documents.Indexes.Static
                     _ => sizeof(byte)
                 };
 
-                var memScope = allocator.Allocate(bufferSize, out ByteString mem);
-                ref var floatRef = ref MemoryMarshal.GetReference(mem.ToSpan<float>());
-                ref var sbyteRef = ref MemoryMarshal.GetReference(mem.ToSpan<sbyte>());
-                ref var byteRef = ref MemoryMarshal.GetReference(mem.ToSpan<byte>());
+                var memScope = allocator.Allocate(bufferSize, out Memory<byte> mem);
+                ref var floatRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, float>(mem.Span));
+                ref var sbyteRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, sbyte>(mem.Span));
+                ref var byteRef = ref MemoryMarshal.GetReference(mem.Span);
                 
                 for (int i = 0; i < len; ++i)
                 {
@@ -472,7 +479,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     }
                 }
 
-                return GenerateEmbeddings.FromArray(vectorOptions, memScope, mem, bufferSize);
+                return GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, bufferSize);
             }
 
             object HandleJsArray(JsArray jsArray)
@@ -482,7 +489,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     var values = new object[jsArray.Length];
                     for (var i = 0; i < jsArray.Length; i++)
-                        values[i] = GenerateEmbeddings.FromArray(vectorOptions, allocator, jsArray[i].AsString());
+                        values[i] = GenerateEmbeddings.FromBase64Array(vectorOptions, allocator, jsArray[i].AsString());
 
                     return values;
                 }
@@ -503,10 +510,10 @@ namespace Raven.Server.Documents.Indexes.Static
                     _ => sizeof(byte)
                 };
 
-                var memScope = allocator.Allocate(bufferSize, out ByteString mem);
-                ref var floatRef = ref MemoryMarshal.GetReference(mem.ToSpan<float>());
-                ref var sbyteRef = ref MemoryMarshal.GetReference(mem.ToSpan<sbyte>());
-                ref var byteRef = ref MemoryMarshal.GetReference(mem.ToSpan<byte>());
+                var memScope = allocator.Allocate(bufferSize, out Memory<byte> mem);
+                ref var floatRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, float>(mem.Span));
+                ref var sbyteRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, sbyte>(mem.Span));
+                ref var byteRef = ref MemoryMarshal.GetReference(mem.Span);
                 
                 for (int i = 0; i < len; ++i)
                 {
@@ -525,8 +532,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     }
                 }
                 
-                
-                return GenerateEmbeddings.FromArray(vectorOptions, memScope, mem, bufferSize);
+                return GenerateEmbeddings.FromArray(allocator, memScope, mem, vectorOptions, bufferSize);
             }
             
             bool IsBase64(object val) => val is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject or JsString;
@@ -536,7 +542,8 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (value is null)
                 return null;
-            
+
+            var allocator = CurrentIndexingScope.Current.IndexContext.Allocator;
             object embedding = null;
             if (value is LazyStringValue or LazyCompressedStringValue or string or DynamicNullObject)
                 embedding = CreateVectorValue(value);
@@ -566,7 +573,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (str == null)
                     throw new InvalidDataException($"Unsupported vector value type: {valueToProcess?.GetType().FullName}");
 
-                return GenerateEmbeddings.FromText(indexField.Vector, str);
+                return GenerateEmbeddings.FromText(allocator, indexField.Vector, str);
             }
         }
 

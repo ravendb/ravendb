@@ -645,32 +645,24 @@ public static class CoraxQueryBuilder
                 ValueTokenType.String => value.ToString(),
                 _ => throw new NotSupportedException("Vector.Search() on " + valueType)
             };
-            transformedEmbedding = GenerateEmbeddings.FromText(vectorOptions, valueAsString);
+            transformedEmbedding = GenerateEmbeddings.FromText(builderParameters.Allocator, vectorOptions, valueAsString);
         }
         else if (value is string s)
         {
-            if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Binary or VectorEmbeddingType.Int8)
-            {
-                var buffer = Convert.FromBase64String(s);
-                transformedEmbedding = new VectorValue(arrayPool: null, buffer, buffer);
-            }
-            else
-            {
-                transformedEmbedding = GenerateEmbeddings.FromArray(vectorOptions, builderParameters.Allocator, s);
-            }
+            transformedEmbedding = GenerateEmbeddings.FromBase64Array(vectorOptions, builderParameters.Allocator, s);
         }
         else if (value is StringSegment stringSegment)
         {
-            transformedEmbedding = GenerateEmbeddings.FromArray(vectorOptions, allocator: builderParameters.Allocator, stringSegment.ToString());
+            transformedEmbedding = GenerateEmbeddings.FromBase64Array(vectorOptions, allocator: builderParameters.Allocator, stringSegment.ToString());
         }
         else
         {
             var underlyingEnumerable = (BlittableJsonReaderArray)value;
             var bytesUsed = underlyingEnumerable.Length * (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Single ? sizeof(float) : 1);
-            var memScope = builderParameters.Allocator.Allocate(bytesUsed, out ByteString mem);
-            ref var floatRef = ref MemoryMarshal.GetReference(mem.ToSpan<float>());
-            ref var sbyteRef = ref MemoryMarshal.GetReference(mem.ToSpan<sbyte>());
-            ref var byteRef = ref MemoryMarshal.GetReference(mem.ToSpan<byte>());
+            var memScope = builderParameters.Allocator.Allocate(bytesUsed, out Memory<byte> mem);
+            ref var floatRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, float>(mem.Span));
+            ref var sbyteRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, sbyte>(mem.Span));
+            ref var byteRef = ref MemoryMarshal.GetReference(mem.Span);
                 
             for (int i = 0; i < underlyingEnumerable.Length; ++i)
             {
@@ -688,7 +680,7 @@ public static class CoraxQueryBuilder
                 }
             }
 
-            transformedEmbedding = GenerateEmbeddings.FromArray(vectorOptions, memScope, mem, bytesUsed);
+            transformedEmbedding = GenerateEmbeddings.FromArray(builderParameters.Allocator, memScope, mem, vectorOptions, bytesUsed);
         }
         
         var minimumMatch = builderParameters.Index.Configuration.CoraxVectorSearchDefaultMinimumSimilarity;
