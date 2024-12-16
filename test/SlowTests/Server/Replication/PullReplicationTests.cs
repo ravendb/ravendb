@@ -750,13 +750,22 @@ namespace SlowTests.Server.Replication
 
                 var now = DateTime.Now;
                 var nextNow = now + TimeSpan.FromSeconds(60);
+
+                var statistics = new IdleDatabaseStatistics
+                {
+                    Name = hub.Database.ToString()
+                };
+
                 while (now < nextNow && hubServer.ServerStore.IdleDatabases.Count < 1)
                 {
                     await Task.Delay(1000);
+                    var hubDb = hubServer.ServerStore.DatabasesLandlord.LastRecentlyUsed.FirstOrDefault();
+                    hubServer.ServerStore.CanUnloadDatabase(hubDb.Key, hubDb.Value, statistics, out _);
+
                     now = DateTime.Now;
                 }
 
-                Assert.Equal(1, hubServer.ServerStore.IdleDatabases.Count);
+                Assert.True(1 == hubServer.ServerStore.IdleDatabases.Count, string.Join(Environment.NewLine, statistics.Explanations));
                 Assert.Equal(0, sinkServer.ServerStore.IdleDatabases.Count);
 
                 var sinkDb = await GetDatabase(sinkServer, sink.Database);
