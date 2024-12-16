@@ -86,11 +86,11 @@ export function SupportDetails(props: SupportDetailsProps) {
                         </p>
                         <Button
                             variant="outline-secondary"
-                            href={aboutPageUrls.askCommunity}
+                            href={aboutPageUrls.joinCommunity}
                             className="rounded-pill align-self-center px-3"
                             target="_blank"
                         >
-                            <Icon icon="group" /> Ask community <Icon icon="newtab" margin="ms-2" />
+                            <Icon icon="group" /> Join community <Icon icon="newtab" margin="ms-2" />
                         </Button>
                     </RichPanelHeader>
                     <div className="text-center p-4 vstack align-items-center">
@@ -211,11 +211,11 @@ export function SupportDetails(props: SupportDetailsProps) {
                             <Col>
                                 <Button
                                     variant="outline-secondary"
-                                    href={aboutPageUrls.askCommunity}
+                                    href={aboutPageUrls.joinCommunity}
                                     className="rounded-pill align-self-center px-3"
                                     target="_blank"
                                 >
-                                    <Icon icon="group" /> Ask community <Icon icon="newtab" margin="ms-2" />
+                                    Join our Community <Icon icon="newtab" margin="ms-1" />
                                 </Button>
                             </Col>
                         </Row>

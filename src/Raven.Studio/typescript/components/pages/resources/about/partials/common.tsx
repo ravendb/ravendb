@@ -12,9 +12,9 @@ interface OverallInfoItemProps {
 export function OverallInfoItem(props: OverallInfoItemProps) {
     const { icon, label, children } = props;
     return (
-        <Col sm={7} className="mb-3">
+        <Col sm={7}>
             <div className="d-flex">
-                <Icon icon={icon} className="fs-1" margin="me-3 mt-2" />
+                <Icon icon={icon} className="fs-1" margin="me-3 mt-1" />
                 <div className="vstack">
                     <small className="text-muted">{label}</small>
                     <strong className="fs-4 text-emphasis">{children}</strong>
@@ -36,7 +36,9 @@ export const aboutPageUrls = {
     supportTerms: "https://ravendb.net/terms",
     cloudSupportTerms: "https://cloud.ravendb.net/terms",
     cloudPortal: "https://cloud.ravendb.net/portal",
-    askCommunity: "https://ravendb.net/l/ITXUEA",
+    gitHubDiscussions: "https://ravendb.net/l/ITXUEA",
+    discordServer: "https://ravendb.net/l/ZL8MVM",
+    joinCommunity: "https://ravendb.net/l/FUNILW",
     supportRequest: (licenseId: string) => "https://ravendb.net/support/supportrequest?licenseId=" + licenseId,
     social: {
         facebook: "https://www.facebook.com/profile.php?id=100063550929698",

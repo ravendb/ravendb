@@ -58,7 +58,16 @@ const AboutViewFloating = (props: AboutViewProps) => {
                     ],
                 }}
                 overlay={
-                    <Popover id={aboutViewId} className="bs5 about-view-dropdown" style={{ width: "100%" }}>
+                    <Popover
+                        id={aboutViewId}
+                        className="bs5 about-view-dropdown"
+                        style={
+                            {
+                                width: "100%",
+                                "--bs-popover-max-width": "640px",
+                            } as React.CSSProperties
+                        }
+                    >
                         <Popover.Body className="p-1">
                             <AboutViewAnchored defaultOpen={defaultOpen ? "licensing" : null}>
                                 {children}

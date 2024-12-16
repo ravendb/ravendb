@@ -57,22 +57,28 @@ export function LicenseSummary(props: LicenseSummaryProps) {
         <Card>
             <Card.Body>
                 <h4>License</h4>
-                <Row>
-                    <OverallInfoItem icon="license" label="License type">
-                        <span className={classNames({ "text-cloud": isCloud })}>
-                            {licenseModel.licenseTypeTextProvider(licenseStatus)}
-                        </span>
-                    </OverallInfoItem>
-                    <LicenseExpiration />
-                    <OverallInfoItem icon="raven" label="License server">
-                        <ConnectivityStatusComponent
-                            refreshing={refreshing}
-                            refresh={refreshConnectivity}
-                            status={asyncCheckLicenseServerConnectivity}
-                        />
-                    </OverallInfoItem>
-                    <LicenseActions asyncGetConfigurationSettings={asyncGetConfigurationSettings} />
-                </Row>
+                <div className="vstack gap-4">
+                    <Row>
+                        <OverallInfoItem icon="license" label="License type">
+                            <span className={classNames({ "text-cloud": isCloud })}>
+                                {licenseModel.licenseTypeTextProvider(licenseStatus)}
+                            </span>
+                        </OverallInfoItem>
+                    </Row>
+                    <Row>
+                        <LicenseExpiration />
+                    </Row>
+                    <Row>
+                        <OverallInfoItem icon="raven" label="License server">
+                            <ConnectivityStatusComponent
+                                refreshing={refreshing}
+                                refresh={refreshConnectivity}
+                                status={asyncCheckLicenseServerConnectivity}
+                            />
+                        </OverallInfoItem>
+                        <LicenseActions asyncGetConfigurationSettings={asyncGetConfigurationSettings} />
+                    </Row>
+                </div>
             </Card.Body>
         </Card>
     );

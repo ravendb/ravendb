@@ -34,49 +34,65 @@ export function SupportSummary(props: SupportSummaryProps) {
     return (
         <Card>
             <Card.Body>
-                <h4>Support</h4>
-                <Row>
-                    <OverallInfoItem icon="support" label="Support type">
-                        {hideSupportStatus ? (
-                            <span className="text-warning" id={uniqueId}>
-                                <Icon icon="warning" />
-                                <small>
-                                    Unable to reach the RavenDB License Server at <code>api.ravendb.net</code>
-                                </small>
-                            </span>
-                        ) : (
-                            <span
-                                className={classNames(
-                                    { "text-professional": supportType === "Professional" },
-                                    { "text-enterprise": supportType === "Production" }
-                                )}
-                            >
-                                {isCloud && supportType === "Production" ? "Cloud Support" : supportType}
-                            </span>
-                        )}
-                    </OverallInfoItem>
-
-                    <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
-                        {isPaidSupport && (
+                <h4>Support & Community</h4>
+                <div className="vstack gap-4">
+                    <Row>
+                        <OverallInfoItem icon="support" label="Support type">
+                            {hideSupportStatus ? (
+                                <span className="text-warning" id={uniqueId}>
+                                    <Icon icon="warning" />
+                                    <small>
+                                        Unable to reach the RavenDB License Server at <code>api.ravendb.net</code>
+                                    </small>
+                                </span>
+                            ) : (
+                                <span
+                                    className={classNames(
+                                        { "text-professional": supportType === "Professional" },
+                                        { "text-enterprise": supportType === "Production" }
+                                    )}
+                                >
+                                    {isCloud && supportType === "Production" ? "Cloud Support" : supportType}
+                                </span>
+                            )}
+                        </OverallInfoItem>
+                        <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
+                            {isPaidSupport && (
+                                <Button
+                                    href={isCloud ? aboutPageUrls.cloudPortal : aboutPageUrls.supportRequest(licenseId)}
+                                    target="_blank"
+                                    className="rounded-pill"
+                                    variant={isCloud ? "cloud" : "primary"}
+                                >
+                                    <Icon icon="notifications" /> Request support
+                                </Button>
+                            )}
                             <Button
-                                href={isCloud ? aboutPageUrls.cloudPortal : aboutPageUrls.supportRequest(licenseId)}
-                                target="_blank"
+                                variant={isPaidSupport ? "outline-secondary" : "primary"}
                                 className="rounded-pill"
-                                variant={isCloud ? "cloud" : "primary"}
+                                href={aboutPageUrls.gitHubDiscussions}
+                                target="_blank"
                             >
-                                <Icon icon="notifications" /> Request support
+                                GitHub Discussions <Icon icon="newtab" margin="ms-1" />
                             </Button>
-                        )}
-                        <Button
-                            variant="outline-secondary"
-                            className="rounded-pill"
-                            href={aboutPageUrls.askCommunity}
-                            target="_blank"
-                        >
-                            <Icon icon="group" /> Ask community <Icon icon="newtab" margin="ms-1" />
-                        </Button>
-                    </Col>
-                </Row>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <OverallInfoItem icon="discord" label="Let's solve it together">
+                            Developers Community
+                        </OverallInfoItem>
+                        <Col className="d-flex flex-wrap gap-2 align-items-center justify-content-end">
+                            <Button
+                                variant="primary"
+                                className="rounded-pill"
+                                href={aboutPageUrls.discordServer}
+                                target="_blank"
+                            >
+                                Join our Discord <Icon icon="newtab" margin="ms-1" />
+                            </Button>
+                        </Col>
+                    </Row>
+                </div>
             </Card.Body>
         </Card>
     );
