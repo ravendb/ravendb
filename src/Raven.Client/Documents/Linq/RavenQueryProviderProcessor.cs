@@ -4049,7 +4049,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var finalQuery = ((DocumentQuery<T>)DocumentQuery).CreateDocumentQueryInternal<TProjection>(
                 new QueryData(fields, projections, FromAlias, _declareTokens, _loadTokens, _declareTokens != null || _jsSelectBody != null)
                 {
-                    IsProjectInto = _isProjectInto
+                    IsProjectInto = _isProjectInto,
+                    QueryStatistics =  _queryStatistics
                 });
 
             var executeQuery = GetQueryResult(finalQuery);
