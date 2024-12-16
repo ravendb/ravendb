@@ -472,14 +472,17 @@ namespace Sparrow.Server
 
     public sealed unsafe class UnmanagedGlobalSegment : PooledItem
     {
-        public byte* Segment;
+        private byte* _segment;
+        public byte* Segment => _segment;
+
         public readonly int Size;
+
         private readonly NativeMemory.ThreadStats _thread;
 
         public UnmanagedGlobalSegment(int size)
         {
             Size = size;
-            Segment = NativeMemory.AllocateMemory(size, out _thread);
+            _segment = NativeMemory.AllocateMemory(size, out _thread);
             InUse.Raise();
         }
 
@@ -487,10 +490,12 @@ namespace Sparrow.Server
         {
             try
             {
-                if (Segment == null)
+                var segment = _segment;
+                if (segment == null)
                     return;
-                NativeMemory.Free(Segment, Size, _thread);
-                Segment = null;
+                _segment = null;
+
+                NativeMemory.Free(segment, Size, _thread);
             }
             catch (ObjectDisposedException)
             {
@@ -500,17 +505,13 @@ namespace Sparrow.Server
 
         public override void Dispose()
         {
-            if (Segment == null)
+            var segment = _segment;
+            if (segment == null)
                 return;
+            _segment = null;
+            GC.SuppressFinalize(this);
 
-            lock (this)
-            {
-                if (Segment == null)
-                    return;
-                NativeMemory.Free(Segment, Size, _thread);
-                Segment = null;
-                GC.SuppressFinalize(this);
-            }
+            NativeMemory.Free(segment, Size, _thread);
         }
 
     }
@@ -539,11 +540,11 @@ namespace Sparrow.Server
 
     public struct ByteStringMemoryCache : IByteStringAllocator
     {
-        private static readonly LightWeightThreadLocal<StackHeader<UnmanagedGlobalSegment>> SegmentsPool;
+        private static readonly LockFreeRingBuffer<UnmanagedGlobalSegment> SegmentsPool;
         private static readonly SharedMultipleUseFlag LowMemoryFlag;
         private static readonly LowMemoryHandler LowMemoryHandlerInstance = new LowMemoryHandler();
 
-        public static readonly NativeMemoryCleaner<StackHeader<UnmanagedGlobalSegment>, UnmanagedGlobalSegment> Cleaner;
+        public static readonly NativeMemoryCleaner<UnmanagedGlobalSegment> Cleaner;
 
         private sealed class LowMemoryHandler : ILowMemoryHandler
         {
@@ -553,7 +554,7 @@ namespace Sparrow.Server
                     return;
 
                 if (LowMemoryFlag.Raise())
-                    Cleaner.CleanNativeMemory(null);
+                    Cleaner.PurgeStaleOrExcessItems();
             }
 
             public void LowMemoryOver()
@@ -562,93 +563,105 @@ namespace Sparrow.Server
             }
         }
 
+        private static readonly int SegmentPoolSize = IntPtr.Size == 4 ? 64 : 1024;
+
         static ByteStringMemoryCache()
         {
-            SegmentsPool = new LightWeightThreadLocal<StackHeader<UnmanagedGlobalSegment>>(() => new StackHeader<UnmanagedGlobalSegment>());
+            SegmentsPool = new(SegmentPoolSize);
             LowMemoryFlag = new SharedMultipleUseFlag();
-            Cleaner = new NativeMemoryCleaner<StackHeader<UnmanagedGlobalSegment>, UnmanagedGlobalSegment>(typeof(ByteStringMemoryCache), _ => SegmentsPool.Values, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-
-            ThreadLocalCleanup.ReleaseThreadLocalState += CleanForCurrentThread;
+            Cleaner = new NativeMemoryCleaner<UnmanagedGlobalSegment>(SegmentsPool, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(LowMemoryHandlerInstance);
         }
 
-        [ThreadStatic]
-        private static int _minSize;
-
         public UnmanagedGlobalSegment Allocate(int size)
         {
-            if (_minSize < size)
-                _minSize = size;
+            var pool = SegmentsPool;
+            if (pool.TryDequeue(out var segment) == false)
+                goto ALLOCATE;
 
-            var stack = SegmentsPool.Value;
+            Debug.Assert(segment != null, "The segment cannot be null.");
 
-            while (true)
+            if (segment.Size >= size)
             {
-                var current = stack.Head;
-                if (current == null)
-                    break;
+                if (segment.InUse.Raise() == false)
+                    goto ALLOCATE;
 
-                if (Interlocked.CompareExchange(ref stack.Head, current.Next, current) != current)
-                    continue;
-
-                var segment = current.Value;
-                if (segment == null)
-                    continue;
-
-                if (segment.Size >= size)
-                {
-                    if (!segment.InUse.Raise())
-                        continue;
-
-                    return segment;
-                }
-
-                // not big enough, so we'll discard it and create a bigger instance
-                // it will go into the pool afterward and be available for future use
-                segment.Dispose();
+                return segment;
             }
-
+            
+            // not big enough, so if the pool is half full we'll discard it and create a bigger instance
+            // it will go into the pool afterward and be available for future use.
+            // The idea is that we will get rid of small segments if half full is that we want the
+            // pool to only be half full on average. 
+            if (pool.Count >= SegmentPoolSize / 2 || pool.TryEnqueue(segment) == false)
+                segment.Dispose();
+                        
+            ALLOCATE:
+            // have to allocate it directly
             return new UnmanagedGlobalSegment(size);
         }
 
+        /// <summary>
+        /// Returns an UnmanagedGlobalSegment to the pool. If the segment is no longer in use and the pool is not full, 
+        /// it is added back for future reuse. 
+        /// 
+        /// If the pool is full, we attempt a fallback strategy:
+        /// 1. Dequeue another segment from the pool to compare sizes.
+        /// 2. Keep the larger segment (to better accommodate future allocations) and dispose of the smaller one.
+        /// 3. If re-enqueueing the chosen segment still fails, we dispose it to prevent memory leaks.
+        ///
+        /// This ensures that we maintain a healthy set of segments in the pool while also preventing indefinite growth or 
+        /// memory leaks if the pool cannot accept more segments.
+        /// </summary>
         public unsafe void Free(UnmanagedGlobalSegment memory)
         {
             ThrowIfNull<InvalidOperationException>(memory.Segment, "Attempt to return a memory segment that has already been disposed");
 
-            if (_minSize > memory.Size)
-            {
-                memory.Dispose();
-                return;
-            }
+            if (memory.InUse.Lower() == false)
+                ThrowSegmentStillInUse();
 
-            memory.InUse.Lower();
             memory.InPoolSince = DateTime.UtcNow;
 
-            var stack = SegmentsPool.Value;
+            var pool = SegmentsPool;
 
-            while (true)
+            // Attempt to return the segment to the pool.
+            if (pool.IsFull || pool.TryEnqueue(memory) == false)
             {
-                var current = stack.Head;
-                var newHead = new StackNode<UnmanagedGlobalSegment> { Value = memory, Next = current };
-                if (Interlocked.CompareExchange(ref stack.Head, newHead, current) == current)
-                    return;
+                // Pool is full; attempt to swap an existing segment with the current one
+                if (pool.TryDequeue(out var comparable))
+                {
+                    // Compare the sizes of the two segments.
+                    var (toAdd, toRemove) = comparable.Size < memory.Size
+                        ? (memory, comparable) // Keep the larger segment for reuse.
+                        : (comparable, memory); // Keep the existing segment if it's better.
+
+                    // Try to re-enqueue the chosen segment.
+                    if (pool.TryEnqueue(toAdd) == false)
+                        toAdd.Dispose(); // If enqueue fails, dispose to prevent leaks.
+
+                    // Dispose of the other segment.
+                    toRemove.Dispose();
+                }
+                else
+                {
+                    // If we fail to dequeue, just dispose the memory.
+                    // While very unlikely this will ever execute, it prevents leaks if it happens.
+                    memory.Dispose();
+                }
             }
         }
 
-        public static void CleanForCurrentThread()
+        [DoesNotReturn]
+        private static void ThrowInvalidMemorySegment()
         {
-            if (SegmentsPool.IsValueCreated == false)
-                return; // nothing to do
+            throw new InvalidOperationException("Attempt to return a memory segment that has already been disposed");
+        }
 
-            var stack = SegmentsPool.Value;
-            _minSize = 0;
-            var current = Interlocked.Exchange(ref stack.Head, null);
-            while (current != null)
-            {
-                current.Value?.Dispose();
-                current = current.Next;
-            }
+        [DoesNotReturn]
+        private static void ThrowSegmentStillInUse()
+        {
+            throw new InvalidOperationException("Attempt to return a memory segment that it is still in use");
         }
     }
 
@@ -658,7 +671,7 @@ namespace Sparrow.Server
         internal static readonly int ExternalAlignedSize;
 
         public const int MinBlockSizeInBytes = 4 * 1024; // If this is changed, we need to change also LogMinBlockSize.
-        public const int MaxAllocationBlockSizeInBytes = 256 * MinBlockSizeInBytes;
+        public const int MaxAllocationBlockSizeInBytes = 4 * 256 * MinBlockSizeInBytes;
         public const int DefaultAllocationBlockSizeInBytes = 1 * MinBlockSizeInBytes;
         public const int MinReusableBlockSizeInBytes = 8;
         public const int MaxSegmentSizeInBytes = 2 * Sparrow.Global.Constants.Size.Megabyte;

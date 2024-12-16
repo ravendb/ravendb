@@ -161,8 +161,6 @@ namespace Raven.Server.Documents.Indexes
 
         internal PoolOfThreads.LongRunningWork _indexingThread;
 
-        private bool CalledUnderIndexingThread => _indexingThread?.ManagedThreadId == Thread.CurrentThread.ManagedThreadId;
-
         private bool _initialized;
 
         internal UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
@@ -2177,11 +2175,6 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.DocumentsStorage.ContextPool.Clean();
                 _contextPool.Clean();
-
-                if (CalledUnderIndexingThread)
-                {
-                    ByteStringMemoryCache.CleanForCurrentThread();
-                }
 
                 IndexPersistence.Clean(mode);
                 environment?.Cleanup();

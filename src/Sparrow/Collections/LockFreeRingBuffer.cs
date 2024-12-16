@@ -6,7 +6,7 @@ using Sparrow.Binary;
 
 namespace Sparrow.Collections
 {
-    internal sealed class LockFreeRingBuffer<T>
+    public sealed class LockFreeRingBuffer<T>
     {
         // Explicit layout to control the exact memory layout
         [StructLayout(LayoutKind.Sequential, Size = 128)]
