@@ -2,81 +2,84 @@
 // Badges
 // --------------------------------------------------
 
-
 // Base class
 .badge {
-  display: inline-block;
-  min-width: 10px;
-  padding: 3px 7px;
-  font-size: @font-size-small;
-  font-weight: @badge-font-weight;
-  color: @badge-color;
-  line-height: @badge-line-height;
-  vertical-align: middle;
-  white-space: nowrap;
-  text-align: center;
-  background-color: @badge-bg;
-  border-radius: @badge-border-radius;
+    display: inline-block;
+    min-width: 10px;
+    padding: 3px 7px;
+    font-size: @font-size-small;
+    font-weight: @badge-font-weight;
+    color: @badge-color;
+    line-height: @badge-line-height;
+    vertical-align: middle;
+    white-space: nowrap;
+    text-align: center;
+    background-color: @badge-bg;
+    border-radius: @badge-border-radius;
 
-  // Empty badges collapse automatically (not available in IE8)
-  &:empty {
-    display: none;
-  }
-
-  // Quick fix for badges in buttons
-  .btn & {
-    position: relative;
-    top: -1px;
-  }
-
-  .btn-xs &,
-  .btn-group-xs > .btn & {
-    top: 0;
-    padding: 1px 5px;
-  }
-
-  // Hover state, but only for links
-  a& {
-    &:hover,
-    &:focus {
-      color: @badge-link-hover-color;
-      text-decoration: none;
-      cursor: pointer;
+    // Empty badges collapse automatically (not available in IE8)
+    &:empty {
+        display: none;
     }
-  }
 
-  // Account for badges in navs
-  .list-group-item.active > &,
-  .nav-pills > .active > a > & {
-    color: @badge-active-color;
-    background-color: @badge-active-bg;
-  }
+    // Quick fix for badges in buttons
+    .btn & {
+        position: relative;
+        top: -1px;
+    }
 
-  .list-group-item > & {
-    float: right;
-  }
+    .btn-xs &,
+    .btn-group-xs > .btn & {
+        top: 0;
+        padding: 1px 5px;
+    }
 
-  .list-group-item > & + & {
-    margin-right: 5px;
-  }
+    // Hover state, but only for links
+    a& {
+        &:hover,
+        &:focus {
+            color: @badge-link-hover-color;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    }
 
-  .nav-pills > li > a > & {
-    margin-left: 3px;
-  }
+    // Account for badges in navs
+    .list-group-item.active > &,
+    .nav-pills > .active > a > & {
+        color: @badge-active-color;
+        background-color: @badge-active-bg;
+    }
 
-  &.badge-primary {
-    .badge-variant(@gray-dark, @brand-primary);
-  }
-  &.badge-success {
-    .badge-variant(@gray-dark, @brand-success);
-  }
-  &.badge-info {
-    .badge-variant(@gray-dark, @brand-info);
-  }
-  &.badge-warning {
-    .badge-variant(@gray-dark, @brand-warning);
-  }
-  &.badge-danger {
-    .badge-variant(@gray-dark, @brand-danger);
-  }
+    .list-group-item > & {
+        float: right;
+    }
+
+    .list-group-item > & + & {
+        margin-right: 5px;
+    }
+
+    .nav-pills > li > a > & {
+        margin-left: 3px;
+    }
+
+    &.badge-primary {
+        .badge-variant(@gray-dark, @brand-primary);
+    }
+    &.badge-success {
+        .badge-variant(@gray-dark, @brand-success);
+    }
+    &.badge-info {
+        .badge-variant(@gray-dark, @brand-info);
+    }
+    &.badge-warning {
+        .badge-variant(@gray-dark, @brand-warning);
+    }
+    &.badge-danger {
+        .badge-variant(@gray-dark, @brand-danger);
+    }
+    &.badge-new {
+        color: #000;
+        background: linear-gradient(230deg, #ba50a1, #f38861, #f0bf54);
+    }
 }
