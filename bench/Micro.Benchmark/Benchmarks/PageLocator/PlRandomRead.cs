@@ -24,7 +24,7 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core22,
+                        Runtime = CoreRuntime.Core90,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit
                     },

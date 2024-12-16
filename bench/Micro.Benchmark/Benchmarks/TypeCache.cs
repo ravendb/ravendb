@@ -13,6 +13,7 @@ using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Sparrow.Binary;
 using Sparrow.Collections;
+using Sparrow.Utils;
 
 namespace Micro.Benchmark.Benchmarks
 {
@@ -27,7 +28,7 @@ namespace Micro.Benchmark.Benchmarks
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core70,
+                        Runtime = CoreRuntime.Core90,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit,
                     },
@@ -52,6 +53,7 @@ namespace Micro.Benchmark.Benchmarks
 
         private Type[] _typesToCheck;
 
+        private readonly TypeCache<int> _ravenDb60TypeCache = new(128);
         private readonly RavenDb50TypeCache<int> _ravenDb50TypeCache = new(128);
         private readonly UnsafeAddressTypeCache<int> _compareExchangeThreadSafe = new(128);
         private readonly HashFastTypeCache<int> _hashCompareExchangeThreadSafe = new(128);
@@ -77,20 +79,33 @@ namespace Micro.Benchmark.Benchmarks
             foreach (var type in typesToCheck)
             {
                 _ravenDb50TypeCache.Put(type, 0);
+                _ravenDb60TypeCache.Put(type, 0);
                 _compareExchangeThreadSafe.Put(type, 0);
                 _hashCompareExchangeThreadSafe.Set(type, 0);
                 _dictionary.Add(type, 0);
             }
         }
 
-
-        [Benchmark(Baseline = true)]
-        public int CurrentThreadUnsafe()
+        [Benchmark]
+        public int RavenDB50ThreadUnsafe()
         {
             int result = 0;
             foreach (var type in _typesToCheck)
             {
                 _ravenDb50TypeCache.TryGet(type, out var r);
+                result += r;
+            }
+
+            return result;
+        }
+
+        [Benchmark(Baseline = true)]
+        public int RavenDB60ThreadUnsafe()
+        {
+            int result = 0;
+            foreach (var type in _typesToCheck)
+            {
+                _ravenDb60TypeCache.TryGet(type, out var r);
                 result += r;
             }
 

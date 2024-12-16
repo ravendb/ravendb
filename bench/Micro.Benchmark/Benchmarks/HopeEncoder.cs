@@ -24,7 +24,7 @@ namespace Micro.Benchmark.Benchmarks
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core50,
+                        Runtime = CoreRuntime.Core90,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit,
                     },

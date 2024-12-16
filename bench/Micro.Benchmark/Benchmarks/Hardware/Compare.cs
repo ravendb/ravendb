@@ -30,7 +30,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core80,
+                        Runtime = CoreRuntime.Core90,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit
                     }
