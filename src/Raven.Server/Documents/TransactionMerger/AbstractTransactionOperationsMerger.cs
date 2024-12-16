@@ -984,5 +984,12 @@ namespace Raven.Server.Documents.TransactionMerger
 
         private DateTime _lastHighDirtyMemCheck;
         private readonly TimeSetting _timeToCheckHighDirtyMemory;
+        
+        
+
+        public void Wake()
+        {
+            _waitHandle.Set();
+        }
     }
 }

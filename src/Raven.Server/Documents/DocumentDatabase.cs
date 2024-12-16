@@ -415,6 +415,8 @@ namespace Raven.Server.Documents
                 _addToInitLog(LogLevel.Debug, "Starting Transaction Merger");
                 TxMerger.Initialize(DocumentsStorage.ContextPool, IsEncrypted, Is32Bits);
                 TxMerger.Start();
+                DocumentsStorage.Environment.Journal.OnBranchJournalEntrySubmitted += TxMerger.Wake;
+
                 _addToInitLog(LogLevel.Debug, "Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();
 
