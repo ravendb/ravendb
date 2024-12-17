@@ -6,6 +6,8 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,10 +16,20 @@ namespace Sparrow.Utils
 {
     internal static class TimeoutManager
     {
+        private static FrozenDictionary<uint, TimerTaskHolder> ValuesForRead = new Dictionary<uint, TimerTaskHolder>().ToFrozenDictionary();
         private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values = new ConcurrentDictionary<uint, TimerTaskHolder>();
         private static readonly Task InfiniteTask = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
 
-        private sealed class TimerTaskHolder  : IDisposable
+        private const bool ForceTaskDelay = true;
+
+        private static readonly bool UseTaskDelay;
+
+        static TimeoutManager()
+        {
+            UseTaskDelay = Environment.ProcessorCount <= 2 || ForceTaskDelay;
+        }
+
+        private sealed class TimerTaskHolder : IDisposable
         {
             private TaskCompletionSource<object> _nextTimeout;
             private readonly Timer _timer;
@@ -59,7 +71,7 @@ namespace Sparrow.Utils
             }
         }
 
-        private static async Task WaitForInternal(TimeSpan time, CancellationToken token)
+        private static async Task WaitForInternal(TimeSpan time, bool canBeCanceled, CancellationToken token)
         {
             if (time.TotalMilliseconds < 0)
                 ThrowOutOfRange();
@@ -76,7 +88,7 @@ namespace Sparrow.Utils
 
             var value = GetHolderForDuration(duration);
 
-            using (token.Register(value.TimerCallback, null))
+            using (canBeCanceled ? (IDisposable)token.Register(value.TimerCallback, null) : null)
             {
                 var sp = Stopwatch.StartNew();
                 await value.NextTask.ConfigureAwait(false);
@@ -104,9 +116,10 @@ namespace Sparrow.Utils
 
         private static TimerTaskHolder GetHolderForDuration(uint duration)
         {
-            if (Values.TryGetValue(duration, out var value) == false)
+            if (ValuesForRead.TryGetValue(duration, out var value) == false)
             {
                 value = Values.GetOrAdd(duration, d => new TimerTaskHolder(d));
+                ValuesForRead = Values.ToFrozenDictionary();
             }
             return value;
         }
@@ -121,18 +134,25 @@ namespace Sparrow.Utils
                 return Task.CompletedTask;
             }
 
+            if (UseTaskDelay)
+            {
+                return await Task.WhenAny(outer, Task.Delay(duration, token)).ConfigureAwait(false);
+            }
+
+            var canBeCanceled = token != CancellationToken.None && token.CanBeCanceled;
+
             Task task;
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
             if (duration != Timeout.InfiniteTimeSpan)
-                task = WaitForInternal(duration, token);
+                task = WaitForInternal(duration, canBeCanceled, token);
             else
                 task = InfiniteTask;
-            
-            if (token == CancellationToken.None || token.CanBeCanceled == false)
+
+            if (canBeCanceled == false)
             {
                 return await Task.WhenAny(outer, task).ConfigureAwait(false);
             }
-            
+
             var onCancel = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             using (token.Register(tcs => onCancel.TrySetCanceled(), onCancel))
             {
@@ -150,14 +170,22 @@ namespace Sparrow.Utils
                 return;
             }
 
+            if (UseTaskDelay)
+            {
+                await Task.Delay(duration, token).ConfigureAwait(false);
+                return;
+            }
+
+            var canBeCanceled = token != CancellationToken.None && token.CanBeCanceled;
+
             Task task;
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
             if (duration != Timeout.InfiniteTimeSpan)
-                task = WaitForInternal(duration, token);
+                task = WaitForInternal(duration, canBeCanceled, token);
             else
                 task = InfiniteTask;
-            
-            if (token == CancellationToken.None || token.CanBeCanceled == false)
+
+            if (canBeCanceled == false)
             {
                 await task.ConfigureAwait(false);
                 return;
