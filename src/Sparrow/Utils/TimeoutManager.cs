@@ -134,6 +134,9 @@ namespace Sparrow.Utils
                 return Task.CompletedTask;
             }
 
+            if (duration == TimeSpan.MaxValue)
+                duration = Timeout.InfiniteTimeSpan;
+
             if (UseTaskDelay)
             {
                 return await Task.WhenAny(outer, Task.Delay(duration, token)).ConfigureAwait(false);
@@ -169,6 +172,9 @@ namespace Sparrow.Utils
             {
                 return;
             }
+
+            if (duration == TimeSpan.MaxValue)
+                duration = Timeout.InfiniteTimeSpan;
 
             if (UseTaskDelay)
             {
