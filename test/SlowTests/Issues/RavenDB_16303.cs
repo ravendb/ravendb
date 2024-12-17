@@ -3,6 +3,7 @@ using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -27,7 +28,7 @@ namespace SlowTests.Issues
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
-        public void CanCreateSqlEtlTransformScriptWithGuidWhenTableTypeGuid(MigrationProvider provider)
+        public async Task CanCreateSqlEtlTransformScriptWithGuidWhenTableTypeGuid(MigrationProvider provider)
         {
             using (var store = GetDocumentStore())
             {
@@ -45,7 +46,7 @@ namespace SlowTests.Issues
                         ConnectionString = connectionString
                     });
 
-                    store.Maintenance.Send(operation);
+                    await store.Maintenance.SendAsync(operation);
 
                     var etlDone = new ManualResetEventSlim();
                     var configuration = new SqlEtlConfiguration
@@ -70,8 +71,8 @@ loadToTestGuidEtls(item);"
                         }
                     };
 
-                    store.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(configuration));
-                    var database = GetDatabase(store.Database).Result;
+                    await store.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(configuration));
+                    var database = await GetDatabase(store.Database);
                     var errors = 0;
                     database.EtlLoader.BatchCompleted += x =>
                     {
@@ -85,10 +86,10 @@ loadToTestGuidEtls(item);"
                         }
                     };
                     var guid = Guid.NewGuid();
-                    using (var session = store.OpenSession())
+                    using (var session = store.OpenAsyncSession())
                     {
-                        session.Store(new TestGuidEtl() { Guid = guid });
-                        session.SaveChanges();
+                        await session.StoreAsync(new TestGuidEtl() { Guid = guid });
+                        await session.SaveChangesAsync();
                     }
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
@@ -105,7 +106,7 @@ loadToTestGuidEtls(item);"
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
-        public void CanCreateSqlEtlTransformScriptWithGuidWhenTableTypeVarchar(MigrationProvider provider)
+        public async Task CanCreateSqlEtlTransformScriptWithGuidWhenTableTypeVarchar(MigrationProvider provider)
         {
             using (var store = GetDocumentStore())
             {
@@ -123,7 +124,7 @@ loadToTestGuidEtls(item);"
                         ConnectionString = connectionString
                     });
 
-                    store.Maintenance.Send(operation);
+                    await store.Maintenance.SendAsync(operation);
 
                     var etlDone = new ManualResetEventSlim();
                     var configuration = new SqlEtlConfiguration
@@ -148,8 +149,8 @@ loadToTestGuidEtls(item);"
                         }
                     };
 
-                    store.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(configuration));
-                    var database = GetDatabase(store.Database).Result;
+                    await store.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(configuration));
+                    var database = await GetDatabase(store.Database);
                     var errors = 0;
                     database.EtlLoader.BatchCompleted += x =>
                     {

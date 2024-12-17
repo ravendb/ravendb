@@ -35,7 +35,7 @@ namespace SlowTests.Issues
             }))
             {
                 db = await GetDatabase(store.Database);
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
             }
 
             db.Dispose();

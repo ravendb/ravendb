@@ -20,31 +20,30 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var index = new Products_ByCategory();
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new Category { Id = "categories/0", Name = "foo"});
-                    session.Store(new Category { Id = "categories/1", Name = "bar"});
+                    await session.StoreAsync(new Category { Id = "categories/0", Name = "foo"});
+                    await session.StoreAsync(new Category { Id = "categories/1", Name = "bar"});
 
                     for (int i = 0; i < 200; i++)
                     {
-                        session.Store(new Product { Category = $"categories/{i % 2}"});
+                        await session.StoreAsync(new Product { Category = $"categories/{i % 2}"});
                     }
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new Category { Id = "categories/1", Name = "baz" });
-
-                    session.SaveChanges();
+                    await session.StoreAsync(new Category { Id = "categories/1", Name = "baz" });
+                    await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var indexInstance = (await GetDatabase(store.Database)).IndexStore.GetIndex(index.IndexName);
 

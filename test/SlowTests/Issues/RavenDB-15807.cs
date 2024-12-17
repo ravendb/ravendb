@@ -82,8 +82,8 @@ namespace SlowTests.Issues
                 {
                     BlittableJsonReaderObject reader = ctx.Sync.ReadForMemory(new MemoryStream(Encoding.UTF8.GetBytes(json)), "users/1");
                     
-                    var task = await sinkServer.ServerStore.UpdatePullReplicationAsSink(sinkStore.Database, reader, Guid.NewGuid().ToString(), out PullReplicationAsSink pullReplication);
-                    taskId = task.Index;
+                    var result = await sinkServer.ServerStore.UpdatePullReplicationAsSink(sinkStore.Database, reader, Guid.NewGuid().ToString(), out PullReplicationAsSink pullReplication);
+                    taskId = result.Index;
                     Assert.NotNull(pullReplication.CertificateWithPrivateKey);
                 }
 

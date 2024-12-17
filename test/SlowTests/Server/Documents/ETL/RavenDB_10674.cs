@@ -20,11 +20,10 @@ namespace SlowTests.Server.Documents.ETL
         {
             using (var src = GetDocumentStore())
             {
-                using (var store = src.OpenSession())
+                using (var store = src.OpenAsyncSession())
                 {
-                    store.Store(new User());
-
-                    store.SaveChanges();
+                    await store.StoreAsync(new User());
+                    await store.SaveChangesAsync();
                 }
 
                 var configuration = new RavenEtlConfiguration()
@@ -33,7 +32,7 @@ namespace SlowTests.Server.Documents.ETL
                     Name = "aaa",
                     Transforms =
                     {
-                        new Transformation()
+                        new Transformation
                         {
                             Collections = {"Users"},
                             Name = "test"

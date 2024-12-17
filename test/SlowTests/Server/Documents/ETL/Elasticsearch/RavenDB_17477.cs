@@ -37,17 +37,16 @@ loadTo" + OrdersIndexName + @"(orderData);",
                     new []{ new ElasticSearchIndex { IndexName = OrdersIndexName, DocumentIdProperty = "Id" } },
                     new List<string> { "orders" }, configurationName: "my-etl", transformationName: "my-transformation");
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new Order { Lines = new List<OrderLine>() });
-                    session.SaveChanges();
+                    await session.StoreAsync(new Order { Lines = new List<OrderLine>() });
+                    await session.SaveChangesAsync();
                 }
 
-                var alert = await AssertWaitForNotNullAsync(() =>
+                var alert = await AssertWaitForNotNullAsync(async () =>
                 {
-                    Etl.TryGetLoadError(store.Database, config, out var error);
-
-                    return Task.FromResult(error);
+                    var error = await Etl.TryGetLoadErrorAsync(store.Database, config);
+                    return error;
                 }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
 
                 Assert.Contains($"The index '{OrdersIndexName}' has invalid mapping for 'Id' property.", alert.Error);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.ETL;
@@ -21,14 +22,14 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [RavenFact(RavenTestCategory.Etl)]
-        public void Processing_in_low_memory_mode()
+        public async Task Processing_in_low_memory_mode()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
                 Etl.AddEtl(src, dest, "Users", script: null);
 
-                var database = GetDatabase(src.Database).Result;
+                var database = await GetDatabase(src.Database);
 
                 var etlProcess = (RavenEtl)database.EtlLoader.Processes.First();
 
@@ -38,27 +39,26 @@ namespace SlowTests.Server.Documents.ETL
 
                 var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses >= numberOfDocs);
 
-                using (var session = src.OpenSession())
+                using (var session = src.OpenAsyncSession())
                 {
                     for (int i = 0; i < numberOfDocs; i++)
                     {
-                        session.Store(new User()
-                        {
-                            Name = "Joe Doe"
-                        }, $"users/{i}");
+                        await session.StoreAsync(new User
+                            {
+                                Name = "Joe Doe"
+                            }, $"users/{i}");
                     }
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
                 for (int i = 0; i < numberOfDocs; i++)
                 {
-                    using (var session = dest.OpenSession())
+                    using (var session = dest.OpenAsyncSession())
                     {
-                        var user = session.Load<User>($"users/{i}");
-
+                        var user = await session.LoadAsync<User>($"users/{i}");
                         Assert.NotNull(user);
                     }
                 }

@@ -1,6 +1,7 @@
 ﻿using Confluent.Kafka;
 using System;
 using System.Text;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -16,7 +17,7 @@ public class RavenDB_21659_Kafka : KafkaEtlTestBase
     }
 
     [RequiresKafkaRetryFact]
-    public void CanPassOptionalAttributesToLoadToMethod()
+    public async Task CanPassOptionalAttributesToLoadToMethod()
     {
         using (var store = GetDocumentStore())
         {
@@ -29,16 +30,16 @@ public class RavenDB_21659_Kafka : KafkaEtlTestBase
 
             var etlDone = Etl.WaitForEtlToComplete(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-            using (var session = store.OpenSession())
+            using (var session = store.OpenAsyncSession())
             {
-                session.Store(new User
+                await session.StoreAsync(new User
                 {
                     Name = "Arek"
                 });
-                session.SaveChanges();
+                await session.SaveChangesAsync();
             }
 
-            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             using IConsumer<string, byte[]> consumer = CreateKafkaConsumer(new[] { $"Users{TopicSuffix}" });
 

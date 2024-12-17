@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.Raven;
@@ -28,7 +29,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         ")]
         [InlineData(null)]
-        public void Should_stop_batch_if_size_limit_exceeded(string script)
+        public async Task Should_stop_batch_if_size_limit_exceeded(string script)
         {
             using (var src = GetDocumentStore(new Options
             {
@@ -36,12 +37,12 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }))
             using (var dest = GetDocumentStore())
             {
-                using (var session = src.OpenSession())
+                using (var session = src.OpenAsyncSession())
                 {
                     for (int i = 0; i < 6; i++)
                     {
                         var user = new User();
-                        session.Store(user);
+                        await session.StoreAsync(user);
 
                         var r = new Random(i);
 
@@ -52,7 +53,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         session.Advanced.Attachments.Store(user, "my-attachment", new MemoryStream(bytes));
                     }
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 Etl.AddEtl(src, dest, "Users", script: script);
@@ -61,7 +62,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var database = GetDatabase(src.Database).Result;
+                var database = await GetDatabase(src.Database);
 
                 var etlProcess = (RavenEtl)database.EtlLoader.Processes.First();
 

@@ -45,19 +45,19 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections);
                 var etlDone = Etl.WaitForEtlToComplete(store);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new Order
+                    await session.StoreAsync(new Order
                     {
                         OrderLines = new List<OrderLine>
                         {
                             new OrderLine {Cost = 3, Product = "Cheese", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
                         }
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 var ordersCount = await client.CountAsync<object>(descriptor => descriptor.Indices(Indices.Index(OrdersIndexName)));
                 var orderLinesCount = await client.CountAsync<object>(descriptor => descriptor.Indices(Indices.Index(OrderLinesIndexName)));
@@ -67,14 +67,14 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 etlDone.Reset();
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     session.Delete("orders/1-A");
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 var ordersCountAfterDelete = await client.CountAsync<object>(descriptor => descriptor.Indices(Indices.Index(OrdersIndexName)));
                 var orderLinesCountAfterDelete = await client.CountAsync<object>(descriptor => descriptor.Indices(Indices.Index(OrderLinesIndexName)));
@@ -101,7 +101,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 for (int i = 0; i < numberOfOrders; i++)
                 {
-                    using (var session = store.OpenSession())
+                    using (var session = store.OpenAsyncSession())
                     {
                         Order order = new Order
                         {
@@ -113,13 +113,13 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                             order.OrderLines.Add(new OrderLine { Cost = j + 1, Product = "foos/" + j, Quantity = (i * j) % 10 });
                         }
 
-                        session.Store(order, "orders/" + i);
+                        await session.StoreAsync(order, "orders/" + i);
 
-                        session.SaveChanges();
+                        await session.SaveChangesAsync();
                     }
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 var ordersCount = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
                 var orderLinesCount = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
@@ -131,15 +131,15 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 for (int i = 0; i < numberOfOrders; i++)
                 {
-                    using (var session = store.OpenSession())
+                    using (var session = store.OpenAsyncSession())
                     {
                         session.Delete("orders/" + i);
 
-                        session.SaveChanges();
+                        await session.SaveChangesAsync();
                     }
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 var ordersCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
                 var orderLinesCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
@@ -172,23 +172,22 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 Etl.AddEtl(store, config, new ElasticSearchConnectionString { Name = "test", Nodes = new[] { "http://localhost:1234" } }); //wrong elastic search url
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new Order
+                    await session.StoreAsync(new Order
                     {
                         OrderLines = new List<OrderLine>
                         {
                             new OrderLine {Cost = 3, Product = "Cheese", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
                         }
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                var alert = await AssertWaitForNotNullAsync(() =>
+                var alert = await AssertWaitForNotNullAsync(async () =>
                 {
-                    Etl.TryGetLoadError(store.Database, config, out var error);
-
-                    return Task.FromResult(error);
+                    var error = await Etl.TryGetLoadErrorAsync(store.Database, config);
+                    return error;
                 }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
                 
                 Assert.StartsWith("Raven.Server.Exceptions.ETL.ElasticSearch.ElasticSearchLoadException", alert.Error);
@@ -201,23 +200,23 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new Order
+                    await session.StoreAsync(new Order
                     {
                         OrderLines = new List<OrderLine>
                         {
                             new OrderLine {Cost = 3, Product = "Cheese", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
                         }
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 var etlDone = Etl.WaitForEtlToComplete(store);
 
                 var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections);
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 await client.Indices.RefreshAsync(OrdersIndexName);
                 await client.Indices.RefreshAsync(OrderLinesIndexName);
@@ -252,14 +251,14 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 etlDone.Reset();
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     session.Delete("orders/1-a");
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 await client.Indices.RefreshAsync(OrdersIndexName);
                 await client.Indices.RefreshAsync(OrderLinesIndexName);
@@ -282,19 +281,19 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections);
                 var etlDone = Etl.WaitForEtlToComplete(store);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new Order
+                    await session.StoreAsync(new Order
                     {
                         OrderLines = new List<OrderLine>
                         {
                             new OrderLine {Cost = 3, Product = "Cheese", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
                         }
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 await client.Indices.RefreshAsync(OrdersIndexName);
                 await client.Indices.RefreshAsync(OrderLinesIndexName);
@@ -307,14 +306,14 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 etlDone.Reset();
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var order = session.Load<Order>("orders/1-A");
+                    var order = await session.LoadAsync<Order>("orders/1-A");
                     order.OrderLines.Clear();
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 await client.Indices.RefreshAsync(OrdersIndexName);
                 await client.Indices.RefreshAsync(OrderLinesIndexName);
@@ -333,22 +332,22 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new Order
+                    await session.StoreAsync(new Order
                     {
                         OrderLines = new List<OrderLine>
                         {
                             new OrderLine {Cost = 10, Product = "a", Quantity = 1}, new OrderLine {Cost = 10, Product = "b", Quantity = 1},
                         }
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections);
                 var etlDone = Etl.WaitForEtlToComplete(store);
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 await client.Indices.RefreshAsync(OrdersIndexName);
 
@@ -371,9 +370,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 etlDone.Reset();
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(
+                    await session.StoreAsync(
                         new Order
                         {
                             OrderLines = new List<OrderLine>
@@ -382,10 +381,10 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                             }
                         }, "orders/1-A");
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(2), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(2), store.Database, config);
 
                 await client.Indices.RefreshAsync(OrdersIndexName);
 
@@ -418,16 +417,16 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 var config = SetupElasticEtl(store, @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + IndexSuffix + @"(userData)", UsersIndex, new[] { "Users", "People" });
                 var etlDone = Etl.WaitForEtlToComplete(store);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new User { Name = "Joe Doe" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Joe Doe" }, "users/1");
 
-                    session.Store(new Person { Name = "James Smith" }, "people/1");
+                    await session.StoreAsync(new Person { Name = "James Smith" }, "people/1");
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 await client.Indices.RefreshAsync(UsersIndexName);
 
@@ -466,16 +465,16 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 // update
                 etlDone.Reset();
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new User { Name = "Doe Joe" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Doe Joe" }, "users/1");
 
-                    session.Store(new Person { Name = "Smith James" }, "people/1");
+                    await session.StoreAsync(new Person { Name = "Smith James" }, "people/1");
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 await client.Indices.RefreshAsync(UsersIndexName);
 
@@ -525,14 +524,14 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                     new List<string>(),
                     applyToAllDocuments: true);
 
-                using (var session = src.OpenSession())
+                using (var session = src.OpenAsyncSession())
                 {
-                    session.Store(new User { Name = "James", LastName = "Smith" }, "users/1");
+                    await session.StoreAsync(new User { Name = "James", LastName = "Smith" }, "users/1");
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
 
                 var userResponse = await client.SearchAsync<object>(d => d
                     .Index(UsersIndexName)
@@ -560,14 +559,14 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                     UsersIndex,
                     new List<string> { "Users" });
 
-                using (var session = src.OpenSession())
+                using (var session = src.OpenAsyncSession())
                 {
-                    session.Store(new User { Name = "Joe Doe" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Joe Doe" }, "users/1");
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
 
                 var userResponse = await client.SearchAsync<object>(d => d
                     .Index(UsersIndexName)
@@ -582,14 +581,14 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 etlDone.Reset();
 
-                using (var session = src.OpenSession())
+                using (var session = src.OpenAsyncSession())
                 {
-                    var user = session.Load<User>("users/1");
+                    var user = await session.LoadAsync<User>("users/1");
                     user.Name = "John Doe";
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
 
                 userResponse = await client.SearchAsync<object>(d => d
                     .Index("users")
@@ -705,14 +704,14 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 var etlDone = Etl.WaitForEtlToComplete(src);
 
-                using (var session = src.OpenSession())
+                using (var session = src.OpenAsyncSession())
                 {
-                    session.Store(new User { Name = "Joe Doe" });
+                    await session.StoreAsync(new User { Name = "Joe Doe" });
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
 
                 var userResponse1 = await client.SearchAsync<object>(d => d
                     .Index(UsersIndexName)

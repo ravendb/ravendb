@@ -7,6 +7,7 @@ using Xunit;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit.Abstractions;
+using Raven.Client.Documents;
 
 namespace SlowTests.Issues
 {
@@ -143,13 +144,13 @@ update {
                     "map-reduce index that is forced under low memory");
 
                 Invoices_Search invoicesSearch = new Invoices_Search();
-                invoicesSearch.Execute(store);
+                await invoicesSearch.ExecuteAsync(store);
 
-                using (var bulk = store.BulkInsert())
+                await using (var bulk = store.BulkInsert())
                 {
                     for (int i = 0; i < 10_000; i++)
                     {
-                        bulk.Store(new Invoice
+                        await bulk.StoreAsync(new Invoice
                         {
                             Amount = 4,
                             Price = 3,
@@ -158,15 +159,15 @@ update {
                     }
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
-                using (var bulk = store.BulkInsert())
+                await using (var bulk = store.BulkInsert())
                 {
                     for (int i = 0; i < 100; i++)
                     {
-                        bulk.Store(new Stock
+                        await bulk.StoreAsync(new Stock
                         {
                             Age = 1,
                             Name = "Long name #" + i,
@@ -177,13 +178,13 @@ update {
 
                 (await GetDatabase(store.Database)).IndexStore.GetIndex(invoicesSearch.IndexName).SimulateLowMemory();
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var s = session.Query<Invoices_Search.Result, Invoices_Search>()
+                    var s = await session.Query<Invoices_Search.Result, Invoices_Search>()
                         .Customize(x => x.WaitForNonStaleResults(waitTimeout: TimeSpan.FromMinutes(3)))
-                        .ToList();
+                        .ToListAsync();
 
                     Assert.Equal(100, s.Count);
 
@@ -200,11 +201,11 @@ update {
         {
             using (var store = GetDocumentStore())
             {
-                using (var bulk = store.BulkInsert())
+                await using (var bulk = store.BulkInsert())
                 {
                     for (int i = 0; i < 500; i++)
                     {
-                        bulk.Store(new Stock
+                        await bulk.StoreAsync(new Stock
                         {
                             Age = 1,
                             Name = "Long name #" + i,
@@ -214,7 +215,7 @@ update {
 
                     for (int i = 0; i < 5_000; i++)
                     {
-                        bulk.Store(new Invoice
+                        await bulk.StoreAsync(new Invoice
                         {
                             Amount = 4,
                             Price = 3,
@@ -223,13 +224,13 @@ update {
                     }
 
                     Invoices_Search invoicesSearch = new Invoices_Search();
-                    invoicesSearch.Execute(store);
+                    await invoicesSearch.ExecuteAsync(store);
 
                     (await GetDatabase(store.Database)).IndexStore.GetIndex(invoicesSearch.IndexName).SimulateLowMemory();
 
                     for (int i = 0; i < 5_000; i++)
                     {
-                        bulk.Store(new Invoice
+                        await bulk.StoreAsync(new Invoice
                         {
                             Amount = 4,
                             Price = 3,
@@ -238,11 +239,11 @@ update {
                     }
                 }
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var s = session.Query<Invoices_Search.Result, Invoices_Search>()
+                    var s = await session.Query<Invoices_Search.Result, Invoices_Search>()
                         .Customize(x => x.WaitForNonStaleResults(waitTimeout: TimeSpan.FromMinutes(3)))
-                        .ToList();
+                        .ToListAsync();
                     Assert.Equal(500, s.Count);
                     foreach (var item in s)
                     {
@@ -250,19 +251,19 @@ update {
                     }
                 }
 
-                var op = store.Operations.Send(new PatchByQueryOperation(@"
+                var op = await store.Operations.SendAsync(new PatchByQueryOperation(@"
 from Stocks
 update {
     this.Age++;
 }
 "));
-                op.WaitForCompletion(TimeSpan.FromMinutes(5));
+                await op.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    var s = session.Query<Invoices_Search.Result, Invoices_Search>()
+                    var s = await session.Query<Invoices_Search.Result, Invoices_Search>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .ToList();
+                        .ToListAsync();
 
                     Assert.Equal(500, s.Count);
 

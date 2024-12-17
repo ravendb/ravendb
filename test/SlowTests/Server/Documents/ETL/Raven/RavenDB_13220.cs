@@ -56,7 +56,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
             using (var src = GetDocumentStore(options))
             using (var dstServer = GetNewServer())
-            using (var dest = GetDocumentStore(new Options()
+            using (var dest = GetDocumentStore(new Options
             {
                 Server = dstServer
             }))
@@ -67,7 +67,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     Name = "myFirstEtl",
                     Transforms =
                     {
-                        new Transformation()
+                        new Transformation
                         {
                             Collections =
                             {
@@ -78,7 +78,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         }
                     },
                     AllowEtlOnNonEncryptedChannel = true
-                }, new RavenConnectionString()
+                }, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = dest.Urls,
@@ -92,21 +92,21 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 var etlDone = Etl.WaitForEtlToComplete(src);
 
-                using (var session = src.OpenSession())
+                using (var session = src.OpenAsyncSession())
                 {
-                    session.Store(new User()
+                    await session.StoreAsync(new User
                     {
                         Name = "Joe Doe"
                     }, docId);
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                using (var session = dest.OpenSession())
+                using (var session = dest.OpenAsyncSession())
                 {
-                    var user = session.Load<User>(docId);
+                    var user = await session.LoadAsync<User>(docId);
 
                     Assert.NotNull(user);
                     Assert.Equal("Joe Doe", user.Name);
@@ -162,7 +162,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 ModifyDatabaseName = s => dstDbName,
             }))
             {
-                Etl.AddEtl(src, new RavenEtlConfiguration()
+                Etl.AddEtl(src, new RavenEtlConfiguration
                 {
                     ConnectionStringName = "test",
                     Name = "myFirstEtl",
@@ -193,21 +193,21 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 var etlDone = Etl.WaitForEtlToComplete(src);
 
-                using (var session = src.OpenSession())
+                using (var session = src.OpenAsyncSession())
                 {
-                    session.Store(new User()
+                    await session.StoreAsync(new User
                     {
                         Name = "Joe Doe"
                     }, docId);
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                using (var session = dest.OpenSession())
+                using (var session = dest.OpenAsyncSession())
                 {
-                    var user = session.Load<User>(docId);
+                    var user = await session.LoadAsync<User>(docId);
 
                     Assert.NotNull(user);
                     Assert.Equal("Joe Doe", user.Name);

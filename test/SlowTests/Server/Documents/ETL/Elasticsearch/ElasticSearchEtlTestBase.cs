@@ -140,12 +140,12 @@ loadToOrders" + IndexSuffix + @"(orderData);";
             }
         }
 
-        protected void AssertEtlDone(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, ElasticSearchEtlConfiguration config)
+        protected async Task AssertEtlDoneAsync(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, ElasticSearchEtlConfiguration config)
         {
             if (etlDone.Wait(timeout) == false)
             {
-                Etl.TryGetLoadError(databaseName, config, out var loadError);
-                Etl.TryGetTransformationError(databaseName, config, out var transformationError);
+                var loadError = await Etl.TryGetLoadErrorAsync(databaseName, config);
+                var transformationError = await Etl.TryGetTransformationErrorAsync(databaseName, config);
 
                 Assert.Fail($"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
             }

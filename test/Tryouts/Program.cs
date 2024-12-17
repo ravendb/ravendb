@@ -8,6 +8,7 @@ using SlowTests.Corax;
 using SlowTests.Sharding.Cluster;
 using Xunit;
 using FastTests.Voron.Util;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Tryouts;
 

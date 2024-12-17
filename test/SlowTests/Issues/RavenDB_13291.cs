@@ -34,24 +34,24 @@ namespace SlowTests.Issues
                     DatabaseName = databaseName
                 }))
                 {
-                    var stats = store.Maintenance.ForDatabase(databaseName).Send(new GetStatisticsOperation());
+                    var stats = await store.Maintenance.ForDatabase(databaseName).SendAsync(new GetStatisticsOperation());
 
                     Assert.Equal(2, stats.CountOfDocuments);
                     Assert.Equal(1, stats.CountOfCounterEntries);
 
-                    using (var session = store.OpenSession(databaseName))
+                    using (var session = store.OpenAsyncSession(databaseName))
                     {
-                        var o = session.Load<object>("LoginCounters/1");
+                        var o = await session.LoadAsync<object>("LoginCounters/1");
 
                         Assert.NotNull(o);
 
-                        var d = session.Load<object>("downloads/1");
+                        var d = await session.LoadAsync<object>("downloads/1");
 
                         Assert.NotNull(d);
 
-                        var details = store.Operations
+                        var details = await store.Operations
                             .ForDatabase(databaseName)
-                            .Send(new GetCountersOperation("downloads/1", returnFullResults: true));
+                            .SendAsync(new GetCountersOperation("downloads/1", returnFullResults: true));
 
                         Assert.Equal(1, details.Counters.Count);
                         Assert.Equal("NumberOfDownloads", details.Counters[0].CounterName);

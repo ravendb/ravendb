@@ -53,9 +53,9 @@ loadTo" + OrdersIndexName + @"(orderData);
 
                 var etlDone = Etl.WaitForEtlToComplete(store);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new Order
+                    await session.StoreAsync(new Order
                     {
                         Lines = new List<OrderLine>
                         {
@@ -63,10 +63,10 @@ loadTo" + OrdersIndexName + @"(orderData);
                             new OrderLine { PricePerUnit = 4, Product = "Bear", Quantity = 2 },
                         }
                     });
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 var ordersCount = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
                 var orderLinesCount = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));
@@ -79,14 +79,14 @@ loadTo" + OrdersIndexName + @"(orderData);
 
                 etlDone.Reset();
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     session.Delete("orders/1-A");
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
-                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+                await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 var ordersCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrdersIndexName)));
                 var orderLinesCountAfterDelete = await client.CountAsync<object>(c => c.Indices(Indices.Index(OrderLinesIndexName)));

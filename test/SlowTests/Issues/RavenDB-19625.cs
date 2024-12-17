@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -19,27 +20,27 @@ public class RavenDB_19625 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Indexes)]
-    public void CanQueryIndexFilteredByDateTime()
+    public async Task CanQueryIndexFilteredByDateTime()
     {
         using (var store = GetDocumentStore())
         {
-            store.ExecuteIndex(new QueryDateTime_Index());
+            await store.ExecuteIndexAsync(new QueryDateTime_Index());
 
-            using (var session = store.OpenSession())
+            using (var session = store.OpenAsyncSession())
             {
-                session.Store(new Post {Id = "posts/1", Date = new DateTime(2023, 1, 1, 12, 11, 10)});
+                await session.StoreAsync(new Post { Id = "posts/1", Date = new DateTime(2023, 1, 1, 12, 11, 10) });
 
-                session.SaveChanges();
+                await session.SaveChangesAsync();
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
-                var res = session.Query<QueryDateTime_Index.Result, QueryDateTime_Index>()
+                var res = await session.Query<QueryDateTime_Index.Result, QueryDateTime_Index>()
                     .Where(x => x.Date < DateTime.UtcNow)
                     .ProjectInto<QueryDateTime_Index.Result>()
-                    .ToList();
+                    .ToListAsync();
 
                 Assert.NotEmpty(res);
-                var hasTimeValues = GetDatabase(store.Database).Result.IndexStore.GetIndex(new QueryDateTime_Index().IndexName).IndexFieldsPersistence
+                var hasTimeValues = (await GetDatabase(store.Database)).IndexStore.GetIndex(new QueryDateTime_Index().IndexName).IndexFieldsPersistence
                     .HasTimeValues(nameof(QueryDateTime_Index.Result.Date));
                 Assert.True(hasTimeValues);
             }
@@ -49,7 +50,7 @@ public class RavenDB_19625 : RavenTestBase
     [RavenTheory(RavenTestCategory.Indexes)]
     [InlineData("SlowTests.Data.RavenDB_21957.js_index_with_dates_54112.ravendb-snapshot")]
     [InlineData("SlowTests.Data.RavenDB_21957.js_index_with_dates_601.ravendb-snapshot")]
-    public void IndexBuiltBeforeJsDateIntroductionWillNotInsertTicks(string snapshotResourcePath)
+    public async Task IndexBuiltBeforeJsDateIntroductionWillNotInsertTicks(string snapshotResourcePath)
     {
         var backupPath = NewDataPath(forceCreateDir: true);
         var fullBackupPath = Path.Combine(backupPath, "backup.ravendb-snapshot");
@@ -57,38 +58,37 @@ public class RavenDB_19625 : RavenTestBase
         using (var file = File.Create(fullBackupPath))
         using (var stream = typeof(RavenDB_19625).Assembly.GetManifestResourceStream(snapshotResourcePath))
         {
-            stream.CopyTo(file);
+            await stream.CopyToAsync(file);
         }
 
         using var store = GetDocumentStore();
         var databaseName = GetDatabaseName();
         using var _ = Backup.RestoreDatabase(store, new RestoreBackupConfiguration {BackupLocation = backupPath, DatabaseName = databaseName});
 
-        using (var session = store.OpenSession(databaseName))
+        using (var session = store.OpenAsyncSession(databaseName))
         {
-            var results = session.Query<QueryDateTime_Index.Result, QueryDateTime_Index>()
+            var results = await session.Query<QueryDateTime_Index.Result, QueryDateTime_Index>()
                 .Where(x => x.Date < new DateTime(2024, 1, 1))
                 .ProjectInto<QueryDateTime_Index.Result>()
-                .ToList();
+                .ToListAsync();
             Assert.Equal(1, results.Count);
             Assert.Equal("posts/1", results[0].Id);
-            var hasTimeValues = GetDatabase(databaseName).Result.IndexStore.GetIndex(new QueryDateTime_Index().IndexName).IndexFieldsPersistence
+            var hasTimeValues = (await GetDatabase(databaseName)).IndexStore.GetIndex(new QueryDateTime_Index().IndexName).IndexFieldsPersistence
                 .HasTimeValues(nameof(QueryDateTime_Index.Result.Date));
             Assert.False(hasTimeValues);
             
+            await session.StoreAsync(new Post {Id = "posts/2", Date = new DateTime(2023, 1, 2, 12, 11, 12)});
+            await session.SaveChangesAsync();
+            await Indexes.WaitForIndexingAsync(store, databaseName);
             
-            session.Store(new Post {Id = "posts/2", Date = new DateTime(2023, 1, 2, 12, 11, 12)});
-            session.SaveChanges();
-            Indexes.WaitForIndexing(store, databaseName);
-            
-            results = session.Query<QueryDateTime_Index.Result, QueryDateTime_Index>()
+            results = await session.Query<QueryDateTime_Index.Result, QueryDateTime_Index>()
                 .Where(x => x.Date < new DateTime(2024, 1, 1))
                 .ProjectInto<QueryDateTime_Index.Result>()
-                .ToList();
+                .ToListAsync();
             
             Assert.Equal(2, results.Count);
 
-            hasTimeValues = GetDatabase(databaseName).Result.IndexStore.GetIndex(new QueryDateTime_Index().IndexName).IndexFieldsPersistence
+            hasTimeValues = (await GetDatabase(databaseName)).IndexStore.GetIndex(new QueryDateTime_Index().IndexName).IndexFieldsPersistence
                 .HasTimeValues(nameof(QueryDateTime_Index.Result.Date));
             Assert.False(hasTimeValues);
         }
