@@ -298,7 +298,7 @@ namespace SlowTests.Client.Subscriptions
                     }
                 }
 
-                Assert.True(Task.WaitAll(new[] { subscriptionReleasedAwaiter }, 250));
+                await subscriptionReleasedAwaiter.WaitAsync(TimeSpan.FromMilliseconds(250));
 
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionName)
                 {
