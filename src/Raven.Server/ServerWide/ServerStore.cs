@@ -469,7 +469,7 @@ namespace Raven.Server.ServerWide
 
         private int ReconnectionBackoff(int delay)
         {
-            TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(delay), ServerShutdown).Wait(ServerShutdown);
+            ServerShutdown.WaitHandle.WaitOne(delay);
             return Math.Min(15_000, delay * 2);
         }
 

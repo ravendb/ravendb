@@ -813,14 +813,7 @@ namespace Raven.Server
                     }
                 }
 
-                try
-                {
-                    Task.Delay(1000).Wait(ServerStore.ServerShutdown);
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
+                ServerStore.ServerShutdown.WaitHandle.WaitOne(TimeSpan.FromSeconds(5));
             }
 
             void MaybeRaiseAlert(

@@ -2269,7 +2269,10 @@ namespace Raven.Server.Documents.Indexes
                 var timeLeft = timeToWaitInMilliseconds - sp.ElapsedMilliseconds;
                 // wait for sync
                 if (timeLeft > 0)
-                    Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
+                {
+                    if (_indexingProcessCancellationTokenSource.Token.WaitHandle.WaitOne((int)timeLeft))
+                        return;
+                }
             }
             catch (OperationCanceledException)
             {
