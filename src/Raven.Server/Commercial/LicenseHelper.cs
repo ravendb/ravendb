@@ -415,7 +415,7 @@ namespace Raven.Server.Commercial
                     ValidateLicenseVersionOrThrow(deserializedLicense, serverStore, contextPool);
 
                     serverStore.LicenseManager.OnBeforeInitialize += () => AsyncHelpers.RunSync(() => serverStore.LicenseManager.TryActivateLicenseAsync
-                        (throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure).WaitAsync(TimeSpan.FromSeconds(30)));
+                        (throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure).WaitAsync(serverStore.ServerShutdown));
 
                     return true;
                 }
