@@ -927,7 +927,6 @@ namespace Voron
             }
 
             long tempBuffers = 0;
-            long tempRecyclableJournals = 0;
 
             if (includeTempBuffers)
             {
@@ -954,7 +953,6 @@ namespace Voron
                 DataFileInBytes = StorageReportGenerator.PagesToBytes(numberOfAllocatedPages),
                 JournalsInBytes = journalsSize,
                 TempBuffersInBytes = tempBuffers,
-                TempRecyclableJournalsInBytes = tempRecyclableJournals
             };
         }
 

@@ -233,7 +233,7 @@ class storageReport extends viewModelBase {
                 []
             );
             
-            item.recyclableJournal = temp.Type === "RecyclableJournal";
+            item.recyclableJournal = false;
             
             return item;
         });

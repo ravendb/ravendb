@@ -314,7 +314,7 @@ class storageReport extends shardViewModelBase {
                 []
             );
             
-            item.recyclableJournal = temp.Type === "RecyclableJournal";
+            item.recyclableJournal = false;
             
             return item;
         });

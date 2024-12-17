@@ -16,7 +16,6 @@ namespace Voron.Debugging
         public long DataFileInBytes { get; set; }
         public long JournalsInBytes { get; set; }
         public long TempBuffersInBytes { get; set; }
-        public long TempRecyclableJournalsInBytes { get; set; }
     }
 
     public sealed class StorageReport

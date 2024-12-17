@@ -45,11 +45,11 @@ public static class Program
                 {
 
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new FastTests.Voron.NextGenPagers.BasicNextGen(testOutputHelper))
+                    using (var test = new FastTests.Voron.SharedJournal.SharedJournalTests(testOutputHelper))
                     {
                         DebuggerAttachedTimeout.DisableLongTimespan = true;
 
-                        test.WithRestartAndFlush();
+                        test.CanFlushWithSharedJournals();
                     }
                 }
                 catch (Exception e)
