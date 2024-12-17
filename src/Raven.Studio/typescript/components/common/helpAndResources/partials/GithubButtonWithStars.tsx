@@ -3,6 +3,7 @@ import React from "react";
 import { useAsync } from "react-async-hook";
 import * as yup from "yup";
 import { Icon } from "components/common/Icon";
+import "./GithubButtonWithStars.scss";
 
 export default function GithubButtonWithStars() {
     return (
@@ -10,7 +11,7 @@ export default function GithubButtonWithStars() {
             href="https://github.com/ravendb/ravendb"
             target="_blank"
             title="Star ravendb on GitHub"
-            className="bg-dark d-flex align-items-center p-1 m-0 border border-dark-subtle rounded-1 gap-1 small no-decor lh-1"
+            className="github-star no-decor"
         >
             <div>
                 <Icon icon="github" />

@@ -135,8 +135,9 @@ $btn-default-dimension: 36px;
             }
 
             &--primary {
-                border: 1px solid colors.$link-color;
+                border: 1px solid colors.$link-color-var;
                 background-color: colors.$primary-var;
+                color: colors.$white;
             }
 
             &--cloud {
@@ -155,6 +156,7 @@ $btn-default-dimension: 36px;
             flex-direction: column;
             border-top: 1px solid colors.$border-color-light-var;
             padding: sizes.$gutter-sm;
+            color: colors.$text-muted-var;
         }
     }
 }

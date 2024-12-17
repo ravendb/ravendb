@@ -1,0 +1,22 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+@use "Content/scss/variables";
+
+.github-star {
+    color: colors.$text-emphasis-var !important;
+    display: flex;
+    align-items: center;
+    padding: sizes.$gutter-xxs;
+    margin: 0;
+    border: 1px solid colors.$border-color-light-var;
+    border-radius: sizes.$border-radius-sm;
+    gap: sizes.$gutter-xxs;
+    font-size: bs5variables.$font-size-xs;
+    line-height: 1;
+    transition: bs5variables.$transition-base;
+
+    &:hover {
+        filter: colors.$hover-filter-var;
+    }
+}

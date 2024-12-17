@@ -26,7 +26,8 @@ export function ContactSupportContent() {
     const supportPlansUrl = useRavenLink({ hash: "2DW5F4" });
     const cloudTermsUrl = useRavenLink({ hash: "75DJRY" });
     const onPremiseTermsUrl = useRavenLink({ hash: "R1OFBF" });
-    const gitHubCommunityUrl = useRavenLink({ hash: "ITXUEA" });
+    const gitHubDiscussionsUrl = useRavenLink({ hash: "ITXUEA" });
+    const communityUrl = useRavenLink({ hash: "FUNILW", isDocs: false });
     const cloudRequestSupportUrl = useRavenLink({ hash: "2YGOL1" });
     const onPremiseRequestSupportUrl = "https://ravendb.net/support/supportrequest?licenseId=" + licenseId;
 
@@ -69,7 +70,7 @@ export function ContactSupportContent() {
                                     <span className="fw-bold lh-base">
                                         {supportType === "Professional" ? "Next day SLA" : "2 hour SLA"}
                                     </span>
-                                    <small className="text-muted lh-1">
+                                    <small className="lh-1">
                                         {supportType === "Professional"
                                             ? "Sun-Fri, Business Hours"
                                             : "24/7 availability"}
@@ -106,7 +107,7 @@ export function ContactSupportContent() {
                             className="action-menu__list-item action-menu__list-item--primary mt-1"
                             role="button"
                             title="Go to GitHub discussions"
-                            onClick={() => window.open(gitHubCommunityUrl, "_blank")}
+                            onClick={() => window.open(gitHubDiscussionsUrl, "_blank")}
                         >
                             <Icon icon="github" margin="m-0" />
                             GitHub Discussions
@@ -117,7 +118,7 @@ export function ContactSupportContent() {
                 )}
             </ul>
             <div className="action-menu__footer">
-                <small className="text-muted lh-1">
+                <small className="lh-1">
                     <Icon icon="support" />
                     Get more details on our{" "}
                     <a href={supportPlansUrl} target="_blank">
@@ -125,11 +126,11 @@ export function ContactSupportContent() {
                     </a>
                 </small>
                 {isPaidSupport && !isSupportStatusHidden && (
-                    <small className="text-muted lh-1 mt-1">
-                        <Icon icon="github" />
+                    <small className="lh-1 mt-1">
+                        <Icon icon="community" />
                         Join our{" "}
-                        <a href={gitHubCommunityUrl} target="_blank">
-                            GitHub community
+                        <a href={communityUrl} target="_blank">
+                            Community
                         </a>
                     </small>
                 )}

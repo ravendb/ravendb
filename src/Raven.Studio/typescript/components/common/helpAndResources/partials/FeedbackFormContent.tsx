@@ -32,8 +32,8 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
     const serverVersion = useAppSelector(clusterSelectors.serverVersion).FullVersion;
     const clientVersion = useAppSelector(clusterSelectors.clientVersion);
 
-    const gitHubCommunityUrl = useRavenLink({ hash: "ITXUEA" });
-    const cloudRequestSupportUrl = useRavenLink({ hash: "2YGOL1" });
+    const communityUrl = useRavenLink({ hash: "FUNILW", isDocs: false });
+    const cloudRequestSupportUrl = useRavenLink({ hash: "2YGOL1", isDocs: false });
     const onPremiseRequestSupportUrl = "https://ravendb.net/support/supportrequest?licenseId=" + licenseId;
 
     const requestSupportUrl = isCloud ? cloudRequestSupportUrl : onPremiseRequestSupportUrl;
@@ -159,14 +159,14 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
                 </div>
             </ul>
             <div className="action-menu__footer">
-                <small className="text-muted lh-1">
-                    <Icon icon="github" />
+                <small className="lh-1">
+                    <Icon icon="community" />
                     Join our{" "}
-                    <a href={gitHubCommunityUrl} target="_blank">
-                        GitHub community
+                    <a href={communityUrl} target="_blank">
+                        Community
                     </a>
                 </small>
-                <small className="text-muted lh-1 mt-1">
+                <small className="lh-1 mt-1">
                     <Icon icon="support" />
                     Need help?{" "}
                     <a href={requestSupportUrl} target="_blank">
