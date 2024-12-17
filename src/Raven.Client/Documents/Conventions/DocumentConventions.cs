@@ -47,7 +47,11 @@ namespace Raven.Client.Documents.Conventions
         internal static TimeSpan? DefaultHttpPooledConnectionIdleTimeout;
 #endif
 
+#if FEATURE_ZSTD_SUPPORT
+        internal static HttpCompressionAlgorithm DefaultHttpCompressionAlgorithm = HttpCompressionAlgorithm.Zstd;
+#else
         internal static HttpCompressionAlgorithm DefaultHttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
+#endif
 
         internal static readonly DocumentConventions Default = new();
 
