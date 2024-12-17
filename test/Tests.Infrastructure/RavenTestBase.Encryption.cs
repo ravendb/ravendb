@@ -133,9 +133,9 @@ public partial class RavenTestBase
             return dbName;
         }
 
-        public string SetupEncryptedDatabaseInCluster(List<RavenServer> nodes, TestCertificatesHolder certificates, out string databaseName)
+        public async Task<(string Key, string DatabaseName)> SetupEncryptedDatabaseInCluster(List<RavenServer> nodes, TestCertificatesHolder certificates)
         {
-            databaseName = _parent.GetDatabaseName();
+            var databaseName = _parent.GetDatabaseName();
             var base64Key = CreateMasterKey(out _);
 
             foreach (var node in nodes)
@@ -143,15 +143,15 @@ public partial class RavenTestBase
                 _parent.Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, node);
 
                 EnsureServerMasterKeyIsSetup(node);
-
-                Assert.True(node.ServerStore.EnsureNotPassiveAsync().Wait(TimeSpan.FromSeconds(30))); // activate license so we can insert the secret key
-                Assert.True(node.ServerStore.LicenseManager.TryActivateLicenseAsync(_parent.Server.ThrowOnLicenseActivationFailure).Wait(TimeSpan.FromSeconds(30))); // activate license so we can insert the secret key
+                 
+                await _parent.Server.ServerStore.EnsureNotPassiveAsync().WaitAsync(TimeSpan.FromSeconds(30)); // activate license so we can insert the secret key
+                await _parent.Server.ServerStore.LicenseManager.TryActivateLicenseAsync(_parent.Server.ThrowOnLicenseActivationFailure).WaitAsync(TimeSpan.FromSeconds(30));
 
                 var key = new string(base64Key);
                 node.ServerStore.PutSecretKey(key, databaseName, overwrite: true);
             }
 
-            return base64Key;
+            return (base64Key, databaseName);
         }
 
         private void EnsureServerMasterKeyIsSetup(RavenServer server)

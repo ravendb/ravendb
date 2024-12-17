@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
 using Raven.Client.Documents.Operations.Indexes;
@@ -18,15 +19,16 @@ public class RavenDB_20979 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void CanUsePulsedEnumeratorInDictionaryTrainingPhase(Options parameters)
+    public async Task CanUsePulsedEnumeratorInDictionaryTrainingPhase(Options parameters)
     {
-        Encryption.EncryptedServer(out var certificates, out string dbName);
+        var result = await Encryption.EncryptedServerAsync();
+
         using var store = GetDocumentStore(new Options
         {
             Encrypted = true,
-            AdminCertificate = certificates.ServerCertificate.Value,
-            ClientCertificate = certificates.ServerCertificate.Value,
-            ModifyDatabaseName = s => dbName,
+            AdminCertificate = result.Certificates.ServerCertificate.Value,
+            ClientCertificate = result.Certificates.ServerCertificate.Value,
+            ModifyDatabaseName = s => result.DatabaseName,
             ModifyDatabaseRecord = record =>
             {
                 parameters.ModifyDatabaseRecord(record);

@@ -28,19 +28,19 @@ namespace SlowTests.Sharding.Encryption
         }
 
         [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
-        public void Can_Setup_Sharded_Encrypted_Database()
+        public async Task Can_Setup_Sharded_Encrypted_Database()
         {
-            Encryption.EncryptedServer(out var certificates, out var dbName);
+            var result = await Encryption.EncryptedServerAsync();
 
             var options = new Options
             {
-                AdminCertificate = certificates.ServerCertificate.Value,
-                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificate.Value,
+                ClientCertificate = result.Certificates.ServerCertificate.Value,
                 ModifyDatabaseRecord = record =>
                 {
                     record.Encrypted = true;
                 },
-                ModifyDatabaseName = s => dbName
+                ModifyDatabaseName = s => result.DatabaseName
             };
 
             using (var store = Sharding.GetDocumentStore(options))
@@ -66,17 +66,17 @@ namespace SlowTests.Sharding.Encryption
         [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
         public async Task CRUD_Operations_Encrypted()
         {
-            Encryption.EncryptedServer(out var certificates, out var dbName);
+            var result = await Encryption.EncryptedServerAsync();
 
             var options = new Options
             {
-                AdminCertificate = certificates.ServerCertificate.Value,
-                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificate.Value,
+                ClientCertificate = result.Certificates.ServerCertificate.Value,
                 ModifyDatabaseRecord = record =>
                 {
                     record.Encrypted = true;
                 },
-                ModifyDatabaseName = s => dbName
+                ModifyDatabaseName = s => result.DatabaseName
             };
 
             using (var store = Sharding.GetDocumentStore(options))
@@ -140,7 +140,7 @@ namespace SlowTests.Sharding.Encryption
         public async Task Can_Add_Shard_To_Encrypted_Database()
         {
             var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
-            Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates, out var databaseName);
+            (_, string databaseName) = await Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates);
 
             var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 1);
             options.ClientCertificate = certificates.ClientCertificate1.Value;
@@ -216,17 +216,17 @@ namespace SlowTests.Sharding.Encryption
         [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
         public async Task ClientCertificateForShardedDatabaseShouldPermitAccessToIndividualShards()
         {
-            Encryption.EncryptedServer(out var certificates, out var dbName);
+            var result = await Encryption.EncryptedServerAsync();
 
             var options = new Options
             {
-                AdminCertificate = certificates.ServerCertificate.Value,
-                ClientCertificate = certificates.ClientCertificate1.Value,
+                AdminCertificate = result.Certificates.ServerCertificate.Value,
+                ClientCertificate = result.Certificates.ClientCertificate1.Value,
                 ModifyDatabaseRecord = record =>
                 {
                     record.Encrypted = true;
                 },
-                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseName = s => result.DatabaseName,
                 DeleteDatabaseOnDispose = false
             };
             var dic = new Dictionary<int, List<string>>();
@@ -260,13 +260,13 @@ namespace SlowTests.Sharding.Encryption
                 }
             }
 
-            var userCert = certificates.ClientCertificate2.Value;
+            var userCert = result.Certificates.ClientCertificate2.Value;
 
-            Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value,
+            Certificates.RegisterClientCertificate(result.Certificates.ServerCertificate.Value,
                 clientCertificate: userCert,
                 permissions: new Dictionary<string, DatabaseAccess>
                 {
-                    [dbName] = DatabaseAccess.Admin
+                    [result.DatabaseName] = DatabaseAccess.Admin
                 },
                 clearance: SecurityClearance.ValidUser);
 
@@ -320,7 +320,7 @@ namespace SlowTests.Sharding.Encryption
         public async Task DatabaseSecretKeyShouldBeDeletedAfterShardedDatabaseDeletion()
         {
             var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
-            Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates, out var databaseName);
+            (_, string databaseName) = await Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates);
 
             var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
             options.ClientCertificate = certificates.ClientCertificate1.Value;
@@ -375,7 +375,7 @@ namespace SlowTests.Sharding.Encryption
             };
 
             var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true, customSettings: customSettings);
-            Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates, out var databaseName);
+            (_, string databaseName) = await Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates);
 
             var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
             options.ClientCertificate = certificates.ClientCertificate1.Value;
@@ -429,7 +429,7 @@ namespace SlowTests.Sharding.Encryption
         public async Task CanAddAndRemoveShardFromEncryptedShardedDb()
         {
             var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
-            Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates, out var databaseName);
+            (_, string databaseName) = await Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates);
 
             var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 2);
             options.ClientCertificate = certificates.ClientCertificate1.Value;

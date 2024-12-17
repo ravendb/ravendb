@@ -18,20 +18,20 @@ public class RavenDB_20237 : RavenTestBase
     [RavenFact(RavenTestCategory.Encryption)]
     public async Task MustProvideEncryptionKeyToAllDbStorages()
     {
-        Encryption.EncryptedServer(out var certificates, out var databaseName);
+        var result = await Encryption.EncryptedServerAsync();
 
         using (var store = GetDocumentStore(new Options
                {
-                   ModifyDatabaseName = _ => databaseName,
-                   ClientCertificate = certificates.ServerCertificate.Value,
-                   AdminCertificate = certificates.ServerCertificate.Value,
+                   ModifyDatabaseName = _ => result.DatabaseName,
+                   ClientCertificate = result.Certificates.ServerCertificate.Value,
+                   AdminCertificate = result.Certificates.ServerCertificate.Value,
                    Encrypted = true
                }))
         {
             Index index = new Index();
             await index.ExecuteAsync(store);
 
-            var database = await GetDatabase(databaseName);
+            var database = await GetDatabase(result.DatabaseName);
 
             Assert.NotNull(database.MasterKey);
 

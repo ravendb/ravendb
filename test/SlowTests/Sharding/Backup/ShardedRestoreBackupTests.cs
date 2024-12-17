@@ -564,13 +564,13 @@ namespace SlowTests.Sharding.Backup
          
             try
             {
-                var key = Encryption.EncryptedServer(out var certificates, out var dbName);
+                var result = await Encryption.EncryptedServerAsync();
 
                 using (var store = Sharding.GetDocumentStore(new Options
                 {
-                   AdminCertificate = certificates.ServerCertificate.Value,
-                   ClientCertificate = certificates.ServerCertificate.Value,
-                   ModifyDatabaseName = s => dbName,
+                   AdminCertificate = result.Certificates.ServerCertificate.Value,
+                   ClientCertificate = result.Certificates.ServerCertificate.Value,
+                   ModifyDatabaseName = s => result.DatabaseName,
                    ModifyDatabaseRecord = record => record.Encrypted = true
                 }))
                 {
@@ -638,7 +638,7 @@ namespace SlowTests.Sharding.Backup
                        Settings = s3Settings,
                        ShardRestoreSettings = shardedRestoreSettings,
                        DatabaseName = databaseName,
-                       EncryptionKey = key,
+                       EncryptionKey = result.Key,
                        BackupEncryptionSettings = new BackupEncryptionSettings
                        {
                            EncryptionMode = EncryptionMode.UseDatabaseKey
@@ -686,12 +686,12 @@ namespace SlowTests.Sharding.Backup
             try
             {
                 var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
-                var key = Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates, out var databaseName);
+                var result = await Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates);
 
                 var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
                 options.ClientCertificate = certificates.ClientCertificate1.Value;
                 options.AdminCertificate = certificates.ServerCertificate.Value;
-                options.ModifyDatabaseName = _ => databaseName;
+                options.ModifyDatabaseName = _ => result.DatabaseName;
                 options.ModifyDatabaseRecord += record => record.Encrypted = true;
                 options.RunInMemory = false;
 
@@ -731,7 +731,7 @@ namespace SlowTests.Sharding.Backup
                         Settings = s3Settings,
                         ShardRestoreSettings = shardedRestoreSettings,
                         DatabaseName = newDbName,
-                        EncryptionKey = key,
+                        EncryptionKey = result.Key,
                         BackupEncryptionSettings = new BackupEncryptionSettings
                         {
                             EncryptionMode = EncryptionMode.UseDatabaseKey
