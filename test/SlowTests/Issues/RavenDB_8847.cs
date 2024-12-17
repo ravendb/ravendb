@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -50,7 +51,9 @@ namespace SlowTests.Issues
 
                     await session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name != "ema").ToListAsync();
 
-                    Indexes.WaitForIndexBatchCompleted(store, x => x.DidWork).Wait(TimeSpan.FromSeconds(2));
+                    var batchCompleted = await Indexes.WaitForIndexBatchCompletedAsync(store, x => x.DidWork);
+                    using (var tcs = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
+                        await batchCompleted.WaitAsync(tcs.Token);
 
                     // ensure the timeout was reset after the run completed
                     Assert.False(index._firstBatchTimeout.HasValue);
@@ -100,7 +103,9 @@ namespace SlowTests.Issues
 
                     await session.Query<User>(usersByName).Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name != "ema").ToListAsync();
 
-                    Indexes.WaitForIndexBatchCompleted(store, x => x.DidWork).Wait(TimeSpan.FromSeconds(2));
+                    var batchCompleted = await Indexes.WaitForIndexBatchCompletedAsync(store, x => x.DidWork);
+                    using (var tcs = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
+                        await batchCompleted.WaitAsync(tcs.Token);
 
                     // ensure the timeout was reset after the run completed
                     Assert.False(index._firstBatchTimeout.HasValue);

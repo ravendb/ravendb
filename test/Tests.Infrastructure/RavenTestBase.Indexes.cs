@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.Runtime.Internal.Util;
+using Nito.AsyncEx;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -340,11 +341,11 @@ public partial class RavenTestBase
             return entriesCount;
         }
 
-        public ManualResetEventSlim WaitForIndexBatchCompleted(IDocumentStore store, Func<(string IndexName, bool DidWork), bool> predicate)
+        public async Task<AsyncManualResetEvent> WaitForIndexBatchCompletedAsync(IDocumentStore store, Func<(string IndexName, bool DidWork), bool> predicate)
         {
-            var database = _parent.GetDatabase(store.Database).Result;
+            var database = await _parent.GetDatabase(store.Database);
 
-            var mre = new ManualResetEventSlim();
+            var mre = new AsyncManualResetEvent();
 
             database.IndexStore.IndexBatchCompleted += x =>
             {
