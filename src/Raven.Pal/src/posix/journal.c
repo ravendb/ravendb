@@ -232,7 +232,7 @@ error_cleanup:
 EXPORT int32_t 
 rvn_hard_link(const char *src, const char *dst, int32_t *detailed_error_code)
 {
-    if (!link(src, dst))
+    if (link(src, dst))
     {    
         *detailed_error_code = errno;
         return FAIL_HARD_LINK;
