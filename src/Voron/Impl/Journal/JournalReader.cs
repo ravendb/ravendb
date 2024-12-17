@@ -373,15 +373,17 @@ namespace Voron.Impl.Journal
             if (current->HeaderMarker != Constants.TransactionHeaderMarker)
                 return false;
 
-            var numberOfPages = GetNumberOfPagesFor(
-                positionInsidePage + sizeof(TransactionHeader) + 
-                    (current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize)
-            );
-
-            if (pageNumber + numberOfPages > _journalPagerState.NumberOfAllocatedPages)
+            long actualTransactionSize = sizeof(TransactionHeader) + 
+                              (current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize);
+          
+            if (_readAt4Kb * (4*Constants.Size.Kilobyte) + actualTransactionSize > _journalPagerState.TotalAllocatedSize)
                 return false;
-            
-            _journalPager.EnsureMapped(_journalPagerState, ref txState, pageNumber, numberOfPages);
+
+            // Note that journals are measured in units of 4KB while Voron pages are 8KB.
+            // So we may read "half a page", that is fine, since the OS is always 4KB pages
+            // and we explicitly checked the size above
+            var requiredPages = GetNumberOfPagesFor(positionInsidePage + actualTransactionSize);
+            _journalPager.EnsureMapped(_journalPagerState, ref txState, pageNumber, requiredPages);
 
             var pageHeader = _journalPager.AcquirePagePointer(_journalPagerState, ref txState, pageNumber)
                              + positionInsidePage;
