@@ -47,11 +47,12 @@ namespace SlowTests.Issues
                         Name = "B"
                     });
 
+                    var batchCompleted = await Indexes.WaitForIndexBatchCompletedAsync(store, x => x.DidWork);
+
                     await session.SaveChangesAsync();
 
                     await session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name != "ema").ToListAsync();
-
-                    var batchCompleted = await Indexes.WaitForIndexBatchCompletedAsync(store, x => x.DidWork);
+                    
                     using (var tcs = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
                         await batchCompleted.WaitAsync(tcs.Token);
 
@@ -85,7 +86,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.Query<User>(usersByName).Customize(x => x.WaitForNonStaleResults()).ToList();
+                    await session.Query<User>(usersByName).Customize(x => x.WaitForNonStaleResults()).ToListAsync();
 
                     Assert.True(index._firstBatchTimeout.HasValue);
                 }
@@ -99,11 +100,12 @@ namespace SlowTests.Issues
                         Name = "B"
                     });
 
+                    var batchCompleted = await Indexes.WaitForIndexBatchCompletedAsync(store, x => x.DidWork);
+
                     await session.SaveChangesAsync();
 
                     await session.Query<User>(usersByName).Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name != "ema").ToListAsync();
 
-                    var batchCompleted = await Indexes.WaitForIndexBatchCompletedAsync(store, x => x.DidWork);
                     using (var tcs = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
                         await batchCompleted.WaitAsync(tcs.Token);
 
