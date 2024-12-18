@@ -204,6 +204,9 @@
     <PackageReference Include="ZstdSharp.Port" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="NLog.template.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Properties\Settings\settings_posix.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
