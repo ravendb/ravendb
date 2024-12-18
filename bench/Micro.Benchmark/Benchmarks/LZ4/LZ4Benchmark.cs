@@ -23,11 +23,11 @@ namespace Micro.Benchmark.Benchmarks.LZ4
         {
             public Config()
             {
-                AddJob(new Job
+                AddJob(new Job(RunMode.Dry)
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core90,
+                        Runtime = CoreRuntime.Core22,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit
                     }

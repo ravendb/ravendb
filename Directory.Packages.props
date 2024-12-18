@@ -46,7 +46,7 @@
     <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageVersion Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.553101" />
-    <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.18" />
+    <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.77" />
     <PackageVersion Include="Microsoft.DotNet.xunit.performance" Version="1.0.0-alpha-build0041" />
     <PackageVersion Include="Microsoft.DotNet.xunit.performance.runner.cli" Version="1.0.0-alpha-build0041" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.0" />
