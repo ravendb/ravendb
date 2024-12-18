@@ -245,7 +245,7 @@ namespace Sparrow.Logging
             _loggingThread.Start();
             if (compress)
             {
-                _compressLoggingThread = new Thread(BackgroundLoggerCompress) { IsBackground = true, Name = _name + " Log Compression Thread" };
+                _compressLoggingThread = new Thread(BackgroundLoggerCompress) { IsBackground = true, Name = _name + " Compression Thread" };
                 _compressLoggingThread.Start();
             }
             else
