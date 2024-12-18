@@ -412,11 +412,21 @@ namespace Voron.Impl.Journal
 
             if (_files.Count > 0)
             {
+                for (int i = 0; i < _files.Count-1; i++)
+                {
+                    _files[i].DoneWriting.Raise();
+                }
                 var lastFile = _files.Last();
-                if (lastFile.GetAvailable4Kbs(_env.CurrentStateRecord) >= 2 && 
+                if (lastFile.GetAvailable4Kbs(_env.CurrentStateRecord) >= 2 &&
                     lastFile.HasLegacyTransaction is false)
                     // it must have at least one page for the next transaction header and one 4kb for data
+                {
                     CurrentFile = lastFile;
+                }
+
+                {
+                    lastFile.DoneWriting.Raise();
+                }
             }
 
             addToInitLog?.Invoke(LogLevel.Debug, $"Info: Current File = '{CurrentFile?.Number}', Position (4KB)='{CurrentFile?.GetWritePosIn4KbPosition(_env.CurrentStateRecord)}'. Require Header Update = {requireHeaderUpdate}");
@@ -655,11 +665,6 @@ namespace Voron.Impl.Journal
                     }
 
                     _forTestingPurposes?.OnApplyLogsToDataFileUnderFlushingLock?.Invoke();
-
-                    if (_waj._env.DataPager.FileName.Contains("Indexes"))
-                    {
-                        Console.WriteLine();
-                    }
 
                     if (_applyLogsToDataFileStateFromPreviousFailedAttempt != null)
                     {
