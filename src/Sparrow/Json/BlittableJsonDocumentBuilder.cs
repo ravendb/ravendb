@@ -273,7 +273,7 @@ namespace Sparrow.Json
                         var property = CreateLazyStringValueFromParserState();
                         currentState.CurrentProperty = _context.CachedProperties.GetProperty(property);
 
-                        if (currentState.CurrentProperty.Comparer.ToString() == "@vector")
+                        if (currentState.CurrentProperty.ComparePropertyNameToBytes(Global.Constants.Naming.VectorPropertyNameAsSpan) == 0)
                             _isVectorProperty = true;
 
                         currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);

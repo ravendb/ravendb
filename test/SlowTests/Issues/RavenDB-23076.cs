@@ -71,7 +71,7 @@ public class RavenDB_23076 : RavenTestBase
         public IndexWithServerSideType()
         {
             Map = dtos => from dto in dtos
-                select new IndexEntry() { UnderlyingArrayType = ((Raven.Server.Documents.Indexes.Static.DynamicBlittableJson)(object)dto.Vector)["@vector"].GetType().FullName };
+                select new IndexEntry() { UnderlyingArrayType = ((Raven.Server.Documents.Indexes.Static.DynamicBlittableJson)(object)dto.Vector)[Sparrow.Global.Constants.Naming.VectorPropertyName].GetType().FullName };
         }
     }
 }

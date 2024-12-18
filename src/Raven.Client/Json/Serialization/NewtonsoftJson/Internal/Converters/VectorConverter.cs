@@ -3,6 +3,8 @@ using System.Collections;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
+using System.Reflection;
+using System.Reflection.Emit;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Sparrow.Json;
@@ -12,9 +14,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
 internal sealed class VectorConverter : JsonConverter
 {
     public static readonly VectorConverter Instance = new();
-
-    private const string VectorPropertyName = "@vector";
-
+    
     private static bool TryWriteVectorArray<T>(JsonWriter writer, RavenVector<T> vector)
     where T : unmanaged
 #if NET7_0_OR_GREATER
@@ -32,6 +32,9 @@ internal sealed class VectorConverter : JsonConverter
                 writer.WriteValue((float)(object)value); 
             else if (typeof(T) == typeof(double))
                 writer.WriteValue((double)(object)value); 
+            else if (typeof(T) == typeof(decimal))
+                writer.WriteValue((decimal)(object)value);
+            
             else if (typeof(T) == typeof(byte))
                 writer.WriteValue((byte)(object)value); 
             else if (typeof(T) == typeof(ushort))
@@ -40,6 +43,7 @@ internal sealed class VectorConverter : JsonConverter
                 writer.WriteValue((uint)(object)value); 
             else if (typeof(T) == typeof(ulong))
                 writer.WriteValue((ulong)(object)value); 
+            
             else if (typeof(T) == typeof(sbyte))
                 writer.WriteValue((sbyte)(object)value);  
             else if (typeof(T) == typeof(short))
@@ -62,7 +66,7 @@ internal sealed class VectorConverter : JsonConverter
         }
         
         writer.WriteStartObject();
-        writer.WritePropertyName(VectorPropertyName);
+        writer.WritePropertyName(Sparrow.Global.Constants.Naming.VectorPropertyName);
         writer.WriteStartArray();
 
         // For known types we can cast vector, otherwise we will use reflection
@@ -70,15 +74,17 @@ internal sealed class VectorConverter : JsonConverter
         {
             RavenVector<float> v => TryWriteVectorArray(writer, v),
             RavenVector<double> v => TryWriteVectorArray(writer, v),
+            RavenVector<decimal> v => TryWriteVectorArray(writer, v),
+            
             RavenVector<byte> v => TryWriteVectorArray(writer, v),
             RavenVector<ushort> v => TryWriteVectorArray(writer, v),
             RavenVector<uint> v => TryWriteVectorArray(writer, v),
             RavenVector<ulong> v => TryWriteVectorArray(writer, v),
+            
             RavenVector<sbyte> v => TryWriteVectorArray(writer, v),
             RavenVector<short> v => TryWriteVectorArray(writer, v),
             RavenVector<int> v => TryWriteVectorArray(writer, v),
             RavenVector<long> v => TryWriteVectorArray(writer, v),
-            RavenVector<decimal> v => TryWriteVectorArray(writer, v),
             _ => false
         };
 
@@ -106,12 +112,9 @@ internal sealed class VectorConverter : JsonConverter
         Debug.Assert(reader.TokenType == JsonToken.StartObject, "reader.TokenType == JsonToken.StartArray");
         
         reader.Read();
-        
         Debug.Assert(reader.TokenType == JsonToken.PropertyName, "reader.TokenType == JsonToken.PropertyName");
         
-        var propertyName = reader.Value?.ToString();
-
-        Debug.Assert(propertyName == VectorPropertyName, "propertyName == VectorPropertyName");
+        Debug.Assert(reader.Value?.ToString() == Sparrow.Global.Constants.Naming.VectorPropertyName, "propertyName == VectorPropertyName");
 
         // Read vector value
         reader.Read();
@@ -122,14 +125,33 @@ internal sealed class VectorConverter : JsonConverter
         
         var blittableJsonReaderVector = (BlittableJsonReaderVector)reader.Value;
 
+        reader.Read();
+        Debug.Assert(reader.TokenType == JsonToken.EndObject, "reader.TokenType == JsonToken.EndObject");
+        
         if (embeddingType == typeof(float))
             return CreateRavenVector<float>(blittableJsonReaderVector);
         if (embeddingType == typeof(double))
             return CreateRavenVector<double>(blittableJsonReaderVector);
+        if (embeddingType == typeof(decimal))
+            return CreateRavenVector<double>(blittableJsonReaderVector);
+        
         if (embeddingType == typeof(byte))
             return CreateRavenVector<byte>(blittableJsonReaderVector);
+        if (embeddingType == typeof(ushort))
+            return CreateRavenVector<ushort>(blittableJsonReaderVector);
+        if (embeddingType == typeof(uint))
+            return CreateRavenVector<uint>(blittableJsonReaderVector);
+        if (embeddingType == typeof(ulong))
+            return CreateRavenVector<ulong>(blittableJsonReaderVector);
+        
         if (embeddingType == typeof(sbyte))
             return CreateRavenVector<sbyte>(blittableJsonReaderVector);
+        if (embeddingType == typeof(short))
+            return CreateRavenVector<short>(blittableJsonReaderVector);
+        if (embeddingType == typeof(int))
+            return CreateRavenVector<int>(blittableJsonReaderVector);
+        if (embeddingType == typeof(long))
+            return CreateRavenVector<long>(blittableJsonReaderVector);
 
         throw new InvalidOperationException($"Type {embeddingType} is not supported.");
     }

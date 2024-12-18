@@ -2,11 +2,15 @@
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
+using FastTests.Voron.FixedSize;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -540,6 +544,159 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                     for (var i = 0; i < 8; i++)
                         Assert.Equal(i, arrayReader[i]);
+
+                    Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
+                }
+            }
+        }
+        
+        [RavenTheory(RavenTestCategory.Vector)]
+        [InlineDataWithRandomSeed(1)]
+        [InlineDataWithRandomSeed(2)]
+        [InlineDataWithRandomSeed(4)]
+        [InlineDataWithRandomSeed(256)]
+        [InlineDataWithRandomSeed(4000)]
+        public void VectorByteTest(int size, int seed)
+        {
+            var random = new Random(seed);
+            var array = Enumerable.Range(0, size).Select(x => (byte)(random.Next() % byte.MaxValue)).ToArray();
+            VectorTestBase(array);
+        }
+        
+        [RavenTheory(RavenTestCategory.Vector)]
+        [InlineDataWithRandomSeed(1)]
+        [InlineDataWithRandomSeed(2)]
+        [InlineDataWithRandomSeed(4)]
+        [InlineDataWithRandomSeed(256)]
+        [InlineDataWithRandomSeed(4000)]
+        public void VectorUshortTest(int size, int seed)
+        {
+            var random = new Random(seed);
+            var array = Enumerable.Range(0, size).Select(x => (ushort)(random.Next() % ushort.MaxValue)).ToArray();
+            VectorTestBase(array);
+        }
+        
+        [RavenTheory(RavenTestCategory.Vector)]
+        [InlineDataWithRandomSeed(1)]
+        [InlineDataWithRandomSeed(2)]
+        [InlineDataWithRandomSeed(4)]
+        [InlineDataWithRandomSeed(256)]
+        [InlineDataWithRandomSeed(4000)]
+        public void VectorUIntTest(int size, int seed)
+        {
+            var random = new Random(seed);
+            var array = Enumerable.Range(0, size).Select(x => (uint)(random.NextInt64() % uint.MaxValue)).ToArray();
+            VectorTestBase(array);
+        }
+        
+        [RavenTheory(RavenTestCategory.Vector)]
+        [InlineDataWithRandomSeed(1)]
+        [InlineDataWithRandomSeed(2)]
+        [InlineDataWithRandomSeed(4)]
+        [InlineDataWithRandomSeed(256)]
+        [InlineDataWithRandomSeed(4000)]
+        public void VectorULongTest(int size, int seed)
+        {
+            var random = new Random(seed);
+            var array = Enumerable.Range(0, size).Select(x => GetNumber()).ToArray();
+            VectorTestBase(array);
+
+            ulong GetNumber()
+            {
+                var num = (ulong)random.NextInt64();
+                if (random.NextInt64() % 16 == 0)
+                    num |= unchecked((ulong)~long.MaxValue);
+                return num;
+            }
+        }
+        
+        [RavenTheory(RavenTestCategory.Vector)]
+        [InlineDataWithRandomSeed(1)]
+        [InlineDataWithRandomSeed(2)]
+        [InlineDataWithRandomSeed(4)]
+        [InlineDataWithRandomSeed(256)]
+        [InlineDataWithRandomSeed(4000)]
+        public void VectorSByteTest(int size, int seed)
+        {
+            var random = new Random(seed);
+            var array = Enumerable.Range(0, size).Select(x => (sbyte)random.Next(sbyte.MinValue, sbyte.MaxValue)).ToArray();
+            VectorTestBase(array);
+        }
+        
+        [RavenTheory(RavenTestCategory.Vector)]
+        [InlineDataWithRandomSeed(1)]
+        [InlineDataWithRandomSeed(2)]
+        [InlineDataWithRandomSeed(4)]
+        [InlineDataWithRandomSeed(256)]
+        [InlineDataWithRandomSeed(4000)]
+        public void VectorShortTest(int size, int seed)
+        {
+            var random = new Random(seed);
+            var array = Enumerable.Range(0, size).Select(x => (short)(random.Next(short.MinValue, short.MaxValue))).ToArray();
+            VectorTestBase(array);
+        }
+        
+        [RavenTheory(RavenTestCategory.Vector)]
+        [InlineDataWithRandomSeed(1)]
+        [InlineDataWithRandomSeed(2)]
+        [InlineDataWithRandomSeed(4)]
+        [InlineDataWithRandomSeed(256)]
+        [InlineDataWithRandomSeed(4000)]
+        public void VectorIntTest(int size, int seed)
+        {
+            var random = new Random(seed);
+            var array = Enumerable.Range(0, size).Select(x => random.Next(int.MinValue, int.MaxValue)).ToArray();
+            VectorTestBase(array);
+        }
+        
+        [RavenTheory(RavenTestCategory.Vector)]
+        [InlineDataWithRandomSeed(1)]
+        [InlineDataWithRandomSeed(2)]
+        [InlineDataWithRandomSeed(4)]
+        [InlineDataWithRandomSeed(256)]
+        [InlineDataWithRandomSeed(4000)]
+        public void VectorLongTest(int size, int seed)
+        {
+            var random = new Random(seed);
+            var array = Enumerable.Range(0, size).Select(x => random.NextInt64(long.MinValue, long.MaxValue)).ToArray();
+            VectorTestBase(array);
+        }
+        
+        private static void VectorTestBase<T>(T[] array) where T : unmanaged, INumber<T>
+        {
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
+            {
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                {
+                    builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+                    builder.StartWriteObjectDocument();
+
+                    builder.StartWriteObject();
+                    {
+                        builder.WritePropertyName("MyNestedVectorOfNumbers");
+                        builder.WriteVector<T>(array);
+                        
+                        builder.WritePropertyName("Height");
+                        {
+                            builder.WriteValue(55);
+                        }
+                        builder.WriteObjectEnd();
+                    }
+                    builder.FinalizeDocument();
+
+                    var reader = builder.CreateReader();
+
+                    Assert.Equal(2, reader.Count);
+
+                    var vector = reader["MyNestedVectorOfNumbers"] as BlittableJsonReaderVector;
+                    Assert.Equal(array.Length, vector.Length);
+                    Assert.True(vector.IsOfType<T>());
+
+                    var arrayReader = vector.ReadArray<T>();
+                    Assert.Equal(Unsafe.SizeOf<T>() ,vector.ElementSize);
+                    
+                    for (var i = 0; i < array.Length; i++)
+                        Assert.Equal(array[i], arrayReader[i]);
 
                     Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
                 }

@@ -69,6 +69,8 @@ namespace Sparrow.Json
         public int Length => _header->Count;
 
         public BlittableVectorType Type => _header->Type;
+
+        public int ElementSize => _header->ElementSize;
         
         public DynamicJsonArray Modifications;
 
@@ -152,6 +154,15 @@ namespace Sparrow.Json
                 default:
                     return false;
             }
+        }
+
+        /// <summary>
+        /// Useful when we've to copy memory without known type. 
+        /// </summary>
+        /// <returns>Span of underlying memory</returns>
+        public ReadOnlySpan<byte> ReadUnderlyingMemory()
+        {
+            return new ReadOnlySpan<byte>(_dataStart, _header->Count * _header->ElementSize);
         }
 
         public ReadOnlySpan<T> ReadArray<T>()

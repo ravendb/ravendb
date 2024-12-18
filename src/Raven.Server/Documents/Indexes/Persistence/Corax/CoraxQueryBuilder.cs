@@ -655,6 +655,16 @@ public static class CoraxQueryBuilder
         {
             transformedEmbedding = GenerateEmbeddings.FromBase64Array(vectorOptions, allocator: builderParameters.Allocator, stringSegment.ToString());
         }
+        else if (value is BlittableJsonReaderObject json)
+        {
+            json.TryGetMember(Sparrow.Global.Constants.Naming.VectorPropertyName, out var vectorObject);
+            var vectorReader = (BlittableJsonReaderVector)vectorObject;
+            var bytesUsed = vectorReader.Length * vectorReader.ElementSize;
+            var memoryScope = builderParameters.Allocator.Allocate(bytesUsed, out Memory<byte> vectorBytes);
+            
+            vectorReader.ReadUnderlyingMemory().CopyTo(vectorBytes.Span);
+            transformedEmbedding = GenerateEmbeddings.FromArray(builderParameters.Allocator, memoryScope, vectorBytes, vectorOptions, bytesUsed);
+        }
         else
         {
             var underlyingEnumerable = (BlittableJsonReaderArray)value;

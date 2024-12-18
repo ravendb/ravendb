@@ -218,6 +218,16 @@ public interface IVectorEmbeddingFieldValueFactory
     /// </summary>
     /// <param name="base64Embedding">Embedding encoded as base64 string.</param>
     public void ByBase64(string base64Embedding);
+    
+    /// <summary>
+    /// Defines queried embedding.
+    /// </summary>
+    /// <param name="embedding">RavenVector containing embedding values.</param>
+    public void ByEmbedding<T>(RavenVector<T> embedding) where T : unmanaged
+#if NET7_0_OR_GREATER
+        , INumber<T>
+#endif
+    ;
 }
 
 public interface IVectorFieldValueFactory : IVectorEmbeddingTextFieldValueFactory, IVectorEmbeddingFieldValueFactory
@@ -263,4 +273,10 @@ internal class VectorFieldValueFactory : IVectorFieldValueFactory
     {
         Text = text;
     }
+    
+    void IVectorEmbeddingFieldValueFactory.ByEmbedding<T>(RavenVector<T> embedding)
+    {
+        Embedding = embedding;
+    }
+
 }

@@ -334,6 +334,48 @@ namespace Sparrow.Json
                     WriteArrayEnd();
                     break;
 
+                case BlittableJsonToken.Vector:
+                {
+                    var vector = (BlittableJsonReaderVector)value;
+                    switch (vector.Type)
+                    {
+                        case BlittableVectorType.Byte:
+                            WriteVector(vector.ReadArray<byte>());
+                            break;
+                        case BlittableVectorType.UInt16:
+                            WriteVector(vector.ReadArray<ushort>());
+                            break;
+                        case BlittableVectorType.UInt32:
+                            WriteVector(vector.ReadArray<uint>());
+                            break;
+                        case BlittableVectorType.UInt64:
+                            WriteVector(vector.ReadArray<ulong>());
+                            break;
+                        
+                        case BlittableVectorType.SByte:
+                            WriteVector(vector.ReadArray<sbyte>());
+                            break;
+                        case BlittableVectorType.Int16:
+                            WriteVector(vector.ReadArray<short>());
+                            break;
+                        case BlittableVectorType.Int32:
+                            WriteVector(vector.ReadArray<int>());
+                            break;
+                        case BlittableVectorType.Int64:
+                            WriteVector(vector.ReadArray<long>());
+                            break;
+                        
+                        case BlittableVectorType.Float:
+                            WriteVector(vector.ReadArray<float>());
+                            break;
+                        case BlittableVectorType.Double:
+                            WriteVector(vector.ReadArray<double>());
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(vector.Type), vector.Type, $"Cannot write vector of {vector.Type}.");
+                    }
+                    break;
+                }
                 default:
                     throw new ArgumentOutOfRangeException(nameof(token), token, null);
             }
@@ -554,15 +596,16 @@ namespace Sparrow.Json
 
         public void WriteVector<T>(ReadOnlySpan<T> array) where T : unmanaged
         {
+            var currentState = _continuationState.Pop();
             var valuePos = _writer.WriteVector(array);
             _writeToken = new WriteToken(position: valuePos, token: BlittableJsonToken.Vector);
 
             // Update the state accordingly
-            ref var currentState = ref _continuationState.TopByRef();
             if (currentState.FirstWrite == -1)
                 currentState.FirstWrite = valuePos;
 
             FinishWritingScalarValue(ref currentState);
+            _continuationState.Push(currentState);
         }
 
         private void FinishWritingScalarValue(ref BuildingState currentState)

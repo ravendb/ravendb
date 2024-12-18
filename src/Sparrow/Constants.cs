@@ -1,4 +1,6 @@
-﻿namespace Sparrow.Global
+﻿using System;
+
+namespace Sparrow.Global
 {
     internal static class Constants
     {
@@ -53,6 +55,12 @@
 
                 internal const string DefaultAuditRuleName = "Raven_Default_Audit";
             }
+        }
+
+        internal static class Naming
+        {
+            public const string VectorPropertyName = "@vector";
+            public static ReadOnlySpan<byte> VectorPropertyNameAsSpan => "@vector"u8;
         }
     }
 }
