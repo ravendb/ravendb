@@ -61,11 +61,8 @@ function SetupDebBuildEnvironment($arch, $ubuntuVersion){
         "jammy" {
             . "..\scripts\linux\pkg\deb\set-ubuntu-jammy.ps1"
         }
-        "noble" {
-            . "..\scripts\linux\pkg\deb\set-ubuntu-noble.ps1"
-        }
         Default {
-            throw "ERROR: Unsupported Ubuntu version $($ubuntuVersion). Supported version: bionic, focal, jammy, noble."
+            throw "ERROR: Unsupported Ubuntu version $($ubuntuVersion). Supported version: bionic, focal, jammy."
             exit 1
         }
     }

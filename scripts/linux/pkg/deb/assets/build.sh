@@ -64,7 +64,7 @@ else
 fi
 
 
-export DEB_DEPS="${DOTNET_RUNTIME_DEPS}, libc6-dev (>= 2.27), adduser (>=3.0)"
+export DEB_DEPS="${DOTNET_RUNTIME_DEPS}, libc6-dev (>= 2.27)"
 
 echo ".NET Runtime: $DOTNET_FULL_VERSION"
 echo "Package dependencies: $DEB_DEPS"
