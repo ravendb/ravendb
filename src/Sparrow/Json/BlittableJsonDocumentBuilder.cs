@@ -334,6 +334,7 @@ namespace Sparrow.Json
                         // We try to read integers and doubles, if the value is a decimal (which can happen)
                         // then we bail out because we cannot handle it as a vector (as least for now). 
                         JsonParserToken current = _state.CurrentTokenType;
+
                         switch (current)
                         {
                             case JsonParserToken.Integer:
@@ -341,16 +342,28 @@ namespace Sparrow.Json
                                 processed = true;
                                 break;
                             case JsonParserToken.Float:
-                                if ((_mode & UsageMode.ValidateDouble) == UsageMode.ValidateDouble)
-                                    _reader.ValidateFloat();
-
                                 var numberString = new ReadOnlySpan<byte>(_state.StringBuffer, _state.StringSize);
-                                if (Utf8Parser.TryParse(numberString, out double value, out int bytesConsumed) == false)
+                                if (Utf8Parser.TryParse(numberString, out decimal value, out int bytesConsumed) == false)
                                     break;
 
                                 Debug.Assert(bytesConsumed == _state.StringSize);
+#if NET7_0_OR_GREATER
+                                // This will only be executed on the server, so no problem on this regard as vector
+                                // representations are not supported on older systems.
+                                if (decimal.IsInteger(value) && decimal.Abs(value) < long.MaxValue)
+                                {
+                                    _state.AddBuffered(decimal.ToInt64(value));
+                                }
+                                else
+                                {
+                                    if ((_mode & UsageMode.ValidateDouble) == UsageMode.ValidateDouble)
+                                        _reader.ValidateFloat();
 
-                                _state.AddBuffered(value);
+                                    _state.AddBuffered(decimal.ToDouble(value));
+                                }
+#else
+                                throw new NotSupportedException("Vector representations are only supported for .Net versions greater than 6.0");
+#endif
                                 processed = true;
                                 break;
                         }

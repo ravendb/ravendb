@@ -272,6 +272,12 @@ namespace Sparrow.Json.Parsing
 
             while (true)
             {
+                if (current == null)
+                {
+                    _state.CurrentTokenType = JsonParserToken.Null;
+                    return true;
+                }
+
                 if (current is IDynamicJson idj)
                 {
                     current = idj.ToJson();
@@ -332,8 +338,8 @@ namespace Sparrow.Json.Parsing
 
                 if (current is BlittableJsonReaderObject bjro)
                 {
-                    if (bjro.Modifications == null)
-                        bjro.Modifications = new DynamicJsonValue(bjro);
+                    bjro.Modifications ??= new DynamicJsonValue(bjro);
+
                     if (_seenValues.Add(bjro.Modifications))
                     {
                         _elements.Push(bjro);
@@ -367,8 +373,7 @@ namespace Sparrow.Json.Parsing
 
                 if (current is BlittableJsonReaderArray bjra)
                 {
-                    if (bjra.Modifications == null)
-                        bjra.Modifications = new DynamicJsonArray();
+                    bjra.Modifications ??= new DynamicJsonArray();
 
                     if (_seenValues.Add(bjra.Modifications))
                     {
@@ -398,8 +403,7 @@ namespace Sparrow.Json.Parsing
                 
                 if (current is BlittableJsonReaderVector bjrv)
                 {
-                    if (bjrv.Modifications == null)
-                        bjrv.Modifications = new DynamicJsonArray();
+                    bjrv.Modifications ??= new DynamicJsonArray();
                     
                     if (_seenValues.Add(bjrv.Modifications))
                     {
@@ -471,6 +475,9 @@ namespace Sparrow.Json.Parsing
 
                 if (current is LazyNumberValue ldv)
                 {
+                    // RavenDB-22076: Notice here we are forcing the token type to Float, this is not correct for
+                    // proper handling when we are dealing with Vector so we will need to pay the cost to adjust
+                    // at the level of vector handling because of compatibility concerns. 
                     _state.StringBuffer = ldv.Inner.Buffer;
                     _state.StringSize = ldv.Inner.Size;
                     _state.CompressedSize = null;// don't even try
@@ -640,12 +647,6 @@ namespace Sparrow.Json.Parsing
                     }
                     current = dja;
                     continue;
-                }
-
-                if (current == null)
-                {
-                    _state.CurrentTokenType = JsonParserToken.Null;
-                    return true;
                 }
 
                 if (current is Enum)

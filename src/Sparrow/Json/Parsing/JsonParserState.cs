@@ -226,7 +226,7 @@ namespace Sparrow.Json.Parsing
         }
 
         internal FastList<(JsonParserToken, long)> _bufferedSequence;
-        private long _maxLongMagnitude;
+        private decimal _maxLongMagnitude;
         private double _maxDoubleMagnitude;
         private bool _hasNegativeValue;
 
@@ -247,8 +247,8 @@ namespace Sparrow.Json.Parsing
             {
                 // We need to check both because we can convert longs to doubles, but not the other
                 // way around. 
-                double maxValue = Math.Max(_maxDoubleMagnitude, _maxLongMagnitude);
-                
+                var maxValue = Math.Max(decimal.ToDouble(_maxLongMagnitude), _maxDoubleMagnitude);
+
                 // If handling floating-point values, use a simple check first.
                 return Math.Abs(maxValue) switch
                 {
