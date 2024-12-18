@@ -161,7 +161,7 @@ export default function StudioDatabaseConfiguration() {
                                             <PopoverBody>
                                                 <ul className="mb-0">
                                                     <li className="margin-bottom-xs">
-                                                        Toggle on to disable creating new Auto-Indexes when making a
+                                                        Toggle on to disable creating new Auto-Indexes when making a{" "}
                                                         <strong>dynamic query</strong>.
                                                     </li>
                                                     <li>
