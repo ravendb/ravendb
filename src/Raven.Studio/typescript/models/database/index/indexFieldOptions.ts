@@ -1,10 +1,8 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import spatialOptions = require("models/database/index/spatialOptions");
 import jsonUtil = require("common/jsonUtil");
-import eventsCollector = require("common/eventsCollector");
 import models = require("models/database/settings/databaseSettingsModels");
-import getDatabaseSettingsCommand from "commands/database/settings/getDatabaseSettingsCommand";
-import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
+import { isEmpty } from "lodash";
 
 function labelMatcher<T>(labels: Array<valueAndLabelItem<T, string>>): (arg: T) => string {
     return(arg) => labels.find(x => x.value === arg).label;
@@ -18,11 +16,6 @@ type indexingTypes = Raven.Client.Documents.Indexes.FieldIndexing | "Search (imp
 
 type preDefinedAnalyzerNameForUI = "Keyword Analyzer" | "LowerCase Keyword Analyzer" | "LowerCase Whitespace Analyzer" |
                                    "NGram Analyzer" | "Simple Analyzer" | "Raven Standard Analyzer" | "Stop Analyzer" | "Whitespace Analyzer";
-
-type indexingDatabaseSettings =
-    "Indexing.Analyzers.Default"
-    | "Indexing.Analyzers.Exact.Default"
-    | "Indexing.Analyzers.Search.Default"
 
 interface analyzerName {
     studioName: preDefinedAnalyzerNameForUI | string;
@@ -54,35 +47,8 @@ class indexFieldOptions {
             .filter(x => x !== "LowerCase Keyword Analyzer");
     })
 
-    indexingAnalyzerSettings = ko.observable<Record<indexingDatabaseSettings[number], models.serverWideOnlyEntry | models.databaseEntry<string | number>>>({});
-
     static readonly DefaultFieldOptions = "__all_fields";
     
-    static readonly indexingAnalyzersDefaultsDatabaseSettingsKeys = ["Indexing.Analyzers.Default", "Indexing.Analyzers.Exact.Default", "Indexing.Analyzers.Search.Default"] as const;
-
-    private fetchDatabaseSettings() {
-        const db = activeDatabaseTracker.default.database();
-        eventsCollector.default.reportEvent("database-settings", "get");
-
-        return new getDatabaseSettingsCommand(db)
-            .execute()
-            .done((result: Raven.Server.Config.SettingsResult) => {
-                const settingsEntries = result.Settings.map(x => {
-                    const rawEntry = x as Raven.Server.Config.ConfigurationEntryDatabaseValue;
-                    return models.settingsEntry.getEntry(rawEntry);
-                });
-
-                const indexingAnalyzerSettings: Record<indexingDatabaseSettings[number], models.serverWideOnlyEntry | models.databaseEntry<string | number>> = Object.fromEntries(
-                    indexFieldOptions.indexingAnalyzersDefaultsDatabaseSettingsKeys.map(key => [
-                        key,
-                        settingsEntries.find(entry => entry.keyName() === key),
-                    ]),
-                );
-
-                this.indexingAnalyzerSettings(indexingAnalyzerSettings);
-            });
-    }
-
     static readonly TermVectors: Array<valueAndLabelItem<Raven.Client.Documents.Indexes.FieldTermVector, string>> = [{
             label: "No",
             value: "No"
@@ -177,6 +143,9 @@ class indexFieldOptions {
 
     searchEngine = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
 
+    indexLocalConfiguration: Raven.Client.Documents.Indexes.IndexConfiguration;
+    databaseIndexConfiguration: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>;
+
     validationGroup: KnockoutObservable<any>;
     dirtyFlag: () => DirtyFlag;
     
@@ -184,11 +153,38 @@ class indexFieldOptions {
                 dto: Raven.Client.Documents.Indexes.IndexFieldOptions,
                 indexHasReduce: KnockoutObservable<boolean>,
                 engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>,
-                parentFields?: indexFieldOptions) {
+                parentFields?: indexFieldOptions,
+                indexLocalConfiguration?: Raven.Client.Documents.Indexes.IndexConfiguration,
+                databaseIndexConfiguration?: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>
+    ) {
         this.name(name);
         this.parent(parentFields);
         this.indexDefinitionHasReduce = indexHasReduce;
         this.searchEngine = engineType;
+        this.indexLocalConfiguration = indexLocalConfiguration;
+        this.databaseIndexConfiguration = databaseIndexConfiguration;
+        
+        if (!isEmpty(databaseIndexConfiguration)) {
+            Object.values(databaseIndexConfiguration).forEach((databaseIndexConfigurationElement) => {
+                if (!this.analyzersNamesDictionary().some(x => x.serverName === databaseIndexConfigurationElement.effectiveValue())) {
+                    this.analyzersNamesDictionary.push({
+                        studioName: databaseIndexConfigurationElement.effectiveValue(),
+                        serverName: databaseIndexConfigurationElement.effectiveValue()
+                    });
+                }
+            });
+        }
+        
+        if (!isEmpty(indexLocalConfiguration)) {
+            Object.values(indexLocalConfiguration).forEach((indexConfigurationElement) => {
+                if (!this.analyzersNamesDictionary().some(x => x.serverName === indexConfigurationElement)) {
+                    this.analyzersNamesDictionary.push({
+                        studioName: indexConfigurationElement,
+                        serverName: indexConfigurationElement
+                    });
+                }
+            });
+        }
         
         const analyzerPositionInName = dto.Analyzer ? dto.Analyzer.lastIndexOf(".") : 0;
         const analyzerNameInDto = analyzerPositionInName !== -1 && dto.Analyzer ? dto.Analyzer.substring(analyzerPositionInName + 1) : dto.Analyzer;
@@ -248,7 +244,6 @@ class indexFieldOptions {
         
         _.bindAll(this, "toggleAdvancedOptions");
 
-        this.fetchDatabaseSettings();
         this.initObservables();
         this.initValidation();
 
@@ -439,28 +434,45 @@ class indexFieldOptions {
         let placeHolder = null;
         const thisIndexing = this.indexing();
         const parentIndexing = this.parent() ? this.parent().indexing() : null;
+        const parentAnalyzer = this.parent() ? this.parent()?.analyzer() : null;
 
-        const indexingAnalyzerSetting = this.indexingAnalyzerSettings()[`Indexing.Analyzers.${thisIndexing === "Default" ? `${thisIndexing}` : `${thisIndexing}.Default`}`];
+        const analyzerConfigurationKey = `Indexing.Analyzers.${thisIndexing === "Default" || thisIndexing === null ? `Default` : `${thisIndexing}.Default`}`;
+        const databaseAnalyzerSetting = this.databaseIndexConfiguration?.[analyzerConfigurationKey];
+        const localAnalyzerConfiguration: string | undefined = this.indexLocalConfiguration?.[analyzerConfigurationKey];
 
-        const hasDefaultValueChangedInDbSettings = indexingAnalyzerSetting?.effectiveValue() !== indexingAnalyzerSetting?.serverOrDefaultValue();
-        const hasNewDbValueIncludeInAnalyzersNameDictionary = this.analyzersNamesDictionary().some((analyzerItem) => analyzerItem.serverName === indexingAnalyzerSetting?.effectiveValue());
+        const hasDatabaseDefaultChanged =
+            databaseAnalyzerSetting?.effectiveValue() !== databaseAnalyzerSetting?.serverOrDefaultValue();
+        const isAnalyzerNameInDictionary = localAnalyzerConfiguration
+            ? this.analyzersNamesDictionary().some(
+                (analyzerItem) => analyzerItem.serverName === localAnalyzerConfiguration
+            )
+            : this.analyzersNamesDictionary().some(
+                (analyzerItem) => analyzerItem.serverName === databaseAnalyzerSetting?.effectiveValue()
+            );
 
 
-        if (thisIndexing === "No" ||
-           (!thisIndexing && parentIndexing === "No")) {
+        const currentAnalyzerStudioName = localAnalyzerConfiguration
+            ? this.analyzersNamesDictionary().find((item) => item.serverName === localAnalyzerConfiguration)?.studioName ??
+            localAnalyzerConfiguration
+            : this.analyzersNamesDictionary().find((item) => item.serverName === databaseAnalyzerSetting?.effectiveValue())?.studioName ??
+            databaseAnalyzerSetting?.effectiveValue();
+        
+        const parentAnalyzerStudioName = this.analyzersNamesDictionary().find((item) => item.serverName === parentAnalyzer)?.studioName ?? parentAnalyzer;
+        const defaultFieldAnalyzer = !thisIndexing && parentAnalyzer != null ? parentAnalyzerStudioName : currentAnalyzerStudioName;
+        
+        if (thisIndexing === "No" || (!thisIndexing && parentIndexing === "No")) {
             this.analyzer(null);
         }
         
+        console.log("@@TEST", thisIndexing, parentIndexing, this.analyzer(), "@@DB", this.databaseIndexConfiguration, this.indexLocalConfiguration, this.parent()?.analyzer());
         this.disabledAnalyzerText("");
-        const helpMsg = "To set a different analyzer, select the 'Indexing.Search' option first."
+        const helpMsg = "To set a different analyzer, select the 'Indexing.Search' option first.";
         
-        if (thisIndexing === "Exact" ||
-           (!thisIndexing && parentIndexing === "Exact")) {
-            if (hasDefaultValueChangedInDbSettings && hasNewDbValueIncludeInAnalyzersNameDictionary) {
-                const studioName = this.analyzersNamesDictionary().find((item) => item.serverName === indexingAnalyzerSetting.effectiveValue()).studioName;
-                this.analyzer(studioName);
-                placeHolder = studioName;
-                this.disabledAnalyzerText(`${studioName} is used when selecting Indexing.Exact. ` + helpMsg);
+        if (thisIndexing === "Exact" || (!thisIndexing && parentIndexing === "Exact")) {
+            if ((localAnalyzerConfiguration || hasDatabaseDefaultChanged) && isAnalyzerNameInDictionary) {
+                this.analyzer(defaultFieldAnalyzer);
+                placeHolder = defaultFieldAnalyzer;
+                this.disabledAnalyzerText(`${defaultFieldAnalyzer} is used when selecting Indexing.Exact. ` + helpMsg);
             } else {
                 this.analyzer(null);
                 placeHolder = "Keyword Analyzer";
@@ -468,13 +480,11 @@ class indexFieldOptions {
             }
         }
 
-        if (thisIndexing === "Default" ||
-           (!thisIndexing && (parentIndexing === "Default" || !parentIndexing))) {
-            if (hasDefaultValueChangedInDbSettings && hasNewDbValueIncludeInAnalyzersNameDictionary) {
-                const studioName = this.analyzersNamesDictionary().find((item) => item.serverName === indexingAnalyzerSetting.effectiveValue()).studioName;
-                placeHolder = studioName;
-                this.analyzer(studioName);
-                this.disabledAnalyzerText(`${studioName} is used when selecting Indexing.Default. ` + helpMsg);
+        if (thisIndexing === "Default" || (!thisIndexing && (parentIndexing === "Default" || !parentIndexing))) {
+            if ((localAnalyzerConfiguration || hasDatabaseDefaultChanged) && isAnalyzerNameInDictionary) {
+                placeHolder = defaultFieldAnalyzer;
+                this.analyzer(defaultFieldAnalyzer);
+                this.disabledAnalyzerText(`${defaultFieldAnalyzer} is used when selecting Indexing.Default. ` + helpMsg);
             } else {
                 this.analyzer(null);
                 placeHolder = "LowerCase Keyword Analyzer";
@@ -487,10 +497,9 @@ class indexFieldOptions {
         }
 
         if (!thisIndexing && parentIndexing === "Search") {
-            if (hasDefaultValueChangedInDbSettings && hasNewDbValueIncludeInAnalyzersNameDictionary) {
-                const studioName = this.analyzersNamesDictionary().find((item) => item.serverName === indexingAnalyzerSetting.effectiveValue()).studioName;
-                this.analyzer(studioName);
-                placeHolder = studioName;
+            if ((localAnalyzerConfiguration || hasDatabaseDefaultChanged) && isAnalyzerNameInDictionary) {
+                this.analyzer(defaultFieldAnalyzer);
+                placeHolder = defaultFieldAnalyzer;
             } else {
                 this.analyzer(null);
                 placeHolder = this.parent().analyzer() || "Raven Standard Analyzer";
@@ -498,10 +507,9 @@ class indexFieldOptions {
         }
 
         if (thisIndexing === "Search") {
-            if (hasDefaultValueChangedInDbSettings && hasNewDbValueIncludeInAnalyzersNameDictionary) {
-                const studioName = this.analyzersNamesDictionary().find((item) => item.serverName === indexingAnalyzerSetting.effectiveValue()).studioName;
-                this.analyzer(studioName);
-                placeHolder = studioName;
+            if ((localAnalyzerConfiguration || hasDatabaseDefaultChanged) && isAnalyzerNameInDictionary) {
+                this.analyzer(defaultFieldAnalyzer);
+                placeHolder = defaultFieldAnalyzer;
             } else {
                 placeHolder = "Raven Standard Analyzer";
             }
@@ -565,25 +573,38 @@ class indexFieldOptions {
         });
     }
     
-    static defaultFieldOptions(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>) {
-        return new indexFieldOptions(indexFieldOptions.DefaultFieldOptions, indexFieldOptions.getDefaultDto(), indexHasReduce, engineType,
-            indexFieldOptions.globalDefaults(indexHasReduce, engineType));
+    static defaultFieldOptions(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>, indexConfiguration?: Raven.Client.Documents.Indexes.IndexConfiguration,
+                          databaseIndexConfiguration?: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>) {
+        return new indexFieldOptions(indexFieldOptions.DefaultFieldOptions, indexFieldOptions.getDefaultDto(indexConfiguration, databaseIndexConfiguration), indexHasReduce, engineType,
+          indexFieldOptions.globalDefaults(indexHasReduce, engineType, indexConfiguration, databaseIndexConfiguration), indexConfiguration, databaseIndexConfiguration);
     }
 
-    static empty(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>) {
-        return new indexFieldOptions("", indexFieldOptions.getDefaultDto(), indexHasReduce, engineType,
-            indexFieldOptions.globalDefaults(indexHasReduce, engineType));
+    static empty(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>, indexConfiguration?: Raven.Client.Documents.Indexes.IndexConfiguration,
+                          databaseIndexConfiguration?: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>) {
+        return new indexFieldOptions("", indexFieldOptions.getDefaultDto(indexConfiguration, databaseIndexConfiguration), indexHasReduce, engineType,
+          indexFieldOptions.globalDefaults(indexHasReduce, engineType, indexConfiguration, databaseIndexConfiguration), indexConfiguration, databaseIndexConfiguration);
     }
     
-    static globalDefaults(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>) {
-        const field = new indexFieldOptions("", {
+    static globalDefaults(indexHasReduce: KnockoutObservable<boolean>, engineType: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>, indexConfiguration?: Raven.Client.Documents.Indexes.IndexConfiguration,
+                          databaseIndexConfiguration?: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>) {
+        const defaultDto: Raven.Client.Documents.Indexes.IndexFieldOptions = {
             Storage: "No",
             Indexing: "Default",
-            Analyzer: "StandardAnalyzer",
+            Analyzer: "RavenStandardAnalyzer",
             Suggestions: false,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
             TermVector: "No"
-        }, indexHasReduce, engineType);
+        };
+        
+        if (databaseIndexConfiguration && isEmpty(indexConfiguration)) {
+            defaultDto.Analyzer = databaseIndexConfiguration?.[`Indexing.Analyzers.Default`].effectiveValue();
+        }
+        
+        if (!isEmpty(indexConfiguration)) {
+            defaultDto.Analyzer = indexConfiguration?.[`Indexing.Analyzers.Default`];
+        }
+        
+        const field = new indexFieldOptions("", defaultDto, indexHasReduce, engineType, undefined, indexConfiguration, databaseIndexConfiguration);
         
         field.fullTextSearch(false);
         field.highlighting(false);
@@ -591,15 +612,26 @@ class indexFieldOptions {
         return field;
     }
 
-    private static getDefaultDto(): Raven.Client.Documents.Indexes.IndexFieldOptions {
-        return {
-            Storage: null,
-            Indexing: null,
-            Analyzer: null,
-            Suggestions: null,
+    private static getDefaultDto(indexConfiguration?: Raven.Client.Documents.Indexes.IndexConfiguration,
+                          databaseIndexConfiguration?: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>) {
+        const defaultDto: Raven.Client.Documents.Indexes.IndexFieldOptions = {
+            Storage: "No",
+            Indexing: "Default",
+            Analyzer: "RavenStandardAnalyzer",
+            Suggestions: false,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
-            TermVector: null
+            TermVector: "No"
         };
+        
+        if (databaseIndexConfiguration && isEmpty(indexConfiguration)) {
+            defaultDto.Analyzer = databaseIndexConfiguration?.[`Indexing.Analyzers.Default`].effectiveValue();
+        }
+        
+        if (!isEmpty(indexConfiguration)) {
+            defaultDto.Analyzer = indexConfiguration?.[`Indexing.Analyzers.Default`];
+        }
+        
+        return defaultDto;
     }
 
     toggleAdvancedOptions() {
