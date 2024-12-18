@@ -33,6 +33,7 @@ namespace SlowTests.Server.Replication
     {
         public ReplicationCleanTombstones(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         [RavenMultiplatformTheory(RavenTestCategory.Replication, RavenArchitecture.X64)]

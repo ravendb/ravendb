@@ -30,6 +30,7 @@ namespace SlowTests.Issues
     {
         public RavenDB_17650(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         [RavenTheory(RavenTestCategory.Subscriptions)]

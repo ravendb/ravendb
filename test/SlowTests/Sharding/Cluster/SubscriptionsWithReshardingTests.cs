@@ -33,6 +33,7 @@ namespace SlowTests.Sharding.Cluster
     {
         public SubscriptionsWithReshardingTests(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         [RavenFact(RavenTestCategory.Sharding)]

@@ -35,6 +35,7 @@ namespace SlowTests.Client.Attachments
     {
         public AttachmentsReplication(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Replication)]

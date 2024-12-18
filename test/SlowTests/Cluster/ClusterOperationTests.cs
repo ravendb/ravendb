@@ -28,6 +28,7 @@ namespace SlowTests.Cluster
     {
         public ClusterOperationTests(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         [Fact]

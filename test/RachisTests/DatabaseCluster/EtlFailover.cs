@@ -23,6 +23,7 @@ namespace RachisTests.DatabaseCluster
     {
         public EtlFailover(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         [Fact]

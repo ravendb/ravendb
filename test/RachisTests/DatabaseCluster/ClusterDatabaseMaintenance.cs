@@ -39,6 +39,7 @@ namespace RachisTests.DatabaseCluster
     {
         public ClusterDatabaseMaintenance(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         private class User

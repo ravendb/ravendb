@@ -30,6 +30,7 @@ namespace SlowTests.Client
     {
         public ChangesApiFailover(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         [RavenTheory(RavenTestCategory.ChangesApi | RavenTestCategory.Cluster)]

@@ -36,6 +36,7 @@ namespace RachisTests
     {
         public SubscriptionsFailover(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         private class SubscriptionProggress

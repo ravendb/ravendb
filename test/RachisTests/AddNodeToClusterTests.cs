@@ -41,6 +41,7 @@ namespace RachisTests
     {
         public AddNodeToClusterTests(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         [Fact]

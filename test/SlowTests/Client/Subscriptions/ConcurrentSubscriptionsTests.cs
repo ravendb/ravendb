@@ -29,6 +29,7 @@ namespace SlowTests.Client.Subscriptions
     {
         public ConcurrentSubscriptionsTests(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);

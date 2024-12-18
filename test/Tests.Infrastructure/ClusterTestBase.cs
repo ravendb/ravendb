@@ -691,12 +691,14 @@ namespace Tests.Infrastructure
             Servers.Remove(serverToDispose);
         }
 
-        protected Dictionary<string, string> DefaultClusterSettings = new Dictionary<string, string>
+        protected Dictionary<string, string> DefaultClusterSettings = new Dictionary<string, string>();
+
+        protected void EnableFastMoveToRehabResponse()
         {
-            [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
-            [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
-            [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-        };
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1";
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1";
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1";
+        }
 
         protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(
             int numberOfNodes,

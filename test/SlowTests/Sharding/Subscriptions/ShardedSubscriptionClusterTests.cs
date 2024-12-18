@@ -20,6 +20,7 @@ namespace SlowTests.Sharding.Subscriptions
     {
         public ShardedSubscriptionClusterTests(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);

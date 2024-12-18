@@ -42,6 +42,7 @@ namespace SlowTests.Cluster
     {
         public ClusterTransactionTests(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName] string caller = null)

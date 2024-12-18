@@ -26,6 +26,7 @@ namespace SlowTests.Issues
     {
         public RavenDB_15535(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         [Fact]

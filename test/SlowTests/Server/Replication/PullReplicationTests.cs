@@ -30,6 +30,7 @@ namespace SlowTests.Server.Replication
     {
         public PullReplicationTests(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
 
         [RavenTheory(RavenTestCategory.Replication)]

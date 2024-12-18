@@ -29,6 +29,7 @@ namespace SlowTests.Sharding.Cluster
     {
         public ShardedClusterObserverTests(ITestOutputHelper output) : base(output)
         {
+            EnableFastMoveToRehabResponse();
         }
         
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
