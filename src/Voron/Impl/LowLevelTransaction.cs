@@ -324,7 +324,6 @@ namespace Voron.Impl
             _scratchPagesInUse = _env.WriteTransactionPool.ScratchPagesInUse;
             _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
             _pagesToFreeOnCommit = new Stack<long>();
-            _pageLocator = AllocatePageLocator();
 
             InitializeRoots();
             InitTransactionHeader();
