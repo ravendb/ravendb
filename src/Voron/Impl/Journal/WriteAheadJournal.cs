@@ -49,7 +49,7 @@ namespace Voron.Impl.Journal
     {
         private readonly StorageEnvironment _env;
         private readonly ConcurrentQueue<PendingJournalStateRecord> _mergedCommitsQueue = new();
-        private readonly CancellationTokenSource _mergedCommitsTcs = new();
+        private CancellationTokenSource _mergedCommitsTcs;
         private readonly List<Pal.journal_entry> _mergedEntriesBuffer = new();
         private readonly List<PendingJournalStateRecord> _mergedJournalRecordsBuffer = new();
 
@@ -81,6 +81,25 @@ namespace Voron.Impl.Journal
 
         private readonly DisposeOnce<SingleAttempt> _disposeRunner;
 
+        public ScopeForSharedJournals SharedJournalsScope()
+        {
+            if (_mergedCommitsTcs != null)
+                throw new InvalidOperationException("Already using shared scope, can only be done once");
+
+            _mergedCommitsTcs = new CancellationTokenSource();
+            
+            return new ScopeForSharedJournals(this);
+        }
+
+        public readonly struct ScopeForSharedJournals(WriteAheadJournal journal) : IDisposable
+        {
+            public void Dispose()
+            {
+                journal._mergedCommitsTcs.Cancel();
+                journal.RejectCommitsToMerge();
+            }
+        }
+        
         public WriteAheadJournal(StorageEnvironment env)
         {
             _env = env;
@@ -95,8 +114,9 @@ namespace Voron.Impl.Journal
 
             _disposeRunner = new DisposeOnce<SingleAttempt>(() =>
             {
-                _mergedCommitsTcs.Cancel();
-                
+                _mergedCommitsTcs?.Cancel();
+                RejectCommitsToMerge();
+
                 _compressionPager.Dispose();
 
                 _journalApplicator.Dispose();
@@ -108,10 +128,6 @@ namespace Voron.Impl.Journal
                     }
                 }
 
-                while (_mergedCommitsQueue.TryDequeue(out var cur))
-                {
-                    cur.Tcs.TrySetCanceled();
-                }
                 _files = ImmutableAppendOnlyList<JournalFile>.Empty;
             });
         }
@@ -1629,7 +1645,7 @@ namespace Voron.Impl.Journal
                         branchCommit = tcs.Task;
                         numberOf4Kbs = entry.NumberOf4Kbs;
                         rootJournal._mergedCommitsQueue.Enqueue(new PendingJournalStateRecord(tx, tcs, entry));
-                        rootJournal._mergedCommitsTcs.Token.ThrowIfCancellationRequested();
+                        rootJournal._mergedCommitsTcs?.Token.ThrowIfCancellationRequested();
                         if (_logger.IsDebugEnabled)
                         {
                             var elapsed = Stopwatch.GetElapsedTime(start);
@@ -2320,6 +2336,14 @@ namespace Voron.Impl.Journal
         internal sealed class TestingStuff
         {
             internal Action OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager;
+        }
+
+        private void RejectCommitsToMerge()
+        {
+            while (_mergedCommitsQueue.TryDequeue(out PendingJournalStateRecord result))
+            {
+                result.Tcs.TrySetCanceled();
+            }
         }
     }
 }

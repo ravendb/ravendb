@@ -37,29 +37,26 @@ public static class Program
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
 
-        Parallel.For(0, 1000, i =>
+        for (int i = 0; i < 1000; i++)
         {
-            //for (int i = 0; i < 1000; i++)
+            try
             {
-                try
+                Console.WriteLine(i);
+                using (var testOutputHelper = new ConsoleTestOutputHelper())
+                using (var test = new RavenDB_7940(testOutputHelper))
                 {
+                    DebuggerAttachedTimeout.DisableLongTimespan = true;
 
-                    using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new FastTests.Voron.SharedJournal.SharedJournalTests(testOutputHelper))
-                    {
-                        DebuggerAttachedTimeout.DisableLongTimespan = true;
-
-                        test.CanFlushWithSharedJournals();
-                    }
-                }
-                catch (Exception e)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(e);
-                    Console.ForegroundColor = ConsoleColor.White;
+                    await test.RecreatingIndexesToARecreatedDatabase();
                 }
             }
-        });
+            catch (Exception e)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(e);
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+        }
     }
 
     private static void TryRemoveDatabasesFolder()
