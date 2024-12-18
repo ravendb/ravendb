@@ -89,7 +89,7 @@ namespace Voron.Impl.Journal
         {
             var validMarker = (HeaderMarker == Constants.TransactionHeaderMarker ? "Valid" : "Invalid");
             var timestamp = new DateTime(TimeStampTicksUtc).ToString("g");
-            return $"HeaderMarker: {validMarker}, TransactionId: {TransactionId}, NextPageNumber: {NextPageNumber}, LastPageNumber: {LastPageNumber}, " +
+            return $"HeaderMarker: {validMarker}, TransactionId: {TransactionId}, DatabaseId: {DatabaseId} NextPageNumber: {NextPageNumber}, LastPageNumber: {LastPageNumber}, " +
                    $"PageCount: {PageCount}, Hash: {Hash}, Root: {Root}, TxMarker: {TxMarker}, CompressedSize: {CompressedSize}," +
                    $" UncompressedSize: {UncompressedSize}, TimeStamp: {timestamp}";
         }
