@@ -211,7 +211,7 @@ int32_t rvn_write_io_ring(
             rc = _submit_and_wait(&handle_ptr->global_state->ring, submitted, detailed_error_code);
             if (rc != SUCCESS)
             {
-                return rc;
+                goto Exit;
             }
             submitted = 0;
             sqe = io_uring_get_sqe(&handle_ptr->global_state->ring);
@@ -220,7 +220,7 @@ int32_t rvn_write_io_ring(
                 // *after* we submitted, we have no entry? No recovery from this...
                 *detailed_error_code = ENOENT;
                 rc = FAIL_IO_RING_WRITE;
-                break;
+                goto Exit;
             }
         }
         io_uring_prep_write(sqe,
@@ -236,6 +236,7 @@ int32_t rvn_write_io_ring(
     {
         rc = _submit_and_wait(&handle_ptr->global_state->ring, submitted, detailed_error_code);
     }
+Exit:
     pthread_mutex_unlock(&handle_ptr->global_state->lock);
     return rc;
 }
