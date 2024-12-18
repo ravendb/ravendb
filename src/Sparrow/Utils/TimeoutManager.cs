@@ -20,13 +20,12 @@ namespace Sparrow.Utils
         private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values = new ConcurrentDictionary<uint, TimerTaskHolder>();
         private static readonly Task InfiniteTask = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
 
-        private const bool ForceTaskDelay = true;
-
         private static readonly bool UseTaskDelay;
 
         static TimeoutManager()
         {
-            UseTaskDelay = Environment.ProcessorCount <= 2 || ForceTaskDelay;
+            if (bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_TIMEOUTMANAGER_USE_TASK_DELAY"), out var useTaskDelay))
+                UseTaskDelay = useTaskDelay;
         }
 
         private sealed class TimerTaskHolder : IDisposable
