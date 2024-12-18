@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
-    <RuntimeFrameworkVersion>9.0.0</RuntimeFrameworkVersion>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeFrameworkVersion>8.0.11</RuntimeFrameworkVersion>
   </PropertyGroup>
 
   <ItemGroup>

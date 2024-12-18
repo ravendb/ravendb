@@ -42,7 +42,6 @@ namespace FastTests
             }
 #pragma warning restore SYSLIB0026 // Type or member is obsolete
 
-#pragma warning disable SYSLIB0057
             public TrackingX509Certificate2(byte[] rawData)
                 : base(rawData)
             {
@@ -92,7 +91,6 @@ namespace FastTests
                 : base(fileName, password, keyStorageFlags)
             {
             }
-#pragma warning restore SYSLIB0057
 
             public TrackingX509Certificate2(X509Certificate certificate)
                 : base(certificate)
@@ -162,7 +160,7 @@ namespace FastTests
             {
                 try
                 {
-                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.UserKeySet | CertificateLoaderUtil.FlagsForExport);
+                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
                 }
                 catch (CryptographicException e)
                 {
@@ -213,7 +211,7 @@ namespace FastTests
             {
                 try
                 {
-                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.UserKeySet | CertificateLoaderUtil.FlagsForExport);
+                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
                 }
                 catch (CryptographicException e)
                 {
@@ -232,7 +230,7 @@ namespace FastTests
             {
                 try
                 {
-                    return new TrackingX509Certificate2(path(), (string)null, X509KeyStorageFlags.UserKeySet | CertificateLoaderUtil.FlagsForExport);
+                    return new TrackingX509Certificate2(path(), (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
                 }
                 catch (CryptographicException e)
                 {

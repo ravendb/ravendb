@@ -17,7 +17,6 @@ using FluentFTP;
 using FluentFTP.Client.BaseClient;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Util;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -166,7 +165,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 try
                 {
-                    var x509Certificate = CertificateLoaderUtil.CreateCertificateFromAny(byteArray);
+                    var x509Certificate = new X509Certificate2(byteArray);
                     client.Config.EncryptionMode = FtpEncryptionMode.Explicit;
                     client.Config.ClientCertificates.Add(x509Certificate);
                     client.ValidateCertificate += OnValidateCertificate;

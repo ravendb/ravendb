@@ -18,7 +18,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
@@ -270,7 +269,7 @@ namespace SlowTests.Sharding.Backup
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
-                   CertificateHelper.CreateCertificateFromPfx(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
+                new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
             {
                 privateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
             }
@@ -502,7 +501,7 @@ namespace SlowTests.Sharding.Backup
             var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = hubSettings, RegisterForDisposal = true });
 
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
-            var pullReplicationCertificate = CertificateHelper.CreateCertificateFromPfx(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
+            var pullReplicationCertificate = new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
             Assert.True(pullReplicationCertificate.HasPrivateKey);
 
             using (var hubStore = GetDocumentStore(new Options

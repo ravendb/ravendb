@@ -202,7 +202,7 @@ namespace Raven.Server.Utils
             // Note this is for tests only!
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName, log);
             CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, DateTime.UtcNow.Date.AddMonths(3), out var certBytes, log: log);
-            var selfSignedCertificateBasedOnPrivateKey = CertificateLoaderUtil.CreateCertificateFromPfx(certBytes);
+            var selfSignedCertificateBasedOnPrivateKey = CertificateLoaderUtil.CreateCertificate(certBytes);
             selfSignedCertificateBasedOnPrivateKey.Verify();
 
             // We had a problem where we didn't cleanup the user store in Linux (~/.dotnet/corefx/cryptography/x509stores/ca)
@@ -274,7 +274,7 @@ namespace Raven.Server.Utils
             store.Save(memoryStream, Array.Empty<char>(), GetSeededSecureRandom());
             certBytes = memoryStream.ToArray();
 
-            var cert = CertificateLoaderUtil.CreateCertificateFromPfx(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
+            var cert = CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
             return cert;
         }
 
@@ -282,7 +282,7 @@ namespace Raven.Server.Utils
         {
             var collection = new X509Certificate2Collection();
             // without the server private key here
-            CertificateLoaderUtil.ImportAny(collection, serverCertBytes);
+            CertificateLoaderUtil.Import(collection, serverCertBytes);
 
             if (new X509Certificate2Collection(collection).OfType<X509Certificate2>().FirstOrDefault(x => x.HasPrivateKey) != null)
                 throw new InvalidOperationException("After export of CERT, still have private key from signer in certificate, should NEVER happen");
@@ -301,7 +301,7 @@ namespace Raven.Server.Utils
                 DateTime.UtcNow.Date.AddYears(-1),
                 out var certBytes);
 
-            return CertificateLoaderUtil.CreateCertificateFromPfx(certBytes);
+            return CertificateLoaderUtil.CreateCertificate(certBytes);
         }
 
         public static void CreateSelfSignedCertificateBasedOnPrivateKey(string commonNameValue,
@@ -470,7 +470,7 @@ namespace Raven.Server.Utils
             var stream = new MemoryStream();
             store.Save(stream, Array.Empty<char>(), random);
 
-            return CertificateHelper.CreateCertificateFromPfx(stream.ToArray(), (string)null, CertificateLoaderUtil.FlagsForExport);
+            return new X509Certificate2(stream.ToArray());
         }
 
         // generating this can take a while, so we cache that at the process level, to significantly speed up the tests
@@ -650,7 +650,7 @@ namespace Raven.Server.Utils
 
                 if (item.Certificate.Thumbprint == certificate.Thumbprint)
                 {
-                    var key = new AsymmetricKeyEntry(DotNetUtilities.GetRsaKeyPair(certWithKey.GetRSAPrivateKey().ExportParameters(true)).Private);
+                    var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.GetRSAPrivateKey()).Private);
                     store.SetKeyEntry(x509Certificate.SubjectDN.ToString(), key, new[] { new X509CertificateEntry(x509Certificate) });
                     continue;
                 }
@@ -665,7 +665,7 @@ namespace Raven.Server.Utils
             Debug.Assert(certBytes != null);
             setupInfo.Certificate = Convert.ToBase64String(certBytes);
 
-            return CertificateLoaderUtil.CreateCertificateFromPfx(certBytes, flags: CertificateLoaderUtil.FlagsForExport);
+            return CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForExport);
         }
 
         public static string GetBasicCertificateInfo(this X509Certificate2 certificate)

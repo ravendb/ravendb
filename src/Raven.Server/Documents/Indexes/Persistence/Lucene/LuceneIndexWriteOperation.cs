@@ -16,7 +16,6 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
-using Lock = Lucene.Net.Store.Lock;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {

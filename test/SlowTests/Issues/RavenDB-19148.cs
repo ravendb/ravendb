@@ -4,7 +4,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.Util;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
@@ -34,7 +33,7 @@ public class RavenDB_19148 : ClusterTestBase
         using (var store = new DocumentStore
         {
             Urls = new[] { result.Leader.WebUrl },
-            Certificate = CertificateLoaderUtil.CreateCertificateFromAny(certBytes),
+            Certificate = new X509Certificate2(certBytes),
             Conventions =
             {
                 DisposeCertificate = false

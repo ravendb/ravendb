@@ -10,7 +10,6 @@ using System.Threading;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
@@ -146,7 +145,7 @@ public partial class RavenTestBase
                 X509Certificate2 serverCertificate;
                 try
                 {
-                    serverCertificate = CertificateHelper.CreateCertificateFromPfx(certBytes, (string)null, X509KeyStorageFlags.UserKeySet);
+                    serverCertificate = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (Exception e)
                 {

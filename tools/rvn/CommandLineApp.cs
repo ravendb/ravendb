@@ -8,7 +8,6 @@ using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Sparrow.Json;
 using Sparrow.Platform;
@@ -337,8 +336,8 @@ namespace rvn
                     }
 
                     
-                    X509Certificate2 clientCertificate = CertificateLoaderUtil.CreateCertificateFromAny(clientCertificatePathArg.Value);
-                    X509Certificate2 serverCertificate = CertificateLoaderUtil.CreateCertificateFromAny(serverCertificatePathArg.Value);
+                    X509Certificate2 clientCertificate = new(clientCertificatePathArg.Value);
+                    X509Certificate2 serverCertificate = new(serverCertificatePathArg.Value);
                     var name = Path.GetFileNameWithoutExtension(clientCertificatePathArg.Value);
                     try
                     {

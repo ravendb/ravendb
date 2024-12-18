@@ -81,7 +81,7 @@ namespace Voron.Data.CompactTrees
                     VoronUnrecoverableErrorException.Raise(llt.Environment.Options, "The default dictionary has not been included in the build, the build process needs to be corrected.");
 
                 var dictionary = new byte[embeddedFile.Length];
-                int unused = embeddedFile.Read(dictionary);
+                embeddedFile.Read(dictionary);
 
                 var arrayAsInt = MemoryMarshal.Cast<byte, int>(dictionary.AsSpan());
                 int tableSize = arrayAsInt[0];

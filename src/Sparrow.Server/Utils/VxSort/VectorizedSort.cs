@@ -42,7 +42,7 @@ namespace Sparrow.Server.Utils.VxSort
 
         public static void Run<T>([NotNull] Span<T> array) where T : unmanaged
         {
-            if (array == Span<T>.Empty)
+            if (array == null)
                 throw new ArgumentNullException(nameof(array));
 
             if (AdvInstructionSet.X86.IsSupportedAvx256 == false)

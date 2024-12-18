@@ -39,7 +39,16 @@ internal static class HttpClientHandlerHelper
             throw new InvalidOperationException("Underlying handler for HttpClientHandler is not SocketsHttpHandler");
         }
 
-        Configure(underlyingHandler, pooledConnectionLifetime, pooledConnectionIdleTimeout);
+        underlyingHandler.EnableMultipleHttp2Connections = true;
+
+        if (pooledConnectionLifetime == null && pooledConnectionIdleTimeout == null)
+            return;
+
+        if (pooledConnectionLifetime.HasValue)
+            underlyingHandler.PooledConnectionLifetime = pooledConnectionLifetime.Value;
+
+        if (pooledConnectionIdleTimeout.HasValue)
+            underlyingHandler.PooledConnectionIdleTimeout = pooledConnectionIdleTimeout.Value;
 #else
         if (pooledConnectionLifetime == null && pooledConnectionIdleTimeout == null)
             return;
@@ -47,23 +56,4 @@ internal static class HttpClientHandlerHelper
         throw new InvalidOperationException("Cannot set 'PooledConnectionLifetime' and 'PooledConnectionIdleTimeout' in this framework. Should not happen!");
 #endif
     }
-
-#if NETCOREAPP3_1_OR_GREATER
-    public static void Configure(SocketsHttpHandler handler, TimeSpan? pooledConnectionLifetime, TimeSpan? pooledConnectionIdleTimeout)
-    {
-        if (handler == null)
-            throw new ArgumentNullException(nameof(handler));
-
-        handler.EnableMultipleHttp2Connections = true;
-
-        if (pooledConnectionLifetime == null && pooledConnectionIdleTimeout == null)
-            return;
-
-        if (pooledConnectionLifetime.HasValue)
-            handler.PooledConnectionLifetime = pooledConnectionLifetime.Value;
-
-        if (pooledConnectionIdleTimeout.HasValue)
-            handler.PooledConnectionIdleTimeout = pooledConnectionIdleTimeout.Value;
-    }
-#endif
 }
