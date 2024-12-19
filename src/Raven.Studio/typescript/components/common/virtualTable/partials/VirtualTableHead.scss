@@ -1,0 +1,53 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.sorting-controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    order: 10;
+    flex-shrink: 0;
+
+    .btn {
+        font-size: sizes.$font-size-xs;
+        line-height: 25px;
+        color: colors.$text-muted-var;
+        display: flex;
+        padding: 0;
+        opacity: 0.5;
+
+        &:hover {
+            opacity: 1;
+        }
+
+        &.active-sorting {
+            color: colors.$link-color;
+            opacity: 1;
+
+            &:active {
+                color: colors.$link-color;
+            }
+        }
+    }
+}
+
+.filtering-controls {
+    &.btn {
+        font-size: sizes.$font-size-base;
+        line-height: 25px;
+        color: colors.$text-muted-var;
+        display: flex;
+        padding: 0;
+        opacity: 0.5;
+
+        &:hover {
+            filter: colors.$hover-filter-var;
+        }
+    }
+
+    &.active-filtering {
+        color: colors.$link-color;
+        opacity: 1;
+    }
+}

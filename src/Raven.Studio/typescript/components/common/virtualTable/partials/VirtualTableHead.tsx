@@ -3,6 +3,9 @@ import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import { useMemo, useState } from "react";
 import { UncontrolledDropdown, DropdownToggle, DropdownMenu, Input, Label, Button } from "reactstrap";
+import { HStack } from "components/common/HStack";
+import "./VirtualTableHead.scss";
+import { todo } from "common/developmentHelper";
 
 interface VirtualTableHeadProps<T> {
     table: TanstackTable<T>;
@@ -71,6 +74,21 @@ function ColumnSettings<T>({ column }: { column: Column<T, unknown> }) {
         debouncedSetFilter(value);
     };
 
+    todo("BugFix", "Damian", "Fix logic to handle double click properly");
+
+    const handleSort = (direction: "asc" | "desc") => {
+        const currentSort = column.getIsSorted();
+
+        switch (direction) {
+            case "asc":
+                column.toggleSorting(currentSort === "asc" ? undefined : false);
+                break;
+            case "desc":
+                column.toggleSorting(currentSort === "desc" ? undefined : true);
+                break;
+        }
+    };
+
     if (document.querySelector("#page-host") == null) {
         return null;
     }
@@ -81,10 +99,39 @@ function ColumnSettings<T>({ column }: { column: Column<T, unknown> }) {
 
     return (
         <UncontrolledDropdown>
-            <DropdownToggle caret title="Column settings" color="link" size="sm" />
+            <HStack>
+                {column.getCanSort() && (
+                    <div className="sorting-controls">
+                        <Button
+                            color="link"
+                            onClick={() => handleSort("asc")}
+                            title="Sort A to Z"
+                            className={classNames(column.getIsSorted() === "asc" && "active-sorting")}
+                        >
+                            <Icon icon="arrow-thin-top" margin="m-0" />
+                        </Button>
+                        <Button
+                            color="link"
+                            onClick={() => handleSort("desc")}
+                            title="Sort Z to A"
+                            className={classNames(column.getIsSorted() === "desc" && "active-sorting")}
+                        >
+                            <Icon icon="arrow-thin-bottom" margin="m-0" />
+                        </Button>
+                    </div>
+                )}
+                <DropdownToggle
+                    title="Column settings"
+                    color="link"
+                    className={classNames(localFilter ? "active-filtering" : "link-muted", "filtering-controls")}
+                    size="sm"
+                >
+                    <Icon icon="filter" margin="m-0" />
+                </DropdownToggle>
+            </HStack>
             <DropdownMenu container="page-host">
                 {column.getCanFilter() && (
-                    <div className="px-3 py-1">
+                    <div className="px-3 pb-2">
                         <Label className="small-label">Filter column</Label>
                         <div className="clearable-input">
                             <Input
@@ -101,19 +148,6 @@ function ColumnSettings<T>({ column }: { column: Column<T, unknown> }) {
                                     </Button>
                                 </div>
                             )}
-                        </div>
-                    </div>
-                )}
-                {column.getCanSort() && (
-                    <div className="px-3 py-1">
-                        <Label className="small-label">Sort</Label>
-                        <div className="d-flex gap-1">
-                            <Button color="primary" onClick={() => column.toggleSorting(false)} title="Sort A to Z">
-                                <Icon icon="corax-sort-az" margin="m-0" />
-                            </Button>
-                            <Button color="primary" onClick={() => column.toggleSorting(true)} title="Sort Z to A">
-                                <Icon icon="corax-sort-za" margin="m-0" />
-                            </Button>
                         </div>
                     </div>
                 )}
