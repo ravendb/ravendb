@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using OperationCanceledException = System.OperationCanceledException;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
@@ -73,6 +74,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             foreach (var index in _indexStore.GetIndexesForCollection(query.ForCollection))
             {
+                if (query.SearchEngineType != index.SearchEngineType)
+                    continue;
+                
                 if (query.IsGroupBy)
                 {
                     if (index.Type != IndexType.AutoMapReduce)

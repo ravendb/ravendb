@@ -29,6 +29,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public bool IsGroupBy { get; private set; }
 
         public List<Index> SupersededIndexes;
+        
+        public SearchEngineType SearchEngineType { get; private set; }
 
         internal AutoIndexDefinitionBaseServerSide CreateAutoIndexDefinition()
         {
@@ -208,8 +210,20 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
             }
         }
+        
+        public static DynamicQueryMapping Create(IndexQueryServerSide query, SearchEngineType searchEngineType)
+        {
+            var result = CreateInternal(query);
+            
+            result.SearchEngineType = searchEngineType;
 
-        public static DynamicQueryMapping Create(IndexQueryServerSide query)
+            if (query.Metadata.HasVectorSearch)
+                result.SearchEngineType = SearchEngineType.Corax;
+
+            return result;
+        }
+
+        internal static DynamicQueryMapping CreateInternal(IndexQueryServerSide query)
         {
             var result = new DynamicQueryMapping
             {

@@ -195,11 +195,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void ExtendsMappingBasedOnExistingDefinition()
         {
-            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE StartsWith(FirstName, 'a') ORDER BY Count AS long"));
+            _sut = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE StartsWith(FirstName, 'a') ORDER BY Count AS long"));
 
             var existingDefinition = _sut.CreateAutoIndexDefinition();
 
-            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE StartsWith(LastName, 'A') ORDER BY Age AS double"));
+            _sut = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE StartsWith(LastName, 'A') ORDER BY Age AS double"));
 
             _sut.ExtendMappingBasedOn(existingDefinition);
 
@@ -217,11 +217,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void DefinitionExtensionWontDuplicateFields()
         {
-            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE StartsWith(FirstName, 'A') AND StartsWith(LastName, 'A') ORDER BY Age AS double, Count AS long"));
+            _sut = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE StartsWith(FirstName, 'A') AND StartsWith(LastName, 'A') ORDER BY Age AS double, Count AS long"));
 
             var existingDefinition = _sut.CreateAutoIndexDefinition();
 
-            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE StartsWith(FirstName, 'A') AND AddressId = 'addresses/1' ORDER BY Age AS double, Count AS long"));
+            _sut = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE StartsWith(FirstName, 'A') AND AddressId = 'addresses/1' ORDER BY Age AS double, Count AS long"));
 
 
             _sut.ExtendMappingBasedOn(existingDefinition);
@@ -254,11 +254,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void ExtendsIndexingOptionsOfTheSameField()
         {
-            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE FirstName = 'a'"));
+            _sut = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE FirstName = 'a'"));
 
             var existingDefinition = _sut.CreateAutoIndexDefinition();
 
-            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE search(FirstName, 'A')"));
+            _sut = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE search(FirstName, 'A')"));
 
             _sut.ExtendMappingBasedOn(existingDefinition);
 
@@ -271,7 +271,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/BySearch(FirstName)", definition.Name);
 
 
-            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE exact(FirstName = 'A')"));
+            _sut = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE exact(FirstName = 'A')"));
 
             _sut.ExtendMappingBasedOn(definition);
 
@@ -286,7 +286,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
         private void create_dynamic_mapping(string query)
         {
-            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide(query));
+            _sut = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(query));
         }
     }
 }

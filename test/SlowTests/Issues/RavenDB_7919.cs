@@ -69,7 +69,7 @@ namespace SlowTests.Issues
 
                 autoIndex.SetState(IndexState.Idle);
 
-                var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("from Users where FirstName = 'Arek'"));
+                var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("from Users where FirstName = 'Arek'"));
 
                 var result = matcher.Match(dynamicQuery, null);
 
@@ -102,7 +102,7 @@ namespace SlowTests.Issues
 
                 autoIndex.SetState(IndexState.Idle);
 
-                var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("from Users group by Location select count()"));
+                var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("from Users group by Location select count()"));
 
                 var result = matcher.Match(dynamicQuery, null);
 

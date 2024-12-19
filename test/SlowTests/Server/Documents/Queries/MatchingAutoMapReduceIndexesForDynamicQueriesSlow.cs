@@ -62,7 +62,7 @@ namespace SlowTests.Server.Documents.Queries
                 ReduceErrors = 900
             });
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT count() "));
+            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT count() "));
 
             var result = _sut.Match(dynamicQuery,  null);
 

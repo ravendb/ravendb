@@ -68,7 +68,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                 return null;
             var query = new IndexQueryServerSide(new QueryMetadata($"from {collection} select {field}", null, 0));
             var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(RequestHandler.Database.IndexStore);
-            var match = dynamicQueryToIndex.Match(DynamicQueryMapping.Create(query));
+            var defaultAutoIndexingEngineType = RequestHandler.Database.Configuration.Indexing.AutoIndexingEngineType;
+            
+            var match = dynamicQueryToIndex.Match(DynamicQueryMapping.Create(query, defaultAutoIndexingEngineType));
             if (match.MatchType == DynamicQueryMatchType.Complete ||
                 match.MatchType == DynamicQueryMatchType.CompleteButIdle)
                 return match.IndexName;

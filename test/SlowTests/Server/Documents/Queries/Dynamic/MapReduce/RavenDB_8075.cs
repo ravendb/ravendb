@@ -19,7 +19,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             using (var db = CreateDocumentDatabase())
             {
-                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
+                var mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"
 from LastFms
 group by Artist
 where search(Artist, ""Rapper"")
@@ -28,7 +28,7 @@ select count() as Count, Artist"));
 
                 await db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString());
 
-                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
+                mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"
 from LastFms
 group by Artist
 where Count > 100
@@ -48,13 +48,13 @@ select count() as Count, Artist"));
         {
             using (var db = CreateDocumentDatabase())
             {
-                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
+                var mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"
 from LastFms
 where search(Artist, ""Chri"") and Genre = ""jazz"""));
 
                 await db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString());
 
-                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
+                mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"
 from LastFms
 where Genre = ""jazz""
 select Artist"));

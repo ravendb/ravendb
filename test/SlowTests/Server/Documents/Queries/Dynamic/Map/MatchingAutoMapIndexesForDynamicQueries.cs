@@ -40,7 +40,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
         public void Failure_if_there_is_no_index()
         {
             Initialize();
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek'"));
+            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek'"));
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -62,7 +62,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             AddIndex(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Companies WHERE Name = 'IBM'"));
+            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Companies WHERE Name = 'IBM'"));
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -84,7 +84,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             AddIndex(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek'"));
+            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek'"));
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -122,7 +122,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             AddIndex(usersByName);
             AddIndex(usersByNameAndAge);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Age = 29"));
+            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Age = 29"));
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -145,7 +145,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             AddIndex(usersByName);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Age = 29"));
+            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Age = 29"));
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -178,7 +178,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             AddIndex(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Address.Street ='1stAvenue' AND Friends[].Name = 'Jon'"));
+            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Address.Street ='1stAvenue' AND Friends[].Name = 'Jon'"));
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -201,7 +201,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             AddIndex(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' ORDER BY Name"));
+            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' ORDER BY Name"));
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -224,7 +224,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             AddIndex(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users ORDER BY Address.ZipCode AS double"));
+            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users ORDER BY Address.ZipCode AS double"));
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -247,7 +247,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             AddIndex(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' ORDER BY Weight"));
+            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' ORDER BY Weight"));
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -270,14 +270,14 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             AddIndex(definition);
 
-            var dynamicQueryWithStringSorting = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Age > 9 ORDER BY Age AS long"));
+            var dynamicQueryWithStringSorting = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE Age > 9 ORDER BY Age AS long"));
 
             var result = _sut.Match(dynamicQueryWithStringSorting, null);
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
 
-            var dynamicQueryWithNoneSorting = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Age = 31 ORDER BY Age AS double"));
+            var dynamicQueryWithNoneSorting = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE Age = 31 ORDER BY Age AS double"));
 
             result = _sut.Match(dynamicQueryWithNoneSorting, null);
 
@@ -300,7 +300,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 
             AddIndex(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek'"));
+            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek'"));
 
             var index = GetIndex(definition.Name);
 
@@ -334,12 +334,12 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Initialize();
             using (var db = CreateDocumentDatabase())
             {
-                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+                var mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"from Users
 where Name = 'arek'"));
 
                 await db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString());
 
-                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+                mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"from Users
 where search(Name, 'arek')"));
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
@@ -356,12 +356,12 @@ where search(Name, 'arek')"));
             Initialize();
             using (var db = CreateDocumentDatabase())
             {
-                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+                var mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"from Users
 where Name = 'arek'"));
 
                 await db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString());
 
-                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+                mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"from Users
 where exact(Name = 'arek')"));
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
@@ -378,13 +378,13 @@ where exact(Name = 'arek')"));
             Initialize();
             using (var db = CreateDocumentDatabase())
             {
-                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+                var mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"from Users
 where search(Name, 'arek')"));
 
                 var definition = mapping.CreateAutoIndexDefinition();
                 await db.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString());
 
-                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+                mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"from Users
 where search(Name, 'arek')
 include highlight(Name, 18, 2)
 "));
@@ -485,7 +485,7 @@ include highlight(Name, 18, 2)
 
             void VerifyIndex(string query, string expectedIndexName)
             {
-                var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide(query));
+                var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(query));
 
                 var result = _sut.Match(dynamicQuery, explanations);
 
@@ -640,7 +640,7 @@ include highlight(Name, 18, 2)
 
             void VerifyIndex(string query, string expectedIndexName, DynamicQueryMatchType matchType)
             {
-                var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide(query));
+                var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(query));
 
                 var result = _sut.Match(dynamicQuery, explanations);
 

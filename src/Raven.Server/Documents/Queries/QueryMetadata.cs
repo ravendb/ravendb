@@ -175,6 +175,8 @@ function execute(doc, args){
         public bool HasCmpXchgSelect { get; internal set; }
 
         public bool HasTimeSeriesSelect { get; internal set; }
+        
+        public bool HasVectorSearch { get; internal set; }
 
         public bool IsCollectionQuery { get; private set; } = true;
 
@@ -2389,6 +2391,7 @@ function execute(doc, args){
                         return;
                     
                     case MethodType.Vector_Search:
+                        _metadata.HasVectorSearch = true;
                         HandleVector(methodName.Value, arguments, withoutAlias: true, parameters);
                         break;
 

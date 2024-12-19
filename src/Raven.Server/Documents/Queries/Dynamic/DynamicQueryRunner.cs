@@ -157,7 +157,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private async Task<(long? Index, Index Instance)> CreateAutoIndexIfNeeded(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, CancellationToken token)
         {
-            var map = DynamicQueryMapping.Create(query);
+            var defaultAutoIndexingEngineType = Database.Configuration.Indexing.AutoIndexingEngineType;
+            
+            var map = DynamicQueryMapping.Create(query, defaultAutoIndexingEngineType);
 
             (long? Index, Index Instance) result = default;
 
@@ -182,7 +184,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     query.WaitForNonStaleResultsTimeout = customStalenessWaitTimeout ?? TimeSpan.FromSeconds(15);
                 }
-
+                
                 var t = CleanupSupersededAutoIndexes(index, map, RaftIdGenerator.NewId(), token)
                     .ContinueWith(task =>
                     {
@@ -287,7 +289,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainIndexSelection(IndexQueryServerSide query, out string indexName)
         {
-            var map = DynamicQueryMapping.Create(query);
+            var defaultAutoIndexingEngineType = Database.Configuration.Indexing.AutoIndexingEngineType;
+            
+            var map = DynamicQueryMapping.Create(query, defaultAutoIndexingEngineType);
             var explanations = new List<DynamicQueryToIndexMatcher.Explanation>();
 
             var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(_indexStore);
