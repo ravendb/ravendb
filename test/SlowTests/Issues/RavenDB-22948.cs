@@ -265,13 +265,11 @@ namespace SlowTests.Issues
                             })
                             .ToList();
 
-                        //*****************Not expected****************************
-                        Assert.Equal("users/2-T", results[0].User.Id); //need to be users/2
+                        Assert.Equal("users/2-T", results[0].User.Id);
                         Assert.Null(results[0].User.TestId);
 
-                        Assert.Equal("users/3", results[1].User.Id); // need to be users/1
+                        Assert.Equal("users/3", results[1].User.Id);
                         Assert.Null(results[1].User.TestId);
-                        //**********************************************************
                     }
 
                     //TestId is identity property
