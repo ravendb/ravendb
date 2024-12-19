@@ -1603,8 +1603,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 // Root, field factory, value factory, similarity, number of neighbors, isExact 
                 // e.g. Query<Dto>.VectorSearch(x => x.WithText("TextField"), factory => factory.ByText("SomeText"), minimumSimilarity (nullable): 0.7, numberOfCandidates: (nullable) 16, isExact: true (default: Raven.Client.Constants.VectorSearch.DefaultIsExact))
                 case nameof(LinqExtensions.VectorSearch):
-                    VisitExpression(expression.Arguments[0]);
+                    _insideWhereOrSearchCounter++;
                     
+                    VisitExpression(expression.Arguments[0]);
+
+                    if (_chainedWhere)
+                    {
+                        DocumentQuery.AndAlso();
+                        DocumentQuery.OpenSubclause();
+                    }
+                    
+                    if (_chainedWhere == false && _insideWhereOrSearchCounter > 1)
+                        DocumentQuery.OpenSubclause();
+
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var minimumSimilarityObject);
 
                     if (minimumSimilarityObject != null)
@@ -1678,6 +1689,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     
                     
                     DocumentQuery.VectorSearch(fieldBuilder, valueBuilder, minimumSimilarityObject as float?, numberOfCandidatesObject as int?, isExact);
+                    
+                    if (_chainedWhere == false && _insideWhereOrSearchCounter > 1)
+                        DocumentQuery.CloseSubclause();
+                    if (_chainedWhere)
+                        DocumentQuery.CloseSubclause();
+                    _chainedWhere = true;
+                    _insideWhereOrSearchCounter--;
+                    
                     break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);
