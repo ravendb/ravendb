@@ -124,7 +124,7 @@ namespace SlowTests.Issues
             var backupPath = NewDataPath();
             var db = "NewDatabase";
             //Cluster with 2 nodes
-            var (nodes, leader) = await CreateRaftCluster(2);
+            var (nodes, leader) = await CreateRaftCluster(2, shouldRunInMemory: false);
             await CreateDatabaseInCluster(db, 2, leader.WebUrl);
             using (var store = new DocumentStore
             {
@@ -171,11 +171,9 @@ namespace SlowTests.Issues
 
                 var res = mre.WaitOne(TimeSpan.FromSeconds(30)); // Wait to ensure the database record is written before disposing of one node.
                 Assert.True(res);
-
                 var disposedNode = await DisposeServerAndWaitForFinishOfDisposalAsync(nodeToTakeDown);
                 await restoreTask.KillAsync();
                 mre2.Set();
-
                 var database = await GetDatabase(remainingNode, store.Database);
                 WaitForValue(() =>
                 {
