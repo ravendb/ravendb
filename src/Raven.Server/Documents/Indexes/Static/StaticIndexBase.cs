@@ -340,20 +340,30 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        /// <summary>
+        /// Dictionary training process occurs in IsOnBeforeExecuteIndexing. Since we're not training dictionaries with vectors, and considering computation
+        /// power required (e.g., generating embeddings from text), it is better to skip that part as there is no benefit in performing it.
+        /// </summary>
+        /// <param name="currentIndexingScope">Current indexing scope.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsDictionaryTrainingPhase(CurrentIndexingScope currentIndexingScope)
+        {
+            return currentIndexingScope != null && currentIndexingScope.Index.IsOnBeforeExecuteIndexing;
+        }
+        
         public object CreateVector(string fieldName, object value)
         {
             if (value is null or DynamicNullObject)
+                return null;
+
+            var currentIndexingScope = CurrentIndexingScope.Current;
+            if (IsDictionaryTrainingPhase(currentIndexingScope))
                 return null;
             
             // We're supporting two defaults:
             // when Options are not set, we'll decide what is configuration in following manner:
             // - value is textual or array of textual we're treating them as text input
             // - otherwise, we will write as array of numerical values
-            var currentIndexingScope = CurrentIndexingScope.Current;
-            if (currentIndexingScope != null && currentIndexingScope.Index.IsOnBeforeExecuteIndexing)
-                return null;
-            
-            
             var fieldExists = currentIndexingScope.Index.Definition.IndexFields.TryGetValue(fieldName, out var indexField);
             if (fieldExists == false || indexField?.Vector is null)
             {
@@ -376,7 +386,7 @@ namespace Raven.Server.Documents.Indexes.Static
             indexField!.Vector!.ValidateDebug();
 
             return indexField.Vector.SourceEmbeddingType switch
-            {
+            { 
                 VectorEmbeddingType.Text => VectorFromText(indexField, value),
                 _ => VectorFromEmbedding(indexField, value)
             };
@@ -390,8 +400,7 @@ namespace Raven.Server.Documents.Indexes.Static
         /// <returns></returns>
         internal static object CreateVector(IndexField indexField, object value)
         {
-            var currentIndexingScope = CurrentIndexingScope.Current;
-            if (currentIndexingScope != null && currentIndexingScope.Index.IsOnBeforeExecuteIndexing)
+            if (IsDictionaryTrainingPhase(CurrentIndexingScope.Current))
                 return null;
             
             return indexField!.Vector!.SourceEmbeddingType switch
