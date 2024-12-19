@@ -18,14 +18,15 @@ import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { Button, Label } from "reactstrap";
+import { Button, Input, InputGroup, InputGroupText, Label } from "reactstrap";
+import { Checkbox } from "components/common/Checkbox";
 
 export default {
     title: "Bits/Form",
     component: Form,
     decorators: [withStorybookContexts, withBootstrap5],
     args: {
-        isDefaultValid: false,
+        isDefaultValid: true,
     },
 } satisfies Meta;
 
@@ -48,6 +49,32 @@ export function Form({ isDefaultValid }: { isDefaultValid: boolean }) {
             <div>
                 <Label>Input text</Label>
                 <FormInput type="text" control={control} name="inputText" />
+            </div>
+            <div>
+                <InputGroup>
+                    <InputGroupText>@</InputGroupText>
+                    <Input placeholder="username" />
+                </InputGroup>
+                <br />
+                <InputGroup>
+                    <InputGroupText>
+                        <FormCheckbox control={control} name="inputGroupCheckbox" />
+                    </InputGroupText>
+                    <Input placeholder="Check it out" />
+                </InputGroup>
+                <br />
+                <InputGroup>
+                    <Input placeholder="username" />
+                    <InputGroupText>@example.com</InputGroupText>
+                </InputGroup>
+                <br />
+                <InputGroup>
+                    <InputGroupText>$</InputGroupText>
+                    <InputGroupText>$</InputGroupText>
+                    <Input placeholder="Dolla dolla billz yo!" />
+                    <InputGroupText>$</InputGroupText>
+                    <InputGroupText>$</InputGroupText>
+                </InputGroup>
             </div>
             <div>
                 <Label>Input number</Label>
@@ -164,6 +191,7 @@ const schema = yup.object().shape({
     inputNumber: yup.number().required().positive(),
     inputPasswordPreview: yup.string().required(),
     inputCheckbox: yup.boolean().oneOf([true]),
+    inputGroupCheckbox: yup.boolean().oneOf([true]),
     inputCheckboxes: yup.array().of(yup.boolean().oneOf([true])),
     inputSwitch: yup.boolean().oneOf([true]),
     inputRadio: yup.boolean().oneOf([true]),
@@ -185,6 +213,7 @@ const validValues: FormData = {
     inputNumber: 2,
     inputPasswordPreview: "password",
     inputCheckbox: true,
+    inputGroupCheckbox: true,
     inputCheckboxes: [true, false],
     inputRadio: true,
     inputSelect: 1,
@@ -201,6 +230,7 @@ const invalidValues: FormData = {
     inputNumber: -2,
     inputPasswordPreview: "",
     inputCheckbox: false,
+    inputGroupCheckbox: false,
     inputCheckboxes: [false, false],
     inputRadio: false,
     inputSelect: null,
