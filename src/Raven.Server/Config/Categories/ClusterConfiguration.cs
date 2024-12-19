@@ -15,13 +15,13 @@ namespace Raven.Server.Config.Categories
         public TimeSetting ElectionTimeout { get; set; }
 
         [Description("How frequently we sample the information about the databases and send it to the maintenance supervisor.")]
-        [DefaultValue(250)]
+        [DefaultValue(500)]
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("Cluster.WorkerSamplePeriodInMs", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting WorkerSamplePeriod { get; set; }
 
         [Description("As the maintenance supervisor, how frequent we sample the information received from the nodes.")]
-        [DefaultValue(500)]
+        [DefaultValue(1000)]
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("Cluster.SupervisorSamplePeriodInMs", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting SupervisorSamplePeriod { get; set; }
