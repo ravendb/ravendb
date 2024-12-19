@@ -57,8 +57,6 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute
         _architecture = architecture;
     }
 
-    public bool LicenseRequired { get; set; }
-
     public override string Skip
     {
         get
