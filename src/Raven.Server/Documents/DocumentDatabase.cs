@@ -1007,15 +1007,6 @@ namespace Raven.Server.Documents
             }
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed all running TCP connections");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing TxMerger");
-            exceptionAggregator.Execute(() =>
-            {
-                TxMerger?.Dispose();
-            });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TxMerger");
-
-            ForTestingPurposes?.AfterTxMergerDispose?.Invoke();
-
             // must acquire the lock in order to prevent concurrent access to index files
             if (lockTaken == false)
             {
@@ -1064,6 +1055,19 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed IndexStore");
 
             DisposeBackgroundWorkers(exceptionAggregator);
+            
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing TxMerger");
+            exceptionAggregator.Execute(() =>
+            {
+                // Note that we want to dispose the TxMerger *after* we disposed
+                // of all the indexes, since index commit on dispose should be 
+                // handled by the transaction merge (branches -> root relations)
+                // and write to the database journal
+                TxMerger?.Dispose();
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TxMerger");
+
+            ForTestingPurposes?.AfterTxMergerDispose?.Invoke();
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ReplicationLoader");
             exceptionAggregator.Execute(() =>

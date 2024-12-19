@@ -101,8 +101,10 @@ namespace Raven.Server.Documents.TransactionMerger
 
         public void Start()
         {
-            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ => MergeOperationThreadProc(), null, ThreadNames.ForTransactionMerging(TransactionMergerThreadName, _resourceName));
+            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(DoWork, null, ThreadNames.ForTransactionMerging(TransactionMergerThreadName, _resourceName));
         }
+
+        public virtual void DoWork(object state) => MergeOperationThreadProc();
 
         /// <summary>
         /// Enqueue the command to be eventually executed.
@@ -155,7 +157,7 @@ namespace Raven.Server.Documents.TransactionMerger
             ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, TransactionMergerThreadName, _log);
 
             var oomTimer = new Stopwatch();// this is allocated here to avoid OOM when using it
-
+            
             while (true) // this is actually only executed once, except if we are trying to recover from OOM errors
             {
                 NativeMemory.EnsureRegistered();

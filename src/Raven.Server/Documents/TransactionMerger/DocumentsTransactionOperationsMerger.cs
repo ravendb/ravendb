@@ -16,6 +16,14 @@ public sealed class DocumentsTransactionOperationsMerger : AbstractTransactionOp
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
+    public override void DoWork(object state)
+    {
+        using (_database.DocumentsStorage.Environment.Journal.SharedJournalsScope())
+        {
+            base.DoWork(state);
+        }
+    }
+
     internal override DocumentsTransaction BeginAsyncCommitAndStartNewTransaction(DocumentsTransaction previousTransaction, DocumentsOperationContext currentContext)
     {
         return previousTransaction.BeginAsyncCommitAndStartNewTransaction(currentContext);
