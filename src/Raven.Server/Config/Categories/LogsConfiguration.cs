@@ -24,11 +24,11 @@ namespace Raven.Server.Config.Categories
         public LogLevel MinLevel { get; set; }
 
         [DefaultValue(null)]
-        [ConfigurationEntry("Logs.InternalPath", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.Internal.Path", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NLogInternalPath { get; set; }
 
         [DefaultValue(LogLevel.Info)]
-        [ConfigurationEntry("Logs.Level", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.Internal.Level", ConfigurationEntryScope.ServerWideOnly)]
         public LogLevel NLogInternalLevel { get; set; }
 
         [DefaultValue(false)]
