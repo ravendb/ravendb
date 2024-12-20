@@ -216,11 +216,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var result = new DynamicQueryMapping
             {
                 ForCollection = query.Metadata.CollectionName,
-                SearchEngineType = defaultSearchEngineType
+                SearchEngineType = IndexSearchEngineHelper.GetSearchEngineType(query, defaultSearchEngineType)
             };
-            
-            if (query.Metadata.HasVectorSearch)
-                result.SearchEngineType = SearchEngineType.Corax;
 
             var mapFields = new Dictionary<string, DynamicQueryMappingItem>(StringComparer.Ordinal);
 
