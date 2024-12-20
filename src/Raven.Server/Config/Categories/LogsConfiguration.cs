@@ -32,12 +32,12 @@ namespace Raven.Server.Config.Categories
         public LogLevel NLogInternalLevel { get; set; }
 
         [DefaultValue(false)]
-        [ConfigurationEntry("Logs.LogToConsole", ConfigurationEntryScope.ServerWideOnly)]
-        public bool NLogLogToConsole { get; set; }
+        [ConfigurationEntry("Logs.Internal.LogToStandardOutput", ConfigurationEntryScope.ServerWideOnly)]
+        public bool NLogInternalLogToStandardOutput { get; set; }
 
         [DefaultValue(false)]
-        [ConfigurationEntry("Logs.LogToConsoleError", ConfigurationEntryScope.ServerWideOnly)]
-        public bool NLogLogToConsoleError { get; set; }
+        [ConfigurationEntry("Logs.Internal.LogToStandardError", ConfigurationEntryScope.ServerWideOnly)]
+        public bool NLogInternalLogToStandardError { get; set; }
 
         [DefaultValue(128)]
         [MinValue(16)]

@@ -433,8 +433,8 @@ internal static class RavenLogManagerServerExtensions
 
             InternalLogger.LogFile = configuration.Logs.NLogInternalPath.Combine("nlog.internal.log").FullPath;
             InternalLogger.LogLevel = configuration.Logs.NLogInternalLevel.ToNLogLogLevel();
-            InternalLogger.LogToConsole = configuration.Logs.NLogLogToConsole;
-            InternalLogger.LogToConsoleError = configuration.Logs.NLogLogToConsoleError;
+            InternalLogger.LogToConsole = configuration.Logs.NLogInternalLogToStandardOutput;
+            InternalLogger.LogToConsoleError = configuration.Logs.NLogInternalLogToStandardError;
         }
 
         static void ThrowNoRule(string ruleName)
