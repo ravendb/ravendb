@@ -65,7 +65,7 @@ function ColumnSettings<T>({ column }: { column: Column<T, unknown> }) {
     const [localFilter, setLocalFilter] = useState("");
 
     const debouncedSetFilter = useMemo(
-        () => _.debounce((value: string) => column.setFilterValue(value), 500),
+        () => _.debounce((value: string) => column.setFilterValue(value), 300),
         [column]
     );
 
