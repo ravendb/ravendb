@@ -28,7 +28,7 @@ public class RavenDB_14963 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Voron)]
+    [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Voron | RavenTestCategory.Compression)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { true })]
     [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { false })]
     public async Task TestAllRevisionsView(Options options, bool compression)
