@@ -211,11 +211,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
         }
         
-        public static DynamicQueryMapping Create(IndexQueryServerSide query, SearchEngineType searchEngineType)
+        public static DynamicQueryMapping Create(IndexQueryServerSide query, SearchEngineType defaultSearchEngineType)
         {
             var result = CreateInternal(query);
             
-            result.SearchEngineType = searchEngineType;
+            result.SearchEngineType = defaultSearchEngineType;
 
             if (query.Metadata.HasVectorSearch)
                 result.SearchEngineType = SearchEngineType.Corax;
@@ -229,6 +229,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 ForCollection = query.Metadata.CollectionName
             };
+            
+            if (query.Metadata.HasVectorSearch)
+                result.SearchEngineType = SearchEngineType.Corax;
 
             var mapFields = new Dictionary<string, DynamicQueryMappingItem>(StringComparer.Ordinal);
 
