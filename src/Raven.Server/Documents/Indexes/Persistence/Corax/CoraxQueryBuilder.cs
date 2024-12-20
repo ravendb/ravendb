@@ -11,6 +11,7 @@ using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using Lucene.Net.Analysis;
+using Lucene.Net.Analysis.Standard;
 using NetTopologySuite.Utilities;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Corax;
@@ -1225,7 +1226,7 @@ public static class CoraxQueryBuilder
                     KeywordAnalyzer keywordAnalyzer => builderParameters.IndexFieldsMapping.ExactAnalyzer(original.FieldName.ToString()),
                     // here we force a lower case keyword analyzer to ensure proper behavior
                     // https://ayende.com/blog/191841-B/understanding-query-processing-and-wildcards-in-ravendb
-                    RavenStandardAnalyzer or NGramAnalyzer => builderParameters.IndexFieldsMapping.DefaultAnalyzer,
+                    RavenStandardAnalyzer or NGramAnalyzer or StandardAnalyzer => builderParameters.IndexFieldsMapping.DefaultAnalyzer,
                     LowerCaseKeywordAnalyzer or CollationAnalyzer => builderParameters.IndexFieldsMapping.DefaultAnalyzer,
                     // if the user has a custom analyzer, we'll use that, and they can deal with any surprises
                     // in wildcard queries
