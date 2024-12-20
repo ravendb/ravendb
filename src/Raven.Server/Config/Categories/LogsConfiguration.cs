@@ -69,21 +69,21 @@ namespace Raven.Server.Config.Categories
 
         [Description("Location of NuGet packages cache")]
         [DefaultValue("Packages/NuGet/Logging")]
-        [ConfigurationEntry("Logs.NuGetPackagesPath", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.NuGet.PackagesPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NuGetPackagesPath { get; set; }
 
         [Description("Default NuGet source URL")]
         [DefaultValue("https://api.nuget.org/v3/index.json")]
-        [ConfigurationEntry("Logs.NuGetPackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.NuGet.PackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string NuGetPackageSourceUrl { get; set; }
 
         [Description("Allow installation of NuGet prerelease packages")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Logs.NuGetAllowPreReleasePackages", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.NuGet.AllowPreReleasePackages", ConfigurationEntryScope.ServerWideOnly)]
         public bool NuGetAllowPreReleasePackages { get; set; }
 
         [DefaultValue(null)]
-        [ConfigurationEntry("Logs.NuGetAdditionalPackages", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.NuGet.AdditionalPackages", ConfigurationEntryScope.ServerWideOnly)]
         public Dictionary<string, string> NuGetAdditionalPackages { get; set; }
     }
 }
