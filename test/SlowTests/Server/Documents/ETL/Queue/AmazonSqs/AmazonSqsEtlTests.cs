@@ -29,7 +29,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
     }
 
     [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
-    public void SimpleScript()
+    public async Task SimpleScript()
     {
         using (var store = GetDocumentStore())
         {
@@ -50,7 +50,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
                 session.SaveChanges();
             }
 
-            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             IAmazonSQS queueClient = CreateQueueClient();
             var queueUrl = AsyncHelpers.RunSync(() => queueClient.GetQueueUrlAsync(OrdersQueueName)).QueueUrl;
@@ -65,12 +65,12 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
     }
 
     [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
-    public void SimpleScriptToFifoQueue()
+    public async Task SimpleScriptToFifoQueue()
     {
         using (var store = GetDocumentStore())
         {
             IAmazonSQS queueClient = CreateQueueClient();
-            queueClient.CreateQueueAsync(new CreateQueueRequest
+            await queueClient.CreateQueueAsync(new CreateQueueRequest
             {
                 QueueName = "users.fifo",
                 Attributes = new Dictionary<string, string>
@@ -102,7 +102,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
                 session.SaveChanges();
             }
 
-            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
 
             var queueUrl = AsyncHelpers.RunSync(() => queueClient.GetQueueUrlAsync("users.fifo")).QueueUrl;
@@ -237,7 +237,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
 
 
     [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
-    public void TestAreHeadersPresent()
+    public async Task TestAreHeadersPresent()
     {
         using (var store = GetDocumentStore())
         {
@@ -258,7 +258,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
                 session.SaveChanges();
             }
 
-            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             IAmazonSQS queueClient = CreateQueueClient();
             var queueUrl = AsyncHelpers.RunSync(() => queueClient.GetQueueUrlAsync(OrdersQueueName)).QueueUrl;
@@ -275,7 +275,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
 
 
     [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
-    public void SimpleScriptWithManyDocuments()
+    public async Task SimpleScriptWithManyDocuments()
     {
         using var store = GetDocumentStore();
 
@@ -308,7 +308,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
             }
         }
 
-        AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         IAmazonSQS queueClient = CreateQueueClient();
         var queueUrl = AsyncHelpers.RunSync(() => queueClient.GetQueueUrlAsync(OrdersQueueName)).QueueUrl;
@@ -436,7 +436,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
 
 
     [RavenFact(RavenTestCategory.Etl, AmazonSqsRequired = true)]
-    public void ShouldDeleteDocumentsAfterProcessing()
+    public async Task ShouldDeleteDocumentsAfterProcessing()
     {
         using (var store = GetDocumentStore())
         {
@@ -452,7 +452,7 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
                 session.SaveChanges();
             }
 
-            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             IAmazonSQS queueClient = CreateQueueClient();
             var queueUrl = AsyncHelpers.RunSync(() => queueClient.GetQueueUrlAsync("users")).QueueUrl;

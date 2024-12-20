@@ -28,7 +28,7 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
     }
 
     [RavenFact(RavenTestCategory.Etl, AzureQueueStorageRequired = true)]
-    public void SimpleScript()
+    public async Task SimpleScript()
     {
         using (var store = GetDocumentStore())
         {
@@ -49,7 +49,7 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
                 session.SaveChanges();
             }
 
-            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             QueueClient queueClient = CreateAzureQueueStorageClient(AzureQueueStorageConnectionString, OrdersQueueName);
             var message = ReceiveAndDeleteMessages(queueClient).Single();
@@ -136,7 +136,7 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
     }
 
     [RavenFact(RavenTestCategory.Etl, AzureQueueStorageRequired = true)]
-    public void TestAreHeadersPresent()
+    public async Task TestAreHeadersPresent()
     {
         using (var store = GetDocumentStore())
         {
@@ -157,7 +157,7 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
                 session.SaveChanges();
             }
 
-            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             QueueClient queueClient = CreateAzureQueueStorageClient(AzureQueueStorageConnectionString, OrdersQueueName);
             var message = ReceiveAndDeleteMessages(queueClient).Single();
@@ -171,7 +171,7 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
     }
 
     [RavenFact(RavenTestCategory.Etl, AzureQueueStorageRequired = true)]
-    public void SimpleScriptWithManyDocuments()
+    public async Task SimpleScriptWithManyDocuments()
     {
         using var store = GetDocumentStore();
 
@@ -204,7 +204,7 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
             }
         }
 
-        AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         QueueClient queueClient = CreateAzureQueueStorageClient(AzureQueueStorageConnectionString, OrdersQueueName);
         QueueMessage[] messages = ReceiveAndDeleteMessages(queueClient, numberOfOrders);
@@ -321,7 +321,7 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
     }
 
     [RavenFact(RavenTestCategory.Etl, AzureQueueStorageRequired = true)]
-    public void ShouldDeleteDocumentsAfterProcessing()
+    public async Task ShouldDeleteDocumentsAfterProcessing()
     {
         using (var store = GetDocumentStore())
         {
@@ -337,7 +337,7 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
                 session.SaveChanges();
             }
 
-            AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            await AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
             QueueClient queueClient = CreateAzureQueueStorageClient(AzureQueueStorageConnectionString, "users");
             var message = queueClient.ReceiveMessage();
