@@ -53,7 +53,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Map_all_fields()
         {
-            _sut = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count() "));
+            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count() "), SearchEngineType.Lucene);
 
             var definition = _sut.CreateAutoIndexDefinition();
 
@@ -80,13 +80,13 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Extends_mapping_based_on_existing_definition_if_group_by_fields_match()
         {
-            _sut = DynamicQueryMapping.CreateInternal(
-                new IndexQueryServerSide("FROM Users GROUP BY Location WHERE StartsWith(Location, 'A') ORDER BY Count SELECT Location, count() "));
+            _sut = DynamicQueryMapping.Create(
+                new IndexQueryServerSide("FROM Users GROUP BY Location WHERE StartsWith(Location, 'A') ORDER BY Count SELECT Location, count() "), SearchEngineType.Lucene);
 
             var existingDefinition = _sut.CreateAutoIndexDefinition();
 
-            _sut = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(
-                "FROM Users GROUP BY Location WHERE StartsWith(Location, 'A') ORDER BY Age as long SELECT Location, count(), sum(Age) "));
+            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide(
+                "FROM Users GROUP BY Location WHERE StartsWith(Location, 'A') ORDER BY Age as long SELECT Location, count(), sum(Age) "), SearchEngineType.Lucene);
 
             _sut.ExtendMappingBasedOn(existingDefinition);
 

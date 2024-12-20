@@ -213,21 +213,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
         
         public static DynamicQueryMapping Create(IndexQueryServerSide query, SearchEngineType defaultSearchEngineType)
         {
-            var result = CreateInternal(query);
-            
-            result.SearchEngineType = defaultSearchEngineType;
-
-            if (query.Metadata.HasVectorSearch)
-                result.SearchEngineType = SearchEngineType.Corax;
-
-            return result;
-        }
-
-        internal static DynamicQueryMapping CreateInternal(IndexQueryServerSide query)
-        {
             var result = new DynamicQueryMapping
             {
-                ForCollection = query.Metadata.CollectionName
+                ForCollection = query.Metadata.CollectionName,
+                SearchEngineType = defaultSearchEngineType
             };
             
             if (query.Metadata.HasVectorSearch)

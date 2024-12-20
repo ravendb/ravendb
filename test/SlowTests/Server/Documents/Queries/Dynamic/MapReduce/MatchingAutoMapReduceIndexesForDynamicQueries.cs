@@ -24,6 +24,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 
         private DocumentDatabase _documentDatabase;
         protected DynamicQueryToIndexMatcher _sut;
+        private SearchEngineType DefaultAutoIndexingEngineType => _documentDatabase.Configuration.Indexing.AutoIndexingEngineType;
 
         public void Initialize([CallerMemberName] string caller = null)
         {
@@ -37,7 +38,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             Initialize();
 
-            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count() "));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count() "), DefaultAutoIndexingEngineType);
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -69,8 +70,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(
-                "FROM Users GROUP BY Location WHERE Location = 'Poland' ORDER BY Count AS long ASC, Location ASC SELECT Location, count() "));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide(
+                "FROM Users GROUP BY Location WHERE Location = 'Poland' ORDER BY Count AS long ASC, Location ASC SELECT Location, count() "), DefaultAutoIndexingEngineType);
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -99,7 +100,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users GROUP BY Location WHERE Location = 'Poland' SELECT Location, count() "));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location WHERE Location = 'Poland' SELECT Location, count() "), DefaultAutoIndexingEngineType);
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -131,7 +132,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, sum(Count) "));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, sum(Count) "), DefaultAutoIndexingEngineType);
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -163,7 +164,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count(), sum(Sum) "));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count(), sum(Sum) "), DefaultAutoIndexingEngineType);
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -233,7 +234,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             add_index(usersByCountReducedByLocationAndNickNameAndAge);
 
             var dynamicQuery =
-                DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users GROUP BY Location, NickName WHERE Location = 'Poland' SELECT Location, count() "));
+                DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location, NickName WHERE Location = 'Poland' SELECT Location, count() "), DefaultAutoIndexingEngineType);
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -290,7 +291,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             add_index(usersByCountGroupedByLocation);
             add_index(usersByCountAndTotalAgeGroupedByLocation);
 
-            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users GROUP BY Location WHERE Location = 'Poland' SELECT Location, count() "));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location WHERE Location = 'Poland' SELECT Location, count() "), DefaultAutoIndexingEngineType);
 
             var result = _sut.Match(dynamicQuery, null);
 
@@ -314,7 +315,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' ORDER BY Weight ASC"));
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' ORDER BY Weight ASC"), DefaultAutoIndexingEngineType);
  
             var result = _sut.Match(dynamicQuery, null);
 
@@ -329,19 +330,19 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 
             using (var db = CreateDocumentDatabase())
             {
-                var mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"
+                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from Users
 group by Name
 where Name = 'arek'
-select Name, count()"));
+select Name, count()"), DefaultAutoIndexingEngineType);
 
                 await db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString());
 
-                mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"
+                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from Users
 group by Name
 where search(Name, 'arek')
-select Name, count()"));
+select Name, count()"), DefaultAutoIndexingEngineType);
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
 
@@ -358,19 +359,19 @@ select Name, count()"));
 
             using (var db = CreateDocumentDatabase())
             {
-                var mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"
+                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from Users
 group by Name
 where Name = 'arek'
-select Name, count()"));
+select Name, count()"), DefaultAutoIndexingEngineType);
 
                 await db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString());
 
-                mapping = DynamicQueryMapping.CreateInternal(new IndexQueryServerSide(@"
+                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from Users
 group by Name
 where exact(Name = 'arek')
-select Name, count()"));
+select Name, count()"), DefaultAutoIndexingEngineType);
 
                 var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
 
