@@ -189,26 +189,26 @@ $token-important: $color-2-2;
     $gray-100: #f0f1f6;
     $white: #ffffff;
 
-    $color-1: darken(#f06582, 0%);
-    $color-1-1: darken(#f3766e, 2%);
-    $color-1-2: darken(#f38a66, 4%);
-    $color-1-3: darken(#eea361, 6%);
-    $color-2: darken(#f0b362, 8%);
-    $color-2-1: darken(#f0c254, 9%);
-    $color-2-2: darken(#edcd51, 12%);
-    $color-2-3: darken(#c4d451, 12%);
-    $color-3: darken(#7bd85d, 15%);
-    $color-3-1: darken(#51d27a, 10%);
-    $color-3-2: darken(#37c4ac, 8%);
-    $color-3-3: darken(#2fb7d2, 7%);
-    $color-4: darken(#2f9ef3, 5%);
-    $color-4-1: darken(#5186ee, 5%);
-    $color-4-2: darken(#7069ee, 5%);
-    $color-4-3: darken(#8361d4, 5%);
-    $color-5: darken(#945ab5, 5%);
-    $color-5-1: darken(#bf569f, 5%);
-    $color-5-2: darken(#d85b9a, 5%);
-    $color-5-3: darken(#ed558c, 5%);
+    $color-1: color.adjust(#f06582, $lightness: 0%);
+    $color-1-1: color.adjust(#f3766e, $lightness: -2%);
+    $color-1-2: color.adjust(#f38a66, $lightness: -4%);
+    $color-1-3: color.adjust(#eea361, $lightness: -6%);
+    $color-2: color.adjust(#f0b362, $lightness: -8%);
+    $color-2-1: color.adjust(#f0c254, $lightness: -9%);
+    $color-2-2: color.adjust(#edcd51, $lightness: -12%);
+    $color-2-3: color.adjust(#c4d451, $lightness: -12%);
+    $color-3: color.adjust(#7bd85d, $lightness: -15%);
+    $color-3-1: color.adjust(#51d27a, $lightness: -10%);
+    $color-3-2: color.adjust(#37c4ac, $lightness: -8%);
+    $color-3-3: color.adjust(#2fb7d2, $lightness: -7%);
+    $color-4: color.adjust(#2f9ef3, $lightness: -5%);
+    $color-4-1: color.adjust(#5186ee, $lightness: -5%);
+    $color-4-2: color.adjust(#7069ee, $lightness: -5%);
+    $color-4-3: color.adjust(#8361d4, $lightness: -5%);
+    $color-5: color.adjust(#945ab5, $lightness: -5%);
+    $color-5-1: color.adjust(#bf569f, $lightness: -5%);
+    $color-5-2: color.adjust(#d85b9a, $lightness: -5%);
+    $color-5-3: color.adjust(#ed558c, $lightness: -5%);
 
     $primary: $color-5;
     $secondary: $gray-400;
@@ -348,7 +348,7 @@ $token-important: $color-2-2;
 $table-bg-scale: 30% !default;
 
 @function background-color-mix($color, $weight) {
-    @return mix(color.scale(color.scale($color, $lightness: -40%), $saturation: 30%), $panel-bg-1, $weight);
+    @return color.mix(color.scale(color.scale($color, $lightness: -40%), $saturation: 30%), $panel-bg-1, $weight);
 }
 
 $color-support-free: $color-4;
@@ -360,6 +360,7 @@ $shard-color: $color-4-1;
 $orchestrator-color: $color-2-1;
 $progress-color: $color-2-3;
 
+$free: $color-4;
 $professional: $color-4-2;
 $enterprise: $color-5;
 $developer: #c7ff6b;
@@ -456,7 +457,7 @@ $success-bg-subtle: tint-color($success, 80%) !default;
 $info-bg-subtle: tint-color($info, 80%) !default;
 $warning-bg-subtle: tint-color($warning, 80%) !default;
 $danger-bg-subtle: tint-color($danger, 80%) !default;
-$light-bg-subtle: mix($gray-100, $white) !default;
+$light-bg-subtle: color.mix($gray-100, $white) !default;
 $dark-bg-subtle: $gray-400 !default;
 // scss-docs-end theme-bg-subtle-variables
 

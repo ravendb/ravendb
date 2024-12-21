@@ -1,4 +1,6 @@
-﻿@each $key, $value in $theme-colors {
+﻿@use "sass:color";
+
+@each $key, $value in $theme-colors {
     .bg-#{$key} {
         color: color-contrast($value);
     }
@@ -6,7 +8,7 @@
 
 @each $key, $value in $theme-colors {
     .bg-faded-#{$key} {
-        background-color: mix($panel-bg-1, $value, 80%) !important;
-        color: mix($text-emphasis-color, $value, 30%);
+        background-color: color.mix($panel-bg-1, $value, 80%) !important;
+        color: color.mix($text-emphasis-color, $value, 30%);
     }
 }

@@ -1,4 +1,5 @@
-﻿@use "Content/scss/colors";
+﻿@use "sass:color";
+@use "Content/scss/colors";
 @use "Content/scss/sizes";
 
 .change-vector-popover {
@@ -48,6 +49,9 @@
         height: 100%;
         text-align: center;
         position: relative;
+        transition:
+            background-color 0.5s sizes.$global-easing,
+            color 0.1s !important;
 
         h4 {
             color: inherit;
@@ -69,9 +73,6 @@
             font-size: 36px;
             line-height: 1em;
         }
-        transition:
-            background-color 0.5s sizes.$global-easing,
-            color 0.1s !important;
 
         &:hover {
             transition:
@@ -83,11 +84,11 @@
 
     @each $name, $color in colors.$task-colors {
         .#{$name} {
-            background-color: fade-out($color, 0.9);
+            background-color: color.scale($color, $alpha: -90%);
             color: $color;
 
             &:hover {
-                background-color: fade-out($color, 0.1);
+                background-color: color.scale($color, $alpha: -10%);
             }
         }
     }

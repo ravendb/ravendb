@@ -1,3 +1,4 @@
+@use "sass:map";
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
@@ -12,7 +13,7 @@
             6: colors.$color-3-3,
         );
 
-        @return map-get($colors, $index);
+        @return map.get($colors, $index);
     }
     .half-width-section {
         flex-grow: 1;

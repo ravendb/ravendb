@@ -38,8 +38,8 @@ $well-bg-2: colors.$gray-base-light;
 $well-border: none;
 
 $row-bg: $well-bg;
-$row-bg-selection-preview: fadeout(colors.$primary, 92%);
-$row-bg-selected: fadeout(colors.$primary, 80%);
+$row-bg-selection-preview: fade-out(colors.$primary, 0.92);
+$row-bg-selected: fade-out(colors.$primary, 0.8);
 
 //== Scaffolding
 //
@@ -667,8 +667,8 @@ $list-group-link-heading-color: #333;
 //
 //##
 
-$panel-body-padding: $grid-gutter-width / 2;
-$panel-heading-padding: 7px $grid-gutter-width / 2;
+$panel-body-padding: calc($grid-gutter-width / 2);
+$panel-heading-padding: 7px calc($grid-gutter-width / 2);
 $panel-footer-padding: $panel-heading-padding;
 $panel-border-radius: $border-radius-base;
 //** Border color for elements within panels

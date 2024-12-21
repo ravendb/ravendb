@@ -13,12 +13,11 @@
     padding: 1px;
     text-align: center;
     overflow-x: auto;
+    --license-color: var(--bs-secondary);
 
     table {
         margin-bottom: 0 !important;
     }
-
-    --license-color: var(--bs-secondary);
 
     .developer {
         --license-color: var(--license-developer);

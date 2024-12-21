@@ -1,3 +1,5 @@
+@use "sass:color";
+
 // CSS custom properties for font color (outside .bs5 to fix regressions)
 $prefix: "bs-";
 
@@ -31,7 +33,7 @@ $prefix: "bs-";
     --#{$prefix}border-radius-md: #{$border-radius-md}; //fix missing size in bootstrap 5.3
 
     @each $key, $value in $theme-colors {
-        --faded-#{$key}: #{mix($panel-bg-1, $value, 80%)};
+        --faded-#{$key}: #{color.mix($panel-bg-1, $value, 80%)};
     }
 
     @each $key, $value in $zindexes {

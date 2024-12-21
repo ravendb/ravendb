@@ -1,4 +1,5 @@
-﻿@use "sass:math";
+﻿@use "sass:map";
+@use "sass:math";
 @use "Content/scss/bs5variables";
 @use "Content/scss/sizes";
 
@@ -78,7 +79,7 @@
             flex-grow: 1;
             word-break: break-all;
 
-            @media (min-width: map-get(bs5variables.$grid-breakpoints, "sm")) {
+            @media (min-width: map.get(bs5variables.$grid-breakpoints, "sm")) {
                 width: 350px;
                 min-width: 350px;
                 a {

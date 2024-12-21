@@ -14,7 +14,7 @@
 .bs5 {
     // Optional Bootstrap components
     @import "../scss/reboot";
-    @import "~boostrap5/scss/type";
+    @import "../scss/type";
     @import "~boostrap5/scss/images";
     @import "~boostrap5/scss/containers";
     @import "~boostrap5/scss/grid";

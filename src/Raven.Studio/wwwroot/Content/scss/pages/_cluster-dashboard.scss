@@ -10,6 +10,7 @@
             .node-item-header {
                 display: flex;
                 align-items: flex-end;
+                border-bottom: solid $border-width $panel-bg-1-var;
 
                 .global-spinner {
                     margin-top: -4px;
@@ -29,6 +30,7 @@
                         margin-right: $gutter-xs;
                     }
                 }
+
                 .node-type,
                 .node-os,
                 .node-url {
@@ -38,10 +40,11 @@
                 .node-url {
                     display: block;
                 }
+
                 i {
                     font-size: 1.75em;
                 }
-                border-bottom: solid $border-width $panel-bg-1-var;
+
                 .small-label {
                     margin-top: $gutter-xxs;
                 }

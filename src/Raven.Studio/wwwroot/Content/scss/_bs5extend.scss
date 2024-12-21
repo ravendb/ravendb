@@ -1,3 +1,5 @@
+@use "sass:color";
+
 // TODO replace all panels widh cards -> remove css
 .panel {
     background-color: $panel-bg-1;
@@ -231,6 +233,7 @@
         $bulge-width: 3px;
         cursor: pointer;
         position: relative;
+        transition: box-shadow 0.25s $global-easing;
 
         .badge {
             position: absolute;
@@ -245,7 +248,6 @@
             margin-bottom: $gutter-sm;
         }
 
-        transition: box-shadow 0.25s $global-easing;
         &:hover,
         &.active {
             filter: $hover-filter;
@@ -281,13 +283,15 @@ select {
 .form-dropdown-select {
     display: flex;
     flex-grow: 1;
+    min-width: 200px;
+
     .dropdown-toggle {
         flex-grow: 1;
     }
 
-    min-width: 200px;
     .dropdown {
         max-width: 100%;
+
         .dropdown-toggle {
             overflow: hidden;
             text-overflow: ellipsis;
@@ -308,10 +312,10 @@ select {
 
 // custom alerts colors
 @each $key, $value in $theme-colors {
-    $bg: mix($panel-bg-1, $value, 80%);
-    $border-color: mix($text-emphasis-color, $value, 30%);
+    $bg: color.mix($panel-bg-1, $value, 80%);
+    $border-color: color.mix($text-emphasis-color, $value, 30%);
     $color: color-contrast($bg);
-    $title-color: mix($text-emphasis-color, $value, 30%);
+    $title-color: color.mix($text-emphasis-color, $value, 30%);
 
     .alert-#{$key} {
         --#{$prefix}alert-color: #{$color};
@@ -393,7 +397,7 @@ select {
         transition: background-color 0.1s ease;
         border-radius: $border-radius;
         &:hover {
-            background-color: lighten($well-bg, 5%);
+            background-color: color.adjust($well-bg, $lightness: 5%);
         }
     }
 }

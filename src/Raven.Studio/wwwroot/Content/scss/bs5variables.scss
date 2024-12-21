@@ -1,5 +1,7 @@
+@use "sass:color";
 @use "sass:math";
 @use "sass:map";
+@use "sass:string";
 @import "../../../node_modules/boostrap5/scss/functions";
 @import "../scss/colors";
 @import "../scss/sizes";
@@ -11,7 +13,7 @@
 
 // The contrast ratio to reach against white, to determine if color changes from "light" to "dark". Acceptable values for WCAG 2.0 are 3, 4.5 and 7.
 // See https://www.w3.org/TR/WCAG20/#visual-audio-contrast-contrast
-$min-contrast-ratio: 4 !default;
+$min-contrast-ratio: 3 !default;
 
 // Customize the light and dark text colors for use in our color contrast function.
 $color-contrast-dark: $black !default;
@@ -499,7 +501,7 @@ $btn-active-box-shadow: inset 0 3px 5px rgba($black, 0.125) !default;
 $btn-link-color: var(--#{$prefix}link-color) !default;
 $btn-link-hover-color: var(--#{$prefix}link-hover-color) !default;
 $btn-link-disabled-color: $text-muted-var !default;
-$btn-link-focus-shadow-rgb: to-rgb(mix(color-contrast($link-color), $link-color, 15%)) !default;
+$btn-link-focus-shadow-rgb: to-rgb(color.mix(color-contrast($link-color), $link-color, 15%)) !default;
 
 // Allows for customizing button radius independently from global border radius
 $btn-border-radius: var(--#{$prefix}border-radius-sm) !default;
@@ -1223,7 +1225,7 @@ $modal-content-inner-border-radius: subtract($modal-content-border-radius, $moda
 $modal-content-box-shadow-xs: var(--#{$prefix}box-shadow-sm) !default;
 $modal-content-box-shadow-sm-up: var(--#{$prefix}box-shadow) !default;
 
-$modal-backdrop-bg: darken($body-bg, 10%) !default;
+$modal-backdrop-bg: color.adjust($body-bg, $lightness: -10%) !default;
 $modal-backdrop-opacity: 0.5 !default;
 
 $modal-header-border-color: $border-color-light !default;
@@ -1341,7 +1343,7 @@ $breadcrumb-margin-bottom: 1rem !default;
 $breadcrumb-bg: null !default;
 $breadcrumb-divider-color: var(--#{$prefix}secondary-color) !default;
 $breadcrumb-active-color: var(--#{$prefix}secondary-color) !default;
-$breadcrumb-divider: quote("/") !default;
+$breadcrumb-divider: string.quote("/") !default;
 $breadcrumb-divider-flipped: $breadcrumb-divider !default;
 $breadcrumb-border-radius: null !default;
 // scss-docs-end breadcrumb-variables
