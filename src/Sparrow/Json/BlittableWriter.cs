@@ -729,6 +729,11 @@ namespace Sparrow.Json
                     return BlittableVectorType.Float;
                 if (type == typeof(double))
                     return BlittableVectorType.Double;
+#if NET6_0_OR_GREATER
+                if (type == typeof(Half))
+                    return BlittableVectorType.Half;
+#endif
+                
                 throw new NotSupportedException($"Type {type.Name} is not supported in vectors.");
             }
             

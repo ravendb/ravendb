@@ -273,7 +273,7 @@ namespace Sparrow.Json
                         var property = CreateLazyStringValueFromParserState();
                         currentState.CurrentProperty = _context.CachedProperties.GetProperty(property);
 
-                        if (currentState.CurrentProperty.ComparePropertyNameToBytes(Global.Constants.Naming.VectorPropertyNameAsSpan) == 0)
+                        if (currentState.CurrentProperty.EqualsPropertyNameToBytes(Global.Constants.Naming.VectorPropertyNameAsSpan))
                             _isVectorProperty = true;
 
                         currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);
@@ -344,7 +344,17 @@ namespace Sparrow.Json
                             case JsonParserToken.Float:
                                 var numberString = new ReadOnlySpan<byte>(_state.StringBuffer, _state.StringSize);
                                 if (Utf8Parser.TryParse(numberString, out decimal value, out int bytesConsumed) == false)
+                                {
+                                    //We suspect the underlying value might be a double with large values or exponents, so let's verify it again before moving to classic array.
+                                    if (Utf8Parser.TryParse(numberString, out double dValue, out bytesConsumed) == false)
+                                    {
+                                        break;
+                                    }
+                                    
+                                    _state.AddBuffered(dValue);
+                                    processed = true;
                                     break;
+                                }
 
                                 Debug.Assert(bytesConsumed == _state.StringSize);
 #if NET7_0_OR_GREATER

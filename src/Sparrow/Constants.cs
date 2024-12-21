@@ -60,6 +60,7 @@ namespace Sparrow.Global
         internal static class Naming
         {
             public const string VectorPropertyName = "@vector";
+            
             public static ReadOnlySpan<byte> VectorPropertyNameAsSpan => "@vector"u8;
         }
     }

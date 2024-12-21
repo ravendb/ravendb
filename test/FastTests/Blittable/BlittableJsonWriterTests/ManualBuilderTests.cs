@@ -662,6 +662,19 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             VectorTestBase(array);
         }
         
+        [RavenTheory(RavenTestCategory.Vector)]
+        [InlineDataWithRandomSeed(1)]
+        [InlineDataWithRandomSeed(2)]
+        [InlineDataWithRandomSeed(4)]
+        [InlineDataWithRandomSeed(256)]
+        [InlineDataWithRandomSeed(4000)]
+        public void VectorDoubleTest(int size, int seed)
+        {
+            var random = new Random(seed);
+            var array = Enumerable.Range(0, size).Select(x => random.NextSingle() * double.MaxValue).ToArray();
+            VectorTestBase(array);
+        }
+        
         private static void VectorTestBase<T>(T[] array) where T : unmanaged, INumber<T>
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))

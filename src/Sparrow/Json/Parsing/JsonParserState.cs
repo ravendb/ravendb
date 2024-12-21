@@ -221,14 +221,15 @@ namespace Sparrow.Json.Parsing
             EscapePositions.Clear();
 
             // We will change this value to MinValue because the 0 magnitude number is valid as the content of a vector.
-            _maxLongMagnitude = long.MinValue;
+            _maxLong = long.MinValue;
+            _minLong = long.MaxValue;
             _maxDoubleMagnitude = double.MinValue;
         }
 
         internal FastList<(JsonParserToken, long)> _bufferedSequence;
-        private decimal _maxLongMagnitude;
+        private decimal _maxLong;
+        private decimal _minLong;
         private double _maxDoubleMagnitude;
-        private bool _hasNegativeValue;
 
         internal bool IsBufferedFloat { get; private set; }
 
@@ -237,7 +238,8 @@ namespace Sparrow.Json.Parsing
             _bufferedSequence.WeakClear();
 
             // We will change this value to MinValue because the 0 magnitude number is valid as the content of a vector.
-            _maxLongMagnitude = long.MinValue;
+            _maxLong = long.MinValue;
+            _minLong = long.MaxValue;
             _maxDoubleMagnitude = double.MinValue;
         }
 
@@ -247,7 +249,7 @@ namespace Sparrow.Json.Parsing
             {
                 // We need to check both because we can convert longs to doubles, but not the other
                 // way around. 
-                var maxValue = Math.Max(decimal.ToDouble(_maxLongMagnitude), _maxDoubleMagnitude);
+                var maxValue = Math.Max(decimal.ToDouble(Math.Max(Math.Abs(_maxLong), Math.Abs(_minLong))), _maxDoubleMagnitude);
 
                 // If handling floating-point values, use a simple check first.
                 return Math.Abs(maxValue) switch
@@ -258,16 +260,20 @@ namespace Sparrow.Json.Parsing
             }
 
             // At this point we know we are only working with integers.
-            return (_maxBufferedLongMagnitude: _maxLongMagnitude, _hasNegativeLongValue: _hasNegativeValue) switch
+            // Also, we're prioritizing signed types over unsigned for parsing purposes
+            return (minLong: _minLong, maxLong: _maxLong) switch
             {
-                ( <= sbyte.MaxValue, true) => BlittableVectorType.SByte,
-                ( <= byte.MaxValue, false) => BlittableVectorType.Byte,
-                ( <= short.MaxValue, true) => BlittableVectorType.Int16,
-                ( <= ushort.MaxValue, false) => BlittableVectorType.UInt16,
-                ( <= int.MaxValue, true) => BlittableVectorType.Int32,
-                ( <= uint.MaxValue, false) => BlittableVectorType.UInt32,
-                (_, true) => BlittableVectorType.Int64,
-                (_, false) => BlittableVectorType.UInt64, // Fallback for unsigned long
+                (>= sbyte.MinValue, <= sbyte.MaxValue) => BlittableVectorType.SByte,
+                (>= byte.MinValue, <= byte.MaxValue) => BlittableVectorType.Byte,
+
+                (>= short.MinValue, <= short.MaxValue) => BlittableVectorType.Int16,
+                (>= ushort.MinValue, <= ushort.MaxValue) => BlittableVectorType.UInt16,
+
+                (>= int.MinValue, <= int.MaxValue) => BlittableVectorType.Int32,
+                (>= uint.MinValue, <= uint.MaxValue) => BlittableVectorType.UInt32,
+                
+                (>= long.MinValue, <= long.MaxValue) => BlittableVectorType.Int64,
+                (>= ulong.MinValue, _) => BlittableVectorType.Int64, // Fallback for unsigned long
             };
         }
 
@@ -275,8 +281,8 @@ namespace Sparrow.Json.Parsing
         {
             _bufferedSequence ??= new();
 
-            _maxLongMagnitude = Math.Max(Math.Abs(stateLong), _maxLongMagnitude);
-            _hasNegativeValue |= stateLong < 0;
+            _maxLong = Math.Max(stateLong, _maxLong);
+            _minLong = Math.Min(stateLong, _minLong);
 
             _bufferedSequence.Add((JsonParserToken.Integer, stateLong));
         }

@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using Sparrow.Json.Parsing;
 using static Sparrow.PortableExceptions;
 
@@ -61,7 +57,7 @@ namespace Sparrow.Json
         public int ElementSize => ((byte)Type) & TypeMask;
     }
     
-    public sealed unsafe class BlittableJsonReaderVector : BlittableJsonReaderBase, IEnumerable
+    public sealed unsafe class BlittableJsonReaderVector : BlittableJsonReaderBase
     {
         private readonly BlittableVectorHeader* _header;
         private readonly byte* _dataStart;
@@ -122,6 +118,28 @@ namespace Sparrow.Json
             }
         }
 
+        public bool IsTypeCompatibleForDirectRead<T>()
+        {
+            var type = typeof(T);
+            return _header->Type switch
+            {
+                BlittableVectorType.Byte or BlittableVectorType.SByte => type == typeof(sbyte) || type == typeof(byte),
+                BlittableVectorType.Int16 => type == typeof(short) || type == typeof(ushort),
+                BlittableVectorType.Int32 => type == typeof(int) || type == typeof(uint),
+                BlittableVectorType.Int64 => type == typeof(long) || type == typeof(ulong),
+                BlittableVectorType.UInt16 => type == typeof(ushort) || type == typeof(byte),
+                BlittableVectorType.UInt32 => type == typeof(uint) || type == typeof(byte),
+                BlittableVectorType.UInt64 => type == typeof(ulong) || type == typeof(byte),
+                BlittableVectorType.Float => type == typeof(float),
+                BlittableVectorType.Double => type == typeof(double),
+                #if NET6_0_OR_GREATER
+                BlittableVectorType.Half => type == typeof(Half),
+                #endif
+                _ => false
+            };
+
+        }
+        
         public bool IsOfType<T>()
         {
             var type = typeof(T);
@@ -168,182 +186,382 @@ namespace Sparrow.Json
         public ReadOnlySpan<T> ReadArray<T>()
             where T : unmanaged
         {
-            if (!IsOfType<T>())
+            if (IsOfType<T>() == false)
                 throw new InvalidOperationException($"Vector is not of type {typeof(T).Name}");
 
             return new ReadOnlySpan<T>(_dataStart, _header->Count);
         }
 
-        private struct EnumerateAsLong<T> : IEnumerator<long> where T : unmanaged
+        public bool TryReadArray<T>(out ReadOnlySpan<T> span)
         {
+            if (IsTypeCompatibleForDirectRead<T>() == false)
+            {
+                span = [];
+                return false;
+            }
+
+            span = new ReadOnlySpan<T>(_dataStart, _header->Count);
+            return true;
+        }
+
+        public EnumerableAs<TOut> ReadAs<TOut>() where TOut : unmanaged
+        {
+            var size = _header->Count * _header->ElementSize; 
+            return new EnumerableAs<TOut>(_dataStart, size, ElementSize, _header->Type);
+        }
+
+        /**
+         * Since compression may happen on the server side, we need a simple way to deserialize it on the client side.
+         * Let's introduce a method that reads the requested type.
+         **/
+        public struct EnumerableAs<TOut> : IEnumerator<TOut>
+            where TOut : unmanaged
+        {
+            private readonly BlittableVectorType _type;
+            public int Count => _dataLength / _elementSize;
+            private int _position = -1;
             private readonly byte* _dataStart;
             private readonly int _dataLength;
-            private int _position;
-
-            public EnumerateAsLong(byte* dataStart, int dataLength)
+            private readonly int _elementSize;
+            private readonly delegate*<byte*, TOut> _getElement;
+  
+            public EnumerableAs(byte* dataStart, int dataLength, int elementSize, BlittableVectorType type)
             {
                 _dataStart = dataStart;
                 _dataLength = dataLength;
-            }
-
-            public bool MoveNext()
-            {
-                _position++;
-                return _position < _dataLength;
-            }
-
-            public void Reset()
-            {
-                _position = 0;
-            }
-
-            public long Current
-            {
-                get
+                _elementSize = elementSize;
+                
+                _getElement = type switch
                 {
-                    if (typeof(T) == typeof(sbyte))
-                        return *((sbyte*)_dataStart + _position);
-                    if (typeof(T) == typeof(byte))
-                        return *((byte*)_dataStart + _position);
-
-                    if (typeof(T) == typeof(short))
-                        return *((short*)_dataStart + _position);
-                    if (typeof(T) == typeof(ushort))
-                        return *((ushort*)_dataStart + _position);
-
-                    if (typeof(T) == typeof(int))
-                        return *((int*)_dataStart + _position);
-                    if (typeof(T) == typeof(uint))
-                        return *((uint*)_dataStart + _position);
-
-                    if (typeof(T) == typeof(ulong))
-                        return (long)*((ulong*)_dataStart + _position);
-
-                    return *((long*)_dataStart + _position);
-                }
-            }
-
-            object IEnumerator.Current => Current;
-
-            public void Dispose() { }
-        }
-
-        private struct EnumerateAsULong<T> : IEnumerator<ulong> where T : unmanaged
-        {
-            private readonly byte* _dataStart;
-            private readonly int _dataLength;
-            private int _position;
-
-            public EnumerateAsULong(byte* dataStart, int dataLength)
-            {
-                _dataStart = dataStart;
-                _dataLength = dataLength;
-            }
-
-            public bool MoveNext()
-            {
-                _position++;
-                return _position < _dataLength;
-            }
-
-            public void Reset()
-            {
-                _position = 0;
-            }
-
-            public ulong Current
-            {
-                get
-                {
-                    if (typeof(T) == typeof(byte))
-                        return *((byte*)_dataStart + _position);
-                    if (typeof(T) == typeof(ushort))
-                        return *((ushort*)_dataStart + _position);
-                    if (typeof(T) == typeof(uint))
-                        return *((uint*)_dataStart + _position);
-
-                    return *((ulong*)_dataStart + _position);
-                }
-            }
-
-            object IEnumerator.Current => Current;
-
-            public void Dispose() { }
-        }
-
-        private struct EnumerateAsDouble<T> : IEnumerator<double> where T : unmanaged
-        {
-            private readonly byte* _dataStart;
-            private readonly int _dataLength;
-            private int _position;
-
-            public EnumerateAsDouble(byte* dataStart, int dataLength)
-            {
-                _dataStart = dataStart;
-                _dataLength = dataLength;
-            }
-
-            public bool MoveNext()
-            {
-                _position++;
-                return _position < _dataLength;
-            }
-
-            public void Reset()
-            {
-                _position = 0;
-            }
-
-            public double Current
-            {
-                get
-                {
-#if NET6_0_OR_GREATER                    
-                    if (typeof(T) == typeof(Half))
-                        return (double)*((Half*)_dataStart + _position);
-#endif
-                    if (typeof(T) == typeof(float))
-                        return *((float*)_dataStart + _position);
-                    return *((double*)_dataStart + _position);
-                }
-            }
-
-            object IEnumerator.Current => Current;
-
-            public void Dispose() { }
-        }
-
-        public IEnumerator GetEnumerator()
-        {
-            switch (_header->Type)
-            {
-                case BlittableVectorType.SByte:
-                    return new EnumerateAsLong<sbyte>(_dataStart, _header->Count);
-                case BlittableVectorType.Int16:
-                    return new EnumerateAsLong<short>(_dataStart, _header->Count);
-                case BlittableVectorType.Int32:
-                    return new EnumerateAsLong<int>(_dataStart, _header->Count);
-                case BlittableVectorType.Int64:
-                    return new EnumerateAsLong<long>(_dataStart, _header->Count);
-                case BlittableVectorType.Byte:
-                    return new EnumerateAsLong<byte>(_dataStart, _header->Count);
-                case BlittableVectorType.UInt16:
-                    return new EnumerateAsLong<ushort>(_dataStart, _header->Count);
-                case BlittableVectorType.UInt32:
-                    return new EnumerateAsLong<uint>(_dataStart, _header->Count);
-                case BlittableVectorType.UInt64:
-                    return new EnumerateAsULong<ulong>(_dataStart, _header->Count);
+                    BlittableVectorType.SByte => &SbyteConverter,
+                    BlittableVectorType.Int16 => &Int16Converter,
+                    BlittableVectorType.Int32 => &Int32Converter,
+                    BlittableVectorType.Int64 => &UInt64Converter,
+                    
+                    BlittableVectorType.Byte => &ByteConverter,
+                    BlittableVectorType.UInt16 => &UInt16Converter,
+                    BlittableVectorType.UInt32 => &UInt32Converter,
+                    BlittableVectorType.UInt64 => &UInt64Converter,
+                    
+                    BlittableVectorType.Float => &FloatConverter,
+                    BlittableVectorType.Double => &DoubleConverter,
 #if NET6_0_OR_GREATER
-                case BlittableVectorType.Half:
-                    return new EnumerateAsDouble<Half>(_dataStart, _header->Count);
+                    BlittableVectorType.Half => &HalfConverter,
 #endif
-                case BlittableVectorType.Float:
-                    return new EnumerateAsDouble<float>(_dataStart, _header->Count);
-                case BlittableVectorType.Double:
-                    return new EnumerateAsDouble<double>(_dataStart, _header->Count);
+                    _ => throw new NotSupportedException($"The type `{type}` is not supported.")
+                };
             }
 
-            throw new NotSupportedException("The type is not supported.");
+            public bool MoveNext()
+            {
+                _position++;
+                return _position * _elementSize < _dataLength;
+            }
+
+            public void Reset()
+            {
+                _position = -1;
+            }
+
+            public TOut Current
+            {
+                get
+                {
+                    var currentElementPtr = (_dataStart + (_position * _elementSize));
+                    return _getElement(currentElementPtr);
+                }
+            }
+
+            object IEnumerator.Current => Current;
+
+            private static TOut SbyteConverter(byte* data)
+            {
+                var value = Unsafe.ReadUnaligned<sbyte>(data);
+                
+                if (typeof(TOut) == typeof(sbyte))
+                    return (TOut)(object)Convert.ToSByte(value);
+                if (typeof(TOut) == typeof(short))
+                    return (TOut)(object)Convert.ToInt16(value);
+                if (typeof(TOut) == typeof(int))
+                    return (TOut)(object)Convert.ToInt32(value);
+                if (typeof(TOut) == typeof(long))
+                    return (TOut)(object)Convert.ToInt64(value);
+                
+                if (typeof(TOut) == typeof(byte))
+                    return (TOut)(object)Convert.ToByte(value);
+                if (typeof(TOut) == typeof(ushort))
+                    return (TOut)(object)Convert.ToUInt16(value);
+                if (typeof(TOut) == typeof(uint))
+                    return (TOut)(object)Convert.ToUInt32(value);
+                if (typeof(TOut) == typeof(ulong))
+                    return (TOut)(object)Convert.ToUInt64(value);
+                
+                if (typeof(TOut) == typeof(float))
+                    return (TOut)(object)Convert.ToSingle(value);
+                if (typeof(TOut) == typeof(double))
+                    return (TOut)(object)Convert.ToDouble(value);
+#if NET6_0_OR_GREATER
+                if (typeof(TOut) == typeof(Half))
+                    return (TOut)(object)(Half)Convert.ToSingle(value);
+#endif
+                
+                return (TOut)(object)value;
+            }
+            
+            private static TOut ByteConverter(byte* data)
+            {
+                var value = Unsafe.ReadUnaligned<byte>(data);
+                
+                if (typeof(TOut) == typeof(sbyte))
+                    return (TOut)(object)Convert.ToSByte(value);
+                if (typeof(TOut) == typeof(short))
+                    return (TOut)(object)Convert.ToInt16(value);
+                if (typeof(TOut) == typeof(int))
+                    return (TOut)(object)Convert.ToInt32(value);
+                if (typeof(TOut) == typeof(long))
+                    return (TOut)(object)Convert.ToInt64(value);
+                
+                if (typeof(TOut) == typeof(byte))
+                    return (TOut)(object)Convert.ToByte(value);
+                if (typeof(TOut) == typeof(ushort))
+                    return (TOut)(object)Convert.ToUInt16(value);
+                if (typeof(TOut) == typeof(uint))
+                    return (TOut)(object)Convert.ToUInt32(value);
+                if (typeof(TOut) == typeof(ulong))
+                    return (TOut)(object)Convert.ToUInt64(value);
+                
+                if (typeof(TOut) == typeof(float))
+                    return (TOut)(object)Convert.ToSingle(value);
+                if (typeof(TOut) == typeof(double))
+                    return (TOut)(object)Convert.ToDouble(value);
+#if NET6_0_OR_GREATER
+                if (typeof(TOut) == typeof(Half))
+                    return (TOut)(object)(Half)Convert.ToSingle(value);
+#endif
+                
+                return (TOut)(object)value;
+            }
+
+            private static TOut Int16Converter(byte* data)
+            {
+                var value = Unsafe.ReadUnaligned<short>(data);
+
+                if (typeof(TOut) == typeof(sbyte))
+                    return (TOut)(object)Convert.ToSByte(value);
+                if (typeof(TOut) == typeof(short))
+                    return (TOut)(object)Convert.ToInt16(value);
+                if (typeof(TOut) == typeof(int))
+                    return (TOut)(object)Convert.ToInt32(value);
+                if (typeof(TOut) == typeof(long))
+                    return (TOut)(object)Convert.ToInt64(value);
+                
+                if (typeof(TOut) == typeof(byte))
+                    return (TOut)(object)Convert.ToByte(value);
+                if (typeof(TOut) == typeof(ushort))
+                    return (TOut)(object)Convert.ToUInt16(value);
+                if (typeof(TOut) == typeof(uint))
+                    return (TOut)(object)Convert.ToUInt32(value);
+                if (typeof(TOut) == typeof(ulong))
+                    return (TOut)(object)Convert.ToUInt64(value);
+                
+                if (typeof(TOut) == typeof(float))
+                    return (TOut)(object)Convert.ToSingle(value);
+                if (typeof(TOut) == typeof(double))
+                    return (TOut)(object)Convert.ToDouble(value);
+#if NET6_0_OR_GREATER
+                if (typeof(TOut) == typeof(Half))
+                    return (TOut)(object)(Half)Convert.ToSingle(value);
+#endif
+                
+                return (TOut)(object)value;
+            }
+            
+            private static TOut UInt16Converter(byte* data)
+            {
+                var value = Unsafe.ReadUnaligned<ushort>(data);
+                
+
+                if (typeof(TOut) == typeof(sbyte))
+                    return (TOut)(object)Convert.ToSByte(value);
+                if (typeof(TOut) == typeof(short))
+                    return (TOut)(object)Convert.ToInt16(value);
+                if (typeof(TOut) == typeof(int))
+                    return (TOut)(object)Convert.ToInt32(value);
+                if (typeof(TOut) == typeof(long))
+                    return (TOut)(object)Convert.ToInt64(value);
+                
+                if (typeof(TOut) == typeof(byte))
+                    return (TOut)(object)Convert.ToByte(value);
+                if (typeof(TOut) == typeof(ushort))
+                    return (TOut)(object)Convert.ToUInt16(value);
+                if (typeof(TOut) == typeof(uint))
+                    return (TOut)(object)Convert.ToUInt32(value);
+                if (typeof(TOut) == typeof(ulong))
+                    return (TOut)(object)Convert.ToUInt64(value);
+                
+                if (typeof(TOut) == typeof(float))
+                    return (TOut)(object)Convert.ToSingle(value);
+                if (typeof(TOut) == typeof(double))
+                    return (TOut)(object)Convert.ToDouble(value);
+#if NET6_0_OR_GREATER
+                if (typeof(TOut) == typeof(Half))
+                    return (TOut)(object)(Half)Convert.ToSingle(value);
+#endif
+                
+                return (TOut)(object)value;
+                
+                return (TOut)(object)value;
+            }
+            
+            private static TOut UInt32Converter(byte* data)
+            {
+                var value = Unsafe.ReadUnaligned<uint>(data);
+                
+
+                if (typeof(TOut) == typeof(sbyte))
+                    return (TOut)(object)Convert.ToSByte(value);
+                if (typeof(TOut) == typeof(short))
+                    return (TOut)(object)Convert.ToInt16(value);
+                if (typeof(TOut) == typeof(int))
+                    return (TOut)(object)Convert.ToInt32(value);
+                if (typeof(TOut) == typeof(long))
+                    return (TOut)(object)Convert.ToInt64(value);
+                
+                if (typeof(TOut) == typeof(byte))
+                    return (TOut)(object)Convert.ToByte(value);
+                if (typeof(TOut) == typeof(ushort))
+                    return (TOut)(object)Convert.ToUInt16(value);
+                if (typeof(TOut) == typeof(uint))
+                    return (TOut)(object)Convert.ToUInt32(value);
+                if (typeof(TOut) == typeof(ulong))
+                    return (TOut)(object)Convert.ToUInt64(value);
+                
+                if (typeof(TOut) == typeof(float))
+                    return (TOut)(object)Convert.ToSingle(value);
+                if (typeof(TOut) == typeof(double))
+                    return (TOut)(object)Convert.ToDouble(value);
+#if NET6_0_OR_GREATER
+                if (typeof(TOut) == typeof(Half))
+                    return (TOut)(object)(Half)Convert.ToSingle(value);
+#endif
+                
+                return (TOut)(object)value;
+            }
+            
+            private static TOut Int32Converter(byte* data)
+            {
+                var value = Unsafe.ReadUnaligned<uint>(data);
+
+
+                if (typeof(TOut) == typeof(sbyte))
+                    return (TOut)(object)Convert.ToSByte(value);
+                if (typeof(TOut) == typeof(short))
+                    return (TOut)(object)Convert.ToInt16(value);
+                if (typeof(TOut) == typeof(int))
+                    return (TOut)(object)Convert.ToInt32(value);
+                if (typeof(TOut) == typeof(long))
+                    return (TOut)(object)Convert.ToInt64(value);
+                
+                if (typeof(TOut) == typeof(byte))
+                    return (TOut)(object)Convert.ToByte(value);
+                if (typeof(TOut) == typeof(ushort))
+                    return (TOut)(object)Convert.ToUInt16(value);
+                if (typeof(TOut) == typeof(uint))
+                    return (TOut)(object)Convert.ToUInt32(value);
+                if (typeof(TOut) == typeof(ulong))
+                    return (TOut)(object)Convert.ToUInt64(value);
+                
+                if (typeof(TOut) == typeof(float))
+                    return (TOut)(object)Convert.ToSingle(value);
+                if (typeof(TOut) == typeof(double))
+                    return (TOut)(object)Convert.ToDouble(value);
+#if NET6_0_OR_GREATER
+                if (typeof(TOut) == typeof(Half))
+                    return (TOut)(object)(Half)Convert.ToSingle(value);
+#endif
+                
+                return (TOut)(object)value;
+            }
+            
+            private static TOut UInt64Converter(byte* data)
+            {
+                var value = Unsafe.ReadUnaligned<ulong>(data);
+                
+
+                if (typeof(TOut) == typeof(sbyte))
+                    return (TOut)(object)Convert.ToSByte(value);
+                if (typeof(TOut) == typeof(short))
+                    return (TOut)(object)Convert.ToInt16(value);
+                if (typeof(TOut) == typeof(int))
+                    return (TOut)(object)Convert.ToInt32(value);
+                if (typeof(TOut) == typeof(long))
+                    return (TOut)(object)Convert.ToInt64(value);
+                
+                if (typeof(TOut) == typeof(byte))
+                    return (TOut)(object)Convert.ToByte(value);
+                if (typeof(TOut) == typeof(ushort))
+                    return (TOut)(object)Convert.ToUInt16(value);
+                if (typeof(TOut) == typeof(uint))
+                    return (TOut)(object)Convert.ToUInt32(value);
+                if (typeof(TOut) == typeof(ulong))
+                    return (TOut)(object)Convert.ToUInt64(value);
+                
+                if (typeof(TOut) == typeof(float))
+                    return (TOut)(object)Convert.ToSingle(value);
+                if (typeof(TOut) == typeof(double))
+                    return (TOut)(object)Convert.ToDouble(value);
+#if NET6_0_OR_GREATER
+                if (typeof(TOut) == typeof(Half))
+                    return (TOut)(object)(Half)Convert.ToSingle(value);
+#endif
+                
+                return (TOut)(object)value;
+            }
+            
+            private static TOut FloatConverter(byte* data)
+            {
+                var value = Unsafe.ReadUnaligned<float>(data);
+
+                if (typeof(TOut) == typeof(double))
+                    return (TOut)(object)Convert.ToDouble(value);
+#if NET6_0_OR_GREATER
+                if (typeof(TOut) == typeof(Half))
+                    return (TOut)(object)(Half)value;
+#endif
+                return (TOut)(object)value;
+            }
+            
+            private static TOut DoubleConverter(byte* data)
+            {
+                var value = Unsafe.ReadUnaligned<double>(data);
+
+                if (typeof(TOut) == typeof(float))
+                    return (TOut)(object)Convert.ToSingle(value);
+                
+#if NET6_0_OR_GREATER
+                if (typeof(TOut) == typeof(Half))
+                    return (TOut)(object)(Half)Convert.ToSingle(value);
+#endif
+                
+                return (TOut)(object)value;
+            }
+
+#if NET6_0_OR_GREATER
+            private static TOut HalfConverter(byte* data)
+            {
+                var value = Unsafe.ReadUnaligned<Half>(data);
+
+                if (typeof(TOut) == typeof(float))
+                    return (TOut)(object)(float)value;
+                
+                if (typeof(TOut) == typeof(float))
+                    return (TOut)(object)(double)value;
+                
+                return (TOut)(object)value;
+            }
+#endif
+            
+            public void Dispose() { }
         }
     }
 }

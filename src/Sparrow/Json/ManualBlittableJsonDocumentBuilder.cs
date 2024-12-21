@@ -371,6 +371,11 @@ namespace Sparrow.Json
                         case BlittableVectorType.Double:
                             WriteVector(vector.ReadArray<double>());
                             break;
+#if NET6_0_OR_GREATER
+                        case BlittableVectorType.Half:
+                            WriteVector(vector.ReadArray<Half>());
+                            break;
+#endif
                         default:
                             throw new ArgumentOutOfRangeException(nameof(vector.Type), vector.Type, $"Cannot write vector of {vector.Type}.");
                     }

@@ -54,11 +54,10 @@ public class BlittableVectorIntegrationTests(ITestOutputHelper output) : RavenTe
     }
     
     [RavenTheory(RavenTestCategory.Vector)]
-    // [InlineDataWithRandomSeed(8)]
-    // [InlineDataWithRandomSeed(500)]
-    // [InlineDataWithRandomSeed(1024)]
-    // [InlineDataWithRandomSeed(2048)]
-    [InlineData(1024, 12312412)]
+    [InlineDataWithRandomSeed(8)]
+    [InlineDataWithRandomSeed(500)]
+    [InlineDataWithRandomSeed(1024)]
+    [InlineDataWithRandomSeed(2048)]
     public async Task CanReadGenericValuesULong(int size, int seed)
     {
         var random = new Random(seed);
@@ -124,6 +123,19 @@ public class BlittableVectorIntegrationTests(ITestOutputHelper output) : RavenTe
     [InlineDataWithRandomSeed(500)]
     [InlineDataWithRandomSeed(1024)]
     [InlineDataWithRandomSeed(2048)]
+    public async Task CanReadGenericValuesHalf(int size, int seed)
+    {
+        var random = new Random(seed);
+        var array1 = Enumerable.Range(0, size).Select(_ => (Half)random.NextSingle() * Half.MaxValue).ToArray();
+        var array2 = Enumerable.Range(0, size).Select(_ => (Half)random.NextSingle()).ToArray();
+        await CanReadGenericValuesBase(array1, array2);
+    }
+    
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineDataWithRandomSeed(8)]
+    [InlineDataWithRandomSeed(500)]
+    [InlineDataWithRandomSeed(1024)]
+    [InlineDataWithRandomSeed(2048)]
     public async Task CanReadGenericValuesFloat(int size, int seed)
     {
         var random = new Random(seed);
@@ -143,6 +155,126 @@ public class BlittableVectorIntegrationTests(ITestOutputHelper output) : RavenTe
         var array1 = Enumerable.Range(0, size).Select(_ => random.NextSingle() * double.MaxValue).ToArray();
         var array2 = Enumerable.Range(0, size).Select(_ => random.NextSingle() * double.MaxValue).ToArray();
         await CanReadGenericValuesBase(array1, array2);
+    }
+
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineData(1.0d, 8)]
+    [InlineData(1.0d, 500)]
+    [InlineData(1.0d, 1024)]
+    [InlineData(1.0d, 2048)]
+    [InlineData(1.1d, 8)]
+    [InlineData(1.1d, 500)]
+    [InlineData(1.1d, 1024)]
+    [InlineData(1.1d, 2048)]
+    public async Task CanReadFloatingValuesAsAllTypes(double repeatedValue, int size)
+    {
+        var array1 = Enumerable.Repeat(1d, size).ToArray();
+        using var store = GetDocumentStore();
+        string id;
+        using (var session = store.OpenAsyncSession(new SessionOptions(){NoCaching = true}))
+        {
+            var vectorDto = new GenericUser<double>(){Vector = array1};
+            await session.StoreAsync(vectorDto);
+            await session.SaveChangesAsync();
+            id = vectorDto.Id;
+        }
+        
+        //Double
+        using (var session = store.OpenAsyncSession(new SessionOptions() { NoCaching = true }))
+        {
+            var storedUser = await session.LoadAsync<GenericUser<double>>(id);
+            Assert.Equal(array1.Select(x => (double)x), storedUser.Vector.Embedding);
+        }
+        
+        //Float
+        using (var session = store.OpenAsyncSession(new SessionOptions() { NoCaching = true }))
+        {
+            var storedUser = await session.LoadAsync<GenericUser<float>>(id);
+            Assert.Equal(array1.Select(x => (float)x), storedUser.Vector.Embedding);
+        }
+        
+        //Half
+        using (var session = store.OpenAsyncSession(new SessionOptions() { NoCaching = true }))
+        {
+            var storedUser = await session.LoadAsync<GenericUser<Half>>(id);
+            Assert.Equal(array1.Select(x => (Half)x), storedUser.Vector.Embedding);
+        }
+        
+    }
+    
+    [RavenTheory(RavenTestCategory.Vector)]
+    [InlineData(8)]
+    [InlineData(500)]
+    [InlineData(1024)]
+    [InlineData(2048)]
+    public async Task CanReadNumericValuesAsAllTypes(int size)
+    {
+        var array1 = Enumerable.Repeat(1, size).ToArray();
+        using var store = GetDocumentStore();
+        string id;
+        using (var session = store.OpenAsyncSession(new SessionOptions(){NoCaching = true}))
+        {
+            var vectorDto = new GenericUser<int>(){Vector = array1};
+            await session.StoreAsync(vectorDto);
+            await session.SaveChangesAsync();
+            id = vectorDto.Id;
+        }
+        
+        //SByte
+        using (var session = store.OpenAsyncSession(new SessionOptions() { NoCaching = true }))
+        {
+            var storedUser = await session.LoadAsync<GenericUser<sbyte>>(id);
+            Assert.Equal(array1.Select(x => (sbyte)x), storedUser.Vector.Embedding);
+        }
+        
+        //Short
+        using (var session = store.OpenAsyncSession(new SessionOptions() { NoCaching = true }))
+        {
+            var storedUser = await session.LoadAsync<GenericUser<short>>(id);
+            Assert.Equal(array1.Select(x => (short)x), storedUser.Vector.Embedding);
+        }
+        
+        //Int
+        using (var session = store.OpenAsyncSession(new SessionOptions() { NoCaching = true }))
+        {
+            var storedUser = await session.LoadAsync<GenericUser<int>>(id);
+            Assert.Equal(array1.Select(x => (int)x), storedUser.Vector.Embedding);
+        }
+        
+        //Long
+        using (var session = store.OpenAsyncSession(new SessionOptions() { NoCaching = true }))
+        {
+            var storedUser = await session.LoadAsync<GenericUser<long>>(id);
+            Assert.Equal(array1.Select(x => (long)x), storedUser.Vector.Embedding);
+        }
+        
+        //SByte
+        using (var session = store.OpenAsyncSession(new SessionOptions() { NoCaching = true }))
+        {
+            var storedUser = await session.LoadAsync<GenericUser<byte>>(id);
+            Assert.Equal(array1.Select(x => (byte)x), storedUser.Vector.Embedding);
+        }
+        
+        //UShort
+        using (var session = store.OpenAsyncSession(new SessionOptions() { NoCaching = true }))
+        {
+            var storedUser = await session.LoadAsync<GenericUser<ushort>>(id);
+            Assert.Equal(array1.Select(x => (ushort)x), storedUser.Vector.Embedding);
+        }
+        
+        //UInt
+        using (var session = store.OpenAsyncSession(new SessionOptions() { NoCaching = true }))
+        {
+            var storedUser = await session.LoadAsync<GenericUser<uint>>(id);
+            Assert.Equal(array1.Select(x => (uint)x), storedUser.Vector.Embedding);
+        }
+        
+        //ULong
+        using (var session = store.OpenAsyncSession(new SessionOptions() { NoCaching = true }))
+        {
+            var storedUser = await session.LoadAsync<GenericUser<ulong>>(id);
+            Assert.Equal(array1.Select(x => (ulong)x), storedUser.Vector.Embedding);
+        }
     }
     
     private async Task CanReadGenericValuesBase<T>(T[] array1, T[] array2) where T : unmanaged, INumber<T>

@@ -549,7 +549,15 @@ namespace Sparrow.Json.Parsing
                     _state.CurrentTokenType = JsonParserToken.Float;
                     return true;
                 }
-
+#if NET6_0_OR_GREATER
+                if (current is Half h)
+                {
+                    var s = EnsureDecimalPlace((double)h, h.ToString("R", CultureInfo.InvariantCulture));
+                    SetStringBuffer(s);
+                    _state.CurrentTokenType = JsonParserToken.Float;
+                    return true;              
+                }
+#endif
                 if (current is DateTime dateTime1)
                 {
                     var s = dateTime1.GetDefaultRavenFormat();

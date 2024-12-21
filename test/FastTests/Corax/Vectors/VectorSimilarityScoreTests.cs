@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Numerics.Tensors;
 using System.Runtime.InteropServices;
 using FastTests.Voron.FixedSize;
@@ -83,8 +84,12 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
 
         var queryVector = VectorQuantizer.ToInt8(Enumerable.Range(0, dimensions).Select(_ => random.NextSingle()).ToArray());
 
-        var query = session.Query<Dto, Index>()
-            .VectorSearch(f => f.WithField(d => d.Int8), v => v.ByEmbedding(queryVector), 0.1f)
+        var query = session.Query<Dto, Index>() 
+            .VectorSearch(f => f.WithEmbedding("fieldName", VectorEmbeddingType.Single).TargetQuantization(VectorEmbeddingType.Int8)
+                , v => v.ByEmbedding([1f, 2f])
+                ,minimumSimilarity: 0.1f, 
+                numberOfCandidates: 12, 
+                isExact: true)
             .OrderByScore();
 
 
@@ -173,8 +178,14 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         public Index()
         {
             Map = dtos => from doc in dtos
-                select new { Singles = CreateVector(doc.Singles), Int8 = CreateVector(doc.Int8), Binary = CreateVector(doc.Binary) };
+                select new
+                {
+                    Singles = CreateVector(doc.Singles),
+                    Int8 = CreateVector(doc.Int8), 
+                    Binary = CreateVector(doc.Binary)
+                };
 
+            Vector(f => f.Singles, i => i.SourceEmbedding(VectorEmbeddingType.Single).DestinationEmbedding(VectorEmbeddingType.Int8).Dimensions(2));
             Vector(f => f.Int8, i => i.SourceEmbedding(VectorEmbeddingType.Int8));
             Vector(f => f.Binary, i => i.SourceEmbedding(VectorEmbeddingType.Binary));
         }
