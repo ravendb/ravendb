@@ -12,6 +12,8 @@ namespace Raven.Server.ServerWide.Context
         private ClusterChanges _changes;
         private StorageEnvironment _storageEnvironment;
 
+        public StorageEnvironment Environment => _storageEnvironment;
+
         public ClusterContextPool(ClusterChanges changes, StorageEnvironment storageEnvironment, Size? maxContextSizeToKeepInMb = null)
             : base(maxContextSizeToKeepInMb, RavenLogManager.Instance.GetLoggerForServer<ClusterContextPool>())
         {

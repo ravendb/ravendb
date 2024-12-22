@@ -8,6 +8,7 @@ using Raven.Server.Documents;
 using Raven.Server.Logging;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Voron;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -20,6 +21,8 @@ namespace Raven.Server.ServerWide.Context
         {
             _database = database;
         }
+
+        public StorageEnvironment Environment => _database.DocumentsStorage.Environment;
 
         protected override DocumentsOperationContext CreateContext()
         {

@@ -22,7 +22,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             rootOptions.ManualSyncing = true;
 
             using var root = new StorageEnvironment(rootOptions);
-            using var _ = root.Journal.SharedJournalsScope();
+            using var _ = root.Journal.SharedJournalsScope(CancellationToken.None);
             
             using (var rootTx = root.WriteTransaction())
             {
@@ -149,7 +149,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             rootOptions.ManualSyncing = true;
 
             using var root = new StorageEnvironment(rootOptions);
-            using var _ = root.Journal.SharedJournalsScope();
+            using var _ = root.Journal.SharedJournalsScope(CancellationToken.None);
 
             using (var rootTx = root.WriteTransaction())
             {
@@ -197,7 +197,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             branchOptions.ManualSyncing = true;
 
             using var root = new StorageEnvironment(rootOptions);
-            using var _ = root.Journal.SharedJournalsScope();
+            using var _ = root.Journal.SharedJournalsScope(CancellationToken.None);
             branchOptions.RootJournal = root.Journal;
             using var branch = new StorageEnvironment(branchOptions);
             
@@ -262,7 +262,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
 
             // journal 0 - 0
             using var root = new StorageEnvironment(rootOptions);
-            using var _ = root.Journal.SharedJournalsScope();
+            using var _ = root.Journal.SharedJournalsScope(CancellationToken.None);
             // journal 0 - 1
             using (var rootTx = root.WriteTransaction())
             {
@@ -348,7 +348,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             rootOptions.MaxLogFileSize = 4096 * 3;
 
             using var root = new StorageEnvironment(rootOptions);
-            using var _ = root.Journal.SharedJournalsScope();
+            using var _ = root.Journal.SharedJournalsScope(CancellationToken.None);
 
             using (var rootTx = root.WriteTransaction())
             {

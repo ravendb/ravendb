@@ -15,7 +15,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Logging;
 using Sparrow.Server.LowMemory;
@@ -25,7 +24,6 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Global;
 using Voron.Impl;
-using Voron.Impl.Journal;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.TransactionMerger
@@ -46,6 +44,7 @@ namespace Raven.Server.Documents.TransactionMerger
         private bool _runTransactions = true;
         private readonly ConcurrentQueue<MergedTransactionCommand<TOperationContext, TTransaction>> _operations = new();
         private readonly CountdownEvent _concurrentOperations = new(1);
+        private StorageEnvironment _env;
 
         private readonly ConcurrentQueue<List<MergedTransactionCommand<TOperationContext, TTransaction>>> _opsBuffers = new();
         private readonly ManualResetEventSlim _waitHandle = new(false);
@@ -87,8 +86,11 @@ namespace Raven.Server.Documents.TransactionMerger
             _contextPool = contextPool ?? throw new ArgumentNullException(nameof(contextPool));
             _isEncrypted = isEncrypted;
             _is32Bits = is32Bits;
+            _env = GetStorageEnvironment(contextPool);
             _initialized = true;
         }
+
+        protected abstract StorageEnvironment GetStorageEnvironment(JsonContextPoolBase<TOperationContext> contextPool);
 
         internal abstract TTransaction BeginAsyncCommitAndStartNewTransaction(TTransaction previousTransaction, TOperationContext currentContext);
 
@@ -101,10 +103,8 @@ namespace Raven.Server.Documents.TransactionMerger
 
         public void Start()
         {
-            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(DoWork, null, ThreadNames.ForTransactionMerging(TransactionMergerThreadName, _resourceName));
+            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(o => MergeOperationThreadProc(), null, ThreadNames.ForTransactionMerging(TransactionMergerThreadName, _resourceName));
         }
-
-        public virtual void DoWork(object state) => MergeOperationThreadProc();
 
         /// <summary>
         /// Enqueue the command to be eventually executed.
@@ -158,6 +158,8 @@ namespace Raven.Server.Documents.TransactionMerger
 
             var oomTimer = new Stopwatch();// this is allocated here to avoid OOM when using it
             
+            using var _ = _env.Journal.SharedJournalsScope(_shutdown);
+
             while (true) // this is actually only executed once, except if we are trying to recover from OOM errors
             {
                 NativeMemory.EnsureRegistered();
@@ -167,7 +169,7 @@ namespace Raven.Server.Documents.TransactionMerger
                     {
                         _recording.State?.Prepare(ref _recording.State);
 
-                        if (_operations.IsEmpty)
+                        if (_operations.IsEmpty && _env.Journal.HasBranchCommits is false)
                         {
                             if (_isEncrypted)
                             {
@@ -197,6 +199,11 @@ namespace Raven.Server.Documents.TransactionMerger
                 }
                 catch (OperationCanceledException)
                 {
+                    if (_shutdown.IsCancellationRequested is false)
+                    {
+                        Debugger.Launch();
+                        Console.WriteLine();
+                    }
                     // clean shutdown, nothing to do
                 }
                 catch (Exception e) when (e is EarlyOutOfMemoryException || e is OutOfMemoryException)

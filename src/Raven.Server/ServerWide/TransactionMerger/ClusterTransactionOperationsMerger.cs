@@ -7,7 +7,9 @@ using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Logging;
+using Voron;
 
 namespace Raven.Server.ServerWide.TransactionMerger;
 
@@ -16,6 +18,11 @@ public sealed class ClusterTransactionOperationsMerger : AbstractTransactionOper
     public ClusterTransactionOperationsMerger(RavenConfiguration configuration, SystemTime time, CancellationToken shutdown)
         : base("Cluster", configuration, time, RavenLogManager.Instance.GetLoggerForServer<ClusterTransactionOperationsMerger>(), shutdown)
     {
+    }
+
+    protected override StorageEnvironment GetStorageEnvironment(JsonContextPoolBase<ClusterOperationContext> contextPool)
+    {
+        return ((ClusterContextPool)contextPool).Environment;
     }
 
     internal override ClusterTransaction BeginAsyncCommitAndStartNewTransaction(ClusterTransaction previousTransaction, ClusterOperationContext currentContext)

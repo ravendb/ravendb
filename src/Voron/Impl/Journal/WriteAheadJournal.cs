@@ -49,7 +49,6 @@ namespace Voron.Impl.Journal
     {
         private readonly StorageEnvironment _env;
         private readonly ConcurrentQueue<PendingJournalStateRecord> _mergedCommitsQueue = new();
-        private CancellationTokenSource _mergedCommitsTcs;
         private readonly List<Pal.journal_entry> _mergedEntriesBuffer = new();
         private readonly List<PendingJournalStateRecord> _mergedJournalRecordsBuffer = new();
 
@@ -81,13 +80,12 @@ namespace Voron.Impl.Journal
 
         private readonly DisposeOnce<SingleAttempt> _disposeRunner;
 
-        public ScopeForSharedJournals SharedJournalsScope()
+        public ScopeForSharedJournals SharedJournalsScope(CancellationToken mergedCommits)
         {
-            if (_mergedCommitsTcs != null)
+            if (_mergedCommits != CancellationToken.None)
                 throw new InvalidOperationException("Already using shared scope, can only be done once");
 
-            _mergedCommitsTcs = new CancellationTokenSource();
-            
+            _mergedCommits = mergedCommits;
             return new ScopeForSharedJournals(this);
         }
 
@@ -95,7 +93,7 @@ namespace Voron.Impl.Journal
         {
             public void Dispose()
             {
-                journal._mergedCommitsTcs.Cancel();
+                journal._mergedCommits= CancellationToken.None;
                 journal.RejectCommitsToMerge();
             }
         }
@@ -114,7 +112,6 @@ namespace Voron.Impl.Journal
 
             _disposeRunner = new DisposeOnce<SingleAttempt>(() =>
             {
-                _mergedCommitsTcs?.Cancel();
                 RejectCommitsToMerge();
 
                 _compressionPager.Dispose();
@@ -1682,7 +1679,7 @@ namespace Voron.Impl.Journal
         public event Action OnBranchJournalEntrySubmitted; 
         private void SubmitBranchJournalEntry( Task commitCompleted)
         {
-            var token = _mergedCommitsTcs.Token;
+            var token = _mergedCommits;
             token.ThrowIfCancellationRequested();
             var handler = OnBranchJournalEntrySubmitted;
             if(handler == null)
@@ -1738,7 +1735,10 @@ namespace Voron.Impl.Journal
             }
             catch (Exception e)
             {
-                _mergedCommitsTcs.Cancel();
+                foreach (var record in _mergedJournalRecordsBuffer)
+                {
+                    record.Tcs.TrySetException(e);
+                }
                 while (_mergedCommitsQueue.TryDequeue(out var cur))
                 {
                     cur.Tcs.TrySetException(e);
@@ -2325,6 +2325,7 @@ namespace Voron.Impl.Journal
         }
 
         private TestingStuff _forTestingPurposes;
+        private CancellationToken _mergedCommits = default;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
