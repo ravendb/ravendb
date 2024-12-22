@@ -21,6 +21,8 @@ import { logLevelOptions } from "components/utils/common";
 import { useEffect } from "react";
 import { StylesConfig } from "react-select";
 import { Button, Card, CardBody, CardHeader, Input } from "reactstrap";
+import { Switch } from "components/common/Checkbox";
+import { FlexGrow } from "components/common/FlexGrow";
 
 export default function AdminLogs() {
     const dispatch = useAppDispatch();
@@ -73,17 +75,19 @@ export default function AdminLogs() {
 
     return (
         <div className="content-padding vstack gap-3 h-100">
-            <div className="hstack flex-wrap gap-1">
-                <div className="flex-grow-1">
+            <div className="d-flex gap-3 flex-lg-row flex-column">
+                <div className="flex-grow-1" style={{ flexBasis: "40%" }}>
                     <Card>
-                        <CardHeader className="d-flex justify-content-between">
-                            <h4 className="mb-0">
+                        <CardHeader className="d-flex justify-content-between flex-wrap gap-2 p-2">
+                            <h4 className="mb-0 lh-base d-flex align-items-center">
                                 <Icon icon="client" />
                                 Logs on this view
                             </h4>
-                            <div className="d-flex align-items-center">
+                            <div className="d-flex align-items-center lh-base">
                                 <Icon icon="logs" addon="arrow-filled-up" />
-                                Min level:{" "}
+                                <span className="lh-1">
+                                    <strong>Min level:</strong>
+                                </span>{" "}
                                 <Select
                                     value={enabledLogLevelOptions.find(
                                         (x) => x.value === configs?.adminLogsConfig?.AdminLogs?.CurrentMinLevel
@@ -92,12 +96,12 @@ export default function AdminLogs() {
                                     options={enabledLogLevelOptions}
                                     isLoading={configsLoadStatus === "loading"}
                                     isDisabled={configsLoadStatus !== "success"}
-                                    className="ms-1"
+                                    className="ms-1 lh-1"
                                     styles={levelSelectStyles}
                                 />
                             </div>
                         </CardHeader>
-                        <CardBody>
+                        <CardBody className="p-2">
                             <div className="d-flex gap-2 flex-wrap">
                                 <Button
                                     type="button"
@@ -118,51 +122,57 @@ export default function AdminLogs() {
                                     <Icon icon="cancel" />
                                     Clear
                                 </Button>
-                                <Button
-                                    type="button"
-                                    color={isMonitorTail ? "secondary" : "info"}
-                                    onClick={() => dispatch(adminLogsActions.isMonitorTailToggled())}
+                                <Switch
+                                    selected={isMonitorTail}
+                                    toggleSelection={() => dispatch(adminLogsActions.isMonitorTailToggled())}
+                                    color="primary"
+                                    title="Toggle monitor (tail -f)"
                                 >
-                                    <Icon icon={isMonitorTail ? "pause" : "check"} />
                                     Monitor (tail -f)
-                                </Button>
-                                <AdminLogsExportButton />
-                                <ButtonWithSpinner
-                                    type="button"
-                                    color="secondary"
-                                    onClick={() => dispatch(adminLogsActions.isViewSettingOpenToggled())}
-                                    isSpinning={configsLoadStatus === "loading"}
-                                    icon="settings"
-                                    disabled={configsLoadStatus !== "success"}
-                                >
-                                    Settings
-                                </ButtonWithSpinner>
+                                </Switch>
+                                <FlexGrow />
+                                <div className="d-flex gap-2">
+                                    <AdminLogsExportButton />
+                                    <ButtonWithSpinner
+                                        type="button"
+                                        color="secondary"
+                                        onClick={() => dispatch(adminLogsActions.isViewSettingOpenToggled())}
+                                        isSpinning={configsLoadStatus === "loading"}
+                                        icon="settings"
+                                        disabled={configsLoadStatus !== "success"}
+                                    >
+                                        Settings
+                                    </ButtonWithSpinner>
+                                </div>
                                 {isViewSettingOpen && <AdminLogsViewSettingsModal />}
                             </div>
                         </CardBody>
                     </Card>
                 </div>
-                <div className="flex-grow-1">
+                <div className="flex-grow-1" style={{ flexBasis: "40%" }}>
                     <Card>
-                        <CardHeader className="d-flex justify-content-between">
-                            <h4 className="mb-0">
+                        <CardHeader className="d-flex justify-content-between flex-wrap gap-2 p-2">
+                            <h4 className="mb-0 lh-base d-flex align-items-center">
                                 <Icon icon="drive" />
                                 Logs on disk
                             </h4>
                             <div className="d-flex align-items-center">
                                 <Icon icon="logs" addon="arrow-filled-up" />
-                                Min level:{" "}
+                                <span className="lh-1 me-1">
+                                    <strong>Min level:</strong>
+                                </span>
                                 {configsLoadStatus === "loading" ? (
                                     <LazyLoad active>
                                         <div>?????</div>
                                     </LazyLoad>
                                 ) : (
-                                    configs?.adminLogsConfig?.Logs?.CurrentMinLevel
+                                    <span className="lh-1">{configs?.adminLogsConfig?.Logs?.CurrentMinLevel}</span>
                                 )}
                             </div>
                         </CardHeader>
-                        <CardBody>
-                            <div className="d-flex gap-2 flex-wrap">
+                        <CardBody className="p-2">
+                            <div className="d-flex gap-2 flex-wrap align-items-center">
+                                <FlexGrow />
                                 <Button
                                     type="button"
                                     color="secondary"
@@ -188,7 +198,7 @@ export default function AdminLogs() {
                     </Card>
                 </div>
             </div>
-            <div className="d-flex gap-2">
+            <div className="d-flex gap-2 flex-lg-row flex-column">
                 <div className="clearable-input flex-grow-1">
                     <Input
                         type="text"
@@ -205,24 +215,26 @@ export default function AdminLogs() {
                         </div>
                     )}
                 </div>
-                <Button
-                    type="button"
-                    color="secondary"
-                    outline
-                    onClick={() => dispatch(adminLogsActions.isAllExpandedToggled())}
-                >
-                    <Icon icon={isAllExpanded ? "collapse-vertical" : "expand-vertical"} />
-                    {isAllExpanded ? "Collapse all" : "Expand all"}
-                </Button>
-                <Button
-                    type="button"
-                    color="secondary"
-                    outline
-                    onClick={() => dispatch(adminLogsActions.isDisplaySettingsOpenToggled())}
-                >
-                    <Icon icon="settings" />
-                    Display settings
-                </Button>
+                <div className="d-flex gap-2">
+                    <Button
+                        type="button"
+                        color="secondary"
+                        outline
+                        onClick={() => dispatch(adminLogsActions.isAllExpandedToggled())}
+                    >
+                        <Icon icon={isAllExpanded ? "collapse-vertical" : "expand-vertical"} />
+                        {isAllExpanded ? "Collapse all" : "Expand all"}
+                    </Button>
+                    <Button
+                        type="button"
+                        color="secondary"
+                        outline
+                        onClick={() => dispatch(adminLogsActions.isDisplaySettingsOpenToggled())}
+                    >
+                        <Icon icon="table" />
+                        Display settings
+                    </Button>
+                </div>
                 {isDisplaySettingsOpen && <AdminLogsDisplaySettingsModal />}
             </div>
             <div className="flex-grow-1">
@@ -238,8 +250,8 @@ export default function AdminLogs() {
 const levelSelectStyles: StylesConfig = {
     control: (base) => ({
         ...base,
-        minHeight: 22,
-        height: 22,
+        minHeight: 25,
+        height: 25,
         lineHeight: 1,
         minWidth: "fit-content",
     }),
@@ -249,7 +261,7 @@ const levelSelectStyles: StylesConfig = {
     }),
     placeholder: (base) => ({
         ...base,
-        height: 22,
+        height: 25,
     }),
     singleValue: (base) => ({
         ...base,
@@ -258,12 +270,12 @@ const levelSelectStyles: StylesConfig = {
     indicatorsContainer: () => ({
         padding: 0,
         paddingRight: 3,
+        paddingBottom: 1,
     }),
     dropdownIndicator: (base) => ({
         ...base,
         padding: 0,
         paddingRight: 3,
-        paddingBottom: 3,
     }),
     clearIndicator: (base) => ({
         ...base,
