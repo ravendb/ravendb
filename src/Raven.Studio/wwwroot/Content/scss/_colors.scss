@@ -102,6 +102,8 @@ $token-keyword: $color-5;
 $token-deleted: $color-1;
 $token-important: $color-2-2;
 
+$developer: #c7ff6b;
+
 // Blue Theme
 @if $theme == "blue" {
     $black: #172138;
@@ -173,6 +175,8 @@ $token-important: $color-2-2;
     $ace-character: $token-important;
     $ace-name: $token-keyword;
     $ace-constant: $token-operator;
+
+    $developer: darken(#c7ff6b, 33%);
 }
 
 // Light Theme
@@ -254,6 +258,8 @@ $token-important: $color-2-2;
 
     $row-bg: $white;
     $row-even-bg: $gray-100;
+
+    $developer: darken(#c7ff6b, 33%);
 }
 
 // Classic Theme
@@ -362,7 +368,6 @@ $progress-color: $color-2-3;
 
 $professional: $color-4-2;
 $enterprise: $color-5;
-$developer: #c7ff6b;
 
 // Color system
 // scss-docs-end gray-color-variables
