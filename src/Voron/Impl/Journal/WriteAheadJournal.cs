@@ -1645,7 +1645,6 @@ namespace Voron.Impl.Journal
                         branchCommit = tcs.Task;
                         numberOf4Kbs = entry.NumberOf4Kbs;
                         rootJournal._mergedCommitsQueue.Enqueue(new PendingJournalStateRecord(tx, tcs, entry));
-                        rootJournal._mergedCommitsTcs?.Token.ThrowIfCancellationRequested();
                         if (_logger.IsDebugEnabled)
                         {
                             var elapsed = Stopwatch.GetElapsedTime(start);
@@ -1661,7 +1660,7 @@ namespace Voron.Impl.Journal
                     else
                     {
                         Debug.Assert(tx.ShouldWriteTransactionChangesToJournal, "ShouldWriteTransactionChangesToJournal must be true for branch commit");
-                        rootJournal.SubmitBranchJournalEntry(tx, branchCommit);
+                        rootJournal.SubmitBranchJournalEntry(branchCommit);
                     }
 
                     if (_env.Options.Encryption.IsEnabled && _env.Options.Encryption.HasExternalJournalCompressionBufferHandlerRegistration == false)
@@ -1681,8 +1680,10 @@ namespace Voron.Impl.Journal
         }
 
         public event Action OnBranchJournalEntrySubmitted; 
-        private void SubmitBranchJournalEntry(LowLevelTransaction tx, Task commitCompleted)
+        private void SubmitBranchJournalEntry( Task commitCompleted)
         {
+            var token = _mergedCommitsTcs.Token;
+            token.ThrowIfCancellationRequested();
             var handler = OnBranchJournalEntrySubmitted;
             if(handler == null)
                 throw new InvalidOperationException($"Call to {nameof(SubmitBranchJournalEntry)} when there is no handler registered for the journal {nameof(OnBranchJournalEntrySubmitted)}");
@@ -1692,7 +1693,7 @@ namespace Voron.Impl.Journal
           
             handler();
             // here we are going to wait for the root to do the actual write to disk
-            commitCompleted.Wait();
+            commitCompleted.Wait(token);
         }
 
         private void WriteBuffersToJournal(LowLevelTransaction tx)
