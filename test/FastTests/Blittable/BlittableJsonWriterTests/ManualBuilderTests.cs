@@ -509,7 +509,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core | RavenTestCategory.Vector)]
         public void ObjectWithNestedIntVectorTest()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))

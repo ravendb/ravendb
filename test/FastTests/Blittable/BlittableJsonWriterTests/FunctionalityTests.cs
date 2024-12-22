@@ -13,6 +13,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -117,7 +118,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             NativeMemory.Free(encodeOutput, maximumOutputLength);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Core)]
         [InlineData(0)]
         [InlineData(1)]
         [InlineData(2)]

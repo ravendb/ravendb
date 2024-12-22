@@ -15,7 +15,7 @@ public class RavenDB_23076 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.None)]
+    [RavenTheory(RavenTestCategory.Vector)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestRavenVectorStorageAndLoad(Options options)
     {
@@ -55,13 +55,13 @@ public class RavenDB_23076 : RavenTestBase
         }
     }
 
-    public class Dto
+    private class Dto
     {
         public string Id { get; set; }
         public RavenVector<float> Vector { get; set; }
     }
 
-    public class IndexWithServerSideType : AbstractIndexCreationTask<Dto>
+    private class IndexWithServerSideType : AbstractIndexCreationTask<Dto>
     {
         public class IndexEntry
         {

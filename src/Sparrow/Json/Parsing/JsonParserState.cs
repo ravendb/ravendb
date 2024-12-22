@@ -1,5 +1,5 @@
 using System;
-using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow.Collections;
 using InvalidOperationException = System.InvalidOperationException;
@@ -273,7 +273,8 @@ namespace Sparrow.Json.Parsing
                 (>= uint.MinValue, <= uint.MaxValue) => BlittableVectorType.UInt32,
                 
                 (>= long.MinValue, <= long.MaxValue) => BlittableVectorType.Int64,
-                (>= ulong.MinValue, _) => BlittableVectorType.Int64, // Fallback for unsigned long
+                (>= ulong.MinValue, _) => BlittableVectorType.UInt64, // Fallback for unsigned long
+                (_, _) => throw new InvalidDataException("Unable to determine a type for values ranging between {_minLong} and {_maxLong}.")
             };
         }
 
