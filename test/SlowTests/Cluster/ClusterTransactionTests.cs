@@ -2269,7 +2269,7 @@ select incl(c)"
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
+        [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi, RavenArchitecture.AllX64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ClusterWideTrx_WhenExecutedBatchExceedsSpaceLimit_ShouldStoreAllDocumentsSuccessfully(Options options)
         {
