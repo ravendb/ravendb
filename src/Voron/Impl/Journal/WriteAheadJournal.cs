@@ -1700,8 +1700,6 @@ namespace Voron.Impl.Journal
                 Debug.Assert(_mergedEntriesBuffer.Count is 0 && _mergedEntriesBuffer.Count is 0,
                     "_mergedEntriesBuffer.Count is 0 && _mergedEntriesBuffer.Count is 0");
 
-                tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
-
                 long requiredSizeIn4Kbs = 0;
                 while (true)
                 {
@@ -1775,6 +1773,7 @@ namespace Voron.Impl.Journal
             var start = Stopwatch.GetTimestamp();
             try
             {
+                tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
                 long positionIn4Kbs = CurrentFile.Write(tx, entries);
                 // We must update the _root_ transaction as well here, since if we have a batch
                 // that does not include the root env, then we have to update the position of 
