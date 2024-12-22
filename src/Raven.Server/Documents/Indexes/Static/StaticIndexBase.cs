@@ -426,8 +426,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 return HandleBlittableJsonReaderArray(bjra);
             }
 
-            if (value is BlittableJsonReaderObject bjro)
+            if (value is BlittableJsonReaderObject or DynamicBlittableJson)
             {
+                var bjro = value as BlittableJsonReaderObject ?? ((DynamicBlittableJson)value).BlittableJson;
                 if (bjro.TryGetMember(Sparrow.Global.Constants.Naming.VectorPropertyName, out var vector) && vector is BlittableJsonReaderVector bjrv)
                 {
                     return HandleBlittableJsonReaderVector(bjrv);

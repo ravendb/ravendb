@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace Raven.Client.Documents;
 
-public class RavenVector<T> : IEnumerable
+public class RavenVector<T> : IEnumerable, IEnumerable<T>
     where T : unmanaged
 #if NET7_0_OR_GREATER
     , INumber<T>
@@ -43,6 +43,11 @@ public class RavenVector<T> : IEnumerable
         if (isKnownType == false)
             throw new InvalidDataException($"The type of embedding must be numeric. Supported types are: float, double, decimal, sbyte, byte, int, uint, long, ulong. Received: {typeof(T).FullName}.");
 #endif
+    }
+
+    IEnumerator<T> IEnumerable<T>.GetEnumerator()
+    {
+        return Embedding.AsEnumerable().GetEnumerator();
     }
 
     public IEnumerator GetEnumerator()
