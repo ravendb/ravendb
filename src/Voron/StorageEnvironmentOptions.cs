@@ -83,7 +83,7 @@ namespace Voron
         internal DisposableAction DisableOnRecoveryErrorHandler()
         {
             var handler = OnRecoveryError;
-            OnRecoveryError = null;
+            OnRecoveryError = (_, __) => { };
 
             return new DisposableAction(() => OnRecoveryError = handler);
         }
@@ -103,7 +103,7 @@ namespace Voron
         internal DisposableAction DisableOnIntegrityErrorOfAlreadySyncedDataHandler()
         {
             var handler = OnIntegrityErrorOfAlreadySyncedData;
-            OnIntegrityErrorOfAlreadySyncedData = null;
+            OnIntegrityErrorOfAlreadySyncedData = (_, __) => { };
 
             return new DisposableAction(() => OnIntegrityErrorOfAlreadySyncedData = handler);
         }

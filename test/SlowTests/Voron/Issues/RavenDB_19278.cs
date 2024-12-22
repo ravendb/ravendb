@@ -284,8 +284,11 @@ public class RavenDB_19278 : StorageTest
         }
     }
 
-    private void CorruptJournal(long journal, long position, int numberOfCorruptedBytes = Constants.Size.Kilobyte * 4, byte value = 42, bool preserveValue = false)
+    private void CorruptJournal(long journal, long position)
     {
+        Span<byte> buffer = stackalloc byte[Constants.Size.Kilobyte * 4];
+        Random.Shared.NextBytes(buffer);
+        
         Options.Dispose();
         Options = StorageEnvironmentOptions.ForPathForTests(DataDir);
         Configure(Options);
@@ -295,29 +298,12 @@ public class RavenDB_19278 : StorageTest
                    FileShare.ReadWrite | FileShare.Delete))
         {
             fileStream.Position = position;
-
-            var buffer = new byte[numberOfCorruptedBytes];
-
-            var remaining = buffer.Length;
-            var start = 0;
-            while (remaining > 0)
+            while (fileStream.Position + buffer.Length < fileStream.Length)
             {
-                var read = fileStream.Read(buffer, start, remaining);
-                if (read == 0)
-                    break;
-                start += read;
-                remaining -= read;
+                fileStream.Write(buffer);
             }
-
-            for (int i = 0; i < buffer.Length; i++)
-            {
-                if (buffer[i] != value || preserveValue)
-                    buffer[i] = value;
-                else
-                    buffer[i] = (byte)(value + 1); // we really want to change the original value here so it must not stay the same
-            }
-            fileStream.Position = position;
-            fileStream.Write(buffer, 0, buffer.Length);
+            var remaining = fileStream.Length - fileStream.Position;
+            fileStream.Write(buffer[..(int)remaining]);
         }
     }
 }

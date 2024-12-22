@@ -575,6 +575,9 @@ namespace Voron.Impl.Journal
 
         private bool VerifyNoUnexpectedValidTransactionsAfter(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState)
         {
+            using var _ = options.DisableOnRecoveryErrorHandler();
+            using var __ = options.DisableOnIntegrityErrorOfAlreadySyncedDataHandler();
+            
             // now need to verify if there are any _valid_ transactions after we found an invalid one
             var original4KbPosition = _readAt4Kb;
             for (; _readAt4Kb < _journalPagerNumberOfAllocated4Kb; _readAt4Kb++)
