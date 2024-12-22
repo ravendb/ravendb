@@ -22,6 +22,8 @@ $prefix: "bs-";
     --hover-filter: #{$hover-filter};
     --shadow-color: #{to-rgb($shadow-color)};
 
+    --link-color: #{$link-color};
+
     --license-developer: #c7ff6b;
     --license-cloud: #{$brand-cloud};
     --license-community: #{$color-4};

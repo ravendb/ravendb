@@ -28,9 +28,10 @@ $btn-default-dimension: 36px;
         justify-content: center;
         align-items: center;
         background-color: colors.$primary-var;
-        border: 1px solid colors.$link-color;
+        border: 1px solid colors.$link-color-var;
         border-radius: $btn-default-dimension;
         transition: bs5variables.$transition-base;
+        color: colors.$white;
 
         i {
             left: 0.75px;

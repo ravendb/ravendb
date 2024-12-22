@@ -147,7 +147,7 @@ $token-important: $color-2-2;
     $pre-bg: $white;
     $ace-gutter-bg: $panel-bg-2;
 
-    $link-color: $primary;
+    $link-color: #c072ee;
     $shadow-color: $gray-500;
 
     $hover-filter: brightness(1.03) saturate(1.3);
@@ -247,7 +247,7 @@ $token-important: $color-2-2;
     $pre-bg: $white;
     $ace-gutter-bg: $panel-header-bg;
 
-    $link-color: $primary;
+    $link-color: #c072ee;
     $shadow-color: $gray-600;
 
     $hover-filter: brightness(1.03) saturate(1.4);
@@ -503,6 +503,8 @@ $well-bg-var: var(--well-bg);
 $pre-bg-var: var(--pre-bg);
 $ace-gutter-bg-var: var(--ace-gutter-bg);
 $shadow-color-var: var(--shadow-color);
+
+$link-color-var: var(--link-color);
 
 $row-bg-var: var(--row-bg);
 $row-even-bg-var: var(--row-even-bg);
