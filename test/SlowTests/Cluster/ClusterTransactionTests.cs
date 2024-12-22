@@ -189,11 +189,17 @@ namespace SlowTests.Cluster
             return new string(str);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
         [InlineData(1)]
+        public async Task CanPreformSeveralClusterTransactions(int numberOfNodes)
+        {
+            await CanPreformSeveralClusterTransactions_X64(1);
+        }
+
+        [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi, RavenArchitecture.AllX64)]
         [InlineData(3)]
         [InlineData(5)]
-        public async Task CanPreformSeveralClusterTransactions(int numberOfNodes)
+        public async Task CanPreformSeveralClusterTransactions_X64(int numberOfNodes)
         {
             var numOfSessions = 10;
             var docsPerSession = 2;
@@ -2109,7 +2115,7 @@ select incl(c)"
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi)]
+        [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.ClientApi, RavenArchitecture.AllX64)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ClusterWideTrx_WhenExecutedBatchExceedsSpaceLimit_ShouldStoreAllDocumentsSuccessfully(Options options)
         {

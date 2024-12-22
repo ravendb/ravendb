@@ -22,7 +22,7 @@ public class CompareExchangeTests : RavenTestBase
     {
     }
     
-    [RavenFact(RavenTestCategory.CompareExchange)]
+    [RavenMultiplatformFact(RavenTestCategory.CompareExchange, RavenArchitecture.AllX64)]
     public async Task AddOrUpdateCompareExchangeCommand_WhenCommandSentTwice_SecondAttemptShouldNotReturnNull()
     {
         var leader = GetNewServer();
