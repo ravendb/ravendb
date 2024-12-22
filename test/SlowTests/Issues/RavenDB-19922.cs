@@ -166,7 +166,7 @@ namespace SlowTests.Issues
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var databaseName = GetDatabaseName();
-
+            string info = "";
             var settings = new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
@@ -175,7 +175,7 @@ namespace SlowTests.Issues
                 [RavenConfiguration.GetKey(x => x.Backup.MoveToNewResponsibleNodeGracePeriod)] = "0"
             };
 
-            var (nodes, leaderServer) = await CreateRaftCluster(clusterSize, customSettings: settings);
+            var (nodes, leaderServer) = await CreateRaftCluster(clusterSize, customSettings: settings, watcherCluster: true);
             await CreateDatabaseInCluster(databaseName, clusterSize, leaderServer.WebUrl);
 
             using (var store = new DocumentStore
@@ -189,15 +189,18 @@ namespace SlowTests.Issues
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup", pinToMentorNode:true);
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
+                info += $"leader = {leaderServer.ServerStore.NodeTag}, mentorNode = {mentorNode.ServerStore.NodeTag}";
+
                 var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                 var tag1 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
 
+                Assert.Equal(mentorNode.ServerStore.NodeTag, tag1);
 
                 var op = new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup);
                 var pinToMentorNode = store.Maintenance.Send(op).PinToMentorNode;
 
                 Assert.True(pinToMentorNode);
-                CheckDecisionLog(leaderServer, new PinnedMentorNode(tag1, config.Name).ReasonForDecisionLog);
+                CheckDecisionLog(leaderServer, new PinnedMentorNode(tag1, config.Name).ReasonForDecisionLog, info);
 
                 var disposedServer = nodes.First(s => s.ServerStore.NodeTag == tag1);
                 nodes.Remove(disposedServer);
@@ -231,7 +234,6 @@ namespace SlowTests.Issues
                 }, true);
 
                 Assert.Equal(tag1, tag2);
-
             }
         }
 
@@ -369,7 +371,7 @@ namespace SlowTests.Issues
             return res.Topology.Members.Count;
         }
 
-        private static void CheckDecisionLog(RavenServer leaderServer, string reasonForDecisionLog)
+        private static void CheckDecisionLog(RavenServer leaderServer, string reasonForDecisionLog, string info = "")
         {
             (ClusterObserverLogEntry[] List, long Iteration) dbDecisions = leaderServer.ServerStore.Observer.ReadDecisionsForDatabase();
             bool equals = false;
@@ -379,7 +381,8 @@ namespace SlowTests.Issues
                 equals = dbDecisions.List.Any(x => x.ToString().Contains(reasonForDecisionLog, StringComparison.OrdinalIgnoreCase));
                 return equals;
             }, true);
-            Assert.True(equals, $"looking for :{reasonForDecisionLog}\n\nContents of dbDecisions:\n{string.Join("\n", dbDecisions.List.Select(entry => entry.ToString()))}");
+            info += $", Iteration = {dbDecisions.Iteration}";
+            Assert.True(equals, info + $"looking for :{reasonForDecisionLog}\n\nContents of dbDecisions:\n{string.Join("\n", dbDecisions.List.Select(entry => entry.ToString()))}");
         }
 
         private async Task<long> InitializeBackup(DocumentStore store, int clusterSize, RavenServer leaderServer, List<RavenServer> nodes, PeriodicBackupConfiguration config)
