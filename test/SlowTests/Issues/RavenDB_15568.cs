@@ -16,15 +16,18 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-        public void SettingDefaultFieldsToNoIndexAndNoStoreShouldGenerateErrorsInCorax(Options options) => SettingDefaultFieldsToNoIndexAndNoStoreShouldGenerateErrors(
-            options,
-            simpleMapErrors =>
-            {
-                Assert.Equal(1, simpleMapErrors.Errors.Length);
-                Assert.True(simpleMapErrors.Errors.All(x => x.Error.Contains("that is neither indexed nor stored is useless because it cannot be searched or retrieved.")));
-            });
+        [NightlyBuildTheory]
+        public void SettingDefaultFieldsToNoIndexAndNoStoreShouldGenerateErrorsInCorax()
+        {
+            SettingDefaultFieldsToNoIndexAndNoStoreShouldGenerateErrors(
+                Options.ForSearchEngine(RavenSearchEngineMode.Corax),
+                simpleMapErrors =>
+                {
+                    Assert.Equal(1, simpleMapErrors.Errors.Length);
+                    Assert.True(simpleMapErrors.Errors.All(x =>
+                        x.Error.Contains("that is neither indexed nor stored is useless because it cannot be searched or retrieved.")));
+                });
+        }
 
         [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]

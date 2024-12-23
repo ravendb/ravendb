@@ -1,24 +1,22 @@
 ﻿using System;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests.Graph;
 using FastTests.Server.Replication;
 using Raven.Server.Documents;
-using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace StressTests.Issues;
+
 public class RavenDB_21101 : ReplicationTestBase
 {
     public RavenDB_21101(ITestOutputHelper output) : base(output)
     {
     }
 
-    [NightlyBuildFact]
+    [RavenFact(RavenTestCategory.Revisions)]
     public async Task RevisionsConflictConfiguration_Default_Value_Is_1024()
     {
         using var src = GetDocumentStore();

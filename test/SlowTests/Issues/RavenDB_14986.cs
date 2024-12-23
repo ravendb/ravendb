@@ -16,13 +16,16 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-        public void CanSetFieldStorageNoAndFieldIndexingNoInMapReduceCorax(Options options) => CanSetFieldStorageNoAndFieldIndexingNoInMapReduce(options, simpleMapReduceErrors =>
+        [NightlyBuildFact]
+        public void CanSetFieldStorageNoAndFieldIndexingNoInMapReduceCorax()
         {
-            Assert.Equal(1, simpleMapReduceErrors.Errors.Length);
-            Assert.True(simpleMapReduceErrors.Errors.All(x => x.Error.Contains("that is neither indexed nor stored is useless because it cannot be searched or retrieved.")));
-        });
+            CanSetFieldStorageNoAndFieldIndexingNoInMapReduce(Options.ForSearchEngine(RavenSearchEngineMode.Corax), simpleMapReduceErrors =>
+            {
+                Assert.Equal(1, simpleMapReduceErrors.Errors.Length);
+                Assert.True(simpleMapReduceErrors.Errors.All(x =>
+                    x.Error.Contains("that is neither indexed nor stored is useless because it cannot be searched or retrieved.")));
+            });
+        }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]

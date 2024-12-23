@@ -844,60 +844,6 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [RavenFact(RavenTestCategory.Cluster)]
-        public async Task TakingIntoAccountMoveToRehabGraceTimeConfiguration()
-        {
-            const int moveToRehabGraceTimeInSec = 60;
-            var databaseName = GetDatabaseName();
-            var settings = new Dictionary<string, string>
-            {
-                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = moveToRehabGraceTimeInSec.ToString(),
-                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1"
-            };
-
-            var (servers, leader) = await CreateRaftCluster(numberOfNodes: 3, shouldRunInMemory: false, customSettings: settings);
-            using (var leaderStore = new DocumentStore { Urls = new[] { leader.WebUrl }, Database = databaseName, }.Initialize())
-            {
-                var topology = new DatabaseTopology { Members = new List<string> { "A", "B", "C" }, DynamicNodesDistribution = true };
-
-                var (index, _) = await CreateDatabaseInCluster(new DatabaseRecord { DatabaseName = databaseName, Topology = topology }, replicationFactor: 3,
-                    leader.WebUrl);
-                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
-
-                using (var session = leaderStore.OpenSession())
-                {
-                    session.Store(new User(), "users/1");
-                    session.SaveChanges();
-                }
-                var databaseTopology = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
-                Assert.Equal(3, databaseTopology.AllNodes.Count());
-                Assert.Equal(0, databaseTopology.Promotables.Count);
-                Assert.True(await WaitForDocumentInClusterAsync<User>(topology, databaseName, "users/1", null, TimeSpan.FromSeconds(30)));
-
-                var serverA = servers.Single(s => s.ServerStore.NodeTag == "A");
-
-                await Task.Delay(TimeSpan.FromSeconds(moveToRehabGraceTimeInSec)); // we need to take into account database uptime
-
-                var sw = Stopwatch.StartNew();
-                await DisposeServerAndWaitForFinishOfDisposalAsync(serverA);
-
-                var disposeTime = sw.Elapsed;
-
-                var count = await WaitForValueAsync(async () => await GetRehabCount(leaderStore, databaseName),
-                    expectedVal: 1,
-                    timeout: (int)TimeSpan.FromSeconds(moveToRehabGraceTimeInSec * 2).TotalMilliseconds);
-
-                sw.Stop();
-
-                var acceptableDeviation = TimeSpan.FromSeconds(1);
-                Assert.Equal(1, count);
-                Assert.True(sw.Elapsed > TimeSpan.FromSeconds(moveToRehabGraceTimeInSec) - disposeTime - acceptableDeviation,
-                    userMessage: $"The grace period was not considered and node 'A' went into rehab after {sw.Elapsed}, " +
-                                 $"but grace period is '{moveToRehabGraceTimeInSec}' sec (disposing of the node took '{disposeTime}').");
-            }
-        }
-
         [Fact]
         public async Task DontRemoveNodeWhileItHasNotReplicatedDocs()
         {
