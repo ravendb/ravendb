@@ -22,6 +22,7 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.AmazonSqs;
 public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
 {
     private const string FifoQueueIdentifier = ".fifo";
+    private static readonly Regex NonAlphanumericRegex = new Regex("[^a-zA-Z0-9]", RegexOptions.Compiled);
     private readonly Dictionary<string, string> _alreadyCreatedQueues = new();
     private IAmazonSQS _queueClient;
 
@@ -81,11 +82,12 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
 
                 try
                 {
-                    string message = SerializeCloudEvent(queueItem, out string messageId, out string messageGroupId);
+                    string message = SerializeCloudEvent(queueItem, out string messageGroupId);
+                    string messageId = CreateAmazonBatchMessageId(queueItem.DocumentId); 
                     
                     var sendMessageEntry = new SendMessageBatchRequestEntry
                     {
-                        Id = CreateAmazonBatchMessageId(queueItem.DocumentId),
+                        Id = messageId,
                         MessageBody = message
                     };
 
@@ -230,17 +232,16 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
     }
 
 
-    private string SerializeCloudEvent(AmazonSqsItem queueItem, out string messageId, out string messageGroupId)
+    private string SerializeCloudEvent(AmazonSqsItem queueItem, out string messageGroupId)
     {
         var cloudEvent = CreateCloudEvent(queueItem);
-        messageId = cloudEvent.Id;
         messageGroupId = cloudEvent.Type;
         return JsonSerializer.Serialize(cloudEvent, JsonSerializerOptions);
     }
     
     private static string CreateAmazonBatchMessageId(string documentId)
     {
-        string formattedString = Regex.Replace(documentId, "[^a-zA-Z0-9]", "-");
+        string formattedString = NonAlphanumericRegex.Replace(documentId, "-");
 
         if (formattedString.Length > 80)
         {
