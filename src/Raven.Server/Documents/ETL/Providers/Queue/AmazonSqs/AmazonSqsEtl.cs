@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
@@ -13,6 +15,7 @@ using Raven.Server.Exceptions.ETL.QueueEtl;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue.AmazonSqs;
 
@@ -82,7 +85,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
                     
                     var sendMessageEntry = new SendMessageBatchRequestEntry
                     {
-                        Id = messageId,
+                        Id = CreateAmazonBatchMessageId(queueItem.DocumentId),
                         MessageBody = message
                     };
 
@@ -233,6 +236,20 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
         messageId = cloudEvent.Id;
         messageGroupId = cloudEvent.Type;
         return JsonSerializer.Serialize(cloudEvent, JsonSerializerOptions);
+    }
+    
+    private static string CreateAmazonBatchMessageId(string documentId)
+    {
+        string formattedString = Regex.Replace(documentId, "[^a-zA-Z0-9]", "-");
+
+        if (formattedString.Length > 80)
+        {
+            formattedString = formattedString.Substring(0, 70) + "-" +
+                              $"{(Hashing.XXHash64.Calculate(formattedString, Encoding.UTF8) % 1_000_000_000)}";
+            
+        }
+
+        return formattedString;
     }
 
     protected override void OnProcessStopped()
