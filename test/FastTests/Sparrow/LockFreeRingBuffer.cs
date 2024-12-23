@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Voron;
@@ -13,6 +14,19 @@ namespace FastTests.Sparrow
 {
     public class LockFreeRingBufferTests(ITestOutputHelper output) : StorageTest(output)
     {
+        [RavenFact(RavenTestCategory.Core)]
+        public unsafe void EnsureStructuralProperties()
+        {
+            LockFreeRingBuffer<long>.Cell[] cells = new LockFreeRingBuffer<long>.Cell[2];
+            long seqMemoryLocation = (long)Unsafe.AsPointer(ref cells[0].Sequence);
+            long valueMemoryLocation = (long)Unsafe.AsPointer(ref cells[0].Value);
+            long nextSeqMemoryLocation = (long)Unsafe.AsPointer(ref cells[1].Sequence);
+
+            Assert.Equal(64, valueMemoryLocation - seqMemoryLocation);
+            Assert.Equal(0, Unsafe.SizeOf<LockFreeRingBuffer<long>.Cell>() % 64);
+            Assert.Equal(0, (nextSeqMemoryLocation - seqMemoryLocation) % 64);
+        }
+
         [RavenFact(RavenTestCategory.Core)]
         public void Enqueue_Dequeue_SingleItem()
         {

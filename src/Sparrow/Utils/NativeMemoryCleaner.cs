@@ -95,8 +95,15 @@ namespace Sparrow.Utils
                         // Item is still valid, and we are not under memory pressure, attempt to return it back to the pool
                         if (_ringBuffer.TryEnqueue(item) == false)
                         {
-                            // Fallback: if the pool is full, dispose to prevent memory growth.
-                            item.Dispose();
+                            try
+                            {
+                                // Fallback: if the pool is full, dispose to prevent memory growth.
+                                item.Dispose();
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                // Item was already disposed elsewhere; ignore and continue.
+                            }
                         }
 
                         // If the pool now has too few items, stop cleaning.

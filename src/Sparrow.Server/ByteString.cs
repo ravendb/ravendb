@@ -488,16 +488,17 @@ namespace Sparrow.Server
 
         ~UnmanagedGlobalSegment()
         {
+            var segment = _segment;
+            if (segment == null)
+                return;
+            
+            _segment = null;
+
             try
             {
-                var segment = _segment;
-                if (segment == null)
-                    return;
-                _segment = null;
-
                 NativeMemory.Free(segment, Size, _thread);
             }
-            catch (ObjectDisposedException)
+            catch 
             {
                 // nothing that can be done here
             }
@@ -508,6 +509,7 @@ namespace Sparrow.Server
             var segment = _segment;
             if (segment == null)
                 return;
+
             _segment = null;
             GC.SuppressFinalize(this);
 
@@ -636,12 +638,12 @@ namespace Sparrow.Server
                         ? (memory, comparable) // Keep the larger segment for reuse.
                         : (comparable, memory); // Keep the existing segment if it's better.
 
-                    // Try to re-enqueue the chosen segment.
-                    if (pool.TryEnqueue(toAdd) == false)
-                        toAdd.Dispose(); // If enqueue fails, dispose to prevent leaks.
-
-                    // Dispose of the other segment.
-                    toRemove.Dispose();
+                    using (toRemove)
+                    {
+                        // Try to re-enqueue the chosen segment.
+                        if (pool.TryEnqueue(toAdd) == false)
+                            toAdd.Dispose(); // If enqueue fails, dispose to prevent leaks.
+                    }
                 }
                 else
                 {

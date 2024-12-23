@@ -8,29 +8,19 @@ namespace Sparrow.Collections
 {
     public sealed class LockFreeRingBuffer<T>
     {
+        private const int CacheLine = 64;
+
         // Explicit layout to control the exact memory layout
-        [StructLayout(LayoutKind.Sequential, Size = 128)]
+        [StructLayout(LayoutKind.Sequential, Size = 2 * CacheLine)]
         internal unsafe struct Cell
         {
             // Sequence number at offset 0
-            internal long _sequence;
+            internal long Sequence;
 
             private fixed byte _sequencePadding[64 - sizeof(long)];
 
             // Value at offset 64 to ensure it's on a different cache line
-            internal T _value;
-
-            public long Sequence
-            {
-                get => Volatile.Read(ref _sequence);
-                set => Volatile.Write(ref _sequence, value);
-            }
-
-            public T Value
-            {
-                get => _value;
-                set => _value = value;
-            }
+            internal T Value;
         }
 
         private readonly int _bufferMask;
@@ -39,7 +29,19 @@ namespace Sparrow.Collections
         private long _enqueuePos;
         private long _dequeuePos;
 
-        public LockFreeRingBuffer(int capacity = 64)
+        static LockFreeRingBuffer()
+        {
+            // Fast + generic + big‐value‑friendly – pick any two; with a lock‑free ring buffer
+            // the missing one has to be paid for explicitly. We chose fast and generic.
+            if (Unsafe.SizeOf<T>() > CacheLine)
+                throw new NotSupportedException(
+                    $"Type {typeof(T)} is {Unsafe.SizeOf<T>()} B. " +
+                    "The ring‑buffer layout guarantees wait‑free behaviour only when the payload " +
+                    $"fits in the second cache line (≤ {CacheLine} B). " +
+                    "Use a reference or split metadata/payload for larger structs.");
+        }
+
+        public LockFreeRingBuffer(int capacity = CacheLine)
         {
             if (capacity < 8)
                 throw new ArgumentException("Capacity must be at least 8", nameof(capacity));
@@ -53,7 +55,7 @@ namespace Sparrow.Collections
             // Initialize the cells and the sequence numbers.
             _buffer = new Cell[capacity];
             for (long i = 0; i < capacity; i++)
-                _buffer[i].Sequence = i;
+                Volatile.Write(ref _buffer[i].Sequence, i);
         }
 
 
@@ -69,7 +71,7 @@ namespace Sparrow.Collections
             while (true)
             {
                 // This will perform a Volatile.Read on the sequence number.
-                long dif = cell.Sequence - pos;
+                long dif = Volatile.Read(ref cell.Sequence) - pos;
 
                 if (dif == 0)
                 {
@@ -87,7 +89,7 @@ namespace Sparrow.Collections
             }
 
             cell.Value = item;
-            cell.Sequence = pos + 1; // This will perform a Volatile.Write on the sequence number.
+            Volatile.Write(ref cell.Sequence, pos + 1); // This will perform a Volatile.Write on the sequence number.
             return true;
         }
 
@@ -103,7 +105,7 @@ namespace Sparrow.Collections
             while (true)
             {
                 // This will perform a Volatile.Read on the sequence number.
-                long dif = cell.Sequence - (pos + 1);
+                long dif = Volatile.Read(ref cell.Sequence) - (pos + 1);
 
                 if (dif == 0)
                 {
@@ -122,7 +124,7 @@ namespace Sparrow.Collections
             }
 
             item = cell.Value;
-            cell.Sequence = pos + _buffer.Length; // This will perform a Volatile.Write on the sequence number.
+            Volatile.Write(ref cell.Sequence, pos + _buffer.Length); // This will perform a Volatile.Write on the sequence number.
             return true;
         }
 
@@ -139,7 +141,7 @@ namespace Sparrow.Collections
                 long currentDequeuePos = Volatile.Read(ref _dequeuePos);
                 Cell dequeueCell = _buffer[currentDequeuePos & _bufferMask];
 
-                return (int) (enqueueCell.Sequence - dequeueCell.Sequence);
+                return (int) (Volatile.Read(ref enqueueCell.Sequence) - Volatile.Read(ref dequeueCell.Sequence));
             }
         }
 
@@ -152,7 +154,7 @@ namespace Sparrow.Collections
             {
                 long currentDequeuePos = Volatile.Read(ref _dequeuePos);
                 Cell cell = _buffer[currentDequeuePos & _bufferMask];
-                return (cell.Sequence - (currentDequeuePos + 1)) < 0;
+                return (Volatile.Read(ref cell.Sequence) - (currentDequeuePos + 1)) < 0;
             }
         }
 
@@ -165,7 +167,7 @@ namespace Sparrow.Collections
             {
                 long currentEnqueuePos = Volatile.Read(ref _enqueuePos);
                 Cell cell = _buffer[currentEnqueuePos & _bufferMask];
-                return (cell.Sequence - currentEnqueuePos) < 0;
+                return (Volatile.Read(ref cell.Sequence) - currentEnqueuePos) < 0;
             }
         }
     }
