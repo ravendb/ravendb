@@ -15,9 +15,9 @@ using Xunit.Abstractions;
 
 namespace StressTests.Issues;
 
-public class RavenDB_21247 : RavenTestBase
+public class RavenDB_21247_Stress : RavenTestBase
 {
-    public RavenDB_21247(ITestOutputHelper output) : base(output)
+    public RavenDB_21247_Stress(ITestOutputHelper output) : base(output)
     {
     }
 
