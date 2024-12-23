@@ -20,6 +20,12 @@ export default function useAllRevisionsFilters() {
     const [selectedType, setSelectedType] = useState<RevisionType>("All");
     const [selectedCollectionName, setSelectedCollectionName] = useState("");
 
+    const tooltipTexts: Record<RevisionType, string> = {
+        All: "Display all revisions.",
+        Regular: "Display only revisions created by document creation or modification.",
+        Deleted: 'Display only "Delete Revisions" created by document deletion.',
+    };
+
     const [persistedTypeOptions, setPersistedTypeOptions] = useState<InputItem<RevisionType>[]>(
         allRevisionTypes.map((type) => ({
             value: type,
@@ -32,7 +38,11 @@ export default function useAllRevisionsFilters() {
             const options: InputItem<RevisionType>[] = [];
 
             for (const type of allRevisionTypes) {
-                const baseOption: InputItem<RevisionType> = { value: type, label: type };
+                const baseOption: InputItem<RevisionType> = {
+                    value: type,
+                    label: type,
+                    popover: tooltipTexts[type],
+                };
 
                 if (!selectedCollectionName) {
                     const previewResult = await databasesService.getRevisionsPreview({

@@ -95,27 +95,27 @@ const getColumnDefs = (
                     <span className="flags">
                         <Icon
                             icon="attachment"
-                            title="Attachments"
+                            title='"HasAttachments"'
                             className={classNames({ attachments: flags.includes("HasAttachments") })}
                         />
                         <Icon
                             icon="new-counter"
-                            title="Counters"
+                            title='"HasCounters"'
                             className={classNames({ counters: flags.includes("HasCounters") })}
                         />
                         <Icon
                             icon="new-time-series"
-                            title="Time Series"
+                            title='"HasTimeSeries"'
                             className={classNames({ "time-series": flags.includes("HasTimeSeries") })}
                         />
                         <Icon
                             icon="data-archival"
-                            title="Archived"
+                            title='"Archived"'
                             className={classNames({ archived: flags.includes("Archived") })}
                         />
                         <Icon
                             icon="trash"
-                            title="Deleted Revision"
+                            title='"DeleteRevision"'
                             className={classNames({ "deleted-revision": flags.includes("DeleteRevision") })}
                         />
                     </span>
@@ -164,7 +164,7 @@ function CheckboxCell({ rowValue, rowSelection, setRowSelection }: CheckboxCellP
                 isActive: isDeleteRevision,
                 message: (
                     <div className="text-center">
-                        A delete revision can only be deleted from the
+                        A "Delete Revision" can only be deleted from the
                         <br />
                         <a href={forCurrentDatabase.revisionsBin()} target="_blank">
                             Revisions Bin view

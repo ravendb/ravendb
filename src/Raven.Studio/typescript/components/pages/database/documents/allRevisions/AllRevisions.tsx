@@ -125,9 +125,9 @@ export default function AllRevisions() {
             </VStack>
             {type.value !== "All" && collection.value && (
                 <RichAlert variant="warning">
-                    The table contains only part of the results. When the selected revision type is other than
-                    &quot;All&quot; and a collection is selected, only the first {allRevisionsUtils.smallSampleSize}{" "}
-                    results are visible.
+                    The table displays only part of the results. When both a collection and a type other than
+                    &quot;All&quot; are selected, only the first {allRevisionsUtils.smallSampleSize} results are
+                    visible.
                 </RichAlert>
             )}
             <SizeGetter

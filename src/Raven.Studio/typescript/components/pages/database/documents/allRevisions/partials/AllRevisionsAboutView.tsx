@@ -35,7 +35,7 @@ export default function AllRevisionsAboutView() {
                     <p>
                         <strong>Deleted revisions</strong>:
                         <ul>
-                            <li>A deleted revision is created for a document when the document is deleted.</li>
+                            <li>A "Delete Revision" is created for a document when the document is deleted.</li>
                             <li>
                                 These revisions are also listed in the{" "}
                                 <a href={appUrl.forRevisionsBin(activeDatabaseName)} target="_blank">
