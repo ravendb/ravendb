@@ -72,10 +72,12 @@ namespace Voron.Impl.FileHeaders
         public int PageSize;
 
         /// <summary>
-        /// The database id for this file
+        /// The journal id for all the transactions in shared journals
+        /// for this environment that allows to tell which transactions
+        /// belong to this envionment or to others
         /// </summary>
         [FieldOffset(154)]
-        public Guid DatabaseId;
+        public Guid JournalId;
         
         /// <summary>
         /// Hash of the header used for validation
@@ -88,7 +90,7 @@ namespace Voron.Impl.FileHeaders
             return
                 $"{nameof(Version)}: {Version}, {nameof(HeaderRevision)}: {HeaderRevision}, {nameof(TransactionId)}: {TransactionId}, {nameof(LastPageNumber)}: {LastPageNumber}, " +
                 $"{nameof(Root.RootPageNumber)}: {Root.RootPageNumber}, " +
-                $"{nameof(Journal.CurrentJournal)}: {Journal.CurrentJournal}, {nameof(DatabaseId)}: {DatabaseId},  {nameof(Journal.LastSyncedJournal)}: {Journal.LastSyncedJournal},  {nameof(Journal.LastSyncedTransactionId)}: {Journal.LastSyncedJournal}, {nameof(Journal.Flags)}: {Journal.Flags}";
+                $"{nameof(Journal.CurrentJournal)}: {Journal.CurrentJournal}, {nameof(JournalId)}: {JournalId},  {nameof(Journal.LastSyncedJournal)}: {Journal.LastSyncedJournal},  {nameof(Journal.LastSyncedTransactionId)}: {Journal.LastSyncedJournal}, {nameof(Journal.Flags)}: {Journal.Flags}";
         }
     }
 }

@@ -74,8 +74,12 @@ namespace Voron.Impl.Journal
         [FieldOffset(128)]
         public long TimeStampTicksUtc; // DateTime.UtcNow.Ticks when the tx happened
 
+        /// <summary>
+        /// In a shared journal (root / branch model) - tell us which environment this
+        /// transaction belongs to. 
+        /// </summary>
         [FieldOffset(136)]
-        public Guid DatabaseId;
+        public Guid JournalId;
 
         [FieldOffset(152)]
         public fixed byte Nonce[24];
@@ -89,7 +93,7 @@ namespace Voron.Impl.Journal
         {
             var validMarker = (HeaderMarker == Constants.TransactionHeaderMarker ? "Valid" : "Invalid");
             var timestamp = new DateTime(TimeStampTicksUtc).ToString("g");
-            return $"HeaderMarker: {validMarker}, TransactionId: {TransactionId}, DatabaseId: {DatabaseId} NextPageNumber: {NextPageNumber}, LastPageNumber: {LastPageNumber}, " +
+            return $"HeaderMarker: {validMarker}, TransactionId: {TransactionId}, JournalId: {JournalId} NextPageNumber: {NextPageNumber}, LastPageNumber: {LastPageNumber}, " +
                    $"PageCount: {PageCount}, Hash: {Hash}, Root: {Root}, TxMarker: {TxMarker}, CompressedSize: {CompressedSize}," +
                    $" UncompressedSize: {UncompressedSize}, TimeStamp: {timestamp}";
         }

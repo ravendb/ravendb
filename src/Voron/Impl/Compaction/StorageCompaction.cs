@@ -58,12 +58,7 @@ namespace Voron.Impl.Compaction
             using (var existingEnv = new StorageEnvironment(srcOptions))
             using (var compactedEnv = new StorageEnvironment(compactOptions))
             {
-                Guid dbId = existingEnv.HeaderAccessor.Get((in FileHeader header) => header.DatabaseId);
-                compactedEnv.HeaderAccessor.Modify((ref FileHeader header) =>
-                {
-                    header.DatabaseId = dbId;
-                });
-                
+               
                 CopyTrees(existingEnv, compactedEnv, modifyTableSchema, progressReport, token);
 
                 compactedEnv.FlushLogToDataFile();

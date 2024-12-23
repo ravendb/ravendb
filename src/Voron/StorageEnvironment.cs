@@ -358,35 +358,14 @@ namespace Voron
                 if (_options.GenerateNewDatabaseId == false)
                 {
                     databaseGuidId = new Guid(buffer);
-                    if (fileHeader.DatabaseId == Guid.Empty)
-                    {
-                        _headerAccessor.Modify((ref FileHeader h) =>
-                        {
-                            h.DatabaseId = databaseGuidId;
-                        });
-                    }
-                    else if (fileHeader.DatabaseId != databaseGuidId)
-                    {
-                        VoronUnrecoverableErrorException.Raise(tx,
-                            "The db id value in metadata tree did not match the db id in the header file. Possible corruption or mismatch?");
-                    }
                 }
                 else
                 {
                     databaseGuidId = Guid.NewGuid();
-                    _headerAccessor.Modify((ref FileHeader h) =>
-                    {
-                        h.DatabaseId = databaseGuidId;
-                    });
+                    metadataTree.Add("db-id", databaseGuidId.ToByteArray());
                 }
 
                 FillBase64Id(databaseGuidId);
-
-                if (_options.GenerateNewDatabaseId)
-                {
-                    // save the new database id
-                    metadataTree.Add("db-id", DbId.ToByteArray());
-                }
 
                 foreach (long freeSegment in _freeSpaceHandling.GetAllFullyEmptySegments(tx))
                 {
@@ -495,11 +474,6 @@ namespace Voron
                 ThrowSimulateFailureOnDbCreation();
 
             Guid dbId = Guid.NewGuid();
-            _headerAccessor.Modify((ref FileHeader header) =>
-            {
-                header.DatabaseId = dbId;
-            });
-
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {

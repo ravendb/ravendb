@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
@@ -15,7 +16,9 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
     public void CanCreateRootAndBranchEnvironments()
     {
         string rootPath = NewDataPath(suffix: "root");
+        IOExtensions.DeleteDirectory(rootPath);
         string branchPath = NewDataPath(suffix: "branch");
+        IOExtensions.DeleteDirectory(branchPath);
         {
             using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
             rootOptions.ManualFlushing = true;
@@ -419,5 +422,60 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
         }
 
         task.Wait();
+    }
+    
+    
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CanProperlyHandleChangingDbId()
+    {
+        var path = NewDataPath();
+        IOExtensions.DeleteDirectory(path);
+        {
+            using var opts = StorageEnvironmentOptions.ForPathForTests(path);
+            opts.ManualSyncing = true;
+            opts.ManualFlushing = true;
+            // tx 1
+            using (var env = new StorageEnvironment(opts))
+            {
+                env.FlushLogToDataFile();
+                env.SyncDataFileImmediately();
+                // tx 2
+                using (var txw = env.WriteTransaction())
+                {
+                    txw.CreateTree("abc");
+                    txw.Commit();
+                }
+            }
+        }
+        {
+            using var opts = StorageEnvironmentOptions.ForPathForTests(path);
+            opts.ManualSyncing = true;
+            opts.ManualFlushing = true;
+            opts.OwnsPagers = false;
+            opts.GenerateNewDatabaseId = true;
+            // tx 3 - changing db id
+            using (var env = new StorageEnvironment(opts))
+            {
+                Assert.Equal(3, env.CurrentStateRecord.TransactionId);
+                
+                // tx 4 - with new id
+                using (var txw = env.WriteTransaction())
+                {
+                    txw.CreateTree("def");
+                    txw.Commit();
+                }
+            }
+        }
+        
+        {
+            using var opts = StorageEnvironmentOptions.ForPathForTests(path);
+            opts.ManualSyncing = true;
+            opts.ManualFlushing = true;
+            opts.OwnsPagers = false;
+            using (var env = new StorageEnvironment(opts))
+            {
+                // here we fail because we have a mix of tx in the journal, from multiple ids
+            }
+        }
     }
 }

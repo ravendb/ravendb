@@ -155,7 +155,7 @@ namespace Voron.Impl.Journal
                     // if this journal contains any transaction with empty database 
                     // then we cannot use it for current writes, since it may be a 
                     // root environment and confuse any branch env reading from it
-                    if (tx.DatabaseId == Guid.Empty)
+                    if (tx.JournalId == Guid.Empty)
                         return true;
                 }
 

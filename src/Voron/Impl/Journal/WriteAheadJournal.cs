@@ -2064,7 +2064,7 @@ namespace Voron.Impl.Journal
             txHeader.CompressedSize = reportedCompressionLength;
             txHeader.UncompressedSize = totalSizeWritten;
             txHeader.PageCount = numberOfPages;
-            txHeader.DatabaseId = _env.DbId;
+            txHeader.JournalId = _headerAccessor.JournalId;
             
             if (_env.Options.Encryption.IsEnabled == false)
             {

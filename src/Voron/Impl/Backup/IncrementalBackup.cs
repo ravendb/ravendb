@@ -263,6 +263,17 @@ namespace Voron.Impl.Backup
                 options.ManualFlushing = true;
                 using (var env = new StorageEnvironment(options))
                 {
+                    // We create a completely new environment... 
+                    if (env.CurrentReadTransactionId is 1)
+                    {
+                        env.HeaderAccessor.Modify((ref FileHeader header) =>
+                        {
+                            // The journal id should come from the first
+                            // real transaction that is being applies here
+                            header.JournalId = Guid.Empty;
+                        });
+                    }
+
                     foreach (var backupPath in backupPaths)
                     {
                         Restore(env, backupPath);
@@ -327,7 +338,9 @@ namespace Voron.Impl.Backup
             {
                 TransactionHeader* lastTxHeader = null;
                 var lastTxHeaderStackLocation = stackalloc TransactionHeader[1];
-                long lastTxId = env.HeaderAccessor.Get((in FileHeader header) => header.TransactionId);
+                var envHeader = env.HeaderAccessor.CopyHeader();
+                var lastTxId = envHeader.TransactionId;
+                var journalId = envHeader.JournalId;
 
                 long journalNumber = -1;
                 var rc = Pal.rvn_pager_get_file_handle(txw.DataPagerState.Handle, out var fileHandle, out int errorCode);
@@ -364,18 +377,8 @@ namespace Voron.Impl.Backup
                                     env.Options.Encryption.IsEnabled);
                             toDispose.Add(recoveryPager);
 
-
-                            Guid databaseId = txw.Id is 2 ?
-                                // tx #1 - creates the StorageEnvironment - so here we ask if this is
-                                // the very first real transaction, and we are restoring, then there _isn't_ a valid value
-                                // for the DatabaseId. We created a _new_ database instance (with new id!) that won't match what
-                                // we have in the backup. So we need to mark it as empty, otherwise, we won't accept the transactions
-                                // for the old db id.
-                                Guid.Empty :
-                                txw.Environment.DbId;
-
                             using (var reader = new JournalReader(env, journalPager, journalPagerState, txw.DataPager, recoveryPager, new HashSet<long>(),
-                                       new JournalInfo { LastSyncedTransactionId = lastTxId }, new FileHeader { HeaderRevision = -1, DatabaseId = databaseId },
+                                       new JournalInfo { LastSyncedTransactionId = lastTxId }, new FileHeader { HeaderRevision = -1, JournalId = journalId},
                                        lastTxHeader))
                             {
                                 while (reader.ReadOneTransactionToDataFile(ref txw.DataPagerState, ref recoverPagerState, ref txw.PagerTransactionState, fileHandle,
@@ -384,10 +387,7 @@ namespace Voron.Impl.Backup
                                     lastTxHeader = reader.LastTransactionHeader;
                                 }
 
-                                if (reader.DatabaseId != databaseId)
-                                {
-                                    env.FillBase64Id(reader.DatabaseId);
-                                }
+                                journalId = reader.JournalId;
 
                                 reader.ZeroRecoveryBufferIfNeeded(recoverPagerState, ref txw.PagerTransactionState, env.Options);
                                 if (lastTxHeader != null)
@@ -422,7 +422,7 @@ namespace Voron.Impl.Backup
                 {
                     header.TransactionId = lastTxHeader->TransactionId;
                     header.LastPageNumber = lastTxHeader->LastPageNumber;
-                    header.DatabaseId = env.DbId;
+                    header.JournalId = journalId;
                     header.Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
                 
                     header.Root = lastTxHeader->Root;

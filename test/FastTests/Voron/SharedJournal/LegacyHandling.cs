@@ -61,9 +61,6 @@ public class LegacyHandling(ITestOutputHelper output) : RavenTestBase(output)
                 }
             }
 
-            var header = env.HeaderAccessor.CopyHeader();
-            Assert.Equal(env.DbId, header.DatabaseId);
-        
             using (var txw = env.WriteTransaction())
             {
                 var tree = txw.ReadTree("legacy-tree");
@@ -152,10 +149,6 @@ public class LegacyHandling(ITestOutputHelper output) : RavenTestBase(output)
                         tree.Read(i.ToString()).Reader.ToStringValue());
                 }
             }
-
-            var header = branch.HeaderAccessor.CopyHeader();
-            Assert.Equal(branch.DbId, header.DatabaseId);
-        
             var mre = new ManualResetEventSlim(false);
             root.Journal.OnBranchJournalEntrySubmitted += () =>
             {
@@ -234,9 +227,6 @@ public class LegacyHandling(ITestOutputHelper output) : RavenTestBase(output)
                         tree.Read(i.ToString()).Reader.ToStringValue());
                 }
             }
-
-            var header = env.HeaderAccessor.CopyHeader();
-            Assert.Equal(env.DbId, header.DatabaseId);
         
             using (var txw = env.WriteTransaction())
             {

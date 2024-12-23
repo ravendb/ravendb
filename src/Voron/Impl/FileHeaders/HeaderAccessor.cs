@@ -128,6 +128,7 @@ namespace Voron.Impl.FileHeaders
             }
         }
 
+        public Guid JournalId => _theHeader.JournalId;
 
         public T Get<T>(GetDataFromHeaderAction<T> action)
         {
@@ -189,7 +190,7 @@ namespace Voron.Impl.FileHeaders
             header.IncrementalBackup.LastBackedUpJournalPage = -1;
             header.IncrementalBackup.LastCreatedJournal = -1;
             header.PageSize = env.Options.PageSize;
-            header.DatabaseId = Guid.Empty;
+            header.JournalId = Guid.NewGuid();
             var buffer = MemoryMarshal.AsBytes(new Span<FileHeader>(ref header));
             header.Hash = Hashing.XXHash64.CalculateInline(buffer[..^sizeof(ulong)], (ulong)header.TransactionId);
         }
@@ -207,8 +208,7 @@ namespace Voron.Impl.FileHeaders
                    header.Journal.Reserved[2] == 0 &&
                    header.Journal is { LastSyncedJournal: -1, LastSyncedTransactionId: -1 } &&
                    header.IncrementalBackup.LastBackedUpJournal == -1 &&
-                   header.IncrementalBackup is { LastBackedUpJournalPage: -1, LastCreatedJournal: -1 } && 
-                   header.DatabaseId == Guid.Empty;
+                   header.IncrementalBackup is { LastBackedUpJournalPage: -1, LastCreatedJournal: -1 };
         }
 
         public JournalInfo CopyHeaders(BackupZipArchive package, DataCopier copier, StorageEnvironmentOptions envOptions, string basePath)
