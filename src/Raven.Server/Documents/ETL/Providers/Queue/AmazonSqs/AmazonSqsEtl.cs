@@ -83,17 +83,16 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
                 try
                 {
                     string message = SerializeCloudEvent(queueItem, out string messageGroupId);
-                    string messageId = CreateAmazonBatchMessageId(queueItem.DocumentId); 
                     
                     var sendMessageEntry = new SendMessageBatchRequestEntry
                     {
-                        Id = messageId,
+                        Id = CreateBatchMessageId(queueItem.DocumentId),
                         MessageBody = message
                     };
 
                     if (isFifoQueue)
                     {
-                        sendMessageEntry.MessageDeduplicationId = messageId;
+                        sendMessageEntry.MessageDeduplicationId = CreateMessageDeduplicationId(queueItem.ChangeVector);
                         sendMessageEntry.MessageGroupId = messageGroupId;
                     }
 
@@ -239,18 +238,38 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
         return JsonSerializer.Serialize(cloudEvent, JsonSerializerOptions);
     }
     
-    private static string CreateAmazonBatchMessageId(string documentId)
+    private static string CreateMessageId(string input, int maxLength, bool applyReplacement)
     {
-        string formattedString = NonAlphanumericRegex.Replace(documentId, "-");
+        string processedString = input;
 
-        if (formattedString.Length > 80)
+        if (applyReplacement)
         {
-            formattedString = formattedString.Substring(0, 70) + "-" +
-                              $"{(Hashing.XXHash64.Calculate(formattedString, Encoding.UTF8) % 1_000_000_000)}";
-            
+            processedString = NonAlphanumericRegex.Replace(input, "-");
         }
 
-        return formattedString;
+        if (processedString.Length > maxLength)
+        {
+            int truncateLength = maxLength - 10; // Reserve 10 characters for hash suffix
+            if (truncateLength < 0)
+            {
+                throw new ArgumentException("Maximum length must be at least 10 to allow for a hash suffix.", nameof(maxLength));
+            }
+
+            processedString = processedString.Substring(0, truncateLength) + "-" +
+                              $"{(Hashing.XXHash64.Calculate(processedString, Encoding.UTF8) % 1_000_000_000)}";
+        }
+
+        return processedString;
+    }
+    
+    private static string CreateBatchMessageId(string documentId)
+    {
+        return CreateMessageId(documentId, 80, true);
+    }
+    
+    private static string CreateMessageDeduplicationId(string changeVector)
+    {
+        return CreateMessageId(changeVector, 128, false);
     }
 
     protected override void OnProcessStopped()
