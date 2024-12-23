@@ -11,34 +11,35 @@ using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Analysis;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_14939 : RavenTestBase
+    public class RavenDB_14939(ITestOutputHelper output) : RavenTestBase(output)
     {
-        public RavenDB_14939(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
-        public void CanUseCustomAnalyzer()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseCustomAnalyzer(Options options)
         {
             string analyzerName = GetDatabaseName();
 
             using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = _ => analyzerName,
-                ModifyDatabaseRecord = record => record.Analyzers = new Dictionary<string, AnalyzerDefinition>
-                {
-                    { analyzerName, new AnalyzerDefinition
-                    {
-                        Name = analyzerName,
-                        Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName)
-                    }}
-                }
-            }))
+                   {
+                       ModifyDatabaseName = _ => analyzerName,
+                       ModifyDatabaseRecord = record =>
+                       {
+                           options.ModifyDatabaseRecord(record);
+                           record.Analyzers = new Dictionary<string, AnalyzerDefinition>
+                           {
+                               {
+                                   analyzerName,
+                                   new AnalyzerDefinition { Name = analyzerName, Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName) }
+                               }
+                           };
+                       }
+                   }))
             {
                 store.ExecuteIndex(new MyIndex(analyzerName));
 
@@ -53,24 +54,28 @@ namespace SlowTests.Issues
                 Assert.NotEqual(analyzerName, key.Key.ResourceName);
         }
 
-        [Fact]
-        public void CanUseCustomAnalyzer_Restart()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseCustomAnalyzer_Restart(Options options)
         {
             string analyzerName = GetDatabaseName();
 
             using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = _ => analyzerName,
-                ModifyDatabaseRecord = record => record.Analyzers = new Dictionary<string, AnalyzerDefinition>
-                {
-                    { analyzerName, new AnalyzerDefinition
-                    {
-                        Name = analyzerName,
-                        Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName)
-                    }}
-                },
-                RunInMemory = false
-            }))
+                   {
+                       ModifyDatabaseName = _ => analyzerName,
+                       ModifyDatabaseRecord = record =>
+                       {
+                           options.ModifyDatabaseRecord(record);
+                           record.Analyzers = new Dictionary<string, AnalyzerDefinition>
+                           {
+                               {
+                                   analyzerName,
+                                   new AnalyzerDefinition { Name = analyzerName, Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName) }
+                               }
+                           };
+                       },
+                       RunInMemory = false
+                   }))
             {
                 store.ExecuteIndex(new MyIndex(analyzerName));
 
@@ -90,23 +95,20 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseCustomAnalyzerWithOperations()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseCustomAnalyzerWithOperations(Options options)
         {
             string analyzerName = GetDatabaseName();
 
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = _ => analyzerName
-            }))
+            using (var store = GetDocumentStore(new Options { ModifyDatabaseName = _ => analyzerName, ModifyDatabaseRecord = options.ModifyDatabaseRecord}))
             {
                 var e = Assert.Throws<IndexCompilationException>(() => store.ExecuteIndex(new MyIndex(analyzerName)));
                 Assert.Contains($"Cannot find analyzer type '{analyzerName}' for field: Name", e.Message);
 
                 store.Maintenance.Send(new PutAnalyzersOperation(new AnalyzerDefinition
                 {
-                    Name = analyzerName,
-                    Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName)
+                    Name = analyzerName, Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName)
                 }));
 
                 store.ExecuteIndex(new MyIndex(analyzerName));
@@ -128,28 +130,29 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseCustomAnalyzerWithConfiguration()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseCustomAnalyzerWithConfiguration(Options options)
         {
             string analyzerName = GetDatabaseName();
 
             using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = _ => analyzerName,
-                ModifyDatabaseRecord = record =>
-                {
-                    record.Analyzers = new Dictionary<string, AnalyzerDefinition>
-                    {
-                        { analyzerName, new AnalyzerDefinition
-                        {
-                            Name = analyzerName,
-                            Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName)
-                        }}
-                    };
+                   {
+                       ModifyDatabaseName = _ => analyzerName,
+                       ModifyDatabaseRecord = record =>
+                       {
+                           options.ModifyDatabaseRecord(record);
+                           record.Analyzers = new Dictionary<string, AnalyzerDefinition>
+                           {
+                               {
+                                   analyzerName,
+                                   new AnalyzerDefinition { Name = analyzerName, Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName) }
+                               }
+                           };
 
-                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer)] = analyzerName;
-                }
-            }))
+                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer)] = analyzerName;
+                       }
+                   }))
             {
                 store.ExecuteIndex(new MyIndex_WithoutAnalyzer());
 
@@ -161,19 +164,21 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseCustomAnalyzerWithConfiguration_NoAnalyzer()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseCustomAnalyzerWithConfiguration_NoAnalyzer(Options options)
         {
             string analyzerName = GetDatabaseName();
 
             using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = _ => analyzerName,
-                ModifyDatabaseRecord = record =>
-                {
-                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer)] = analyzerName;
-                }
-            }))
+                   {
+                       ModifyDatabaseName = _ => analyzerName,
+                       ModifyDatabaseRecord = record =>
+                       {
+                           options.ModifyDatabaseRecord(record);
+                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer)] = analyzerName;
+                       }
+                   }))
             {
                 store.ExecuteIndex(new MyIndex_WithoutAnalyzer());
 
@@ -186,8 +191,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new PutAnalyzersOperation(new AnalyzerDefinition
                 {
-                    Name = analyzerName,
-                    Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName)
+                    Name = analyzerName, Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName)
                 }));
 
                 store.Maintenance.Send(new ResetIndexOperation(new MyIndex_WithoutAnalyzer().IndexName));
@@ -218,7 +222,7 @@ namespace SlowTests.Issues
                 var results = session.Query<Customer, TIndex>()
                     .Customize(x => x.NoCaching())
                     .Search(x => x.Name, "Rogério*");
-
+                WaitForUserToContinueTheTest(store);
                 Assert.Equal(results.Count(), 4);
             }
         }
@@ -256,10 +260,7 @@ namespace SlowTests.Issues
             public MyIndex(string analyzerName)
             {
                 Map = customers => from customer in customers
-                                   select new
-                                   {
-                                       Name = customer.Name
-                                   };
+                    select new { Name = customer.Name };
 
                 Indexes.Add(x => x.Name, FieldIndexing.Search);
                 Analyzers.Add(x => x.Name, analyzerName);
@@ -271,10 +272,7 @@ namespace SlowTests.Issues
             public MyIndex_WithoutAnalyzer()
             {
                 Map = customers => from customer in customers
-                                   select new
-                                   {
-                                       Name = customer.Name
-                                   };
+                    select new { Name = customer.Name };
 
                 Indexes.Add(x => x.Name, FieldIndexing.Search);
             }

@@ -190,7 +190,8 @@ namespace Raven.Server.Documents.Queries
                     KeywordAnalyzer keywordAnalyzer => keywordAnalyzer,
                     // here we force a lower case keyword analyzer to ensure proper behavior
                     // https://ayende.com/blog/191841-B/understanding-query-processing-and-wildcards-in-ravendb
-                    RavenStandardAnalyzer or NGramAnalyzer or StandardAnalyzer => WildcardAnalyzer.Value,
+                    RavenStandardAnalyzer or NGramAnalyzer => WildcardAnalyzer.Value,
+                    StandardAnalyzer when analyzerToUse.GetType() == typeof(StandardAnalyzer) => WildcardAnalyzer.Value,
                     LowerCaseKeywordAnalyzer or CollationAnalyzer => analyzer,
                     // if the user has a custom analyzer, we'll use that, and they can deal with any surprises
                     // in wildcard queries
