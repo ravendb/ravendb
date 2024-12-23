@@ -363,13 +363,30 @@ namespace Voron.Impl.Backup
                                     env.Options.InitialFileSize ?? env.Options.InitialLogFileSize,
                                     env.Options.Encryption.IsEnabled);
                             toDispose.Add(recoveryPager);
-                            
+
+
+                            Guid databaseId = txw.Id is 2 ?
+                                // tx #1 - creates the StorageEnvironment - so here we ask if this is
+                                // the very first real transaction, and we are restoring, then there _isn't_ a valid value
+                                // for the DatabaseId. We created a _new_ database instance (with new id!) that won't match what
+                                // we have in the backup. So we need to mark it as empty, otherwise, we won't accept the transactions
+                                // for the old db id.
+                                Guid.Empty :
+                                txw.Environment.DbId;
+
                             using (var reader = new JournalReader(env, journalPager, journalPagerState, txw.DataPager, recoveryPager, new HashSet<long>(),
-                                       new JournalInfo { LastSyncedTransactionId = lastTxId }, new FileHeader { HeaderRevision = -1 }, lastTxHeader))
+                                       new JournalInfo { LastSyncedTransactionId = lastTxId }, new FileHeader { HeaderRevision = -1, DatabaseId = databaseId },
+                                       lastTxHeader))
                             {
-                                while (reader.ReadOneTransactionToDataFile(ref txw.DataPagerState, ref recoverPagerState, ref txw.PagerTransactionState,fileHandle, env.Options))
+                                while (reader.ReadOneTransactionToDataFile(ref txw.DataPagerState, ref recoverPagerState, ref txw.PagerTransactionState, fileHandle,
+                                           env.Options))
                                 {
                                     lastTxHeader = reader.LastTransactionHeader;
+                                }
+
+                                if (reader.DatabaseId != databaseId)
+                                {
+                                    env.FillBase64Id(reader.DatabaseId);
                                 }
 
                                 reader.ZeroRecoveryBufferIfNeeded(recoverPagerState, ref txw.PagerTransactionState, env.Options);
@@ -405,7 +422,7 @@ namespace Voron.Impl.Backup
                 {
                     header.TransactionId = lastTxHeader->TransactionId;
                     header.LastPageNumber = lastTxHeader->LastPageNumber;
-                    
+                    header.DatabaseId = env.DbId;
                     header.Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
                 
                     header.Root = lastTxHeader->Root;

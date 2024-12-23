@@ -60,7 +60,7 @@ namespace Voron.Impl.Journal
             _readAt4Kb = 0;
             LastTransactionHeader = previous;
             _journalPagerNumberOfAllocated4Kb = _journalPagerState.TotalAllocatedSize / (4 * Constants.Size.Kilobyte);
-
+            DatabaseId = _currentFileHeader.DatabaseId;
             if (journalPager.Options.Encryption.IsEnabled)
                 _encryptionBuffers = new List<Pager.EncryptionBuffer>();
         }
@@ -542,8 +542,13 @@ namespace Voron.Impl.Journal
                 }
 
                 _next4Kb = _readAt4Kb + GetTransactionSizeIn4Kb(current);
+
+                if (DatabaseId == Guid.Empty)
+                {
+                    DatabaseId = current->DatabaseId;
+                }
                 
-                if (current->DatabaseId != _currentFileHeader.DatabaseId &&
+                if (current->DatabaseId != DatabaseId &&
                     current->DatabaseId != Guid.Empty) // this may be legacy
                 {
                     // not our env, skip processing it
@@ -585,7 +590,7 @@ namespace Voron.Impl.Journal
                 if (TryValidateTransaction(options, ref txState, out var current) is false)
                     continue;
                 
-                if (current->DatabaseId == _currentFileHeader.DatabaseId ||
+                if (current->DatabaseId == DatabaseId ||
                     current->DatabaseId == Guid.Empty && Legacy_IsOldTransactionFromRecycledJournal(current))
                 {
                     // This is a valid transaction, but if all the transactions *up to it* are sync-ed, then we know that we can 
@@ -620,6 +625,8 @@ namespace Voron.Impl.Journal
                 throw new InvalidJournalException(message, _journalInfo);
             }
         }
+
+        public Guid DatabaseId;
 
         private bool CanIgnoreDataIntegrityErrorBecauseTxWasSynced(long transactionId, StorageEnvironmentOptions options)
         {
