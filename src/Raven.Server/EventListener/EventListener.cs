@@ -18,6 +18,7 @@ public class EventListener
                 public const string GCFinalizersEnd = "GCFinalizersEnd_V1";
                 public const string GCJoin = "GCJoin_V2";
                 public const string GCHeapStats = "GCHeapStats_V2";
+                public const string GCMarkWithType = "GCMarkWithType";
             }
 
             public class Allocations
