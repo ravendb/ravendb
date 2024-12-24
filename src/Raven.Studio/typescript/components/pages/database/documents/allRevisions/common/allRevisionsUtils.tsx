@@ -164,7 +164,7 @@ function CheckboxCell({ rowValue, rowSelection, setRowSelection }: CheckboxCellP
                 isActive: isDeleteRevision,
                 message: (
                     <div className="text-center">
-                        A "Delete Revision" can only be deleted from the
+                        A &quot;Delete Revision&quot; can only be deleted from the
                         <br />
                         <a href={forCurrentDatabase.revisionsBin()} target="_blank">
                             Revisions Bin view
