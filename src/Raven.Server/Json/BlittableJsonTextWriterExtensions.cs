@@ -1594,7 +1594,7 @@ namespace Raven.Server.Json
                     writer.WriteString(key);
                     writer.WriteComma();
                 
-                    writer.WritePropertyName(nameof(RevisionIncludeResult.Before));
+                    writer.WritePropertyName(nameof(RevisionIncludeResult.Id));
                     writer.WriteString(document.Id.ToString());
                     writer.WriteComma();
                 
