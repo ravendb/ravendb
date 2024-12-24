@@ -727,6 +727,12 @@ namespace Voron
                 return fileInfo.Length;
             }
 
+            public override bool CanJournalsBeLinkedWith(StorageEnvironmentOptions other)
+            {
+                return other is DirectoryStorageEnvironmentOptions && 
+                       CanJournalsBeLinkedWith(other.JournalPath, JournalPath);
+            }
+
             public override (Pager Pager, Pager.State State) OpenJournalPager(long journalNumber, JournalInfo journalInfo)
             {
                 var fileInfo = GetJournalFileInfo(journalNumber, journalInfo);
@@ -982,6 +988,12 @@ namespace Voron
                     return new FileInfo(value.FileName.FullPath).Length;
                 throw new InvalidJournalException(journalNumber, journalInfo);
             }
+
+            public override bool CanJournalsBeLinkedWith(StorageEnvironmentOptions other)
+            {
+                return other is PureMemoryStorageEnvironmentOptions && 
+                       CanJournalsBeLinkedWith(TempPath, other.TempPath);
+            }
         }
 
         public static string JournalName(long number)
@@ -1204,6 +1216,24 @@ namespace Voron
         internal sealed class TestingStuff
         {
             public int? WriteToJournalCompressionAcceleration = null;
+        }
+
+        public abstract bool CanJournalsBeLinkedWith(StorageEnvironmentOptions other);
+        
+        protected static bool CanJournalsBeLinkedWith(VoronPathSetting otherPath, VoronPathSetting selfPath)
+        {
+            string fileName = Guid.NewGuid() + ".test-hard-link";
+            string src = otherPath.Combine(fileName).FullPath;
+            string dst = selfPath.Combine(fileName).FullPath;
+            File.WriteAllText(src, "This file was created to see if hard links between document database & index work");
+            var rc = Pal.rvn_hard_link(src,dst,out _);
+              
+            File.Delete(src);
+            if (rc != PalFlags.FailCodes.Success)
+                return false;
+                
+            File.Delete(dst);
+            return true;
         }
     }
 }

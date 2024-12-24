@@ -50,6 +50,10 @@ namespace Raven.Server.Documents.Handlers.Processors.Debugging
                         writer.WritePropertyName("Type");
                         writer.WriteString(env.Type.ToString());
                         writer.WriteComma();
+                        
+                        writer.WritePropertyName("SharedJournals");
+                        writer.WriteString(env.Environment.Options.RootJournal is null ? "Root" : "Branch");
+                        writer.WriteComma();
 
                         var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(GetReport(env));
                         writer.WritePropertyName("Report");

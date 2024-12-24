@@ -591,17 +591,8 @@ namespace Raven.Server.Documents.Indexes
 
         private static void AttemptToLinkDatabaseAndIndexJournals(string name, StorageEnvironmentOptions indexOptions, DocumentDatabase documentDatabase)
         {
-            string fileName = Guid.NewGuid() + ".test-hard-link";
-            string src = documentDatabase.DocumentsStorage.Environment.Options.JournalPath.Combine(fileName).FullPath;
-            string dst = indexOptions.JournalPath.Combine(fileName).FullPath;
-            File.WriteAllText(src, "This file was created to see if hard links between document database & index work");
-            var rc = Pal.rvn_hard_link(src,dst,out var errorCode);
-            File.Delete(src);
-            if (rc == PalFlags.FailCodes.Success)
+            if (indexOptions.CanJournalsBeLinkedWith(documentDatabase.DocumentsStorage.Environment.Options))
             {
-                File.Delete(src);
-                File.Delete(dst);
-                
                 // here we enable the root / branch model for this index
                 indexOptions.RootJournal = documentDatabase.DocumentsStorage.Environment.Journal;
                 return;
@@ -610,7 +601,7 @@ namespace Raven.Server.Documents.Indexes
             var logger = documentDatabase.Loggers.GetLogger(typeof(Index));
             if (logger.IsWarnEnabled)
             {
-                logger.Warn($"Unable to create hard links between '{documentDatabase.DocumentsStorage.Environment.Options.JournalPath}' and '{indexOptions.JournalPath}', rc={rc}, error={errorCode}." +
+                logger.Warn($"Unable to create hard links between '{documentDatabase.DocumentsStorage.Environment.Options.JournalPath}' and '{indexOptions.JournalPath}'." +
                             $"Shared journals mode is disabled for this index: {name}");
             }
         }

@@ -82,10 +82,10 @@ namespace Voron.Impl.Journal
 
         public ScopeForSharedJournals SharedJournalsScope(CancellationToken mergedCommits)
         {
-            if (_mergedCommits != CancellationToken.None)
+            if (_rootJournalMergedCommitsCts != null) 
                 throw new InvalidOperationException("Already using shared scope, can only be done once");
 
-            _mergedCommits = mergedCommits;
+            _rootJournalMergedCommitsCts = CancellationTokenSource.CreateLinkedTokenSource(mergedCommits);
             return new ScopeForSharedJournals(this);
         }
 
@@ -93,9 +93,7 @@ namespace Voron.Impl.Journal
         {
             public void Dispose()
             {
-                using var cts = new CancellationTokenSource();
-                cts.Cancel();
-                journal._mergedCommits = cts.Token;
+                journal._rootJournalMergedCommitsCts.Cancel();
                 journal.RejectCommitsToMerge();
             }
         }
@@ -1630,6 +1628,11 @@ namespace Voron.Impl.Journal
                 {
                     Task branchCommit = null;
                     var rootJournal = _env.Options.RootJournal ?? this;
+                    if(_env.Options.RootJournal != null && rootJournal._rootJournalMergedCommitsCts is null)
+                    {
+                        throw new InvalidOperationException("Unable to commit as a branch if the root journal I'm associated with is not within a shared journal scope");
+                    }
+                    
                     if (tx.ShouldWriteTransactionChangesToJournal)
                     {
                         var start = Stopwatch.GetTimestamp();
@@ -1675,18 +1678,23 @@ namespace Voron.Impl.Journal
         public event Action OnBranchJournalEntrySubmitted; 
         private void SubmitBranchJournalEntry(Task commitCompleted)
         {
-            var token = _mergedCommits;
-            token.ThrowIfCancellationRequested();
+            Debug.Assert(_env.Options.RootJournal is null, "_env.Options.RootJournal is null");
+            {
+                var token = _rootJournalMergedCommitsCts.Token;
+                token.ThrowIfCancellationRequested();
+            }
             var handler = OnBranchJournalEntrySubmitted;
             if(handler == null)
                 throw new InvalidOperationException($"Call to {nameof(SubmitBranchJournalEntry)} when there is no handler registered for the journal {nameof(OnBranchJournalEntrySubmitted)}");
-            
-            if (_disposeRunner.DisposedRequested)
-                throw new ObjectDisposedException(nameof(WriteAheadJournal));
-          
+           
             handler();
+            
             // here we are going to wait for the root to do the actual write to disk
-            commitCompleted.Wait(token);
+            // note that we *explicitly* do NOT use the cancellation token, since 
+            // we _must_ wait in the branch until the root releases us, because the 
+            // may be in the middle of writing from our buffer and returning here
+            // will release this memory pre-maturely
+            commitCompleted.Wait();
         }
 
         private void WriteBuffersToJournal(LowLevelTransaction tx)
@@ -2320,7 +2328,7 @@ namespace Voron.Impl.Journal
         }
 
         private TestingStuff _forTestingPurposes;
-        private CancellationToken _mergedCommits = default;
+        private CancellationTokenSource _rootJournalMergedCommitsCts;
 
         internal TestingStuff ForTestingPurposesOnly()
         {

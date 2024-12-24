@@ -69,6 +69,8 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
 
             using var root = new StorageEnvironment(rootOptions);
             branchOptions.RootJournal = root.Journal;
+            using var _ = root.Journal.SharedJournalsScope(CancellationToken.None);
+        
             using var branch = new StorageEnvironment(branchOptions);
 
             using (var rootTx = root.ReadTransaction())
@@ -121,6 +123,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             branchOptions.ManualSyncing = true;
 
             using var root = new StorageEnvironment(rootOptions);
+            using var _ = root.Journal.SharedJournalsScope(CancellationToken.None);
             branchOptions.RootJournal = root.Journal;
             using var branch = new StorageEnvironment(branchOptions);
 
