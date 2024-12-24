@@ -12,6 +12,7 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
     private EventWrittenEventArgs _suspendData;
     private DateTime? _timeGcRestartStart;
     private DateTime? _timeGcFinalizersStart;
+    private GCEvent.MarkDetails _markDetails = new();
 
     protected override HashSet<EventType> DefaultEventTypes => EventListenerToLog.GcEvents;
 
@@ -35,7 +36,7 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
                     var reason = (uint)eventData.Payload[2];
                     _timeGcStartByIndex[startIndex] = (eventData.TimeStamp, generation, reason);
                 }
-                
+
                 return true;
 
             case EventListener.Constants.EventNames.GC.GCEnd:
@@ -45,14 +46,15 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
 
                     if (_timeGcStartByIndex.TryGetValue(endIndex, out var tuple))
                     {
-                        var @event = new GCEvent(tuple.DateTime, eventData, endIndex, tuple.Generation, tuple.Reason);
+                        var @event = new GCEvent(tuple.DateTime, eventData, endIndex, tuple.Generation, tuple.Reason, _markDetails);
                         if (@event.DurationInMs >= MinimumDurationInMs)
                             OnEvent.Invoke(@event);
 
                         _timeGcStartByIndex.Remove(endIndex);
+                        _markDetails = new GCEvent.MarkDetails();
                     }
                 }
-                
+
                 return true;
 
             case EventListener.Constants.EventNames.GC.GCSuspendBegin:
@@ -117,11 +119,28 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
                 }
 
                 return true;
-            
+
             case EventListener.Constants.EventNames.GC.GCHeapStats:
                 if (EventTypes.Contains(EventType.GCHeapStats))
                 {
                     OnEvent.Invoke(new GCHeapStatsEvent(EventType.GCHeapStats, eventData));
+                }
+
+                return true;
+
+            case EventListener.Constants.EventNames.GC.GCMarkWithType:
+                if (EventTypes.Contains(EventType.GC))
+                {
+                    if (_markDetails.First == null)
+                    {
+                        _markDetails.First = eventData.TimeStamp;
+                    }
+                    else
+                    {
+                        _markDetails.Last = eventData.TimeStamp;
+                    }
+
+                    _markDetails.TotalBytes += (ulong)eventData.Payload[3];
                 }
 
                 return true;
@@ -183,12 +202,24 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
 
         private string Reason { get; }
 
-        public GCEvent(DateTime start, EventWrittenEventArgs eventData, long index, uint generation, uint reason)
+        private MarkDetails MarkInfo { get; }
+
+        internal struct MarkDetails
+        {
+            public DateTime? First;
+
+            public DateTime? Last;
+
+            public ulong TotalBytes;
+        }
+
+        public GCEvent(DateTime start, EventWrittenEventArgs eventData, long index, uint generation, uint reason, MarkDetails markDetails)
             : base(EventType.GC, start, eventData)
         {
             Index = index;
             Generation = generation;
             Reason = GetGcReason(reason);
+            MarkInfo = markDetails;
         }
 
         public override DynamicJsonValue ToJson()
@@ -203,7 +234,14 @@ public class GcEventsHandler : AbstractEventsHandler<GcEventsHandler.GCEventBase
         public override string ToString()
         {
             var str = base.ToString();
-            return $"{str}, index: {Index}, generation: {Generation}, reason: {Reason}";
+            var output = $"{str}, index: {Index}, generation: {Generation}, reason: {Reason}";
+            if (MarkInfo.First != null && MarkInfo.Last != null)
+            {
+                double markDurationInMs = (MarkInfo.Last - MarkInfo.First).Value.TotalMilliseconds;
+                output += $", mark duration: {markDurationInMs}ms, {(markDurationInMs / DurationInMs * 100):F2}% of GC time, total marked: {new Size((long)MarkInfo.TotalBytes, SizeUnit.Bytes)}";
+            }
+
+            return output;
         }
 
         private static string GetGcReason(uint valueReason)
