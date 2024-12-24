@@ -20,6 +20,9 @@ public class DebugMemoryTests : NoDisposalNeeded
         Assert.True(Environment.Version.Major == 8 && EventListener.Constants.EventNames.GC.GCEnd == "GCEnd_V1",
             "Check if GCEnd event was updated: https://github.com/dotnet/runtime/blob/main/src/coreclr/gc/gcevents.h");
 
+        Assert.True(Environment.Version.Major == 8 && EventListener.Constants.EventNames.GC.GCMarkWithType == "GCMarkWithType",
+            "Check if GCEnd event was updated: https://github.com/dotnet/runtime/blob/main/src/coreclr/gc/gcevents.h");
+
         Assert.True(Environment.Version.Major == 8 && EventListener.Constants.EventNames.GC.GCSuspendBegin == "GCSuspendEEBegin_V1",
             "Check if GCSuspendBegin event was updated: https://github.com/dotnet/runtime/blob/main/src/coreclr/gc/gcevents.h");
 
