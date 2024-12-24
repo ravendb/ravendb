@@ -1739,7 +1739,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        _database.DocumentsStorage.Put(context, id, expectedChangeVector: null, document.Data, document.LastModified.Ticks, document.ChangeVector, null, document.Flags, document.NonPersistentFlags | NonPersistentDocumentFlags.FromImport);
+                        _database.DocumentsStorage.Put(context, id, expectedChangeVector: null, document.Data, document.LastModified.Ticks, document.ChangeVector, null, document.Flags, document.NonPersistentFlags | NonPersistentDocumentFlags.FromSmuggler);
                     }
                     catch (DocumentCollectionMismatchException)
                     {

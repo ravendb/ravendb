@@ -56,8 +56,7 @@ namespace Raven.Server.Documents
         ByTimeSeriesUpdate = 0x4000,
         LegacyDeleteMarker = 0x8000,
         ForceRevisionCreation = 0x10000,
-        AllowDataAsNull = 0x20000,
-        FromImport = 0x40000
+        AllowDataAsNull = 0x20000
     }
 
     public static class EnumExtensions
