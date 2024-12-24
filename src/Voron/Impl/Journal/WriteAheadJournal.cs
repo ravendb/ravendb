@@ -93,7 +93,9 @@ namespace Voron.Impl.Journal
         {
             public void Dispose()
             {
-                journal._mergedCommits= CancellationToken.None;
+                using var cts = new CancellationTokenSource();
+                cts.Cancel();
+                journal._mergedCommits = cts.Token;
                 journal.RejectCommitsToMerge();
             }
         }
@@ -239,18 +241,16 @@ namespace Voron.Impl.Journal
                     using (var journalReader = new JournalReader(_env, journalPager, journalPagerState, dataPager, recoveryPager, modifiedPages, logInfo, currentFileHeader, transactionHeader))
                     {
                         var transactionHeaders = journalReader.RecoverAndValidate(ref dataPagerState, ref recoveryPagerState, ref txState, _env.Options);
-
-                        var lastReadHeaderPtr = journalReader.LastTransactionHeader;
-
-                        if (lastReadHeaderPtr != null)
+       
+                        if (transactionHeaders.Count > 0)
                         {
-                            if (lastFlushedJournal != -1 && lastReadHeaderPtr->TransactionId < lastFlushedTxId)
+                            *txHeader = transactionHeaders[^1];
+
+                            if (lastFlushedJournal != -1 && txHeader->TransactionId < lastFlushedTxId)
                             {
                                 throw new InvalidOperationException(
-                                $"After recovering {journalPager.FileName} file we got tx {lastReadHeaderPtr->TransactionId} as the last one but it's lower than last flushed transaction - tx {lastFlushedTxId} (from {StorageEnvironmentOptions.JournalName(lastFlushedJournal)})");
+                                    $"After recovering {journalPager.FileName} file we got tx {txHeader->TransactionId} as the last one but it's lower than last flushed transaction - tx {lastFlushedTxId} (from {StorageEnvironmentOptions.JournalName(lastFlushedJournal)})");
                             }
-
-                            *txHeader = *lastReadHeaderPtr;
                             lastFlushedTxId = txHeader->TransactionId;
 
                             if (journalReader.Next4Kb > 0) // only if journal has some data
@@ -406,19 +406,15 @@ namespace Voron.Impl.Journal
                 {
                     // last flushed journal might not exist because it could be already deleted and the only journal we have is empty
                     TransactionHeader lastFlushedTxHeader = instanceOfLastFlushedJournal.GetLastReadTxHeader(lastFlushedTxId);
+                    if (lastFlushedTxHeader.TransactionId is -1)
+                    {
+                        throw new InvalidOperationException(
+                            $"Could not find expected transaction id {lastFlushedTxId} in journal file {instanceOfLastFlushedJournal.Number}");
+                    }
                     _journalApplicator.SetLastFlushed(new JournalApplicator.LastFlushState(lastFlushedTxId, 
                             instanceOfLastFlushedJournal, toDelete, lastFlushedTxHeader.TransactionId, 
                             lastFlushedTxHeader.Root, lastFlushedTxHeader.LastPageNumber));
                 }
-#if DEBUG
-                if (instanceOfLastFlushedJournal == null)
-                {
-                    Debug.Assert(toDelete.Count == 0 || (toDelete.Count >= 1 && deleteLastJournal),
-                        $"Last flushed journal (number: {lastFlushedJournal}) doesn't exist so we didn't call {nameof(_journalApplicator.SetLastFlushed)}" +
-                        $" and didn't mark to delete last journal but," +
-                        $" there are still some journals to delete ({string.Join(", ", toDelete.Select(x => x.Number))}. )");
-                }
-#endif
             }
 
             _journalIndex = lastProcessedJournal;
@@ -429,14 +425,14 @@ namespace Voron.Impl.Journal
                 {
                     _files[i].DoneWriting.Raise();
                 }
-                var lastFile = _files.Last();
+                var lastFile = _files[^1];
                 if (lastFile.GetAvailable4Kbs(_env.CurrentStateRecord) >= 2 &&
                     lastFile.HasLegacyTransaction is false)
                     // it must have at least one page for the next transaction header and one 4kb for data
                 {
                     CurrentFile = lastFile;
                 }
-
+                else
                 {
                     lastFile.DoneWriting.Raise();
                 }
@@ -1677,7 +1673,7 @@ namespace Voron.Impl.Journal
         }
 
         public event Action OnBranchJournalEntrySubmitted; 
-        private void SubmitBranchJournalEntry( Task commitCompleted)
+        private void SubmitBranchJournalEntry(Task commitCompleted)
         {
             var token = _mergedCommits;
             token.ThrowIfCancellationRequested();

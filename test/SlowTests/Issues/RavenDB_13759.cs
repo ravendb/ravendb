@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
+using Sparrow.Server.Platform;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -170,6 +171,46 @@ namespace SlowTests.Issues
             }
         }
 
+        
+        
+        [Fact]
+        public async Task IndexesJouranlsUseHardLinksToDatabaseJournal()
+        {
+            var serverPath = NewDataPath();
+            var databasePath = NewDataPath();
+            string indexStoragePath1, indexStoragePath2;
+            string databaseName;
+
+            var index = new Orders_ByOrderBy();
+
+            using (var server = GetNewServer(new ServerCreationOptions { DataDirectory = serverPath, RunInMemory = false }))
+            using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, Path = databasePath }))
+            {
+                databaseName = store.Database;
+                index.Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var orders = session.Query<Order>()
+                        .Where(x => x.OrderedAt >= DateTime.Now)
+                        .ToList();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                indexStoragePath1 = database.IndexStore.GetIndex(index.IndexName)._environment.Options.BasePath.FullPath;
+                indexStoragePath2 = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt")._environment.Options.BasePath.FullPath;
+
+                var dbJrnl = Directory.GetFiles(Path.Combine(databasePath, "Journals"), "*.journal").Last();
+                var idx1Jrnl = Directory.GetFiles(Path.Combine(indexStoragePath1, "Journals"), "*.journal").Last();
+                var idx2Jrnl = Directory.GetFiles(Path.Combine(indexStoragePath2, "Journals"), "*.journal").Last();
+
+                Assert.True(Pal.rvn_is_same_hard_link(dbJrnl, idx1Jrnl));
+                Assert.True(Pal.rvn_is_same_hard_link(dbJrnl, idx2Jrnl));
+            }
+
+        }
         [Fact]
         public void WhenUsingExactOnDateTimeOffsetWeShouldBeAbleToQueryByThisValue()
         {

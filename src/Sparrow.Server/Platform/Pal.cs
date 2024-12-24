@@ -269,6 +269,17 @@ namespace Sparrow.Server.Platform
             return rvn_is_same_hard_link(convertSrc.Pointer, convertDst.Pointer, out isSame, out errorCode);
         }
         
+        public static bool rvn_is_same_hard_link(string src, string dst)
+        {
+            var rc = rvn_is_same_hard_link(src, dst, out var isSame, out var errorCode);
+            if (rc != PalFlags.FailCodes.Success)
+            {
+                PalHelper.ThrowLastError(rc, errorCode, "Failed to check hard link");
+            }
+
+            return isSame;
+        }
+
         
         [DllImport(LIBRVNPAL, SetLastError = true)]
         private static extern PalFlags.FailCodes

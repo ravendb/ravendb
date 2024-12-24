@@ -340,7 +340,7 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
 
     
     [RavenFact(RavenTestCategory.Voron)]
-    public void JournalsAreDeletesInRootAndBranch()
+    public void JournalsAreDeletedInRootAndBranch()
     {
         string rootPath = NewDataPath(suffix: "-root");
         string branchPath = NewDataPath(suffix: "-branch");
@@ -476,6 +476,137 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
             {
                 // here we fail because we have a mix of tx in the journal, from multiple ids
             }
+        }
+    }
+    
+    
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CanRecoverRootWhenLastJournalIsJustBranchCommits()
+    {
+        string rootPath = NewDataPath(suffix: "-root");
+        string branchPath = NewDataPath(suffix: "-branch");
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+            rootOptions.MaxLogFileSize = 4096 * 3;
+
+            using var root = new StorageEnvironment(rootOptions);
+            using var _ = root.Journal.SharedJournalsScope(CancellationToken.None);
+
+            using (var rootTx = root.WriteTransaction())
+            {
+                Tree tree = rootTx.CreateTree("rootTree");
+                tree.Add("root", "yes");
+                tree.Add("branch", "no");
+                rootTx.Commit();
+            }
+            root.FlushLogToDataFile();
+
+            var mre = new ManualResetEventSlim(false);
+            root.Journal.OnBranchJournalEntrySubmitted += () =>
+            {
+                mre.Set();
+            };
+
+            var task = Task.Run(() =>
+            {
+                using var branch = CreateBranchEnv(branchPath, root);
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var branchTx = branch.WriteTransaction())
+                    {
+                        Tree tree = branchTx.CreateTree("branchTree");
+                        tree.Add("root", i.ToString());
+                        branchTx.Commit();
+                    }
+                    
+                }
+            });
+            task.ContinueWith(_ => mre.Set());
+
+            WaitForTaskAndExecuteBranchTransactions(task, mre, root);
+        }
+
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+            rootOptions.MaxLogFileSize = 4096 * 4;
+            using var root = new StorageEnvironment(rootOptions);
+
+            root.FlushLogToDataFile();
+            root.SyncDataFileImmediately();
+        }
+    }
+    
+    
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CanRecoverRootWhenLastJournalIsJustBranchCommits_WithNoRootTransactionsAtAll()
+    {
+        string rootPath = NewDataPath(suffix: "-root");
+        string branchPath = NewDataPath(suffix: "-branch");
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+            rootOptions.MaxLogFileSize = 4096 * 3;
+
+            using var root = new StorageEnvironment(rootOptions);
+            using var _ = root.Journal.SharedJournalsScope(CancellationToken.None);
+
+            for (int i = 0; i < 2; i++)
+            {
+                using (var rootTx = root.WriteTransaction())
+                {
+                    Tree tree = rootTx.CreateTree("rootTree");
+                    tree.Add("root", i.ToString());
+                    rootTx.Commit();
+                }
+            }
+
+            // Previous 3 txs should cover all journal
+            Assert.Null(root.Journal.CurrentFile);
+            root.FlushLogToDataFile();
+            root.SyncDataFileImmediately();
+
+            string[] rootJournals = Directory.GetFiles(root.Options.JournalPath.FullPath);
+            Assert.Empty(rootJournals);
+
+            var mre = new ManualResetEventSlim(false);
+            root.Journal.OnBranchJournalEntrySubmitted += () =>
+            {
+                mre.Set();
+            };
+
+            var task = Task.Run(() =>
+            {
+                using var branch = CreateBranchEnv(branchPath, root);
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var branchTx = branch.WriteTransaction())
+                    {
+                        Tree tree = branchTx.CreateTree("branchTree");
+                        tree.Add("root", i.ToString());
+                        branchTx.Commit();
+                    }
+                    
+                }
+            });
+            task.ContinueWith(_ => mre.Set());
+
+            WaitForTaskAndExecuteBranchTransactions(task, mre, root);
+        }
+
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+            rootOptions.MaxLogFileSize = 4096 * 3;
+            using var root = new StorageEnvironment(rootOptions);
+
+            root.FlushLogToDataFile();
+            root.SyncDataFileImmediately();
         }
     }
 }
