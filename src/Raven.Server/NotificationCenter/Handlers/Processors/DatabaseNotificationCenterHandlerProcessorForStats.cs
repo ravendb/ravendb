@@ -96,6 +96,10 @@ internal sealed class DatabaseNotificationCenterHandlerProcessorForStats : Abstr
 
                 writer.WriteEndObject();
             }
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.CountOfRevisions));
+            writer.WriteInteger(stats.CountOfRevisions);
 
             writer.WriteEndObject();
         }
