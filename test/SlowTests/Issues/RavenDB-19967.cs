@@ -358,7 +358,7 @@ namespace SlowTests.Issues
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.QueueEtl;
                         break;
                     case EtlType.Snowflake:
-                        var snowflakeConnectionString = new SnowflakeConnectionString { Name = store.Identifier, ConnectionString = global::Tests.Infrastructure.ConnectionString.SnowflakeConnectionString.Instance.VerifiedConnectionString.Value};
+                        var snowflakeConnectionString = new SnowflakeConnectionString { Name = store.Identifier,  ConnectionString = "ACCOUNT = SnowflakeAccount; USER = SnowflakeUser; PASSWORD = SnowflakePassword",};
                         var snowflakeConfiguration = new SnowflakeEtlConfiguration { Name = _customTaskName, ConnectionStringName = snowflakeConnectionString.Name, Transforms = { transforms }, SnowflakeTables = { new SnowflakeEtlTable {TableName = "Orders", DocumentIdColumn = "Id"}}};
                         taskId = await AddEtlAndDisableIt(store, snowflakeConnectionString, snowflakeConfiguration, OngoingTaskType.SnowflakeEtl);
                         blockerType = ITombstoneAware.TombstoneDeletionBlockerType.SnowflakeEtl;

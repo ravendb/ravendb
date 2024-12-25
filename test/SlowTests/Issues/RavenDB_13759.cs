@@ -12,6 +12,7 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
 using Sparrow.Server.Platform;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -173,7 +174,7 @@ namespace SlowTests.Issues
 
         
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task IndexesJouranlsUseHardLinksToDatabaseJournal()
         {
             var serverPath = NewDataPath();

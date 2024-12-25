@@ -1606,7 +1606,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private void CurrentFileIsDone()
+        public void CurrentFileIsDone()
         {
             // Note, if this is a root/branch situation, the same
             // flag is used by all instances of this journal file

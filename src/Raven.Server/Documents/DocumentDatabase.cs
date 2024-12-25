@@ -414,7 +414,7 @@ namespace Raven.Server.Documents
                 NotificationCenter.Initialize();
 
                 _addToInitLog(LogLevel.Debug, "Initializing DocumentStorage");
-                DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
+                DocumentsStorage.Initialize(options);
                 _addToInitLog(LogLevel.Debug, "Starting Transaction Merger");
                 TxMerger.Initialize(DocumentsStorage.ContextPool, IsEncrypted, Is32Bits);
                 TxMerger.Start();
