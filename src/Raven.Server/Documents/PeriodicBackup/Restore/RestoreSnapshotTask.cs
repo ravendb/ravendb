@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             Result.Files.FileCount = FilesToRestore.Count + 1;
 
-            Options |= InitializeOptions.GenerateNewDatabaseId | InitializeOptions.ForceNewJournalFile;
+            Options |= InitializeOptions.GenerateNewDatabaseId;
 
             Progress.Invoke(Result.Progress);
 

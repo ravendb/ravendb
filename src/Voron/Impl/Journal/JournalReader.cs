@@ -521,6 +521,8 @@ namespace Voron.Impl.Journal
             }
         }
 
+        public readonly HashSet<Guid> RecoveredJournalIds = [];
+        
         private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState, out TransactionHeader* current)
         {
             for (; _readAt4Kb < _journalPagerNumberOfAllocated4Kb; _readAt4Kb++)
@@ -540,6 +542,8 @@ namespace Voron.Impl.Journal
 
                     return false;
                 }
+
+                RecoveredJournalIds.Add(current->JournalId);
 
                 _next4Kb = _readAt4Kb + GetTransactionSizeIn4Kb(current);
 

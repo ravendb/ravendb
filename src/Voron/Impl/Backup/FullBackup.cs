@@ -6,6 +6,7 @@
 
 using Sparrow.Binary;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -149,7 +150,7 @@ namespace Voron.Impl.Backup
                         {
                             long journalSize = Bits.PowerOf2(env.Options.GetJournalFileSize(journalNum, journalInfo));
 
-                            journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
+                            journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum, FrozenSet<Guid>.Empty);
                         }
 
                         journalFile.AddRef();

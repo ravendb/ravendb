@@ -9,6 +9,7 @@ using Sparrow.Binary;
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -62,6 +63,8 @@ namespace Voron.Impl.Journal
 
         private long _journalIndex = -1;
 
+        public long CurrentJournalIndex => _journalIndex;
+        
         private readonly JournalApplicator _journalApplicator;
 
         private ImmutableAppendOnlyList<JournalFile> _files = ImmutableAppendOnlyList<JournalFile>.Empty;
@@ -161,7 +164,7 @@ namespace Voron.Impl.Journal
 
             _lastFile = now;
 
-            var journal = new JournalFile(_env, journalPager, _journalIndex);
+            var journal = new JournalFile(_env, journalPager, _journalIndex, FrozenSet<Guid>.Empty);
             journal.DoneWriting = new SingleUseFlag();
             journal.AddRef(); // one reference added by a creator - write ahead log
             journal.RegisteredEnvironments[_env] = journal;
@@ -269,7 +272,7 @@ namespace Voron.Impl.Journal
                         if(_env.Options.RootJournal is null)
                         {
                             var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
-                            var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
+                            var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber, journalReader.RecoveredJournalIds.ToFrozenSet());
                             jrnlFile.DoneWriting = new SingleUseFlag();
                             jrnlFile.InitFrom(_env, journalReader, transactionHeaders);
                             jrnlFile.AddRef(); // creator reference - write ahead log
@@ -1606,7 +1609,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public void CurrentFileIsDone()
+        private void CurrentFileIsDone()
         {
             // Note, if this is a root/branch situation, the same
             // flag is used by all instances of this journal file
@@ -1714,7 +1717,9 @@ namespace Voron.Impl.Journal
                     {
                         // there is space to write the current entries, but not if we add the current entry, so flush and then create a new file
                         // note that this can also happen on the first run, when requiredSizeIn4Kbs is 0
-                        if (CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) < requiredSizeIn4Kbs + cur.Entry.NumberOf4Kbs)
+                        if (CurrentFile.GetAvailable4Kbs(tx.CurrentStateRecord) < requiredSizeIn4Kbs + cur.Entry.NumberOf4Kbs ||
+                            // This file may not be valid for this environment, so we need to create a fresh one
+                            CurrentFile.IsValidFileFor(cur.Transaction.Environment) is false)
                         {
                             FlushBuffersToFile(tx, ref requiredSizeIn4Kbs);
                             CurrentFileIsDone();
@@ -1862,7 +1867,7 @@ namespace Voron.Impl.Journal
             JournalFile AddJournal(long index)
             {
                 var journalWriter = _env.Options.CreateJournalWriterForBranchEnvironment(index, existingJournalFileName, journalFile);
-                var journal = new JournalFile(_env, journalWriter, index);
+                var journal = new JournalFile(_env, journalWriter, index, FrozenSet<Guid>.Empty);
                 journal.DoneWriting = journalFile.DoneWriting;
                 journal.AddRef();
                 _files = _files.Append(journal);

@@ -152,7 +152,7 @@ namespace Raven.Server.Documents
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        public void Initialize(InitializeOptions initializeOptions = InitializeOptions.None)
+        public void Initialize(bool generateNewDatabaseId = false)
         {
             if (_logger.IsDebugEnabled)
             {
@@ -180,7 +180,7 @@ namespace Raven.Server.Documents
             options.OnIntegrityErrorOfAlreadySyncedData += DocumentDatabase.HandleOnDatabaseIntegrityErrorOfAlreadySyncedData;
             options.OnRecoverableFailure += DocumentDatabase.HandleRecoverableFailure;
 
-            options.GenerateNewDatabaseId = initializeOptions.HasFlag(InitializeOptions.GenerateNewDatabaseId);
+            options.GenerateNewDatabaseId = generateNewDatabaseId;
             options.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = DocumentDatabase.Configuration.Storage.EnablePrefetching;
@@ -201,7 +201,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                Initialize(options, initializeOptions);
+                Initialize(options);
             }
             catch (Exception)
             {
@@ -232,7 +232,7 @@ namespace Raven.Server.Documents
                 loggingComponent: null);
         }
 
-        private void Initialize(StorageEnvironmentOptions options, InitializeOptions initializeOptions)
+        private void Initialize(StorageEnvironmentOptions options)
         {
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.DocumentsVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Documents, null, this, null);
@@ -283,13 +283,6 @@ namespace Raven.Server.Documents
                     var lastEtagInChangeVector = ChangeVectorUtils.GetEtagById(cv, DocumentDatabase.DbBase64Id);
                     _lastEtag = Math.Max(_lastEtag, lastEtagInChangeVector);
 
-                    if (initializeOptions.HasFlag(InitializeOptions.ForceNewJournalFile))
-                    {
-                        // force a commit to journal even if there are no other changes
-                        tx.LowLevelTransaction.ModifyPage(0);
-                        tx.LowLevelTransaction.Environment.Journal.CurrentFileIsDone();
-                    }
-                    
                     tx.Commit();
                 }
 

@@ -6,6 +6,7 @@
 
 using Sparrow;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
@@ -15,7 +16,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Journal
 {
-    public sealed unsafe class JournalFile(StorageEnvironment env, JournalWriter journalWriter, long journalNumber) : IDisposable
+    public sealed unsafe class JournalFile(StorageEnvironment env, JournalWriter journalWriter, long journalNumber, FrozenSet<Guid> recoveredJournalIds) : IDisposable
     {
         public long LastTransactionId;
 
@@ -23,6 +24,8 @@ namespace Voron.Impl.Journal
 
         private List<TransactionHeader> _transactionHeaders = new();
 
+        public FrozenSet<Guid> RecoveredJournalIds = recoveredJournalIds;
+        
         public override string ToString()
         {
             return $"Number: {Number}";
@@ -33,16 +36,17 @@ namespace Voron.Impl.Journal
         public long Number { get; } = journalNumber;
 
         public SingleUseFlag DoneWriting;
+        private JournalWriter _journalWriter = journalWriter;
 
-        public long GetAvailable4Kbs(EnvironmentStateRecord record) => (journalWriter?.NumberOfAllocated4Kb - GetWritePosIn4KbPosition(record)) ?? 0;
+        public long GetAvailable4Kbs(EnvironmentStateRecord record) => (_journalWriter?.NumberOfAllocated4Kb - GetWritePosIn4KbPosition(record)) ?? 0;
 
-        public Size JournalSize => new Size(journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes);
+        public Size JournalSize => new Size(_journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes);
 
-        internal JournalWriter JournalWriter => journalWriter;
+        internal JournalWriter JournalWriter => _journalWriter;
 
         public void Release()
         {
-            if (journalWriter?.Release() != true)
+            if (_journalWriter?.Release() != true)
                 return;
 
             Dispose();
@@ -50,13 +54,13 @@ namespace Voron.Impl.Journal
 
         public void AddRef()
         {
-            journalWriter?.AddRef();
+            _journalWriter?.AddRef();
         }
 
         public void Dispose()
         {
             _transactionHeaders = null;
-            journalWriter = null;
+            _journalWriter = null;
         }
 
         public TransactionHeader GetLastReadTxHeader(long maxTransactionId)
@@ -139,7 +143,7 @@ namespace Voron.Impl.Journal
         {
             set
             {
-                var writer = journalWriter;
+                var writer = _journalWriter;
 
                 if (writer != null)
                     writer.ShouldDelete = value;
@@ -166,6 +170,45 @@ namespace Voron.Impl.Journal
         public void SetTransactionFrom(Pal.journal_entry journalEntry)
         {
             _transactionHeaders.Add(*(TransactionHeader*)journalEntry.Base);
+        }
+
+        /// <summary>
+        ///  A journal file is valid for a journal id if:
+        /// - There are no existing transactions in the journal for this journal id
+        /// - There *are* existing transactions in the journal *and* that journal is a hard link
+        ///
+        /// The issue is that we may have a snapshot / manual file move that would result in breaking
+        /// of the hard link between shared journals. Consider the case of an index & database that have
+        /// a snapshot taken at time T1 for the index and T2 for the database.
+        ///
+        /// On restore, they journal for the database contains entries for the _index_, but since there is
+        /// no hard link after the restore, we miss them (which is fine and expected). But if we link the
+        /// current journal file from the data to the index, then on recovery, we'll have transactions in an
+        /// out of order manner.
+        ///
+        /// See: Snapshot_should_have_correct_index_entries_after_snapshot_and_incremental_restore_counters
+        /// </summary>
+        public bool IsValidFileFor(StorageEnvironment other)
+        {
+            if (RegisteredEnvironments.ContainsKey(other))
+            {
+                // already there, so it is fine to not check
+                // adding to this is done by EnsureRegistered call that happens 
+                // later in the sequence of operations
+                return true;
+            }
+
+            // if it isn't here, we can safely use it for the other env, because there
+            // are no existing transactions to this environment in the file
+            if (RecoveredJournalIds.Contains(other.HeaderAccessor.JournalId) is false)
+                return true;
+            
+            // there _are_ transactions for the other env in this file, so we now need to 
+            // check whatever those are linked or not. If they are _not_ linked, this means that this
+            // is a restore of a snapshot or user manually moving files, and writing to this journal
+            // may cause a mix of transaction ids, see test:
+            // Snapshot_should_have_correct_index_entries_after_snapshot_and_incremental_restore_counters
+            return other.Options.IsLinked(other.Journal.CurrentJournalIndex, JournalWriter.FileName.FullPath, out _);
         }
     }
 }
