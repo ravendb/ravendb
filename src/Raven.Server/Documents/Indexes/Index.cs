@@ -591,7 +591,8 @@ namespace Raven.Server.Documents.Indexes
 
         private static void AttemptToLinkDatabaseAndIndexJournals(string name, StorageEnvironmentOptions indexOptions, DocumentDatabase documentDatabase)
         {
-            if (indexOptions.CanJournalsBeLinkedWith(documentDatabase.DocumentsStorage.Environment.Options))
+            if (documentDatabase.Configuration.Storage.AvoidSharedJournals is false &&
+                indexOptions.CanJournalsBeLinkedWith(documentDatabase.DocumentsStorage.Environment.Options))
             {
                 // here we enable the root / branch model for this index
                 indexOptions.RootJournal = documentDatabase.DocumentsStorage.Environment.Journal;

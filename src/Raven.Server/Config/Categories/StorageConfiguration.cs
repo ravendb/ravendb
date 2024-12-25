@@ -153,5 +153,9 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.Encrypted.DisableBuffersPooling", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableEncryptionBuffersPooling { get; set; }
 
+        [Description("EXPERT: Avoid shared journals between database & indexes.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Storage.AvoidSharedJournals", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool AvoidSharedJournals { get; set; }
     }
 }
