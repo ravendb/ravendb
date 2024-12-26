@@ -75,6 +75,12 @@ export default function AllRevisions() {
             icon: "trash",
             actionColor: "danger",
             confirmText: "Delete",
+            message: (
+                <RichAlert variant="warning">
+                    Please be aware that this action is irreversible. <br />
+                    Revisions that are removed cannot be recovered.
+                </RichAlert>
+            ),
         });
 
         if (isConfirmed) {
