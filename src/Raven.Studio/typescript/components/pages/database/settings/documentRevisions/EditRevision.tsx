@@ -25,6 +25,8 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import moment from "moment";
 import RichAlert from "components/common/RichAlert";
 import useEditRevisionFormSideEffects from "components/pages/database/settings/documentRevisions/useEditRevisionFormSideEffects";
+import { useAppUrls } from "hooks/useAppUrls";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 const revisionsDelta = 100;
 const revisionsByAgeDelta = 604800; // 7 days
@@ -106,6 +108,9 @@ export default function EditRevision(props: EditRevisionProps) {
         !isDefaultConflicts &&
         ((revisionsAgeInDaysLimit > 0 && minimumRevisionAgeToKeepDays > revisionsAgeInDaysLimit) ||
             (revisionsToKeepLimit > 0 && formValues.minimumRevisionsToKeep > revisionsToKeepLimit));
+
+    const { appUrl } = useAppUrls();
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     return (
         <Modal isOpen toggle={toggle} wrapClassName="bs5" contentClassName="modal-border bulge-info" centered>
@@ -201,13 +206,20 @@ export default function EditRevision(props: EditRevisionProps) {
                     <RichAlert variant="primary" title="Summary" className="mt-2">
                         <ul className="m-0 ps-2 vstack gap-1">
                             <li>
-                                A revision will be created anytime a document is modified
+                                A revision will be created anytime a document is created, modified,
                                 {!formValues.isPurgeOnDeleteEnabled && <span> or deleted</span>}.
                             </li>
                             {formValues.isPurgeOnDeleteEnabled ? (
                                 <li>When a document is deleted all its revisions will be removed.</li>
                             ) : (
-                                <li>Revisions of a deleted document can be accessed in the Revisions Bin view.</li>
+                                <li>
+                                    Revisions of a deleted document can be accessed in the{" "}
+                                    <a href={appUrl.forRevisionsBin(activeDatabaseName)} target="_blank">
+                                        {" "}
+                                        Revisions Bin{" "}
+                                    </a>{" "}
+                                    view.
+                                </li>
                             )}
                             {formValues.minimumRevisionsToKeep > 0 && (
                                 <>

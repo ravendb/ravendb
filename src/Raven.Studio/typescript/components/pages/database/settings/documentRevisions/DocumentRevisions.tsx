@@ -66,6 +66,9 @@ export default function DocumentRevisions() {
         licenseSelectors.statusValue("MaxNumberOfRevisionAgeToKeepInDays")
     );
 
+    const { appUrl } = useAppUrls();
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
         overwrites: [
@@ -371,7 +374,10 @@ export default function DocumentRevisions() {
                                 <div>
                                     A document revision will be created when:
                                     <ul>
-                                        <li>Revisions are defined and enabled for the document&apos;s collection.</li>
+                                        <li>
+                                            Revisions configuration is defined and enabled for the document&apos;s
+                                            collection.
+                                        </li>
                                         <li>The document has been modified.</li>
                                     </ul>
                                 </div>
@@ -405,6 +411,14 @@ export default function DocumentRevisions() {
                                             per collection.
                                         </li>
                                     </ul>
+                                </div>
+                                <div>
+                                    All document revisions that are created are listed in the{" "}
+                                    <a href={appUrl.forAllRevisions(activeDatabaseName)} target="_blank">
+                                        {" "}
+                                        All Revisions{" "}
+                                    </a>{" "}
+                                    view.
                                 </div>
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
