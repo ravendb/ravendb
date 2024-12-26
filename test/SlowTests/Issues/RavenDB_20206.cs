@@ -63,8 +63,7 @@ public class RavenDB_20206 : RavenTestBase
             using (context.OpenReadTransaction())
             {
                 // clean tombstones
-                var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store1.Database, server, true);
-                Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
+                await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: true);
             }
 
             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -85,8 +84,7 @@ public class RavenDB_20206 : RavenTestBase
             using (context.OpenReadTransaction())
             {
                 // clean tombstones
-                var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store2.Database, server, true);
-                Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
+                await Cluster.RunCompareExchangeTombstoneCleaner(server, simulateClusterTransactionIndex: true);
             }
 
             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

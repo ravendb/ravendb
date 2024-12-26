@@ -613,10 +613,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (_forTestingPurposes != null && _forTestingPurposes.BackupStatusFromMemoryOnly)
                 return inMemoryBackupStatus;
-            
+
             return GetBackupStatus(taskId, inMemoryBackupStatus);
         }
-        
+
         private PeriodicBackupStatus GetBackupStatus(long taskId, PeriodicBackupStatus inMemoryBackupStatus)
         {
             var backupStatus = GetBackupStatusFromCluster(_serverStore, _database.Name, taskId);
@@ -631,7 +631,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return BackupUtils.GetBackupStatusFromCluster(serverStore, context, databaseName, taskId);
             }
         }
-
+        
+        private PeriodicBackupStatus GetMostUpdatedLocalBackupStatus(long taskId, PeriodicBackupStatus inMemoryBackupStatus)
+        {
+            var backupStatus = BackupUtils.GetLocalBackupStatus(_serverStore, _database.Name, taskId);
+            return BackupUtils.ComparePeriodicBackupStatus(taskId, backupStatus, inMemoryBackupStatus);
+        }
+        
         private long GetMinLastEtag()
         {
             var min = long.MaxValue;
@@ -648,13 +654,43 @@ namespace Raven.Server.Documents.PeriodicBackup
                         // if there is no status for this, we don't need to take into account tombstones
                         continue; // if the backup is always full, we don't need to take into account the tombstones, since we never back them up.
                     }
-                    var status = BackupUtils.GetBackupStatusFromCluster(_serverStore, context, _database.Name, taskId);
-                    if (status == null)
+
+                    var localStatus = BackupUtils.GetLocalBackupStatus(_serverStore, context, _database.Name, taskId);
+                    if (localStatus == null)
                     {
                         // if there is no status for this, we don't need to take into account tombstones
                         return 0; // cannot delete the tombstones until we've done a full backup
                     }
-                    var etag = ChangeVectorUtils.GetEtagById(status.LastDatabaseChangeVector, _database.DbBase64Id);
+
+                    // if we are not the responsible node, we want to avoid gathering tombstones indefinitely since our local status will not be updated
+                    var responsibleNode = BackupUtils.GetResponsibleNodeTag(_serverStore, _database.Name, taskId);
+                    if (responsibleNode != null && responsibleNode != _serverStore.NodeTag && config.FullBackupFrequency != null)
+                    {
+                        var nextFullBackup = BackupUtils.GetNextBackupOccurrence(new BackupUtils.NextBackupOccurrenceParameters()
+                        {
+                            BackupFrequency = config.FullBackupFrequency,
+                            Configuration = config,
+                            LastBackupUtc = localStatus.LastFullBackupInternal ?? DateTime.MinValue
+                        });
+                        if (nextFullBackup == null)
+                        {
+                            // this is supposed to only happen if full frequency is null - shouldn't happen
+                            // let's not delete any tombstones
+                            return 0;
+                        }
+                        
+                        var now = DateTime.UtcNow;
+                        if (nextFullBackup.Value.ToUniversalTime() < now)
+                        {
+                            // we are overdue for a full backup, we can delete the local status to ensure the next backup will be full
+                            // this is in order to free the tombstone cleaners (for both local and compare exchange tombstones) to delete freely for this node
+
+                            _serverStore.DatabaseInfoCache.DeleteBackupStatus(_database.Name, _serverStore._env.Base64Id, taskId);
+                            continue;
+                        }
+                    }
+
+                    var etag = ChangeVectorUtils.GetEtagById(localStatus.LastDatabaseChangeVector, _database.DbBase64Id);
                     min = Math.Min(etag, min);
                 }
 
@@ -1012,15 +1048,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)
         {
-            string collection = tombstoneType switch
-            {
-                ITombstoneAware.TombstoneType.Documents => Constants.Documents.Collections.AllDocumentsCollection,
-                ITombstoneAware.TombstoneType.TimeSeries => Constants.TimeSeries.All,
-                ITombstoneAware.TombstoneType.Counters => Constants.Counters.All,
-                _ => throw new NotSupportedException($"Tombstone type '{tombstoneType}' is not supported.")
-            };
-
-            var minLastEtag = GetMinLastEtag(lastProcessedTombstonesInfo, collection);
+            var minLastEtag = GetMinLastEtag();
 
             if (minLastEtag == long.MaxValue)
                 return null;

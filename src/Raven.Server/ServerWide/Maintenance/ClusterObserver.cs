@@ -98,7 +98,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public bool Suspended = false; // don't really care about concurrency here
         private readonly BlockingCollection<ClusterObserverLogEntry> _decisionsLog = new BlockingCollection<ClusterObserverLogEntry>();
-        private long _iteration;
+        internal long _iteration;
         private readonly long _term;
         private readonly long _moveToRehabTimeMs;
         private readonly long _maxChangeVectorDistance;
@@ -558,6 +558,9 @@ namespace Raven.Server.ServerWide.Maintenance
 
             cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(state, out long maxEtag);
 
+            if(_server.ForTestingPurposes?.AfterCompareExchangeTombstonesResult != null)
+                _server.ForTestingPurposes?.AfterCompareExchangeTombstonesResult.Invoke(cleanupState);
+
             return cleanupState == CompareExchangeTombstonesCleanupState.HasMoreTombstones 
                 ? new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId()) 
                 : null;
@@ -602,13 +605,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 foreach (var (taskId, status) in report.BackupStatuses)
                 {
                     if (status == null)
-                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
-
-                    if (status.TaskId == null)
-                    {
-                        // the local backup status was null -> never backed up, so we can delete tombstones
                         continue;
-                    }
 
                     var lastFullBackupInternal = status.LastFullBackupInternal;
                     if (lastFullBackupInternal == null)
@@ -622,14 +619,12 @@ namespace Raven.Server.ServerWide.Maintenance
 
                     if (backupConfiguration == null)
                         return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
-                    
-                    // if we only run full backups we can delete tombstones always
-                    if(backupConfiguration.IncrementalBackupFrequency == null)
-                        continue;
 
-                    // we only run incremental backups - never delete tombstones
                     if (backupConfiguration.FullBackupFrequency == null)
-                        return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+                        if (backupConfiguration.IncrementalBackupFrequency == null)
+                            continue; // not valid but possible, we treat it the same as if there is no backup at all
+                        else
+                            return CompareExchangeTombstonesCleanupState.NoMoreTombstones; // we only run incremental backups - never delete tombstones
 
                     if (status.LastRaftIndex == null)
                     {
@@ -657,6 +652,10 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
 
                 var clusterWideTransactionIndex = report.LastClusterWideTransactionRaftIndex;
+
+                if (_server.ForTestingPurposes?.IgnoreClusterTransactionIndexInCompareExchangeCleaner == true)
+                    clusterWideTransactionIndex = long.MaxValue;
+
                 if (minClusterWideTransactionIndex == -1 || clusterWideTransactionIndex < minClusterWideTransactionIndex)
                     minClusterWideTransactionIndex = clusterWideTransactionIndex;
 
@@ -675,7 +674,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             // there are cluster transactions that haven't happened on some of the nodes yet, only delete up to the ones that happened on all
-            if (minClusterWideTransactionIndex < maxEtag)
+            if (maxEtag == -1 || minClusterWideTransactionIndex < maxEtag)
                 maxEtag = minClusterWideTransactionIndex;
 
             if (maxEtag == 0)

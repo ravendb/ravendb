@@ -244,22 +244,11 @@ namespace SlowTests.Server.Documents.TimeSeries
                 }
 
                 var cleaner = storage.TombstoneCleaner;
-                await cleaner.ExecuteCleanup();
-
-                var c = 0L;
-                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    c += storage.DocumentsStorage.GetNumberOfTombstones(context);
-                    c += storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context);
-                    c += storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesPendingDeletionSegments(context);
-                }
-                Assert.True(c > 0);
-
+                
                 await Backup.RunBackupInClusterAsync(store, taskId, isFullBackup: true);
                 await cleaner.ExecuteCleanup();
 
-                c = 0;
+                var c = 0L;
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {

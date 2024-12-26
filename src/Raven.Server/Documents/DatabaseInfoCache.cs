@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Json.Serialization;
 using Raven.Server.ServerWide;
@@ -137,16 +138,39 @@ namespace Raven.Server.Documents
             return periodicBackup;
         }
 
-        public void DeleteBackupStatus(string databaseName, string dbId, long taskId)
+        public bool DeleteBackupStatusesByTaskIds(string databaseName, string dbId, HashSet<long> taskIds)
         {
-            var backupKey = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var tx = ctx.OpenWriteTransaction(TimeSpan.FromSeconds(5)))
-            using (Slice.From(ctx.Allocator, backupKey.ToLowerInvariant(), out Slice key))
+            try
             {
-                DeleteInternal(ctx, key);
-                tx.Commit();
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (var tx = ctx.OpenWriteTransaction(TimeSpan.FromSeconds(5)))
+                {
+                    foreach (var taskId in taskIds)
+                    {
+                        var backupKey = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
+                        using (Slice.From(ctx.Allocator, backupKey.ToLowerInvariant(), out Slice key))
+                        {
+                            DeleteInternal(ctx, key);
+                        }
+                    }
+
+                    tx.Commit();
+
+                    var status = GetBackupStatus(databaseName, dbId, taskIds.First(), ctx);
+                }
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"{databaseName}: Deleted local backup statuses for the following ids [{string.Join(",", taskIds)}], because node with db id {dbId} is not responsible anymore and is overdue for a full backup.");
             }
+            catch (Exception ex)
+            {
+                if(Logger.IsInfoEnabled)
+                    Logger.Info($"{databaseName}: Could not delete the local backup statuses for the following ids [{string.Join(",", taskIds)}]. We will not remove any tombstones.", ex);
+                
+                return false;
+            }
+
+            return true;
         }
 
         public void DeleteBackupStatus(ClusterOperationContext context, string databaseName, string dbId, long taskId)

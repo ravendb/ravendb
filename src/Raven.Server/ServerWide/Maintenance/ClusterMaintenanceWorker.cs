@@ -384,8 +384,11 @@ namespace Raven.Server.ServerWide.Maintenance
             foreach (var taskId in backupTaskIds)
             {
                 var statusBlittable = BackupUtils.GetLocalBackupStatusBlittable(serverStore, context, dbName, taskId);
-                var backupStatusReport = DatabaseStatusReport.PeriodicBackupStatusReport.Deserialize(statusBlittable);
-                report.BackupStatuses[taskId] = backupStatusReport;
+                if (statusBlittable != null)
+                {
+                    var backupStatusReport = DatabaseStatusReport.PeriodicBackupStatusReport.Deserialize(statusBlittable);
+                    report.BackupStatuses[taskId] = backupStatusReport;
+                }
             }
         }
 

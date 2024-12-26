@@ -7,6 +7,7 @@ using NCrontab.Advanced;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server;
@@ -15,7 +16,6 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -152,7 +152,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             // A does full backup on compare exchanges, backup moves to B, cx deleted, B does full backup on their tombstones, backup moves back to A, A should still have the tombstones to back up
             // they should not have been deleted by the observer because of A's low index should prevent it
-            var settings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "0" }, };
+            var settings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Cluster.MaxClusterTransactionCompareExchangeTombstoneCheckInterval), "0" }, };
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var incrementalFrequency = "0 0 * * *";
             var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true, customSettings: settings);
@@ -257,9 +257,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(otherNodeDir[0].Contains(otherNodeServer.ServerStore.NodeTag));
 
                 // run cx tombstone cleaner
-                using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                    await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, leader, ignoreClustrTrx: true);
+                await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
 
                 // tombstones should not have been deleted
                 stats = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
@@ -279,8 +277,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             var settings = new Dictionary<string, string>
             {
-                { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "0" },
-                { RavenConfiguration.GetKey(x => x.Tombstones.CleanupInterval), 1.ToString()}
+                { RavenConfiguration.GetKey(x => x.Cluster.MaxClusterTransactionCompareExchangeTombstoneCheckInterval), "0" },
+                { RavenConfiguration.GetKey(x => x.Tombstones.CleanupInterval), 1.ToString()},
+                { RavenConfiguration.GetKey(x => x.Cluster.WorkerSamplePeriod), 1000.ToString()}
             };
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true, customSettings: settings);
@@ -295,7 +294,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // stabilize test - if next full is very close, wait it out
                 var timeUntilNextOccurence = GetTimeUntilBackupNextOccurence(fullBackupFrequency, DateTime.UtcNow);
-                await Task.Delay(timeUntilNextOccurence);
+                if(timeUntilNextOccurence < TimeSpan.FromSeconds(20))
+                    await Task.Delay(timeUntilNextOccurence);
 
                 // setup config with full and incremental freq and do first full backup
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: fullBackupFrequency, incrementalBackupFrequency: incrementalFrequency);
@@ -334,13 +334,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(status);
                 Assert.Equal(otherNodeServer.ServerStore.NodeTag, status.NodeTag);
                 Assert.True(status.IsFull);
-
+                
                 // run cleaner
                 await db.TombstoneCleaner.ExecuteCleanup();
-
-                using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                    await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, leader, ignoreClustrTrx: true);
+                await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
 
                 // check tombstones not deleted
                 var stats = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
@@ -352,15 +349,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(delRes2.Successful);
 
                 // run the incremental
-                await Task.Delay(GetTimeUntilBackupNextOccurence(incrementalFrequency, status.LastFullBackupInternal ?? DateTime.UtcNow));
-
+                await Backup.RunBackupAsync(otherNodeServer, taskId, store, isFullBackup: false);
+                
                 var res = await WaitForValueAsync(async () =>
                 {
                     status = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
                     return status.LastIncrementalBackup != null;
-                }, true, timeout: 70_000);
+                }, true);
                 Assert.True(res, $"Incremental hasn't happened");
                 Assert.False(status.IsFull);
+
+                // run the cleaner - this should not delete anything
+                await db.TombstoneCleaner.ExecuteCleanup();
+                await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
 
                 // check local status not null and tombstones not deleted
                 var localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, store.Database, taskId);
@@ -376,10 +377,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // run cleaner
                 await db.TombstoneCleaner.ExecuteCleanup();
-
-                using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                    await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, leader, ignoreClustrTrx: true);
+                await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
 
                 // wait for local backup status to be deleted
                 await WaitForValueAsync(() =>
@@ -388,13 +386,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     return localStatus == null;
                 }, true);
                 Assert.Null(localStatus);
-
-                // wait for cx tombstones to be deleted
-                await WaitForValueAsync(() =>
+                
+                await WaitForValueAsync(async () =>
                 {
+                    await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
                     stats = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
-                    return stats.CountOfCompareExchangeTombstones;
-                }, 0);
+                    return stats.CountOfCompareExchangeTombstones == 0;
+                }, true);
+                Assert.Equal(0, stats.CountOfCompareExchangeTombstones);
             }
         }
 
@@ -410,7 +409,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             var settings = new Dictionary<string, string>
             {
-                { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "0" },
                 { RavenConfiguration.GetKey(x => x.Tombstones.CleanupInterval), 1.ToString()}
             };
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -571,6 +569,78 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var nextLocal = backupParser.GetNextOccurrence(fromLocal);
             var timeUntilNextOccurence = nextLocal - nowLocal + TimeSpan.FromSeconds(2);
             return timeUntilNextOccurence > TimeSpan.Zero ? timeUntilNextOccurence : TimeSpan.FromSeconds(1);
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Smuggler)]
+        public async Task ChangingBackupConfigurationToAlsoIncrementalShouldNotCauseTombstoneLoss()
+        {
+            // have a full backup with only full frequency configuration, change config to include incremental frequency, make sure that cleaner did not rely on only having full backups to delete tombstones freely
+            var backupPath1 = NewDataPath(suffix: "BackupFolder1");
+            
+            using (var server = GetNewServer())
+            using (var store = GetDocumentStore(new Options { Server = server }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                // full backup without incremental
+                var config = Backup.CreateBackupConfiguration(backupPath1);
+
+                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                Assert.NotNull(documentDatabase);
+                
+                // run full backup
+                var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                
+                // create tombstone
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("users/1");
+                    session.SaveChanges();
+                }
+
+                // wait for tombstone cleaner
+                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+
+                var beforeChangeConfig = DateTime.UtcNow;
+
+                // change configuration to include incremental
+                config.TaskId = taskId;
+                config.IncrementalBackupFrequency = "* * * * *";
+                await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+
+                // check change applied
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(1, record.PeriodicBackups.Count);
+                Assert.Equal("* * * * *", record.PeriodicBackups.First().IncrementalBackupFrequency);
+
+                // wait for next backup
+                PeriodicBackupStatus status;
+                var res = await WaitForValueAsync(async () =>
+                {
+                    status = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
+                    return status.LastIncrementalBackup > beforeChangeConfig;
+                }, true, timeout: 70_000, interval: 1000);
+                Assert.True(res, "Incremental backup didn't happen");
+
+                // restore from backup
+                var newDb = store.Database + "-restored";
+                var backupDir = Directory.GetDirectories(backupPath1).First();
+                var restoreConfig = new RestoreBackupConfiguration { BackupLocation = backupDir, DatabaseName = newDb };
+                var restoreOperation = new RestoreBackupOperation(restoreConfig);
+                var o = await store.Maintenance.Server.SendAsync(restoreOperation);
+                await o.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+
+                // check the original document is not included in the restored db
+                using (var session = store.OpenSession(newDb))
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.Null(user);
+                }
+            }
         }
     }
 }

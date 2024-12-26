@@ -323,7 +323,7 @@ namespace RachisTests.DatabaseCluster
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            var (nodes, leader) = await CreateRaftCluster(3);
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
             using var documentStore = GetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
 
             var notDelete = $"TestObjs/{count}";

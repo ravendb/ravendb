@@ -14,6 +14,7 @@ using Raven.Server;
 using Raven.Server.Monitoring.Snmp;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -240,6 +241,26 @@ public partial class RavenTestBase
             WaitForValue(() => server.ServerStore.Observer != null, true);
 
             server.ServerStore.Observer.Suspended = true;
+        }
+
+        internal async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> RunCompareExchangeTombstoneCleaner(RavenServer leader, bool simulateClusterTransactionIndex = true)
+        {
+            ClusterObserver.CompareExchangeTombstonesCleanupState state = ClusterObserver.CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+            leader.ServerStore.ForTestingPurposesOnly().AfterCompareExchangeTombstonesResult = innerState =>
+            {
+                state = innerState;
+            };
+
+            // if we want the test to be completely organic, set the configuration of the server to MaxClusterTransactionCompareExchangeTombstoneCheckInterval = 0, and this flag to false
+            if (simulateClusterTransactionIndex)
+                leader.ServerStore.ForTestingPurposesOnly().IgnoreClusterTransactionIndexInCompareExchangeCleaner = true;
+
+            leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks = 0;  // this will trigger the cleaner to run immediately
+            var iteration = leader.ServerStore.Observer._iteration;
+            var iterated = await WaitForValueAsync(() => leader.ServerStore.Observer._iteration > iteration, true);
+            Assert.True(iterated);
+
+            return state;
         }
 
         internal async Task<(bool, Dictionary<string, long>)> GetNumberOfCommandsPerNode(long expectedNumberOfCommands, List<RavenServer> servers, string commandType, int timeout = 30_000, int interval = 1_000)
