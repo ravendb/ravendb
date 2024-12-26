@@ -57,6 +57,15 @@ namespace SlowTests.Cluster
             if(options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)) == false)
                 options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "30000";
 
+
+            // In this test we are intentionally injecting a slow command to the transaction merger
+            // then we want to do things for indexes, but with shared journals, this going to lead to
+            // a deadlock, because the indexes are waiting for the tx merge command to complete, but that
+            // is waiting for the indexes to complete.
+            // As we don't have an actual need for testing shared journals, it is easiest to simply 
+            // skip this behavior for this test
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Storage.AvoidSharedJournals)] = "true"; 
+
             return base.GetNewServer(options, caller);
         }
 
@@ -1622,6 +1631,8 @@ namespace SlowTests.Cluster
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
+                Assert.True(context.DocumentDatabase.Configuration.Storage.AvoidSharedJournals, 
+                    "This test requires a shared journal to be disabled, since we try to coordinate db & indexes work in this test");
                 _manualResetEvent.WaitOne(_timeout);
                 return 1;
             }
@@ -1638,18 +1649,7 @@ namespace SlowTests.Cluster
         public async Task ClusterTransaction_WhenLoadReturnEmptyAndCompareExchangeExit_ShouldStillThrowConcurrency(Options options, bool clusterTrxBefore)
         {
             const string id = "testObjs/1";
-            var old = options.ModifyDatabaseRecord;
-            options.ModifyDatabaseRecord = record =>
-            {
-                old?.Invoke(record);
-                // In this test we are intentionally injecting a slow command to the transaction merger
-                // then we want to do things for indexes, but with shared journals, this going to lead to
-                // a deadlock, because the indexes are waiting for the tx merge command to complete, but that
-                // is waiting for the indexes to complete.
-                // As we don't have an actual need for testing shared journals, it is easiest to simply 
-                // skip this behavior for this test
-                record.Settings["Storage.AvoidSharedJournals"] = "true";
-            };
+            
             using var store = GetDocumentStore(options);
 
             if (clusterTrxBefore)

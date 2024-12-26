@@ -37,28 +37,26 @@ public static class Program
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
 
-        using var env = new StorageEnvironment(
-            StorageEnvironmentOptions.ForPathForTests(@"F:\ravendb-7.0\test\SlowTests\bin\Debug\net8.0\Databases\GetNewServer-.0-3\Databases\restored_database-39dc4f36-a127-4eda-a8ea-03cb40849c68\Indexes\UsersCountersMapReduceIndex"));
-        // for (int i = 0; i < 1000; i++)
-        // {
-        //     try
-        //     {
-        //         Console.WriteLine(i);
-        //         using (var testOutputHelper = new ConsoleTestOutputHelper())
-        //         using (var test = new RavenDB_7940(testOutputHelper))
-        //         {
-        //             DebuggerAttachedTimeout.DisableLongTimespan = true;
-        //
-        //             await test.RecreatingIndexesToARecreatedDatabase();
-        //         }
-        //     }
-        //     catch (Exception e)
-        //     {
-        //         Console.ForegroundColor = ConsoleColor.Red;
-        //         Console.WriteLine(e);
-        //         Console.ForegroundColor = ConsoleColor.White;
-        //     }
-        // }
+        for (int i = 0; i < 1000; i++)
+        {
+            try
+            {
+                Console.WriteLine(i);
+                using (var testOutputHelper = new ConsoleTestOutputHelper())
+                using (var test = new RavenDB_22659(testOutputHelper))
+                {
+                    DebuggerAttachedTimeout.DisableLongTimespan = true;
+        
+                    await test.CannotDeleteDatabaseWhenRestoreCancelledOnNonResponsibleNode();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(e);
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+        }
     }
 
     private static void TryRemoveDatabasesFolder()
