@@ -6,7 +6,7 @@ import configurationItem = require("models/database/index/configurationItem");
 import validateNameCommand = require("commands/resources/validateNameCommand");
 import generalUtils = require("common/generalUtils");
 import compoundField = require("models/database/index/compoundField");
-import models = require("models/database/settings/databaseSettingsModels");
+import { IndexingDatabaseSettingsType } from "models/database/index/types";
 
 class mapItem {
     map = ko.observable<string>();
@@ -29,12 +29,6 @@ class mapItem {
         });
     }
 }
-
-
-type indexingDatabaseSettings =
-  "Indexing.Analyzers.Default"
-  | "Indexing.Analyzers.Exact.Default"
-  | "Indexing.Analyzers.Search.Default"
 
 
 class indexDefinition {
@@ -80,9 +74,9 @@ class indexDefinition {
     searchEngine = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
 
     validationGroup: KnockoutValidationGroup;
-    indexingDatabaseSettings = ko.observable<Record<indexingDatabaseSettings[number], models.serverWideOnlyEntry | models.databaseEntry<string | number>>>();
+    indexingDatabaseSettings = ko.observable<IndexingDatabaseSettingsType>();
 
-    constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition, indexingDatabaseSettings?: Record<indexingDatabaseSettings[number], models.serverWideOnlyEntry | models.databaseEntry<string | number>>) {
+    constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition, indexingDatabaseSettings?: IndexingDatabaseSettingsType) {
         this.isAutoIndex(dto.Type.startsWith("Auto"));
 
         this.name(dto.Name);
@@ -407,7 +401,7 @@ class indexDefinition {
         }
     }
     
-    static empty(indexingDatabaseSettings?: Record<indexingDatabaseSettings[number], models.serverWideOnlyEntry | models.databaseEntry<string | number>>): indexDefinition {
+    static createDefaultIndexDefinition(indexingDatabaseSettings?: IndexingDatabaseSettingsType): indexDefinition {
         return new indexDefinition({
             Fields: {},
             Maps: [""],

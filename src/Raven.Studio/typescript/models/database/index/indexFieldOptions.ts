@@ -437,7 +437,9 @@ class indexFieldOptions {
         const parentAnalyzer = this.parent() ? this.parent()?.analyzer() : null;
 
         const analyzerConfigurationKey = `Indexing.Analyzers.${thisIndexing === "Default" || thisIndexing === null ? `Default` : `${thisIndexing}.Default`}`;
+        
         const databaseAnalyzerSetting = this.databaseIndexConfiguration?.[analyzerConfigurationKey];
+        
         const localAnalyzerConfiguration: string | undefined = this.indexLocalConfiguration?.[analyzerConfigurationKey];
 
         const hasDatabaseDefaultChanged =
@@ -464,7 +466,6 @@ class indexFieldOptions {
             this.analyzer(null);
         }
         
-        console.log("@@TEST", thisIndexing, parentIndexing, this.analyzer(), "@@DB", this.databaseIndexConfiguration, this.indexLocalConfiguration, this.parent()?.analyzer());
         this.disabledAnalyzerText("");
         const helpMsg = "To set a different analyzer, select the 'Indexing.Search' option first.";
         
@@ -597,7 +598,7 @@ class indexFieldOptions {
         };
         
         if (databaseIndexConfiguration && isEmpty(indexConfiguration)) {
-            defaultDto.Analyzer = databaseIndexConfiguration?.[`Indexing.Analyzers.Default`].effectiveValue();
+            defaultDto.Analyzer = databaseIndexConfiguration?.[`Indexing.Analyzers.Default`]?.effectiveValue();
         }
         
         if (!isEmpty(indexConfiguration)) {
@@ -615,16 +616,16 @@ class indexFieldOptions {
     private static getDefaultDto(indexConfiguration?: Raven.Client.Documents.Indexes.IndexConfiguration,
                           databaseIndexConfiguration?: Record<string, models.serverWideOnlyEntry | models.databaseEntry<string | number>>) {
         const defaultDto: Raven.Client.Documents.Indexes.IndexFieldOptions = {
-            Storage: "No",
-            Indexing: "Default",
-            Analyzer: "RavenStandardAnalyzer",
-            Suggestions: false,
+            Storage: null,
+            Indexing: null,
+            Analyzer: null,
+            Suggestions: null,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
-            TermVector: "No"
-        };
+            TermVector: null
+        }
         
         if (databaseIndexConfiguration && isEmpty(indexConfiguration)) {
-            defaultDto.Analyzer = databaseIndexConfiguration?.[`Indexing.Analyzers.Default`].effectiveValue();
+            defaultDto.Analyzer = databaseIndexConfiguration?.[`Indexing.Analyzers.Default`]?.effectiveValue();
         }
         
         if (!isEmpty(indexConfiguration)) {

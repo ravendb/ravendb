@@ -61,11 +61,11 @@ import convertToStaticDialog = require("viewmodels/database/indexes/convertToSta
 import convertedIndexesToStaticStorage = require("common/storage/convertedIndexesToStaticStorage");
 import getDatabaseSettingsCommand from "commands/database/settings/getDatabaseSettingsCommand";
 import models = require("models/database/settings/databaseSettingsModels");
-
-type indexingDatabaseSettings =
-  "Indexing.Analyzers.Default"
-  | "Indexing.Analyzers.Exact.Default"
-  | "Indexing.Analyzers.Search.Default"
+import {
+    IndexingDatabaseSetting,
+    IndexingDatabaseSettingsType
+} from "models/database/index/types";
+import genUtils from "common/generalUtils";
 
 class editIndex extends shardViewModelBase {
     
@@ -149,7 +149,7 @@ class editIndex extends shardViewModelBase {
 
     infoHubView: ReactInKnockout<typeof EditIndexInfoHub.EditIndexInfoHub>;
     isAddingNewIndex = ko.observable<boolean>(true);
-    indexingAnalyzerSettings = ko.observable<Record<indexingDatabaseSettings[number], models.serverWideOnlyEntry | models.databaseEntry<string | number>>>();
+    indexingAnalyzerSettings = ko.observable<IndexingDatabaseSettingsType>();
 
     constructor(db: database) {
         super(db);
@@ -400,7 +400,7 @@ class editIndex extends shardViewModelBase {
                         });
                     return canActivateResult;
                 } else {
-                    this.editedIndex(indexDefinition.empty(this.indexingAnalyzerSettings()));
+                    this.editedIndex(indexDefinition.createDefaultIndexDefinition(this.indexingAnalyzerSettings()));
                 }
 
                 return $.Deferred<canActivateResultDto>().resolve({ can: true });
@@ -559,20 +559,21 @@ class editIndex extends shardViewModelBase {
         return new getDatabaseSettingsCommand(this.db)
           .execute()
           .done((result: Raven.Server.Config.SettingsResult) => {
-              const indexingAnalyzersDefaultsDatabaseSettingsKeys = ["Indexing.Analyzers.Default", "Indexing.Analyzers.Exact.Default", "Indexing.Analyzers.Search.Default"] as const;
-              
+              const indexingAnalyzersDefaultsDatabaseSettingsKeys = genUtils.exhaustiveStringTuple<IndexingDatabaseSetting>()(
+                  "Indexing.Analyzers.Default", "Indexing.Analyzers.Exact.Default", "Indexing.Analyzers.Search.Default"
+              )
               const settingsEntries = result.Settings.map(x => {
                   const rawEntry = x as Raven.Server.Config.ConfigurationEntryDatabaseValue;
                   return models.settingsEntry.getEntry(rawEntry);
               });
               
               
-              const indexingAnalyzerSettings: Record<indexingDatabaseSettings[number], models.serverWideOnlyEntry | models.databaseEntry<string | number>> = Object.fromEntries(
+              const indexingAnalyzerSettings = Object.fromEntries(
                   indexingAnalyzersDefaultsDatabaseSettingsKeys.map(key => [
                       key,
                       settingsEntries.find(entry => entry.keyName() === key)
                   ])
-              );
+              ) as IndexingDatabaseSettingsType
               this.indexingAnalyzerSettings(indexingAnalyzerSettings);
           });
     }
