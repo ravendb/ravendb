@@ -33,7 +33,7 @@ public sealed class LogFilter : IDynamicJson
             [nameof(MinLevel)] = MinLevel,
             [nameof(MaxLevel)] = MaxLevel,
             [nameof(Condition)] = Condition,
-            [nameof(LogFilterAction)] = Action
+            [nameof(Action)] = Action
         };
     }
 }
