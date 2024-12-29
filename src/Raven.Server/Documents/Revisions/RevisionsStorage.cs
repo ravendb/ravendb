@@ -1568,13 +1568,19 @@ namespace Raven.Server.Documents.Revisions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
         {
-            return GetKeyPrefix(context, lowerId.Content.Ptr, lowerId.Size, out prefixSlice);
+            return GetKeyPrefix(context.Allocator, lowerId.Content.Ptr, lowerId.Size, out prefixSlice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, out Slice prefixSlice)
+        public static unsafe ByteStringContext.InternalScope GetKeyPrefix(ByteStringContext allocator, Slice lowerId, out Slice prefixSlice)
         {
-            var scope = context.Allocator.Allocate(lowerIdSize + 1, out ByteString keyMem);
+            return GetKeyPrefix(allocator, lowerId.Content.Ptr, lowerId.Size, out prefixSlice);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe ByteStringContext.InternalScope GetKeyPrefix(ByteStringContext allocator, byte* lowerId, int lowerIdSize, out Slice prefixSlice)
+        {
+            var scope = allocator.Allocate(lowerIdSize + 1, out ByteString keyMem);
 
             Memory.Copy(keyMem.Ptr, lowerId, lowerIdSize);
             keyMem.Ptr[lowerIdSize] = SpecialChars.RecordSeparator;
@@ -1591,7 +1597,13 @@ namespace Raven.Server.Documents.Revisions
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetKeyWithEtag(DocumentsOperationContext context, Slice lowerId, long etag, out Slice prefixSlice)
         {
-            var scope = context.Allocator.Allocate(lowerId.Size + 1 + sizeof(long), out ByteString keyMem);
+            return GetKeyWithEtag(context.Allocator, lowerId, etag, out prefixSlice);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetKeyWithEtag(ByteStringContext allocator, Slice lowerId, long etag, out Slice prefixSlice)
+        {
+            var scope = allocator.Allocate(lowerId.Size + 1 + sizeof(long), out ByteString keyMem);
 
             Memory.Copy(keyMem.Ptr, lowerId.Content.Ptr, lowerId.Size);
             keyMem.Ptr[lowerId.Size] = SpecialChars.RecordSeparator;

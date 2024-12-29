@@ -1,27 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
+using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
-using SlowTests.Voron.Bugs;
 using Tests.Infrastructure;
 using Voron;
-using Voron.Data.Fixed;
-using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
-using static Lucene.Net.Search.SpanFilterResult;
+using Table = Voron.Data.Tables.Table;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_23167 : ReplicationTestBase
+    public class RavenDB_23167 : RavenTestBase
     {
         public RavenDB_23167(ITestOutputHelper output) : base(output)
         {
@@ -77,17 +71,24 @@ namespace SlowTests.Issues
                 // cv: A:5, etag: 6
             }
             
-            AssertSeekBackwardForFixedSizeTrees(db, endEtag: 3, empty: false);
+            AssertSeekBackwardForFixedSizeTrees(db, endEtag: 3, empty: false, expectedEtag: 2);
             AssertSeekBackwardForFixedSizeTrees(db, endEtag: 0, empty: true);
-            AssertSeekBackwardForFixedSizeTrees(db, endEtag: 10, empty: false);
-            AssertSeekBackward(db, "foo/bar", endEtag: 3, empty: false);
+            AssertSeekBackwardForFixedSizeTrees(db, endEtag: 10, empty: false, expectedEtag: 6);
+
+            AssertSeekBackward(db, "foo/bar", endEtag: 3, empty: false, expectedEtag: 2);
             AssertSeekBackward(db, "foo/bar", endEtag: 0, empty: true);
-            AssertSeekBackward(db, "foo/bar", endEtag: 10, empty: false);
-            AssertSeekBackward(db, "foo/bar", endEtag: long.MaxValue, empty: false);
-            AssertSeekBackwardAfterAllKeys(db, "foo/bar", empty: false);
+            AssertSeekBackward(db, "foo/bar", endEtag: 10, empty: false, expectedEtag: 6);
+            AssertSeekBackward(db, "foo/bar", endEtag: long.MaxValue, empty: false, expectedEtag: 6);
+
+            AssertSeekBackward(db, "foo/bar", endEtag: 5, empty: false, expectedEtag: 2);
+            AssertSeekBackward(db, "foo/bar1", endEtag: 5, empty: false, expectedEtag: 4);
+            AssertSeekBackward(db, "foo/ba", endEtag: 5, empty: true);
+
+            AssertSeekBackwardAfterAllKeys(db, "foo/bar", empty: false, expectedEtag: 6);
+            AssertSeekBackwardAfterAllKeys(db, "foo/ba", empty: true);
         }
 
-        private static void AssertSeekBackwardForFixedSizeTrees(DocumentDatabase db, long endEtag, bool empty = false)
+        private static void AssertSeekBackwardForFixedSizeTrees(DocumentDatabase db, long endEtag, bool empty, long? expectedEtag = null)
         {
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -98,17 +99,24 @@ namespace SlowTests.Issues
                 var revisions = tvhs.Select(tvh => RevisionsStorage.TableValueToRevision(context, ref tvh.Reader, DocumentFields.ChangeVector)).ToList();
 
                 if (empty)
+                {
                     Assert.Empty(revisions);
+                    if (expectedEtag.HasValue)
+                        throw new InvalidOperationException("Cannot pass `expectedEtag` when `empty` is true");
+                }
                 else
                 {
                     Assert.NotEmpty(revisions);
                     var lastLocalEtag = revisions[0].Etag;
                     Assert.True(endEtag >= lastLocalEtag, $"endEtag {endEtag}, lastLocalEtag: {lastLocalEtag}");
+
+                    if(expectedEtag.HasValue)
+                        Assert.Equal(expectedEtag.Value, lastLocalEtag);
                 }
             }
         }
 
-        private static void AssertSeekBackward(DocumentDatabase db, string id, long endEtag, bool empty = false)
+        private static void AssertSeekBackward(DocumentDatabase db, string id, long endEtag, bool empty, long? expectedEtag = null)
         {
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -120,19 +128,26 @@ namespace SlowTests.Issues
                 var voronIndex = RevisionsStorage.RevisionsSchema.Indexes[RevisionsStorage.IdAndEtagSlice];
                 var trvs = table.SeekBackwardFrom(voronIndex, prefixSlice, compoundPrefix, 0);
                 var revisions = trvs.Select(tvr => RevisionsStorage.TableValueToRevision(context, ref tvr.Result.Reader, DocumentFields.ChangeVector)).ToList();
-                
+
                 if (empty)
+                {
                     Assert.Empty(revisions);
+                    if (expectedEtag.HasValue)
+                        throw new InvalidOperationException("Cannot pass `expectedEtag` when `empty` is true");
+                }
                 else
                 {
                     Assert.NotEmpty(revisions);
                     var lastLocalEtag = revisions[0].Etag;
                     Assert.True(endEtag >= lastLocalEtag, $"endEtag {endEtag}, lastLocalEtag: {lastLocalEtag}");
+
+                    if (expectedEtag.HasValue)
+                        Assert.Equal(expectedEtag.Value, lastLocalEtag);
                 }
             }
         }
 
-        private static void AssertSeekBackwardAfterAllKeys(DocumentDatabase db, string id, bool empty = false)
+        private static void AssertSeekBackwardAfterAllKeys(DocumentDatabase db, string id, bool empty = false, long? expectedEtag = null)
         {
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -145,11 +160,20 @@ namespace SlowTests.Issues
                 var revisions = trvs.Select(tvr => RevisionsStorage.TableValueToRevision(context, ref tvr.Result.Reader, DocumentFields.ChangeVector)).ToList();
 
                 if (empty)
+                {
                     Assert.Empty(revisions);
+                    if (expectedEtag.HasValue)
+                        throw new InvalidOperationException("Cannot pass `expectedEtag` when `empty` is true");
+                }
                 else
                 {
                     Assert.NotEmpty(revisions);
-                    var lastLocalEtag = revisions[0].Etag;
+
+                    if (expectedEtag.HasValue)
+                    {
+                        var lastLocalEtag = revisions[0].Etag;
+                        Assert.Equal(expectedEtag.Value, lastLocalEtag);
+                    }
                 }
             }
         }
