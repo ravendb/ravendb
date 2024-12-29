@@ -1,7 +1,8 @@
 import AdminLogsConfigTableValue from "components/pages/resources/manageServer/adminLogs/bits/AdminLogsConfigTableValue";
 import { adminLogsSelectors } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import { useAppSelector } from "components/store";
-import { AccordionItem, AccordionBody, AccordionHeader, Table } from "reactstrap";
+import { AccordionItem, AccordionBody, AccordionHeader, Table, UncontrolledPopover } from "reactstrap";
+import { Icon } from "components/common/Icon";
 
 export default function AdminLogsConfigAuditLogs({ targetId }: { targetId: string }) {
     const config = useAppSelector(adminLogsSelectors.configs).adminLogsConfig.AuditLogs;
@@ -10,7 +11,17 @@ export default function AdminLogsConfigAuditLogs({ targetId }: { targetId: strin
         <AccordionItem className="p-1 rounded-3">
             <AccordionHeader targetId={targetId}>Audit logs</AccordionHeader>
             <AccordionBody accordionId={targetId}>
-                <h5 className="text-center text-muted text-uppercase">Read-only</h5>
+                <h5 className="text-center text-muted text-uppercase">
+                    Read-only
+                    <span id="read-only-tooltip-for-audit-logs">
+                        <Icon icon="info" color="info" margin="ms-1" />
+                    </span>
+                    <UncontrolledPopover target="read-only-tooltip-for-audit-logs" trigger="hover" className="bs5">
+                        <div className="p-3">
+                            These settings are not editable here but can be configured through the server configuration.
+                        </div>
+                    </UncontrolledPopover>
+                </h5>
                 <Table>
                     <tbody>
                         <tr>

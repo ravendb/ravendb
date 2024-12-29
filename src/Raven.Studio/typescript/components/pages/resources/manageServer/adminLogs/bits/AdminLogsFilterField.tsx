@@ -79,7 +79,39 @@ export default function AdminLogsFilterField({ control, idx, remove }: AdminLogs
                 </Col>
                 <Col md={4}>
                     <FormGroup className="flex-grow-1">
-                        <Label>Action</Label>
+                        <Label>
+                            Action
+                            <span id="filter-action">
+                                <Icon icon="info" color="info" margin="ms-1" />
+                            </span>
+                            <UncontrolledPopover target="filter-action" trigger="hover" className="bs5" placement="top">
+                                <div className="p-3">
+                                    <ul className="mb-1">
+                                        <li className="mb-1">
+                                            <code>Ignore</code> - The log entry will Not be logged.
+                                        </li>
+                                        <li className="mb-1">
+                                            <code>IgnoreFinal</code> - The log entry will Not be logged.
+                                            <br />
+                                            Any subsequent logging rules matching the condition will be ignored.
+                                        </li>
+                                        <li className="mb-1">
+                                            <code>Log</code> - The log entry will be logged.
+                                        </li>
+                                        <li className="mb-1">
+                                            <code>LogFinal</code> - The log entry will be logged.
+                                            <br />
+                                            Any subsequent logging rules matching the condition will be ignored.
+                                        </li>
+                                        <li>
+                                            <code>Neutral</code> - The decision is deferred to the next filter that
+                                            matches the condition. If no other filter matches, the &quot;Default Filter
+                                            Action&quot; is applied.
+                                        </li>
+                                    </ul>
+                                </div>
+                            </UncontrolledPopover>
+                        </Label>
                         <FormSelect control={control} name={`filters.${idx}.action`} options={logFilterActionOptions} />
                     </FormGroup>
                 </Col>

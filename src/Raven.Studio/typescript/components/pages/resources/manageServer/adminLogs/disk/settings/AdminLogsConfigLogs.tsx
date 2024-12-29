@@ -9,6 +9,7 @@ import {
     Label,
     Row,
     Table,
+    UncontrolledPopover,
 } from "reactstrap";
 import * as yup from "yup";
 import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
@@ -62,16 +63,32 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
         <AccordionItem className="p-1 rounded-3">
             <AccordionHeader targetId={targetId}>Logs</AccordionHeader>
             <AccordionBody accordionId={targetId}>
-                <h5 className="text-center text-muted text-uppercase">Writable</h5>
+                <h5 className="text-center text-muted text-uppercase">Set Filters & min level</h5>
                 <Form onSubmit={handleSubmit(handleSave)} key={targetId}>
                     <Row>
                         <Col>
                             <FormGroup>
-                                <Label>Current Minimum Level</Label>
+                                <Label>
+                                    Current Minimum Level
+                                    <span id="current-min-level">
+                                        <Icon icon="info" color="info" margin="ms-1" />
+                                    </span>
+                                    <UncontrolledPopover
+                                        target="current-min-level"
+                                        trigger="hover"
+                                        className="bs5"
+                                        placement="top"
+                                    >
+                                        <div className="p-3">
+                                            Only log entries at this level or higher will be logged, even if a filter
+                                            matches a lower-level entry.
+                                        </div>
+                                    </UncontrolledPopover>
+                                </Label>
                                 <FormSelect control={control} name="minLevel" options={logLevelOptions} />
                                 {!isCloud && (
                                     <FormCheckbox control={control} name="isPersist" className="mt-1">
-                                        Save level in <code>settings.json</code>
+                                        Save the minimum level in <code>settings.json</code>
                                         <AdminLogsPersistInfoIcon />
                                     </FormCheckbox>
                                 )}
@@ -79,11 +96,40 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
                         </Col>
                         <Col>
                             <FormGroup>
-                                <Label>Filter Default Action</Label>
+                                <Label>
+                                    Default Filter Action
+                                    <span id="default-filter-action">
+                                        <Icon icon="info" color="info" margin="ms-1" />
+                                    </span>
+                                    <UncontrolledPopover
+                                        target="default-filter-action"
+                                        trigger="hover"
+                                        className="bs5"
+                                        placement="top"
+                                    >
+                                        <div className="p-3">
+                                            <p className="mb-1">
+                                                This action does <strong>Not apply</strong> when no filters are defined.
+                                                <br />
+                                                This action <strong>applies</strong> in the following cases:
+                                            </p>
+                                            <ul className="mb-0">
+                                                <li className="mb-1">
+                                                    When a log entry does Not match any defined filter.
+                                                </li>
+                                                <li>
+                                                    When a log entry matches a filter with a <code>Neutral</code>{" "}
+                                                    action, provided that no subsequent filters apply.
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </UncontrolledPopover>
+                                </Label>
                                 <FormSelect
                                     control={control}
                                     name="logFilterDefaultAction"
                                     options={logFilterActionOptions}
+                                    isDisabled={filterFieldArray.fields.length === 0}
                                 />
                             </FormGroup>
                         </Col>
@@ -121,7 +167,17 @@ export default function AdminLogsConfigLogs({ targetId }: { targetId: string }) 
                         Save
                     </ButtonWithSpinner>
                 </Form>
-                <h5 className="text-center text-muted text-uppercase">Read-only</h5>
+                <h5 className="text-center text-muted text-uppercase">
+                    Read-only
+                    <span id="read-only-tooltip-for-logs">
+                        <Icon icon="info" color="info" margin="ms-1" />
+                    </span>
+                    <UncontrolledPopover target="read-only-tooltip-for-logs" trigger="hover" className="bs5">
+                        <div className="p-3">
+                            These settings are not editable here but can be configured through the server configuration.
+                        </div>
+                    </UncontrolledPopover>
+                </h5>
                 <Table className="m-0">
                     <tbody>
                         <tr>

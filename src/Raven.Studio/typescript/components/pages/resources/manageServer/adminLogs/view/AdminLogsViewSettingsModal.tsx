@@ -13,7 +13,7 @@ import {
 import { useAppDispatch, useAppSelector } from "components/store";
 import { logFilterActionOptions, tryHandleSubmit } from "components/utils/common";
 import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
-import { Button, CloseButton, Form, FormGroup, Label, Modal, ModalBody } from "reactstrap";
+import { Button, CloseButton, Form, FormGroup, Label, Modal, ModalBody, UncontrolledPopover } from "reactstrap";
 import * as yup from "yup";
 
 type AdminLogsConfig = Raven.Client.ServerWide.Operations.Logs.GetLogsConfigurationResult["AdminLogs"];
@@ -61,8 +61,38 @@ export default function AdminLogsViewSettingsModal() {
 
                 <Form onSubmit={handleSubmit(handleSave)}>
                     <FormGroup>
-                        <Label>Filter Default Action</Label>
-                        <FormSelect control={control} name="logFilterDefaultAction" options={logFilterActionOptions} />
+                        <Label>
+                            Default Filter Action
+                            <span id="default-filter-action-for-view">
+                                <Icon icon="info" color="info" margin="ms-1" />
+                            </span>
+                            <UncontrolledPopover
+                                target="default-filter-action-for-view"
+                                trigger="hover"
+                                className="bs5"
+                            >
+                                <div className="p-3">
+                                    <p className="mb-1">
+                                        This action does <strong>Not apply</strong> when no filters are defined.
+                                        <br />
+                                        This action <strong>applies</strong> in the following cases:
+                                    </p>
+                                    <ul className="mb-0">
+                                        <li className="mb-1">When a log entry does Not match any defined filter.</li>
+                                        <li>
+                                            When a log entry matches a filter with a <code>Neutral</code> action,
+                                            provided that no subsequent filters apply.
+                                        </li>
+                                    </ul>
+                                </div>
+                            </UncontrolledPopover>
+                        </Label>
+                        <FormSelect
+                            control={control}
+                            name="logFilterDefaultAction"
+                            options={logFilterActionOptions}
+                            isDisabled={filterFieldArray.fields.length === 0}
+                        />
                     </FormGroup>
                     <FormGroup className="vstack">
                         <Label>Filters</Label>

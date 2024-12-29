@@ -9,7 +9,7 @@ export default function AdminLogsPersistInfoIcon() {
         <>
             <Icon icon="info" color="info" margin="ms-1" id={id} />
             <UncontrolledPopover target={id} trigger="hover" className="bs5">
-                <div className="p-3">If not saved, above settings will reset after a server restart</div>
+                <div className="p-3">If not saved, the minimum level will reset after a server restart.</div>
             </UncontrolledPopover>
         </>
     );

@@ -102,6 +102,7 @@ export default function AdminLogs() {
                                 <Button
                                     type="button"
                                     color={isPaused ? "success" : "warning"}
+                                    title={isPaused ? "Click to resume logging" : "Click to pause logging"}
                                     onClick={() => dispatch(adminLogsActions.isPausedToggled())}
                                 >
                                     <Icon icon={isPaused ? "play" : "pause"} />

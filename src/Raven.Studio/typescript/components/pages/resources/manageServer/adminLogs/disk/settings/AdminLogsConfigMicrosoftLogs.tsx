@@ -13,8 +13,18 @@ import {
 import { useAppDispatch, useAppSelector } from "components/store";
 import { logLevelOptions, tryHandleSubmit } from "components/utils/common";
 import { SubmitHandler, useForm } from "react-hook-form";
-import { AccordionBody, AccordionHeader, AccordionItem, Form, FormGroup, Label, Table } from "reactstrap";
+import {
+    AccordionBody,
+    AccordionHeader,
+    AccordionItem,
+    Form,
+    FormGroup,
+    Label,
+    Table,
+    UncontrolledPopover,
+} from "reactstrap";
 import * as yup from "yup";
+import { Icon } from "components/common/Icon";
 
 type MicrosoftLogsConfig = Raven.Client.ServerWide.Operations.Logs.GetLogsConfigurationResult["MicrosoftLogs"];
 
@@ -49,14 +59,14 @@ export default function AdminLogsConfigMicrosoftLogs({ targetId }: AdminLogsConf
         <AccordionItem className="p-1 rounded-3">
             <AccordionHeader targetId={targetId}>Microsoft logs</AccordionHeader>
             <AccordionBody accordionId={targetId}>
-                <h5 className="text-center text-muted text-uppercase">Writable</h5>
+                <h5 className="text-center text-muted text-uppercase">Set min level</h5>
                 <Form onSubmit={handleSubmit(handleSave)} key={targetId}>
                     <FormGroup>
                         <Label>Current Minimum Level</Label>
                         <FormSelect control={control} name="minLevel" options={logLevelOptions} />
                         {!isCloud && (
                             <FormCheckbox control={control} name="isPersist" className="mt-1">
-                                Save level in <code>settings.json</code>
+                                Save the minimum level in <code>settings.json</code>
                                 <AdminLogsPersistInfoIcon />
                             </FormCheckbox>
                         )}
@@ -72,8 +82,17 @@ export default function AdminLogsConfigMicrosoftLogs({ targetId }: AdminLogsConf
                         Save
                     </ButtonWithSpinner>
                 </Form>
-
-                <h5 className="text-center text-muted text-uppercase">Read-only</h5>
+                <h5 className="text-center text-muted text-uppercase">
+                    Read-only
+                    <span id="read-only-tooltip-for-ms-logs">
+                        <Icon icon="info" color="info" margin="ms-1" />
+                    </span>
+                    <UncontrolledPopover target="read-only-tooltip-for-ms-logs" trigger="hover" className="bs5">
+                        <div className="p-3">
+                            This setting is not editable here but can be configured through the server configuration.
+                        </div>
+                    </UncontrolledPopover>
+                </h5>
                 <Table className="m-0">
                     <tbody>
                         <tr>
