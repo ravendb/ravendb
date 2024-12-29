@@ -86,6 +86,10 @@ export default function AdminLogsFilterField({ control, idx, remove }: AdminLogs
                             </span>
                             <UncontrolledPopover target="filter-action" trigger="hover" className="bs5" placement="top">
                                 <div className="p-3">
+                                    <p>
+                                        The selected action will apply to all log entries that match the filter
+                                        logging-rules:
+                                    </p>
                                     <ul className="mb-1">
                                         <li className="mb-1">
                                             <code>Ignore</code> - The log entry will Not be logged.
@@ -93,7 +97,8 @@ export default function AdminLogsFilterField({ control, idx, remove }: AdminLogs
                                         <li className="mb-1">
                                             <code>IgnoreFinal</code> - The log entry will Not be logged.
                                             <br />
-                                            Any subsequent logging rules matching the condition will be ignored.
+                                            Any subsequent filters with the same logging-rules as this filter will be
+                                            ignored.
                                         </li>
                                         <li className="mb-1">
                                             <code>Log</code> - The log entry will be logged.
@@ -101,12 +106,13 @@ export default function AdminLogsFilterField({ control, idx, remove }: AdminLogs
                                         <li className="mb-1">
                                             <code>LogFinal</code> - The log entry will be logged.
                                             <br />
-                                            Any subsequent logging rules matching the condition will be ignored.
+                                            Any subsequent filters with the same logging-rules as this filter will be
+                                            ignored.
                                         </li>
                                         <li>
-                                            <code>Neutral</code> - The decision is deferred to the next filter that
-                                            matches the condition. If no other filter matches, the &quot;Default Filter
-                                            Action&quot; is applied.
+                                            <code>Neutral</code> - The action to take is deferred to the next filter
+                                            that matches the log entry. If no other filter matches, the &quot;Default
+                                            Filter Action&quot; will be applied.
                                         </li>
                                     </ul>
                                 </div>
