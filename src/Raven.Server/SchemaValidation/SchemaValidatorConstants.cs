@@ -8,7 +8,6 @@ internal static class SchemaValidatorConstants
     public const string patternProperties = "patternProperties";
     public const string additionalProperties = "additionalProperties";
     
-    public const string required = "required";
     public const string type = "type";
     public const string description = "description";
     // ReSharper restore InconsistentNaming

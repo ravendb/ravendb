@@ -434,7 +434,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     }
     
     [RavenTheory(RavenTestCategory.JavaScript)]
-    [InlineData("invalidType", "The 'type' restriction must be one of the allowed types ('string', 'number', 'boolean', 'object', 'array', 'null', 'integer'), but found 'invalidType'. Path: 'prop'.")]
+    [InlineData("invalidType", "The 'type' restriction must be one of the allowed types (null, integer, number, string, boolean, object, array), but found 'invalidType'. Path: 'prop'.")]
     [InlineData(89, "Expected a value of type 'string' for 'type', but received 'integer' of type '89' at path 'prop'.")]
     [InlineData(45.5, "Expected a value of type 'string' for 'type', but received 'number' of type '45.5' at path 'prop'.")]
     [InlineData(true, "Expected a value of type 'string' for 'type', but received 'boolean' of type 'True' at path 'prop'.")]

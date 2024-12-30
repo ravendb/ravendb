@@ -24,7 +24,8 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
             new object[] { "maximum", "somestring", "The value of 'maximum' at 'prop' must be integer, number, but received 'somestring' of type 'string'." },
             new object[] { "minimum", "somestring", "The value of 'minimum' at 'prop' must be integer, number, but received 'somestring' of type 'string'." },
             new object[] { "multipleOf", "somestring", "The value of 'multipleOf' at 'prop' must be integer, number, but received 'somestring' of type 'string'." },
-            new object[] { "enum", "somestring", "The value of 'enum' at 'prop' must be an array, but received 'somestring' of type 'string'." }
+            new object[] { "enum", "somestring", "The value of 'enum' at 'prop' must be an array, but received 'somestring' of type 'string'." },
+            new object[] { "required", "somestring", "The value of 'required' at 'prop' must be an array, but received 'somestring' of type 'string'." }
         };
 
     [RavenFact(RavenTestCategory.JavaScript)]
