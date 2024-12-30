@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
+using Elastic.Clients.Elasticsearch.Mapping;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -15,6 +17,7 @@ using Raven.Server.Indexing;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -1207,7 +1210,7 @@ namespace Raven.Server.Documents.Indexes
                     fieldsTree.MultiAdd(IndexSchema.TimeSlice, fieldName);
             }
         }
-
+        
         internal Dictionary<string, int> ReadVectorDimensions()
         {
             // (string FieldName, int VectorSizeInBytes)
@@ -1242,6 +1245,44 @@ namespace Raven.Server.Documents.Indexes
             foreach (var kvp in vectorDimensionsToAdd)
                 fieldsTree.Add(kvp.Key, kvp.Value.ToString());
         }
+        
+        internal Dictionary<string, VectorEmbeddingType> ReadIndexEmbeddingType()
+        {
+            var embeddingTypeStorage = new Dictionary<string, VectorEmbeddingType>();
+            using (var tx = _environment.ReadTransaction())
+            {
+                var vectorEmbeddingTypeTree = tx.ReadTree(IndexSchema.VectorSourceEmbeddingType);
+                if (vectorEmbeddingTypeTree is null)
+                    return embeddingTypeStorage;
+
+                using (var it = vectorEmbeddingTypeTree.Iterate(prefetch: false))
+                {
+                    if (it.Seek(Slices.BeforeAllKeys))
+                    {
+                        do
+                        {
+                            var key = it.CurrentKey.ToString();
+                            var valueAsString = it.CreateReaderForCurrent().ToStringValue();
+                            var parsingResult = Enum.TryParse(valueAsString.AsSpan(), out VectorEmbeddingType currentEmbedding);
+                            PortableExceptions.ThrowIfNot<InvalidDataException>(parsingResult, $"Unknown embedding type: {valueAsString}.");
+                            
+                            embeddingTypeStorage.Add(key, currentEmbedding);
+                        } while (it.MoveNext());
+                    }
+                }
+
+            }
+
+            return embeddingTypeStorage;
+        }
+        
+        internal static void WriteIndexEmbeddingType(RavenTransaction tx, Dictionary<string, VectorEmbeddingType> vectorEmbeddingTypeToAdd)
+        {
+            var fieldsTree = tx.InnerTransaction.CreateTree(IndexSchema.VectorSourceEmbeddingType);
+            
+            foreach (var kvp in vectorEmbeddingTypeToAdd)
+                fieldsTree.Add(kvp.Key, kvp.Value.ToString());
+        }
 
         internal sealed class IndexSchema
         {
@@ -1264,6 +1305,7 @@ namespace Raven.Server.Documents.Indexes
             public const string LastDocumentEtagOnIndexCreationTree = "LastDocumentEtagOnIndexCreation";
 
             public const string VectorDimensionsTree = "VectorDimensions";
+            public const string VectorSourceEmbeddingType = "VectorSourceEmbeddingType";
 
             public static readonly Slice TypeSlice;
 

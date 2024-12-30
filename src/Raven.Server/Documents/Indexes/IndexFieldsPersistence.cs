@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -17,6 +18,9 @@ namespace Raven.Server.Documents.Indexes
         private HashSet<string> _timeFieldsToWrite;
         private Dictionary<string, int> _vectorFieldsDimensions;
         private Dictionary<string, int> _vectorFieldsDimensionsToWrite;
+        
+        private Dictionary<string, VectorEmbeddingType> _vectorSourceEmbeddingType;
+        private Dictionary<string, VectorEmbeddingType> _vectorSourceEmbeddingTypeToWrite;
 
         public IndexFieldsPersistence(Index index)
         {
@@ -35,6 +39,7 @@ namespace Raven.Server.Documents.Indexes
                 _timeFields = _index._indexStorage.ReadIndexTimeFields();
             
             _vectorFieldsDimensions = _index._indexStorage.ReadVectorDimensions();
+            _vectorSourceEmbeddingType = _index._indexStorage.ReadIndexEmbeddingType();
             
             foreach (var indexField in _index.Definition.IndexFields.Values)
             {
@@ -77,6 +82,33 @@ namespace Raven.Server.Documents.Indexes
             return _supportsTimeFields && _timeFields.Contains(fieldName);
         }
 
+        internal bool TryReadVectorSourceEmbeddingType(string fieldName, out VectorEmbeddingType embeddingType)
+        {
+            return _vectorSourceEmbeddingType.TryGetValue(fieldName, out embeddingType);
+        }
+
+        internal void SetVectorSourceEmbeddingType(string fieldName, VectorEmbeddingType embeddingType)
+        {
+            var isStoredOnDisk = _vectorSourceEmbeddingType.TryGetValue(fieldName, out var diskStoredEmbeddingType);
+            
+            PortableExceptions.ThrowIf<InvalidOperationException>(isStoredOnDisk && embeddingType != diskStoredEmbeddingType, $"We are expecting that field {fieldName} has the same embedding type as it was before. However, stored embedding type was {diskStoredEmbeddingType} and current one is {embeddingType}.");
+
+
+            var isStoredInRuntime = false;
+            if (_vectorSourceEmbeddingTypeToWrite != null)
+            {
+                isStoredInRuntime = _vectorSourceEmbeddingTypeToWrite.TryGetValue(fieldName, out var runtimeStoredEmbeddingType);
+                PortableExceptions.ThrowIf<InvalidOperationException>(isStoredInRuntime && embeddingType != runtimeStoredEmbeddingType,
+                    $"We are expecting that field {fieldName} has the same embedding type as it was before. However, previously embedding type was {runtimeStoredEmbeddingType} and current one is {embeddingType}.");
+            }
+
+            if (isStoredOnDisk || isStoredInRuntime)
+                return;
+            
+            _vectorSourceEmbeddingTypeToWrite ??= new Dictionary<string, VectorEmbeddingType>();
+            _vectorSourceEmbeddingTypeToWrite.Add(fieldName, embeddingType);
+        }
+        
         internal void SetFieldEmbeddingDimension(string fieldName, int dimensions, VectorEmbeddingType destinationEmbeddingType)
         {
             _vectorFieldsDimensionsToWrite ??= new Dictionary<string, int>();
@@ -106,7 +138,7 @@ namespace Raven.Server.Documents.Indexes
         
         internal void Persist(TransactionOperationContext indexContext)
         {
-            if (_timeFieldsToWrite == null && _vectorFieldsDimensionsToWrite == null)
+            if (_timeFieldsToWrite == null && _vectorFieldsDimensionsToWrite == null && _vectorSourceEmbeddingTypeToWrite == null)
                 return;
             
             if (_timeFieldsToWrite != null)
@@ -114,6 +146,9 @@ namespace Raven.Server.Documents.Indexes
             
             if (_vectorFieldsDimensionsToWrite != null)
                 IndexStorage.WriteVectorDimensions(indexContext.Transaction, _vectorFieldsDimensionsToWrite);
+            
+            if (_vectorSourceEmbeddingTypeToWrite != null)
+                IndexStorage.WriteIndexEmbeddingType(indexContext.Transaction, _vectorSourceEmbeddingTypeToWrite);
 
             indexContext.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
             {
@@ -135,6 +170,16 @@ namespace Raven.Server.Documents.Indexes
 
                     _vectorFieldsDimensions = vectorFieldsDimensions;
                     _vectorFieldsDimensionsToWrite = null;
+                }
+
+                if (_vectorSourceEmbeddingTypeToWrite != null)
+                {
+                    var vectorSourceEmbeddingType = new Dictionary<string, VectorEmbeddingType>(_vectorSourceEmbeddingType);
+                    foreach (var fieldDimension in _vectorSourceEmbeddingTypeToWrite)
+                        vectorSourceEmbeddingType.Add(fieldDimension.Key, fieldDimension.Value);
+                    
+                    _vectorSourceEmbeddingType = vectorSourceEmbeddingType;
+                    _vectorSourceEmbeddingTypeToWrite = null;
                 }
             };
         }

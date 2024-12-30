@@ -633,7 +633,23 @@ public static class CoraxQueryBuilder
 
         VectorOptions vectorOptions = null;
         if (builderParameters.FieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField))
-            vectorOptions = indexField?.Vector ?? VectorOptions.Default;
+        {
+            // VectorOptions can be null when a user does not specify the configuration.
+            // In such cases, we will choose the input depending on the value type (similar to how we handle it during indexing).
+            vectorOptions = indexField?.Vector;
+            if (vectorOptions == null)
+            {
+                builderParameters.Index.IndexFieldsPersistence.TryReadVectorSourceEmbeddingType(fieldName, out var vectorSourceEmbeddingType);
+                vectorOptions = vectorSourceEmbeddingType switch
+                {
+                    VectorEmbeddingType.Single => VectorOptions.Default,
+                    VectorEmbeddingType.Text => VectorOptions.DefaultText,
+                    _ => throw new InvalidDataException(
+                        $"Unknown vector source embedding type: {vectorSourceEmbeddingType}. Implicit configuration support only single and text vector source embedding types.")
+                };
+            }
+            
+        }
         else
             PortableExceptions.Throw<InvalidDataException>($"Cannot find `{fieldName}` field in the index.");
         
