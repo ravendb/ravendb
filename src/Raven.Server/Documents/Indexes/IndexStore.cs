@@ -1525,10 +1525,14 @@ namespace Raven.Server.Documents.Indexes
             if (index.Type.IsAuto())
                 throw new NotSupportedException("Side by side index reset is not supported for auto indexes.");
             
+            var definition = index.GetIndexDefinition();
+            
+            if (index.Type.IsMapReduce() && definition.OutputReduceToCollection != null)
+                throw new NotSupportedException("Side by side index reset is not supported for map-reduce indexes with output reduce to collection.");
+            
             try
             {
                 var definitionClone = new IndexDefinition();
-                var definition = index.GetIndexDefinition();
                 definition.CopyTo(definitionClone);
 
                 var sideBySideIndex = GetIndex(Constants.Documents.Indexing.SideBySideIndexNamePrefix + index.Name);
