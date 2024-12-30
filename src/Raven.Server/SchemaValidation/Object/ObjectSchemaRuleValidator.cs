@@ -9,7 +9,6 @@ namespace Raven.Server.SchemaValidation.Object;
 public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     private readonly string _schemaPath;
-    private HashSet<string> _requiredHashSet;
     private Dictionary<string, PropertySchemaRuleValidator> _namedPropertySchemaRuleValidators;
     private (Regex Regex, PropertySchemaRuleValidator Validator)[] _patternPropertiesSchemaRuleValidators;
     private (bool Allowed, PropertySchemaRuleValidator Validator) _additionalPropertiesSchemaRuleValidator;
@@ -22,10 +21,6 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
     
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {
-        _requiredHashSet = schemaDefinition.TryGet(SchemaValidatorConstants.required, out BlittableJsonReaderArray required)
-            ? required.Select(x => x.ToString()).ToHashSet()
-            : null;
-        
         //TODO To create an informative error when fails to read
         _namedPropertySchemaRuleValidators = ReadPropertyValidators(schemaDefinition, SchemaValidatorConstants.properties)?
             .ToDictionary(x => x.PropertySpecifier);
@@ -97,16 +92,6 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
 
     protected override void ValidateInternal(BlittableJsonReaderObject value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
-        if (_requiredHashSet != null)
-        {
-            foreach (var required in _requiredHashSet)
-            {
-                if(value.Contains(required))
-                    continue;
-                errorBuilder.AddError($"The required property '{required}' is missing at '{path}'.");
-            }
-        }
-
         if (_namedPropertySchemaRuleValidators != null)
         {
             foreach (var (prop, validator) in _namedPropertySchemaRuleValidators)

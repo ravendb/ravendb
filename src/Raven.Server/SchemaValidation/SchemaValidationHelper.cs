@@ -34,9 +34,46 @@ public static class SchemaValidationHelper
         PublicTypes = StringTypeToBlittableToken.Select(x => x.Key.ToString()).ToArray();
     }
     
-    public static bool TryConvertTypeToTokens(IComparable<string> type, out BlittableJsonToken[] tokens)
+    public static bool TryGetTokensForType(IComparable<string> type, out BlittableJsonToken[] tokens)
     {
-        return StringTypeToBlittableToken.TryGetValue(type, out tokens);
+        if (type.CompareTo(Null) == 0)
+        {
+            tokens = [BlittableJsonToken.Null];
+            return true;
+        }
+        if (type.CompareTo(Integer) == 0)
+        {
+            tokens = [BlittableJsonToken.Integer];
+            return true;
+        }
+        if (type.CompareTo(Number) == 0)
+        {
+            tokens = [BlittableJsonToken.Integer, BlittableJsonToken.LazyNumber];
+            return true;
+        }
+        if (type.CompareTo(String) == 0)
+        {
+            tokens = [BlittableJsonToken.String, BlittableJsonToken.String];
+            return true;
+        }
+        if (type.CompareTo(Boolean) == 0)
+        {
+            tokens = [BlittableJsonToken.Boolean];
+            return true;
+        }
+        if (type.CompareTo(Object) == 0)
+        {
+            tokens = [BlittableJsonToken.StartObject];
+            return true;
+        }
+        if (type.CompareTo(Object) == 0)
+        {
+            tokens = [BlittableJsonToken.StartObject];
+            return true;
+        }
+
+        tokens = default;
+        return false;
     }
 
     public static string GetPublicTypeOfObj(object obj) => GetPublicType(obj?.GetType());
@@ -63,21 +100,16 @@ public static class SchemaValidationHelper
 
     public static string GetPublicType(BlittableJsonToken type)
     {
-        if (type == BlittableJsonToken.Null)
-            return Null;
-        if (type == BlittableJsonToken.Integer)
-            return Integer;
-        if (type == BlittableJsonToken.LazyNumber)
-            return Number;
-        if (type is BlittableJsonToken.String or BlittableJsonToken.CompressedString)
-            return String;
-        if (type == BlittableJsonToken.Boolean)
-            return Boolean;
-        if (type == BlittableJsonToken.StartObject)
-            return Object;
-        if (type == BlittableJsonToken.StartArray)
-            return Array;
-
-        throw new NotImplementedException($"The type '{type}' is not supported.");
+        return type switch
+        {
+            BlittableJsonToken.Null => Null,
+            BlittableJsonToken.Integer => Integer,
+            BlittableJsonToken.LazyNumber => Number,
+            BlittableJsonToken.String or BlittableJsonToken.CompressedString => String,
+            BlittableJsonToken.Boolean => Boolean,
+            BlittableJsonToken.StartObject => Object,
+            BlittableJsonToken.StartArray => Array,
+            _ => throw new NotImplementedException($"The type '{type}' is not supported.")
+        };
     }
 }

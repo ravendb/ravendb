@@ -51,7 +51,7 @@ public class PropertySchemaRuleValidator
         _typesRestriction = allowedTypes.ToArray();
     }
     
-    public void Validate(BlittableJsonReaderObject parent, string property, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    public virtual void Validate(BlittableJsonReaderObject parent, string property, SchemaValidatorPath path, IErrorBuilder errorBuilder)
     {
         if (TryGetPropertyType(parent, property, out BlittableJsonToken token) == false)
         {
@@ -70,9 +70,14 @@ public class PropertySchemaRuleValidator
         }
         
         var value = parent[property];
+        CheckAllValidators(value, path, errorBuilder);
+    }
+
+    protected void CheckAllValidators(object value, SchemaValidatorPath path, IErrorBuilder errorBuilder)
+    {
         if (_ruleValidators == null)
             return;
-        
+
         //TODO Maybe to filter _ruleValidators by afgument type and avoid cast and checking inside ruleValidator.Validate
         foreach (var ruleValidator in _ruleValidators)
         {
@@ -82,7 +87,7 @@ public class PropertySchemaRuleValidator
 
     private static bool TryGetPropertyType(BlittableJsonReaderObject parent, string property, out BlittableJsonToken token)
     {
-        if (parent.TryGetPropertyType(new StringSegment(property), out var internalToken))
+        if (parent.TryGetPropertyType(property, out var internalToken))
         {
             token = internalToken & BlittableJsonReaderBase.TypesMask;
             return true;
@@ -103,7 +108,7 @@ public class PropertySchemaRuleValidator
             if (rule is SchemaValidatorConstants.type or SchemaValidatorConstants.description)
                 continue;
 
-            if (rule is SchemaValidatorConstants.properties or SchemaValidatorConstants.patternProperties or SchemaValidatorConstants.additionalProperties or SchemaValidatorConstants.required)
+            if (rule is SchemaValidatorConstants.properties or SchemaValidatorConstants.patternProperties or SchemaValidatorConstants.additionalProperties)
             {
                 hasObjectRestrictions = true;
                 continue;
@@ -129,7 +134,7 @@ public class PropertySchemaRuleValidator
     private BlittableJsonToken[] ConvertTypeToTokens(object type)
     {
         var stringType = GetLazyString(type);
-        if(SchemaValidationHelper.TryConvertTypeToTokens(stringType, out BlittableJsonToken[] tokens) == false)
+        if(SchemaValidationHelper.TryGetTokensForType(stringType, out BlittableJsonToken[] tokens) == false)
         {
             throw new InvalidSchemaValidationDefinitionException(
                 $"The '{SchemaValidatorConstants.type}' restriction must be one of the allowed types ({string.Join(", ", SchemaValidationHelper.PublicTypes)}), but found '{type}'. " +

@@ -27,6 +27,7 @@ public abstract class SchemaRuleValidatorFactory : ISchemaRuleValidatorFactory
         #region objects
         {ConstantSchemaRuleValidator.RuleName, new ConstantSchemaRuleValidatorFactory()},
         {EnumSchemaRuleValidator.RuleName, new EnumSchemaRuleValidatorFactory()},
+        {RequiredSchemaRuleValidator.RuleName, new RequiredSchemaRuleValidatorFactory()},
         #endregion
         
         #region strings
