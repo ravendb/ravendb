@@ -127,9 +127,9 @@ namespace Sparrow.Json
                 BlittableVectorType.Int16 => type == typeof(short) || type == typeof(ushort),
                 BlittableVectorType.Int32 => type == typeof(int) || type == typeof(uint),
                 BlittableVectorType.Int64 => type == typeof(long) || type == typeof(ulong),
-                BlittableVectorType.UInt16 => type == typeof(ushort) || type == typeof(byte),
-                BlittableVectorType.UInt32 => type == typeof(uint) || type == typeof(byte),
-                BlittableVectorType.UInt64 => type == typeof(ulong) || type == typeof(byte),
+                BlittableVectorType.UInt16 => type == typeof(ushort) || type == typeof(short),
+                BlittableVectorType.UInt32 => type == typeof(uint) || type == typeof(int),
+                BlittableVectorType.UInt64 => type == typeof(ulong) || type == typeof(long),
                 BlittableVectorType.Float => type == typeof(float),
                 BlittableVectorType.Double => type == typeof(double),
                 #if NET6_0_OR_GREATER
@@ -231,6 +231,7 @@ namespace Sparrow.Json
                 _dataLength = dataLength;
                 _elementSize = elementSize;
                 
+                // This might be expensive; however, the method should not be used extensively.
                 _getElement = type switch
                 {
                     BlittableVectorType.SByte => &SbyteConverter,
